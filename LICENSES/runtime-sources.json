@@ -100,5 +100,12 @@
     "scope": "MurmurHash3 x64_128 in src/glue/anybor_imohash.h",
     "sha256": "0b8dbbc917ae625ffd6870fc079056303bf0b4e7b8b42eb0af9f3ab982ab23ad",
     "bytes": 280
+  },
+  "OpenBOR-profile-6330-mod-BSD-3-Clause.txt": {
+    "url": "https://raw.githubusercontent.com/AveyondFly/openbor-fflns/cfb4f3a676613714757d4539275482f7c323d6ad/engine/LICENSE",
+    "sha256": "adfc28feba4d32bb3933b29fe55fd0a6aa746084704c3ee71fc3f732706b9aa4",
+    "bytes": 1544,
+    "license": "BSD-3-Clause",
+    "scope": "Modified6330 source adaptations and own-source regression extracts. Original OpenBOR Team notices and contributor credits are retained."
   }
 }

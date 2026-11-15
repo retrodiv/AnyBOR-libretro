@@ -1,0 +1,77 @@
+/* SPDX-License-Identifier: BSD-3-Clause
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me> */
+#include <assert.h>
+#include <stdbool.h>
+#include <stdint.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <setjmp.h>
+#include @ABI@
+#define MAX_ARG_LEN 1024
+#define MAX_ARG_COUNT 128
+#define MAX_SELECT_LOADS 512
+typedef struct {size_t count,arglen[MAX_ARG_COUNT];char *args[MAX_ARG_COUNT];} ArgList;
+typedef struct {char selectLoad[MAX_SELECT_LOADS][MAX_ARG_LEN];int selectLoadCount;
+ char selectMusic[MAX_ARG_LEN],selectBackground[MAX_ARG_LEN];} s_savelevel;
+typedef struct {int unload;} s_model;
+static unsigned obor_profile_features;
+static s_model model;
+static s_savelevel saved;
+static struct {int lookup,load,update,integers,music,background,last_flag,loop,offset;} calls;
+static jmp_buf fault;
+static void borShutdown(int code,const char *format,...) {(void)format;assert(code==1);longjmp(fault,1);}
+static s_model *findmodel(const char *name) {++calls.lookup;return !strcmp(name,"loaded")?&model:NULL;}
+static int getValidInt(char *value,char *filename,char *command) {
+ (void)filename;(void)command;++calls.integers;return atoi(value);
+}
+#define GET_ARG(n) (arglist.count>(n)?arglist.args[n]:"")
+#define GET_INT_ARG(n) getValidInt(GET_ARG(n),filename,command)
+static s_model *load_cached_model(char *name,char *owner,char unload) {
+ assert(!strcmp(owner,"authored"));assert(!strcmp(name,"unloaded"));++calls.load;calls.last_flag=unload;return &model;
+}
+static s_model *original_load_cached_model(char *name,char *owner,char unload,bool quickload) {
+ assert(!quickload);return load_cached_model(name,owner,unload);
+}
+static void update_model_loadflag(s_model *target,char flag) {assert(target==&model);++calls.update;calls.last_flag=flag;target->unload=flag;}
+static void music(char *name,int loop,long offset) {assert(!strcmp(name,"track"));++calls.music;calls.loop=loop;calls.offset=(int)offset;}
+static void load_background(char *name,int type) {assert(!strcmp(name,"scene") && type==1);++calls.background;}
+@PARSER@
+@CANDIDATE@
+@ORIGINALS@
+static void reset(void) {memset(&calls,0,sizeof(calls));model.unload=7;}
+static void seed(int count) {
+ memset(&saved,0,sizeof(saved));saved.selectLoadCount=count;
+ strcpy(saved.selectMusic,"music track 2 30\n");strcpy(saved.selectBackground,"background scene\n");
+}
+int main(void) {
+ unsigned features[]={0,OBOR_PROFILE_ATTACK_HISTORY_FOUR,OBOR_PROFILE_LNS_6330};
+ const int flags[]={-129,-1,0,3,67,127,128,255};
+ for(unsigned f=0;f<3;++f) {
+  obor_profile_features=features[f];
+  for(unsigned flag=0;flag<sizeof(flags)/sizeof(*flags);++flag)for(int loaded=0;loaded<2;++loaded) {
+   char line[128];snprintf(line,sizeof(line),"load %s %d\n",loaded?"loaded":"unloaded",flags[flag]);
+   reset();if(f==2)lns_file_load(line);else official_file_load(line);
+   unsigned char expected[sizeof(calls)];memcpy(expected,&calls,sizeof(calls));int unload=model.unload;
+   reset();candidate_file_load(line);assert(!memcmp(expected,&calls,sizeof(calls)) && model.unload==unload);
+  }
+  /* These are the original restore function's defined no-model-loop paths. */
+  for(int count=-2;count<=0;++count) {
+   seed(count);reset();if(f==2)lns_restore(&saved);else official_restore(&saved);
+   unsigned char expected[sizeof(calls)];memcpy(expected,&calls,sizeof(calls));
+   reset();load_select_screen_info(&saved);assert(!memcmp(expected,&calls,sizeof(calls)));
+  }
+  /* The source's post-parse model policy is explicit. No undefined original
+   * pre-parse ArgList read is used as an expected result. */
+  seed(3);strcpy(saved.selectLoad[0],"load loaded 17\n");strcpy(saved.selectLoad[1],"load unloaded 0\n");
+  reset();load_select_screen_info(&saved);
+  assert(calls.lookup==2 && calls.update==1 && calls.load==0 && model.unload==17);
+  assert(calls.integers==2 && calls.music==1 && calls.background==1 && calls.loop==2 && calls.offset==30);
+  seed(MAX_SELECT_LOADS);strcpy(saved.selectLoad[MAX_SELECT_LOADS-1],"load loaded -7\n");
+  reset();load_select_screen_info(&saved);assert(calls.lookup==1 && calls.update==1 && model.unload==-7);
+  seed(MAX_SELECT_LOADS+1);reset();
+  if(!setjmp(fault)){load_select_screen_info(&saved);assert(0);}
+  assert(calls.lookup==0 && calls.music==0 && calls.background==0 && model.unload==7);
+ }
+ return 0;
+}

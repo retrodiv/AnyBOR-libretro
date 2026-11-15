@@ -1,10 +1,11 @@
-/* AnyBOR modification record: 2026-10-05.
+/* AnyBOR modification record: 2026-11-15.
  * Port maintained by retrodiv <retrodiv@proton.me>.
  * Copyright (c) 2026 retrodiv <retrodiv@proton.me> (original contributions).
  * These contributions are licensed under BSD-3-Clause; see LICENSE at the root.
  * Upstream code retains its original license and notices.
  * Convert the command-list lookup result to its command enumeration
- * explicitly instead of through a plain pointer cast.
+ * explicitly instead of through a plain pointer cast. Register modified 6330
+ * LNS model and level-order commands only in that profile.
  * Existing changes recorded here; this is not their implementation date.
  * See MODIFICATIONS.md and docs/modifications/6391.md
  * at the source repository root. Original notices follow below.
@@ -500,6 +501,13 @@ List *createModelCommandList(void)
     LIST_ADD(CMD_MODEL_WEAPONS, "weapons");
 
 
+    if(obor_profile_features & OBOR_PROFILE_LNS_6330)
+    {
+        LIST_ADD(CMD_MODEL_FLASHOVERRIDE, "flashoverride");
+        LIST_ADD(CMD_MODEL_IGNOREPROJECTILEWALLCOLLISION, "ignore_projectile_wall_collision");
+        LIST_ADD(CMD_MODEL_NOEXPLODE, "noexplode");
+        LIST_ADD(CMD_MODEL_SELECTCOL, "selectcol");
+    }
 #undef LIST_ADD
     return result;
 }
@@ -735,6 +743,14 @@ List *createLevelOrderCommandList(void)
     LIST_ADD(CMD_LEVELORDER_UNLOCKBG, "unlockbg");
     LIST_ADD(CMD_LEVELORDER_Z, "z");
 
+    if(obor_profile_features & OBOR_PROFILE_LNS_6330)
+    {
+        LIST_ADD(CMD_LEVELORDER_HALLFAME, "hallfame");
+        LIST_ADD(CMD_LEVELORDER_HALLFAMEDIFFICULTIES, "hallfame_difficulties");
+        LIST_ADD(CMD_LEVELORDER_HALLFAMEDIFFICULTYCREDITS, "hallfame_difficulty_credits");
+        LIST_ADD(CMD_LEVELORDER_HALLFAMEINITIALS, "hallfame_initials");
+        LIST_ADD(CMD_LEVELORDER_HALLFAMETIMES, "hallfame_times");
+    }
 #undef LIST_ADD
     return result;
 }

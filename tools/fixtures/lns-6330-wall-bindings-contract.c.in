@@ -1,0 +1,119 @@
+/* SPDX-License-Identifier: BSD-3-Clause
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me> */
+#include <assert.h>
+#include <stdbool.h>
+#include <stdint.h>
+#include <stdlib.h>
+#include <string.h>
+#include <limits.h>
+#include <math.h>
+#include @ABI@
+enum {TYPE_OBSTACLE=7,SPAWN_TYPE_PROJECTILE_NORMAL=4,SPAWN_TYPE_PROJECTILE_BOMB=5};
+typedef struct {
+    float x,z,upperleft,lowerleft,upperright,lowerright,depth,height;
+    int type,ignore_projectile_wall_collision;
+} Terrain;
+typedef struct {Terrain *walls;int numwalls,width;} Level;
+static Level world,*level=&world;
+static unsigned obor_profile_features;
+static Terrain *grow(Terrain *walls,int count) {
+    Terrain *result=realloc(walls,((size_t)count+1)*sizeof(*result));assert(result);
+    memset(result+count,0,sizeof(*result));return result;
+}
+#define __realloc(list,count) ((list)=grow(list,count))
+@ADDWALL@
+@ORIGINAL_ADDWALL@
+@OFFICIAL_ADDWALL@
+static double args[11];static unsigned arguments_seen;
+static double argument(unsigned index) {arguments_seen|=1U<<index;return args[index];}
+#define GET_FLOAT_ARG(index) argument(index)
+static void candidate_wall(void) {@WALL_CALL@}
+static void reference_wall(void) {
+    if(obor_profile_features & OBOR_PROFILE_LNS_6330) {@ORIGINAL_WALL_CALL@}
+    else {@OFFICIAL_WALL_CALL@}
+}
+#define PLAYER_MAX_Z 232
+#define MAX_WALL_HEIGHT 1000
+static int panel_height=240;
+static void candidate_default_wall(void) {@DEFAULT_CALL@}
+static void reference_default_wall(void) {
+    if(obor_profile_features & OBOR_PROFILE_LNS_6330) {@ORIGINAL_DEFAULT_CALL@}
+    else {@OFFICIAL_DEFAULT_CALL@}
+}
+typedef struct entity {
+    struct {int subject_to_platform,ignore_projectile_wall_collision,type;} modeldata;
+    struct {float y;} velocity;
+    struct entity *landed_on_platform;
+    int spawntype;
+} entity;
+static entity actors[4],*self,*selected;
+static int deflect_calls,collision_calls,platform_calls,reached;
+static int projectile_wall_deflect(entity *e) {assert(e==self);++deflect_calls;return 1;}
+static int check_projectile_wall_collision(entity *e) {assert(e==self);++collision_calls;return 1;}
+static entity *check_platform_below_entity(entity *e) {
+    assert(e==self);++platform_calls;return selected;
+}
+static void candidate_arrow(void) {@ARROW@}
+static void candidate_bomb(void) {@BOMB@}
+@PREFIX@
+@ORIGINAL_PREFIX@
+@OFFICIAL_PREFIX@
+int main(void) {
+    unsigned masks[]={0,OBOR_PROFILE_ATTACK_HISTORY_FOUR,OBOR_PROFILE_LNS_6330};
+    double flags[]={-12,-1.9,-0.9,0,0.9,1,1.9,12};
+    for(unsigned i=1;i<10;++i)args[i]=(double)i+0.25;
+    for(unsigned m=0;m<3;++m)for(unsigned n=0;n<sizeof(flags)/sizeof(*flags);++n) {
+        obor_profile_features=masks[m];args[10]=flags[n];arguments_seen=0;
+        candidate_wall();assert(world.numwalls==1);Terrain actual=world.walls[0];
+        assert(!!(arguments_seen&(1U<<10))==(m==2));
+        free(world.walls);memset(&world,0,sizeof(world));arguments_seen=0;
+        reference_wall();assert(world.numwalls==1 && !memcmp(&actual,world.walls,sizeof(actual)));
+        assert(!!(arguments_seen&(1U<<10))==(m==2));
+        free(world.walls);memset(&world,0,sizeof(world));
+    }
+    for(unsigned m=0;m<3;++m) {
+        obor_profile_features=masks[m];world.width=640;args[10]=12;
+        candidate_default_wall();assert(world.numwalls==1);
+        Terrain actual=world.walls[0];assert(!actual.ignore_projectile_wall_collision);
+        free(world.walls);world.walls=NULL;world.numwalls=0;
+        reference_default_wall();assert(world.numwalls==1 && !memcmp(&actual,world.walls,sizeof(actual)));
+        free(world.walls);memset(&world,0,sizeof(world));
+    }
+    obor_profile_features=OBOR_PROFILE_LNS_6330;
+    double invalid[]={NAN,INFINITY,-INFINITY,(double)INT_MAX+1,(double)INT_MIN-1};
+    for(unsigned n=0;n<sizeof(invalid)/sizeof(*invalid);++n) {
+        args[10]=invalid[n];candidate_wall();assert(!world.walls[0].ignore_projectile_wall_collision);
+        free(world.walls);memset(&world,0,sizeof(world));
+    }
+    for(unsigned m=0;m<3;++m)for(int loaded=0;loaded<2;++loaded) {
+        obor_profile_features=masks[m];level=loaded?&world:NULL;self=actors;
+        deflect_calls=collision_calls=0;candidate_arrow();
+        assert(collision_calls==(loaded && m==2) && deflect_calls==(loaded && m!=2));
+        deflect_calls=collision_calls=0;candidate_bomb();
+        assert(collision_calls==(loaded && m==2) && !deflect_calls);
+    }
+    level=&world;
+    for(unsigned m=0;m<3;++m)for(int spawn=3;spawn<7;++spawn)
+    for(int subject=-1;subject<2;++subject)for(int found=0;found<2;++found)
+    for(int ignored=-1;ignored<2;++ignored)for(int obstacle=0;obstacle<2;++obstacle)
+    for(int velocity=-1;velocity<2;++velocity)for(int landed=0;landed<2;++landed) {
+        memset(actors,0,sizeof(actors));obor_profile_features=masks[m];
+        actors[0].spawntype=spawn;actors[0].modeldata.subject_to_platform=subject;
+        actors[0].modeldata.ignore_projectile_wall_collision=!ignored;
+        actors[0].velocity.y=(float)velocity;
+        actors[0].landed_on_platform=landed?actors+3:NULL;
+        actors[1].modeldata.ignore_projectile_wall_collision=ignored;
+        actors[1].modeldata.type=obstacle?TYPE_OBSTACLE:0;
+        selected=found?actors+1:NULL;self=actors+2;
+        entity *platform_actor=actors+3;platform_calls=reached=0;
+        entity before=actors[0];candidate_adjust_prefix(actors,&platform_actor);
+        entity actual=actors[0],*actual_platform=platform_actor,*actual_self=self;
+        int actual_reached=reached,actual_calls=platform_calls;
+        actors[0]=before;platform_actor=actors+3;self=actors+2;platform_calls=reached=0;
+        if(m==2)lns_original_adjust_prefix(actors,&platform_actor);
+        else official_original_adjust_prefix(actors,&platform_actor);
+        assert(!memcmp(&actual,actors,sizeof(actual)) && actual_platform==platform_actor);
+        assert(actual_self==self && actual_reached==reached && actual_calls==platform_calls);
+    }
+    return 0;
+}

@@ -1,0 +1,95 @@
+/* SPDX-License-Identifier: BSD-3-Clause
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me> */
+#include <assert.h>
+#include <stdint.h>
+#include <stddef.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <setjmp.h>
+#include @ABI@
+@LIMITS@
+@RECORD@
+@ORIGINALS@
+@RESET_LIMITS@
+@LIMITS@
+static unsigned obor_profile_features;
+static jmp_buf invalid_storage;
+static void borShutdown(int status,const char *format,...) {
+ (void)format;assert(status==1);longjmp(invalid_storage,1);
+}
+@HELPERS@
+static s_savelevel candidate[3];
+static official_savelevel ordinary[3],expected_ordinary[3];
+static lns_savelevel modified[3],expected_modified[3];
+static void canonical_from_ordinary(s_savelevel *out,const official_savelevel *in) {
+ memcpy(out,in,offsetof(official_savelevel,selectMusic));
+ memcpy(out->selectMusic,in->selectMusic,sizeof(in->selectMusic));
+ memcpy(out->selectBackground,in->selectBackground,sizeof(in->selectBackground));
+ for(unsigned i=0;i<MAX_SELECT_LOADS;++i)memcpy(out->selectLoad[i],in->selectLoad[i],sizeof(in->selectLoad[i]));
+ out->selectLoadCount=in->selectLoadCount;
+ memcpy(out->selectSkipSelect,in->selectSkipSelect,sizeof(in->selectSkipSelect));
+}
+static void check_ordinary(const s_savelevel *actual,const official_savelevel *expected) {
+ assert(!memcmp(actual,expected,offsetof(official_savelevel,selectMusic)));
+ assert(!memcmp(actual->selectMusic,expected->selectMusic,sizeof(expected->selectMusic)));
+ assert(!memcmp(actual->selectBackground,expected->selectBackground,sizeof(expected->selectBackground)));
+ for(unsigned i=0;i<MAX_SELECT_LOADS;++i)
+  assert(!memcmp(actual->selectLoad[i],expected->selectLoad[i],sizeof(expected->selectLoad[i])));
+ assert(actual->selectLoadCount==expected->selectLoadCount);
+ assert(!memcmp(actual->selectSkipSelect,expected->selectSkipSelect,sizeof(expected->selectSkipSelect)));
+}
+static void fill_bytes(void *buffer,size_t size) {
+ unsigned char *bytes=buffer;uint32_t value=8371;
+ for(size_t i=0;i<size;++i){value=value*1664525u+1013904223u;bytes[i]=(unsigned char)(value>>24);}
+}
+static FILE *input(const void *bytes,size_t size) {
+ FILE *file=tmpfile();assert(file);assert(fwrite(bytes,1,size,file)==size);rewind(file);return file;
+}
+static void compare_files(FILE *one,FILE *two) {
+ rewind(one);rewind(two);unsigned char a[4096],b[4096];
+ for(;;){size_t na=fread(a,1,sizeof(a),one),nb=fread(b,1,sizeof(b),two);assert(na==nb && !memcmp(a,b,na));if(!na)break;}
+}
+int main(void) {
+ assert(sizeof(s_savelevel)==sizeof(lns_savelevel));
+ assert(offsetof(s_savelevel,selectMusic)==offsetof(official_savelevel,selectMusic));
+ fill_bytes(ordinary,sizeof(ordinary));fill_bytes(modified,sizeof(modified));
+ unsigned modes[]={0,OBOR_PROFILE_ATTACK_HISTORY_FOUR,OBOR_PROFILE_LNS_6330};
+ for(unsigned m=0;m<3;++m) {
+  obor_profile_features=modes[m];int lns=m==2;
+  size_t record_size=lns?sizeof(lns_savelevel):sizeof(official_savelevel);
+  assert(obor_profile_savelevel_size()==record_size);
+  memset(candidate,0x5a,sizeof(candidate));
+  if(lns)memcpy(candidate,modified,sizeof(modified));
+  else for(unsigned i=0;i<3;++i)canonical_from_ordinary(candidate+i,ordinary+i);
+  for(size_t count=0;count<=3;++count) {
+   FILE *actual=tmpfile(),*expected=tmpfile();assert(actual && expected);
+   assert(obor_profile_savelevels_io(actual,candidate,count,1)==count);
+   assert(fwrite(lns?(void*)modified:(void*)ordinary,record_size,count,expected)==count);
+   compare_files(actual,expected);fclose(actual);fclose(expected);
+  }
+  size_t offsets[]={0,1,offsetof(official_savelevel,selectMusic)-1,
+   offsetof(official_savelevel,selectMusic),offsetof(official_savelevel,selectMusic)+511,
+   offsetof(official_savelevel,selectBackground),offsetof(official_savelevel,selectLoad),
+   offsetof(official_savelevel,selectLoad)+1023,offsetof(official_savelevel,selectLoadCount),
+   offsetof(official_savelevel,selectLoadCount)+2,offsetof(official_savelevel,selectSkipSelect),
+   record_size-1,record_size,record_size+1,record_size*2-1,record_size*2,record_size*3-1,record_size*3};
+  for(unsigned sample=0;sample<sizeof(offsets)/sizeof(*offsets)+64;++sample) {
+   size_t bytes=sample<sizeof(offsets)/sizeof(*offsets)?offsets[sample]:(record_size*3)*(sample%64)/64;
+   FILE *actual=input(lns?(void*)modified:(void*)ordinary,bytes);
+   FILE *expected=input(lns?(void*)modified:(void*)ordinary,bytes);
+   memset(candidate,0xa5,sizeof(candidate));memset(expected_ordinary,0xa5,sizeof(expected_ordinary));memset(expected_modified,0xa5,sizeof(expected_modified));
+   size_t got=obor_profile_savelevels_io(actual,candidate,3,0);
+   size_t wanted=fread(lns?(void*)expected_modified:(void*)expected_ordinary,record_size,3,expected);
+   assert(got==wanted && ftell(actual)==ftell(expected));
+   if(lns)assert(!memcmp(candidate,expected_modified,sizeof(candidate)));
+   else for(unsigned i=0;i<3;++i)check_ordinary(candidate+i,expected_ordinary+i);
+   fclose(actual);fclose(expected);
+  }
+ }
+ assert(obor_profile_savelevels_io(NULL,NULL,0,0)==0);
+ if(!setjmp(invalid_storage)){(void)obor_profile_savelevels_io(NULL,candidate,1,0);assert(0);}
+ FILE *file=tmpfile();assert(file);
+ if(!setjmp(invalid_storage)){(void)obor_profile_savelevels_io(file,candidate,SIZE_MAX,0);assert(0);}
+ fclose(file);return 0;
+}

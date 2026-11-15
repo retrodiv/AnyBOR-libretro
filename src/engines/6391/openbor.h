@@ -1,4 +1,4 @@
-/* AnyBOR modification record: 2026-10-17.
+/* AnyBOR modification record: 2026-11-15.
  * Port maintained by retrodiv <retrodiv@proton.me>.
  * Copyright (c) 2026 retrodiv <retrodiv@proton.me> (original contributions).
  * These contributions are licensed under BSD-3-Clause; see LICENSE at the root.
@@ -9,7 +9,8 @@
  * contracts for four-ID attack history, native cheat toggles and selection-
  * screen escape using explicit profile feature flags and published upstream
  * code. Track each model's allocated animation-table capacity and reject
- * lookups outside it.
+ * lookups outside it. Declare the modified 6330 LNS profile's shared model,
+ * player, score and parser layouts.
  * Existing changes recorded here; this is not their implementation date.
  * See MODIFICATIONS.md and docs/modifications/6391.md
  * at the source repository root. Original notices follow below.
@@ -73,17 +74,21 @@
 
 /////////////////////////////////////////////////////////////////////////////
 
-#define		DEFAULT_SHUTDOWN_MESSAGE \
-			"OpenBOR " VERSION ", Compile Date: " __DATE__ "\n" \
+#define		OBOR_DEFAULT_SHUTDOWN_MESSAGE(version) \
+			"OpenBOR " version ", Compile Date: " __DATE__ "\n" \
 			"Presented by the OpenBOR Team.\n" \
 			"www.chronocrash.com\n"\
 			"OpenBOR is the open source continuation of Beats of Rage by Senile Team.\n" \
 			"\n" \
 			"Special thanks to SEGA and SNK.\n\n"
+#define DEFAULT_SHUTDOWN_MESSAGE \
+    ((obor_profile_features & OBOR_PROFILE_LNS_6330) \
+        ? OBOR_DEFAULT_SHUTDOWN_MESSAGE("v3.0 Build 6330 LNS v0.10g") \
+        : OBOR_DEFAULT_SHUTDOWN_MESSAGE(VERSION))
 
 #define		COMPATIBLEVERSION	0x00033748
 #define		CV_SAVED_GAME		0x00033747
-#define		CV_HIGH_SCORE		0x00033747
+#define		CV_HIGH_SCORE		((obor_profile_features & OBOR_PROFILE_LNS_6330) ? 0x00033748u : 0x00033747u)
 #define     GAME_SPEED          200
 #define		THINK_SPEED			2
 #define		COUNTER_SPEED		(GAME_SPEED*2)
@@ -100,13 +105,15 @@
 #define		MAX_ATTACKS			4					// Total number of attacks players have
 #define     MAX_FOLLOWS         4					// For followup animations
 #define     MAX_COLLISIONS      2                   // Collision boxes.
-#define		MAX_ARG_LEN			512
+#define		MAX_ARG_LEN			1024
 #define		MAX_ALLOWSELECT_LEN	1024
 #define		MAX_SELECT_LOADS   	512
 #define		MAX_PAL_SIZE		1024
 #define		MAX_CACHED_BACKGROUNDS 9
 #define     MAX_DOTS            10                  // Max active dot effects.
-#define     MAX_ARG_COUNT       64
+#define     MAX_ARG_COUNT       128
+#define     MAX_DIFFICULTIES    10
+#define     NUM_INITIALS        3
 #define     PLATFORM_DEFAULT_X  99999
 
 /*
@@ -336,6 +343,11 @@ typedef enum
     FLAG_BACKWARD		= 0x80000000
 } e_key_def;
 
+/* A self-reference in the ordinary arm denotes the enum constant above. */
+#define FLAG_ANYBUTTON ((obor_profile_features & OBOR_PROFILE_LNS_6330) ? (FLAG_START | FLAG_SPECIAL | FLAG_ATTACK | FLAG_JUMP) : FLAG_ANYBUTTON)
+#define FLAG_CONTROLKEYS ((obor_profile_features & OBOR_PROFILE_LNS_6330) ? (FLAG_SPECIAL | FLAG_ATTACK | FLAG_JUMP | FLAG_MOVEUP | FLAG_MOVEDOWN | FLAG_MOVELEFT | FLAG_MOVERIGHT) : FLAG_CONTROLKEYS)
+
+
 typedef enum
 {
     /*
@@ -358,6 +370,14 @@ typedef enum
     SDID_SCREENSHOT,
     SDID_ESC
 } e_key_id;
+
+/* Keep each profile's native key-array positions and script constants. */
+#define SDID_ATTACK2 ((obor_profile_features & OBOR_PROFILE_LNS_6330) ? 9 : SDID_ATTACK2)
+#define SDID_ATTACK3 ((obor_profile_features & OBOR_PROFILE_LNS_6330) ? 5 : SDID_ATTACK3)
+#define SDID_ATTACK4 ((obor_profile_features & OBOR_PROFILE_LNS_6330) ? 6 : SDID_ATTACK4)
+#define SDID_JUMP ((obor_profile_features & OBOR_PROFILE_LNS_6330) ? 7 : SDID_JUMP)
+#define SDID_SPECIAL ((obor_profile_features & OBOR_PROFILE_LNS_6330) ? 8 : SDID_SPECIAL)
+
 
 typedef enum
 {
@@ -1643,6 +1663,11 @@ typedef struct
     unsigned compatibleversion;
     unsigned highsc[10];
     char hscoren[10][MAX_NAME_LEN];
+    char hscorei[10][3];
+    bool is1CC[10];
+    unsigned short mode;
+    unsigned short difficulty;
+    unsigned short credits;
 } s_savescore;
 
 typedef struct
@@ -2222,6 +2247,8 @@ typedef struct
     s_boomerang_props boomerang_prop;
     int bomb; // New projectile type for exploding bombs/grenades/dynamite
     int flash; // Now each entity can have their own flash
+    int flashoverridesource;
+    int flashoverridetarget;
     int bflash; // Flash that plays when an attack is blocked
     s_dust dust; //Spawn entity during certain actions.
     s_axis_plane_vertical_int size; // Used to set height of player in pixels
@@ -2328,6 +2355,10 @@ typedef struct
     int hitwalltype; // wall type to toggle hitwall animations
     e_ModelFreetype freetypes;
     s_scripts *scripts;
+    int noexplode;
+    int ignore_projectile_wall_collision;
+    int selectcol;
+    bool quickload;
 } s_model;
 
 typedef struct
@@ -2337,6 +2368,9 @@ typedef struct
     s_model *model;
     int loadflag;
     int selectable;
+    bool player;
+    int clearcount;
+    int selectcol;
 } s_modelcache;
 s_modelcache *model_cache;
 
@@ -2531,6 +2565,10 @@ typedef struct entity
     unsigned int attack_id_incoming2;
     unsigned int attack_id_incoming3;
     unsigned int attack_id_incoming4;
+    unsigned int lns_attack_id_incoming[100];
+    unsigned int lns_attack_id_incoming_index;
+    int override_next_force_direction;
+    int next_force_direction;
     unsigned int attack_id_outgoing;
     int hitwall; // == 1 in the instant that hit the wall/platform/obstacle, else == 0
     unsigned char *colourmap;
@@ -2677,6 +2715,7 @@ typedef struct
     int saveflag;
     int nosame;
     int noshowcomplete;
+    s_savescore *savescore;
 } s_set_entry;
 
 typedef struct
@@ -2740,6 +2779,7 @@ typedef struct
     float x;
     float z;
     int type;
+    int ignore_projectile_wall_collision;
 } s_terrain;
 
 typedef struct
@@ -2963,7 +3003,18 @@ void remove_from_cache(char *name);
 void free_modelcache();
 int get_cached_model_index(char *name);
 char *get_cached_model_path(char *name);
+/* Internal request, never forwarded from content or script arguments. */
+#define OBOR_LNS_QUICK_MODEL 67
+#define MAX_SEL_PLAYERS 200
 s_model *load_cached_model(char *name, char *owner, char unload);
+void preload_cached_model(char *name);
+s_model *nextplayermodelcol(s_model *current);
+s_model *nextplayermodelcoln(s_model *current, int p);
+s_model *prevplayermodelcol(s_model *current);
+s_model *prevplayermodelcoln(s_model *current, int p);
+s_model *selectrandomplayer(s_model *current);
+int selectrandomcolourmap(s_model *current, int p);
+void unload_model(s_model *model);
 int is_set(s_model *model, int m);
 int load_script_setting();
 int load_models();
@@ -3046,6 +3097,7 @@ void set_blocking_action(entity *ent, entity *other, s_collision_attack *attack)
 entity *spawn_attack_flash(entity *ent, s_collision_attack *attack, int attack_flash, int model_flash);
 
 int projectile_wall_deflect(entity *ent);
+int check_projectile_wall_collision(entity *ent);
 
 void sort_invert_by_parent(entity *ent, entity* parent);
 
@@ -3096,6 +3148,7 @@ float get_platform_base(entity *);
 int is_on_platform(entity *);
 entity *get_platform_on(entity *);
 void do_item_script(entity *ent, entity *item);
+void obor_remember_attack(entity *target, unsigned int id);
 void do_attack(entity *e);
 int do_energy_charge(entity *ent);
 void adjust_base(entity *e, entity **pla);
@@ -3239,6 +3292,8 @@ int playgif(char *filename, int x, int y, int noskip);
 void playscene(char *filename);
 void gameover();
 void hallfame(int addtoscore);
+void hallfame_add(void);
+void hallfame_show(void);
 void showcomplete(int num);
 int playlevel(char *filename);
 int selectplayer(int *players, char *filename, int useSavedGame);
@@ -3254,6 +3309,7 @@ void inputrefresh(int playrecmode);
 
 int menu_difficulty();
 void menu_options();
+int allow_default_keys(void);
 void menu_options_config();
 void menu_options_debug();
 void menu_options_input();
@@ -3277,5 +3333,8 @@ void goto_mainmenu(int);
 
 extern s_savelevel   *savelevel;
 extern s_savescore    savescore;
+extern int cheatcode;
+extern int obor_lns_players[MAX_PLAYERS];
+extern int bonus;
 
 #endif

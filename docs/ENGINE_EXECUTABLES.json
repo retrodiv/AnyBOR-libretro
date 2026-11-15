@@ -1,7 +1,7 @@
 {
   "schema": 1,
   "purpose": "Verified engine executable identities, not game identities",
-  "catalog_sha256": "c2291687e5108c9de2ffcd12945c339db9478b0fd7a3f9aa0ec58f178fb3b6e7",
+  "catalog_sha256": "517fe9e0fbda63165ffba58b224e3869914ad5c7255e2cb8e07c515ba63c0134",
   "executables": [
     {
       "sha256": "000627b9380e4c93e0be0ab18c0a8bbed422ada582f6ba68cef1128fc0dad74c",
@@ -4853,6 +4853,20 @@
       "architecture": "mips"
     },
     {
+      "sha256": "1fe7382d63b2a4b39bb831cf3c7b4d6abec32badf9e6dd7846f36631da057304",
+      "build": 6330,
+      "variant": "mod",
+      "bytes": 3813390,
+      "format": "pe",
+      "platform": "windows",
+      "imohash": "8ee0e801cb65b43cb261623ddefd1316",
+      "architecture": "x86",
+      "provenance": {
+        "visibility": "private",
+        "receipt_sha256": "9e3e9f6981c04f311e425f9a58f7a15ac0f0406abf353efb20aee0e0f276835d"
+      }
+    },
+    {
       "sha256": "1ffe891a2eeb2931b792c4d2572ac8388b6ae0b066453591aa31437d8c5deb68",
       "build": 2818,
       "variant": "",
@@ -6476,6 +6490,20 @@
       "platform": "psp",
       "imohash": "b3d0e701a1385415af19d7d7ddd8b12c",
       "architecture": "mips"
+    },
+    {
+      "sha256": "2aae1c9e5839e428de98071d18335283920a5577ac773a4d4d7c48bc8b6def66",
+      "build": 6330,
+      "variant": "mod",
+      "bytes": 3602446,
+      "format": "pe",
+      "platform": "windows",
+      "imohash": "8ef0db01bae75f63ee0d70e01ecec85d",
+      "architecture": "x86",
+      "provenance": {
+        "visibility": "private",
+        "receipt_sha256": "f68e71619400bfce8c068e7e4e2e81a4a514af05f634c57f0de1adc36c10db91"
+      }
     },
     {
       "sha256": "2adfc6d02a40519306cef6658954007fbe9704d20602c6b0072c7bf2ef849673",

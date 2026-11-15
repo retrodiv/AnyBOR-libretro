@@ -1,0 +1,94 @@
+/* SPDX-License-Identifier: BSD-3-Clause
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me> */
+#include <assert.h>
+#include <stdbool.h>
+#include <stdint.h>
+#include <stdio.h>
+#include <string.h>
+#include <stdarg.h>
+#include @ABI@
+@LIMITS@
+typedef struct {int lives,credits,score,colourmap,weapnum,spawnhealth,spawnmp,hasplayed;char name[MAX_NAME_LEN];uintptr_t unused[3];void *ent;} Player;
+typedef struct {unsigned level,stage,credits,times_completed;int flag,pLives[4],pCredits[4],pScores[4],pColourmap[4],pWeapnum[4],pSpawnhealth[4],pSpawnmp[4];char pName[4][MAX_NAME_LEN],allowSelectArgs[64];} Save;
+typedef struct {int maxplayers,numlevels,noselect,noshowhof;} Set;
+typedef struct {char *skipselect[4],*filename;} Level;
+static unsigned obor_profile_features;
+static Player player[MAX_PLAYERS];
+static int flags[MAX_PLAYERS],current_level,current_stage,credits,bonus,nofadeout;
+static char skipselect[MAX_PLAYERS][MAX_NAME_LEN],branch_name[32];
+static struct Event {int kind,level,stage,credits,bonus,hasplayed,flag;unsigned completed,saved_level;char text[80];} events[32],expected_events[32];
+static unsigned event_count;
+static Save save_data;
+static int script_status,select_status;
+static void record(int kind,const char *text) {
+ assert(event_count<32);struct Event *event=&events[event_count++];memset(event,0,sizeof(*event));
+ event->kind=kind;event->level=current_level;event->stage=current_stage;event->credits=credits;event->bonus=bonus;event->completed=save_data.times_completed;event->saved_level=save_data.level;event->hasplayed=player[0].hasplayed;event->flag=flags[0];
+ if(text){assert(strlen(text)<80);strcpy(event->text,text);}
+}
+static int loadScriptFile(void) {record(1,NULL);return script_status;}
+static int captured_printf(const char *text,...) {record(2,text);return 0;}
+#define printf captured_printf
+static void load_playable_list(const char *text) {record(3,text);}
+static int selectplayer(int *players,char *name,int useSavedGame) {assert(players==flags);record(4,name);flags[0]=9;(void)useSavedGame;return select_status;}
+static int saveGameFile(void) {record(5,NULL);return 1;}
+static void fade_out(int a,int b) {assert(a==0 && b==0);record(6,NULL);}
+static void hallfame(int add) {assert(add==1);record(7,NULL);}
+static void sound_close_music(void) {record(8,branch_name);}
+@CANDIDATE@
+@ORIGINALS@
+#undef printf
+static void setup(unsigned family,unsigned names,unsigned lives) {
+ obor_profile_features=family==2?OBOR_PROFILE_LNS_6330:0;memset(player,0xa5,sizeof(player));memset(skipselect,0x6b,sizeof(skipselect));
+ memset(&save_data,0,sizeof(save_data));strcpy(save_data.allowSelectArgs,"AUTHORED");
+ for(unsigned p=0;p<4;++p) {
+  flags[p]=(int)p+3;player[p].lives=(int)((lives>>p)&1);player[p].hasplayed=19;
+  if(names&(1u<<p))snprintf(save_data.pName[p],MAX_NAME_LEN,"SAVED%u",p);
+  save_data.pLives[p]=2+p;save_data.pCredits[p]=5+p;save_data.pScores[p]=7+p;save_data.pColourmap[p]=9+p;
+  save_data.pWeapnum[p]=11+p;save_data.pSpawnhealth[p]=13+p;save_data.pSpawnmp[p]=15+p;
+  snprintf(skipselect[p],MAX_NAME_LEN,"CACHED%u",p);
+ }
+ current_level=17;current_stage=18;credits=19;bonus=20;nofadeout=0;script_status=select_status=1;event_count=0;memset(events,0,sizeof(events));strcpy(branch_name,"BRANCH");
+}
+static struct Result {Player players[4];int flags[4],level,stage,credits,bonus,returned;Save saved;char skip[4][MAX_NAME_LEN],branch[32];unsigned count;} expected;
+static void remember(int returned) {
+ memcpy(expected.players,player,sizeof(player));memcpy(expected.flags,flags,sizeof(flags));expected.level=current_level;expected.stage=current_stage;expected.credits=credits;expected.bonus=bonus;expected.returned=returned;expected.saved=save_data;
+ memcpy(expected.skip,skipselect,sizeof(skipselect));memcpy(expected.branch,branch_name,sizeof(branch_name));expected.count=event_count;memcpy(expected_events,events,event_count*sizeof(*events));
+}
+static void compare(int returned) {
+ assert(!memcmp(expected.players,player,sizeof(player)) && !memcmp(expected.flags,flags,sizeof(flags)));
+ assert(expected.level==current_level && expected.stage==current_stage && expected.credits==credits && expected.bonus==bonus && expected.returned==returned);
+ assert(!memcmp(&expected.saved,&save_data,sizeof(save_data)) && !memcmp(expected.skip,skipselect,sizeof(skipselect)) && !memcmp(expected.branch,branch_name,sizeof(branch_name)) && expected.count==event_count);
+ assert(!memcmp(expected_events,events,event_count*sizeof(*events)));
+}
+static int original_resume(unsigned family,int use,Set *set) {return family==0?official_resume(use,set,&save_data,flags):family==1?physical_resume(use,set,&save_data,flags):lns_resume(use,set,&save_data,flags);}
+static int original_selection(unsigned family,Set *set,Level *level) {return family==0?official_selection(set,level,flags,1):family==1?physical_selection(set,level,flags,1):lns_selection(set,level,flags,1);}
+static void original_completed(unsigned family,Set *set) {if(family==0)official_completed(set,&save_data);else if(family==1)physical_completed(set,&save_data);else lns_completed(set,&save_data);}
+static void original_cleanup(unsigned family) {if(family==0)official_cleanup();else if(family==1)physical_cleanup();else lns_cleanup();}
+int main(void) {
+ unsigned resumes=0,selections=0,completions=0;
+ for(unsigned family=0;family<3;++family)for(int use=0;use<3;++use)for(int flag=0;flag<4;++flag)for(unsigned saved_level=0;saved_level<7;++saved_level)for(unsigned name_mask=0;name_mask<16;++name_mask) {
+  Set set={1+(int)(name_mask%4),5,0,0};
+  setup(family,name_mask,0);save_data.flag=flag;save_data.level=saved_level;save_data.stage=3;save_data.credits=27;script_status=name_mask%2;
+  remember(original_resume(family,use,&set));
+  setup(family,name_mask,0);save_data.flag=flag;save_data.level=saved_level;save_data.stage=3;save_data.credits=27;script_status=name_mask%2;
+  compare(candidate_resume(use,&set,&save_data,flags));++resumes;
+ }
+ for(unsigned family=0;family<3;++family)for(unsigned mask=0;mask<16;++mask)for(unsigned lives=0;lives<16;++lives)for(int result=0;result<2;++result) {
+  Set set={4,5,1,0};Level level={ {NULL,NULL,NULL,NULL},"AUTHORED/SELECT"};
+  for(unsigned p=0;p<4;++p)if(mask&(1u<<p))level.skipselect[p]="provided";
+  setup(family,0,lives);select_status=result;remember(original_selection(family,&set,&level));int expected_noselect=set.noselect;
+  setup(family,0,lives);select_status=result;set.noselect=1;compare(candidate_selection(&set,&level,flags,1));assert(set.noselect==expected_noselect);++selections;
+ }
+ for(unsigned family=0;family<3;++family)for(int level=3;level<=6;++level)for(unsigned complete=0;complete<4;++complete)for(unsigned options=0;options<4;++options) {
+  Set set={4,5,0,(int)(options&1)};
+  setup(family,7,9);current_level=level;save_data.times_completed=complete;nofadeout=(options>>1)&1;original_completed(family,&set);remember(0);
+  setup(family,7,9);current_level=level;save_data.times_completed=complete;nofadeout=(options>>1)&1;candidate_completed(&set,&save_data);compare(0);++completions;
+ }
+ for(unsigned family=0;family<3;++family) {
+  setup(family,3,10);original_cleanup(family);remember(0);setup(family,3,10);candidate_cleanup();compare(0);
+ }
+ /* Retain the physical family's existing bounded-name correction. */
+ setup(2,1,0);save_data.flag=2;save_data.level=1;memset(save_data.pName[0],'q',MAX_NAME_LEN);Set set={4,5,0,0};
+ assert(candidate_resume(1,&set,&save_data,flags)==1 && player[0].name[MAX_NAME_LEN-1]==0);
+ fprintf(stderr,"Resume/selection/completion comparisons: %u/%u/%u\n",resumes,selections,completions);return 0;
+}

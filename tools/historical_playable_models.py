@@ -147,6 +147,8 @@ static void check_limits(const struct limit_context *ctx){
 #undef assert
 #define assert(c) do{if(!(c)){fprintf(stderr,"playable models revision=%u line=%d: %s\n",obor_profile_build,__LINE__,#c);abort();}}while(0)
 uint32_t obor_profile_build;
+uint32_t obor_profile_features;
+int cheatcode;
 s_modelcache *model_cache;
 @READER_GLOBALS@
 static s_model models[3];static s_modelcache cache_slots[4];

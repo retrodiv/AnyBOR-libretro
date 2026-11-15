@@ -1,7 +1,7 @@
 {
   "core_name": "AnyBOR",
   "core_basename": "anybor_libretro",
-  "version": "0.2.29",
+  "version": "0.2.30",
   "fallback_build": "6391",
   "profiles": [
     {
@@ -2829,6 +2829,27 @@
       "automatic": true,
       "major": "v3.0",
       "auto_until": 6330
+    },
+    {
+      "build": "6330-mod",
+      "revision": "6330",
+      "engine": "6391",
+      "major": "v3.0",
+      "stage": "mod",
+      "covers": "Modified 6330 LNS v0.10g behavior; explicit variant tag or core option, with independently bound native-capability detection.",
+      "automatic": false,
+      "tagged": true,
+      "triage": false,
+      "features": [
+        "lns_6330"
+      ],
+      "reconstruction": {
+        "basis": "Reconstruction of the published modified 6330 LNS v0.10g source with contributions by Hechelion and Gonzalo MVP; no claim of complete binary equivalence or author endorsement.",
+        "source_repository": "https://github.com/AveyondFly/openbor-fflns",
+        "source_commits": [
+          "cfb4f3a676613714757d4539275482f7c323d6ad"
+        ]
+      }
     },
     {
       "build": "6391",

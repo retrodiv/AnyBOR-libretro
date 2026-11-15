@@ -1,10 +1,12 @@
-/* AnyBOR modification record: 2026-10-05.
+/* AnyBOR modification record: 2026-11-15.
  * Port maintained by retrodiv <retrodiv@proton.me>.
  * Copyright (c) 2026 retrodiv <retrodiv@proton.me> (original contributions).
  * These contributions are licensed under BSD-3-Clause; see LICENSE at the root.
  * Upstream code retains its original license and notices.
  * Expose the cache descriptor for resource restoration and initialize it to
- * -1.
+ * -1. Preserve the modified 6330 unsigned cache arithmetic in a separately
+ * compiled copy and select the valid emergency-read descriptor before
+ * reading its readahead length.
  * Existing changes recorded here; this is not their implementation date.
  * See MODIFICATIONS.md and docs/modifications/6391.md
  * at the source repository root. Original notices follow below.
@@ -16,6 +18,7 @@
 //
 /////////////////////////////////////////////////////////////////////////////
 
+#include "anybor_lns_pak.h"
 #include <stdio.h>
 #include <string.h>
 #include <unistd.h>
@@ -33,9 +36,9 @@
 
 /////////////////////////////////////////////////////////////////////////////
 
-static int filecache_blocksize;
-static int filecache_blocks;
-static int max_vfds;
+static obor_pak_int filecache_blocksize;
+static obor_pak_int filecache_blocks;
+static obor_pak_int max_vfds;
 
 //static int default_minimum_run_bytes = 98304;
 static int default_minimum_run_bytes = 131072;
@@ -46,10 +49,14 @@ static int default_minimum_run_bytes = 131072;
 // fd for pak file
 // lba for pak file (if negative)
 /* Process resource retained across libretro state restores. */
+#ifdef OBOR_LNS_PAK_IMPL
+extern int real_pakfd;
+#else
 int real_pakfd = -1;
+#endif
 
 // total number of blocks in the pak
-static int total_pakblocks;
+static obor_pak_int total_pakblocks;
 
 // BLOCKSIZE * BLOCKS; be sure to 64-byte-align
 static unsigned char *filecache;
@@ -99,21 +106,21 @@ static void cacheblock_mark_used(unsigned n)
 
 // current read pointer (round down)
 // -1 if not open
-static int *vfd_readptr_pakblock;
+static obor_pak_int *vfd_readptr_pakblock;
 // desired readahead in blocks
-static int *vfd_desired_readahead_blocks;
+static obor_pak_int *vfd_desired_readahead_blocks;
 // starting block of each open vfd
 // these blocks are immune to being replaced in the cache
-static int *vfd_startptr_pakblock;
+static obor_pak_int *vfd_startptr_pakblock;
 
 // THIS IS TEMPORARY; DO NOT RELY ON THIS VALUE
-static int *vfd_blocks_available;
+static obor_pak_int *vfd_blocks_available;
 
 // requested read block
 static int request_read_pakblock = -1;
 
 // avoid going off the end of the track for gdroms
-static int filecache_maxcdsectors;
+static obor_pak_int filecache_maxcdsectors;
 
 /////////////////////////////////////////////////////////////////////////////
 //
@@ -259,7 +266,7 @@ int which_pakblock_to_read(int *suggested_min_run)
     {
         if(suggested_min_run)
         {
-            *suggested_min_run = vfd_desired_readahead_blocks[vfd] / 4;
+            *suggested_min_run = vfd_desired_readahead_blocks[least_avail] / 4;
         }
         return vfd_readptr_pakblock[least_avail] + vfd_blocks_available[least_avail];
     }
@@ -316,6 +323,10 @@ static int pakblock_run_min = 1;
 
 void filecache_process(void)
 {
+#ifndef OBOR_LNS_PAK_IMPL
+    if(obor_profile_features & OBOR_PROFILE_LNS_6330) { obor_lns_filecache_process(); return; }
+#endif
+
     int vfd;
     int least_useful_cacheblock;
     int cacheblock_read;
@@ -469,8 +480,12 @@ void filecache_process(void)
 // attempt to read a block
 // returns the number of bytes read or 0 on error
 //
-int filecache_readpakblock(unsigned char *dest, int pakblock, int startofs, int bytes, int blocking)
+int filecache_readpakblock(unsigned char *dest, obor_pak_int pakblock, int startofs, int bytes, int blocking)
 {
+#ifndef OBOR_LNS_PAK_IMPL
+    if(obor_profile_features & OBOR_PROFILE_LNS_6330) { return obor_lns_filecache_readpakblock(dest, pakblock, startofs, bytes, blocking); }
+#endif
+
     int cacheblock;
     if(pakblock < 0 || pakblock >= total_pakblocks)
     {
@@ -523,8 +538,12 @@ int filecache_readpakblock(unsigned char *dest, int pakblock, int startofs, int 
 //
 // set up where the vfd pointers are
 //
-void filecache_setvfd(int vfd, int start, int block, int readahead)
+void filecache_setvfd(obor_pak_int vfd, obor_pak_int start, obor_pak_int block, obor_pak_int readahead)
 {
+#ifndef OBOR_LNS_PAK_IMPL
+    if(obor_profile_features & OBOR_PROFILE_LNS_6330) { obor_lns_filecache_setvfd(vfd, start, block, readahead); return; }
+#endif
+
     if(vfd < 0 || vfd >= max_vfds)
     {
         return;
@@ -540,6 +559,10 @@ void filecache_setvfd(int vfd, int start, int block, int readahead)
 //
 void filecache_term()
 {
+#ifndef OBOR_LNS_PAK_IMPL
+    if(obor_profile_features & OBOR_PROFILE_LNS_6330) { obor_lns_filecache_term(); return; }
+#endif
+
     filecache_blocksize       = 32768;
     filecache_blocks          = 96;
     max_vfds                  = 8;
@@ -613,8 +636,12 @@ void filecache_term()
 //
 // BLOCKS MUST BE 255 OR LESS
 //
-void filecache_init(int realfd, int pakcdsectors, int blocksize, unsigned char blocks, int vfds)
+void filecache_init(int realfd, obor_pak_int pakcdsectors, obor_pak_int blocksize, unsigned char blocks, obor_pak_int vfds)
 {
+#ifndef OBOR_LNS_PAK_IMPL
+    if(obor_profile_features & OBOR_PROFILE_LNS_6330) { obor_lns_filecache_init(realfd, pakcdsectors, blocksize, blocks, vfds); return; }
+#endif
+
     int i;
 
 #ifdef PSP
@@ -701,8 +728,12 @@ void filecache_init(int realfd, int pakcdsectors, int blocksize, unsigned char b
 //
 // quick and dirty
 //
-void filecache_wait_for_prebuffer(int vfd, int nblocks)
+void filecache_wait_for_prebuffer(obor_pak_int vfd, obor_pak_int nblocks)
 {
+#ifndef OBOR_LNS_PAK_IMPL
+    if(obor_profile_features & OBOR_PROFILE_LNS_6330) { obor_lns_filecache_wait_for_prebuffer(vfd, nblocks); return; }
+#endif
+
     if(vfd_readptr_pakblock[vfd] < 0)
     {
         return;

@@ -1,0 +1,44 @@
+/* SPDX-License-Identifier: BSD-3-Clause
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me> */
+#include <assert.h>
+#include <stdint.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include "openbor.h"
+#undef printf
+void exitIfFalse(int value,const char *condition,const char *func,const char *file,int line) {
+ if(!value){fprintf(stderr,"%s:%d %s: %s\n",file,line,func,condition);abort();}
+}
+uint32_t obor_profile_features;
+static s_set_entry sets[3],*levelsets=sets;
+static s_savelevel slots[3],expected[3];
+s_savelevel *savelevel=slots;
+static s_player player[MAX_PLAYERS];
+static int current_set,current_level,current_stage,credits;
+static char allowselect_args[MAX_ALLOWSELECT_LEN];
+@CODE@
+static void reset(unsigned seed) {
+ memset(slots,(int)(seed%251),sizeof(slots));
+ for(unsigned p=0;p<MAX_PLAYERS;++p) {
+  memset(&player[p],0,sizeof(player[p]));
+  player[p].lives=seed+p;player[p].credits=seed*2+p;player[p].score=seed*333+p;
+  player[p].spawnhealth=(int)seed-5;player[p].spawnmp=(int)seed*2-10;
+  player[p].weapnum=(int)(seed%5)-2;player[p].colourmap=(int)(seed%3)-1;
+  snprintf(player[p].name,MAX_NAME_LEN,"PLAYER_%u_%u",seed,p);
+ }
+ current_level=(int)seed;current_stage=(int)seed*2;credits=(int)seed-10;
+ for(unsigned i=0;i<sizeof(allowselect_args);++i)allowselect_args[i]=(char)('A'+i%26);
+}
+int main(void) {
+ unsigned cases=0;
+ for(obor_profile_features=0;obor_profile_features<8;++obor_profile_features)
+  for(unsigned family=0;family<3;++family)for(current_set=0;current_set<3;++current_set)
+   for(int players=0;players<=MAX_PLAYERS;++players)for(unsigned seed=0;seed<16;++seed) {
+    for(int i=0;i<3;++i){memset(&sets[i],0,sizeof(sets[i]));sets[i].maxplayers=players;sets[i].saveflag=(int)(seed%5)-1;sets[i].name="SYNTHETIC";}
+    reset(seed);
+    if(obor_profile_features&OBOR_PROFILE_LNS_6330)lns_savelevel();else if(family==0)official_savelevel();else physical_savelevel();
+    memcpy(expected,slots,sizeof(slots));reset(seed);candidate_savelevel();assert(!memcmp(expected,slots,sizeof(slots)));++cases;
+   }
+ assert(cases==5760);fprintf(stderr,"Complete savelevel record/version comparisons: %u\n",cases);return 0;
+}

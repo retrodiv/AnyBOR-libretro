@@ -1,0 +1,47 @@
+/* SPDX-License-Identifier: BSD-3-Clause
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me> */
+#include <assert.h>
+#include <stdio.h>
+#include <stdarg.h>
+#include <stdint.h>
+#include <stdlib.h>
+#include <string.h>
+#include @ABI@
+static unsigned obor_profile_features;
+static int cheatcode,bonus,DEFAULT_OFFSCREEN_KILL,printFileUsageStatistics;
+static char output[4096],expected_output[4096];
+static unsigned output_length;
+static int captured_printf(const char *format,...) {
+ va_list args;va_start(args,format);int n=vsnprintf(output+output_length,sizeof(output)-output_length,format,args);va_end(args);
+ assert(n>=0 && (unsigned)n<sizeof(output)-output_length);output_length+=(unsigned)n;return n;
+}
+#define printf captured_printf
+@CODE@
+#undef printf
+static void reset(unsigned family) {
+ obor_profile_features=family==2?OBOR_PROFILE_LNS_6330:0;
+ cheatcode=-77;bonus=-88;DEFAULT_OFFSCREEN_KILL=91;printFileUsageStatistics=92;output_length=0;memset(output,0,sizeof(output));
+}
+static void check(unsigned family,int argc,char **argv) {
+ char *original[4];memcpy(original,argv,sizeof(original));
+ reset(family);if(family==0)official_args(argc,argv);else if(family==1)physical_args(argc,argv);else lns_args(argc,argv);
+ int expected[]={cheatcode,bonus,DEFAULT_OFFSCREEN_KILL,printFileUsageStatistics};unsigned wanted_length=output_length;memcpy(expected_output,output,sizeof(output));
+ assert(!memcmp(original,argv,sizeof(original)));
+ reset(family);candidate_args(argc,argv);
+ int actual[]={cheatcode,bonus,DEFAULT_OFFSCREEN_KILL,printFileUsageStatistics};
+ assert(!memcmp(actual,expected,sizeof(actual)) && output_length==wanted_length && !memcmp(output,expected_output,sizeof(output)) && !memcmp(original,argv,sizeof(original)));
+}
+int main(void) {
+ char *tokens[]={"ordinary","cheatcode=","cheatcode=0","cheatcode=1","cheatcode=-1","cheatcode=-99",
+ "cheatcode=2147483647","cheatcode=-2147483648","cheatcode=+7","cheatcode=0012","cheatcode=12suffix",
+ "cheatcode=0x20","cheatcode=12.8","cheatcode= 12","cheatcode=-","cheatcode=x","CHEATCODE=7","xcheatcode=7","cheatcode =7","cheatcode=\xff"};
+ char *firsts[]={"ordinary","offscreenkill=12","showfilesused=3","offscreenkill=-9","showfilesused=bogus","cheatcode=17"};
+ unsigned cases=0;
+ for(unsigned family=0;family<3;++family)for(unsigned value=0;value<sizeof(tokens)/sizeof(*tokens);++value)for(unsigned first=0;first<sizeof(firsts)/sizeof(*firsts);++first) {
+  char *argv[]={"program",firsts[first],"cheatcode=5",tokens[value]};
+  check(family,0,argv);check(family,1,argv);check(family,4,argv);cases+=3;
+  argv[2]=tokens[value];check(family,3,argv);++cases;
+  argv[1]=tokens[value];check(family,2,argv);++cases;
+ }
+ fprintf(stderr,"Native argument comparisons: %u\n",cases);return 0;
+}

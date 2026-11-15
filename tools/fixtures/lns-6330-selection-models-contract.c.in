@@ -1,0 +1,181 @@
+/* SPDX-License-Identifier: BSD-3-Clause
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me> */
+#include <assert.h>
+#include <stdbool.h>
+#include <stdint.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <strings.h>
+#include <setjmp.h>
+#include <limits.h>
+#include @ABI@
+#define MAX_PLAYERS 4
+#define MAX_SEL_PLAYERS 200
+#define MAX_ARG_LEN 1024
+#define MAX_ARG_COUNT 128
+#define MAX_ALLOWSELECT_LEN 1024
+#define OBOR_LNS_QUICK_MODEL 67
+#define TYPE_PLAYER 1
+#define TYPE_ENEMY 2
+#define stricmp strcasecmp
+typedef struct {size_t count,arglen[MAX_ARG_COUNT];char *args[MAX_ARG_COUNT];} ArgList;
+#define GET_ARG(n) (arglist.count>(n)?arglist.args[n]:"")
+typedef struct {char *name;int type,secret,clearcount,selectcol,maps_loaded,unload,quickload;
+ struct {int frozen,hide_start,hide_end;} maps;} s_model;
+typedef struct {char *name;s_model *model;int selectable,clearcount,selectcol,player;} Cache;
+typedef struct {int nosame;} s_set_entry;
+static Cache model_cache[256],saved_cache[256];
+static s_model pool[256],saved_pool[256],external;
+static struct {char name[32];int colourmap;} player[MAX_PLAYERS];
+static s_set_entry levelsets[1];
+static char names[256][16],allowselect_args[MAX_ALLOWSELECT_LEN];
+static int models_cached,current_set,bonus,allow_secret_chars,colourselect,cheatcode;
+static unsigned obor_profile_features;
+static uint32_t rng,initial_rng;
+static jmp_buf failure;
+static struct {int loads,index[256],unload[256],quick[256];} trace;
+static uint32_t rand32(void) {rng=rng*1664525u+1013904223u;return rng;}
+static void borShutdown(int code,const char *format,...) {(void)code;(void)format;longjmp(failure,1);}
+static int get_cached_model_index(const char *name) {
+ for(int i=0;i<models_cached;++i)if(!strcasecmp(name,model_cache[i].name))return i;
+ return -1;
+}
+static s_model *findmodel(const char *name) {
+ int index=get_cached_model_index(name);return index<0?NULL:model_cache[index].model;
+}
+static s_model *load_record(char *name,char *owner,char unload,bool quickload) {
+ assert(!strcmp(owner,"select_screen"));int i=get_cached_model_index(name);assert(i>=0);
+ assert(trace.loads<256);int n=trace.loads++;trace.index[n]=i;trace.unload[n]=unload;trace.quick[n]=quickload;
+ pool[i].unload=unload;pool[i].quickload=quickload;return model_cache[i].model=&pool[i];
+}
+static s_model *load_cached_model(char *name,char *owner,char unload) {
+ return load_record(name,owner,unload==OBOR_LNS_QUICK_MODEL?3:unload,unload==OBOR_LNS_QUICK_MODEL);
+}
+static s_model *original_load_cached_model(char *name,char *owner,char unload,bool quickload) {
+ return load_record(name,owner,unload,quickload);
+}
+@PARSER@
+/* Internal prototypes preserve the engine header's declaration order. */
+s_model *nextplayermodelcol(s_model *),*prevplayermodelcol(s_model *);
+int selectrandomcolourmap(s_model *,int);
+@CANDIDATE@
+@ORIGINALS@
+static void preserve(void) {
+ memcpy(saved_cache,model_cache,sizeof(model_cache));memcpy(saved_pool,pool,sizeof(pool));initial_rng=rng;
+}
+static void restore(void) {
+ memcpy(model_cache,saved_cache,sizeof(model_cache));memcpy(pool,saved_pool,sizeof(pool));rng=initial_rng;
+ memset(&trace,0,sizeof(trace));memset(allowselect_args,0,sizeof(allowselect_args));
+}
+static int model_index(s_model *model) {
+ if(!model)return -1;
+ if(model==&external)return 256;
+ for(int i=0;i<256;++i)if(model==pool+i)return i;
+ assert(0);return -2;
+}
+typedef struct {int failed,result;uint32_t random;
+ unsigned char calls[sizeof(trace)];int selectable[256],loaded[256],quick[256];char allowed[MAX_ALLOWSELECT_LEN];} Result;
+static Result observe(int op,int variant,int current,int p,const char *line,int which) {
+ Result r;memset(&r,0,sizeof(r));restore();s_model *model=current<0?NULL:current==256?&external:&pool[current];
+ if(setjmp(failure))r.failed=1;
+ else if(op<10) {
+  s_model *result=NULL;
+  switch(op) {
+   case 0:result=variant?lns_nextplayermodel(model):nextplayermodel(model);break;
+   case 1:result=variant?lns_prevplayermodel(model):prevplayermodel(model);break;
+   case 2:result=variant?lns_nextplayermodeln(model,p):nextplayermodeln(model,p);break;
+   case 3:result=variant?lns_prevplayermodeln(model,p):prevplayermodeln(model,p);break;
+   case 4:result=variant?lns_nextplayermodelcol(model):nextplayermodelcol(model);break;
+   case 5:result=variant?lns_prevplayermodelcol(model):prevplayermodelcol(model);break;
+   case 6:result=variant?lns_nextplayermodelcoln(model,p):nextplayermodelcoln(model,p);break;
+   case 7:result=variant?lns_prevplayermodelcoln(model,p):prevplayermodelcoln(model,p);break;
+   case 8:result=variant?lns_selectrandomplayer(model):selectrandomplayer(model);break;
+   case 9:r.result=variant?lns_selectrandomcolourmap(model,p):selectrandomcolourmap(model,p);break;
+  }
+  if(op!=9)r.result=model_index(result);
+ } else if(op==10) {if(variant==2)official_reset_playable_list(which);else if(variant)lns_reset_playable_list(which);else reset_playable_list(which);}
+ else if(op==11) {if(variant==2)official_load_playable_list((char *)line);else if(variant)lns_load_playable_list((char *)line);else load_playable_list((char *)line);}
+ else {
+  s_model *result=op==12?official_nextplayermodel(model):op==13?official_prevplayermodel(model):
+   op==14?official_nextplayermodeln(model,p):official_prevplayermodeln(model,p);
+  r.result=model_index(result);
+ }
+ r.random=rng;memcpy(r.calls,&trace,sizeof(trace));memcpy(r.allowed,allowselect_args,sizeof(r.allowed));
+ for(int i=0;i<models_cached;++i) {
+  r.selectable[i]=model_cache[i].selectable;r.loaded[i]=model_cache[i].model!=NULL;r.quick[i]=pool[i].quickload;
+ }
+ return r;
+}
+static void compare(int op,int current,int p,const char *line,int which) {
+ Result reference=observe(op,1,current,p,line,which),candidate=observe(op,0,current,p,line,which);
+ assert(!memcmp(&reference,&candidate,sizeof(reference)));
+}
+static void initialize(unsigned seed,int count) {
+ memset(model_cache,0,sizeof(model_cache));memset(pool,0,sizeof(pool));memset(player,0,sizeof(player));
+ models_cached=count;rng=seed;bonus=(int)(seed%5)-1;allow_secret_chars=(seed>>3)&1;colourselect=(seed>>4)&1;
+ levelsets[0].nosame=(seed>>5)&3;cheatcode=0;
+ for(int i=0;i<count;++i) {
+  snprintf(names[i],sizeof(names[i]),"model%d",i);
+  pool[i]=(s_model){.name=names[i],.type=(rand32()&1)?TYPE_PLAYER:TYPE_ENEMY,.secret=(rand32()&1),
+    .clearcount=(int)(rand32()%4),.selectcol=1+(int)(rand32()%3),.maps_loaded=1+(int)(rand32()%5)};
+  model_cache[i]=(Cache){.name=names[i],.model=(rand32()&1)?&pool[i]:NULL,.selectable=(rand32()&1),
+    .clearcount=(int)(rand32()%4),.selectcol=1+(int)(rand32()%3),.player=0};
+ }
+ external=(s_model){.name="outside",.selectcol=2,.maps_loaded=3};
+ for(int i=0;i<4;++i)strcpy(player[i].name,"not_selected");
+ preserve();
+}
+int main(void) {
+ obor_profile_features=OBOR_PROFILE_LNS_6330;
+ for(unsigned seed=1;seed<=600;++seed) {
+  initialize(seed,1+(int)(seed%8));
+  int current=seed%3==0?-1:seed%3==1?(int)(seed%(unsigned)models_cached):256;
+  for(int op=0;op<12;++op) {
+   if(((op>=4 && op<=7) || op==9) && current<0)continue;
+   compare(op,current,0,"allowselect model0",(int)(seed%3)-1);
+  }
+ }
+ /* Same-player exclusions are exercised with an available alternate. */
+ for(int direction=0;direction<4;++direction)for(int current=0;current<8;++current) {
+  initialize(42,8);bonus=9;levelsets[0].nosame=1;
+  for(int i=0;i<8;++i){model_cache[i].selectable=1;model_cache[i].selectcol=pool[i].selectcol=1;}
+  strcpy(player[1].name,"model1");strcpy(player[2].name,"model2");strcpy(player[3].name,"model3");preserve();
+  compare(direction<2?2+direction:4+direction,current,0,NULL,0);compare(8,current,0,NULL,0);
+ }
+ const char *lines[]={"allowselect model0 model2","ALLOWSELECT model1","other model0","allowselect absent model1","allowselect"};
+ for(int cheat=-1;cheat<=1;++cheat)for(unsigned n=0;n<sizeof(lines)/sizeof(*lines);++n) {
+  initialize(1,3);cheatcode=cheat;preserve();compare(11,0,0,lines[n],0);
+ }
+ /* Native random selection stops after its first 200 candidates. */
+ initialize(22,240);bonus=9;levelsets[0].nosame=0;
+ for(int i=0;i<240;++i)model_cache[i].selectable=1;
+ preserve();
+ for(unsigned seed=0;seed<256;++seed){initial_rng=seed;compare(8,0,0,NULL,0);}
+ /* Normal and adjacent modified profiles retain official loaded-model rules. */
+ for(int feature=0;feature<2;++feature)for(unsigned seed=0;seed<300;++seed) {
+  obor_profile_features=feature?OBOR_PROFILE_ATTACK_HISTORY_FOUR:0;initialize(seed,8);
+  for(int op=0;op<4;++op) {
+   Result reference=observe(12+op,0,0,0,NULL,0),candidate=observe(op,0,0,0,NULL,0);
+   assert(!memcmp(&reference,&candidate,sizeof(reference)));
+  }
+  for(int op=10;op<12;++op) {
+   /* The original ordinary reader dereferences an absent loaded model;
+    * compare only its defined route. Missing models have safety controls
+    * in the maintained playable-list suite. */
+   if(op==11){restore();model_cache[0].model=&pool[0];preserve();}
+   Result reference=observe(op,2,0,0,"allowselect model0",1),candidate=observe(op,0,0,0,"allowselect model0",1);
+   assert(!memcmp(&reference,&candidate,sizeof(reference)));
+  }
+ }
+ obor_profile_features=OBOR_PROFILE_LNS_6330;
+ initialize(1,2);preserve();assert(observe(4,0,-1,0,NULL,0).failed);
+ assert(observe(9,0,-1,0,NULL,0).result==0);
+ pool[0].maps_loaded=0;preserve();Result zero=observe(9,0,0,0,NULL,0);assert(!zero.failed && zero.result==0 && zero.random==initial_rng);
+ /* No free model in a column must fail rather than spin forever. */
+ initialize(1,2);bonus=9;levelsets[0].nosame=1;
+ for(int i=0;i<2;++i){model_cache[i].selectable=1;model_cache[i].model=&pool[i];model_cache[i].selectcol=pool[i].selectcol=i+1;}
+ strcpy(player[0].name,"outside");strcpy(player[1].name,"model0");preserve();
+ assert(observe(6,0,0,0,NULL,0).failed);
+ return 0;
+}

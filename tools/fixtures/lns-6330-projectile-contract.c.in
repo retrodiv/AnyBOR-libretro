@@ -1,0 +1,197 @@
+/* SPDX-License-Identifier: BSD-3-Clause
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me> */
+#include <assert.h>
+#include <stdbool.h>
+#include <stddef.h>
+#include <stdint.h>
+#include <limits.h>
+#include <math.h>
+#include <string.h>
+enum { DIRECTION_LEFT=0, DIRECTION_RIGHT=1, TYPE_OBSTACLE=7,
+       PLATFORM_HEIGHT=7, SPAWN_TYPE_FLASH=12, ANI_ATTACK2=2, ANI_ATTACK1=3,
+       SAMPLE_BLOCK=17 };
+typedef struct {int width,height,y;} Hitbox;
+typedef struct {Hitbox *coords;int pause_add;} s_collision_attack;
+typedef struct {s_collision_attack **instance;size_t obor_instance_capacity;} AttackList;
+typedef struct Animation {
+    int numframes;
+    AttackList **collision_attack;
+    float (*platform)[8];
+    struct {int animation;} followup;
+    bool attackone;
+} Animation;
+typedef struct entity {
+    struct {int ignore_projectile_wall_collision,type,toflip;Animation **animation;} modeldata;
+    Animation *animation;
+    unsigned animpos;
+    int hitwall,direction,spawntype,autokill,toexplode,remove_on_attack,killed;
+    uint32_t pausetime,toss_time,nextmove,nextanim,nextthink;
+    struct {float x,y,z;} position;
+    float base;
+} entity;
+typedef struct {float height;int ignore_projectile_wall_collision;} Wall;
+typedef struct {Wall *walls;int numwalls;} Level;
+static entity actors[4],*self;
+static Animation animations[4],*model_animations[4];
+static Hitbox box;
+static s_collision_attack attack,*instances[1];
+static AttackList boxes,*frame_boxes[1];
+static float platform[1][8];
+static Wall walls[1];
+static Level current_level,*level;
+static int follows[3]={1,2,3},*animfollows=follows,max_follows=3;
+static uint32_t _time=123;
+static int equalairpause,airborne,wall_index,obstacle_present,valid_mask,spawn_success;
+static struct {int effectvol;} savedata;
+static struct {
+    unsigned count,events[32],inair_calls;
+    int probe_self,animation,reset,model,sample,volume;
+    int script_direction,script_autokill;
+    float script_base,x,y,z;
+} trace;
+static void event(unsigned value) {assert(trace.count<32);trace.events[trace.count++]=value;}
+static int check_block_wall(entity *e) {
+    assert(e==self);event(1);trace.probe_self=(int)(e-actors);return wall_index;
+}
+static entity *check_block_obstacle(entity *e) {
+    assert(e==self);event(2);return obstacle_present?actors+1:NULL;
+}
+static int inair(entity *e) {assert(e==actors);++trace.inair_calls;return airborne;}
+static entity *spawn(float x,float z,float y,int direction,void *name,int model,void *owner) {
+    assert(!name && !owner && !direction);event(3);
+    trace.x=x;trace.y=y;trace.z=z;trace.model=model;
+    return spawn_success?actors+3:NULL;
+}
+static void execute_onspawn_script(entity *e) {
+    assert(e==actors+3 && e->spawntype==SPAWN_TYPE_FLASH);event(4);
+    trace.script_direction=e->direction;trace.script_autokill=e->autokill;trace.script_base=e->base;
+}
+static int validanim(entity *e,int id) {
+    assert(e==actors);return id>=0 && id<4 && (valid_mask&(1<<id)) && e->modeldata.animation[id];
+}
+static void ent_set_anim(entity *e,int id,int reset) {
+    assert(e==actors && id>=0 && id<4);event(5);trace.animation=id;trace.reset=reset;
+    e->animation=e->modeldata.animation[id];
+}
+static void sound_play_sample(int sample,int loop,int left,int right,int speed) {
+    assert(sample==SAMPLE_BLOCK && !loop && left==right && speed==100);event(6);
+    trace.sample=sample;trace.volume=left;
+}
+static void kill_entity(entity *e) {assert(e==actors);event(7);e->killed=1;}
+@ORIGINAL@
+@INTEGER@
+@CANDIDATE@
+static uint32_t random_state;
+static unsigned pick(unsigned count) {
+    random_state^=random_state<<13;random_state^=random_state>>17;random_state^=random_state<<5;
+    return random_state%count;
+}
+static void setup(unsigned seed) {
+    random_state=seed+1;
+    animfollows=follows;max_follows=3;
+    memset(actors,0,sizeof(actors));memset(animations,0,sizeof(animations));
+    memset(&trace,0,sizeof(trace));memset(platform,0,sizeof(platform));
+    for(unsigned n=0;n<4;++n) {
+        animations[n].numframes=1;model_animations[n]=animations+n;
+        actors[n].animation=animations;actors[n].modeldata.animation=model_animations;
+    }
+    for(unsigned n=1;n<4;++n)animations[n].attackone=pick(2);
+    animations[0].attackone=pick(2);
+    box.width=1+(int)pick(9);box.height=5+(int)pick(11);box.y=(int)pick(8);
+    attack.coords=&box;attack.pause_add=(int)pick(5)-2;
+    instances[0]=&attack;boxes.instance=instances;boxes.obor_instance_capacity=1;
+    frame_boxes[0]=&boxes;animations[0].collision_attack=frame_boxes;
+    animations[0].platform=platform;platform[0][PLATFORM_HEIGHT]=12;
+    animations[0].followup.animation=(int)pick(4);
+    level=&current_level;current_level.walls=walls;current_level.numwalls=1;
+    wall_index=(int)pick(2)-1;walls[0].height=(float)pick(4)*10;
+    walls[0].ignore_projectile_wall_collision=(int)pick(3)-1;
+    obstacle_present=(int)pick(2);
+    actors[1].position.y=(float)pick(4)*10;
+    actors[1].modeldata.ignore_projectile_wall_collision=(int)pick(3)-1;
+    actors[1].modeldata.type=pick(2)?TYPE_OBSTACLE:0;
+    actors[0].position.x=-1.75f+(float)pick(4);
+    actors[0].position.y=20.75f;
+    actors[0].position.z=-1.5f+(float)pick(3);
+    actors[0].direction=(int)pick(4)-1;
+    actors[0].toexplode=(int)pick(4)-1;
+    actors[0].remove_on_attack=(int)pick(3)-1;
+    actors[0].pausetime=_time-1+pick(3);
+    actors[0].toss_time=UINT32_MAX-1;actors[0].nextmove=0;
+    actors[0].nextanim=17;actors[0].nextthink=UINT32_MAX;
+    actors[3].modeldata.toflip=(int)pick(3)-1;actors[3].direction=1;
+    actors[3].autokill=9;actors[3].base=31;
+    equalairpause=(int)pick(2);airborne=(int)pick(2);valid_mask=(int)pick(16);
+    spawn_success=(int)pick(2);savedata.effectvol=(int)pick(101);
+    actors[0].modeldata.ignore_projectile_wall_collision=pick(16)==0;
+    actors[0].hitwall=pick(16)==0;
+    /* The original deliberately passes global self rather than its argument. */
+    self=pick(2)?actors:actors+2;
+}
+typedef struct {
+    entity actors[4];
+    unsigned char trace[sizeof(trace)];
+    bool attackone[4];
+    int result;
+} Observation;
+static Observation observe(int result) {
+    Observation out;memset(&out,0,sizeof(out));
+    memcpy(out.actors,actors,sizeof(actors));memcpy(out.trace,&trace,sizeof(trace));
+    for(unsigned n=0;n<4;++n)out.attackone[n]=animations[n].attackone;
+    out.result=result;return out;
+}
+int main(void) {
+    unsigned hits=0,kills=0,animations_seen=0,flashes=0;
+    for(unsigned seed=0;seed<20000;++seed) {
+        setup(seed);Observation expected=observe(lns_original_projectile_wall_collision(actors));
+        setup(seed);Observation actual=observe(check_projectile_wall_collision(actors));
+        assert(!memcmp(&actual,&expected,sizeof(actual)));
+        hits+=(unsigned)actual.result;kills+=(unsigned)actors[0].killed;
+        if(trace.animation)animations_seen|=1U<<trace.animation;
+        flashes+=actors[3].spawntype==SPAWN_TYPE_FLASH;
+    }
+    assert(hits>100 && kills>100 && flashes>100 && (animations_seen&14)==14);
+    /* Malformed metadata is refused without dereferencing an inaccessible row. */
+    for(unsigned mode=0;mode<12;++mode) {
+        setup(7);actors[0].modeldata.ignore_projectile_wall_collision=0;actors[0].hitwall=0;
+        if(mode==0)level=NULL;
+        if(mode==1)animations[0].numframes=0;
+        if(mode==2)actors[0].animpos=UINT_MAX;
+        if(mode==3)animations[0].collision_attack=NULL;
+        if(mode==4)frame_boxes[0]=NULL;
+        if(mode==5)boxes.instance=NULL;
+        if(mode==6){boxes.instance=(void *)1;boxes.obor_instance_capacity=0;}
+        if(mode==7)instances[0]=NULL;
+        if(mode==8)attack.coords=NULL;
+        if(mode==9)actors[0].position.x=NAN;
+        if(mode==10)actors[0].position.z=INFINITY;
+        if(mode==11)actors[0].position.y=1500000000.0f;
+        assert(check_projectile_wall_collision(actors)==0 && !actors[0].hitwall && !trace.count);
+    }
+    setup(7);assert(check_projectile_wall_collision(NULL)==0);
+    for(unsigned mode=0;mode<6;++mode) {
+        setup(7);actors[0].modeldata.ignore_projectile_wall_collision=0;actors[0].hitwall=0;
+        wall_index=-1;obstacle_present=1;actors[1].modeldata.type=0;
+        actors[1].modeldata.ignore_projectile_wall_collision=0;
+        actors[1].animation=animations+1;animations[1].platform=platform;
+        if(mode==0)actors[1].animation=NULL;
+        if(mode==1)animations[1].numframes=0;
+        if(mode==2)actors[1].animpos=UINT_MAX;
+        if(mode==3)animations[1].platform=NULL;
+        if(mode==4){wall_index=INT_MAX;obstacle_present=0;}
+        if(mode==5){wall_index=0;current_level.walls=NULL;obstacle_present=0;}
+        assert(!check_projectile_wall_collision(actors) && !actors[0].hitwall);
+    }
+    for(unsigned mode=0;mode<2;++mode) {
+        setup(7);actors[0].modeldata.ignore_projectile_wall_collision=0;actors[0].hitwall=0;
+        wall_index=0;walls[0].height=100;walls[0].ignore_projectile_wall_collision=0;
+        animations[0].followup.animation=mode?-1:INT_MAX;animfollows=(void *)1;
+        actors[0].toexplode=0;valid_mask=0;
+        assert(check_projectile_wall_collision(actors)==1 && actors[0].hitwall);
+    }
+    int value=17;assert(!obor_lns_wall_integer(INFINITY,&value) && value==17);
+    assert(!obor_lns_wall_integer(NAN,&value) && value==17);
+    assert(obor_lns_wall_integer(INT_MIN,&value) && value==INT_MIN);
+    assert(obor_lns_wall_integer(INT_MAX,&value) && value==INT_MAX);
+    return 0;
+}

@@ -1,10 +1,11 @@
-/* AnyBOR modification record: 2026-10-05.
+/* AnyBOR modification record: 2026-11-15.
  * Port maintained by retrodiv <retrodiv@proton.me>.
  * Copyright (c) 2026 retrodiv <retrodiv@proton.me> (original contributions).
  * These contributions are licensed under BSD-3-Clause; see LICENSE at the root.
  * Upstream code retains its original license and notices.
  * Expose each logical profile's native constants and translate shared
- * selectors to native values.
+ * selectors to native values. Return the modified profile's native parser-
+ * capacity constant while preserving ordinary values.
  * Existing changes recorded here; this is not their implementation date.
  * See MODIFICATIONS.md and docs/modifications/6391.md
  * at the source repository root. Original notices follow below.
@@ -135,7 +136,10 @@ int mapstrings_transconst(ScriptVariant **varlist, int paramCount)
         ICMPCONST(MAX_ATTACKS)
         ICMPCONST(MAX_FOLLOWS)
         ICMPCONST(MAX_PLAYERS)
-        ICMPCONST(MAX_ARG_LEN)
+        else if(stricmp("MAX_ARG_LEN", constname) == 0)
+        {
+            v.lVal = (LONG)((obor_profile_features & OBOR_PROFILE_LNS_6330) ? MAX_ARG_LEN : 512);
+        }
         ICMPCONST(FLAG_ESC)
         ICMPCONST(FLAG_START)
         ICMPCONST(FLAG_MOVELEFT)

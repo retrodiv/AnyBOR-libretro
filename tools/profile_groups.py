@@ -9,6 +9,8 @@ from pathlib import Path
 import re
 import shlex
 
+PROFILE_COUNT_LIMITS = {'linux': 13, 'windows': 12, 'macos': 36}
+
 
 def balanced_boundaries(weights, count):
     """Minimize the largest contiguous group's measured cost, without omissions."""
@@ -163,7 +165,7 @@ def check_workflow_groups(workflow, profiles):
         # Bounded count partitions remain suitable for the faster hosts.
         # Revalidate these ceilings against measured step times when profiles
         # grow; scarce Intel hosts use the measured cost policy instead.
-        limit = 36 if platform == 'macos' else 12
+        limit = PROFILE_COUNT_LIMITS[platform]
         if not groups or any(len(group) > limit and ':' not in selector
                              for group, selector in zip(groups, selectors)):
             raise ValueError('CI profile group exceeds platform budget: ' + platform)

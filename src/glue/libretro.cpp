@@ -2578,6 +2578,15 @@ static void decide_engine(void)
     if (!build && (build = build_from_sidecar(g_pak_path)) != 0)
         how = "sidecar exe";
     int content_profile = 0;
+    if (!build && !g_raw && (obor_native_metadata_features(g_pak_path) & OBOR_PROFILE_LNS_6330)) {
+        for (int i = 0; i < n_avail; ++i) {
+            if (!(kProfiles[i].features & OBOR_PROFILE_LNS_6330)) continue;
+            explicit_profile = &kProfiles[i];
+            build = explicit_profile->build;
+            how = "bound native content capability";
+            break;
+        }
+    }
     if (!build && !g_raw) { /* the content scan reads the pak's file table */
         int cb = build_from_content(g_pak_path);
         if (!g_content_scan_complete)

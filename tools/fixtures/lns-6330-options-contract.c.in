@@ -1,0 +1,115 @@
+/* SPDX-License-Identifier: BSD-3-Clause
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me> */
+#include <assert.h>
+#include <stdint.h>
+#include <stdio.h>
+#include <string.h>
+#include <stdarg.h>
+#include <stdlib.h>
+#include <setjmp.h>
+#include @ABI@
+static unsigned obor_profile_features,obor_profile_build;
+@KEYS@
+@LIMITS@
+@RECORD@
+static s_savedata savedata;
+static int controloptionsMenu,soundoptionsMenu,systemoptionsMenu,videooptionsMenu;
+static int nodebugoptions,versusdamage,forcecheatsoff,cheats,current_set;
+static struct {int maxplayers;} levelsets[1];
+static struct Video {int hRes,vRes;} videomodes;
+static void *level;
+static uint32_t bothnewkeys;
+static int SAMPLE_BEEP,SAMPLE_BEEP2;
+#define SB_VOICEVOL 1
+#define KBYTES 1024
+#define Tr(text) (text)
+static struct Event {int kind,a,b,c,d,e;char text[160];} events[8192],expected_events[8192];
+static unsigned event_count,frames,input_count;
+static uint32_t input[40];
+static unsigned metric;
+static int device_ready,video_failure;
+static jmp_buf stopped;
+static void event(int kind,int a,int b,int c,int d,int e,const char *text) {
+ assert(event_count<8192);struct Event *entry=&events[event_count++];memset(entry,0,sizeof(*entry));entry->kind=kind;entry->a=a;entry->b=b;entry->c=c;entry->d=d;entry->e=e;
+ if(text){assert(strlen(text)<sizeof(entry->text));strcpy(entry->text,text);}
+}
+static int fontmonowidth(int font) {return 5+font*2+(int)metric;}
+static int fontheight(int font) {return 9+font+(int)metric;}
+static int font_string_width(int font,const char *format,...) {
+ char text[160];va_list args;va_start(args,format);int n=vsnprintf(text,sizeof(text),format,args);va_end(args);assert(n>=0 && n<160);return n*fontmonowidth(font);
+}
+static void font_printf(int x,int y,int font,int align,const char *format,...) {
+ char text[160];va_list args;va_start(args,format);int n=vsnprintf(text,sizeof(text),format,args);va_end(args);assert(n>=0 && n<160);event(1,x,y,font,align,0,text);
+}
+@MACROS@
+static void update(int active,int unused) {assert(active==(level!=NULL) && unused==0 && frames<input_count);bothnewkeys=input[frames++];event(2,active,(int)bothnewkeys,0,0,0,NULL);}
+static void sound_play_sample(int sample,int loop,int left,int right,int pitch) {assert(loop==0 && left==right);event(3,sample,left,pitch,0,0,NULL);}
+static void savesettings(void) {event(4,0,0,0,0,0,NULL);}
+static int control_getjoyenabled(void) {return device_ready;}
+static void control_usejoy(int enabled) {event(5,enabled,0,0,0,0,NULL);}
+static void control_init(int enabled) {device_ready=enabled!=0;event(6,enabled,0,0,0,0,NULL);}
+static void keyboard_setup(int p) {event(7,p,0,0,0,0,NULL);bothnewkeys=0;}
+static void menu_options_soundcard(void) {event(8,0,0,0,0,0,NULL);savedata.soundbits=savedata.soundbits==16?8:16;bothnewkeys=0;}
+static void menu_options_debug(void) {event(9,0,0,0,0,0,NULL);savedata.debug_position^=1;bothnewkeys=0;}
+static void menu_options_config(void) {event(10,0,0,0,0,0,NULL);savedata.uselog^=1;bothnewkeys=0;}
+static void SB_setvolume(int channel,int volume) {event(11,channel,volume,0,0,0,NULL);}
+static void sound_volume_music(int left,int right) {event(12,left,right,0,0,0,NULL);}
+static void music(char *name,int loop,int offset) {event(13,loop,offset,0,0,0,name);}
+static void sound_close_music(void) {event(14,0,0,0,0,0,NULL);}
+static void saveasdefault(void) {event(15,0,0,0,0,0,NULL);}
+static void loadfromdefault(void) {event(16,0,0,0,0,0,NULL);savedata.soundvol=7;savedata.musicvol=88;savedata.effectvol=99;savedata.gamma=8;savedata.vsync=1;}
+static void clearsettings(void) {event(17,0,0,0,0,0,NULL);memset(&savedata,0,sizeof(savedata));savedata.soundvol=15;savedata.effectvol=512;savedata.musicvol=512;}
+static void init_videomodes(int log) {assert(log==0);event(18,0,0,0,0,0,NULL);videomodes.hRes=400;videomodes.vRes=300;}
+static int video_set_mode(struct Video mode) {event(19,mode.hRes,mode.vRes,0,0,0,NULL);return !video_failure;}
+static void borShutdown(int status,const char *format,...) {
+ char text[160];va_list args;va_start(args,format);int n=vsnprintf(text,sizeof(text),format,args);va_end(args);assert(n>=0 && n<160 && status==1);event(20,status,0,0,0,0,text);longjmp(stopped,status);
+}
+static unsigned getSystemRam(int unit) {assert(unit==KBYTES);return 65536;}
+static unsigned getUsedRam(int unit) {assert(unit==KBYTES);return 16384;}
+static char *commaprint(unsigned number) {static char text[32];snprintf(text,sizeof(text),"%u",number);return text;}
+static void vga_vwait(void) {event(21,0,0,0,0,0,NULL);}
+static void set_color_correction(int gamma,int brightness) {event(22,gamma,brightness,0,0,0,NULL);}
+@CANDIDATE@
+@ORIGINALS@
+typedef void (*Menu)(void);
+static Menu actual[]={candidate_menu_options_input,candidate_menu_options_sound,candidate_menu_options_config,candidate_menu_options_debug,candidate_menu_options_system,candidate_menu_options_video};
+static Menu original[4][6]={
+ {official_menu_options_input,official_menu_options_sound,official_menu_options_config,official_menu_options_debug,official_menu_options_system,official_menu_options_video},
+ {physical_menu_options_input,physical_menu_options_sound,physical_menu_options_config,physical_menu_options_debug,physical_menu_options_system,physical_menu_options_video},
+ {lns_menu_options_input,lns_menu_options_sound,lns_menu_options_config,lns_menu_options_debug,lns_menu_options_system,lns_menu_options_video},
+ {previous_menu_options_input,previous_menu_options_sound,previous_menu_options_config,previous_menu_options_debug,previous_menu_options_system,previous_menu_options_video}};
+static struct Result {s_savedata settings;struct Video video;int control,sound,system,video_menu,ready,cheats,forceoff,returned;uint32_t keys;unsigned count,frames;} expected;
+static void reset(unsigned family,unsigned seed,int walk,uint32_t trigger,int fail) {
+ static const int boundary[]={-256,-248,248,256};
+ obor_profile_features=family==2?OBOR_PROFILE_LNS_6330:family==3?OBOR_PROFILE_ATTACK_HISTORY_FOUR:0;obor_profile_build=family==0 || family==2?6330:6391;
+ memset(&savedata,0,sizeof(savedata));savedata.soundvol=(int)seed*5;savedata.effectvol=seed&1?512:0;savedata.musicvol=seed&2?512:0;savedata.soundbits=16;savedata.soundrate=22050;savedata.usesound=1;
+ savedata.usemusic=seed&1;savedata.showtitles=(seed>>1)&1;savedata.usejoy=seed&1;savedata.uselog=(seed>>1)&1;savedata.mode=seed&1;savedata.brightness=boundary[seed];savedata.gamma=boundary[3-seed];savedata.windowpos=(int)seed*7-2;
+ savedata.debuginfo=seed&1;savedata.debug_position=(seed>>1)&1;savedata.debug_features=seed&1;savedata.debug_collision_entity=(seed>>1)&1;
+ controloptionsMenu=soundoptionsMenu=systemoptionsMenu=videooptionsMenu=0;nodebugoptions=seed&1;versusdamage=(int)seed;forcecheatsoff=seed&1;cheats=(seed>>1)&1;current_set=0;levelsets[0].maxplayers=1+(int)seed;
+ level=seed&1?&savedata:NULL;videomodes.hRes=320+(int)seed*20;videomodes.vRes=240+(int)seed*10;metric=seed%3;device_ready=(seed>>1)&1;video_failure=fail;SAMPLE_BEEP=seed&1?-1:1;SAMPLE_BEEP2=seed&2?-1:2;
+ frames=input_count=event_count=0;bothnewkeys=123;memset(events,0,sizeof(events));
+ for(unsigned n=0;n<(unsigned)abs(walk);++n){input[input_count++]=walk<0?FLAG_MOVEUP:FLAG_MOVEDOWN;input[input_count++]=0;}
+ input[input_count++]=trigger;input[input_count++]=FLAG_ESC;
+}
+static int invoke(Menu menu) {int status=setjmp(stopped);if(!status)menu();return status;}
+static void remember(int returned) {
+ expected.settings=savedata;expected.video=videomodes;expected.control=controloptionsMenu;expected.sound=soundoptionsMenu;expected.system=systemoptionsMenu;expected.video_menu=videooptionsMenu;expected.ready=device_ready;expected.cheats=cheats;expected.forceoff=forcecheatsoff;expected.returned=returned;expected.keys=bothnewkeys;expected.count=event_count;expected.frames=frames;memcpy(expected_events,events,event_count*sizeof(*events));
+}
+static void compare(int returned) {
+ assert(!memcmp(&expected.settings,&savedata,sizeof(savedata)) && !memcmp(&expected.video,&videomodes,sizeof(videomodes)));
+ assert(expected.control==controloptionsMenu && expected.sound==soundoptionsMenu && expected.system==systemoptionsMenu && expected.video_menu==videooptionsMenu && expected.ready==device_ready && expected.cheats==cheats && expected.forceoff==forcecheatsoff && expected.returned==returned && expected.keys==bothnewkeys && expected.count==event_count && expected.frames==frames);
+ assert(!memcmp(expected_events,events,event_count*sizeof(*events)));
+}
+int main(void) {
+ uint32_t triggers[]={0,FLAG_MOVELEFT,FLAG_MOVERIGHT,FLAG_ATTACK,FLAG_START,FLAG_JUMP,FLAG_SPECIAL,FLAG_ATTACK2,FLAG_ATTACK3,FLAG_ATTACK4,FLAG_MOVELEFT|FLAG_ATTACK,FLAG_MOVERIGHT|FLAG_ATTACK2,FLAG_MOVELEFT|FLAG_MOVERIGHT,FLAG_ESC,FLAG_MOVEUP|FLAG_ATTACK,FLAG_MOVEDOWN|FLAG_ATTACK,FLAG_MOVELEFT|FLAG_ESC};
+ unsigned counts[6]={0};
+ for(unsigned family=0;family<4;++family)for(unsigned menu=0;menu<6;++menu)for(int walk=-2;walk<=10;++walk)for(unsigned seed=0;seed<4;++seed)for(unsigned key=0;key<sizeof(triggers)/sizeof(*triggers);++key)for(int fail=0;fail<2;++fail) {
+  reset(family,seed,walk,triggers[key],fail);remember(invoke(original[family][menu]));
+  reset(family,seed,walk,triggers[key],fail);compare(invoke(actual[menu]));++counts[menu];
+ }
+ for(unsigned family=0;family<4;++family)for(unsigned seed=0;seed<4;++seed) {
+  reset(family,seed,0,0,0);if(family==0)official_choose_title();else if(family==1)physical_choose_title();else if(family==2)lns_choose_title();else previous_choose_title();remember(0);
+  reset(family,seed,0,0,0);candidate_choose_title();compare(0);
+ }
+ fprintf(stderr,"Option source comparisons by controls/sound/config/debug/system/video: %u/%u/%u/%u/%u/%u\n",counts[0],counts[1],counts[2],counts[3],counts[4],counts[5]);return 0;
+}

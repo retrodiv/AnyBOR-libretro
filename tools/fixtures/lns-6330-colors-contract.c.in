@@ -1,0 +1,106 @@
+/* SPDX-License-Identifier: BSD-3-Clause
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me> */
+#include <assert.h>
+#include <stdbool.h>
+#include <stdint.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <strings.h>
+#include <stdarg.h>
+#include @ABI@
+@LIMITS@
+@ARGLIST@
+@ENUMS@
+typedef struct {int x,y;} s_axis_plane_vertical_int;
+@BAR_RECORD@
+typedef struct {int alpha;} s_drawmethod;
+#define BLEND_MULTIPLY 1
+#define HUD_Z 50000
+#define stricmp strcasecmp
+static int globals[32],tables[3][11];
+@GLOBALS@
+#define hpcolourtable tables[0]
+#define ldcolourtable tables[1]
+#define mpcolourtable tables[2]
+static unsigned obor_profile_features;
+static s_drawmethod plainmethod={7};
+static const char *pak_text;
+static unsigned color_mode;
+static char warnings[4096];
+static size_t warning_len;
+static int captured_printf(const char *format,...) {
+ va_list args;va_start(args,format);int n=vsnprintf(warnings+warning_len,sizeof(warnings)-warning_len,format,args);va_end(args);
+ assert(n>=0 && (size_t)n<sizeof(warnings)-warning_len);warning_len+=(size_t)n;return n;
+}
+#define printf captured_printf
+static int buffer_pakfile(char *name,char **buffer,size_t *size) {
+ assert(!strcmp(name,"data/lifebar.txt"));if(!pak_text)return 0;
+ *size=strlen(pak_text);*buffer=malloc(*size+1);assert(*buffer);memcpy(*buffer,pak_text,*size+1);return 1;
+}
+static struct Call {int kind,a,b,c,d,z,color,alpha;} calls[256],expected_calls[256];
+static unsigned call_count;
+static void record(int kind,int a,int b,int c,int d,int z,int color,int alpha) {
+ assert(call_count<256);struct Call value={kind,a,b,c,d,z,color,alpha};calls[call_count++]=value;
+}
+static int _makecolour(int r,int g,int b) {
+ record(1,r,g,b,0,0,0,0);
+ unsigned result=((unsigned)r&255u)<<16|((unsigned)g&255u)<<8|((unsigned)b&255u);
+ return (int)(color_mode?result&0x808080u:result);
+}
+static void spriteq_add_box(int x,int y,int w,int h,int z,int color,s_drawmethod *method) {record(2,x,y,w,h,z,color,method?method->alpha:-1);}
+static void spriteq_add_line(int x,int y,int w,int h,int z,int color,s_drawmethod *method) {record(3,x,y,w,h,z,color,method?method->alpha:-1);}
+@PARSER@
+@CANDIDATE@
+@ORIGINALS@
+#undef printf
+static struct Result {int globals[32],tables[3][11];unsigned calls;char warnings[4096];} expected;
+static void reset(unsigned family,unsigned seed,const char *text) {
+ obor_profile_features=family==2?OBOR_PROFILE_LNS_6330:0;pak_text=text;call_count=0;warning_len=0;memset(warnings,0,sizeof(warnings));
+ for(unsigned i=0;i<32;++i)globals[i]=seed?(int)(i+1)*13:0;
+ for(unsigned i=0;i<3;++i)for(unsigned j=0;j<11;++j)tables[i][j]=100*(int)i+(int)j;
+}
+static void remember(void) {
+ memcpy(expected.globals,globals,sizeof(globals));memcpy(expected.tables,tables,sizeof(tables));memcpy(expected.warnings,warnings,sizeof(warnings));expected.calls=call_count;memcpy(expected_calls,calls,call_count*sizeof(*calls));
+}
+static void compare(void) {
+ assert(!memcmp(expected.globals,globals,sizeof(globals)) && !memcmp(expected.tables,tables,sizeof(tables)));
+ assert(!memcmp(expected.warnings,warnings,sizeof(warnings)) && expected.calls==call_count && !memcmp(expected_calls,calls,call_count*sizeof(*calls)));
+}
+static void original_colors(unsigned family,int defaults) {
+ if(family==0){if(defaults)official_defaults();else official_lifebar_colors();}
+ else if(family==1){if(defaults)physical_defaults();else physical_lifebar_colors();}
+ else {if(defaults)lns_defaults();else lns_lifebar_colors();}
+}
+static void original_bar(unsigned family,int value,int maximum,s_barstatus *status) {
+ if(family==0)official_bar(10,20,value,maximum,status);else if(family==1)physical_bar(10,20,value,maximum,status);else lns_bar(10,20,value,maximum,status);
+}
+int main(void) {
+ const char *commands[]={"blackbox","whitebox","empty_transparent","color25","color50","color100","color200","color300","color400","color500","color600","color700","color800","colormagic","colormagic2","shadowcolor","shadowalpha","shadowopacity","unknown"};
+ const char *texts[]={NULL,"","# color600 1 2 3\n\r","color600 0 0 0\ncolor700 1 2 3\ncolor800 4 5 6\n","CoLoR300 9 8 7 # retained\r\ncolor300 4 5 6\rwhitebox 0 0 0\n","empty_transparent\ncolor600 nonsense 2 3\ncolor800 -1 +2 3junk\n"};
+ unsigned color_cases=0,bar_cases=0;
+ for(unsigned family=0;family<3;++family)for(color_mode=0;color_mode<2;++color_mode)for(unsigned seed=0;seed<2;++seed)for(int defaults=0;defaults<2;++defaults) {
+  for(unsigned n=0;n<sizeof(texts)/sizeof(*texts);++n) {
+   reset(family,seed,texts[n]);original_colors(family,defaults);remember();reset(family,seed,texts[n]);if(defaults)candidate_defaults();else lifebar_colors();compare();++color_cases;
+  }
+  for(unsigned n=0;n<sizeof(commands)/sizeof(*commands);++n)for(unsigned zero=0;zero<2;++zero) {
+   char script[128];snprintf(script,sizeof(script),"%s %s\n",commands[n],zero?"0 0 0":"17 128 255");
+   reset(family,seed,script);original_colors(family,defaults);remember();reset(family,seed,script);if(defaults)candidate_defaults();else lifebar_colors();compare();++color_cases;
+  }
+  /* Same engine loading a second background with no color file: the source
+   * deliberately retains LNS 600/700/800 while resetting its lower colors. */
+  reset(family,seed,"color600 17 33 49\ncolor700 65 81 97\ncolor800 113 129 145\n");original_colors(family,defaults);pak_text=NULL;original_colors(family,defaults);remember();
+  reset(family,seed,"color600 17 33 49\ncolor700 65 81 97\ncolor800 113 129 145\n");if(defaults)candidate_defaults();else lifebar_colors();pak_text=NULL;if(defaults)candidate_defaults();else lifebar_colors();compare();++color_cases;
+ }
+ const int sizes[]={1,2,4,100,101,255};
+ for(unsigned family=0;family<3;++family)for(unsigned size=0;size<6;++size)for(unsigned type=0;type<2;++type)for(unsigned orientation=0;orientation<2;++orientation)for(unsigned invert=0;invert<2;++invert)for(unsigned colored=0;colored<2;++colored) {
+  int max=sizes[size];int values[]={0,1,max/4,max/2,max,max+1,2*max,2*max+1,7*max,8*max,20*max};
+  for(unsigned n=0;n<sizeof(values)/sizeof(*values);++n) {
+   s_barstatus status={{3,-4},{max,max},type?PERCENTAGEBAR:VALUEBAR,orientation?VERTICALBAR:HORIZONTALBAR,(int)(n%2),invert?BARSTATUS_DIR_INVERT:0,3,4,5,6,NULL};
+   s_barstatus original=status;int maximum=type?20*max:10*max;
+   reset(family,1,NULL);colorbars=colored;original_bar(family,values[n],maximum,&original);remember();
+   reset(family,1,NULL);colorbars=colored;bar(10,20,values[n],maximum,&status);compare();assert((original.colourtable==NULL)==(status.colourtable==NULL));++bar_cases;
+  }
+ }
+ fprintf(stderr,"Color/default comparisons: %u; native bar boundary comparisons: %u\n",color_cases,bar_cases);return 0;
+}

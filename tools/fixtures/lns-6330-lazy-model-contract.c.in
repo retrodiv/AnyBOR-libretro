@@ -1,0 +1,131 @@
+/* SPDX-License-Identifier: BSD-3-Clause
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me> */
+#include <assert.h>
+#include <stdbool.h>
+#include <stdint.h>
+#include <stdio.h>
+#include <string.h>
+#include <limits.h>
+#include @ABI@
+#define TYPE_PLAYER 1
+#define TYPE_TEXTBOX 2
+#define TYPE_ENEMY 4
+typedef struct {int numframes;} s_anim;
+typedef struct {char *name;int type,unload,animation_capacity;bool quickload;s_anim **animation;} s_model;
+typedef struct {char *name;s_model *model;} Cache;
+static Cache model_cache[3];
+static s_model models[3],provided;
+static s_anim frames[3][4];
+static s_anim *slots[3][4];
+static struct {char *name;} player[4];
+static int models_cached=3,max_animations=4;
+static unsigned obor_profile_features,depth,expect_barrier;
+static struct {int lookups,finds,loads,updates,sprites,frees,unload,load_index;char owner[32];} trace;
+static int get_cached_model_index(const char *name) {
+ ++trace.lookups;if(!name)return -1;
+ for(int i=0;i<3;++i)if(!strcmp(name,model_cache[i].name))return i;
+ return -1;
+}
+static s_model *findmodel(const char *name) {
+ ++trace.finds;if(!name)return NULL;
+ for(int i=0;i<3;++i)if(!strcmp(name,model_cache[i].name))return model_cache[i].model;
+ return NULL;
+}
+static void update_model_loadflag(s_model *model,char unload) {++trace.updates;model->unload=unload;}
+static s_model *load_cached_model(char *name,char *owner,char unload) {
+ ++trace.loads;trace.unload=unload;snprintf(trace.owner,sizeof(trace.owner),"%s",owner);
+ int index=-1;
+ for(int i=0;i<3;++i)if(!strcmp(name,model_cache[i].name))index=i;
+ trace.load_index=index;
+ if(index<0)return NULL;
+ models[index].quickload=false;models[index].unload=unload;
+ return model_cache[index].model=&models[index];
+}
+static s_model *original_load_cached_model(char *name,char *owner,char unload,bool quickload) {
+ assert(!quickload);return load_cached_model(name,owner,unload);
+}
+static void obor_preload_begin(void) {++depth;}
+static void obor_preload_end(void) {assert(depth);--depth;}
+static void cache_model_sprites(s_model *model,int flag) {
+ (void)model;assert(!flag);++trace.sprites;
+ if(expect_barrier)assert(depth>0);
+}
+static void free_model(s_model *model) {
+ ++trace.frees;
+ if(expect_barrier)assert(depth>0);
+ for(int i=0;i<3;++i)if(model_cache[i].model==model)model_cache[i].model=NULL;
+}
+@SPAWN_HELPER@
+@CHANGE_HELPER@
+@UNLOAD@
+@ORIGINAL_UNLOAD@
+static s_model *candidate_spawn(char *name,int index,s_model *model) {@SPAWN@ return model;}
+static s_model *candidate_change(char *modelname,int index,s_model *newmodel) {@CHANGE@ return newmodel;}
+static void candidate_player(int index) {s_model *model=NULL;(void)model;@PLAYER@}
+/* Original player replacement calls the original unload implementation. */
+#define unload_model original_unload_model
+@ORIGINALS@
+#undef unload_model
+static void reset(int cached,int type,int nframes,int quick) {
+ memset(&trace,0,sizeof(trace));assert(depth==0);expect_barrier=0;
+ for(int i=0;i<3;++i) {
+  model_cache[i]=(Cache){.name=i==0?"one":i==1?"two":"three",.model=cached?&models[i]:NULL};
+  for(int j=0;j<4;++j) {frames[i][j].numframes=j==0?nframes:0;slots[i][j]=&frames[i][j];}
+  models[i]=(s_model){.name=model_cache[i].name,.type=type,.unload=7,.animation_capacity=4,
+                       .quickload=quick!=0,.animation=slots[i]};
+ }
+ for(int i=0;i<4;++i)player[i].name=model_cache[i%3].name;
+ provided=(s_model){.name="provided",.type=type};
+}
+static int index_of(s_model *model) {
+ if(!model)return -1;
+ if(model==&provided)return 3;
+ for(int i=0;i<3;++i)if(model==&models[i])return i;
+ assert(0);return -2;
+}
+int main(void) {
+ char *names[]={"one","two","three","absent",NULL};
+ int types[]={TYPE_PLAYER,TYPE_TEXTBOX,TYPE_ENEMY,TYPE_PLAYER|TYPE_ENEMY};
+ int counts[]={0,10,11,99};
+ for(unsigned feature=0;feature<2;++feature)for(int op=0;op<2;++op)
+  for(int cached=0;cached<2;++cached)for(int supplied=0;supplied<2;++supplied)
+   for(int idx=-1;idx<3;++idx)for(unsigned n=0;n<5;++n)
+    for(unsigned t=0;t<4;++t)for(unsigned f=0;f<4;++f) {
+     obor_profile_features=feature?OBOR_PROFILE_LNS_6330:0;
+     /* The ordinary change-model function assumes a non-NULL name. */
+     if(op && idx<0 && !names[n] && !supplied)continue;
+     reset(cached,types[t],counts[f],1);
+     s_model *expected;
+     if(feature)expected=op?lns_change(names[n],idx,supplied?&provided:NULL):lns_spawn(names[n],idx,supplied?&provided:NULL);
+     else expected=op?official_change(names[n],idx,supplied?&provided:NULL):official_spawn(names[n],idx,supplied?&provided:NULL);
+     int expected_index=index_of(expected),expected_unload=expected?expected->unload:0;
+     unsigned char saved[sizeof(trace)];memcpy(saved,&trace,sizeof(trace));
+     reset(cached,types[t],counts[f],1);
+     s_model *actual=op?candidate_change(names[n],idx,supplied?&provided:NULL):candidate_spawn(names[n],idx,supplied?&provided:NULL);
+     assert(index_of(actual)==expected_index && (!actual || actual->unload==expected_unload));
+     assert(!memcmp(saved,&trace,sizeof(trace)) && depth==0);
+    }
+ for(unsigned feature=0;feature<2;++feature)for(int cached=0;cached<2;++cached)
+  for(int quick=0;quick<2;++quick)for(int index=-1;index<8;++index) {
+   obor_profile_features=feature?OBOR_PROFILE_LNS_6330:0;
+   reset(cached,TYPE_PLAYER,11,quick);
+   if(feature)lns_player(index);else official_player(index);
+   unsigned char saved[sizeof(trace)];memcpy(saved,&trace,sizeof(trace));
+   reset(cached,TYPE_PLAYER,11,quick);expect_barrier=feature;
+   candidate_player(index);assert(!memcmp(saved,&trace,sizeof(trace)) && depth==0);
+  }
+ obor_profile_features=OBOR_PROFILE_LNS_6330;
+ reset(0,TYPE_ENEMY,11,0);
+ assert(candidate_spawn("one",3,NULL)==NULL && trace.loads==0);
+ assert(candidate_change("one",INT_MAX,NULL)==NULL && trace.loads==0);
+ assert(candidate_change(NULL,-1,NULL)==NULL && trace.loads==0);
+ /* Physical tables can be smaller than the historical fixed-size table. */
+ models[0].animation_capacity=1;max_animations=INT_MAX;
+ assert(candidate_spawn("one",0,NULL)==&models[0] && models[0].unload==0);
+ reset(0,TYPE_ENEMY,11,0);models[0].animation=NULL;
+ assert(candidate_spawn("one",0,NULL)==&models[0] && models[0].unload==3);
+ reset(0,TYPE_ENEMY,INT_MAX,0);frames[0][1].numframes=1;
+ assert(candidate_spawn("one",0,NULL)==&models[0] && models[0].unload==0);
+ unload_model(NULL);assert(depth==0);
+ return 0;
+}

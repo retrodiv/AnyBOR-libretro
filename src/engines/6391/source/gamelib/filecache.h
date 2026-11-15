@@ -1,3 +1,15 @@
+/* AnyBOR modification record: 2026-11-15.
+ * Port maintained by retrodiv <retrodiv@proton.me>.
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me> (original contributions).
+ * These contributions are licensed under BSD-3-Clause; see LICENSE at the root.
+ * Upstream code retains its original license and notices.
+ * Declare profile-specific cached reader coordinates without changing the
+ * ordinary signed interface.
+ * Existing changes recorded here; this is not their implementation date.
+ * See MODIFICATIONS.md and docs/modifications/6391.md
+ * at the source repository root. Original notices follow below.
+ */
+
 /////////////////////////////////////////////////////////////////////////////
 //
 // filecache - code for background file reading/caching
@@ -6,6 +18,7 @@
 
 #ifndef FILECACHE_H
 #define FILECACHE_H
+#include "anybor_lns_pak.h"
 
 /////////////////////////////////////////////////////////////////////////////
 //
@@ -16,10 +29,10 @@
 //
 void filecache_init(
     int realfd,
-    int pakcdsectors,
-    int blocksize,
+    obor_pak_int pakcdsectors,
+    obor_pak_int blocksize,
     unsigned char blocks,
-    int vfds
+    obor_pak_int vfds
 );
 
 //
@@ -33,7 +46,7 @@ void filecache_term(void);
 //
 int filecache_readpakblock(
     unsigned char *dest,
-    int pakblock,
+    obor_pak_int pakblock,
     int startofs,
     int bytes,
     int blocking
@@ -42,14 +55,14 @@ int filecache_readpakblock(
 //
 // set up where the vfd pointers are
 //
-void filecache_setvfd(int vfd, int start, int block, int readahead);
+void filecache_setvfd(obor_pak_int vfd, obor_pak_int start, obor_pak_int block, obor_pak_int readahead);
 
 //
 // call this every now and then
 //
 void filecache_process(void);
 
-void filecache_wait_for_prebuffer(int vfd, int nblocks);
+void filecache_wait_for_prebuffer(obor_pak_int vfd, obor_pak_int nblocks);
 
 /////////////////////////////////////////////////////////////////////////////
 

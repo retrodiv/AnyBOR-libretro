@@ -21,6 +21,7 @@
 @SAVEDATA@
 @DISPLAY_DECL@
 uint32_t obor_profile_build;
+uint32_t obor_profile_features;
 static s_model fixture_models[2];
 static entity fixture_entities[4];
 static s_level fixture_level;
@@ -97,6 +98,7 @@ static void fixture_execute_join_script(int index)
 #pragma GCC diagnostic warning "-Wsingle-bit-bitfield-constant-conversion"
 #endif
 #endif
+@LNS_PROVIDERS@
 @ROUTINES@
 #pragma GCC diagnostic pop
 static void setup(int seed,unsigned keys,int frozen,int blocked,int same,int absent,int empty)

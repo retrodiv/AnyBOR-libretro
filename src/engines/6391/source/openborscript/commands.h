@@ -1,10 +1,11 @@
-/* AnyBOR modification record: 2026-10-05.
+/* AnyBOR modification record: 2026-11-15.
  * Port maintained by retrodiv <retrodiv@proton.me>.
  * Copyright (c) 2026 retrodiv <retrodiv@proton.me> (original contributions).
  * These contributions are licensed under BSD-3-Clause; see LICENSE at the root.
  * Upstream code retains its original license and notices.
  * Append shared selectors for logical-profile model commands without
- * shifting existing selectors.
+ * shifting existing selectors. Declare modified 6330 LNS model and level-
+ * order command selectors.
  * Existing changes recorded here; this is not their implementation date.
  * See MODIFICATIONS.md and docs/modifications/6391.md
  * at the source repository root. Original notices follow below.
@@ -143,6 +144,11 @@ typedef enum levelOrderCommand
     CMD_LEVELORDER_TYPEMP,
     CMD_LEVELORDER_UNLOCKBG,
     CMD_LEVELORDER_Z,
+    CMD_LEVELORDER_HALLFAME,
+    CMD_LEVELORDER_HALLFAMEDIFFICULTIES,
+    CMD_LEVELORDER_HALLFAMEDIFFICULTYCREDITS,
+    CMD_LEVELORDER_HALLFAMEINITIALS,
+    CMD_LEVELORDER_HALLFAMETIMES,
 } levelOrderCommands;
 
 typedef enum levelCommand
@@ -618,6 +624,10 @@ typedef enum modelCommand
     CMD_MODEL_CUSTBOOMERANG,
     CMD_MODEL_ON_BIND_UPDATE_OTHER_TO_SELF_SCRIPT,
     CMD_MODEL_ON_BIND_UPDATE_SELF_TO_OTHER_SCRIPT,
+    CMD_MODEL_FLASHOVERRIDE,
+    CMD_MODEL_IGNOREPROJECTILEWALLCOLLISION,
+    CMD_MODEL_NOEXPLODE,
+    CMD_MODEL_SELECTCOL,
 } modelCommands;
 
 typedef enum

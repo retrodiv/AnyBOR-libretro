@@ -1,0 +1,147 @@
+/* SPDX-License-Identifier: BSD-3-Clause
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me> */
+#include <assert.h>
+#include <stdbool.h>
+#include <stdint.h>
+#include <stdio.h>
+#include <string.h>
+#include @ABI@
+#define MAX_PLAYERS 4
+#define MAX_NAME_LEN 50
+#define GAME_SPEED 200
+#define COUNTER_SPEED 400
+#define PLAYER_LIVES 3
+#define CONTINUES 4
+#define OBOR_LNS_QUICK_MODEL 67
+#define ANI_PICK 2
+@KEYS@
+typedef struct {char *name;int health,mp;} s_model;
+typedef struct {s_model *model;unsigned stalltime;} entity;
+typedef struct {char name[MAX_NAME_LEN];int colourmap;unsigned score,lives,credits;entity *ent;
+ uint64_t newkeys,playkeys,releasekeys,disablekeys;int spawnhealth,spawnmp,joining,hasplayed;} s_player;
+typedef struct {int maxplayers,nosame,continuescore;} s_set_entry;
+static s_player player[4];
+static s_model models[5]={{"one",11,12},{"two",21,22},{"three",31,32},{"four",41,42},{"five",51,52}};
+static entity entities[4],*example[4];
+static s_set_entry levelsets[1];
+static struct {int noreset,settime;} level_data,*level=&level_data;
+static struct {unsigned pLives[4],pScores[4],pCredits[4];int credits;} savelevel[1];
+static struct {int effectvol;} savedata;
+static int current_set,freezeall,nojoin,nodropen,credits,noshare,creditscheat,colourselect;
+static int timeleft,obor_lns_players[4],observed_dt,ready[4],defaultselect,valid_pick;
+static unsigned _time;
+static char skipselect[4][MAX_NAME_LEN];
+static unsigned obor_profile_features;
+static const int SAMPLE_BEEP=1,SAMPLE_BEEP2=2;
+static struct {unsigned count;int data[128][4];} trace;
+static void event(int op,int a,int b,int c) {
+ assert(trace.count<128);int *row=trace.data[trace.count++];row[0]=op;row[1]=a;row[2]=b;row[3]=c;
+}
+static int model_index(const s_model *model) {
+ if(!model)return -1;
+ for(int i=0;i<5;++i)if(model==&models[i])return i;
+ assert(0);return -2;
+}
+static s_model *findmodel(const char *name) {
+ for(int i=0;i<5;++i)if(!strcmp(name,models[i].name)){event(1,i,0,0);return &models[i];}
+ event(1,-1,0,0);return NULL;
+}
+static void spawnplayer(int p) {event(2,p,player[p].lives,player[p].colourmap);player[p].ent=&entities[p];}
+static entity *spawnexample(int p) {
+ event(3,p,player[p].lives,player[p].colourmap);entities[p].model=&models[0];return &entities[p];
+}
+static void execute_join_script(int p) {event(4,p,0,0);}
+static void drop_all_enemies(void) {event(5,0,0,0);}
+static s_model *nextplayermodeln(s_model *model,int p) {event(6,p,model_index(model),0);return &models[0];}
+static s_model *prevplayermodeln(s_model *model,int p) {event(6,p,model_index(model),1);return &models[1];}
+static s_model *nextplayermodelcoln(s_model *model,int p) {event(7,p,model_index(model),0);return &models[2];}
+static s_model *prevplayermodelcoln(s_model *model,int p) {event(7,p,model_index(model),1);return &models[3];}
+static int nextcolourmapn(s_model *model,int c,int p) {event(8,p,model_index(model),c);return c+1;}
+static int prevcolourmapn(s_model *model,int c,int p) {event(9,p,model_index(model),c);return c-1;}
+static s_model *selectrandomplayer(s_model *model) {event(10,model_index(model),0,0);return &models[4];}
+static int selectrandomcolourmap(s_model *model,int p) {event(11,p,model_index(model),0);return 7;}
+static s_model *load_cached_model(char *name,char *owner,char unload) {
+ assert(!strcmp(owner,"continue_screen"));assert(!strcmp(name,"missing"));
+ event(12,unload==OBOR_LNS_QUICK_MODEL?3:unload,unload==OBOR_LNS_QUICK_MODEL,0);return &models[4];
+}
+static s_model *original_load_cached_model(char *name,char *owner,char unload,bool quickload) {
+ assert(quickload && unload==3);return load_cached_model(name,owner,OBOR_LNS_QUICK_MODEL);
+}
+static void sound_play_sample(int sample,int loop,int left,int right,int speed) {assert(!loop && left==right);event(13,sample,left,speed);}
+static void ent_set_model(entity *ent,char *name,int animation) {
+ for(int i=0;i<5;++i)if(!strcmp(name,models[i].name)){ent->model=&models[i];event(14,i,animation,0);return;}
+ assert(0);
+}
+static void ent_set_colourmap(entity *ent,int colour) {event(15,model_index(ent->model),colour,0);}
+static int validanim(entity *ent,int animation) {(void)ent;assert(animation==ANI_PICK);return valid_pick;}
+static void ent_set_anim(entity *ent,int animation,int reset) {event(16,model_index(ent->model),animation,reset);}
+@CANDIDATE@
+@ORIGINALS@
+typedef struct {s_player players[4];entity ent[4];int live_examples[4],selected[4],ready[4];
+ int remaining,shared_credits,dt;unsigned char events[sizeof(trace)];} Result;
+static void reset(unsigned seed,unsigned keys) {
+ memset(player,0,sizeof(player));memset(entities,0,sizeof(entities));memset(skipselect,0,sizeof(skipselect));
+ memset(&trace,0,sizeof(trace));memset(ready,0,sizeof(ready));
+ freezeall=(seed>>0)&1;nojoin=(seed>>1)&1;nodropen=(seed>>2)&1;noshare=(seed>>3)&1;
+ creditscheat=(seed>>4)&1;colourselect=(seed>>5)&1;valid_pick=(seed>>6)&1;
+ levelsets[0]=(s_set_entry){4,(int)(seed%4),(int)(seed%3)};
+ level_data.noreset=(seed>>2)&1;level_data.settime=15;credits=(int)(seed%3);timeleft=4321;_time=123;
+ defaultselect=(seed>>1)&1;savedata.effectvol=11;observed_dt=0;
+ for(int i=0;i<4;++i) {
+  strcpy(player[i].name,models[i].name);player[i].colourmap=i;player[i].lives=(seed+i)%4;player[i].credits=(seed+i)%3;
+  player[i].hasplayed=(seed+i)&1;player[i].joining=1;player[i].score=UINT32_MAX;
+  player[i].playkeys=keys;player[i].newkeys=keys;player[i].disablekeys=7;player[i].releasekeys=9;
+  entities[i].model=&models[i];example[i]=(seed&(1u<<i))?&entities[i]:NULL;obor_lns_players[i]=(seed>>i)&1;
+  savelevel[0].pLives[i]=(seed+i)%5;savelevel[0].pCredits[i]=5;savelevel[0].pScores[i]=17;
+ }
+ savelevel[0].credits=8;
+}
+static Result result(void) {
+ Result r;memset(&r,0,sizeof(r));memcpy(r.players,player,sizeof(player));memcpy(r.ent,entities,sizeof(entities));
+ for(int i=0;i<4;++i){r.live_examples[i]=example[i]!=NULL;r.selected[i]=obor_lns_players[i];r.ready[i]=ready[i];}
+ r.remaining=timeleft;r.shared_credits=credits;r.dt=observed_dt;memcpy(r.events,&trace,sizeof(trace));return r;
+}
+static void compare_status(unsigned seed,unsigned keys,int variant,int route) {
+ reset(seed,keys);
+ for(int i=0;i<4;++i) {
+  player[i].joining=route<2;player[i].ent=(route==3 && i==3)?&entities[i]:NULL;
+  if(route==1)player[i].name[0]=0;
+ }
+ if(variant)lns_status();else official_status();Result expected=result();
+ reset(seed,keys);
+ for(int i=0;i<4;++i) {
+  player[i].joining=route<2;player[i].ent=(route==3 && i==3)?&entities[i]:NULL;
+  if(route==1)player[i].name[0]=0;
+ }
+ candidate_status();Result actual=result();assert(!memcmp(&expected,&actual,sizeof(actual)));
+}
+int main(void) {
+ unsigned features[]={0,OBOR_PROFILE_ATTACK_HISTORY_FOUR,OBOR_PROFILE_LNS_6330};
+ for(unsigned f=0;f<3;++f) {
+  obor_profile_features=features[f];int variant=f==2;
+  for(unsigned seed=0;seed<8;++seed)for(unsigned keys=0;keys<8192;++keys)
+   compare_status(seed*17,keys,variant,seed%4);
+  for(unsigned seed=0;seed<128;++seed)for(unsigned keys=0;keys<8192;keys+=37) {
+   reset(seed,keys);if(variant)lns_menu(0);else official_menu(0);Result expected=result();
+   reset(seed,keys);candidate_menu(0);Result actual=result();assert(!memcmp(&expected,&actual,sizeof(actual)));
+  }
+  for(unsigned seed=0;seed<128;++seed) {
+   reset(seed,0);if(variant)lns_initial();else official_initial();Result expected=result();
+   reset(seed,0);candidate_initial();Result actual=result();assert(!memcmp(&expected,&actual,sizeof(actual)));
+   reset(seed,0);if(variant)lns_restore();else official_restore();expected=result();
+   reset(seed,0);candidate_restore();actual=result();assert(!memcmp(&expected,&actual,sizeof(actual)));
+  }
+ }
+ /* Quick continue loading without a cached model, including colour retention. */
+ obor_profile_features=OBOR_PROFILE_LNS_6330;
+ for(int skip=0;skip<2;++skip) {
+  reset(0,FLAG_START);player[0].joining=0;strcpy(player[0].name,"missing");
+  if(skip)strcpy(skipselect[0],"missing");
+  lns_status();Result expected=result();
+  reset(0,FLAG_START);player[0].joining=0;strcpy(player[0].name,"missing");
+  if(skip)strcpy(skipselect[0],"missing");
+  candidate_status();Result actual=result();
+  assert(!memcmp(&expected,&actual,sizeof(actual)));
+ }
+ return 0;
+}

@@ -1,0 +1,69 @@
+/* SPDX-License-Identifier: BSD-3-Clause
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me> */
+#include <assert.h>
+#include <stdint.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <strings.h>
+#include @ABI@
+@LIMITS@
+@KEYS@
+@ARGLIST@
+@ARG_MACROS@
+#define stricmp strcasecmp
+static unsigned obor_profile_features,bothnewkeys,input_keys;
+static int playback_status,missing;
+static char *currentScene;
+static struct {unsigned disablekeys,newkeys,playkeys;} player[MAX_PLAYERS];
+static struct Event {int kind,a,b,c;char name[64];} events[32],expected[32];
+static unsigned count;
+static char contents[512];
+static void event(int kind,const char *name,int a,int b,int c) {
+ assert(count<32);struct Event *e=&events[count++];memset(e,0,sizeof(*e));
+ e->kind=kind;e->a=a;e->b=b;e->c=c;
+ if(name){assert(strlen(name)<sizeof(e->name));strcpy(e->name,name);}
+}
+static int buffer_pakfile(char *filename,char **buf,size_t *size) {
+ assert(!strcmp(filename,"scene.txt"));event(1,filename,missing,0,0);
+ if(missing)return 0;*size=strlen(contents);*buf=malloc(*size+1);assert(*buf);memcpy(*buf,contents,*size+1);return 1;
+}
+static int getValidInt(char *text,char *filename,char *command) {
+ assert(!strcmp(filename,"scene.txt") && command[0]);return atoi(text);
+}
+static void music(char *filename,int loop,long offset) {event(2,filename,loop,(int)offset,0);}
+static int playgif(char *filename,int x,int y,int noskip) {
+ assert(currentScene);event(3,filename,x,y,noskip);bothnewkeys=input_keys;return playback_status;
+}
+static int playwebm(char *filename,int noskip) {
+ assert(currentScene);event(4,filename,noskip,0,0);bothnewkeys=input_keys;return playback_status;
+}
+static void sound_close_music(void) {event(5,NULL,0,0,0);}
+static int getNewLineStart(char *text) {char *p=strchr(text,'\n');return p?(int)(p-text)+1:(int)strlen(text);}
+static int observed_printf(const char *format,...) {(void)format;event(6,NULL,0,0,0);return 1;}
+#define printf observed_printf
+@PARSER@
+@CODE@
+#undef printf
+static void reset(void) {
+ count=0;bothnewkeys=0;currentScene=NULL;memset(events,0,sizeof(events));
+ for(unsigned p=0;p<MAX_PLAYERS;++p)player[p].disablekeys=player[p].newkeys=player[p].playkeys=0x5a+p;
+}
+int main(void) {
+ unsigned cases=0;
+ const unsigned keys[]={0,FLAG_ESC,FLAG_ATTACK,FLAG_START,FLAG_ESC|FLAG_ATTACK};
+ for(obor_profile_features=0;obor_profile_features<8;++obor_profile_features)
+  for(unsigned family=0;family<3;++family)for(missing=0;missing<2;++missing)
+   for(playback_status=-1;playback_status<=1;++playback_status)for(int skip=0;skip<2;++skip)
+    for(int noskip=0;noskip<2;++noskip)for(unsigned k=0;k<5;++k) {
+     input_keys=keys[k];snprintf(contents,sizeof(contents),
+      "music before 1 19\nanimation clip 3 7 %d %d\nmusic after 0 23\nvideo movie %d %d\nsilence\nanimation last 1 2 0 0\n",skip,noskip,skip,noskip);
+     reset();
+     if(obor_profile_features&OBOR_PROFILE_LNS_6330)lns_scene("scene.txt");else if(family==0)official_scene("scene.txt");else physical_scene("scene.txt");
+     memcpy(expected,events,sizeof(events));unsigned wanted=count,old_keys=bothnewkeys;char old_players[sizeof(player)];memcpy(old_players,player,sizeof(player));
+     assert(!currentScene);reset();candidate_scene("scene.txt");
+     assert(wanted==count && old_keys==bothnewkeys && !currentScene && !memcmp(old_players,player,sizeof(player)));
+     assert(!memcmp(expected,events,sizeof(events)));++cases;
+    }
+ assert(cases==2880);fprintf(stderr,"Complete scene dispatch/ESC comparisons: %u\n",cases);return 0;
+}

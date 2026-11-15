@@ -16,7 +16,7 @@
 #undef validanim
 #undef time
 #undef _time
-uint32_t obor_profile_build;
+uint32_t obor_profile_build,obor_profile_features;
 static unsigned checks,used,availability,gate_mode,gate_valid,sample,rng_calls,rise_calls;
 static entity actor;
 entity *self=&actor;

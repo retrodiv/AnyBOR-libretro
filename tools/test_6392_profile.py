@@ -72,7 +72,9 @@ int main(void){
         fields = re.search(r'unsigned int attack_id_incoming;\s*'
                            r'unsigned int attack_id_incoming2;\s*'
                            r'unsigned int attack_id_incoming3;\s*'
-                           r'unsigned int attack_id_incoming4;', header).group()
+                           r'unsigned int attack_id_incoming4;'
+                           r'(?:\s*unsigned int lns_attack_id_incoming\[100\];'
+                           r'\s*unsigned int lns_attack_id_incoming_index;)?', header).group()
         methods = '\n'.join(function(source, n) for n in
                             ('obor_attack_seen', 'obor_remember_attack'))
         attack = function(source, 'do_attack')

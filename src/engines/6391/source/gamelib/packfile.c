@@ -1,4 +1,4 @@
-/* AnyBOR modification record: 2026-10-11.
+/* AnyBOR modification record: 2026-11-15.
  * Port maintained by retrodiv <retrodiv@proton.me>.
  * Copyright (c) 2026 retrodiv <retrodiv@proton.me> (original contributions).
  * These contributions are licensed under BSD-3-Clause; see LICENSE at the root.
@@ -9,6 +9,10 @@
  * directory index proves its first component absent; preserve script changes
  * and case-insensitive overrides. Join case-corrected directory components
  * through a bounded temporary buffer, preserving nested loose-asset paths.
+ * Preserve the modified 6330 unsigned cache coordinates and large-file ABI
+ * in a separately compiled copy of the maintained reader, with shared
+ * process descriptors; dispatch PACK 1.1 volumes through the separate read-
+ * only port adapter.
  * Existing changes recorded here; this is not their implementation date.
  * See MODIFICATIONS.md and docs/modifications/6391.md
  * at the source repository root. Original notices follow below.
@@ -38,6 +42,10 @@
 	} rep
 	dword	headerstart
 */
+#include "anybor_lns_pak.h"
+#ifdef OBOR_LNS_PAK_IMPL
+#include "anybor_pak_multipart.h"
+#endif
 #include <assert.h>
 #ifndef SPK_SUPPORTED
 
@@ -90,7 +98,9 @@ static const size_t USED_FLAG = (((size_t) 1) << ((sizeof(size_t) * 8) - 1));
 #endif
 
 static int pak_initialized;
+#ifndef OBOR_LNS_PAK_IMPL
 int printFileUsageStatistics = 0;
+#endif
 
 /////////////////////////////////////////////////////////////////////////////
 //
@@ -112,6 +122,13 @@ extern int pakfd;
 // every pak fd this instance opened so resets never leak.
 void obor_packfile_closeall(void)
 {
+#ifdef OBOR_LNS_PAK_IMPL
+    if(obor_multipart_active()) { obor_multipart_closeall(); return; }
+#endif
+#ifndef OBOR_LNS_PAK_IMPL
+    if(obor_profile_features & OBOR_PROFILE_LNS_6330) { obor_lns_obor_packfile_closeall(); return; }
+#endif
+
     int h;
     for(h = 0; h < MAXPACKHANDLES; h++)
     {
@@ -130,6 +147,13 @@ void obor_packfile_closeall(void)
 
 void obor_packfile_fixup(const char *pakpath)
 {
+#ifdef OBOR_LNS_PAK_IMPL
+    if(obor_multipart_active()) { obor_multipart_rebind(pakpath); return; }
+#endif
+#ifndef OBOR_LNS_PAK_IMPL
+    if(obor_profile_features & OBOR_PROFILE_LNS_6330) { obor_lns_obor_packfile_fixup(pakpath); return; }
+#endif
+
     struct stat want, got;
     int h;
     if(stat(pakpath, &want) != 0)
@@ -162,15 +186,17 @@ List *filenamelist = NULL;
 // This variables are only used for with Caching code
 //
 /* Process resource retained across libretro state restores. */
+#ifndef OBOR_LNS_PAK_IMPL
 int pakfd = -1;
-static int paksize;
-static int pak_vfdexists[MAXPACKHANDLES];
-static int pak_vfdstart[MAXPACKHANDLES];
-static int pak_vfdsize[MAXPACKHANDLES];
-static int pak_vfdpos[MAXPACKHANDLES];
-static int pak_vfdreadahead[MAXPACKHANDLES];
-static int pak_headerstart;
-static int pak_headersize;
+#endif
+static obor_pak_int paksize;
+static obor_pak_int pak_vfdexists[MAXPACKHANDLES];
+static obor_pak_int pak_vfdstart[MAXPACKHANDLES];
+static obor_pak_int pak_vfdsize[MAXPACKHANDLES];
+static obor_pak_int pak_vfdpos[MAXPACKHANDLES];
+static obor_pak_int pak_vfdreadahead[MAXPACKHANDLES];
+static obor_pak_int pak_headerstart;
+static obor_pak_int pak_headersize;
 static unsigned char *pak_cdheader;
 static unsigned char *pak_header;
 
@@ -432,6 +458,13 @@ int getFreeHandle(void)
 
 void packfile_mode(int mode)
 {
+#ifdef OBOR_LNS_PAK_IMPL
+    if(obor_multipart_active()) { return; }
+#endif
+#ifndef OBOR_LNS_PAK_IMPL
+    if(obor_profile_features & OBOR_PROFILE_LNS_6330) { obor_lns_packfile_mode(mode); return; }
+#endif
+
     if(!mode)
     {
 #ifdef DC
@@ -469,6 +502,13 @@ int isRawData()
 
 int openpackfile(const char *filename, const char *packfilename)
 {
+#ifdef OBOR_LNS_PAK_IMPL
+    { int multi = obor_multipart_init(packfilename); if(multi) return multi > 0 ? obor_multipart_open(filename) : -1; }
+#endif
+#ifndef OBOR_LNS_PAK_IMPL
+    if(obor_profile_features & OBOR_PROFILE_LNS_6330) { return obor_lns_openpackfile(filename, packfilename); }
+#endif
+
 #ifdef VERBOSE
     char *pointsto;
 
@@ -711,6 +751,10 @@ void makefilenamecache(void)
 
 void freefilenamecache(void)
 {
+#ifndef OBOR_LNS_PAK_IMPL
+    if(obor_profile_features & OBOR_PROFILE_LNS_6330) { obor_lns_freefilenamecache(); return; }
+#endif
+
     Node *n;
     size_t count = 0;
     size_t total = 0;
@@ -752,6 +796,13 @@ void freefilenamecache(void)
 
 int openreadaheadpackfile(const char *filename, const char *packfilename, int readaheadsize, int prebuffersize)
 {
+#ifdef OBOR_LNS_PAK_IMPL
+    { int multi = obor_multipart_init(packfilename); if(multi) return multi > 0 ? obor_multipart_open(filename) : -1; }
+#endif
+#ifndef OBOR_LNS_PAK_IMPL
+    if(obor_profile_features & OBOR_PROFILE_LNS_6330) { return obor_lns_openreadaheadpackfile(filename, packfilename, readaheadsize, prebuffersize); }
+#endif
+
     size_t hpos;
     int vfd;
     size_t fnl;
@@ -824,6 +875,13 @@ int openPackfileCached(const char *filename, const char *packfilename)
 
 int readpackfile(int handle, void *buf, int len)
 {
+#ifdef OBOR_LNS_PAK_IMPL
+    if(obor_multipart_active()) { return obor_multipart_read(handle, buf, len); }
+#endif
+#ifndef OBOR_LNS_PAK_IMPL
+    if(obor_profile_features & OBOR_PROFILE_LNS_6330) { return obor_lns_readpackfile(handle, buf, len); }
+#endif
+
     return pReadPackfile(handle, buf, len);
 }
 
@@ -874,10 +932,10 @@ int pak_isvalidhandle(int handle)
 
 static int pak_rawread(int fd, unsigned char *dest, int len, int blocking)
 {
-    int end;
-    int r;
-    int total = 0;
-    int pos = pak_vfdstart[fd] + pak_vfdpos[fd];
+    obor_pak_int end;
+    obor_pak_int r;
+    obor_pak_int total = 0;
+    obor_pak_int pos = pak_vfdstart[fd] + pak_vfdpos[fd];
 
     if(pos < 0)
     {
@@ -968,6 +1026,13 @@ int readPackfileCached(int handle, void *buf, int len)
 
 int closepackfile(int handle)
 {
+#ifdef OBOR_LNS_PAK_IMPL
+    if(obor_multipart_active()) { return obor_multipart_close(handle); }
+#endif
+#ifndef OBOR_LNS_PAK_IMPL
+    if(obor_profile_features & OBOR_PROFILE_LNS_6330) { return obor_lns_closepackfile(handle); }
+#endif
+
 #ifdef VERBOSE
     char *pointsto;
 
@@ -1029,6 +1094,13 @@ int closePackfileCached(int handle)
 
 int seekpackfile(int handle, int offset, int whence)
 {
+#ifdef OBOR_LNS_PAK_IMPL
+    if(obor_multipart_active()) { return obor_multipart_seek(handle, offset, whence); }
+#endif
+#ifndef OBOR_LNS_PAK_IMPL
+    if(obor_profile_features & OBOR_PROFILE_LNS_6330) { return obor_lns_seekpackfile(handle, offset, whence); }
+#endif
+
     return pSeekPackfile(handle, offset, whence);
 }
 
@@ -1134,7 +1206,7 @@ int seekPackfileCached(int handle, int offset, int whence)
 //
 // returns number of sectors read successfully
 //
-static int pak_getsectors(void *dest, int lba, int n)
+static int pak_getsectors(void *dest, obor_pak_int lba, int n)
 {
 #ifdef DC
     if((lba + n) > ((paksize + 0x7FF) / 0x800))
@@ -1254,6 +1326,13 @@ int find_iso_file(const char *filename, int lba, int *bytes)
 
 void pak_term()
 {
+#ifdef OBOR_LNS_PAK_IMPL
+    if(obor_multipart_active()) { obor_multipart_term(); return; }
+#endif
+#ifndef OBOR_LNS_PAK_IMPL
+    if(obor_profile_features & OBOR_PROFILE_LNS_6330) { obor_lns_pak_term(); return; }
+#endif
+
     int i;
     if(!pak_initialized)
     {
@@ -1285,6 +1364,13 @@ void pak_term()
 
 int pak_init()
 {
+#ifdef OBOR_LNS_PAK_IMPL
+    { int multi = obor_multipart_init(packfile); if(multi) return multi > 0 ? 0 : -1; }
+#endif
+#ifndef OBOR_LNS_PAK_IMPL
+    if(obor_profile_features & OBOR_PROFILE_LNS_6330) { return obor_lns_pak_init(); }
+#endif
+
     int i;
     unsigned char *sectors;
     unsigned int magic, version;
@@ -1365,7 +1451,7 @@ int pak_init()
         return 0;
     }
     {
-        int getptrfrom = paksize - 4;
+        obor_pak_int getptrfrom = paksize - 4;
         if(pak_getsectors(sectors, getptrfrom >> 11, 2) < 1)
         {
             printf("unable to read pak header pointer\n");

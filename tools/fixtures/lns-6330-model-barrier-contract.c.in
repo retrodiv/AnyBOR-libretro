@@ -1,0 +1,60 @@
+/* SPDX-License-Identifier: BSD-3-Clause
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me> */
+#include <assert.h>
+#include <stdbool.h>
+#include <stdio.h>
+#include @ABI@
+@QUICK_CONSTANT@
+typedef struct {int unload;bool quickload;} s_model;
+static s_model current;
+static unsigned obor_profile_features,depth;
+static int cached,cache_calls,waits,received_unload,received_quick,expect_barrier;
+static void obor_preload_begin(void) {++depth;}
+static void obor_preload_end(void) {assert(depth>0);--depth;}
+static int obor_preload_active(void) {return depth>0;}
+static void obor_wait_frame(void) {assert(depth>0);++waits;}
+static s_model *findmodel(char *name) {(void)name;return cached?&current:NULL;}
+static void update_model_loadflag(s_model *model,char flag) {model->unload=flag;}
+static void cache_model_sprites(s_model *model,int flag) {
+ (void)model;assert(flag==1);++cache_calls;
+ if(expect_barrier)assert(depth>0);
+}
+static s_model *request(char unload) {
+ char *name="authored";s_model *tempmodel;
+ @REQUEST@
+ received_unload=unload;received_quick=quickload;
+ return NULL;
+}
+static s_model *complete(s_model *newchar) {
+ const bool lns=(obor_profile_features&OBOR_PROFILE_LNS_6330)!=0;
+ const char *shutdownmessage=NULL;
+ @COMPLETE@
+ return NULL;
+}
+static void initialize(s_model *newchar,bool quickload) {@INITIALIZER@}
+int main(void) {
+ char flags[]={-1,0,1,2,3,4,67,127};
+ for(unsigned feature=0;feature<2;++feature)for(unsigned f=0;f<sizeof(flags);++f)
+  for(int quick=0;quick<2;++quick) {
+   obor_profile_features=feature?OBOR_PROFILE_LNS_6330:0;expect_barrier=feature;
+   depth=cache_calls=waits=0;cached=1;current=(s_model){.unload=99,.quickload=quick!=0};
+   assert(request(flags[f])==&current && depth==0 && cache_calls==1 && !waits);
+   assert(current.unload==(feature?3:flags[f]) && current.quickload==(quick!=0));
+   /* A full request hitting a cached quick model must leave it quick. */
+   cached=0;assert(request(flags[f])==NULL && depth==feature);
+   assert(received_unload==(feature?3:flags[f]));
+   assert(received_quick==(feature && flags[f]==OBOR_LNS_QUICK_MODEL));
+   initialize(&current,received_quick);assert(current.quickload==received_quick);
+   assert(complete(&current)==&current && depth==0 && waits==(int)feature);
+  }
+ obor_profile_features=OBOR_PROFILE_LNS_6330;expect_barrier=1;
+ depth=waits=0;cached=0;assert(request(3)==NULL && depth==1);
+ assert(request(OBOR_LNS_QUICK_MODEL)==NULL && depth==2);
+ assert(complete(&current)==&current && depth==1 && waits==1);
+ cached=1;assert(request(3)==&current && depth==1);
+ assert(complete(&current)==&current && depth==0 && waits==2);
+ /* Outer load_level/load_models barriers remain active after a model returns. */
+ depth=1;cached=0;assert(request(3)==NULL && depth==2);
+ assert(complete(&current)==&current && depth==1);obor_preload_end();
+ return 0;
+}

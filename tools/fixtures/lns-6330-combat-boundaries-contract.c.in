@@ -1,0 +1,100 @@
+/* SPDX-License-Identifier: BSD-3-Clause
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me> */
+#include <assert.h>
+#include <limits.h>
+#include <stdint.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include "openbor.h"
+#include "ScriptVariant.h"
+#undef printf
+void exitIfFalse(int value,const char *condition,const char *func,const char *file,int line) {
+ if(!value){fprintf(stderr,"%s:%d %s: %s\n",file,line,func,condition);abort();}
+}
+uint32_t obor_profile_features;
+static int level_completed,multihitcheat,ent_max;
+static entity actors[6],*ent_list[4];
+entity *self;
+static s_anim animations[2];
+static int calls,targets[4],change_animation;
+int checkhit(entity *attacker,entity *target) {
+ assert(attacker==actors && calls<4);targets[calls++]=(int)(target-actors);
+ if(change_animation)attacker->animation=&animations[1];return 0;
+}
+static unsigned conversions;
+HRESULT ScriptVariant_IntegerValue(ScriptVariant *v,LONG *out) {
+ ++conversions;if(v->vt!=VT_INTEGER)return E_FAIL;*out=v->lVal;return S_OK;
+}
+#define ARG_VALUE 2
+#define MAX_ATTACK_IDS 100
+#define _ep_hitbyid 1
+#define _ENTITY_ATTACK_ID_INCOMING 1
+@HISTORY@
+@CODE@
+static void setup(unsigned seed) {
+ memset(actors,0,sizeof(actors));memset(targets,0,sizeof(targets));calls=0;ent_max=4;
+ actors[0].animation=&animations[0];actors[0].projectile=(int)(seed%3)-1;
+ actors[0].modeldata.candamage=TYPE_PLAYER|TYPE_ENEMY;actors[0].modeldata.projectilehit=TYPE_ENEMY;
+ actors[0].attack_id_outgoing=seed%3==0?0:seed%3==1?1:UINT_MAX;
+ if(seed&1)actors[0].owner=&actors[5];change_animation=seed&2;level_completed=(int)(seed%3)-1;
+ for(unsigned i=0;i<4;++i){ent_list[i]=&actors[i+1];actors[i+1].exists=(seed>>(i+2))&1;actors[i+1].modeldata.type=i%2?TYPE_PLAYER:TYPE_ENEMY;}
+}
+static void reference_prefix(unsigned family) {
+ if(family==0)official_prefix(actors);else if(family==1)physical_prefix(actors);else lns_prefix(actors);
+}
+static void candidate_prefix(unsigned family) {
+ if(family==0)candidate_official_prefix(actors);else if(family==1)candidate_physical_prefix(actors);else candidate_lns_prefix(actors);
+}
+static void check_prefix(void) {
+ unsigned cases=0;
+ for(obor_profile_features=0;obor_profile_features<8;++obor_profile_features)
+  for(unsigned ordinary=0;ordinary<2;++ordinary)for(unsigned seed=0;seed<128;++seed) {
+   unsigned family=obor_profile_features&OBOR_PROFILE_LNS_6330?2:ordinary;
+   setup(seed);reference_prefix(family);int wanted_calls=calls,wanted_targets[4];memcpy(wanted_targets,targets,sizeof(targets));
+   unsigned id=actors[0].attack_id_outgoing;int changed=actors[0].animation==&animations[1];
+   setup(seed);candidate_prefix(family);
+   assert(wanted_calls==calls && !memcmp(wanted_targets,targets,sizeof(targets)) && id==actors[0].attack_id_outgoing);
+   assert(changed==(actors[0].animation==&animations[1]));++cases;
+  }
+ assert(cases==2048);
+ for(obor_profile_features=0;obor_profile_features<8;++obor_profile_features)
+  for(unsigned idle=0;idle<3;++idle)for(unsigned state=0;state<3;++state) {
+   self=actors;self->idling=idle;self->attacking=state;
+   int expected=obor_profile_features&OBOR_PROFILE_LNS_6330?lns_busy():official_busy();
+   assert(expected==candidate_busy() && physical_busy()==official_busy());
+  }
+ fprintf(stderr,"Combat completion-prefix comparisons: %u; busy predicates: 72\n",cases);
+}
+static void check_history_bindings(void) {
+ unsigned writes=0,setters=0,reads=0;
+ for(obor_profile_features=0;obor_profile_features<8;++obor_profile_features)for(unsigned family=0;family<2;++family) {
+  int lns=(obor_profile_features&OBOR_PROFILE_LNS_6330)!=0;
+  for(unsigned route=0;route<4;++route) {
+   entity actual={0},original={0};
+   for(unsigned step=0;step<240;++step) {
+    unsigned id=step%31==0?0:step%19==0?UINT_MAX:step%107;
+    ScriptVariant v={0};v.vt=step%7==0?VT_EMPTY:VT_INTEGER;v.lVal=(LONG)id;
+    ScriptVariant *args[]={&v,&v,&v};
+    if(route<2) {
+     if(!lns && (obor_profile_features&OBOR_PROFILE_ATTACK_HISTORY_FOUR))continue;
+     self=&original;if(lns)lns_write(route,(int)id);else if(family==0)official_write(route,(int)id);else physical_write(route,(int)id);
+     self=&actual;candidate_write(route,(int)id);++writes;
+    } else {
+     self=&original;conversions=0;if(lns)lns_setter(route-2,args);else if(family==0)official_setter(route-2,args);else physical_setter(route-2,args);unsigned expected_conversions=conversions;
+     self=&actual;conversions=0;candidate_setter(route-2,args);assert(conversions==expected_conversions);++setters;
+    }
+    assert(!memcmp(&actual,&original,sizeof(actual)));
+    for(multihitcheat=0;multihitcheat<2;++multihitcheat)for(int ignore=0;ignore<2;++ignore) {
+     if(!lns && (obor_profile_features&OBOR_PROFILE_ATTACK_HISTORY_FOUR))continue;
+     s_collision_attack attack={0};attack.ignore_attack_id=ignore;
+     int expected=lns?lns_seen(&original,(int)id,&attack):family==0?official_seen(&original,(int)id,&attack):physical_seen(&original,(int)id,&attack);
+     assert(expected==candidate_seen(&actual,(int)id,&attack));++reads;
+    }
+   }
+  }
+ }
+ assert(writes==5760 && setters==7680 && reads==46080);
+ fprintf(stderr,"Incoming-ID call-site writes: %u; script setter comparisons: %u; collision history checks: %u\n",writes,setters,reads);
+}
+int main(void) {check_prefix();check_history_bindings();return 0;}

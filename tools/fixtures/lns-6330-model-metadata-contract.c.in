@@ -1,0 +1,74 @@
+/* SPDX-License-Identifier: BSD-3-Clause
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me> */
+#include <assert.h>
+#include <stdbool.h>
+#include <stdlib.h>
+#include <string.h>
+#include <strings.h>
+#include <stdarg.h>
+#include <stddef.h>
+#include @ABI@
+static unsigned obor_profile_features=OBOR_PROFILE_LNS_6330;
+#define MAX_ARG_LEN 1024
+#define MAX_ARG_COUNT 128
+#define stricmp strcasecmp
+@ENUM@
+typedef struct {size_t count,arglen[MAX_ARG_COUNT];char *args[MAX_ARG_COUNT];} ArgList;
+#define GET_ARG(n) (arglist.count>(n)?arglist.args[n]:"")
+#define GET_INT_ARG(n) atoi(GET_ARG(n))
+typedef struct {char *path;int selectable,clearcount,selectcol;} Cache;
+static Cache model_cache[1];
+static int models_cached=1,modelcmdlist,missing,reads,errors;
+static char *allocated;
+static const char *input;
+static int get_cached_model_index(const char *name) {return !strcmp(name,"model")?0:-1;}
+static int buffer_pakfile(const char *filename,char **buf,size_t *size) {
+ (void)filename;++reads;if(missing)return 0;
+ *size=strlen(input);allocated=malloc(*size+1);assert(allocated);
+ memcpy(allocated,input,*size+1);*buf=allocated;return 1;
+}
+static void borShutdown(int code,const char *format,...) {(void)code;(void)format;++errors;}
+static modelCommands getModelCommand(int list,const char *name) {
+ (void)list;
+ if(!strcasecmp(name,"secret"))return CMD_MODEL_SECRET;
+ if(!strcasecmp(name,"selectcol"))return CMD_MODEL_SELECTCOL;
+ if(!strcasecmp(name,"type"))return CMD_MODEL_TYPE;
+ return 0;
+}
+@PARSER@
+@NEWLINE@
+@CANDIDATE@
+@ORIGINAL@
+static void reset(int initial) {
+ model_cache[0]=(Cache){.path="authored.txt",.selectable=initial,.clearcount=initial,.selectcol=initial};
+ reads=errors=0;allocated=NULL;
+}
+int main(void) {
+ const char *texts[]={
+  "type player\nselectcol 3\nsecret 0 4\n",
+  "selectcol 3\nsecret 0 4\ntype player\nselectcol 0\n",
+  "# comment\r\nSELECTCOL 2\r\nsecret 1 -1\r\nTYPE PLAYER\r\n",
+  "selectcol -2\ntype player\n",
+  "selectcol 4\ntype enemy\n",
+  "selectcol 1\nselectcol 5\ntype player\n",
+  "secret 0\nselectcol\ntype player\n",
+  "unrecognized \"type\"\nselectcol 3 # ignored\ntype player",
+  "type 'player'\n",
+  "type player\ntype enemy\n"
+ };
+ for(unsigned t=0;t<sizeof(texts)/sizeof(*texts);++t)for(int initial=-1;initial<=1;++initial) {
+  input=texts[t];missing=0;reset(initial);original_preload_cached_model("model");
+  Cache expected=model_cache[0];int expected_reads=reads;
+  /* The reference leaked its buffer; the provider retires that allocation. */
+  free(allocated);allocated=NULL;
+  reset(initial);preload_cached_model("model");allocated=NULL;
+  assert(expected.selectable==model_cache[0].selectable && expected.clearcount==model_cache[0].clearcount && expected.selectcol==model_cache[0].selectcol && reads==expected_reads && !errors);
+ }
+ reset(0);preload_cached_model("absent");assert(reads==0 && errors==0);
+ reset(0);missing=1;preload_cached_model("model");assert(reads==1 && errors==0);
+ const char *invalid[]={"","\n# only comment\n","selectcol 3\n","secret 0 2","\0type player"};
+ for(unsigned i=0;i<sizeof(invalid)/sizeof(*invalid);++i) {
+  input=invalid[i];missing=0;reset(0);preload_cached_model("model");allocated=NULL;assert(errors==1 && reads==1);
+ }
+ return 0;
+}

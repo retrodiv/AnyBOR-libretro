@@ -1,0 +1,27 @@
+{
+  "license": "BSD-3-Clause; OpenBOR Team source with LNS enhancements by Hechelion and Gonzalo MVP",
+  "contexts": {
+    "official": {
+      "commit": "4b1705fa37457ab38bc5d0fcc561242019588e32",
+      "header_sha256": "2c0703d8a028a5ff436ded607def4dd49e20eb7e72d0d214418588554c847056",
+      "default_shutdown_macro": "#define\t\tDEFAULT_SHUTDOWN_MESSAGE \\\n\t\t\t\"OpenBOR \" VERSION \", Compile Date: \" __DATE__ \"\\n\" \\\n\t\t\t\"Presented by the OpenBOR Team.\\n\" \\\n\t\t\t\"www.chronocrash.com\\n\"\\\n\t\t\t\"OpenBOR is the open source continuation of Beats of Rage by Senile Team.\\n\" \\\n\t\t\t\"\\n\" \\\n\t\t\t\"Special thanks to SEGA and SNK.\\n\\n\"",
+      "version_header_sha256": "23e880842b4f97c9a16d8dcc29f56ef3b277ed5af47e39426d07b5435a35e2a0",
+      "version_defines": "#define VERSION_H\n#define VERSION_NAME \"OpenBOR\"\n#define VERSION_MAJOR \"3\"\n#define VERSION_MINOR \"0\"\n#define VERSION_BUILD \"\"\n#define VERSION \"v\"VERSION_MAJOR\".\"VERSION_MINOR\" Build \"VERSION_BUILD"
+    },
+    "physical": {
+      "commit": "494708eb34e71d1afda237873907701c4ec3a569",
+      "header_sha256": "5a69069cc1d8dfdec66dba09c2df2141d050ea2f564f2f8c0a199a7842ff8345",
+      "default_shutdown_macro": "#define\t\tDEFAULT_SHUTDOWN_MESSAGE \\\n\t\t\t\"OpenBOR \" VERSION \", Compile Date: \" __DATE__ \"\\n\" \\\n\t\t\t\"Presented by the OpenBOR Team.\\n\" \\\n\t\t\t\"www.chronocrash.com\\n\"\\\n\t\t\t\"OpenBOR is the open source continuation of Beats of Rage by Senile Team.\\n\" \\\n\t\t\t\"\\n\" \\\n\t\t\t\"Special thanks to SEGA and SNK.\\n\\n\"",
+      "version_header_sha256": "23e880842b4f97c9a16d8dcc29f56ef3b277ed5af47e39426d07b5435a35e2a0",
+      "version_defines": "#define VERSION_H\n#define VERSION_NAME \"OpenBOR\"\n#define VERSION_MAJOR \"3\"\n#define VERSION_MINOR \"0\"\n#define VERSION_BUILD \"\"\n#define VERSION \"v\"VERSION_MAJOR\".\"VERSION_MINOR\" Build \"VERSION_BUILD"
+    },
+    "lns": {
+      "commit": "cfb4f3a676613714757d4539275482f7c323d6ad",
+      "header_sha256": "20431b28fa91cde50ae1b7ed6acb5fb0fe3c7c5f436b729b86dc3cffc3b357b5",
+      "default_shutdown_macro": "#define\t\tDEFAULT_SHUTDOWN_MESSAGE \\\n\t\t\t\"OpenBOR \" VERSION \", Compile Date: \" __DATE__ \"\\n\" \\\n\t\t\t\"Presented by the OpenBOR Team.\\n\" \\\n\t\t\t\"www.chronocrash.com\\n\"\\\n\t\t\t\"OpenBOR is the open source continuation of Beats of Rage by Senile Team.\\n\" \\\n\t\t\t\"\\n\" \\\n\t\t\t\"Special thanks to SEGA and SNK.\\n\\n\"",
+      "version_header_sha256": "87beb414ec242d561656f2ea03e9fca7d282e91e78db2054b74db8e8e2252f09",
+      "version_defines": "#define VERSION_H\n#define VERSION_NAME \"OpenBOR\"\n#define VERSION_MAJOR \"3\"\n#define VERSION_MINOR \"0\"\n#define VERSION_BUILD \"6330 LNS v0.10g\"\n#define VERSION \"v\"VERSION_MAJOR\".\"VERSION_MINOR\" Build \"VERSION_BUILD"
+    }
+  },
+  "scope": "LNS own version literal; ordinary controls preserve the current generated physical VERSION rather than claiming its unmaterialized initial source VERSION_BUILD is an original binary label."
+}

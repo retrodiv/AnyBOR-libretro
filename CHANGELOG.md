@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.2.30
+
+- Add the v3.0 6330-mod profile with deferred model loading, character selection,
+  Hall of Fame, settings, combat, script and HUD behavior from its own source.
+- Recognize the variant through explicit tags, verified engine identities and
+  exclusive native directives in the bound level-order metadata.
+- Read PACK 1.1 numbered volumes with large-file I/O and desktop video metadata
+  across volumes; reject incomplete or invalid volume sets.
+- Keep profile settings and state identity separate, defer states during model
+  changes, and guard selection, cache fallback and absent music-buffer reads.
+
 ## 0.2.29
 
 - Retain the pinned archive reader's Android large-file header and provide

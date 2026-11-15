@@ -6,6 +6,7 @@
 #include <stdint.h>
 #include <stdio.h>
 #include <string.h>
+#include "anybor_pak_volumes.h"
 
 static uint32_t obor_pak_u32(const unsigned char *p)
 {
@@ -21,7 +22,7 @@ static const char *obor_pak_validate(const char *path)
     FILE *fp = fopen(path, "rb");
     unsigned char header[12], name[256];
     const char *error = "Invalid or truncated PAK directory";
-    long end;
+    int64_t end;
     uint32_t directory, position;
     if (!fp)
         return "Cannot open PAK file";
@@ -32,17 +33,25 @@ static const char *obor_pak_validate(const char *path)
         error = "Unsupported SPAK archive";
         goto done;
     }
+    if (!memcmp(header, "PACK", 4) && obor_pak_u32(header + 4) == 0x00010100u) {
+        obor_pak_volumes volumes;
+        fclose(fp);
+        error = obor_pak_volumes_open(&volumes, path);
+        if (!error) obor_pak_volumes_close(&volumes);
+        return error;
+    }
     if (memcmp(header, "PACK", 4) || obor_pak_u32(header + 4)) {
         error = "Unsupported PAK signature or version";
         goto done;
     }
-    if (fseek(fp, 0, SEEK_END) || (end = ftell(fp)) < 12 || end > INT_MAX)
+    if (obor_file_seek64(fp, 0, SEEK_END) ||
+        (end = obor_file_tell64(fp)) < 12 || end > UINT32_MAX)
         goto done;
-    if (fseek(fp, end - 4, SEEK_SET) || fread(header, 1, 4, fp) != 4)
+    if (obor_file_seek64(fp, end - 4, SEEK_SET) || fread(header, 1, 4, fp) != 4)
         goto done;
     directory = obor_pak_u32(header);
     if (directory < 8 || directory >= (uint32_t)end - 4 ||
-        fseek(fp, directory, SEEK_SET))
+        obor_file_seek64(fp, directory, SEEK_SET))
         goto done;
     position = directory;
     while (position < (uint32_t)end - 4) {

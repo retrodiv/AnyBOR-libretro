@@ -84,11 +84,14 @@ def check_core_info(root, pin):
                 raise RuntimeError("Invalid upstream profile provenance") from error
         if "reconstruction" in profile:
             provenance = profile["reconstruction"]
+            reference = (provenance.get("discussion", provenance.get("source_repository"))
+                         if isinstance(provenance, dict) else None)
             if (not isinstance(provenance, dict) or
-                    set(provenance) != {"basis", "discussion", "source_commits"} or
+                    set(provenance) not in ({"basis", "discussion", "source_commits"},
+                                            {"basis", "source_repository", "source_commits"}) or
                     not isinstance(provenance["basis"], str) or not provenance["basis"].strip() or
-                    not isinstance(provenance["discussion"], str) or
-                    not provenance["discussion"].startswith(("https://", "http://")) or
+                    not isinstance(reference, str) or
+                    not reference.startswith(("https://", "http://")) or
                     not isinstance(provenance["source_commits"], list) or
                     not provenance["source_commits"] or
                     any(not isinstance(commit, str) or not re.fullmatch(r"[0-9a-f]{40}", commit)

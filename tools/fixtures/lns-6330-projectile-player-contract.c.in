@@ -1,0 +1,98 @@
+/* SPDX-License-Identifier: BSD-3-Clause
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me> */
+#include <assert.h>
+#include <stdint.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include "openbor.h"
+#undef printf
+void exitIfFalse(int value,const char *condition,const char *func,const char *file,int line) {
+    if(!value) {fprintf(stderr,"%s:%d %s: %s\n",file,line,func,condition);abort();}
+}
+uint32_t obor_profile_build,obor_profile_features;
+s_savedata savedata;
+s_level *level;
+entity *self;
+u32 _time=17;
+static entity parent,weapon,children[3];
+static s_model models[2];
+static s_anim parent_animation;
+static s_level area;
+static int fail_at,created,attempts;
+static struct {unsigned count;double values[256];} trace;
+static void record(double value) {assert(trace.count<256);trace.values[trace.count++]=value;}
+entity *spawn(float x,float z,float y,int direction,char *name,int index,s_model *model) {
+    assert(!model);record(1);record(x);record(z);record(y);record(direction);record(index);
+    record(name?!strcmp(name,"Knife")?1:!strcmp(name,"Boomerang")?2:!strcmp(name,"Bomb")?3:!strcmp(name,"Star")?4:5:0);
+    record(self->attacking);record(self->playerindex);
+    if(attempts++==fail_at)return NULL;
+    assert(created<3);entity *e=children+created;memset(e,0,sizeof(*e));
+    e->model=&models[0];e->modeldata=models[0];e->playerindex=-500-created;
+    e->sortid=100-created;e->position.x=x;e->position.z=z;e->position.y=y;e->direction=direction;
+    created++;return e;
+}
+void ent_set_colourmap(entity *e,unsigned int map) {
+    assert(e>=children && e<children+created);record(2);record(e-children);record(e->playerindex);record(map);e->map=(int)map;
+}
+void toss(entity *e,float lift) {assert(e>=children && e<children+created);record(3);record(e-children);record(e->playerindex);record(lift);}
+void common_think(void) {}
+int arrow_takedamage(entity *e,s_collision_attack *attack,int fall) {(void)e;(void)attack;(void)fall;abort();}
+int common_takedamage(entity *e,s_collision_attack *attack,int fall) {(void)e;(void)attack;(void)fall;abort();}
+@CANDIDATE@
+@ORIGINAL@
+static void reset(unsigned seed,int player,int fail) {
+    memset(&trace,0,sizeof trace);memset(&parent,0,sizeof parent);memset(&weapon,0,sizeof weapon);
+    memset(children,0,sizeof children);memset(models,0,sizeof models);memset(&parent_animation,0,sizeof parent_animation);
+    memset(&savedata,0,sizeof savedata);memset(&area,0,sizeof area);level=seed&1?&area:NULL;
+    if(level)level->nohit=(seed&2)?DAMAGE_FROM_PLAYER_OFF:DAMAGE_FROM_PLAYER_ON;
+    savedata.mode=(seed>>2)&1;fail_at=fail;created=attempts=0;self=&parent;
+    models[0].speed=(seed&8)?3:0;models[0].nomove=(seed>>4)&1;
+    models[0].remove=(seed>>5)&1;models[0].hostile=(seed&64)?TYPE_ENEMY:-1;
+    models[0].candamage=(seed&128)?TYPE_PLAYER:-1;models[0].offscreenkill=(seed&256)?75:0;
+    models[0].jumpheight=3.25f;
+    parent.model=&models[1];parent.animation=&parent_animation;parent.playerindex=player;parent.attacking=ATTACKING_ACTIVE;
+    parent.modeldata.type=(seed&1)?TYPE_PLAYER:TYPE_ENEMY;
+    parent.modeldata.hostile=TYPE_PLAYER|TYPE_ENEMY;parent.modeldata.candamage=TYPE_PLAYER|TYPE_ENEMY;
+    parent.modeldata.knife=parent.modeldata.bomb=parent.modeldata.boomerang=parent.modeldata.star=(seed&4)?1:-1;
+    parent_animation.projectile.knife=parent_animation.projectile.bomb=parent_animation.projectile.boomerang=parent_animation.projectile.star=(seed&8)?0:-1;
+    if(seed&16) {parent.weapent=&weapon;weapon.modeldata.subtype=SUBTYPE_PROJECTILE;weapon.modeldata.project=(seed&32)?0:-1;}
+    static float star_velocities[3]={-2.0f,0,2.25f};parent_animation.starvelocity=(seed&64)?star_velocities:NULL;
+}
+typedef entity *(*normal_spawn)(char *,int,float,float,float,int,int,int);
+static entity *candidate_normal(char *name,int index,float x,float z,float a,int direction,int type,int map) {return candidate_knife_spawn(name,index,x,z,a,direction,type,map);}
+static entity *official_normal(char *name,int index,float x,float z,float a,int direction,int type,int map) {return official_knife_spawn(name,index,x,z,a,direction,type,map);}
+static entity *physical_normal(char *name,int index,float x,float z,float a,int direction,int type,int map) {return physical_knife_spawn(name,index,x,z,a,direction,type,map);}
+static entity *lns_normal(char *name,int index,float x,float z,float a,int direction,int type,int map) {return lns_knife_spawn(name,index,x,z,a,direction,type,map);}
+int main(void) {
+    normal_spawn normal[]={official_normal,physical_normal,lns_normal};
+    entity *(*bombs[])(char *,int,float,float,float,int,int)={official_bomb_spawn,physical_bomb_spawn,lns_bomb_spawn};
+    entity *(*boomerangs[])(char *,int,float,float,float,int,int)={official_boomerang_spawn,NULL,lns_boomerang_spawn};
+    int (*stars[])(float,float,float,int)={official_star_spawn,physical_star_spawn,lns_star_spawn};
+    static const int players[]={-1,0,1,3,2147483647};unsigned cases=0;
+    for(unsigned oracle=0;oracle<3;oracle++)for(unsigned flags=0;flags<8;flags++) {
+        if(((flags&OBOR_PROFILE_LNS_6330)!=0)!=(oracle==2))continue;
+        obor_profile_build=oracle==1?6391:6330;obor_profile_features=flags;
+        for(unsigned sample=0;sample<128;sample++)for(int kind=0;kind<4;kind++)for(int failure=0;failure<4;failure++) {
+            unsigned seed=(sample*73)%512;
+            if(kind==1 && !boomerangs[oracle])continue;
+            int player=players[seed%5],direction=seed&1,type=(seed>>2)%4,map=(seed>>3)%4,index=(seed&1)?0:-1;
+            char *name=(seed&2)?"named":NULL;
+            reset(seed,player,failure);int a;
+            if(kind==0)a=candidate_normal(name,index,1.25f,3.5f,7.75f,direction,type,map)!=NULL;
+            else if(kind==1)a=candidate_boomerang_spawn(name,index,1.25f,3.5f,7.75f,direction,map)!=NULL;
+            else if(kind==2)a=candidate_bomb_spawn(name,index,1.25f,3.5f,7.75f,direction,map)!=NULL;
+            else a=candidate_star_spawn(1.25f,3.5f,7.75f,direction);
+            unsigned char saved_trace[sizeof trace],saved_children[sizeof children],saved_parent[sizeof parent];
+            memcpy(saved_trace,&trace,sizeof trace);memcpy(saved_children,children,sizeof children);memcpy(saved_parent,&parent,sizeof parent);
+            int n=created,tries=attempts;reset(seed,player,failure);int b;
+            if(kind==0)b=normal[oracle](name,index,1.25f,3.5f,7.75f,direction,type,map)!=NULL;
+            else if(kind==1)b=boomerangs[oracle](name,index,1.25f,3.5f,7.75f,direction,map)!=NULL;
+            else if(kind==2)b=bombs[oracle](name,index,1.25f,3.5f,7.75f,direction,map)!=NULL;
+            else b=stars[oracle](1.25f,3.5f,7.75f,direction);
+            assert(a==b && n==created && tries==attempts);
+            assert(!memcmp(saved_trace,&trace,sizeof trace) && !memcmp(saved_children,children,sizeof children) && !memcmp(saved_parent,&parent,sizeof parent));cases++;
+        }
+    }
+    printf("projectile-player cases %u\n",cases);return 0;
+}

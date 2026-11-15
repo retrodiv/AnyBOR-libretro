@@ -1,0 +1,71 @@
+/* SPDX-License-Identifier: BSD-3-Clause
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me> */
+#include <assert.h>
+#include <stdint.h>
+#include <string.h>
+#include <stdio.h>
+#include @ABI@
+uint32_t obor_profile_features;
+/* Unchanged animation selector and attack payload use controlled providers. */
+enum {ANI_FALL=0,ATTACKING_INACTIVE=0,DIRECTION_RIGHT=1,ATK_NONE=-1};
+typedef struct {int token;} s_collision_attack;
+static const s_collision_attack emptyattack={12345};
+typedef struct entity {
+    struct {float x,y,z;} velocity;
+    void (*takeaction)(void);
+    int attacking,projectile,direction;
+    struct {int health_current;} energy_status;
+    struct {int attack_force,attack_type;} damage_on_landing;
+    struct {int subject_to_basemap,no_adjust_base,subject_to_hole;} modeldata;
+    float base;
+} entity;
+static entity actors[2],*self;
+static int valid,wall,obstacle;
+static float random_value;
+static struct {int count,events[8],payload;float toss_height;} trace;
+static void event(int e) {assert(trace.count<8);trace.events[trace.count++]=e;}
+static void common_fall(void) {}
+static int validanim(entity *e,int animation) {assert(e==actors && animation==ANI_FALL);event(1);return valid;}
+static int check_block_wall(entity *e) {assert(e==self);event(2);return wall;}
+static entity *check_block_obstacle(entity *e) {assert(e==self);event(3);return obstacle?actors+1:0;}
+static float randf(float limit) {assert(limit==1);event(4);return random_value;}
+static void toss(entity *e,float height) {assert(e==actors);event(5);trace.toss_height=height;}
+static int set_fall(entity *e,entity *parent,s_collision_attack *attack,int reset) {
+    assert(e==actors && parent==e && !reset);event(6);trace.payload=attack->token;return 1;
+}
+@CANDIDATE@
+@ORIGINAL@
+static void reset(int flags,int direction,float velocity,int self_index) {
+    obor_profile_features=(unsigned)flags;memset(actors,0,sizeof actors);memset(&trace,0,sizeof trace);
+    self=actors+self_index;actors[0].takeaction=0;actors[0].attacking=12;
+    actors[0].projectile=4;actors[0].direction=direction;actors[0].velocity.x=velocity;
+    actors[0].velocity.y=17;actors[0].base=19;actors[0].energy_status.health_current=31;
+    actors[0].damage_on_landing.attack_force=44;actors[0].damage_on_landing.attack_type=45;
+    actors[0].modeldata.subject_to_basemap=-1;actors[0].modeldata.no_adjust_base=1;
+    actors[0].modeldata.subject_to_hole=-1;
+}
+static void same_actor(const entity *a,const entity *b) {
+    assert(a->takeaction==b->takeaction && a->attacking==b->attacking && a->projectile==b->projectile);
+    assert(a->direction==b->direction && a->velocity.x==b->velocity.x && a->velocity.y==b->velocity.y && a->velocity.z==b->velocity.z);
+    assert(a->base==b->base && a->energy_status.health_current==b->energy_status.health_current);
+    assert(a->damage_on_landing.attack_force==b->damage_on_landing.attack_force && a->damage_on_landing.attack_type==b->damage_on_landing.attack_type);
+    assert(a->modeldata.subject_to_basemap==b->modeldata.subject_to_basemap && a->modeldata.no_adjust_base==b->modeldata.no_adjust_base && a->modeldata.subject_to_hole==b->modeldata.subject_to_hole);
+}
+int main(void) {
+    int (*originals[])(entity *)={official_deflect,physical_deflect,lns_deflect};
+    static const float velocities[]={-32,-0.25f,0,0.25f,32};unsigned count=0;
+    for(int oracle=0;oracle<3;oracle++) for(int flags=0;flags<8;flags++) {
+        if(((flags&OBOR_PROFILE_LNS_6330)!=0)!=(oracle==2))continue;
+        for(valid=0;valid<=1;valid++) for(wall=-1;wall<=1;wall++) for(obstacle=0;obstacle<=1;obstacle++)
+        for(int direction=0;direction<=1;direction++) for(int v=0;v<5;v++) for(int random=-1;random<=1;random++) for(int si=0;si<=1;si++) {
+            random_value=(float)random;reset(flags,direction,velocities[v],si);
+            int a=candidate_deflect(actors);entity observed[2];memcpy(observed,actors,sizeof observed);
+            unsigned char saved_trace[sizeof trace];memcpy(saved_trace,&trace,sizeof trace);
+            reset(flags,direction,velocities[v],si);int b=originals[oracle](actors);
+            assert(a==b && !memcmp(saved_trace,&trace,sizeof trace));
+            same_actor(observed,actors);same_actor(observed+1,actors+1);count++;
+        }
+        if(flags&OBOR_PROFILE_LNS_6330) {assert(candidate_deflect(0)==0 && originals[oracle](0)==0);count++;}
+    }
+    printf("deflect cases %u\n",count);return 0;
+}

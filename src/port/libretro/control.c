@@ -261,6 +261,11 @@ static int key_down(int code)
     return obor_pad[pl][btn];
 }
 
+#if OBOR_ENGINE_BUILD == 6391
+extern s_playercontrols default_control;
+extern int allow_default_keys(void);
+#endif
+
 void control_update(s_playercontrols **playercontrols, int numplayers)
 {
     obor_poll_tick();
@@ -271,6 +276,15 @@ void control_update(s_playercontrols **playercontrols, int numplayers)
             if (key_down(pcontrols->settings[i]))
                 k |= ((u64)1 << i);
         }
+#if OBOR_ENGINE_BUILD == 6391
+        if ((obor_profile_features & OBOR_PROFILE_LNS_6330) &&
+            player == 0 && !k && allow_default_keys()) {
+            for (int i = 0; i < JOY_MAX_INPUTS; i++) {
+                if (key_down(default_control.settings[i]))
+                    k |= ((u64)1 << i);
+            }
+        }
+#endif
         pcontrols->kb_break = 0;
         pcontrols->newkeyflags = k & (~pcontrols->keyflags);
         pcontrols->keyflags = k;

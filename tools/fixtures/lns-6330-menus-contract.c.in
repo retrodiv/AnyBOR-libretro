@@ -1,0 +1,122 @@
+/* SPDX-License-Identifier: BSD-3-Clause
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me> */
+#include <assert.h>
+#include <stdbool.h>
+#include <stdint.h>
+#include <stdio.h>
+#include <stdarg.h>
+#include <stdlib.h>
+#include <string.h>
+#include @ABI@
+@LIMITS@
+@KEYS@
+static unsigned obor_profile_features;
+static int num_difficulties,bonus,saveslot,newgameMenu,optionsMenu,cheats,forcecheatsoff,_pause;
+static int livescheat,creditscheat,healthcheat,multihitcheat;
+static uint32_t bothnewkeys;
+static struct {int hRes,vRes;} videomodes;
+static struct {int effectvol;} savedata;
+static struct {char *name;int ifcomplete;} levelsets[32];
+static struct {char dName[MAX_NAME_LEN];} savelevel[32];
+static void *level;
+typedef struct {int alpha;} s_drawmethod;
+static const s_drawmethod plainmethod={0};
+static unsigned color_black=0x10203040,color_white=0xa0b0c0d0;
+#define SAMPLE_BEEP 7
+#define SAMPLE_BEEP2 8
+#define Tr(text) (text)
+#define MIN(a,b) ((a)<(b)?(a):(b))
+static struct Event {int kind,a,b,c,d,e,f;char text[128];} trace[4096],expected_trace[4096];
+static unsigned events,frames,frame_count,system_behavior,system_override=4;
+static uint32_t input[40];
+static int loaded_bonus;
+static void event(int kind,int a,int b,int c,int d,int e,int f,const char *text) {
+ assert(events<4096);struct Event *entry=&trace[events++];memset(entry,0,sizeof(*entry));
+ entry->kind=kind;entry->a=a;entry->b=b;entry->c=c;entry->d=d;entry->e=e;entry->f=f;
+ if(text){assert(strlen(text)<sizeof(entry->text));strcpy(entry->text,text);}
+}
+static int fontmonowidth(int font) {return 5+font*2;}
+static int fontheight(int font) {return 9+font;}
+static int font_string_width(int font,const char *format,...) {
+ char text[128];va_list args;va_start(args,format);int n=vsnprintf(text,sizeof(text),format,args);va_end(args);assert(n>=0 && n<128);return n*fontmonowidth(font);
+}
+static void font_printf(int x,int y,int font,int align,const char *format,...) {
+ assert(align==0);char text[128];va_list args;va_start(args,format);int n=vsnprintf(text,sizeof(text),format,args);va_end(args);assert(n>=0 && n<128);event(1,x,y,font,0,0,0,text);
+}
+@MACROS@
+static void spriteq_add_box(int x,int y,int w,int h,int z,unsigned color,const s_drawmethod *method) {
+ event(2,x,y,w,h,z,method?method->alpha:-1,NULL);event(3,(int)color,0,0,0,0,0,NULL);
+}
+static void spriteq_add_line(int x,int y,int endx,int endy,int z,unsigned color,const s_drawmethod *method) {
+ event(4,x,y,endx,endy,z,method?method->alpha:-1,NULL);event(3,(int)color,0,0,0,0,0,NULL);
+}
+static void sound_play_sample(int sample,int loop,int left,int right,int pitch) {
+ assert(loop==0 && left==savedata.effectvol && right==left && pitch==100);event(5,sample,left,pitch,0,0,0,NULL);
+}
+static int loadGameFile(void) {bonus=loaded_bonus;event(6,bonus,0,0,0,0,0,NULL);return 1;}
+static void savesettings(void) {event(7,0,0,0,0,0,0,NULL);}
+static void menu_options_video(void) {event(8,0,0,0,0,0,0,NULL);}
+static void menu_options_sound(void) {event(8,1,0,0,0,0,0,NULL);}
+static void menu_options_input(void) {event(8,2,0,0,0,0,0,NULL);}
+static void menu_options_system(void) {
+ event(8,3,0,0,0,0,0,NULL);if(system_behavior&1)cheats=!cheats;if(system_behavior&2)forcecheatsoff=!forcecheatsoff;
+}
+static void update(int gameplay,int second) {
+ assert(second==0 && (gameplay==0 || gameplay==1) && frames<frame_count);
+ event(9,(int)frames,newgameMenu,optionsMenu,_pause,gameplay,0,NULL);bothnewkeys=input[frames++];
+}
+@CANDIDATE@
+@ORIGINALS@
+static void setup(unsigned family,unsigned seed,int count,int route,uint32_t keys,int difficulty) {
+ obor_profile_features=family==2?OBOR_PROFILE_LNS_6330:family==3?OBOR_PROFILE_ATTACK_HISTORY_FOUR:0;
+ num_difficulties=count;bonus=91;loaded_bonus=(int)(seed%6)-1;saveslot=-7;newgameMenu=optionsMenu=0;
+ cheats=seed&1;forcecheatsoff=(seed>>1)&1;_pause=(seed>>2)%3;level=seed&16?levelsets:NULL;
+ livescheat=(seed>>5)&1;creditscheat=(seed>>6)&1;healthcheat=(seed>>7)&1;multihitcheat=(seed>>8)&1;system_behavior=system_override<4?system_override:(seed>>9)%4;
+ savedata.effectvol=49;videomodes.hRes=320+(seed%3)*80;videomodes.vRes=240+(seed%2)*40;
+ memset(savelevel,0x5a,sizeof(savelevel));events=frames=0;bothnewkeys=0;memset(trace,0,sizeof(trace));memset(input,0,sizeof(input));
+ static char names[32][16];
+ for(int i=0;i<32;++i){snprintf(names[i],16,"SET_%d",i);levelsets[i].name=names[i];levelsets[i].ifcomplete=i%3==2?3:i%3;}
+ frame_count=(unsigned)route+4;assert(frame_count<=40);
+ for(int i=0;i<route;++i)input[i]=FLAG_MOVEDOWN;
+ input[route]=keys;input[route+1]=difficulty?0:FLAG_ATTACK;input[frame_count-1]=FLAG_ESC;
+}
+static struct Result {int ret,slot,newgame,options,pause,cheats,forceoff,lives,credits,health,multihit;unsigned events,frames;uint32_t keys;unsigned char names[sizeof(savelevel)];} expected;
+static void remember(int ret) {
+ expected.ret=ret;expected.slot=saveslot;expected.newgame=newgameMenu;expected.options=optionsMenu;expected.pause=_pause;
+ expected.cheats=cheats;expected.forceoff=forcecheatsoff;expected.lives=livescheat;expected.credits=creditscheat;expected.health=healthcheat;expected.multihit=multihitcheat;
+ expected.events=events;expected.frames=frames;expected.keys=bothnewkeys;memcpy(expected.names,savelevel,sizeof(savelevel));memcpy(expected_trace,trace,events*sizeof(*trace));
+}
+static void compare(int ret) {
+ assert(expected.ret==ret && expected.slot==saveslot && expected.newgame==newgameMenu && expected.options==optionsMenu && expected.pause==_pause);
+ assert(expected.cheats==cheats && expected.forceoff==forcecheatsoff && expected.lives==livescheat && expected.credits==creditscheat && expected.health==healthcheat && expected.multihit==multihitcheat);
+ assert(expected.events==events && expected.frames==frames && expected.keys==bothnewkeys && !memcmp(expected.names,savelevel,sizeof(savelevel)));
+ assert(!memcmp(expected_trace,trace,events*sizeof(*trace)));
+}
+static int original_difficulty(unsigned family) {
+ return family==0?official_menu_difficulty():family==1?physical_menu_difficulty():lns_menu_difficulty();
+}
+static void original_options(unsigned family) {
+ if(family==0)official_menu_options();else if(family==1)physical_menu_options();else if(family==2)lns_menu_options();else previous_menu_options();
+}
+int main(void) {
+ const int counts[]={1,2,5,6,14,15,29,32};
+ const uint32_t key_bits[]={FLAG_MOVEUP,FLAG_MOVEDOWN,FLAG_MOVELEFT,FLAG_MOVERIGHT,FLAG_ATTACK,FLAG_ESC,FLAG_ATTACK2,FLAG_ATTACK3,FLAG_ATTACK4};
+ unsigned difficulty_cases=0,options_cases=0;
+ for(unsigned family=0;family<3;++family)for(unsigned c=0;c<8;++c)for(int route=0;route<=counts[c]+1;route+=route<2?1:4)for(unsigned seed=0;seed<6;++seed) {
+  uint32_t keys=seed%3==0?FLAG_ATTACK:seed%3==1?FLAG_MOVEUP:FLAG_ESC;
+  setup(family,seed,counts[c],route,keys,1);remember(original_difficulty(family));
+  setup(family,seed,counts[c],route,keys,1);compare(menu_difficulty());++difficulty_cases;
+ }
+ for(unsigned family=0;family<4;++family)for(unsigned mask=0;mask<512;++mask)for(unsigned route=0;route<8;++route) {
+  uint32_t keys=0;for(unsigned k=0;k<9;++k)if(mask&(1u<<k))keys|=key_bits[k];
+  unsigned seed=mask+route*97;
+  setup(family,seed,5,(int)route,keys,0);original_options(family);remember(0);
+  setup(family,seed,5,(int)route,keys,0);menu_options();compare(0);++options_cases;
+ }
+ for(unsigned family=0;family<4;++family)for(system_override=0;system_override<4;++system_override)for(unsigned initial=0;initial<4;++initial) {
+  unsigned seed=initial+20;
+  setup(family,seed,5,3,FLAG_ATTACK,0);original_options(family);remember(0);
+  setup(family,seed,5,3,FLAG_ATTACK,0);menu_options();compare(0);++options_cases;
+ }
+ fprintf(stderr,"Mode comparisons: %u; option/input comparisons: %u\n",difficulty_cases,options_cases);return 0;
+}

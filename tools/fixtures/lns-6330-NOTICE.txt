@@ -1,0 +1,32 @@
+Notices for lns-6330-* source regression fixtures
+
+The reference excerpts retain their original OpenBOR terms. The surrounding
+adapters and synthetic controls are original AnyBOR work under BSD-3-Clause.
+Reference sources: official6330 commit4b1705fa37457ab38bc5d0fcc561242019588e32,
+physical6391 commit494708eb34e71d1afda237873907701c4ec3a569, and modified6330
+initial source cfb4f3a676613714757d4539275482f7c323d6ad.
+
+Retained file-header notices:
+Copyright (c) 2004 - 2013 OpenBOR Team
+Copyright (c) 2004 - 2014 OpenBOR Team
+Copyright (c) 2004 - 2017 OpenBOR Team
+Copyright (c) 2004 - 2018 OpenBOR Team
+
+LNS Enhancements: Hechelion and Gonzalo MVP.
+Attribution does not imply endorsement or complete executable equivalence.
+
+Original modified-source root grant follows verbatim:
+
+Copyright (c) 2003, Roel van Mastbergen & Senile Team
+Copyright (c) 2004 - 2018, OpenBOR Team
+All rights reserved.
+
+Redistribution and use in source and binary forms, with or without modification, are permitted provided that the following conditions are met:
+
+Redistributions of source code must retain the above copyright notice, this list of conditions and the following disclaimer.
+
+Redistributions in binary form must reproduce the above copyright notice, this list of conditions and the following disclaimer in the documentation and/or other materials provided with the distribution.
+
+Neither the name of the Senile Team, OpenBOR Team nor the names of its contributors may be used to endorse or promote products derived from this software without specific prior written permission.
+
+THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.

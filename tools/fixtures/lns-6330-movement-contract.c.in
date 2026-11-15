@@ -1,0 +1,111 @@
+/* SPDX-License-Identifier: BSD-3-Clause
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me> */
+#include <assert.h>
+#include <stdint.h>
+#include <stdio.h>
+#include <string.h>
+#include @ABI@
+uint32_t obor_profile_features;
+/* Only these unchanged selector roles are normalized by the providers. */
+#define TYPE_OBSTACLE 8
+#define TYPE_TRAP 64
+#define ANI_JUMP 0
+#define PLATFORM_HEIGHT 0
+#define T_WALKOFF 2.0
+#define T_MAX_CHECK_ALTITUDE 9999999
+static int PLAYER_MIN_Z=160,PLAYER_MAX_Z=232;
+static float advancex;
+static struct { int hRes; } videomodes={320};
+typedef struct { float x,y,z; } position;
+typedef struct { int x,y; } size2;
+typedef struct animation { size2 size;float **platform;struct { struct { int max; } x; } range; } animation;
+typedef struct entity { position position;float base;unsigned int animpos;animation *animation;
+ struct { int subject_to_minz,subject_to_maxz,subject_to_screen,subject_to_hole;
+ int subject_to_obstacle,subject_to_platform,subject_to_wall;size2 size;animation **animation; } modeldata;
+} entity;
+static struct { struct { float height,z,depth; } walls[1]; } area,*level=&area;
+static entity entities[3];
+static animation animations[3],*jump_animations[1];
+static float platform_value[1],*platform_rows[1];
+static unsigned mode;
+static float trace[128];static size_t trace_count;
+static void record(int kind,entity *e,float x,float z,float y,float extra) {
+    assert(trace_count+6<=sizeof(trace)/sizeof(*trace));
+    trace[trace_count++]=(float)kind;trace[trace_count++]=e?(float)(e-entities+1):0;
+    trace[trace_count++]=x;trace[trace_count++]=z;trace[trace_count++]=y;trace[trace_count++]=extra;
+}
+static float diff(float a,float b) { return a>b?a-b:b-a; }
+static int checkhole(float x,float z) { record(1,0,x,z,0,0);return mode&1; }
+static int checkwall_index(float x,float z) { record(2,0,x,z,0,0);return mode&2?0:-1; }
+static entity *check_platform_below(float x,float z,float y,entity *e) {
+    record(3,e,x,z,y,0);return mode&4?(mode&256?&entities[1]:&entities[2]):0;
+}
+static entity *find_ent_here(entity *e,float x,float z,int types,entity *other) {
+    assert(!other && types==(TYPE_OBSTACLE|TYPE_TRAP));record(4,e,x,z,0,(float)types);
+    return mode&8?&entities[2]:0;
+}
+static entity *check_platform_between(float x,float z,float lo,float hi,entity *e) {
+    record(5,e,x,z,lo,hi);return mode&32?&entities[2]:0;
+}
+static float get_platform_base(entity *e) { record(6,e,0,0,0,0);return e->base; }
+static int checkwall_below(float x,float z,float limit) { record(7,0,x,z,0,limit);return mode&64?0:-1; }
+static int validanim(entity *e,int anim) { assert(anim==ANI_JUMP);record(8,e,0,0,0,0);return mode&128; }
+@CANDIDATE@
+@ORIGINAL@
+static void reset(unsigned seed) {
+    trace_count=0;memset(trace,0,sizeof trace);mode=seed;
+    platform_value[0]=(mode&16)?10:0;platform_rows[0]=platform_value;
+    jump_animations[0]=animations;
+    for(int i=0;i<3;i++) {
+        entity *e=&entities[i];memset(e,0,sizeof(*e));
+        e->position=(position){40.0f+i*60, (float)((seed>>(i+2))&3), 180.0f+i*10};
+        e->base=(float)((seed>>(i+3))&3);e->animation=&animations[i];
+        animations[i].platform=platform_rows;animations[i].size=(size2){0,((seed>>(i+1))&1)?0:30};
+        animations[i].range.x.max=25;
+        e->modeldata.size=(size2){0,20};e->modeldata.animation=jump_animations;
+        e->modeldata.subject_to_minz=(int)((seed>>0)&3)-1;
+        e->modeldata.subject_to_maxz=(int)((seed>>1)&3)-1;
+        e->modeldata.subject_to_screen=(int)((seed>>2)&3)-1;
+        e->modeldata.subject_to_hole=(int)((seed>>3)&3)-1;
+        e->modeldata.subject_to_obstacle=(int)((seed>>4)&3)-1;
+        e->modeldata.subject_to_platform=(int)((seed>>5)&3)-1;
+        e->modeldata.subject_to_wall=(int)((seed>>6)&3)-1;
+    }
+    area.walls[0].height=(mode&256)?1:10;area.walls[0].z=200;area.walls[0].depth=40;
+}
+int main(void) {
+    int (*moves[])(entity *,float,float,float,float)={official_testmove,physical_testmove,lns_testmove};
+    int (*grabs[])(entity *,entity *,float,int)={official_adjust_grabposition,physical_adjust_grabposition,lns_adjust_grabposition};
+    static const float xs[]={9.49f,9.5f,9.51f,10,10.5f,309.5f,310,310.49f,310.5f,310.51f};
+    static const float zs[]={159,160,232,233};unsigned move_cases=0,grab_cases=0;
+    for(unsigned oracle=0;oracle<3;oracle++) for(unsigned features=0;features<8;features++) {
+        if(((features&OBOR_PROFILE_LNS_6330)!=0)!=(oracle==2))continue;
+        obor_profile_features=features;
+        for(unsigned seed=0;seed<512;seed++) {
+            advancex=(seed&1)?-200.0f:0.0f;
+            for(size_t x=0;x<sizeof xs/sizeof(*xs);x++) for(size_t z=0;z<sizeof zs/sizeof(*zs);z++) {
+                float at=advancex+xs[x];reset(seed);
+                float sx=(seed&2)?at:at-1,sz=(seed&2)?zs[z]:180;
+                int a=candidate_testmove(&entities[0],sx,sz,at,zs[z]);
+                float observed[128];size_t count=trace_count;memcpy(observed,trace,sizeof observed);
+                reset(seed);int b=moves[oracle](&entities[0],sx,sz,at,zs[z]);
+                assert(a==b && count==trace_count && !memcmp(observed,trace,sizeof trace));move_cases++;
+            }
+            for(int test=0;test<24;test++) {
+                reset(seed);entities[0].position.x=advancex+(test&1?9.49f:40);
+                entities[1].position.x=advancex+(test&2?310.51f:80);
+                float distance=(test%3==0)?0:(test%3==1?30:-30);int grabin=test%4;
+                int a=candidate_adjust_grabposition(&entities[0],&entities[1],distance,grabin);
+                float observed[128];size_t count=trace_count;memcpy(observed,trace,sizeof observed);
+                position p0=entities[0].position,p1=entities[1].position;
+                reset(seed);entities[0].position.x=advancex+(test&1?9.49f:40);
+                entities[1].position.x=advancex+(test&2?310.51f:80);
+                int b=grabs[oracle](&entities[0],&entities[1],distance,grabin);
+                assert(a==b && count==trace_count && !memcmp(observed,trace,sizeof trace));
+                assert(p0.x==entities[0].position.x && p0.y==entities[0].position.y && p0.z==entities[0].position.z);
+                assert(p1.x==entities[1].position.x && p1.y==entities[1].position.y && p1.z==entities[1].position.z);grab_cases++;
+            }
+        }
+    }
+    printf("movement %u grab %u\n",move_cases,grab_cases);return 0;
+}

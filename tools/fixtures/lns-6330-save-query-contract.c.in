@@ -1,0 +1,134 @@
+/* SPDX-License-Identifier: BSD-3-Clause
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me> */
+#include <assert.h>
+#include <stdint.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <strings.h>
+#include @ABI@
+typedef int64_t LONG;
+typedef int HRESULT;
+enum {S_OK=0,E_FAIL=-1,VT_EMPTY=0,VT_INTEGER=1,VT_STR=3,VT_OTHER=4};
+typedef struct {int vt;LONG lVal;const char *strVal;} ScriptVariant;
+/* A typed field provider for query/bonus behavior, not a file-layout oracle. */
+typedef struct {
+    unsigned compatibleversion;char dName[50];unsigned level,stage;
+    unsigned pLives[4],pCredits[4],pScores[4],credits,times_completed,which_set;
+    int flag;char pName[4][50];int pSpawnhealth[4],pSpawnmp[4];
+} s_savelevel;
+static s_savelevel slots[4],file_slots[4],*savelevel;
+static int num_difficulties,cheatcode,bonus,noshare;
+static unsigned obor_profile_features;
+static const char *StrCache_Get(const char *value) {return value;}
+static const char *StrCache_CreateNewFrom(const char *value) {return value;}
+static void ScriptVariant_ChangeType(ScriptVariant *v,int type) {v->vt=type;}
+static void ScriptVariant_Clear(ScriptVariant *v) {memset(v,0,sizeof(*v));}
+static int ScriptVariant_IntegerValue(ScriptVariant *v,LONG *value) {
+    if(v->vt!=VT_INTEGER)return E_FAIL;
+    *value=v->lVal;return S_OK;
+}
+#define FAILED(value) ((value)<0)
+#define stricmp strcasecmp
+@SAVEINFO@
+@ORIGINAL_SAVEINFO@
+@OFFICIAL_SAVEINFO@
+#define MAX_BUFFER_LEN 256
+#define CV_SAVED_GAME 0x00033747U
+static FILE *input_file;
+static unsigned io_calls,clears;
+static void getBasePath(char *out,const char *folder,int mode) {
+    assert(!strcmp(folder,"Saves") && !mode);++io_calls;strcpy(out,"");
+}
+static void provider_pak_name(char *out,size_t capacity,int mode) {
+    assert(!mode && capacity>strlen("fixture"));++io_calls;strcpy(out,"fixture");
+}
+static void legacy_pak_name(char *out,int mode) {provider_pak_name(out,MAX_BUFFER_LEN,mode);}
+#define PAK_NAME_ARITY(_1,_2,_3,NAME,...) NAME
+#define getPakName(...) PAK_NAME_ARITY(__VA_ARGS__,provider_pak_name,legacy_pak_name)(__VA_ARGS__)
+static int obor_pak_path_append(char *path,size_t capacity,const char *name) {
+    assert(strlen(path)+strlen(name)<capacity);strcat(path,name);return 1;
+}
+static void borExit(int status) {(void)status;abort();}
+static FILE *provider_open(const char *path,const char *mode) {
+    assert(!strcmp(path,"fixture") && !strcmp(mode,"rb"));++io_calls;return input_file;
+}
+static int provider_close(FILE *file) {assert(file==input_file);++io_calls;input_file=NULL;return fclose(file);}
+static void clearSavedGame(void) {++clears;memset(savelevel,0,(size_t)num_difficulties*sizeof(*savelevel));}
+/* Abstract typed IO for the complete loadGameFile control-flow contract.
+ * The separate layout contract runs the actual wire helper. */
+static size_t obor_profile_savelevel_size(void) {return sizeof(s_savelevel);}
+static size_t obor_profile_savelevels_io(FILE *file,s_savelevel *records,size_t count,int writing) {
+    assert(!writing);return fread(records,sizeof(*records),count,file);
+}
+#define fopen provider_open
+#define fclose provider_close
+@LOAD@
+@ORIGINAL_LOAD@
+@OFFICIAL_LOAD@
+#undef fopen
+#undef fclose
+static void seed_slots(void) {
+    memset(slots,0,sizeof(slots));
+    for(unsigned n=0;n<4;++n) {
+        s_savelevel *slot=slots+n;
+        slot->compatibleversion=CV_SAVED_GAME;snprintf(slot->dName,sizeof(slot->dName),"set-%u",n);
+        slot->times_completed=n?2:3;slot->level=10+n;slot->stage=20+n;slot->which_set=30+n;
+        slot->credits=40+n;slot->flag=(int)n;
+        for(unsigned p=0;p<4;++p) {
+            slot->pScores[p]=100*n+p;slot->pLives[p]=200*n+p;slot->pCredits[p]=300*n+p;
+            slot->pSpawnhealth[p]=(int)(400*n+p);slot->pSpawnmp[p]=(int)(500*n+p);
+            snprintf(slot->pName[p],sizeof(slot->pName[p]),"player-%u-%u",n,p);
+        }
+    }
+}
+static void same(ScriptVariant *a,ScriptVariant *b) {
+    assert(a->vt==b->vt && a->lVal==b->lVal && a->strVal==b->strVal);
+}
+static void file_case(unsigned mode) {
+    seed_slots();memcpy(file_slots,slots,sizeof(slots));memset(slots,0,sizeof(slots));savelevel=slots;
+    num_difficulties=3;bonus=37;clears=io_calls=0;input_file=NULL;
+    if(mode) {
+        input_file=tmpfile();assert(input_file);
+        unsigned count=mode-1;assert(fwrite(file_slots,sizeof(*file_slots),count,input_file)==count);
+        rewind(input_file);
+    }
+}
+int main(void) {
+    unsigned masks[]={0,OBOR_PROFILE_ATTACK_HISTORY_FOUR,OBOR_PROFILE_LNS_6330};
+    int cheats[]={-2,-1,0,2};
+    const char *props[]={"flag","level","stage","set","times_completed","TIMES_COMPLETED", 
+                         "score","lives","credits","name","playername","health","mp","absent"};
+    for(unsigned m=0;m<3;++m)for(unsigned c=0;c<4;++c) {
+        obor_profile_features=masks[m];cheatcode=cheats[c];bonus=37;
+        for(int missing=0;missing<2;++missing)for(int shared=0;shared<2;++shared)
+        for(int slot=0;slot<2;++slot)for(unsigned p=0;p<sizeof(props)/sizeof(*props);++p)
+        for(int player=0;player<4;++player)for(int argc=1;argc<4;++argc) {
+            seed_slots();savelevel=missing?NULL:slots;noshare=shared;
+            ScriptVariant a={VT_INTEGER,slot,NULL},b={VT_STR,0,props[p]},v={VT_INTEGER,player,NULL};
+            ScriptVariant out={VT_STR,97,"untouched"},expected_out=out,*result=&out;
+            ScriptVariant *args[]={&a,&b,&v};
+            int actual=openbor_getsaveinfo(args,&result,argc),present=result!=NULL;
+            result=&expected_out;
+            int expected=m==2?lns_openbor_getsaveinfo(args,&result,argc):official_openbor_getsaveinfo(args,&result,argc);
+            assert(actual==expected && present==(result!=NULL));same(&out,&expected_out);
+        }
+        for(unsigned mode=0;mode<5;++mode) {
+            file_case(mode);int actual=loadGameFile(),actual_bonus=bonus;
+            unsigned actual_io=io_calls,actual_clears=clears;s_savelevel after[4];memcpy(after,slots,sizeof(slots));
+            assert(!input_file);file_case(mode);
+            int expected=m==2?lns_loadGameFile():official_loadGameFile();
+            assert(actual==expected && actual_bonus==bonus && actual_io==io_calls && actual_clears==clears);
+            assert(!input_file && !memcmp(after,slots,sizeof(slots)));
+        }
+    }
+    /* The new cheat query needs no slot access: avoid undefined pointer arithmetic. */
+    obor_profile_features=OBOR_PROFILE_LNS_6330;cheatcode=1;bonus=37;savelevel=slots;
+    LONG invalid[]={INT64_MIN,-1,INT64_MAX};
+    for(unsigned n=0;n<3;++n) {
+        ScriptVariant a={VT_INTEGER,invalid[n],NULL},b={VT_STR,0,"times_completed"};
+        ScriptVariant out={VT_EMPTY,97,NULL},*result=&out,*args[]={&a,&b};
+        assert(openbor_getsaveinfo(args,&result,2)==S_OK && result==&out && out.lVal==0);
+    }
+    return 0;
+}

@@ -1,0 +1,58 @@
+/* SPDX-License-Identifier: BSD-3-Clause
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me> */
+#include <assert.h>
+#include <stdint.h>
+#include <stdio.h>
+#include <stdarg.h>
+#include <string.h>
+#include @ABI@
+@KEYS@
+@GAME_SPEED@
+typedef uint32_t u32;
+static unsigned obor_profile_features;
+static u32 _time,bothnewkeys,input;
+static int fade,frames,exit_after;
+static struct {int hRes,vRes,vShift;} videomodes;
+static struct {int logo;} savedata;
+static struct Event {int kind,x,y,font;char text[64];} events[256],expected[256];
+static unsigned count;
+static void event(int kind,int x,int y,int font,const char *text) {
+ assert(count<256);struct Event *e=&events[count++];memset(e,0,sizeof(*e));
+ e->kind=kind;e->x=x;e->y=y;e->font=font;
+ if(text){assert(strlen(text)<sizeof(e->text));strcpy(e->text,text);}
+}
+static int fontmonowidth(int font) {return font+5;}
+static int font_string_width(int font,const char *format,...) {
+ char text[64];va_list args;va_start(args,format);int n=vsnprintf(text,sizeof(text),format,args);va_end(args);
+ assert(n>=0 && n<64);return n*fontmonowidth(font);
+}
+@MACRO@
+static void font_printf(int x,int y,int font,int align,const char *format,...) {
+ assert(align==0);char text[64];va_list args;va_start(args,format);int n=vsnprintf(text,sizeof(text),format,args);va_end(args);
+ assert(n>=0 && n<64);event(1,x,y,font,text);
+}
+static void fade_out(int type,int speed) {assert(!type && !speed);event(2,fade,0,0,NULL);}
+static void unload_level(void) {event(3,0,0,0,NULL);}
+static void update(int gameplay,int second) {
+ assert(gameplay==2 && !second && frames<3);event(4,frames,0,0,NULL);++frames;
+ if(exit_after)_time+=11*GAME_SPEED;
+ bothnewkeys=input;
+}
+@CODE@
+static void reset(void) {count=frames=0;_time=135;fade=9;bothnewkeys=0;memset(events,0,sizeof(events));}
+int main(void) {
+ unsigned cases=0;
+ const u32 keys[]={FLAG_ESC,FLAG_START,FLAG_ATTACK,0,FLAG_ESC|FLAG_ATTACK};
+ for(obor_profile_features=0;obor_profile_features<8;++obor_profile_features)
+  for(unsigned family=0;family<3;++family)for(savedata.logo=-1;savedata.logo<=2;++savedata.logo)
+   for(unsigned seed=0;seed<12;++seed)for(unsigned k=0;k<5;++k) {
+    videomodes.hRes=320+(int)(seed%3)*160;videomodes.vRes=240+(int)(seed%4)*32;videomodes.vShift=(int)seed*3;
+    input=keys[k];exit_after=k>=2;reset();
+    if(obor_profile_features&OBOR_PROFILE_LNS_6330)lns_credits();else if(family==0)official_credits();else physical_credits();
+    memcpy(expected,events,sizeof(events));unsigned wanted=count;int old_fade=fade,old_frames=frames;u32 old_time=_time,old_keys=bothnewkeys;
+    reset();candidate_credits();
+    assert(wanted==count && old_fade==fade && old_frames==frames && old_time==_time && old_keys==bothnewkeys);
+    assert(!memcmp(expected,events,sizeof(events)));++cases;
+   }
+ assert(cases==5760);fprintf(stderr,"Complete credits callback comparisons: %u\n",cases);return 0;
+}

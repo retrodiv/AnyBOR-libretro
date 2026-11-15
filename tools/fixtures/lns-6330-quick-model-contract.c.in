@@ -1,0 +1,40 @@
+/* SPDX-License-Identifier: BSD-3-Clause
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me> */
+#include <assert.h>
+#include <stdbool.h>
+#include <stdint.h>
+#include <string.h>
+@ENUM@
+@FILTER@
+static bool original_filter(modelCommands cmd,const char *animation,bool *skip_all)
+{
+ bool command_skip_all=*skip_all,command_skip_this=false;
+ #define GET_ARG(n) ((void)(n),animation)
+ @ORIGINAL@
+ #undef GET_ARG
+ *skip_all=command_skip_all;
+ return command_skip_this;
+}
+int main(void)
+{
+ modelCommands commands[]={@COMMANDS@};
+ const char *names[]={"select","waiting","idle","SELECT","Waiting","select2","","waiting ","select#"};
+ for(unsigned state=0;state<2;++state)
+  for(unsigned c=0;c<sizeof(commands)/sizeof(*commands);++c)
+   for(unsigned a=0;a<sizeof(names)/sizeof(*names);++a) {
+    bool actual=state,expected=state;
+    bool ar=obor_lns_quick_model_skip(commands[c],names[a],&actual);
+    bool er=original_filter(commands[c],names[a],&expected);
+    assert(ar==er && actual==expected);
+   }
+ uint32_t rng=1731;bool actual=false,expected=false;
+ for(unsigned i=0;i<20000;++i) {
+  rng=rng*1664525u+1013904223u;
+  modelCommands command=commands[rng%(sizeof(commands)/sizeof(*commands))];
+  if((i&3)==0)command=CMD_MODEL_ANIM;
+  const char *name=names[(rng>>12)%9];
+  assert(obor_lns_quick_model_skip(command,name,&actual)==original_filter(command,name,&expected));
+  assert(actual==expected);
+ }
+ return 0;
+}

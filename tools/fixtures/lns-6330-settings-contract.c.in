@@ -1,0 +1,90 @@
+/* SPDX-License-Identifier: BSD-3-Clause
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me> */
+#include <assert.h>
+#include <stdint.h>
+#include <stddef.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include @ABI@
+@LIMITS@
+_Static_assert(sizeof(int)==4 && sizeof(unsigned)==4 && sizeof(float)==4,"supported settings scalar layout");
+@RECORD@
+@REFERENCE_RECORDS@
+static unsigned obor_profile_build,obor_profile_features;
+static s_savedata savedata;
+static unsigned button_calls;
+static void clearbuttons(int p) {
+ assert((unsigned)p==button_calls++ && p<MAX_PLAYERS);
+ for(int j=0;j<MAX_BTN_NUM;++j)savedata.keys[p][j]=p*32+j;
+}
+@REFERENCE_CODE@
+@VERSION@
+@HELPERS@
+@DEFAULTS@
+static FILE *input(const void *data,size_t size) {
+ FILE *file=tmpfile();assert(file);assert(fwrite(data,1,size,file)==size);rewind(file);return file;
+}
+static void fill(void *out,size_t size) {
+ unsigned char *p=out;uint32_t seed=9937;
+ for(size_t i=0;i<size;++i){seed=seed*1664525u+1013904223u;p[i]=(unsigned char)(seed>>24);}
+}
+static void *reference(unsigned profile) {
+ return profile==0?(void*)&official_settings:profile==1?(void*)&physical_settings:(void*)&lns_settings;
+}
+static size_t reference_size(unsigned profile) {
+ return profile==0?sizeof(official_settings):profile==1?sizeof(physical_settings):sizeof(lns_settings);
+}
+static void reference_read(unsigned profile,FILE *file) {
+ if(profile==0)official_read(file);else if(profile==1)physical_read(file);else lns_read(file);
+}
+static void reference_write(unsigned profile,FILE *file) {
+ if(profile==0)official_write(file);else if(profile==1)physical_write(file);else lns_write(file);
+}
+static void canonical_from_reference(unsigned profile) {
+ size_t prefix=offsetof(s_savedata,debug_collision_entity),size=reference_size(profile);
+ const unsigned char *bytes=reference(profile);memset(&savedata,0xa5,sizeof(savedata));
+ if(profile==1)memcpy(&savedata,bytes,size);
+ else {
+  memcpy(&savedata,bytes,prefix);
+  memcpy((unsigned char*)&savedata+prefix+sizeof(int),bytes+prefix,size-prefix);
+ }
+}
+static void compare_writes(unsigned profile) {
+ FILE *actual=tmpfile(),*expected=tmpfile();assert(actual && expected);
+ obor_profile_write_settings(actual);reference_write(profile,expected);
+ assert(ftell(actual)==(long)reference_size(profile) && ftell(expected)==ftell(actual));
+ rewind(actual);rewind(expected);unsigned char a[1024],b[1024];
+ size_t na=fread(a,1,sizeof(a),actual),nb=fread(b,1,sizeof(b),expected);assert(na==reference_size(profile) && na==nb && !memcmp(a,b,na));
+ fclose(actual);fclose(expected);
+}
+int main(void) {
+ assert(sizeof(official_settings)+sizeof(int)==offsetof(s_savedata,vsync));
+ assert(sizeof(physical_settings)==offsetof(s_savedata,vsync));
+ assert(sizeof(lns_settings)+sizeof(int)==sizeof(savedata));
+ for(unsigned profile=0;profile<3;++profile) {
+  obor_profile_build=profile==1?6391:6330;
+  obor_profile_features=profile==2?OBOR_PROFILE_LNS_6330:profile==1?OBOR_PROFILE_ATTACK_HISTORY_FOUR:0;
+  size_t size=reference_size(profile);void *ref=reference(profile);fill(ref,size);
+  canonical_from_reference(profile);compare_writes(profile);
+  unsigned char bytes[sizeof(s_savedata)+2];fill(bytes,sizeof(bytes));
+  for(size_t length=0;length<=size+2;++length) {
+   memset(&savedata,0xa5,sizeof(savedata));memset(ref,0xa5,size);
+   FILE *actual=input(bytes,length),*expected=input(bytes,length);
+   obor_profile_read_settings(actual);reference_read(profile,expected);
+   assert(ftell(actual)==ftell(expected) && fgetc(actual)==fgetc(expected));fclose(actual);fclose(expected);
+   compare_writes(profile);
+   if(profile!=1)assert(savedata.debug_collision_entity==0);
+   if(profile!=2) {unsigned char retained[sizeof(int)];memset(retained,0xa5,sizeof(retained));assert(!memcmp(&savedata.vsync,retained,sizeof(retained)));}
+  }
+  memset(&savedata,0xa5,sizeof(savedata));memset(ref,0xa5,size);button_calls=0;
+  official_button_calls=physical_button_calls=lns_button_calls=0;
+  clearsettings();
+  if(profile==0)official_clearsettings();else if(profile==1)physical_clearsettings();else lns_clearsettings();
+  assert(button_calls==MAX_PLAYERS &&
+   (profile==0?official_button_calls:profile==1?physical_button_calls:lns_button_calls)==MAX_PLAYERS);
+  compare_writes(profile);
+  if(profile==2)assert(savedata.vsync==1);
+ }
+ return 0;
+}

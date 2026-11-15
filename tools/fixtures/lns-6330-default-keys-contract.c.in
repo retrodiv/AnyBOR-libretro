@@ -1,0 +1,66 @@
+/* SPDX-License-Identifier: BSD-3-Clause
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me> */
+#include <assert.h>
+#include <stdint.h>
+#include <stdio.h>
+#include <string.h>
+#include @ABI@
+#include @CONTROL_HEADER@
+uint32_t obor_profile_features;
+static unsigned char obor_pad[4][16];
+static unsigned char reference_keys[SDLK_LAST];
+static void *level;
+static int selectScreen,_pause;
+s_playercontrols default_control;
+static unsigned polls,helper_calls,reference_helper_calls;
+static void obor_poll_tick(void) {++polls;}
+@HELPERS@
+int allow_default_keys(void) {++helper_calls;return candidate_allowed();}
+int reference_allow_default_keys(void) {++reference_helper_calls;return original_allowed();}
+@FUNCTIONS@
+@REFERENCE@
+static void keys_for_frame(unsigned frame,unsigned seed) {
+ memset(obor_pad,0,sizeof(obor_pad));memset(reference_keys,0,sizeof(reference_keys));
+ if(frame==1 || frame==2)obor_pad[0][seed%13]=1;
+ if(frame==2){obor_pad[0][(seed+1)%13]=1;obor_pad[1][(seed+2)%13]=1;}
+ if(frame==3)obor_pad[3][(seed+3)%13]=1;
+ for(unsigned p=0;p<4;++p)for(unsigned b=0;b<16;++b)reference_keys[OBOR_KEY(p,b)]=obor_pad[p][b];
+}
+/* Compare values, not compiler-dependent tail padding in this port record. */
+static void same_control(const s_playercontrols *actual,const s_playercontrols *expected) {
+ for(unsigned i=0;i<JOY_MAX_INPUTS;++i)assert(actual->settings[i]==expected->settings[i]);
+ assert(actual->keyflags==expected->keyflags && actual->newkeyflags==expected->newkeyflags && actual->kb_break==expected->kb_break);
+}
+int main(void) {
+ unsigned contexts=0,frames=0;const int pauses[]={-1,0,1};const unsigned features[]={0,OBOR_PROFILE_ATTACK_HISTORY_FOUR,OBOR_PROFILE_LNS_6330};
+ for(unsigned profile=0;profile<3;++profile)for(int count=0;count<=4;++count)for(unsigned present=0;present<2;++present)for(int selection=0;selection<2;++selection)for(unsigned paused=0;paused<3;++paused)for(unsigned seed=0;seed<4;++seed)for(unsigned binding=0;binding<3;++binding) {
+  s_playercontrols actual[4],expected[4],original_defaults;s_playercontrols *players[4],*references[4];
+  memset(actual,0,sizeof(actual));memset(&default_control,0,sizeof(default_control));default_control.keyflags=123;default_control.newkeyflags=456;default_control.kb_break=7;
+  obor_profile_features=features[profile];level=present?actual:NULL;selectScreen=selection;_pause=pauses[paused];assert(candidate_allowed()==original_allowed());
+  for(unsigned bit=0;bit<13;++bit)control_setkey(&default_control,1u<<bit,OBOR_KEY(0,(bit+seed)%13));
+  for(unsigned p=0;p<4;++p) {
+   players[p]=&actual[p];references[p]=&expected[p];actual[p].keyflags=seed*13u+p;actual[p].newkeyflags=17;actual[p].kb_break=9;
+   if(binding)for(unsigned bit=0;bit<13;++bit)control_setkey(&actual[p],1u<<bit,OBOR_KEY(binding==1?p:(p+1)%4,(bit+seed+binding)%13));
+  }
+  memcpy(expected,actual,sizeof(actual));original_defaults=default_control;
+  for(unsigned frame=0;frame<5;++frame) {
+   keys_for_frame(frame,seed);polls=helper_calls=reference_helper_calls=0;reference_control_update(references,count);unsigned expected_calls=reference_helper_calls;assert(polls==1 && helper_calls==0);
+   polls=helper_calls=reference_helper_calls=0;control_update(players,count);assert(polls==1 && helper_calls==expected_calls && reference_helper_calls==0);
+   for(unsigned p=0;p<4;++p) {same_control(&actual[p],&expected[p]);}
+   same_control(&default_control,&original_defaults);++frames;
+  }
+  ++contexts;
+ }
+ /* Defined candidate-only control: the port's 64-bit keyspace stays safe at
+  * its upper bit. Do not execute the original signed-int shift as an oracle. */
+ s_playercontrols upper={0};s_playercontrols *one[]={&upper};memset(&default_control,0,sizeof(default_control));memset(obor_pad,0,sizeof(obor_pad));
+ default_control.settings[63]=OBOR_KEY(0,0);obor_pad[0][0]=1;level=NULL;selectScreen=0;_pause=0;obor_profile_features=OBOR_PROFILE_LNS_6330;
+ control_update(one,1);
+#if OBOR_ENGINE_BUILD == 6391
+ assert(upper.keyflags==(UINT64_C(1)<<63) && upper.newkeyflags==upper.keyflags);
+ control_update(one,1);assert(upper.newkeyflags==0);
+#else
+ assert(upper.keyflags==0 && upper.newkeyflags==0);
+#endif
+ fprintf(stderr,"Default-key virtual input: build%d, %u contexts, %u frames\n",OBOR_ENGINE_BUILD,contexts,frames);return 0;
+}

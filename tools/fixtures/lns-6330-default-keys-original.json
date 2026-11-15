@@ -1,0 +1,14 @@
+{
+  "schema": 1,
+  "source_commit": "cfb4f3a676613714757d4539275482f7c323d6ad",
+  "source_sdl_sha256": "75e26757a4e1f85196abf9075ec04a4d461c72e6a1b3c61cf66c9d46439cf8bb",
+  "original_helper": "int allow_default_keys()\n{\n    int allowed = 0;\n\n    // allow default keys if not playing a level and not in select screen\n    if (level == NULL)\n    {\n        allowed = !selectScreen;\n    }\n    // during levels only allow default keys in pause\n    else\n    {\n       allowed = _pause;\n    }\n\n    return allowed;\n}\n",
+  "original_fallback": "        //White Dragon: Set input from default keys overriding previous keys\n        //Default keys are available just if no configured keys are pressed!\n        if (player <= 0 && !k && allow_default_keys())\n        {\n            for(i = 0; i < JOY_MAX_INPUTS; i++)\n            {\n                t = default_control.settings[i];\n                if(t >= SDLK_FIRST && t < SDLK_LAST){\n                    if(keystate_def[t]) k |= (1<<i);\n                }\n            }\n        }\n",
+  "previous_backend": {
+    "commit": "58d5181",
+    "path": "code-builder/overlay/engine/libretro/control.c",
+    "sha256": "338aef8f7132e3606b01fb936eaf2cf28b4150a7cabd3d91685ceb983dd79ae8",
+    "function": "void control_update(s_playercontrols **playercontrols, int numplayers)\n{\n    obor_poll_tick();\n    for (int player = 0; player < numplayers; player++) {\n        s_playercontrols *pcontrols = playercontrols[player];\n        u64 k = 0;\n        for (int i = 0; i < JOY_MAX_INPUTS; i++) {\n            if (key_down(pcontrols->settings[i]))\n                k |= ((u64)1 << i);\n        }\n        pcontrols->kb_break = 0;\n        pcontrols->newkeyflags = k & (~pcontrols->keyflags);\n        pcontrols->keyflags = k;\n    }\n}\n"
+  },
+  "scope": "Native source fallback/helper behavior under normalized virtual keyboard codes; source-defined inputs avoid the original signed-shift undefined range. Prior maintained virtual routing is the ordinary-profile preceding control; standalone device enumeration is outside this provider."
+}

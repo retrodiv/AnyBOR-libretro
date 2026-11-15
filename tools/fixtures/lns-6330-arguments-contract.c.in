@@ -1,0 +1,80 @@
+/* SPDX-License-Identifier: BSD-3-Clause
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me> */
+#include <assert.h>
+#include <stdint.h>
+#include <stddef.h>
+#include <string.h>
+#include <strings.h>
+#include @ABI@
+static unsigned obor_profile_features;
+@LIMITS@
+@RECORD@
+@PARSER@
+@FINDER@
+@ORIGINALS@
+#undef MAX_ARG_LEN
+#undef MAX_ARG_COUNT
+@LIMITS@
+typedef int64_t LONG;
+static LONG script_constant(const char *constname) {
+ struct {LONG lVal;} v={-17};
+ #define stricmp strcasecmp
+ if(0) {}
+ @CONSTANT@
+ return v.lVal;
+}
+static void compare_parse(char *input,int lns) {
+ ArgList actual;official_ArgList official;lns_ArgList modified;
+ char output[1025],expected[1025];
+ memset(&actual,0xa5,sizeof(actual));memset(&official,0xa5,sizeof(official));memset(&modified,0xa5,sizeof(modified));
+ memset(output,0x5a,sizeof(output));memset(expected,0x5a,sizeof(expected));
+ size_t count=ParseArgs(&actual,input,output);
+ size_t wanted=lns?lns_ParseArgs(&modified,input,expected):official_ParseArgs(&official,input,expected);
+ assert(count==wanted && count==actual.count && !memcmp(output,expected,sizeof(output)));
+ for(size_t i=0;i<count;++i) {
+  const char *value=lns?modified.args[i]:official.args[i];
+  size_t length=lns?modified.arglen[i]:official.arglen[i];
+  assert(actual.arglen[i]==length && !strcmp(actual.args[i],value));
+  assert(actual.args[i]-output==value-expected);
+ }
+}
+static void compare_find(char *input,int lns,int which) {
+ char prime[1500];memset(prime,'p',sizeof(prime)-1);prime[sizeof(prime)-1]=0;
+ (void)findarg(prime,0);
+ if(lns)(void)lns_findarg(prime,0);else(void)official_findarg(prime,0);
+ char *a=findarg(input,which),*b=lns?lns_findarg(input,which):official_findarg(input,which);
+ assert(!strcmp(a,b));
+}
+int main(void) {
+ unsigned features[]={0,OBOR_PROFILE_ATTACK_HISTORY_FOUR,OBOR_PROFILE_LNS_6330};
+ char *shorts[]={""," \t","alpha beta\n","a # comment\n","a #","a #more\n",
+  "\"first second\" third\n","a 'b c' d\n","a \"unterminated\n","first\\\"second third\r\n"};
+ for(unsigned f=0;f<3;++f) {
+  obor_profile_features=features[f];int lns=f==2;
+  assert(script_constant("MAX_ARG_LEN")== (lns?1024:512));
+  assert(script_constant("max_arg_len")== (lns?1024:512));
+  assert(script_constant("MAX_ARG_LENx")==-17);
+  for(unsigned i=0;i<sizeof(shorts)/sizeof(*shorts);++i) {
+   compare_parse(shorts[i],lns);
+   for(int which=-2;which<12;++which)compare_find(shorts[i],lns,which);
+  }
+  char line[4096];
+  for(unsigned length=0;length<1100;++length) {
+   memset(line,'a',length);line[length]='\n';line[length+1]=0;compare_parse(line,lns);
+   compare_find(line,lns,0);compare_find(line,lns,1);
+  }
+  for(unsigned count=0;count<=200;++count) {
+   for(unsigned i=0;i<count;++i){line[2*i]='a'+(char)(i%26);line[2*i+1]=' ';}
+   line[2*count]=0;compare_parse(line,lns);
+  }
+  /* Quotes, terminators, separators and high bytes near both length limits. */
+  uint32_t state=1981;
+  const unsigned char alphabet[]={'a','b',' ','\t','\r','\n','\'','"','\\','#',0x80,0xff};
+  for(unsigned sample=0;sample<3000;++sample) {
+   unsigned n=sample%1090;
+   for(unsigned i=0;i<n;++i){state=state*1664525u+1013904223u;line[i]=(char)alphabet[state%sizeof(alphabet)];}
+   line[n]=0;compare_parse(line,lns);compare_find(line,lns,(int)(sample%19)-2);
+  }
+ }
+ return 0;
+}

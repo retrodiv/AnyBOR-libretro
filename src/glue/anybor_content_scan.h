@@ -3,6 +3,7 @@
 #ifndef OBOR_CONTENT_SCAN_H
 #define OBOR_CONTENT_SCAN_H
 #include "anybor_detection_clock.h"
+#include "anybor_file64.h"
 #include <ctype.h>
 #include <limits.h>
 #include <stdio.h>
@@ -380,6 +381,7 @@ static unsigned content_u32(const unsigned char *p)
 }
 
 #include "anybor_modern_api.h"
+#include "anybor_native_metadata.h"
 
 static int build_from_content(const char *pak_path)
 {
@@ -393,19 +395,20 @@ static int build_from_content(const char *pak_path)
     FILE *fp = fopen(pak_path, "rb");
     if (!fp) return 0;
     unsigned char h[12];
-    if (fseek(fp, -4, SEEK_END) || fread(h, 1, 4, fp) != 4) { fclose(fp); return 0; }
-    long end = ftell(fp) - 4;
+    if (obor_file_seek64(fp, -4, SEEK_END) || fread(h, 1, 4, fp) != 4) { fclose(fp); return 0; }
+    int64_t end = obor_file_tell64(fp) - 4;
     unsigned dir = content_u32(h);
-    if (dir < 8 || (long)dir > end || fseek(fp, dir, SEEK_SET)) { fclose(fp); return 0; }
+    if (end < 8 || end > (int64_t)UINT32_MAX - 4 || dir < 8 ||
+        (int64_t)dir > end || obor_file_seek64(fp, dir, SEEK_SET)) { fclose(fp); return 0; }
     enum { MAX_FILES = 800, MAX_DIRECTORY = 65536, MAX_FILE_BYTES = 2 << 20, MAX_BYTES = 16 << 20 };
     struct entry { unsigned start, size; bool script; } entries[MAX_FILES];
     unsigned count = 0, bytes = 0, directory_count = 0;
-    while (ftell(fp) < end && s.complete) {
+    while (obor_file_tell64(fp) < end && s.complete) {
         if (++directory_count > MAX_DIRECTORY || !content_budget(&s, 4096)) { s.complete = false; break; }
         if (fread(h, 1, 12, fp) != 12) { s.complete = false; break; }
         unsigned length = content_u32(h), start = content_u32(h + 4), size = content_u32(h + 8);
         char name[1024];
-        if (length < 13 || length > 1035 || (long)(length - 12) > end - ftell(fp) ||
+        if (length < 13 || length > 1035 || (int64_t)(length - 12) > end - obor_file_tell64(fp) ||
             start < 8 || start > dir || size > dir - start ||
             fread(name, 1, length - 12, fp) != length - 12) { s.complete = false; break; }
         size_t len = length - 12;
@@ -431,7 +434,7 @@ static int build_from_content(const char *pak_path)
     char *buffer = s.complete ? (char *)malloc(MAX_FILE_BYTES) : NULL;
     if (!buffer) s.complete = false;
     for (unsigned i = 0; i < count && s.complete; ++i) {
-        if (!content_budget(&s, 4096) || fseek(fp, entries[i].start, SEEK_SET) ||
+        if (!content_budget(&s, 4096) || obor_file_seek64(fp, entries[i].start, SEEK_SET) ||
             fread(buffer, 1, entries[i].size, fp) != entries[i].size) { s.complete = false; break; }
         if (entries[i].script) content_script(&s, buffer, entries[i].size);
         else content_text(&s, buffer, entries[i].size);

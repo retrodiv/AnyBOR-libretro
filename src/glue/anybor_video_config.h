@@ -6,6 +6,8 @@
 #include <stdbool.h>
 #include <stdlib.h>
 #include "anybor_detection_clock.h"
+#include "anybor_file64.h"
+#include "anybor_pak_volumes.h"
 #include "anybor_pak_repair.h"
 
 /* Startup-only metadata probe, not a replacement for full content validation.
@@ -60,6 +62,35 @@ static int obor_video_settings(const char *text, int *width, int *height)
     return 1;
 }
 
+static int obor_video_volume_resolution(const char *path, int *width, int *height)
+{
+    obor_pak_volumes pak;
+    uint64_t started = obor_detection_now();
+    if (obor_pak_volumes_open(&pak, path)) return 0;
+    unsigned volume = 0;
+    const unsigned char *record = obor_pak_volumes_find(&pak, "data/videopc.txt", &volume);
+    if (!record) record = obor_pak_volumes_find(&pak, "data/video.txt", &volume);
+    int result = 0;
+    if (!record) {
+        *width = 320; *height = 240;
+        result = !obor_detection_expired(started);
+    } else {
+        uint32_t bytes = obor_volume_u32(record + 8);
+        char *text = bytes <= 65536 ? (char *)malloc((size_t)bytes + 1) : NULL;
+        FILE *file = text ? fopen(pak.volumes[volume].path, "rb") : NULL;
+        if (file && !obor_file_seek64(file, obor_volume_u32(record + 4), SEEK_SET) &&
+            fread(text, 1, bytes, file) == bytes && !memchr(text, 0, bytes) &&
+            !obor_detection_expired(started)) {
+            text[bytes] = 0;
+            result = obor_video_settings(text, width, height);
+        }
+        if (file) fclose(file);
+        free(text);
+    }
+    obor_pak_volumes_close(&pak);
+    return result;
+}
+
 static int obor_video_resolution(const char *path, int *width, int *height)
 {
     FILE *fp = fopen(path, "rb");
@@ -68,10 +99,15 @@ static int obor_video_resolution(const char *path, int *width, int *height)
     int result = 0;
     if (!fp) return 0;
     do {
-        if (fread(header, 1, 8, fp) != 8 || !memcmp(header, "SPAK", 4) ||
-            obor_pak_u32(header + 4) || fseek(fp, 0, SEEK_END)) break;
-        long size = ftell(fp);
-        if (size < 12 || size > INT_MAX || fseek(fp, -4, SEEK_END) ||
+        if (fread(header, 1, 8, fp) != 8) break;
+        if (!memcmp(header, "PACK", 4) && obor_pak_u32(header + 4) == 0x10100u) {
+            result = obor_video_volume_resolution(path, width, height);
+            break;
+        }
+        if (!memcmp(header, "SPAK", 4) ||
+            obor_pak_u32(header + 4) || obor_file_seek64(fp, 0, SEEK_END)) break;
+        int64_t size = obor_file_tell64(fp);
+        if (size < 12 || size > UINT32_MAX || obor_file_seek64(fp, -4, SEEK_END) ||
             fread(tail, 1, 4, fp) != 4) break;
         uint32_t directory = obor_pak_u32(tail);
         if (directory < 8 || directory >= (uint32_t)size - 4) break;
@@ -86,7 +122,7 @@ static int obor_video_resolution(const char *path, int *width, int *height)
             obor_pak_repair_detect(fp, &bias);
         }
         table = (unsigned char *)malloc(bytes);
-        if (!table || fseek(fp, directory, SEEK_SET) || fread(table, 1, bytes, fp) != bytes) break;
+        if (!table || obor_file_seek64(fp, directory, SEEK_SET) || fread(table, 1, bytes, fp) != bytes) break;
         uint32_t starts[2] = {0, 0}, lengths[2] = {0, 0};
         size_t position = 0;
         unsigned count = 0;
@@ -125,7 +161,7 @@ static int obor_video_resolution(const char *path, int *width, int *height)
         if (!starts[slot]) { *width = 320; *height = 240; result = 1; break; }
         if (lengths[slot] > 65536) break;
         text = (char *)malloc((size_t)lengths[slot] + 1);
-        if (!text || fseek(fp, starts[slot], SEEK_SET) ||
+        if (!text || obor_file_seek64(fp, starts[slot], SEEK_SET) ||
             fread(text, 1, lengths[slot], fp) != lengths[slot]) break;
         if (memchr(text, 0, lengths[slot])) break;
         text[lengths[slot]] = 0;

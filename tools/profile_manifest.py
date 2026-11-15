@@ -5,7 +5,7 @@ Copyright (c) 2026 retrodiv <retrodiv@proton.me>
 """
 import re
 
-PROFILE_FEATURES = {'attack_history_four': 1, 'selection_escape_9': 2}
+PROFILE_FEATURES = {'attack_history_four': 1, 'selection_escape_9': 2, 'lns_6330': 4}
 REVISION = re.compile(r'[1-9][0-9]{3,4}')
 VARIANT = re.compile(r'[a-z][a-z0-9]*')
 

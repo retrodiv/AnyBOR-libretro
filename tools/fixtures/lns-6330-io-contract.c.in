@@ -1,0 +1,148 @@
+/* SPDX-License-Identifier: BSD-3-Clause
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me> */
+#define _POSIX_C_SOURCE 200809L
+#include <assert.h>
+#include <stdint.h>
+#include <stddef.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <unistd.h>
+#include <limits.h>
+#include <sys/types.h>
+#include <errno.h>
+#define O_RDONLY 0
+#define O_BINARY 0
+#define SwapLSB32(x) (x)
+#include @ABI@
+uint32_t obor_profile_features;
+@VARIANT@
+#include @READER_HEADER@
+#ifdef OBOR_LNS_PAK_IMPL
+int real_pakfd;
+#endif
+static uint64_t observed_offset;
+static unsigned reads;
+static uint32_t virtual_size, virtual_header;
+static int initializing;
+static unsigned int readlsb32(const unsigned char *p) { return (unsigned int)p[0]|((unsigned int)p[1]<<8)|((unsigned int)p[2]<<16)|((unsigned int)p[3]<<24); }
+static int observed_open(const char *path,int flags,int mode) { (void)path;(void)flags;(void)mode;observed_offset=0;return 9; }
+static int observed_close(int fd) { (void)fd;return 0; }
+static off_t observed_seek(int fd, off_t offset, int whence) {
+    (void)fd;
+    if(whence==SEEK_SET) observed_offset=(uint64_t)offset;
+    else if(whence==SEEK_CUR) observed_offset+=offset;
+    else if(whence==SEEK_END) observed_offset=virtual_size+offset;
+    else abort();
+    return (off_t)observed_offset;
+}
+static ssize_t observed_read(int fd, void *dest, size_t bytes) {
+    (void)fd; unsigned char *out=dest;
+    for(size_t i=0;i<bytes;i++) out[i]=(unsigned char)((observed_offset+i)%251);
+    if(initializing) {
+        for(size_t i=0;i<bytes;i++) {
+            uint64_t at=observed_offset+i;
+            out[i]=0;
+            if(at<4) out[i]=(unsigned char)(0x4B434150u>>(at*8));
+            if(at>=virtual_size-4u && at<virtual_size) out[i]=(unsigned char)(virtual_header>>((at-(virtual_size-4u))*8));
+        }
+    }
+    observed_offset+=bytes;reads++;
+    return (ssize_t)bytes;
+}
+#define open observed_open
+#define close observed_close
+#define lseek observed_seek
+#define read observed_read
+@CANDIDATE@
+@ORIGINAL@
+@STUBS@
+static void reset(unsigned int size) {
+    paksize=size; original_paksize=size;
+    for(int i=0;i<8;i++) {
+        pak_vfdexists[i]=original_pak_vfdexists[i]=1;
+        pak_vfdstart[i]=original_pak_vfdstart[i]=0;
+        pak_vfdsize[i]=original_pak_vfdsize[i]=123456;
+        pak_vfdpos[i]=original_pak_vfdpos[i]=0;
+        pak_vfdreadahead[i]=original_pak_vfdreadahead[i]=0;
+    }
+}
+int main(void) {
+    static const unsigned int sizes[]={1048576,2147418112u,2147491840u,2775110825u,4254196723u,4294934528u};
+    static const int offsets[]={INT_MIN,-123457,-1,0,1,32767,123455,123456,INT_MAX};
+    unsigned cases=0;
+    for(size_t s=0;s<@SIZE_COUNT@;s++) {
+        reset(sizes[s]);
+        filecache_init(9,(paksize+0x7ff)/0x800,32768,8,8);
+        original_filecache_init(9,(original_paksize+0x7ff)/0x800,32768,8,8);
+        for(int mode=0;mode<4;mode++) for(size_t o=0;o<sizeof(offsets)/sizeof(*offsets);o++) {
+            /* Avoid undefined signed addition in the ordinary source. */
+            if(@SIZE_COUNT@==2 && mode==2 && offsets[o]>INT_MAX-123456) continue;
+            pak_vfdpos[0]=original_pak_vfdpos[0]=0;
+            int a=seekPackfileCached(0,offsets[o],mode);
+            int b=original_seekPackfileCached(0,offsets[o],mode);
+            assert(a==b && pak_vfdpos[0]==original_pak_vfdpos[0]);cases++;
+        }
+        /* Read at low, block-crossing and high absolute addresses. */
+        unsigned int starts[]={0,32760,131067,sizes[s]-131072};
+        for(size_t a=0;a<sizeof(starts)/sizeof(*starts);a++) {
+            pak_vfdstart[0]=original_pak_vfdstart[0]=starts[a];
+            for(int blocking=0;blocking<=1;blocking++) {
+                for(int length=1;length<=65536;length*=16) {
+                    unsigned char x[65536],y[65536];memset(x,0x55,sizeof x);memset(y,0x55,sizeof y);
+                    pak_vfdpos[0]=original_pak_vfdpos[0]=0;
+                    int nx=readpackfileblocking(0,x,length,blocking);
+                    int ny=original_readpackfileblocking(0,y,length,blocking);
+                    assert(nx==ny && memcmp(x,y,sizeof x)==0);
+                    assert(pak_vfdpos[0]==original_pak_vfdpos[0]);cases++;
+                }
+            }
+        }
+        unsigned int last=(sizes[s]-1)/32768;
+        filecache_setvfd(0,0,last,0);original_filecache_setvfd(0,0,last,0);
+        unsigned char last_byte;
+        assert(filecache_readpakblock(&last_byte,last,0,1,1)==1);
+        assert(original_filecache_readpakblock(&last_byte,last,0,1,1)==1);
+        for(int n=0;n<=2;n++) {
+            filecache_wait_for_prebuffer(0,n);
+            original_filecache_wait_for_prebuffer(0,n);
+            assert(get_vfd_blocks_available(0)==original_get_vfd_blocks_available(0));cases++;
+        }
+        static const int lengths[]={INT_MIN,-1,0,1,7,8};
+        pak_vfdstart[0]=original_pak_vfdstart[0]=0;
+        pak_vfdsize[0]=original_pak_vfdsize[0]=7;
+        for(size_t l=0;l<sizeof(lengths)/sizeof(*lengths);l++) {
+            unsigned char x[16],y[16];memset(x,0x55,sizeof x);memset(y,0x55,sizeof y);
+            pak_vfdpos[0]=original_pak_vfdpos[0]=0;
+            int nx=readpackfileblocking(0,x,lengths[l],1);
+            int ny=original_readpackfileblocking(0,y,lengths[l],1);
+            assert(nx==ny && memcmp(x,y,sizeof x)==0);
+            if(lengths[l]<0) assert(nx==(@SIZE_COUNT@==6?7:0));
+            cases++;
+        }
+        /* The original emergency path indexes the finished loop counter,
+         * outside its allocation. Check the repaired selector independently. */
+        filecache_setvfd(2,5,5,12);
+        vfd_blocks_available[2]=1;
+        int minimum=0;
+        assert(which_pakblock_to_read(&minimum)==6 && minimum==3);
+        filecache_term(); original_filecache_term();
+        unsigned char data[4096];
+        /* Sector arithmetic is tested only where each source defines it. */
+        unsigned int lba=(sizes[s]-4)/2048;
+        reads=0;observed_offset=0;int x=pak_getsectors(data,lba,2);
+        uint64_t end=observed_offset;unsigned count=reads;
+        reads=0;observed_offset=0;int y=original_pak_getsectors(data,lba,2);
+        assert(x==y && observed_offset==end && reads==count);cases++;
+        initializing=1;virtual_size=sizes[s];virtual_header=virtual_size-123;
+        assert(pak_init()==(32768*96+64));
+        assert(original_pak_init()==(32768*96+64));
+        assert(paksize==original_paksize && pak_headerstart==original_pak_headerstart);
+        assert(pak_headersize==original_pak_headersize && pak_headersize==119);
+        assert(memcmp(pak_header,original_pak_header,120)==0 && pak_header[119]==0);
+        assert(pak_headerstart==(@SIZE_COUNT@==6?(unsigned int)virtual_header:(int)virtual_header));
+        pak_term();original_pak_term();initializing=0;cases++;
+    }
+    printf("cache/seek/read original comparison: %u cases\n",cases);
+    return 0;
+}

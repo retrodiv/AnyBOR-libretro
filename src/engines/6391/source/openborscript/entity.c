@@ -1,10 +1,11 @@
-/* AnyBOR modification record: 2026-10-05.
+/* AnyBOR modification record: 2026-11-15.
  * Port maintained by retrodiv <retrodiv@proton.me>.
  * Copyright (c) 2026 retrodiv <retrodiv@proton.me> (original contributions).
  * These contributions are licensed under BSD-3-Clause; see LICENSE at the root.
  * Upstream code retains its original license and notices.
  * Translate native entity property names, numeric IDs and animation values
- * for each logical profile.
+ * for each logical profile. Map modified 6330 LNS entity properties without
+ * changing the other profile namespaces.
  * Existing changes recorded here; this is not their implementation date.
  * See MODIFICATIONS.md and docs/modifications/6391.md
  * at the source repository root. Original notices follow below.
@@ -278,7 +279,9 @@ HRESULT openbor_get_entity_property(ScriptVariant **varlist , ScriptVariant **pr
         case _ENTITY_ATTACK_ID_INCOMING:
 
             ScriptVariant_ChangeType(*pretvar, VT_INTEGER);
-            (*pretvar)->lVal = (LONG)handle->attack_id_incoming;
+            (*pretvar)->lVal = (obor_profile_features & OBOR_PROFILE_LNS_6330)
+                ? (LONG)(uintptr_t)handle->lns_attack_id_incoming
+                : (LONG)handle->attack_id_incoming;
 
             break;
 
@@ -615,6 +618,9 @@ HRESULT openbor_set_entity_property(ScriptVariant **varlist, ScriptVariant **pre
 
             if(SUCCEEDED(ScriptVariant_IntegerValue(varlist[ARG_VALUE], &temp_int)))
             {
+                if(obor_profile_features & OBOR_PROFILE_LNS_6330)
+                obor_remember_attack(handle, temp_int);
+            else
                 handle->attack_id_incoming = temp_int;
             }
 

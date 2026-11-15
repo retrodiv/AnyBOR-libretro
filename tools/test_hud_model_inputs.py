@@ -48,7 +48,9 @@ def program(engine, profiles, *, alter_lookup=False):
         'getFPS', 'commaprint', 'sound_play_sample', 'spawnplayer',
         'execute_join_script', 'drop_all_enemies', 'execute_timetick_script',
         'model_get_colourmap', 'draw_visual_debug', 'spriteq_get_sprite_count',
-        'spriteq_get_sprite_max', 'obor_rush_value', 'Tr')}
+        'spriteq_get_sprite_max', 'obor_rush_value', 'Tr', 'nextplayermodelcoln',
+        'prevplayermodelcoln', 'selectrandomplayer', 'selectrandomcolourmap',
+        'load_cached_model')}
     bodies = []
     for label in ('original', 'checked'):
         names = {name: label + '_' + name for name in original}
@@ -85,6 +87,15 @@ def program(engine, profiles, *, alter_lookup=False):
     call = lambda label: (label+'_predrawstatus();' if old else
                           label+'_updatestatus();'+label+'_predrawstatus();')
     values = dict(CONFIG='#include "config.h"' if (engine/'config.h').is_file() else '',
+        LNS_PROVIDERS=('''
+/* These controls exercise the unmodified historical rules. A call into a
+ * variant-only service is a failed boundary, not an authored replacement. */
+static s_model *fixture_nextplayermodelcoln(s_model *m,int p){(void)m;(void)p;CHECK(0);return NULL;}
+static s_model *fixture_prevplayermodelcoln(s_model *m,int p){(void)m;(void)p;CHECK(0);return NULL;}
+static s_model *fixture_selectrandomplayer(s_model *m){(void)m;CHECK(0);return NULL;}
+static int fixture_selectrandomcolourmap(s_model *m,int p){(void)m;(void)p;CHECK(0);return 0;}
+static s_model *fixture_load_cached_model(char *name,char *owner,char unload){(void)name;(void)owner;(void)unload;CHECK(0);return NULL;}
+''' if 'OBOR_PROFILE_LNS_6330' in core else ''),
         DECLARATIONS=prefix,
         SAVEDATA='' if re.search(r'(?m)^s_savedata\s+savedata\s*;', prefix) else 's_savedata savedata;',
         SET_STORAGE='' if old else 'static s_set_entry sets[2];',

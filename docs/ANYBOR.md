@@ -35,7 +35,7 @@ v3.0 3837, v3.0 3839, v3.0 3842, v3.0 3846, v3.0 3847-dev, v3.0 3849, v3.0 3854,
 v3.0 3968-dev, v3.0 3970-dev, v3.0 3978, v3.0 3984, v3.0 3993, v3.0 3994, v3.0
 4011, v3.0 4046, v3.0 4051, v3.0 4054, v3.0 4055, v3.0 4079, v3.0 4080, v3.0
 4082, v3.0 4085, v3.0 4086, v3.0 4088-dev, v3.0 4107, v3.0 4111, v3.0 4129, v3.0
-4153, v3.0 4432, v3.0 4453, v3.0 6330, v3.0 6391, v3.0 6391-mod, v3.0 6392-dev,
+4153, v3.0 4432, v3.0 4453, v3.0 6330, v3.0 6330-mod, v3.0 6391, v3.0 6391-mod, v3.0 6392-dev,
 v3.0 6412-dev, v3.0 6510-dev, v3.0 7086-dev, v3.0 7123-dev, v4.0 7142-alpha,
 v4.0 7530, v4.0 7533, v4.0 7555, v4.0 7556, v4.0 7735 and v4.0 8023-dev.
 Automatic selection uses build tags and content clues to choose a profile. You can select one
@@ -217,11 +217,16 @@ The **v.2.1933** filename form is supported separately.
 An explicit variant after the number uses the profile table: **Build 6391 Mod**,
 **Build 6391-mod** and **Build 6391_MOD** select v3.0 6391-mod. Case is ignored;
 the variant must be a complete word, so **Modern** does not mean **mod**.
+**Build 6330 Mod**, **Build 6330-mod** and **Build 6330_MOD** select v3.0 6330-mod.
 The same rule applies to declared **dev** and **alpha** variants. An unknown
 variant retains ordinary numeric routing. With a partial or range declaration,
 such as **Build 63XX Mod**, automatic selection chooses the highest matching variant inside
 the bounds; without a matching variant, normal range routing applies. A bare
 numeric tag does not select a distinct variant with the same revision.
+For unlabelled ordinary packed content, a complete bounded scan of the native
+video/level-order binding can select v3.0 6330-mod from its exclusive Hall of
+Fame directives. Unused files, comments and script names do not select it;
+ambiguous or incomplete metadata retains the existing detection rules.
 An accompanying executable's **Build** label without a number is inconclusive;
 its compile date does not supply a build.
 

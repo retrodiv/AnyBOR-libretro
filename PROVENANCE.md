@@ -24,7 +24,7 @@ and [native library tests](https://github.com/aosp-mirror/platform_bionic/blob/m
 The port does not import those platform implementation files.
 
 [ENGINE_EXECUTABLES.json](docs/ENGINE_EXECUTABLES.json) records verified engine
-program and installable-package SHA-256 and imohash values, builds, variants, byte sizes and official
+program and installable-package SHA-256 and imohash values, builds, variants, byte sizes and available
 source package/member references. The lookup table contains these factual
 identities, not executable code. Verification checks archive members' sizes and
 CRCs, directly preserved packages' manifest hashes, executable/package formats
@@ -36,6 +36,11 @@ settings follow [content configuration](docs/CONTENT_CONFIGURATION.md); they are
 separate from the engine catalog. No executable is run for identification. Imohash values use standard sampling parameters and are calculated
 only after each complete executable payload matches its recorded SHA-256.
 Different executables can share a sampled imohash value.
+
+Verified modified engine entries retain exact acquisition details privately.
+Their public records identify the provenance receipt by SHA-256 and omit
+private package/member names. These receipt digests document verification;
+only the engine executable identities participate in engine selection.
 
 Files imported from an upstream revision into another physical baseline have a
 `source_import` entry with their own upstream commit, repository and original
@@ -133,6 +138,23 @@ the host build utilities listed in `README.md`; they do not download code.
 The generic buffer transform compiler/interpreter is original AnyBOR work.
 It provides only generic buffer execution and source compilation.
 
+
+The v3.0 6330-mod profile reconstructs the modified 6330 LNS v0.10g engine
+with LNS Enhancements by Hechelion and Gonzalo MVP, from the initial
+[AveyondFly/openbor-fflns source](https://github.com/AveyondFly/openbor-fflns/commit/cfb4f3a676613714757d4539275482f7c323d6ad)
+uploaded by yizhigai. The adapted portions cover model loading/unloading,
+character selection, score/settings records, menus, combat, model/script
+properties, HUD colours and cached I/O. The baseline excludes later uploader
+changes. OpenBOR's BSD-3-Clause licence and original OpenBOR Team copyright
+notices apply and are retained. Attribution identifies the contributors;
+it does not imply endorsement or complete binary equivalence.
+The original modified-source BSD grant is retained in
+`LICENSES/OpenBOR-profile-6330-mod-BSD-3-Clause.txt`; source regression excerpts
+retain their associated notices in `tools/fixtures/lns-6330-NOTICE.txt`.
+The independent PACK 1.1 container adapter uses the published format and
+volume lookup rules documented in the later
+[container source](https://github.com/AveyondFly/openbor-fflns/blob/5cac65237db9b1409a0b7ee4a1a64d6507834915/engine/source/gamelib/packfile.c);
+it reads unchanged member bytes without importing that later engine baseline.
 
 The v3.0 6391-mod profile reconstructs Kratus's experimental build described
 in the [published discussion](https://www.chronocrash.com/forum/threads/npc-walking-backwards-how-to-solve-it.6933/).

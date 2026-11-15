@@ -1,0 +1,52 @@
+/* SPDX-License-Identifier: BSD-3-Clause
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me> */
+#include <assert.h>
+#include <stdint.h>
+#include <stdio.h>
+#include <string.h>
+#include "soundmix.h"
+@TYPES@
+@MAX_VOLUME@
+static channelstruct vchannel[2];
+static s_soundcache cache[2],*soundcache=cache;
+static int max_channels;
+musicchannelstruct musicchannel;
+static int32_t storage[32],*mixbuf=storage,expected_samples[32];
+static short samples16[64],music_samples[64];
+static unsigned char samples8[64];
+@CODE@
+static void warm(void (*mix)(unsigned)) {
+ memset(&musicchannel,0,sizeof(musicchannel));memset(storage,0,sizeof(storage));max_channels=0;
+ musicchannel.active=1;musicchannel.channels=SOUND_MONO;musicchannel.buf[0]=music_samples;
+ musicchannel.fp_playto[0]=INT_TO_FIX(64);musicchannel.fp_period=INT_TO_FIX(1);
+ musicchannel.volume[0]=musicchannel.volume[1]=MAXVOLUME;mix(2);
+}
+static void setup(unsigned seed,int null_buffer) {
+ memset(storage,0,sizeof(storage));memset(&musicchannel,0,sizeof(musicchannel));memset(vchannel,0,sizeof(vchannel));memset(cache,0,sizeof(cache));
+ musicchannel.active=seed%5!=0;musicchannel.paused=seed%7==0;
+ musicchannel.channels=seed%2?SOUND_MONO:SOUND_STEREO;
+ musicchannel.playing_buffer=(int)(seed%4);musicchannel.fp_samplepos=INT_TO_FIX(seed%9);
+ musicchannel.fp_period=INT_TO_FIX((1+seed%2));musicchannel.volume[0]=(int)(seed%65);musicchannel.volume[1]=(int)((seed*3)%65);
+ for(unsigned i=0;i<MUSIC_NUM_BUFFERS;++i){musicchannel.buf[i]=null_buffer?NULL:music_samples;musicchannel.fp_playto[i]=INT_TO_FIX(seed%3==0?0:16);}
+ max_channels=(int)(seed%3);
+ for(int i=0;i<max_channels;++i) {
+  channelstruct *c=&vchannel[i];c->active=seed%2?CHANNEL_PLAYING:CHANNEL_LOOPING;c->paused=seed%11==0;
+  c->samplenum=i;c->channels=seed%2?SOUND_STEREO:SOUND_MONO;c->fp_period=INT_TO_FIX(1);c->fp_samplepos=INT_TO_FIX(seed%8);
+  c->volume[0]=(int)(seed%65);c->volume[1]=(int)((seed*7)%65);
+  cache[i].sample.bits=seed%2?8:16;cache[i].sample.soundlen=16;
+  cache[i].sample.sampleptr=seed%13==0?NULL:seed%2?(void*)samples8:(void*)samples16;
+ }
+}
+static void compare(void (*reference)(unsigned),unsigned seed,int null_buffer) {
+ warm(reference);setup(seed,null_buffer);reference(8);reference(8);
+ memcpy(expected_samples,storage,sizeof(storage));musicchannelstruct wanted_music=musicchannel;channelstruct wanted_channels[2];memcpy(wanted_channels,vchannel,sizeof(vchannel));
+ warm(candidate_mix);setup(seed,null_buffer);candidate_mix(8);candidate_mix(8);
+ assert(!memcmp(expected_samples,storage,sizeof(storage)) && !memcmp(&wanted_music,&musicchannel,sizeof(musicchannel)));
+ assert(!memcmp(wanted_channels,vchannel,sizeof(vchannel)));
+}
+int main(void) {
+ for(unsigned i=0;i<64;++i){samples16[i]=(short)((int)i*11-317);samples8[i]=(unsigned char)(i*3);music_samples[i]=(short)((int)i*7+193);}
+ unsigned cases=0;
+ for(unsigned seed=0;seed<256;++seed){compare(official_mix,seed,0);compare(physical_mix,seed,0);compare(lns_mix,seed,0);compare(lns_mix,seed,1);cases+=4;}
+ assert(cases==1024);fprintf(stderr,"Full mixer comparisons: %u, including 256 defined LNS null-buffer sequences\n",cases);return 0;
+}

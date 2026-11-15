@@ -374,7 +374,7 @@
     "file": "LICENSES/Embedded-source-notices.txt",
     "license": "see each notice",
     "scope": "source and binary",
-    "sha256": "8d8188a6d49e9e906d892ed4e3aa2c26845ab87e628ba61ea4b2ec35e218472c",
+    "sha256": "1b8dc30c627c6d2f9857cb219f99faef28238046d684c2612598844fb6f98afc",
     "source": "Individual source headers listed in this document"
   },
   {
@@ -474,6 +474,13 @@
     "scope": "Selected early profile source imports",
     "sha256": "3f12a435af24fce556b67e4c97a45fa750bccb9d3a17ff25209311b865efe3fb",
     "source": "https://raw.githubusercontent.com/DCurrent/openbor/4a276c8b81fe0fc96d0f98b0e535da802c7417f7/engine/LICENSE"
+  },
+  {
+    "file": "LICENSES/OpenBOR-profile-6330-mod-BSD-3-Clause.txt",
+    "license": "BSD-3-Clause",
+    "scope": "Modified6330 source adaptations and own-source regression extracts. Original OpenBOR Team notices and contributor credits are retained.",
+    "sha256": "adfc28feba4d32bb3933b29fe55fd0a6aa746084704c3ee71fc3f732706b9aa4",
+    "source": "https://raw.githubusercontent.com/AveyondFly/openbor-fflns/cfb4f3a676613714757d4539275482f7c323d6ad/engine/LICENSE"
   },
   {
     "file": "LICENSES/OpenBOR-profile-7735-BSD-3-Clause.txt",

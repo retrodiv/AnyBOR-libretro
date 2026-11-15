@@ -1,0 +1,55 @@
+/* SPDX-License-Identifier: BSD-3-Clause
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me> */
+#include <assert.h>
+#include <stdbool.h>
+#include <stdint.h>
+#include <stdio.h>
+#include <string.h>
+#include @ABI@
+#define CMD_LEVEL_LOAD 1
+static unsigned obor_profile_features;
+typedef struct { int unload; } s_model;
+static s_model model;
+static int loadingbg[2],bgPosi,exists,argument_flag,reads;
+static char *filename="level.txt";
+static struct Event {int kind,a,b,c;} events[16],expected[16];
+static unsigned count;
+static void event(int kind,int a,int b,int c) {
+ assert(count<16);events[count++]=(struct Event){kind,a,b,c};
+}
+#define GET_ARG(n) ((void)(n),"model")
+#define GET_INT_ARG(n) ((void)(n),++reads,argument_flag)
+static s_model *findmodel(const char *name) {
+ assert(!strcmp(name,"model"));event(1,exists,0,0);return exists?&model:NULL;
+}
+static s_model *load_cached_model(char *name,char *owner,char unload) {
+ assert(!strcmp(name,"model") && owner==filename);event(2,unload,0,0);return &model;
+}
+static s_model *reference_load(char *name,char *owner,char unload,bool quick) {
+ assert(!quick);return load_cached_model(name,owner,unload);
+}
+static void update_model_loadflag(s_model *target,char flag) {
+ assert(target==&model);event(3,flag,0,0);target->unload=flag;
+}
+static void update_loading(int *bg,int position,int total) {
+ int kind=bg==&loadingbg[0]?0:bg==&loadingbg[1]?1:2;
+ assert(kind!=2 || bg==&bgPosi);event(4,kind,position,total);
+}
+@CODE@
+static void reset(void) {memset(events,0,sizeof(events));count=reads=0;model.unload=99;}
+int main(void) {
+ unsigned cases=0;
+ for(obor_profile_features=0;obor_profile_features<8;++obor_profile_features)
+  for(unsigned family=0;family<3;++family)for(exists=0;exists<2;++exists)
+   for(argument_flag=-127;argument_flag<=127;argument_flag+=17) {
+    reset();
+    if(obor_profile_features&OBOR_PROFILE_LNS_6330)lns_contract();
+    else if(family==0)official_contract();else physical_contract();
+    memcpy(expected,events,sizeof(events));unsigned wanted=count;int wanted_reads=reads,unload=model.unload;
+    reset();candidate_contract();
+    assert(wanted==count && wanted_reads==reads && unload==model.unload);
+    assert(!memcmp(expected,events,sizeof(events)));++cases;
+   }
+ assert(cases==720);fprintf(stderr,"Loading progress/cache/call-site comparisons: %u\n",cases);
+ return 0;
+}

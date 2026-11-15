@@ -5,7 +5,8 @@
  * Upstream code retains its original license and notices.
  * Declare exact resident PCM content-member ranges for independently
  * verified reconstruction; preserve allocation tails and mutable mixer
- * state.
+ * state. Retain native mixed-sample carryover when a music buffer is absent,
+ * without dereferencing a null buffer.
  * Existing changes recorded here; this is not their implementation date.
  * See MODIFICATIONS.md and docs/modifications/6391.md
  * at the source repository root. Original notices follow below.
@@ -495,7 +496,10 @@ static void mixaudio(unsigned int todo)
             }
 
             // Mix a sample
-            lmusic = rmusic = sptr16[FIX_TO_INT(fp_pos)];
+            if(sptr16)
+            {
+                lmusic = rmusic = sptr16[FIX_TO_INT(fp_pos)];
+            }
             lmusic = (lmusic * lvolume / MAXVOLUME);
             rmusic = (rmusic * rvolume / MAXVOLUME);
             mixbuf[i++] += lmusic;

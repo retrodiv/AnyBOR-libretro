@@ -1,0 +1,53 @@
+/* SPDX-License-Identifier: BSD-3-Clause
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me> */
+#include <assert.h>
+#include <stdint.h>
+#include <string.h>
+#include @ABI@
+enum {S_OK=0,E_FAIL=-1,VT_STR=3,VT_OTHER=4,_sse_name=5};
+typedef struct {int vt;const char *strVal;} ScriptVariant;
+typedef struct {int value;} Model;
+typedef struct {
+    Model *model;int index;struct {int index;} item_properties;
+    int weaponindex;char other[11];
+} Spawn;
+static Spawn spawnentry;
+static Model loaded;
+static unsigned obor_profile_features;
+static unsigned calls[4],call_count;
+static const char *StrCache_Get(const char *text) {calls[call_count++]=1;return text;}
+static Model *findmodel(const char *name) {calls[call_count++]=2;return !strcmp(name,"loaded")?&loaded:NULL;}
+static int get_cached_model_index(const char *name) {calls[call_count++]=3;return !strcmp(name,"cached")?7:-1;}
+#define printf(...) ((void)0)
+@CANDIDATE@
+@ORIGINALS@
+int main(void) {
+    unsigned masks[]={0,OBOR_PROFILE_ATTACK_HISTORY_FOUR,OBOR_PROFILE_LNS_6330};
+    const char *names[]={"loaded","cached","missing",""};int prior[]={-1,0,17};
+    for(unsigned m=0;m<3;++m) {
+        obor_profile_features=masks[m];
+        for(unsigned clear=0;clear<2;++clear) {
+            memset(&spawnentry,0xa5,sizeof(spawnentry));
+            if(clear)candidate_clear();else candidate_init();Spawn actual=spawnentry;
+            memset(&spawnentry,0xa5,sizeof(spawnentry));
+            if(m==2){if(clear)lns_clear();else lns_init();}
+            else {if(clear)official_clear();else official_init();}
+            assert(!memcmp(&actual,&spawnentry,sizeof(actual)));
+            assert(actual.index==(m==2?-1:0) && actual.item_properties.index==(m==2?-1:0));
+            assert(actual.weaponindex==(m==2?-1:0));
+        }
+        for(unsigned n=0;n<4;++n)for(unsigned p=0;p<3;++p)for(int type=VT_STR;type<=VT_OTHER;++type) {
+            ScriptVariant arg={type,names[n]},out={VT_OTHER,"untouched"},*result=&out;
+            memset(&spawnentry,0,sizeof(spawnentry));spawnentry.index=prior[p];spawnentry.model=&loaded;
+            call_count=0;int actual=candidate_name(&arg,&result);Spawn after=spawnentry;
+            unsigned sequence[4],count=call_count;memcpy(sequence,calls,sizeof(sequence));int present=result!=NULL;
+            memset(&spawnentry,0,sizeof(spawnentry));spawnentry.index=prior[p];spawnentry.model=&loaded;
+            result=&out;call_count=0;
+            int expected=m==2?lns_name(&arg,&result):official_name(&arg,&result);
+            assert(actual==expected && present==(result!=NULL) && !memcmp(&after,&spawnentry,sizeof(after)));
+            assert(count==call_count && !memcmp(sequence,calls,count*sizeof(*calls)));
+            if(type==VT_STR)assert(after.index==((m==2 && n!=0)?(n==1?7:-1):prior[p]));
+        }
+    }
+    return 0;
+}

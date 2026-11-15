@@ -1,0 +1,165 @@
+/* SPDX-License-Identifier: BSD-3-Clause
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me> */
+#include <assert.h>
+#include <stdbool.h>
+#include <stddef.h>
+#include <stdint.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <setjmp.h>
+#include @ABI@
+@LIMITS@
+@RECORD@
+@ORIGINAL_RECORDS@
+static unsigned obor_profile_features;
+static s_savescore savescore,*savescore_modes;
+static unsigned short savescore_modes_count,savescore_difficulty_count;
+static int num_difficulties;
+static struct {s_savescore *savescore;} levelsets[4];
+static lns_savescore original_score,*original_modes;
+static unsigned short original_modes_count,original_difficulty_count;
+static struct {lns_savescore *savescore;} original_sets[4];
+static official_savescore official_score;
+static physical_savescore physical_score;
+static FILE *selected_file;
+static int missing_file;
+static jmp_buf source_end,invalid_input;
+static void borShutdown(int status,const char *format,...) {
+ (void)format;assert(status==1);longjmp(invalid_input,1);
+}
+static void getBasePath(char *out,const char *folder,int arg) {(void)folder;(void)arg;out[0]=0;}
+static void original_getPakName(char *out,int score) {assert(score==1);out[0]=0;}
+static void getPakName(char *out,size_t capacity,int score) {assert(capacity==MAX_BUFFER_LEN);original_getPakName(out,score);}
+static int obor_pak_path_append(char *out,size_t capacity,const char *name) {assert(capacity==MAX_BUFFER_LEN);assert(!name[0]);out[0]=0;return 1;}
+static void borExit(int status) {assert(status==1);abort();}
+static FILE *selected_open(const char *path,const char *mode) {
+ (void)path;assert(!strcmp(mode,"rb") || !strcmp(mode,"wb"));return missing_file?NULL:selected_file;
+}
+static int selected_close(FILE *file) {assert(file==selected_file);return 0;}
+/* The original consults an uninitialized/partial record after a short read.
+ * Observe only its defined complete-record prefix, before that unsafe access. */
+static size_t complete_source_read(void *out,size_t size,size_t count,FILE *file) {
+ size_t got=fread(out,size,count,file);if(got!=count)longjmp(source_end,1);return got;
+}
+#define fopen selected_open
+#define fclose selected_close
+@CANDIDATE@
+@ORIGINALS@
+#undef fopen
+#undef fclose
+static FILE *input(const void *bytes,size_t length) {
+ FILE *file=tmpfile();assert(file);assert(fwrite(bytes,1,length,file)==length);rewind(file);return file;
+}
+static void fill(void *out,size_t length,unsigned seed) {
+ unsigned char *p=out;for(size_t i=0;i<length;++i){seed=seed*1664525u+1013904223u;p[i]=(unsigned char)(seed>>24);}
+}
+static void close_selected(void) {fclose(selected_file);selected_file=NULL;}
+static void compare_file_bytes(FILE *left,FILE *right) {
+ rewind(left);rewind(right);unsigned char a[1024],b[1024];
+ for(;;) {size_t na=fread(a,1,sizeof(a),left),nb=fread(b,1,sizeof(b),right);assert(na==nb && !memcmp(a,b,na));if(!na)break;}
+ assert(feof(left) && feof(right));
+}
+static void check_single_score(unsigned flags,int family) {
+ obor_profile_features=flags;
+ size_t size=family==0?sizeof(official_score):family==1?sizeof(physical_score):sizeof(original_score);
+ void *reference=family==0?(void*)&official_score:family==1?(void*)&physical_score:(void*)&original_score;
+ assert(obor_profile_savescore_size()==size);
+ unsigned char bytes[sizeof(s_savescore)+1];fill(bytes,sizeof(bytes),53821);
+ memset(&savescore,0xa5,sizeof(savescore));memcpy(&savescore,bytes,size);memcpy(reference,bytes,size);
+ selected_file=tmpfile();assert(selected_file);assert(saveHighScoreFile()==1);FILE *actual=selected_file;
+ selected_file=tmpfile();assert(selected_file);
+ assert((family==0?official_saveHighScoreFile():family==1?physical_saveHighScoreFile():lns_saveHighScoreFile())==1);
+ compare_file_bytes(actual,selected_file);fclose(actual);close_selected();
+ for(size_t length=0;length<=size+1;++length) {
+  memset(&savescore,0xa5,sizeof(savescore));memset(reference,0xa5,size);
+  selected_file=input(bytes,length);int got=loadHighScoreFile();long actual_pos=ftell(selected_file);close_selected();
+  selected_file=input(bytes,length);
+  int wanted=family==0?official_loadHighScoreFile():family==1?physical_loadHighScoreFile():lns_loadHighScoreFile();
+  assert(got==wanted && ftell(selected_file)==actual_pos && !memcmp(&savescore,reference,size));
+  if(family<2)for(size_t i=size;i<sizeof(savescore);++i)assert(((unsigned char*)&savescore)[i]==0xa5);
+  close_selected();
+ }
+ missing_file=1;
+ assert(saveHighScoreFile()==0 && loadHighScoreFile()==0);
+ missing_file=0;
+}
+static void configure_modes(void) {
+ savescore_modes_count=original_modes_count=2;savescore_difficulty_count=original_difficulty_count=3;num_difficulties=4;
+ savescore_modes=calloc(6,sizeof(*savescore_modes));original_modes=calloc(6,sizeof(*original_modes));assert(savescore_modes && original_modes);
+ memset(levelsets,0,sizeof(levelsets));memset(original_sets,0,sizeof(original_sets));
+ for(unsigned i=0;i<6;++i) {
+  savescore_modes[i].mode=(i/3)*2+1;savescore_modes[i].difficulty=i%3;
+  savescore_modes[i].compatibleversion=i%3==1?0:CV_HIGH_SCORE;
+ }
+ memcpy(original_modes,savescore_modes,6*sizeof(*savescore_modes));
+}
+static void release_modes(void) {free(savescore_modes);free(original_modes);savescore_modes=NULL;original_modes=NULL;}
+static void check_mode_records(void) {
+ obor_profile_features=OBOR_PROFILE_LNS_6330;
+ s_savescore records[10];memset(records,0,sizeof(records));
+ for(unsigned i=0;i<10;++i) {
+  records[i].compatibleversion=CV_HIGH_SCORE;records[i].mode=(i%2)*2+1;
+  records[i].difficulty=i%3;records[i].credits=(unsigned short)(i+1);records[i].highsc[0]=1000+i;
+  strcpy(records[i].hscoren[0],"SYNTHETIC");memcpy(records[i].hscorei[0],"XYZ",3);records[i].is1CC[0]=i%2;
+ }
+ /* Invalid/disabled slots are ignored, and later compatible records still load. */
+ records[1].compatibleversion=0;records[2].mode=4;records[3].difficulty=3;records[4].mode=0;
+ for(size_t count=0;count<=10;++count) {
+  configure_modes();selected_file=input(records,count*sizeof(*records));initHighScore();long actual_pos=ftell(selected_file);close_selected();
+  selected_file=input(records,count*sizeof(*records));
+  if(!setjmp(source_end))lns_initHighScore();
+  assert(ftell(selected_file)==actual_pos && !memcmp(savescore_modes,original_modes,6*sizeof(*savescore_modes)));
+  for(unsigned mode=0;mode<4;++mode) {
+   if(levelsets[mode].savescore)assert((levelsets[mode].savescore-savescore_modes)==(original_sets[mode].savescore-original_modes));
+   else assert(!original_sets[mode].savescore);
+  }
+  close_selected();
+  selected_file=tmpfile();assert(selected_file);assert(saveHighScoreFile()==1);FILE *actual=selected_file;
+  selected_file=tmpfile();assert(selected_file);assert(lns_saveHighScoreFile()==1);compare_file_bytes(actual,selected_file);
+  fclose(actual);close_selected();release_modes();
+ }
+ /* Every truncated first record remains unapplied; complete-prefix records still survive. */
+ for(size_t tail=0;tail<sizeof(*records);++tail) {
+  configure_modes();selected_file=input(records,sizeof(*records)+tail);initHighScore();
+  assert(savescore_modes[0].highsc[0]==records[0].highsc[0]);
+  assert(savescore_modes[3].highsc[0]==0 && savescore_modes[4].highsc[0]==0 && savescore_modes[5].highsc[0]==0);
+  assert(ftell(selected_file)==(long)(sizeof(*records)+tail));close_selected();release_modes();
+ }
+ configure_modes();selected_file=input(records,sizeof(*records));
+ ((unsigned char*)records)[offsetof(s_savescore,is1CC)]=2;
+ close_selected();selected_file=input(records,sizeof(*records));initHighScore();assert(savescore_modes[0].highsc[0]==0);close_selected();
+ records[0].is1CC[0]=true;memset(records[0].hscoren[0],'x',MAX_NAME_LEN);
+ selected_file=input(records,sizeof(*records));initHighScore();assert(savescore_modes[0].highsc[0]==0);close_selected();
+ savescore_difficulty_count=MAX_DIFFICULTIES+1;
+ if(!setjmp(invalid_input)){initHighScore();assert(0);}release_modes();
+ /* Mode attachment never indexes an invalid declared mode. */
+ configure_modes();savescore_modes[0].mode=65535;selected_file=input(records,0);initHighScore();assert(!levelsets[1].savescore);close_selected();release_modes();
+}
+static void check_version_boundary(void) {
+ assert(official_CV_HIGH_SCORE==0x33747u && physical_CV_HIGH_SCORE==0x33747u && lns_CV_HIGH_SCORE==0x33748u);
+ for(unsigned flags=0;flags<8;++flags) {
+  obor_profile_features=flags;
+  assert(CV_HIGH_SCORE==((flags&OBOR_PROFILE_LNS_6330)?lns_CV_HIGH_SCORE:official_CV_HIGH_SCORE));
+ }
+ obor_profile_features=OBOR_PROFILE_LNS_6330;
+ const unsigned versions[]={0,0x33746u,0x33747u,0x33748u,0x33749u,UINT32_MAX};
+ for(unsigned v=0;v<sizeof(versions)/sizeof(*versions);++v) {
+  configure_modes();s_savescore record={0};record.compatibleversion=versions[v];record.mode=1;record.difficulty=0;
+  record.highsc[0]=12345;strcpy(record.hscoren[0],"SYNTHETIC");
+  selected_file=input(&record,sizeof(record));initHighScore();long pos=ftell(selected_file);close_selected();
+  selected_file=input(&record,sizeof(record));if(!setjmp(source_end))lns_initHighScore();
+  assert(pos==ftell(selected_file) && !memcmp(savescore_modes,original_modes,6*sizeof(*savescore_modes)));
+  assert(savescore_modes[0].highsc[0]==(versions[v]==lns_CV_HIGH_SCORE?12345u:0u));
+  close_selected();release_modes();
+ }
+}
+int main(void) {
+ assert(sizeof(s_savescore)==sizeof(lns_savescore));assert(offsetof(s_savescore,hscorei)==sizeof(official_savescore));
+ assert(sizeof(physical_savescore)==sizeof(official_savescore));
+ check_single_score(0,0);check_single_score(OBOR_PROFILE_ATTACK_HISTORY_FOUR,1);check_single_score(OBOR_PROFILE_LNS_6330,2);
+ obor_profile_features=OBOR_PROFILE_LNS_6330;
+ lns_savescore fallback={0};fallback.compatibleversion=CV_HIGH_SCORE;fallback.highsc[0]=73;
+ selected_file=input(&fallback,sizeof(fallback));initHighScore();assert(savescore.highsc[0]==73);close_selected();
+ check_mode_records();check_version_boundary();return 0;
+}

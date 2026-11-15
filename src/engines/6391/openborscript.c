@@ -1,4 +1,4 @@
-/* AnyBOR modification record: 2026-10-22.
+/* AnyBOR modification record: 2026-11-15.
  * Port maintained by retrodiv <retrodiv@proton.me>.
  * Copyright (c) 2026 retrodiv <retrodiv@proton.me> (original contributions).
  * These contributions are licensed under BSD-3-Clause; see LICENSE at the root.
@@ -21,7 +21,8 @@
  * arithmetic and table reads defined. Transfer loaded stream buffers through
  * aligned local outputs while preserving native record layout and results.
  * Close owned input files after stream loading and on buffer allocation
- * failure.
+ * failure. Preserve modified 6330 LNS script property numbering, result
+ * types, deferred loads and player state.
  * Existing changes recorded here; this is not their implementation date.
  * See MODIFICATIONS.md and docs/modifications/6391.md
  * at the source repository root. Original notices follow below.
@@ -414,6 +415,8 @@ int Varlist_DeleteByName(Varlist *array, char *theName)
 void Script_Global_Init()
 {
     memset(&spawnentry, 0, sizeof(spawnentry)); //clear up the spawn entry
+    if(obor_profile_features & OBOR_PROFILE_LNS_6330)
+        spawnentry.index = spawnentry.item_properties.index = spawnentry.weaponindex = -1;
     drawmethod = plainmethod;
 
     Varlist_Init(&global_var_list, max_indexed_vars);
@@ -483,6 +486,8 @@ void Script_Global_Clear()
     Varlist_Clear(&global_var_list);
 
     memset(&spawnentry, 0, sizeof(spawnentry));//clear up the spawn entry
+    if(obor_profile_features & OBOR_PROFILE_LNS_6330)
+        spawnentry.index = spawnentry.item_properties.index = spawnentry.weaponindex = -1;
     for(i = 0; i < numfilestreams; i++)
     {
         if(filestreams[i].buf)
@@ -1233,6 +1238,142 @@ static const char *svlist[] =
 };
 
 
+static const char *obor_svlist6330lns[] =
+{
+    "background",
+    "blockade",
+    "bossescount",
+    "branchname",
+    "cheats",
+    "count_enemies",
+    "count_entities",
+    "count_npcs",
+    "count_players",
+    "current_branch",
+    "current_level",
+    "current_palette",
+    "current_scene",
+    "current_set",
+    "current_stage",
+    "effectvol",
+    "elapsed_time",
+    "ent_max",
+    "fps",
+    "freeram",
+    "game_paused",
+    "game_speed",
+    "game_time",
+    "gfx_x_offset",
+    "gfx_y_offset",
+    "gfx_y_offset_adj",
+    "hresolution",
+    "in_cheat_options",
+    "in_control_options",
+    "in_enginecreditsscreen",
+    "in_gameoverscreen",
+    "in_halloffamescreen",
+    "in_level",
+    "in_load_game",
+    "in_menuscreen",
+    "in_new_game",
+    "in_options",
+    "in_sa_count",
+    "in_selectscreen",
+    "in_showcomplete",
+    "in_sound_options",
+    "in_start_game",
+    "in_system_options",
+    "in_titlescreen",
+    "in_video_options",
+    "lasthita",
+    "lasthitc",
+    "lasthitt",
+    "lasthitx",
+    "lasthity",
+    "lasthitz",
+    "levelheight",
+    "levelpos",
+    "levelwidth",
+    "lightx",
+    "lightz",
+    "maxanimations",
+    "maxattacktypes",
+    "maxentityvars",
+    "maxglobalvars",
+    "maxindexedvars",
+    "maxplayers",
+    "maxscriptvars",
+    "maxsoundchannels",
+    "models_cached",
+    "models_loaded",
+    "musicvol",
+    "nofadeout",
+    "nogameover",
+    "nohof",
+    "nojoin",
+    "nopause",
+    "nosave",
+    "noscreenshot",
+    "noshowcomplete",
+    "numbasemaps",
+    "numbosses",
+    "numholes",
+    "numlayers",
+    "numpalettes",
+    "numwalls",
+    "pakname",
+    "pause",
+    "pixelformat",
+    "player",
+    "player1",
+    "player2",
+    "player3",
+    "player4",
+    "player_max_z",
+    "player_min_z",
+    "porting",
+    "sample_play_id",
+    "scrollmaxx",
+    "scrollmaxz",
+    "scrollminx",
+    "scrollminz",
+    "self",
+    "sets_count",
+    "shadowalpha",
+    "shadowcolor",
+    "shadowopacity",
+    "skiptoset",
+    "slowmotion",
+    "slowmotion_duration",
+    "smartbomber",
+    "soundvol",
+    "textbox",
+    "ticks",
+    "totalram",
+    "usedram",
+    "viewporth",
+    "viewportw",
+    "viewportx",
+    "viewporty",
+    "vresolution",
+    "vscreen",
+    "waiting",
+    "xpos",
+    "ypos",
+};
+
+/* LNS inserts in_sa_count before in_selectscreen in its native namespace. */
+static int obor_systemvariant_native(int index)
+{
+    if(obor_profile_features & OBOR_PROFILE_LNS_6330)
+    {
+        if(index == _sv_in_selectscreen) return _sv_in_sa_count;
+        if(index > _sv_in_selectscreen && index < _sv_the_end) return index - 1;
+    }
+    else if(index == _sv_in_sa_count) return _sv_the_end;
+    return index;
+}
+
 // ===== openborvariant =====
 int mapstrings_systemvariant(ScriptVariant **varlist, int paramCount)
 {
@@ -1240,8 +1381,16 @@ int mapstrings_systemvariant(ScriptVariant **varlist, int paramCount)
     int prop;
 
 
-    MAPSTRINGS(varlist[0], svlist, _sv_the_end,
+    if(obor_profile_features & OBOR_PROFILE_LNS_6330)
+    {
+    MAPSTRINGS(varlist[0], obor_svlist6330lns, _sv_the_end,
                "openborvariant: System variable name not found: '%s'\n");
+    }
+    else
+    {
+    MAPSTRINGS(varlist[0], svlist, _sv_in_sa_count,
+               "openborvariant: System variable name not found: '%s'\n");
+    }
 
     return 1;
 }
@@ -2391,6 +2540,9 @@ enum entityproperty_enum
     _ep_z,
     _ep_zdir,
     _ep_boomerang,
+    _ep_ignore_projectile_wall_collision,
+    _ep_next_force_direction,
+    _ep_override_next_force_direction,
     _ep_the_end,
 };
 
@@ -2596,6 +2748,9 @@ static const char *eplist[] =
     "z",
     "zdir",
     "boomerang",
+    "ignore_projectile_wall_collision",
+    "nextforcedirection",
+    "overridenextforcedirection",
 };
 
 enum aiflag_enum
@@ -2951,6 +3106,8 @@ enum gep_flash_enum
     _ep_flash_block,
     _ep_flash_def,
     _ep_flash_noattack,
+    _ep_flash_overridesource,
+    _ep_flash_overridetarget,
     _ep_flash_the_end,
 };
 
@@ -3314,8 +3471,412 @@ static const int obor_entityproperty6330[] = {
     _ep_zdir,
 };
 
+static const int obor_entityproperty6330lns[] = {
+    _ep_a,
+    _ep_aggression,
+    _ep_aiattack,
+    _ep_aiflag,
+    _ep_aimove,
+    _ep_alpha,
+    _ep_animal,
+    _ep_animating,
+    _ep_animation,
+    _ep_animation_handle,
+    _ep_animationid,
+    _ep_animheight,
+    _ep_animhits,
+    _ep_animnum,
+    _ep_animpos,
+    _ep_animvalid,
+    _ep_antigrab,
+    _ep_antigravity,
+    _ep_attackid,
+    _ep_attacking,
+    _ep_attackthrottle,
+    _ep_attackthrottletime,
+    _ep_autokill,
+    _ep_base,
+    _ep_bbox,
+    _ep_binding,
+    _ep_blink,
+    _ep_blockback,
+    _ep_blockodds,
+    _ep_blockpain,
+    _ep_boomerang,
+    _ep_boss,
+    _ep_bounce,
+    _ep_bound,
+    _ep_candamage,
+    _ep_chargerate,
+    _ep_colourmap,
+    _ep_colourtable,
+    _ep_combostep,
+    _ep_combotime,
+    _ep_custom_target,
+    _ep_damage_on_landing,
+    _ep_dead,
+    _ep_defaultmodel,
+    _ep_defaultname,
+    _ep_defense,
+    _ep_destx,
+    _ep_destz,
+    _ep_detect,
+    _ep_die_on_landing,
+    _ep_direction,
+    _ep_dot,
+    _ep_dropframe,
+    _ep_edelay,
+    _ep_edge,
+    _ep_edgerange,
+    _ep_energycost,
+    _ep_escapecount,
+    _ep_escapehits,
+    _ep_exists,
+    _ep_facing,
+    _ep_falldie,
+    _ep_flash,
+    _ep_freezetime,
+    _ep_frozen,
+    _ep_gfxshadow,
+    _ep_grabbing,
+    _ep_grabforce,
+    _ep_guardpoints,
+    _ep_hasplatforms,
+    _ep_health,
+    _ep_height,
+    _ep_hitbyid,
+    _ep_hitheadplatform,
+    _ep_hitwall,
+    _ep_hmapl,
+    _ep_hmapu,
+    _ep_hostile,
+    _ep_icon,
+    _ep_iconposition,
+    _ep_ignore_projectile_wall_collision,
+    _ep_invincible,
+    _ep_invinctime,
+    _ep_jugglepoints,
+    _ep_jumpheight,
+    _ep_jumpmovex,
+    _ep_jumpmovez,
+    _ep_jumpspeed,
+    _ep_knockdowncount,
+    _ep_komap,
+    _ep_landedplatform,
+    _ep_landframe,
+    _ep_lifeposition,
+    _ep_lifespancountdown,
+    _ep_link,
+    _ep_map,
+    _ep_mapcount,
+    _ep_mapdefault,
+    _ep_maps,
+    _ep_maptime,
+    _ep_maxguardpoints,
+    _ep_maxhealth,
+    _ep_maxjugglepoints,
+    _ep_maxmp,
+    _ep_model,
+    _ep_mp,
+    _ep_mpdroprate,
+    _ep_mprate,
+    _ep_mpset,
+    _ep_mpstable,
+    _ep_mpstableval,
+    _ep_name,
+    _ep_nameposition,
+    _ep_nextanim,
+    _ep_next_force_direction,
+    _ep_nextmove,
+    _ep_nextthink,
+    _ep_no_adjust_base,
+    _ep_noaicontrol,
+    _ep_nodieblink,
+    _ep_nodrop,
+    _ep_nograb,
+    _ep_nohithead,
+    _ep_nolife,
+    _ep_nopain,
+    _ep_numweapons,
+    _ep_offense,
+    _ep_offscreen_noatk_factor,
+    _ep_offscreenkill,
+    _ep_opponent,
+    _ep_override_next_force_direction,
+    _ep_owner,
+    _ep_pain_time,
+    _ep_parent,
+    _ep_path,
+    _ep_pathfindstep,
+    _ep_playerindex,
+    _ep_position,
+    _ep_prevanimationid,
+    _ep_projectile,
+    _ep_projectilehit,
+    _ep_range,
+    _ep_releasetime,
+    _ep_running,
+    _ep_rush_count,
+    _ep_rush_tally,
+    _ep_rush_time,
+    _ep_score,
+    _ep_scroll,
+    _ep_seal,
+    _ep_sealtime,
+    _ep_setlayer,
+    _ep_shadowbase,
+    _ep_sortid,
+    _ep_spawntype,
+    _ep_speed,
+    _ep_sprite,
+    _ep_spritea,
+    _ep_stalltime,
+    _ep_staydown,
+    _ep_staydownatk,
+    _ep_stealth,
+    _ep_subentity,
+    _ep_subject_to_basemap,
+    _ep_subject_to_gravity,
+    _ep_subject_to_hole,
+    _ep_subject_to_maxz,
+    _ep_subject_to_minz,
+    _ep_subject_to_obstacle,
+    _ep_subject_to_platform,
+    _ep_subject_to_screen,
+    _ep_subject_to_wall,
+    _ep_subtype,
+    _ep_takeaction,
+    _ep_think,
+    _ep_thold,
+    _ep_throwdamage,
+    _ep_throwdist,
+    _ep_throwframewait,
+    _ep_throwheight,
+    _ep_tosstime,
+    _ep_tossv,
+    _ep_trymove,
+    _ep_type,
+    _ep_velocity,
+    _ep_vulnerable,
+    _ep_walkoffmovex,
+    _ep_walkoffmovez,
+    _ep_weapent,
+    _ep_weaploss,
+    _ep_weapnum,
+    _ep_weapon,
+    _ep_x,
+    _ep_xdir,
+    _ep_y,
+    _ep_z,
+    _ep_zdir,
+};
+
+static const char *obor_eplist6330lns[] =
+{
+    "a",
+    "aggression",
+    "aiattack",
+    "aiflag",
+    "aimove",
+    "alpha",
+    "animal",
+    "animating",
+    "animation",
+    "animation.handle",
+    "animationid",
+    "animheight",
+    "animhits",
+    "animnum",
+    "animpos",
+    "animvalid",
+    "antigrab",
+    "antigravity",
+    "attackid",
+    "attacking",
+    "attackthrottle",
+    "attackthrottletime",
+    "autokill",
+    "base",
+    "bbox",
+    "binding",
+    "blink",
+    "blockback",
+    "blockodds",
+    "blockpain",
+    "boomerang",
+    "boss",
+    "bounce",
+    "bound",
+    "candamage",
+    "chargerate",
+    "colourmap",
+    "colourtable",
+    "combostep",
+    "combotime",
+    "custom_target",
+    "damage_on_landing",
+    "dead",
+    "defaultmodel",
+    "defaultname",
+    "defense",
+    "destx",
+    "destz",
+    "detect",
+    "die_on_landing",
+    "direction",
+    "dot",
+    "dropframe",
+    "edelay",
+    "edge",
+    "edgerange",
+    "energycost",
+    "escapecount",
+    "escapehits",
+    "exists",
+    "facing",
+    "falldie",
+    "flash",
+    "freezetime",
+    "frozen",
+    "gfxshadow",
+    "grabbing",
+    "grabforce",
+    "guardpoints",
+    "hasplatforms",
+    "health",
+    "height",
+    "hitbyid",
+    "hitheadplatform",
+    "hitwall",
+    "hmapl",
+    "hmapu",
+    "hostile",
+    "icon",
+    "iconposition",
+    "ignore_projectile_wall_collision",
+    "invincible",
+    "invinctime",
+    "jugglepoints",
+    "jumpheight",
+    "jumpmovex",
+    "jumpmovez",
+    "jumpspeed",
+    "knockdowncount",
+    "komap",
+    "landedplatform",
+    "landframe",
+    "lifeposition",
+    "lifespancountdown",
+    "link",
+    "map",
+    "mapcount",
+    "mapdefault",
+    "maps",
+    "maptime",
+    "maxguardpoints",
+    "maxhealth",
+    "maxjugglepoints",
+    "maxmp",
+    "model",
+    "mp",
+    "mpdroprate",
+    "mprate",
+    "mpset",
+    "mpstable",
+    "mpstableval",
+    "name",
+    "nameposition",
+    "nextanim",
+    "nextforcedirection",
+    "nextmove",
+    "nextthink",
+    "no_adjust_base",
+    "noaicontrol",
+    "nodieblink",
+    "nodrop",
+    "nograb",
+    "nohithead",
+    "nolife",
+    "nopain",
+    "numweapons",
+    "offense",
+    "offscreennoatkfactor",
+    "offscreenkill",
+    "opponent",
+    "overridenextforcedirection",
+    "owner",
+    "pain_time",
+    "parent",
+    "path",
+    "pathfindstep",
+    "playerindex",
+    "position",
+    "prevanimationid",
+    "projectile",
+    "projectilehit",
+    "range",
+    "releasetime",
+    "running",
+    "rush_count",
+    "rush_tally",
+    "rush_time",
+    "score",
+    "scroll",
+    "seal",
+    "sealtime",
+    "setlayer",
+    "shadowbase",
+    "sortid",
+    "spawntype",
+    "speed",
+    "sprite",
+    "spritea",
+    "stalltime",
+    "staydown",
+    "staydownatk",
+    "stealth",
+    "subentity",
+    "subject_to_basemap",
+    "subject_to_gravity",
+    "subject_to_hole",
+    "subject_to_maxz",
+    "subject_to_minz",
+    "subject_to_obstacle",
+    "subject_to_platform",
+    "subject_to_screen",
+    "subject_to_wall",
+    "subtype",
+    "takeaction",
+    "think",
+    "thold",
+    "throwdamage",
+    "throwdist",
+    "throwframewait",
+    "throwheight",
+    "tosstime",
+    "tossv",
+    "trymove",
+    "type",
+    "velocity",
+    "vulnerable",
+    "walkoffmovex",
+    "walkoffmovez",
+    "weapent",
+    "weaploss",
+    "weapnum",
+    "weapon",
+    "x",
+    "xdir",
+    "y",
+    "z",
+    "zdir",
+};
+
 static int obor_entityproperty(int native)
 {
+    if(obor_profile_features & OBOR_PROFILE_LNS_6330)
+        return native >= 0 && native < (int)(sizeof(obor_entityproperty6330lns)/sizeof(*obor_entityproperty6330lns))
+            ? obor_entityproperty6330lns[native] : _ep_the_end;
     if(obor_profile_build != 6330) return native >= 0 && native < _ep_boomerang ? native : _ep_the_end;
     return native >= 0 && native < (int)(sizeof(obor_entityproperty6330)/sizeof(*obor_entityproperty6330))
         ? obor_entityproperty6330[native] : _ep_the_end;
@@ -3567,6 +4128,8 @@ int mapstrings_entityproperty(ScriptVariant **varlist, int paramCount)
         "block",
         "default",
         "noattack",
+        "overridesource",
+        "overridetarget",
     };
 
     static const char *proplist_icon[] =
@@ -3703,7 +4266,12 @@ int mapstrings_entityproperty(ScriptVariant **varlist, int paramCount)
     }
 
     // map entity properties
-    if(obor_profile_build == 6330)
+    if(obor_profile_features & OBOR_PROFILE_LNS_6330)
+    {
+        MAPSTRINGS(varlist[1], obor_eplist6330lns, sizeof(obor_eplist6330lns)/sizeof(*obor_eplist6330lns),
+                   "Property name '%s' is not supported by function getentityproperty.\n");
+    }
+    else if(obor_profile_build == 6330)
     {
         MAPSTRINGS(varlist[1], obor_eplist6330, sizeof(obor_eplist6330)/sizeof(*obor_eplist6330),
                    "Property name '%s' is not supported by function getentityproperty.\n");
@@ -3785,7 +4353,8 @@ int mapstrings_entityproperty(ScriptVariant **varlist, int paramCount)
     // map subproperties of Flash
     case _ep_flash:
     {
-        MAPSTRINGS(varlist[2], proplist_flash, _ep_flash_the_end,
+        MAPSTRINGS(varlist[2], proplist_flash,
+                   (obor_profile_features & OBOR_PROFILE_LNS_6330) ? _ep_flash_the_end : _ep_flash_noattack + 1,
                    _is_not_a_known_subproperty_of_, eps);
         break;
     }
@@ -4800,6 +5369,76 @@ HRESULT openbor_getentityproperty(ScriptVariant **varlist , ScriptVariant **pret
     }
     case _ep_flash:
     {
+        if(obor_profile_features & OBOR_PROFILE_LNS_6330)
+        {
+        arg = varlist[2];
+        if(arg->vt != VT_INTEGER)
+        {
+            printf("You must give a string name for flash property.\n");
+            *pretvar = NULL;
+            return E_FAIL;
+        }
+        ltemp = arg->lVal;
+
+        switch(ltemp)
+        {
+        case _ep_flash_block:
+        {
+            ScriptVariant_ChangeType(*pretvar, VT_INTEGER);
+            (*pretvar)->lVal = (LONG)ent->modeldata.bflash;
+            break;
+        }
+        case _ep_flash_def:
+        {
+            ScriptVariant_ChangeType(*pretvar, VT_INTEGER);
+            (*pretvar)->lVal = (LONG)ent->modeldata.flash;
+            break;
+        }
+        case _ep_flash_noattack:
+        {
+            ScriptVariant_ChangeType(*pretvar, VT_INTEGER);
+            (*pretvar)->lVal = (LONG)ent->modeldata.noatflash;
+            break;
+        }
+        case _ep_flash_overridesource:
+        {
+            ScriptVariant_ChangeType(*pretvar, VT_STR);
+            int model_index = ent->modeldata.flashoverridesource;
+            if(model_index >= 0 && model_index < models_cached)
+            {
+                (*pretvar)->strVal = StrCache_CreateNewFrom(model_cache[model_index].name);
+            }
+            else
+            {
+                (*pretvar)->strVal = StrCache_CreateNewFrom("");
+            }
+            break;
+        }
+        case _ep_flash_overridetarget:
+        {
+            ScriptVariant_ChangeType(*pretvar, VT_STR);
+            int model_index = ent->modeldata.flashoverridetarget;
+            if(model_index >= 0 && model_index < models_cached)
+            {
+                (*pretvar)->strVal = StrCache_CreateNewFrom(model_cache[model_index].name);
+            }
+            else
+            {
+                (*pretvar)->strVal = StrCache_CreateNewFrom("");
+            }
+            break;
+        }
+        default:
+        {
+            *pretvar = NULL;
+            return E_FAIL;
+        }
+        }
+        break;
+    
+        }
+        else
+        {
         arg = varlist[2];
         if(arg->vt != VT_INTEGER)
         {
@@ -4836,6 +5475,8 @@ HRESULT openbor_getentityproperty(ScriptVariant **varlist , ScriptVariant **pret
         ScriptVariant_ChangeType(*pretvar, VT_INTEGER);
         (*pretvar)->lVal = (LONG)i;
         break;
+    
+        }
     }
     case _ep_pain_time:
     {
@@ -4909,7 +5550,9 @@ HRESULT openbor_getentityproperty(ScriptVariant **varlist , ScriptVariant **pret
     case _ep_hitbyid:
     {
         ScriptVariant_ChangeType(*pretvar, VT_INTEGER);
-        (*pretvar)->lVal = (LONG)ent->attack_id_incoming;
+        (*pretvar)->lVal = (obor_profile_features & OBOR_PROFILE_LNS_6330)
+                ? (LONG)(uintptr_t)ent->lns_attack_id_incoming
+                : (LONG)ent->attack_id_incoming;
         break;
     }
     case _ep_hitheadplatform:
@@ -5446,6 +6089,24 @@ HRESULT openbor_getentityproperty(ScriptVariant **varlist , ScriptVariant **pret
     {
         ScriptVariant_ChangeType(*pretvar, VT_STR);
         (*pretvar)->strVal = StrCache_CreateNewFrom(ent->name);
+        break;
+    }
+    case _ep_ignore_projectile_wall_collision:
+    {
+        ScriptVariant_ChangeType(*pretvar, VT_INTEGER);
+        (*pretvar)->lVal = (LONG)ent->modeldata.ignore_projectile_wall_collision;
+        break;
+    }
+    case _ep_next_force_direction:
+    {
+        ScriptVariant_ChangeType(*pretvar, VT_INTEGER);
+        (*pretvar)->lVal = (LONG)ent->next_force_direction;
+        break;
+    }
+    case _ep_override_next_force_direction:
+    {
+        ScriptVariant_ChangeType(*pretvar, VT_INTEGER);
+        (*pretvar)->lVal = (LONG)ent->override_next_force_direction;
         break;
     }
     case _ep_nextanim:
@@ -7000,7 +7661,10 @@ HRESULT openbor_changeentityproperty(ScriptVariant **varlist , ScriptVariant **p
     {
         if(SUCCEEDED(ScriptVariant_IntegerValue(varlist[2], &ltemp)))
         {
-            ent->attack_id_incoming = (LONG)ltemp;
+            if(obor_profile_features & OBOR_PROFILE_LNS_6330)
+                obor_remember_attack(ent, (LONG)ltemp);
+            else
+                ent->attack_id_incoming = (LONG)ltemp;
         }
         break;
     }
@@ -7400,6 +8064,37 @@ HRESULT openbor_changeentityproperty(ScriptVariant **varlist , ScriptVariant **p
         if(paramCount > 3 && SUCCEEDED(ScriptVariant_IntegerValue(varlist[3], &ltemp)))
         {
             ent->modeldata.namey = (LONG)ltemp;
+        }
+        break;
+    }
+    case _ep_ignore_projectile_wall_collision:
+    {
+        if(SUCCEEDED(ScriptVariant_IntegerValue(varlist[2], &ltemp)))
+        {
+            ent->modeldata.ignore_projectile_wall_collision = (LONG)ltemp;
+        }
+        break;
+    }
+    case _ep_next_force_direction:
+    {
+        // if a 4th param exists it is used to set the override_next_force_direction value
+        // otherwise override_next_force_direction is set to 1 to override just once
+        if(SUCCEEDED(ScriptVariant_IntegerValue(varlist[2], &ltemp)))
+        {
+            ent->next_force_direction = (LONG)ltemp;
+            ent->override_next_force_direction = 1;
+        }
+        if(paramCount > 3 && SUCCEEDED(ScriptVariant_IntegerValue(varlist[3], &ltemp)))
+        {
+            ent->override_next_force_direction = (LONG)ltemp;
+        }
+        break;
+    }
+    case _ep_override_next_force_direction:
+    {
+        if(SUCCEEDED(ScriptVariant_IntegerValue(varlist[2], &ltemp)))
+        {
+            ent->override_next_force_direction = (LONG)ltemp;
         }
         break;
     }
@@ -8815,6 +9510,8 @@ HRESULT openbor_changeplayerproperty(ScriptVariant **varlist , ScriptVariant **p
         if(SUCCEEDED(ScriptVariant_IntegerValue(arg, &ltemp)))
         {
             player[index].hasplayed = (LONG)ltemp;
+            if(obor_profile_features & OBOR_PROFILE_LNS_6330)
+                obor_lns_players[index] = (LONG)ltemp;
         }
         else
         {
@@ -9047,6 +9744,8 @@ int getsyspropertybyindex(ScriptVariant *var, int index)
         return 0;
     }
 
+    index = obor_systemvariant_native(index);
+
     switch(index)
     {
     case _sv_count_enemies:
@@ -9236,6 +9935,10 @@ int getsyspropertybyindex(ScriptVariant *var, int index)
         }
         ScriptVariant_ChangeType(var, VT_INTEGER);
         var->lVal = gfx_y_offset_adj;
+        break;
+    case _sv_in_sa_count:
+        ScriptVariant_ChangeType(var, VT_INTEGER);
+        var->lVal = bonus;
         break;
     case _sv_in_selectscreen:
         ScriptVariant_ChangeType(var, VT_INTEGER);
@@ -9612,6 +10315,8 @@ int changesyspropertybyindex(int index, ScriptVariant *value)
     //char* tempstr = NULL;
     LONG ltemp;
     DOUBLE dbltemp;
+
+    index = obor_systemvariant_native(index);
 
     switch(index)
     {
@@ -11386,6 +12091,7 @@ HRESULT openbor_setspawnentry(ScriptVariant **varlist, ScriptVariant **pretvar, 
     DOUBLE dbltemp;
     int temp, prop;
     ScriptVariant *arg = NULL;
+    char *name;
 
     if(paramCount < 2)
     {
@@ -11419,7 +12125,10 @@ HRESULT openbor_setspawnentry(ScriptVariant **varlist, ScriptVariant **pretvar, 
             printf("You must use a string value for spawn entry's name property: function setspawnentry.\n");
             goto setspawnentry_error;
         }
-        spawnentry.model = findmodel((char *)StrCache_Get(arg->strVal));
+        name = (char *)StrCache_Get(arg->strVal);
+        spawnentry.model = findmodel(name);
+        if((obor_profile_features & OBOR_PROFILE_LNS_6330) && !spawnentry.model)
+            spawnentry.index = get_cached_model_index(name);
         break;
     case _sse_alias:
         if(arg->vt != VT_STR)
@@ -15179,7 +15888,8 @@ HRESULT openbor_loadmodel(ScriptVariant **varlist , ScriptVariant **pretvar, int
             goto loadmodel_error;
         }
 
-    model = load_cached_model(StrCache_Get(varlist[0]->strVal), "openbor_loadmodel", (char)unload);
+    model = load_cached_model(StrCache_Get(varlist[0]->strVal), "openbor_loadmodel",
+        (obor_profile_features & OBOR_PROFILE_LNS_6330) ? 3 : (char)unload);
 
     if(paramCount >= 3 && model)
     {
@@ -16360,8 +17070,15 @@ HRESULT openbor_getsaveinfo(ScriptVariant **varlist , ScriptVariant **pretvar, i
         return S_OK;
     }
 
-    slot = savelevel + ltemp;
     prop = (char *)StrCache_Get(varlist[1]->strVal);
+    if((obor_profile_features & OBOR_PROFILE_LNS_6330) && cheatcode != 0 &&
+       0 == stricmp(prop, "times_completed"))
+    {
+        ScriptVariant_ChangeType(*pretvar, VT_INTEGER);
+        (*pretvar)->lVal = (ltemp == 0) ? bonus : 0;
+        return S_OK;
+    }
+    slot = savelevel + ltemp;
 
     ScriptVariant_ChangeType(*pretvar, VT_INTEGER);
     if(0 == stricmp(prop, "flag"))

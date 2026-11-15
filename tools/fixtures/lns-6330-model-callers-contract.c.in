@@ -1,0 +1,97 @@
+/* SPDX-License-Identifier: BSD-3-Clause
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me> */
+#include <assert.h>
+#include <stdbool.h>
+#include <stdint.h>
+#include <stdio.h>
+#include <string.h>
+#include <strings.h>
+#include @ABI@
+#define stricmp strcasecmp
+#define CMD_MODEL_LOAD 1
+#define VT_EMPTY 0
+#define VT_INTEGER 1
+#define VT_STR 2
+#define VT_PTR 3
+#define S_OK 0
+#define E_FAIL -1
+#define FAILED(x) ((x)<0)
+typedef int HRESULT;
+typedef long LONG;
+typedef void VOID;
+typedef struct {int vt,strVal;LONG lVal;void *ptrVal;} ScriptVariant;
+typedef struct {int index,unload;} s_model;
+typedef struct {char *name;int loadflag,selectable;} Cache;
+static unsigned obor_profile_features;
+static Cache model_cache[3];
+static s_model model;
+static int global_model,modelLoadCount=2,models_cached=3,loadingbg[1],has_model;
+static struct {int calls,metadata,updates,int_reads,loading,flag;char name[32],owner[32];} trace;
+static int number;
+static char *argument="one";
+#define GET_ARG(n) ((void)(n),argument)
+#define GET_INT_ARG(n) ((void)(n),++trace.int_reads,number)
+static s_model *findmodel(const char *name) {(void)name;return has_model?&model:NULL;}
+static void update_model_loadflag(s_model *target,char flag) {++trace.updates;target->unload=flag;}
+static s_model *load_cached_model(char *name,char *owner,char unload) {
+ ++trace.calls;trace.flag=unload;
+ snprintf(trace.name,sizeof(trace.name),"%s",name);snprintf(trace.owner,sizeof(trace.owner),"%s",owner);
+ return strcmp(name,"missing")?&model:NULL;
+}
+static s_model *original_load_cached_model(char *name,char *owner,char unload,bool quickload) {
+ assert(!quickload);return load_cached_model(name,owner,unload);
+}
+static void preload_cached_model(char *name) {++trace.metadata;snprintf(trace.name,sizeof(trace.name),"%s",name);}
+static void update_loading(int *background,int pos,int total) {(void)background;assert(total==2);trace.loading=pos;}
+static int ScriptVariant_IntegerValue(ScriptVariant *value,LONG *result) {
+ if(value->vt!=VT_INTEGER)return E_FAIL;
+ *result=value->lVal;return S_OK;
+}
+static void ScriptVariant_ChangeType(ScriptVariant *value,int type) {value->vt=type;}
+static void ScriptVariant_Clear(ScriptVariant *value) {memset(value,0,sizeof(*value));}
+static int ScriptVariant_IsTrue(ScriptVariant *value) {return value->vt==VT_INTEGER && value->lVal!=0;}
+static char *StrCache_Get(int index) {return index?"missing":"one";}
+@SCRIPT@
+static void candidate_nested(void) {
+ const bool lns=(obor_profile_features&OBOR_PROFILE_LNS_6330)!=0;
+ char *value,*name="parent";s_model *tempmodel;
+ switch(CMD_MODEL_LOAD) {@NESTED@}
+}
+static void candidate_loop(void) {int i,pos;@LOOP@}
+@ORIGINALS@
+static void reset(void) {
+ memset(&trace,0,sizeof(trace));model=(s_model){.index=1,.unload=99};global_model=-1;
+ model_cache[0]=(Cache){.name="one",.loadflag=1,.selectable=0};
+ model_cache[1]=(Cache){.name="global_model",.loadflag=0,.selectable=0};
+ model_cache[2]=(Cache){.name="three",.loadflag=3,.selectable=0};
+}
+int main(void) {
+ unsigned features[]={0,OBOR_PROFILE_ATTACK_HISTORY_FOUR,OBOR_PROFILE_LNS_6330};
+ for(unsigned f=0;f<3;++f) {
+  obor_profile_features=features[f];int lns=f==2;
+  reset();if(lns)lns_loop();else official_loop();
+  unsigned char expected[sizeof(trace)];memcpy(expected,&trace,sizeof(trace));int gm=global_model;
+  reset();candidate_loop();assert(!memcmp(expected,&trace,sizeof(trace)) && gm==global_model && gm==1);
+  for(has_model=0;has_model<2;++has_model)for(number=-1;number<130;number+=17) {
+   reset();if(lns)lns_nested();else official_nested();
+   memcpy(expected,&trace,sizeof(trace));int unload=model.unload;
+   reset();candidate_nested();assert(!memcmp(expected,&trace,sizeof(trace)) && unload==model.unload);
+  }
+  for(int count=0;count<=4;++count)for(int first=0;first<2;++first)
+   for(int second=0;second<2;++second)for(int missing=0;missing<2;++missing) {
+    ScriptVariant args[4]={{.vt=first?VT_STR:VT_EMPTY,.strVal=missing},
+                          {.vt=second?VT_INTEGER:VT_STR,.lVal=67},
+                          {.vt=VT_INTEGER,.lVal=1},{.vt=VT_EMPTY}};
+    ScriptVariant *varlist[]={&args[0],&args[1],&args[2],&args[3]};
+    ScriptVariant result={0},*ret=&result;reset();
+    int status=lns?lns_openbor_loadmodel(varlist,&ret,count):official_openbor_loadmodel(varlist,&ret,count);
+    ScriptVariant expected_result=result;int null_ret=ret==NULL,selected=model_cache[1].selectable;
+    memcpy(expected,&trace,sizeof(trace));
+    reset();memset(&result,0,sizeof(result));ret=&result;
+    assert(openbor_loadmodel(varlist,&ret,count)==status && (ret==NULL)==null_ret);
+    assert(!memcmp(&result,&expected_result,sizeof(result)) && model_cache[1].selectable==selected);
+    assert(!memcmp(expected,&trace,sizeof(trace)));
+   }
+ }
+ return 0;
+}

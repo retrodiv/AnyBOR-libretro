@@ -1,0 +1,96 @@
+/* SPDX-License-Identifier: BSD-3-Clause
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me> */
+#include <assert.h>
+#include <stdint.h>
+#include <stdio.h>
+#include <stdarg.h>
+#include <string.h>
+#include <strings.h>
+#include <limits.h>
+#include @ABI@
+typedef int64_t LONG;
+typedef double DOUBLE;
+typedef int HRESULT;
+enum {S_OK=0,E_FAIL=-1,VT_EMPTY=0,VT_INTEGER=1,VT_DECIMAL=2,VT_STR=3,VT_OTHER=4};
+typedef struct {int vt;LONG lVal;DOUBLE dblVal;const char *strVal;} ScriptVariant;
+static unsigned obor_profile_features;
+static int bonus,optionsMenu,selectScreen,current_set;
+static float scrollmaxx;
+static const char *StrCache_Get(const char *value) {assert(value);return value;}
+static void ScriptVariant_ChangeType(ScriptVariant *v,int type) {v->vt=type;}
+static void ScriptVariant_Clear(ScriptVariant *v) {memset(v,0,sizeof(*v));}
+static int ScriptVariant_IntegerValue(ScriptVariant *v,LONG *value) {
+    if(v->vt!=VT_INTEGER)return E_FAIL;*value=v->lVal;return S_OK;
+}
+static int ScriptVariant_DecimalValue(ScriptVariant *v,DOUBLE *value) {
+    if(v->vt==VT_INTEGER){*value=(DOUBLE)v->lVal;return S_OK;}
+    if(v->vt==VT_DECIMAL){*value=v->dblVal;return S_OK;}return E_FAIL;
+}
+#define SUCCEEDED(value) ((value)>=0)
+#define stricmp strcasecmp
+static char diagnostics[16384];static size_t diagnostic_bytes;
+static int diagnostic_printf(const char *format,...) {
+    va_list args;va_start(args,format);
+    int count=vsnprintf(diagnostics+diagnostic_bytes,sizeof(diagnostics)-diagnostic_bytes,format,args);
+    va_end(args);assert(count>=0 && (size_t)count<sizeof(diagnostics)-diagnostic_bytes);
+    diagnostic_bytes+=(size_t)count;return count;
+}
+#define printf diagnostic_printf
+@ENUM@
+@TABLES@
+@SEARCH@
+@MAP_MACRO@
+@NATIVE@
+@MAPPER@
+@GETTER@
+@SETTER@
+@GET_WRAPPER@
+@SET_WRAPPER@
+@ORIGINALS@
+static const int expected_lns_native[]={@EXPECTED@};
+static void reset(void) {
+    diagnostic_bytes=0;diagnostics[0]=0;
+    bonus=INT32_MIN+7;optionsMenu=31;selectScreen=-4;current_set=5;scrollmaxx=1.25f;
+}
+static void same_variant(const ScriptVariant *a,const ScriptVariant *b) {
+    assert(a->vt==b->vt && a->lVal==b->lVal && a->dblVal==b->dblVal && a->strVal==b->strVal);
+}
+int main(void) {
+    unsigned masks[]={0,OBOR_PROFILE_ATTACK_HISTORY_FOUR,OBOR_PROFILE_LNS_6330};
+    for(unsigned mode=0;mode<3;++mode) {
+        obor_profile_features=masks[mode];
+        unsigned count=mode==2?sizeof(expected_lns_native)/sizeof(*expected_lns_native):_sv_in_sa_count;
+        for(unsigned n=0;n<count;++n) {
+            assert(obor_systemvariant_native((int)n)==(mode==2?expected_lns_native[n]:(int)n));
+            ScriptVariant a={VT_STR,0,0,mode==2?lns_svlist[n]:official_svlist[n]},b=a;
+            ScriptVariant *pa[]={&a},*pb[]={&b};reset();
+            int actual=mapstrings_systemvariant(pa,1);char log[sizeof(diagnostics)];strcpy(log,diagnostics);
+            reset();int expected=mode==2?lns_mapstrings_systemvariant(pb,1):official_mapstrings_systemvariant(pb,1);
+            assert(actual==expected && a.vt==VT_INTEGER && a.lVal==(LONG)n);
+            same_variant(&a,&b);assert(!strcmp(log,diagnostics));
+        }
+        const char *names[]={"in_options","in_sa_count","in_selectscreen","current_set","scrollmaxx","absent"};
+        int numbers[]={-1,36,37,38,118,119,120,121,INT_MIN,INT_MAX};
+        for(unsigned operation=0;operation<2;++operation)
+        for(unsigned kind=0;kind<2;++kind)for(unsigned n=0;n<(kind?10U:6U);++n)
+        for(int type=VT_INTEGER;type<=VT_OTHER;++type)for(int argc=0;argc<4;++argc) {
+            ScriptVariant arg={kind?VT_INTEGER:VT_STR,kind?numbers[n]:0,0,kind?"unused":names[n]};
+            ScriptVariant value={type,42,-2.25,"unused"};
+            ScriptVariant out={VT_STR,97,1.75,"untouched"},expected_out=out;
+            ScriptVariant *a[]={&arg,&value},*result=&out;
+            reset();int actual=operation?openbor_setsystemvariant(a,&result,argc):openbor_systemvariant(a,&result,argc);
+            ScriptVariant changed=arg;int present=result!=NULL,actual_set=current_set;float actual_scroll=scrollmaxx;
+            char log[sizeof(diagnostics)];strcpy(log,diagnostics);
+            arg=(ScriptVariant){kind?VT_INTEGER:VT_STR,kind?numbers[n]:0,0,kind?"unused":names[n]};
+            result=&expected_out;reset();
+            int expected;
+            if(mode==2)expected=operation?lns_openbor_setsystemvariant(a,&result,argc):lns_openbor_systemvariant(a,&result,argc);
+            else expected=operation?official_openbor_setsystemvariant(a,&result,argc):official_openbor_systemvariant(a,&result,argc);
+            assert(actual==expected && present==(result!=NULL));
+            same_variant(&changed,&arg);same_variant(&out,&expected_out);
+            assert(actual_set==current_set && actual_scroll==scrollmaxx && !strcmp(log,diagnostics));
+        }
+        reset();assert(!getsyspropertybyindex(NULL,37) && !diagnostic_bytes);
+    }
+    return 0;
+}

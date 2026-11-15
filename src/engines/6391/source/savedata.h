@@ -1,3 +1,15 @@
+/* AnyBOR modification record: 2026-11-15.
+ * Port maintained by retrodiv <retrodiv@proton.me>.
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me> (original contributions).
+ * These contributions are licensed under BSD-3-Clause; see LICENSE at the root.
+ * Upstream code retains its original license and notices.
+ * Reserve the modified 6330 settings synchronization field while profile-
+ * specific I/O preserves the native record size and values.
+ * Existing changes recorded here; this is not their implementation date.
+ * See MODIFICATIONS.md and docs/modifications/6391.md
+ * at the source repository root. Original notices follow below.
+ */
+
 /*
  * OpenBOR - http://www.chronocrash.com
  * -----------------------------------------------------------------------
@@ -57,6 +69,7 @@ typedef struct
 #if ANDROID
     int is_touchpad_vibration_enabled;
 #endif
+    int vsync;
 } s_savedata;
 
 extern s_savedata     savedata;

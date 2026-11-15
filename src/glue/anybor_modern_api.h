@@ -209,20 +209,22 @@ static int obor_modern_api_build(const char *path)
     s.entries = (obor_modern_entry *)calloc(OBOR_MODERN_FILES, sizeof(*s.entries));
     char *buffer = NULL;
     unsigned char h[12];
-    long end = 0;
+    int64_t end = 0;
     unsigned dir = 0, directory_count = 0, bytes = 0;
     int result = 0;
     if (!s.entries || fread(h, 1, 8, fp) != 8 || memcmp(h, "PACK\0\0\0\0", 8) ||
-        fseek(fp, -4, SEEK_END) || (end = ftell(fp)) < 8 ||
+        obor_file_seek64(fp, -4, SEEK_END) ||
+        (end = obor_file_tell64(fp)) < 8 || end > (int64_t)UINT32_MAX - 4 ||
         fread(h, 1, 4, fp) != 4) goto done;
     dir = content_u32(h);
-    if (dir < 8 || (long)dir > end || fseek(fp, dir, SEEK_SET)) goto done;
-    while (ftell(fp) < end) {
+    if (dir < 8 || (int64_t)dir > end || obor_file_seek64(fp, dir, SEEK_SET)) goto done;
+    while (obor_file_tell64(fp) < end) {
         if (++directory_count > OBOR_MODERN_DIRECTORY || !content_budget(&s.clock, 4096) ||
-            end - ftell(fp) < 12 || fread(h, 1, 12, fp) != 12) goto done;
+            end - obor_file_tell64(fp) < 12 || fread(h, 1, 12, fp) != 12) goto done;
         unsigned length = content_u32(h), start = content_u32(h + 4), size = content_u32(h + 8);
         char name[256];
-        if (length < 14 || length > sizeof(name) + 12 || (long)(length - 12) > end - ftell(fp) ||
+        if (length < 14 || length > sizeof(name) + 12 ||
+            (int64_t)(length - 12) > end - obor_file_tell64(fp) ||
             start < 8 || start > dir || size > dir - start ||
             fread(name, 1, length - 12, fp) != length - 12) goto done;
         size_t len = length - 12;
@@ -253,7 +255,7 @@ static int obor_modern_api_build(const char *path)
     for (unsigned i = 0; i < s.queued; ++i) {
         const obor_modern_entry *entry = s.entries + s.queue[i];
         if (entry->size > OBOR_MODERN_SOURCE || entry->size > OBOR_MODERN_BYTES - bytes ||
-            !content_budget(&s.clock, 4096) || fseek(fp, entry->start, SEEK_SET) ||
+            !content_budget(&s.clock, 4096) || obor_file_seek64(fp, entry->start, SEEK_SET) ||
             fread(buffer, 1, entry->size, fp) != entry->size) goto done;
         bytes += entry->size;
         if (!strcmp(entry->name, "data/models.txt")) {

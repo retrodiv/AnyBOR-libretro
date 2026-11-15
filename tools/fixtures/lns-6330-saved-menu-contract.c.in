@@ -1,0 +1,96 @@
+/* SPDX-License-Identifier: BSD-3-Clause
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me> */
+#include <assert.h>
+#include <stdbool.h>
+#include <stdint.h>
+#include <stdio.h>
+#include <stdarg.h>
+#include <stdlib.h>
+#include <string.h>
+#include @ABI@
+@LIMITS@
+@KEYS@
+static unsigned obor_profile_features;
+static int num_difficulties,saveslot,loadgameMenu,noshare,file_status;
+static uint32_t bothnewkeys;
+static struct {char dName[MAX_NAME_LEN];unsigned compatibleversion,level,stage,credits,pCredits[4],pLives[4];int flag;} savelevel[8];
+static struct {int numlevels;} levelsets[8];
+static struct {int hRes,vRes;} videomodes;
+static struct {int effectvol;} savedata;
+#define Tr(text) (text)
+#define SAMPLE_BEEP 7
+#define SAMPLE_BEEP2 8
+static struct Event {int kind,x,y,font,length;char text[160];} events[512],expected_events[512];
+static unsigned event_count,frames,input_count;
+static uint32_t input[4];
+static void record(int kind,int x,int y,int font,const char *text,int length) {
+ assert(event_count<512 && length>=0 && length<160);struct Event *e=&events[event_count++];memset(e,0,sizeof(*e));e->kind=kind;e->x=x;e->y=y;e->font=font;e->length=length;if(length)memcpy(e->text,text,(size_t)length);
+}
+static int fontmonowidth(int font) {return 5+font*2;}
+static int fontheight(int font) {return 9+font;}
+static int font_string_width(int font,const char *format,...) {
+ char text[160];va_list args;va_start(args,format);int n=vsnprintf(text,sizeof(text),format,args);va_end(args);assert(n>=0 && n<160);return n*fontmonowidth(font);
+}
+static void font_printf(int x,int y,int font,int align,const char *format,...) {
+ assert(align==0);char text[160];va_list args;va_start(args,format);int n=vsnprintf(text,sizeof(text),format,args);va_end(args);record(1,x,y,font,text,n);
+}
+@MACROS@
+static int loadGameFile(void) {record(2,file_status,0,0,NULL,0);return file_status;}
+static void original_getPakName(char *out,int kind) {assert(kind==0);strcpy(out,"AUTHORED.sav");record(3,0,0,0,NULL,0);}
+static void getPakName(char *out,size_t capacity,int kind) {assert(capacity==MAX_BUFFER_LEN);original_getPakName(out,kind);}
+static void sound_play_sample(int sample,int loop,int left,int right,int pitch) {
+ assert(loop==0 && left==savedata.effectvol && right==left && pitch==100);record(4,sample,left,pitch,NULL,0);
+}
+static void update(int a,int b) {assert(a==0 && b==0 && frames<input_count);record(5,(int)frames,loadgameMenu,saveslot,NULL,0);bothnewkeys=input[frames++];}
+@CANDIDATE@
+@ORIGINALS@
+static void setup(unsigned family,int count,unsigned active,unsigned seed,uint32_t keys) {
+ obor_profile_features=family==2?OBOR_PROFILE_LNS_6330:0;num_difficulties=count;saveslot=-7;loadgameMenu=0;noshare=seed&1;file_status=(seed>>1)&1;
+ videomodes.hRes=320+(seed%3)*80;videomodes.vRes=240+(seed%2)*40;savedata.effectvol=51;bothnewkeys=0;frames=event_count=0;
+ memset(savelevel,0,sizeof(savelevel));memset(levelsets,0,sizeof(levelsets));memset(events,0,sizeof(events));
+ for(unsigned i=0;i<8;++i) {
+  snprintf(savelevel[i].dName,MAX_NAME_LEN,"SAVE_%u",i);savelevel[i].flag=active&(1u<<i)?1:0;
+  savelevel[i].compatibleversion=(seed+i)%3==0?0:CV_SAVED_GAME;savelevel[i].level=(seed+i)%6;savelevel[i].stage=i+1;savelevel[i].credits=7;
+  for(unsigned p=0;p<4;++p){savelevel[i].pCredits[p]=p+1;savelevel[i].pLives[p]=p+3;}
+  levelsets[i].numlevels=4;
+ }
+ input_count=3;input[0]=keys;input[1]=0;input[2]=FLAG_ESC;
+}
+static struct Result {int returned,slot,menu;uint32_t keys;unsigned count,frames;} expected;
+static void remember(int returned) {expected.returned=returned;expected.slot=saveslot;expected.menu=loadgameMenu;expected.keys=bothnewkeys;expected.count=event_count;expected.frames=frames;memcpy(expected_events,events,event_count*sizeof(*events));}
+static void compare(int returned) {
+ assert(returned==expected.returned && saveslot==expected.slot && loadgameMenu==expected.menu && bothnewkeys==expected.keys && event_count==expected.count && frames==expected.frames);
+ assert(!memcmp(events,expected_events,event_count*sizeof(*events)));
+}
+static int original(unsigned family) {return family==0?official_load_saved_game():family==1?physical_load_saved_game():lns_load_saved_game();}
+static void same_frame_policy(void) {
+ for(int reverse=0;reverse<2;++reverse) {
+  setup(2,2,3,2,FLAG_MOVERIGHT|FLAG_ATTACK);savelevel[0].level=reverse?5:1;savelevel[1].level=reverse?1:5;savelevel[0].compatibleversion=savelevel[1].compatibleversion=CV_SAVED_GAME;
+  int result=lns_load_saved_game();assert(result==(reverse?-1:1));remember(result);
+  setup(2,2,3,2,FLAG_MOVERIGHT|FLAG_ATTACK);savelevel[0].level=reverse?5:1;savelevel[1].level=reverse?1:5;savelevel[0].compatibleversion=savelevel[1].compatibleversion=CV_SAVED_GAME;
+  compare(load_saved_game());
+ }
+}
+static void compare_case(unsigned family,int count,unsigned active,unsigned seed,uint32_t value) {
+ setup(family,count,active,seed,value);remember(original(family));
+ setup(family,count,active,seed,value);compare(load_saved_game());
+}
+int main(void) {
+ const int counts[]={0,1,2,5};const uint32_t keys[]={FLAG_MOVEUP,FLAG_MOVEDOWN,FLAG_MOVELEFT,FLAG_MOVERIGHT,FLAG_ATTACK,FLAG_ESC,FLAG_ATTACK2,FLAG_ATTACK3,FLAG_ATTACK4};unsigned cases=0;
+ const uint32_t actions[]={0,FLAG_ATTACK,FLAG_MOVELEFT|FLAG_ATTACK,FLAG_MOVERIGHT|FLAG_ATTACK,FLAG_MOVEUP|FLAG_ATTACK,FLAG_MOVEDOWN|FLAG_ATTACK,FLAG_ESC};
+ for(unsigned family=0;family<3;++family)for(unsigned c=0;c<4;++c)for(unsigned pattern=0;pattern<4;++pattern)for(unsigned seed=0;seed<6;++seed)for(unsigned key=0;key<7;++key) {
+  unsigned active=pattern==0?0:pattern==1?1:pattern==2?(counts[c]?1u<<(counts[c]-1):0):(1u<<counts[c])-1;
+  compare_case(family,counts[c],active,seed,actions[key]);++cases;
+ }
+ for(unsigned family=0;family<3;++family)for(unsigned seed=0;seed<6;++seed)for(unsigned mask=0;mask<512;++mask) {
+  uint32_t value=0;for(unsigned k=0;k<9;++k)if(mask&(1u<<k))value|=keys[k];
+  compare_case(family,5,31,seed,value);++cases;
+ }
+ same_frame_policy();
+ /* Four bounded-name branches remain safe even without a stored terminator. */
+ for(unsigned family=0;family<3;++family)for(unsigned condition=0;condition<3;++condition) {
+  setup(family,1,1,2,FLAG_ESC);savelevel[0].level=condition==0?5:1;savelevel[0].compatibleversion=condition==1?0:CV_SAVED_GAME;memset(savelevel[0].dName,'X',MAX_NAME_LEN);
+  (void)load_saved_game();int seen=0;for(unsigned i=0;i<event_count;++i)if(events[i].length==MAX_NAME_LEN && events[i].text[0]=='X')++seen;assert(seen==1);
+ }
+ fprintf(stderr,"Saved-menu source comparisons: %u\n",cases);return 0;
+}

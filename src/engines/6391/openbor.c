@@ -39,7 +39,9 @@
  * release partial resources without changing existing owners. Check cached
  * sprite availability before reading metadata and ignore cache requests for
  * absent nodes. Capture explicit shutdown failure text before cleanup and
- * bound legacy diagnostic formatting.
+ * bound legacy diagnostic formatting. Reconstruct modified 6330 LNS v0.10g
+ * contributions by Hechelion and Gonzalo MVP: deferred model loading,
+ * character columns, Hall of Fame, menus, settings and combat contracts.
  * Existing changes recorded here; this is not their implementation date.
  * See MODIFICATIONS.md and docs/modifications/6391.md
  * at the source repository root. Original notices follow below.
@@ -82,6 +84,19 @@ s_sprite_map *sprite_map;
 
 s_savelevel *savelevel;
 s_savescore savescore;
+// New savescore system
+s_savescore *savescore_modes = NULL;
+unsigned short savescore_modes_count = 0;
+char *savescore_difficulty_variable = NULL;
+char *savescore_difficulty_names[MAX_DIFFICULTIES]; 
+unsigned short savescore_difficulty_count = 0;
+char *savescore_initials = NULL;
+char savescore_initials_default[42] = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789.!?-_";
+int savescore_max_time = 20;
+int savescore_min_time = 8;
+int savescore_extra_time = 3;
+
+
 s_savedata savedata;
 
 /////////////////////////////////////////////////////////////////////////////
@@ -753,6 +768,8 @@ int			        mpbartext[4]		= { -1, 0, 0, 0};			// Array for adjusting MP status
 int			        lbartext[4]			= { -1, 0, 0, 0};			// Array for adjusting HP status text (font, Xpos, Ypos, Display type).
 int                 pmp[4][2]			= {{0, 0}, {0, 0}, {0, 0}, {0, 0}}; // Used for customizable player mpbar
 int                 spdirection[4]		= {1, 0, 1, 0};			// Used for Select Player Direction for select player screen
+int                 cheatcode = 0;
+int                 obor_lns_players[MAX_PLAYERS] = {0, 0, 0, 0};
 int                 bonus				= 0;					// Used for unlocking Bonus difficulties
 int                 versusdamage		= 2;					// Used for setting mode. (ability to hit other players)
 int                 z_coords[3]			= {0, 0, 0};				// Used for setting customizable walkable area
@@ -767,6 +784,17 @@ int                 color_blue			= 0;
 int                 color_green			= 0;
 int                 color_pink			= 0;
 int                 color_purple		= 0;
+static int obor_lns_empty_transparent;
+static int obor_lns_color25;
+static int obor_lns_color50;
+static int obor_lns_color100;
+static int obor_lns_color200;
+static int obor_lns_color300;
+static int obor_lns_color400;
+static int obor_lns_color500;
+static int obor_lns_color600;
+static int obor_lns_color700;
+static int obor_lns_color800;
 int                 color_magic			= 0;
 int                 color_magic2		= 0;
 int                 lifebarfgalpha      = 0;
@@ -2495,7 +2523,8 @@ void clearbuttons(int player)
         savedata.keys[1][SDID_JUMP]      = CONTROL_DEFAULT2_FIRE5;
         savedata.keys[1][SDID_SPECIAL]   = CONTROL_DEFAULT2_FIRE6;
         savedata.keys[1][SDID_START]     = CONTROL_DEFAULT2_START;
-        savedata.keys[1][SDID_SCREENSHOT] = CONTROL_DEFAULT2_SCREENSHOT;
+        savedata.keys[1][SDID_SCREENSHOT] = (obor_profile_features & OBOR_PROFILE_LNS_6330)
+            ? CONTROL_DEFAULT1_SCREENSHOT : CONTROL_DEFAULT2_SCREENSHOT;
         #ifdef SDL
             //savedata.keys[1][SDID_ESC]       = CONTROL_DEFAULT2_ESC;
         #endif
@@ -2513,7 +2542,8 @@ void clearbuttons(int player)
         savedata.keys[2][SDID_JUMP]      = CONTROL_DEFAULT3_FIRE5;
         savedata.keys[2][SDID_SPECIAL]   = CONTROL_DEFAULT3_FIRE6;
         savedata.keys[2][SDID_START]     = CONTROL_DEFAULT3_START;
-        savedata.keys[2][SDID_SCREENSHOT] = CONTROL_DEFAULT3_SCREENSHOT;
+        savedata.keys[2][SDID_SCREENSHOT] = (obor_profile_features & OBOR_PROFILE_LNS_6330)
+            ? CONTROL_DEFAULT1_SCREENSHOT : CONTROL_DEFAULT3_SCREENSHOT;
         #ifdef SDL
             //savedata.keys[2][SDID_ESC]       = CONTROL_DEFAULT3_ESC;
         #endif
@@ -2531,7 +2561,8 @@ void clearbuttons(int player)
         savedata.keys[3][SDID_JUMP]      = CONTROL_DEFAULT4_FIRE5;
         savedata.keys[3][SDID_SPECIAL]   = CONTROL_DEFAULT4_FIRE6;
         savedata.keys[3][SDID_START]     = CONTROL_DEFAULT4_START;
-        savedata.keys[3][SDID_SCREENSHOT] = CONTROL_DEFAULT4_SCREENSHOT;
+        savedata.keys[3][SDID_SCREENSHOT] = (obor_profile_features & OBOR_PROFILE_LNS_6330)
+            ? CONTROL_DEFAULT1_SCREENSHOT : CONTROL_DEFAULT4_SCREENSHOT;
         #ifdef SDL
             //savedata.keys[3][SDID_ESC]       = CONTROL_DEFAULT4_ESC;
         #endif
@@ -2560,6 +2591,13 @@ void clearsettings()
     savedata.uselog = 1;
     savedata.debuginfo = 0;
     savedata.fullscreen = 0;
+    if(obor_profile_features & OBOR_PROFILE_LNS_6330)
+    {
+#ifdef RASPBERRY
+        savedata.fullscreen = 1;
+#endif
+        savedata.vsync = 1;
+    }
 	
 	#if WII
     savedata.stretch = 1;
@@ -2601,28 +2639,32 @@ void clearsettings()
 static void obor_profile_read_settings(FILE *file)
 {
     size_t offset = offsetof(s_savedata, debug_collision_entity);
+    size_t size = (obor_profile_features & OBOR_PROFILE_LNS_6330)
+        ? sizeof(savedata) : offsetof(s_savedata, vsync);
     if(obor_profile_build != 6330)
     {
-        fread(&savedata, 1, sizeof(savedata), file);
+        fread(&savedata, 1, size, file);
         return;
     }
     fread(&savedata, 1, offset, file);
     savedata.debug_collision_entity = 0;
     fread((char *)&savedata + offset + sizeof(int), 1,
-          sizeof(savedata) - offset - sizeof(int), file);
+          size - offset - sizeof(int), file);
 }
 
 static void obor_profile_write_settings(FILE *file)
 {
     size_t offset = offsetof(s_savedata, debug_collision_entity);
+    size_t size = (obor_profile_features & OBOR_PROFILE_LNS_6330)
+        ? sizeof(savedata) : offsetof(s_savedata, vsync);
     if(obor_profile_build != 6330)
     {
-        fwrite(&savedata, 1, sizeof(savedata), file);
+        fwrite(&savedata, 1, size, file);
         return;
     }
     fwrite(&savedata, 1, offset, file);
     fwrite((char *)&savedata + offset + sizeof(int), 1,
-           sizeof(savedata) - offset - sizeof(int), file);
+           size - offset - sizeof(int), file);
 }
 
 void savesettings()
@@ -2720,6 +2762,51 @@ void loadfromdefault()
 
 
 
+/* Internal storage accommodates LNS; ordinary profiles retain their exact
+ * 512-byte selection fields on disk. Scatter IO preserves even a partially
+ * read final record without allocating a second record on the coroutine stack. */
+static size_t obor_profile_savelevel_size(void)
+{
+    if(obor_profile_features & OBOR_PROFILE_LNS_6330) return sizeof(s_savelevel);
+    return offsetof(s_savelevel, selectMusic) + (MAX_SELECT_LOADS + 3u) * 512u +
+        sizeof(((s_savelevel *)0)->selectLoadCount);
+}
+
+static size_t obor_profile_savelevels_io(FILE *file, s_savelevel *records,
+                                        size_t count, int writing)
+{
+    size_t completed, row;
+    const size_t prefix = offsetof(s_savelevel, selectMusic);
+    if(!count) return 0;
+    if(!file || !records || count > (size_t)-1 / sizeof(*records))
+    {
+        borShutdown(1, "Invalid saved selection storage.\n");
+        return 0;
+    }
+    if(obor_profile_features & OBOR_PROFILE_LNS_6330)
+        return writing ? fwrite(records, sizeof(*records), count, file) :
+                         fread(records, sizeof(*records), count, file);
+#define OBOR_SAVELEVEL_PART(address, length) do { \
+    size_t wanted = (length); \
+    size_t got = writing ? fwrite((address), 1, wanted, file) : \
+                           fread((address), 1, wanted, file); \
+    if(got != wanted) return completed; \
+} while(0)
+    for(completed = 0; completed < count; ++completed)
+    {
+        s_savelevel *record = records + completed;
+        OBOR_SAVELEVEL_PART(record, prefix);
+        OBOR_SAVELEVEL_PART(record->selectMusic, 512);
+        OBOR_SAVELEVEL_PART(record->selectBackground, 512);
+        for(row = 0; row < MAX_SELECT_LOADS; ++row)
+            OBOR_SAVELEVEL_PART(record->selectLoad[row], 512);
+        OBOR_SAVELEVEL_PART(&record->selectLoadCount, sizeof(record->selectLoadCount));
+        OBOR_SAVELEVEL_PART(record->selectSkipSelect, 512);
+    }
+#undef OBOR_SAVELEVEL_PART
+    return completed;
+}
+
 void clearSavedGame()
 {
     memset(savelevel, 0, sizeof(*savelevel)*num_difficulties);
@@ -2736,6 +2823,94 @@ void clearHighScore()
         savescore.highsc[i] = 0;    // Resets all the highscores to 0
         strcpy(savescore.hscoren[i], "None");    // Resets all the highscore names to "None"
     }
+}
+
+static size_t obor_profile_savescore_size(void)
+{
+    return (obor_profile_features & OBOR_PROFILE_LNS_6330)
+        ? sizeof(s_savescore) : offsetof(s_savescore, hscorei);
+}
+
+void initHighScore()
+{
+    FILE *handle = NULL;
+    char path[MAX_BUFFER_LEN] = {""};
+    char tmpname[MAX_BUFFER_LEN] = {""};
+    
+    // if there are no savescore modes we use the old savescore system
+    if(!savescore_modes)
+    {
+       loadHighScoreFile();
+       return; 
+    }
+    
+    if(savescore_difficulty_count == 0 || savescore_difficulty_count > MAX_DIFFICULTIES)
+    {
+        borShutdown(1, "Invalid high-score difficulty count.\n");
+    }
+
+    // save in each mode a direct pointer to its savescore
+    for(int i = 0; i < savescore_modes_count; ++i)
+    {
+        s_savescore *savescore_mode = &savescore_modes[i * savescore_difficulty_count];
+        if(savescore_mode->mode < num_difficulties)
+        {
+            levelsets[savescore_mode->mode].savescore = savescore_mode;
+        }
+    }
+
+    // load savescore modes from file
+    getBasePath(path, "Saves", 0);
+    getPakName(tmpname, sizeof(tmpname), 1);
+    if(!obor_pak_path_append(path, sizeof(path), tmpname)) borExit(1);
+    handle = fopen(path, "rb");
+    if(handle == NULL)
+    {
+        return;
+    }
+
+    // read savescores until we find one with a not compatible format
+    for(;;)
+    {
+        s_savescore savescore_loaded;
+        if(fread(&savescore_loaded, 1, sizeof(savescore_loaded), handle) != sizeof(savescore_loaded))
+        {
+            break;
+        }
+        /* Inspect raw bool bytes before using the stored object. */
+        int valid = 1;
+        for(int row = 0; row < 10; ++row)
+        {
+            const unsigned char *flag = (const unsigned char *)&savescore_loaded.is1CC[row];
+            if(*flag > 1 || !memchr(savescore_loaded.hscoren[row], 0, MAX_NAME_LEN))
+            {
+                valid = 0;
+                break;
+            }
+        }
+        if(!valid)
+        {
+            continue;
+        }
+
+        // check if it is a savescore with the expected format
+        if(savescore_loaded.compatibleversion == CV_HIGH_SCORE)
+        {
+            unsigned int mode = savescore_loaded.mode;
+            unsigned int difficulty = savescore_loaded.difficulty;
+            
+            // check if the mode and difficulty exist
+            if(difficulty < savescore_difficulty_count &&
+                mode < num_difficulties &&
+                levelsets[mode].savescore &&
+                levelsets[mode].savescore[difficulty].compatibleversion == CV_HIGH_SCORE)
+            {
+                levelsets[mode].savescore[difficulty] = savescore_loaded;
+            }
+        }
+    }
+
+    fclose(handle);
 }
 
 
@@ -2758,7 +2933,7 @@ int saveGameFile()
         return 0;
     }
 
-    fwrite(savelevel, sizeof(*savelevel), num_difficulties, handle);
+    obor_profile_savelevels_io(handle, savelevel, num_difficulties, 1);
 
     fclose(handle);
 
@@ -2793,12 +2968,12 @@ int loadGameFile()
     //fseek(handle, 0L, SEEK_SET); // or rewind(handle);
     //(filesize != sizeof(*savelevel)*num_difficulties)
 
-    if( (fread(savelevel, sizeof(*savelevel), num_difficulties, handle) >= sizeof(*savelevel) && savelevel[0].compatibleversion != CV_SAVED_GAME) )
+    if( (obor_profile_savelevels_io(handle, savelevel, num_difficulties, 0) >= obor_profile_savelevel_size() && savelevel[0].compatibleversion != CV_SAVED_GAME) )
     {
         clearSavedGame();
         result = 0;
     }
-    else
+    else if(!(obor_profile_features & OBOR_PROFILE_LNS_6330) || cheatcode == 0)
     {
         bonus = 0;
         for(i = 0; i < num_difficulties; i++) if(savelevel[i].times_completed > 0)
@@ -2831,7 +3006,14 @@ int saveHighScoreFile()
     {
         return 0;
     }
-    fwrite(&savescore, 1, sizeof(savescore), handle);
+    if((obor_profile_features & OBOR_PROFILE_LNS_6330) && savescore_modes)
+    {
+        fwrite(savescore_modes, savescore_modes_count * savescore_difficulty_count, sizeof(s_savescore), handle);
+    }
+    else
+    {
+        fwrite(&savescore, 1, obor_profile_savescore_size(), handle);
+    }
     fclose(handle);
     return 1;
 #else
@@ -2855,7 +3037,7 @@ int loadHighScoreFile()
     {
         return 0;
     }
-    fread(&savescore, 1, sizeof(savescore), handle);
+    fread(&savescore, 1, obor_profile_savescore_size(), handle);
     fclose(handle);
     if(savescore.compatibleversion != CV_HIGH_SCORE)
     {
@@ -3214,7 +3396,9 @@ size_t ParseArgs(ArgList *list, char *input, char *output)
     assert(input);
     assert(output);
 
-    memset(output,0,MAX_ARG_LEN);
+    const size_t capacity = (obor_profile_features & OBOR_PROFILE_LNS_6330) ? MAX_ARG_LEN : 512;
+    const size_t argument_limit = (obor_profile_features & OBOR_PROFILE_LNS_6330) ? MAX_ARG_COUNT : 64;
+    memset(output, 0, capacity);
 
     size_t pos = 0;
     size_t wordstart = 0;
@@ -3225,7 +3409,7 @@ size_t ParseArgs(ArgList *list, char *input, char *output)
     int double_apex_flag = 0;
     int single_apex_flag = 0;
 
-    while(pos < MAX_ARG_LEN - 1 && item < MAX_ARG_COUNT)
+    while(pos < capacity - 1 && item < argument_limit)
     {
         switch(input[pos])
         {
@@ -3384,6 +3568,7 @@ char *findarg(char *command, int which)
     int inarg;
     int argstart;
     static char arg[MAX_ARG_LEN];
+    const int capacity = (obor_profile_features & OBOR_PROFILE_LNS_6330) ? MAX_ARG_LEN : 512;
 
 
     // Copy the command line, replacing spaces by zeroes,
@@ -3393,7 +3578,7 @@ char *findarg(char *command, int which)
     argstart = 0;
     argc = -1;
 
-    while(d < MAX_ARG_LEN - 1 && command[d])
+    while(d < capacity - 1 && command[d])
     {
         // Zero out whitespace
         if(command[d] == ' ' || command[d] == '\t')
@@ -3718,8 +3903,145 @@ int parsecolor(const char *string)
 }
 
 // ltb 1-17-05   new function for lifebar colors
+static void obor_lns_lifebar_colors()
+{
+    char *filename = "data/lifebar.txt";
+    char *buf;
+    size_t size;
+    int pos;
+    ArgList arglist;
+    char argbuf[MAX_ARG_LEN + 1] = "";
+
+
+    char *command;
+
+    if(buffer_pakfile(filename, &buf, &size) != 1)
+    {
+        color_white = 0;
+        color_black = 0;
+        obor_lns_empty_transparent = 0;
+        obor_lns_color25 = 0;
+        obor_lns_color50 = 0;
+        obor_lns_color100 = 0;
+        obor_lns_color200 = 0;
+        obor_lns_color300 = 0;
+        obor_lns_color400 = 0;
+        obor_lns_color500 = 0;
+        color_magic = 0;
+        color_magic2 = 0;
+        shadowcolor = 0;
+        shadowalpha = BLEND_MULTIPLY + 1;
+        shadowopacity = 255;
+        return;
+    }
+
+    pos = 0;
+    colorbars = 1;
+    while(pos < size)
+    {
+        if(ParseArgs(&arglist, buf + pos, argbuf))
+        {
+            command = GET_ARG(0);
+            if(command && command[0])
+            {
+                if(stricmp(command, "blackbox") == 0)
+                {
+                    color_black = _makecolour(GET_INT_ARG(1), GET_INT_ARG(2), GET_INT_ARG(3));
+                }
+                else if(stricmp(command, "whitebox") == 0)
+                {
+                    color_white = _makecolour(GET_INT_ARG(1), GET_INT_ARG(2), GET_INT_ARG(3));
+                }
+                else if(stricmp(command, "empty_transparent") == 0)
+                {
+                    obor_lns_empty_transparent = _makecolour(GET_INT_ARG(1), GET_INT_ARG(2), GET_INT_ARG(3));
+                }
+                else if(stricmp(command, "color25") == 0)
+                {
+                    obor_lns_color25 = _makecolour(GET_INT_ARG(1), GET_INT_ARG(2), GET_INT_ARG(3));
+                }
+                else if(stricmp(command, "color50") == 0)
+                {
+                    obor_lns_color50 = _makecolour(GET_INT_ARG(1), GET_INT_ARG(2), GET_INT_ARG(3));
+                }
+                else if(stricmp(command, "color100") == 0)
+                {
+                    obor_lns_color100 = _makecolour(GET_INT_ARG(1), GET_INT_ARG(2), GET_INT_ARG(3));
+                }
+                else if(stricmp(command, "color200") == 0)
+                {
+                    obor_lns_color200 = _makecolour(GET_INT_ARG(1), GET_INT_ARG(2), GET_INT_ARG(3));
+                }
+                else if(stricmp(command, "color300") == 0)
+                {
+                    obor_lns_color300 = _makecolour(GET_INT_ARG(1), GET_INT_ARG(2), GET_INT_ARG(3));
+                }
+                else if(stricmp(command, "color400") == 0)
+                {
+                    obor_lns_color400 = _makecolour(GET_INT_ARG(1), GET_INT_ARG(2), GET_INT_ARG(3));
+                }
+                else if(stricmp(command, "color500") == 0)
+                {
+                    obor_lns_color500 = _makecolour(GET_INT_ARG(1), GET_INT_ARG(2), GET_INT_ARG(3));
+                }
+                else if(stricmp(command, "color600") == 0)
+                {
+                    obor_lns_color600 = _makecolour(GET_INT_ARG(1), GET_INT_ARG(2), GET_INT_ARG(3));
+                }
+                else if(stricmp(command, "color700") == 0)
+                {
+                    obor_lns_color700 = _makecolour(GET_INT_ARG(1), GET_INT_ARG(2), GET_INT_ARG(3));
+                }
+                else if(stricmp(command, "color800") == 0)
+                {
+                    obor_lns_color800 = _makecolour(GET_INT_ARG(1), GET_INT_ARG(2), GET_INT_ARG(3));
+                }
+                //magic bars color declarations by tails
+                else if(stricmp(command, "colormagic") == 0)
+                {
+                    color_magic = _makecolour(GET_INT_ARG(1), GET_INT_ARG(2), GET_INT_ARG(3));
+                }
+                else if(stricmp(command, "colormagic2") == 0)
+                {
+                    color_magic2 = _makecolour(GET_INT_ARG(1), GET_INT_ARG(2), GET_INT_ARG(3));
+                }
+                //end of magic bars color declarations by tails
+                else if(stricmp(command, "shadowcolor") == 0)
+                {
+                    shadowcolor = _makecolour(GET_INT_ARG(1), GET_INT_ARG(2), GET_INT_ARG(3));
+                }
+                else if(stricmp(command, "shadowalpha") == 0) //gfxshadow alpha
+                {
+                    shadowalpha = GET_INT_ARG(1);
+                }
+                else if(stricmp(command, "shadowopacity") == 0)
+                {
+                    shadowopacity = GET_INT_ARG(1);
+                }
+                else if(command && command[0])
+                {
+                    printf("Warning: Unknown command in lifebar.txt: '%s'.\n", command);
+                }
+            }
+        }
+
+        // Go to next line
+        pos += getNewLineStart(buf + pos);
+    }
+    if(buf != NULL)
+    {
+        free(buf);
+        buf = NULL;
+    }
+}
+
 void lifebar_colors()
 {
+    if(obor_profile_features & OBOR_PROFILE_LNS_6330)
+    {
+        obor_lns_lifebar_colors();
+        return;
+    }
     char *filename = "data/lifebar.txt";
     char *buf;
     size_t size;
@@ -3849,17 +4171,34 @@ void init_colourtable()
     mpcolourtable[9]  = color_magic;
     mpcolourtable[10] = color_magic2;
 
-    hpcolourtable[0]  = color_purple;
-    hpcolourtable[1]  = color_red;
-    hpcolourtable[2]  = color_yellow;
-    hpcolourtable[3]  = color_green;
-    hpcolourtable[4]  = color_blue;
-    hpcolourtable[5]  = color_orange;
-    hpcolourtable[6]  = color_pink;
-    hpcolourtable[7]  = color_purple;
-    hpcolourtable[8]  = color_black;
-    hpcolourtable[9]  = color_white;
-    hpcolourtable[10] = color_white;
+    if(obor_profile_features & OBOR_PROFILE_LNS_6330)
+    {
+        hpcolourtable[0]  = obor_lns_empty_transparent;
+        hpcolourtable[1]  = obor_lns_color25;
+        hpcolourtable[2]  = obor_lns_color50;
+        hpcolourtable[3]  = obor_lns_color100;
+        hpcolourtable[4]  = obor_lns_color200;
+        hpcolourtable[5]  = obor_lns_color300;
+        hpcolourtable[6]  = obor_lns_color400;
+        hpcolourtable[7]  = obor_lns_color500;
+        hpcolourtable[8]  = obor_lns_color600;
+        hpcolourtable[9]  = obor_lns_color700;
+        hpcolourtable[10] = obor_lns_color800;
+    }
+    else
+    {
+        hpcolourtable[0]  = color_purple;
+        hpcolourtable[1]  = color_red;
+        hpcolourtable[2]  = color_yellow;
+        hpcolourtable[3]  = color_green;
+        hpcolourtable[4]  = color_blue;
+        hpcolourtable[5]  = color_orange;
+        hpcolourtable[6]  = color_pink;
+        hpcolourtable[7]  = color_purple;
+        hpcolourtable[8]  = color_black;
+        hpcolourtable[9]  = color_white;
+        hpcolourtable[10] = color_white;
+    }
 
     memcpy(ldcolourtable, hpcolourtable, 11 * sizeof(*hpcolourtable));
 }
@@ -3904,42 +4243,101 @@ void load_background(char *filename, int createtables)
     }
 
     lifebar_colors();
-    if(!color_black)
+    if(obor_profile_features & OBOR_PROFILE_LNS_6330)
     {
-        color_black = _makecolour(0, 0, 0);    // black boxes 500-600HP
+        if(!color_white)
+        {
+            color_white = _makecolour(255, 255, 255);    // white boxes
+        }
+        if(!color_black)
+        {
+            color_black = _makecolour(0, 0, 0);    // black boxes
+        }
+        if(!obor_lns_empty_transparent)
+        {
+            obor_lns_empty_transparent = _makecolour(128, 48, 208);    // transbox
+        }
+        if(!obor_lns_color25)
+        {
+            obor_lns_color25 = _makecolour(255, 0, 0);    // 1% - 25% Full Health
+        }
+        if(!obor_lns_color50)
+        {
+            obor_lns_color50 = _makecolour(0xF8, 0xB8, 0x40);    // 26%-50% Full health
+        }
+        if(!obor_lns_color100)
+        {
+            obor_lns_color100 = _makecolour(0, 255, 0);    // 51% - 100% full health
+        }
+        if(!obor_lns_color200)
+        {
+            obor_lns_color200 = _makecolour(0, 0, 255);    // 100-200 HP
+        }
+        if(!obor_lns_color300)
+        {
+            obor_lns_color300 = _makecolour(255, 150, 0);    // 200-300HP
+        }
+        if(!obor_lns_color400)
+        {
+            obor_lns_color400 = _makecolour(255, 0, 255);    // 300-400HP
+        }
+        if(!obor_lns_color500)
+        {
+            obor_lns_color500 = _makecolour(128, 48, 208);   // 400-500HP
+        }
+        if(!obor_lns_color600)
+        {
+            obor_lns_color600 = _makecolour(0, 0, 0);        // 500-600HP
+        }
+        if(!obor_lns_color700)
+        {
+            obor_lns_color700 = _makecolour(255, 255, 255);  // 600-700HP
+        }
+        if(!obor_lns_color800)
+        {
+            obor_lns_color800 = _makecolour(255, 255, 255);   // 700-800HP
+        }
     }
-    if(!color_red)
+    else
     {
-        color_red = _makecolour(255, 0, 0);    // 1% - 25% Full Health
+        if(!color_black)
+        {
+            color_black = _makecolour(0, 0, 0);    // black boxes 500-600HP
+        }
+        if(!color_red)
+        {
+            color_red = _makecolour(255, 0, 0);    // 1% - 25% Full Health
+        }
+        if(!color_orange)
+        {
+            color_orange = _makecolour(255, 150, 0);    // 200-300HP
+        }
+        if(!color_yellow)
+        {
+            color_yellow = _makecolour(0xF8, 0xB8, 0x40);    // 26%-50% Full health
+        }
+        if(!color_white)
+        {
+            color_white = _makecolour(255, 255, 255);    // white boxes 600+ HP
+        }
+        if(!color_blue)
+        {
+            color_blue = _makecolour(0, 0, 255);    // 100-200 HP
+        }
+        if(!color_green)
+        {
+            color_green = _makecolour(0, 255, 0);    // 51% - 100% full health
+        }
+        if(!color_pink)
+        {
+            color_pink = _makecolour(255, 0, 255);    // 300-400HP
+        }
+        if(!color_purple)
+        {
+            color_purple = _makecolour(128, 48, 208);    // transbox 400-500HP
+        }
     }
-    if(!color_orange)
-    {
-        color_orange = _makecolour(255, 150, 0);    // 200-300HP
-    }
-    if(!color_yellow)
-    {
-        color_yellow = _makecolour(0xF8, 0xB8, 0x40);    // 26%-50% Full health
-    }
-    if(!color_white)
-    {
-        color_white = _makecolour(255, 255, 255);    // white boxes 600+ HP
-    }
-    if(!color_blue)
-    {
-        color_blue = _makecolour(0, 0, 255);    // 100-200 HP
-    }
-    if(!color_green)
-    {
-        color_green = _makecolour(0, 255, 0);    // 51% - 100% full health
-    }
-    if(!color_pink)
-    {
-        color_pink = _makecolour(255, 0, 255);    // 300-400HP
-    }
-    if(!color_purple)
-    {
-        color_purple = _makecolour(128, 48, 208);    // transbox 400-500HP
-    }
+
     if(!color_magic)
     {
         color_magic = _makecolour(98, 180, 255);    // 1st magic bar color by tails
@@ -4884,6 +5282,15 @@ int prevcolourmapn(s_model *model, int c, int p)
 }
 
 // Use by player select menus
+static int obor_selectable_player(int i)
+{
+    if(obor_profile_features & OBOR_PROFILE_LNS_6330)
+        return model_cache[i].selectable && model_cache[i].clearcount <= bonus;
+    return model_cache[i].model && model_cache[i].model->type == TYPE_PLAYER &&
+                (allow_secret_chars || !model_cache[i].model->secret) &&
+                model_cache[i].model->clearcount <= bonus && model_cache[i].selectable;
+}
+
 s_model *nextplayermodel(s_model *current)
 {
     int i;
@@ -4908,12 +5315,12 @@ s_model *nextplayermodel(s_model *current)
         {
             i = 0;
         }
-        if(model_cache[i].model && model_cache[i].model->type == TYPE_PLAYER &&
-                (allow_secret_chars || !model_cache[i].model->secret) &&
-                model_cache[i].model->clearcount <= bonus && model_cache[i].selectable)
+        if(obor_selectable_player(i))
         {
             //printf("next %s\n", model_cache[i].model->name);
-            return model_cache[i].model;
+            if((obor_profile_features & OBOR_PROFILE_LNS_6330) && !model_cache[i].model)
+                load_cached_model(model_cache[i].name, "select_screen", OBOR_LNS_QUICK_MODEL);
+            if(model_cache[i].model) return model_cache[i].model;
         }
     }
     borShutdown(1, "Fatal: can't find any player models!");
@@ -4928,14 +5335,12 @@ s_model *nextplayermodeln(s_model *current, int p)
 
     if(set->nosame & 1)
     {
-        int used_player_count = 0, player_count = 0;
+        int used_player_count = 0, player_count = 0, attempts = 0;
 
         // check count of selectable players
         for(i = 0; i < models_cached; i++)
         {
-            if(model_cache[i].model && model_cache[i].model->type == TYPE_PLAYER &&
-                    (allow_secret_chars || !model_cache[i].model->secret) &&
-                    model_cache[i].model->clearcount <= bonus && model_cache[i].selectable)
+            if(obor_selectable_player(i))
             {
                 ++player_count;
             }
@@ -4957,6 +5362,11 @@ s_model *nextplayermodeln(s_model *current, int p)
         {
             if(i != p && stricmp(model->name, player[i].name) == 0)
             {
+                if((obor_profile_features & OBOR_PROFILE_LNS_6330) && ++attempts > models_cached)
+                {
+                    borShutdown(1, "No available player model for selection.\n");
+                    return NULL;
+                }
                 i = -1;
                 model = nextplayermodel(model);
             }
@@ -4991,12 +5401,12 @@ s_model *prevplayermodel(s_model *current)
         {
             i = models_cached - 1;
         }
-        if(model_cache[i].model && model_cache[i].model->type == TYPE_PLAYER &&
-                (allow_secret_chars || !model_cache[i].model->secret) &&
-                model_cache[i].model->clearcount <= bonus && model_cache[i].selectable)
+        if(obor_selectable_player(i))
         {
             //printf("prev %s\n", model_cache[i].model->name);
-            return model_cache[i].model;
+            if((obor_profile_features & OBOR_PROFILE_LNS_6330) && !model_cache[i].model)
+                load_cached_model(model_cache[i].name, "select_screen", OBOR_LNS_QUICK_MODEL);
+            if(model_cache[i].model) return model_cache[i].model;
         }
     }
     borShutdown(1, "Fatal: can't find any player models!");
@@ -5011,14 +5421,12 @@ s_model *prevplayermodeln(s_model *current, int p)
 
     if(set->nosame & 1)
     {
-        int used_player_count = 0, player_count = 0;
+        int used_player_count = 0, player_count = 0, attempts = 0;
 
         // check count of selectable players
         for(i = 0; i < models_cached; i++)
         {
-            if(model_cache[i].model && model_cache[i].model->type == TYPE_PLAYER &&
-                    (allow_secret_chars || !model_cache[i].model->secret) &&
-                    model_cache[i].model->clearcount <= bonus && model_cache[i].selectable)
+            if(obor_selectable_player(i))
             {
                 ++player_count;
             }
@@ -5040,6 +5448,11 @@ s_model *prevplayermodeln(s_model *current, int p)
         {
             if(i != p && stricmp(model->name, player[i].name) == 0)
             {
+                if((obor_profile_features & OBOR_PROFILE_LNS_6330) && ++attempts > models_cached)
+                {
+                    borShutdown(1, "No available player model for selection.\n");
+                    return NULL;
+                }
                 i = -1;
                 model = prevplayermodel(model);
             }
@@ -5050,12 +5463,278 @@ s_model *prevplayermodeln(s_model *current, int p)
 }
 
 // Reset All Player Models to on/off for Select Screen.
+s_model *nextplayermodelcol(s_model *current)
+{
+	 int i;
+    int curindex = -1;
+    int loops;
+    if(!current)
+    {
+        borShutdown(1, "Column selection requires a player model.\n");
+        return NULL;
+    }
+    if(current)
+    {
+        // Find index of current player model
+        for(i = 0; i < models_cached; i++)
+        {
+            if(model_cache[i].model == current)
+            {
+                curindex = i;
+                break;
+            }
+        }
+    }
+    // Find next player model (first one after current index)
+    for(i = curindex + 1, loops = 0; loops < models_cached; i++, loops++)
+    {
+        if(i >= models_cached)
+        {
+            i = 0;
+        }
+        if(model_cache[i].selectable && 
+          model_cache[i].clearcount <= bonus && 
+          model_cache[i].selectcol == current->selectcol)
+        {
+          // quickload
+          if (!model_cache[i].model)
+          {
+            load_cached_model(model_cache[i].name, "select_screen", OBOR_LNS_QUICK_MODEL);
+          }
+          if (model_cache[i].model)
+          {
+            return model_cache[i].model;
+          }
+        }
+    }
+    borShutdown(1, "Fatal: can't find any player models!");
+    return NULL;
+}
+
+s_model *nextplayermodelcoln(s_model *current, int p)
+{
+    int i;
+    s_set_entry *set = levelsets + current_set;
+    s_model *model = nextplayermodelcol(current);
+
+    if(set->nosame & 1)
+    {
+        int used_player_count = 0, player_count = 0, attempts = 0;
+
+        // check count of selectable players
+        for(i = 0; i < models_cached; i++)
+        {
+            if(model_cache[i].selectable &&
+              model_cache[i].clearcount <= bonus)
+            {
+                ++player_count;
+            }
+        }
+
+        // count all used player
+        for(i = 0; model && i < MAX_PLAYERS; i++)
+        {
+            if(i != p && stricmp(player[p].name, player[i].name) == 0)
+            {
+                ++used_player_count;
+                // all busy players? return the next natural
+                if (used_player_count >= player_count) return model;
+            }
+        }
+
+        // search the first free player
+        for(i = 0; model && i < MAX_PLAYERS; i++)
+        {
+            if(i != p && stricmp(model->name, player[i].name) == 0)
+            {
+                if(++attempts > models_cached)
+                {
+                    borShutdown(1, "No available player model for column selection.\n");
+                    return NULL;
+                }
+                i = -1;
+                model = nextplayermodelcol(model);
+            }
+        }
+    }
+
+    return model;
+}
+
+s_model *prevplayermodelcol(s_model *current)
+{
+	 int i;
+    int curindex = -1;
+    int loops;
+    if(!current)
+    {
+        borShutdown(1, "Column selection requires a player model.\n");
+        return NULL;
+    }
+    if(current)
+    {
+        // Find index of current player model
+        for(i = 0; i < models_cached; i++)
+        {
+            if(model_cache[i].model == current)
+            {
+                curindex = i;
+                break;
+            }
+        }
+    }
+    // Find next player model (first one after current index)
+    for(i = curindex - 1, loops = 0; loops < models_cached; i--, loops++)
+    {
+        if(i < 0)
+        {
+            i = models_cached - 1;
+        }
+        if(model_cache[i].selectable &&
+          model_cache[i].clearcount <= bonus &&
+          model_cache[i].selectcol == current->selectcol)
+        {
+          // quickload
+          if (!model_cache[i].model)
+          {
+            load_cached_model(model_cache[i].name, "select_screen", OBOR_LNS_QUICK_MODEL);
+          }
+          if (model_cache[i].model)
+          {
+            return model_cache[i].model;
+          }
+        }
+    }
+    borShutdown(1, "Fatal: can't find any player models!");
+    return NULL;
+}
+
+s_model *prevplayermodelcoln(s_model *current, int p)
+{
+    int i;
+    s_set_entry *set = levelsets + current_set;
+    s_model *model = prevplayermodelcol(current);
+
+    if(set->nosame & 1)
+    {
+        int used_player_count = 0, player_count = 0, attempts = 0;
+
+        // check count of selectable players
+        for(i = 0; i < models_cached; i++)
+        {
+            if(model_cache[i].selectable &&
+              model_cache[i].clearcount <= bonus)
+            {
+                ++player_count;
+            }
+        }
+
+        // count all used player
+        for(i = 0; model && i < MAX_PLAYERS; i++)
+        {
+            if(i != p && stricmp(player[p].name, player[i].name) == 0)
+            {
+                ++used_player_count;
+                // all busy players? return the prev natural
+                if (used_player_count >= player_count) return model;
+            }
+        }
+
+        // search the first free player
+        for(i = 0; model && i < MAX_PLAYERS; i++)
+        {
+            if(i != p && stricmp(model->name, player[i].name) == 0)
+            {
+                if(++attempts > models_cached)
+                {
+                    borShutdown(1, "No available player model for column selection.\n");
+                    return NULL;
+                }
+                i = -1;
+                model = prevplayermodelcol(model);
+            }
+        }
+    }
+
+    return model;
+}
+
+s_model *selectrandomplayer(s_model *current)
+{
+    unsigned short players[MAX_SEL_PLAYERS];
+    unsigned short player_count = 0;
+    s_set_entry *set = levelsets + current_set;
+    s_model *model = current;
+    int selected_index = 0;
+
+    for(int i = 0; i < models_cached; i++)
+    {
+        if(model_cache[i].selectable &&
+            model_cache[i].clearcount <= bonus)
+        {
+            bool allowed = true;
+            // If no same is allowed we exclude all player selections except current
+            if(set->nosame & 1)
+            {
+                for(int player_index = 0; player_index < MAX_PLAYERS; ++player_index)
+                {
+                    if(model_cache[i].model != current && stricmp(model_cache[i].name, player[player_index].name) == 0)
+                    {
+                        allowed = false;
+                        break;
+                    }
+                }
+            }
+            
+            if(allowed)
+            {
+                players[player_count] = i;
+                ++player_count;
+                if(player_count >= MAX_SEL_PLAYERS)
+                {
+                    break;
+                }
+            }
+        }
+    }
+
+    if(player_count > 0)
+    {
+        selected_index = players[rand32() % player_count];
+
+        // quickload
+        if (!model_cache[selected_index].model)
+        {
+            load_cached_model(model_cache[selected_index].name, "select_screen", OBOR_LNS_QUICK_MODEL);
+        }
+
+        if(model_cache[selected_index].model)
+        {
+            model = model_cache[selected_index].model;
+        }
+    }
+
+    return model;
+}
+
+int selectrandomcolourmap(s_model *current, int p)
+{
+    if(!current || current->maps_loaded <= 0) return 0;
+    int random_colourmap = rand32() % current->maps_loaded;
+
+    // use the nextcolourmap function to avoid same colourmaps if not allowed
+    random_colourmap = nextcolourmapn(current, random_colourmap, p);
+
+    return random_colourmap;
+}
+
 static void reset_playable_list(char which)
 {
     int i;
     for(i = 0; i < models_cached; i++)
     {
-        if(!which || (model_cache[i].model && model_cache[i].model->type == TYPE_PLAYER))
+        if(!which || ((obor_profile_features & OBOR_PROFILE_LNS_6330) ? model_cache[i].player :
+                      (model_cache[i].model && model_cache[i].model->type == TYPE_PLAYER)))
         {
             model_cache[i].selectable = which;
         }
@@ -5071,6 +5750,11 @@ static void load_playable_list(char *buf)
     ArgList arglist;
     char argbuf[MAX_ALLOWSELECT_LEN] = "";
 
+    if((obor_profile_features & OBOR_PROFILE_LNS_6330) && cheatcode == -1)
+    {
+        reset_playable_list(1);
+        return;
+    }
     ParseArgs(&arglist, buf, argbuf);
 
     // avoid to load characters if there isn't an allowselect
@@ -5088,6 +5772,10 @@ static void load_playable_list(char *buf)
 
     for(i = 1; (value = GET_ARG(i))[0]; i++)
     {
+        if(obor_profile_features & OBOR_PROFILE_LNS_6330)
+            index = get_cached_model_index(value);
+        else
+        {
         playermodels = findmodel(value);
         if(playermodels == NULL)
         {
@@ -5095,6 +5783,7 @@ static void load_playable_list(char *buf)
             return;
         }
         index = get_cached_model_index(playermodels->name);
+        }
         if(index == -1)
         {
             borShutdown(1, "Player model '%s' is not cached.\n", value);
@@ -8786,6 +9475,10 @@ s_model *init_model(int cacheindex, int unload)
     // default string value, only by reference
     newchar->rider = get_cached_model_index("K'");
     newchar->flash = newchar->bflash = get_cached_model_index("flash");
+    newchar->flashoverridesource = newchar->flashoverridetarget = -1;
+    newchar->ignore_projectile_wall_collision = 0;
+    newchar->noexplode = 0;
+    newchar->selectcol = 0;
 
     //Default offense/defense values.
     for(i = 0; i < max_attack_types; i++)
@@ -8856,6 +9549,34 @@ static int model_animation_reserve(s_model *model, int animation_id)
 void update_model_loadflag(s_model *model, char unload)
 {
     model->unload = unload;
+}
+
+/* The LNS quick parser retains only selection/waiting animation data.
+ * Animation names are deliberately case sensitive, matching its source. */
+static bool obor_lns_quick_model_skip(modelCommands command, const char *animation,
+                                      bool *skip_all)
+{
+    switch(command)
+    {
+    case CMD_MODEL_ANIM:
+        *skip_all = strcmp(animation, "select") != 0 && strcmp(animation, "waiting") != 0;
+        return *skip_all;
+    case CMD_MODEL_NAME:
+    case CMD_MODEL_TYPE:
+    case CMD_MODEL_ICON:
+    case CMD_MODEL_SELECTCOL:
+    case CMD_MODEL_PALETTE:
+    case CMD_MODEL_ALTERNATEPAL:
+    case CMD_MODEL_LOOP:
+    case CMD_MODEL_DELAY:
+    case CMD_MODEL_OFFSET:
+    case CMD_MODEL_SOUND:
+    case CMD_MODEL_FSHADOW:
+    case CMD_MODEL_FRAME:
+        return *skip_all;
+    default:
+        return true;
+    }
 }
 
 s_model *load_cached_model(char *name, char *owner, char unload)
@@ -9033,19 +9754,29 @@ s_model *load_cached_model(char *name, char *owner, char unload)
 
     modelCommands cmd;
     s_scripts *tempscripts;
+    const bool lns = (obor_profile_features & OBOR_PROFILE_LNS_6330) != 0;
+    const bool quickload = lns && unload == OBOR_LNS_QUICK_MODEL;
+    bool command_skip_all = false;
+
+    if(lns)
+    {
+        unload = 3;
+        obor_preload_begin();
+    }
 
 #ifdef DEBUG
     printf("load_cached_model: %s, unload: %d\n", name, unload);
 #endif
 
     // Start up the standard log entry.
-    printf("Loaded '%s'", name);
+    printf(quickload ? "Loaded quick '%s'" : "Loaded '%s'", name);
 
     // Model already loaded but we might want to unload after level is completed.
     if((tempmodel = findmodel(name)) != NULL)
     {
         update_model_loadflag(tempmodel, unload);
         cache_model_sprites(tempmodel, 1);
+        if(lns) obor_preload_end();
         return tempmodel;
     }
 
@@ -9088,6 +9819,7 @@ s_model *load_cached_model(char *name, char *owner, char unload)
 
     drawmethod = plainmethod;  // better than memset it to 0
 
+    newchar->quickload = quickload;
     newchar->hitwalltype = -1; // init to -1
 
 
@@ -9103,6 +9835,13 @@ s_model *load_cached_model(char *name, char *owner, char unload)
         {
             command = GET_ARG(0);
             cmd = getModelCommand(modelcmdlist, command);
+            if(quickload && obor_lns_quick_model_skip(cmd,
+                    cmd == CMD_MODEL_ANIM ? GET_ARG(1) : NULL, &command_skip_all))
+            {
+                pos += getNewLineStart(buf + pos);
+                continue;
+            }
+
 
             //if (cmd != CMD_MODEL_FRAME) framenum = 0;
 
@@ -9175,9 +9914,9 @@ s_model *load_cached_model(char *name, char *owner, char unload)
                 tempmodel = findmodel(value);
                 if(!tempmodel)
                 {
-                    load_cached_model(value, name, GET_INT_ARG(2));
+                    load_cached_model(value, name, lns ? 3 : GET_INT_ARG(2));
                 }
-                else
+                else if(!lns)
                 {
                     update_model_loadflag(tempmodel, GET_INT_ARG(2));
                 }
@@ -9388,6 +10127,21 @@ s_model *load_cached_model(char *name, char *owner, char unload)
                 {
                     newchar->flash = get_cached_model_index(value);
                 }
+                break;
+            case CMD_MODEL_SELECTCOL:
+                newchar->selectcol = GET_INT_ARG(1);
+                break;
+            case CMD_MODEL_FLASHOVERRIDE:
+                value = GET_ARG(1);
+                newchar->flashoverridesource = get_cached_model_index(value);
+                value = GET_ARG(2);
+                newchar->flashoverridetarget = get_cached_model_index(value);
+                break;
+            case CMD_MODEL_IGNOREPROJECTILEWALLCOLLISION:
+                newchar->ignore_projectile_wall_collision = (0 != GET_INT_ARG(1));
+                break;
+            case CMD_MODEL_NOEXPLODE:
+                newchar->noexplode = GET_INT_ARG(1);
                 break;
             case CMD_MODEL_BFLASH:	// Flash that is spawned if an attack is blocked
                 value = GET_ARG(1);
@@ -12189,6 +12943,7 @@ lCleanup:
     if(!shutdownmessage)
     {
         if (obor_preload_active()) obor_wait_frame();
+        if(lns) obor_preload_end();
         return newchar;
     }
 
@@ -12776,7 +13531,7 @@ int load_models()
         init_colourtable();
     }
 
-    update_loading(&loadingbg[0], -1, 1); // initialize the update screen
+    update_loading(&loadingbg[0], (obor_profile_features & OBOR_PROFILE_LNS_6330) ? 0 : -1, 1); // initialize the update screen
 
     if(custModels != NULL)
     {
@@ -12948,7 +13703,10 @@ int load_models()
         }
         if(model_cache[i].loadflag)
         {
-            load_cached_model(model_cache[i].name, "models.txt", 0);
+            if(obor_profile_features & OBOR_PROFILE_LNS_6330)
+                preload_cached_model(model_cache[i].name);
+            else
+                load_cached_model(model_cache[i].name, "models.txt", 0);
             update_loading(&loadingbg[0], ++pos, modelLoadCount);
         }
     }
@@ -12966,6 +13724,61 @@ int load_models()
 
 
 
+
+/* Metadata is read only up to the first type command, as in LNS.
+ * Missing type used to run past the buffer; reject it after bounded parsing. */
+void preload_cached_model(char *name)
+{
+    char *filename, *buf = NULL, *command;
+    char argbuf[MAX_ARG_LEN + 1] = {0};
+    ArgList arglist;
+    size_t size = 0, pos = 0, step;
+    modelCommands cmd;
+    bool found_type = false;
+    int model_index = get_cached_model_index(name);
+    if(model_index < 0 || model_index >= models_cached) return;
+    filename = model_cache[model_index].path;
+    if(buffer_pakfile(filename, &buf, &size) != 1) return;
+    while(pos < size && !found_type)
+    {
+        if(ParseArgs(&arglist, buf + pos, argbuf))
+        {
+            command = GET_ARG(0);
+            cmd = getModelCommand(modelcmdlist, command);
+            switch(cmd)
+            {
+            case CMD_MODEL_SECRET:
+                model_cache[model_index].clearcount = GET_INT_ARG(2);
+                break;
+            case CMD_MODEL_SELECTCOL:
+                model_cache[model_index].selectcol = GET_INT_ARG(1);
+                break;
+            case CMD_MODEL_TYPE:
+                if(stricmp(GET_ARG(1), "player") == 0 && model_cache[model_index].selectcol > 0)
+                    model_cache[model_index].selectable = 1;
+                found_type = true;
+                break;
+            default:
+                break;
+            }
+        }
+        step = getNewLineStart(buf + pos);
+        if(step == 0 || step > size - pos) break;
+        pos += step;
+    }
+    free(buf);
+    if(!found_type) borShutdown(1, "Model '%s' has no type command.\n", filename);
+}
+
+void unload_model(s_model *model)
+{
+    const bool lns = (obor_profile_features & OBOR_PROFILE_LNS_6330) != 0;
+    if(!model) return;
+    if(lns) obor_preload_begin();
+    cache_model_sprites(model, 0);
+    free_model(model);
+    if(lns) obor_preload_end();
+}
 
 void unload_levelorder()
 {
@@ -13014,6 +13827,22 @@ void unload_levelorder()
         levelsets = NULL;
     }
 
+    free(savescore_modes);
+    savescore_modes = NULL;
+    savescore_modes_count = 0;
+    savescore_difficulty_count = 0;
+    free(savescore_difficulty_variable);
+    savescore_difficulty_variable = NULL;
+    for(i = 0; i < MAX_DIFFICULTIES; ++i)
+    {
+        free(savescore_difficulty_names[i]);
+        savescore_difficulty_names[i] = NULL;
+    }
+    free(savescore_initials);
+    savescore_initials = NULL;
+    savescore_max_time = 20;
+    savescore_min_time = 8;
+    savescore_extra_time = 3;
     num_difficulties = 0;
 }
 
@@ -13394,6 +14223,87 @@ void load_levelorder()
             branch_name[0] = 0;
             le = NULL;
             break;
+        case CMD_LEVELORDER_HALLFAME:
+        {
+            int available_difficulties_count = (arglist.count - 1) / 2;
+            // check if we are using the new savescore system
+            if(savescore_difficulty_count > 0 && available_difficulties_count > 0)
+            {
+                if(num_difficulties <= 0 || savescore_difficulty_count > MAX_DIFFICULTIES ||
+                   savescore_modes_count == UINT16_MAX ||
+                   (size_t)savescore_modes_count + 1 > SIZE_MAX / sizeof(s_savescore) / savescore_difficulty_count)
+                {
+                    borShutdown(1, "Invalid high-score mode declaration.\n");
+                }
+                size_t count = ((size_t)savescore_modes_count + 1) * savescore_difficulty_count;
+                s_savescore *modes = realloc(savescore_modes, sizeof(s_savescore) * count);
+                if(!modes)
+                {
+                    borShutdown(1, "Out of memory allocating high scores.\n");
+                }
+                savescore_modes = modes;
+                ++savescore_modes_count;
+
+                // initialize the new memory block with 0s
+                s_savescore *savescore_mode = &savescore_modes[(savescore_modes_count - 1) * savescore_difficulty_count];
+                memset(savescore_mode, 0, sizeof(s_savescore) * savescore_difficulty_count);
+
+                // init each available difficulty for this mode
+                for(int difficulty_index = 0; difficulty_index < savescore_difficulty_count; ++difficulty_index)
+                {
+                    savescore_mode[difficulty_index].mode = num_difficulties - 1;
+                    savescore_mode[difficulty_index].difficulty = difficulty_index;
+                }
+
+                // enable the available difficulties in this mode
+                for(int difficulty_index = 0; difficulty_index < available_difficulties_count; ++difficulty_index)
+                {
+                    int arg_index = (difficulty_index * 2) + 1; 
+                    int difficulty = GET_INT_ARG(arg_index);
+                    int credits = GET_INT_ARG(arg_index + 1);
+                    if(difficulty >= 0 && difficulty < savescore_difficulty_count)
+                    {
+                        savescore_mode[difficulty].compatibleversion = CV_HIGH_SCORE;
+                        savescore_mode[difficulty].credits = credits;
+                    }
+                }
+            }
+            break;
+        }
+        case CMD_LEVELORDER_HALLFAMEDIFFICULTIES:
+        {
+            int count = arglist.count - 2;
+            if(count < 0 || count > MAX_DIFFICULTIES ||
+               (savescore_modes && count != savescore_difficulty_count))
+            {
+                borShutdown(1, "Invalid high-score difficulty declaration.\n");
+            }
+            savescore_difficulty_count = count;
+            if(savescore_difficulty_count > 0)
+            {
+                free(savescore_difficulty_variable);
+                savescore_difficulty_variable = NAME(GET_ARG(1));
+                for(int difficulty_index = 0; difficulty_index < savescore_difficulty_count; ++difficulty_index)
+                {
+                    free(savescore_difficulty_names[difficulty_index]);
+                    savescore_difficulty_names[difficulty_index] = NAME(GET_ARG(difficulty_index + 2));
+                }
+            }
+            break;
+        }
+        case CMD_LEVELORDER_HALLFAMEINITIALS:
+        {
+            free(savescore_initials);
+            savescore_initials = NAME(GET_ARG(1));
+            break;
+        }
+        case CMD_LEVELORDER_HALLFAMETIMES:
+        {
+            savescore_max_time = GET_INT_ARG(1);
+            savescore_min_time = GET_INT_ARG(2);
+            savescore_extra_time = GET_INT_ARG(3);
+            break;
+        }
         case CMD_LEVELORDER_IFCOMPLETE:
             CHKDEF;
             set->ifcomplete = GET_INT_ARG(1);
@@ -14418,6 +15328,8 @@ void load_levelorder()
         }
     }
 
+    if(obor_profile_features & OBOR_PROFILE_LNS_6330) initHighScore();
+
 lCleanup:
 
     if(buf)
@@ -14664,7 +15576,7 @@ static void addhole(float x, float z, float x1, float x2, float x3, float x4, fl
     level->numholes++;
 }
 
-static void addwall(float x, float z, float x1, float x2, float x3, float x4, float depth, float alt, int type)
+static void addwall(float x, float z, float x1, float x2, float x3, float x4, float depth, float alt, int type, double ignore_projectile_wall_collision)
 {
     __realloc(level->walls, level->numwalls);
     level->walls[level->numwalls].x = x;
@@ -14676,6 +15588,7 @@ static void addwall(float x, float z, float x1, float x2, float x3, float x4, fl
     level->walls[level->numwalls].depth = depth;
     level->walls[level->numwalls].height = alt;
     level->walls[level->numwalls].type = type;
+    level->walls[level->numwalls].ignore_projectile_wall_collision = (ignore_projectile_wall_collision >= INT_MIN && ignore_projectile_wall_collision <= INT_MAX) ? (int)ignore_projectile_wall_collision : 0;
 
     level->numwalls++;
 }
@@ -14827,7 +15740,7 @@ void load_level(char *filename)
         init_colourtable();
     }
 
-    update_loading(&loadingbg[1], -1, 1); // initialize the update screen
+    update_loading(&loadingbg[1], (obor_profile_features & OBOR_PROFILE_LNS_6330) ? 0 : -1, 1); // initialize the update screen
 
     memset(&next, 0, sizeof(next));
 
@@ -14911,7 +15824,7 @@ void load_level(char *filename)
             standard_palette(1);
             lifebar_colors();
             init_colourtable();
-            update_loading(&bgPosi, -1, 1); // initialize the update screen
+            update_loading(&bgPosi, (obor_profile_features & OBOR_PROFILE_LNS_6330) ? 0 : -1, 1); // initialize the update screen
             break;
         case CMD_LEVEL_MUSICFADE:
             memset(&next, 0, sizeof(next));
@@ -14970,9 +15883,10 @@ void load_level(char *filename)
             tempmodel = findmodel(GET_ARG(1));
             if (!tempmodel)
             {
-                load_cached_model(GET_ARG(1), filename, GET_INT_ARG(2));
+                load_cached_model(GET_ARG(1), filename,
+                    (obor_profile_features & OBOR_PROFILE_LNS_6330) ? 3 : GET_INT_ARG(2));
             }
-            else
+            else if(!(obor_profile_features & OBOR_PROFILE_LNS_6330))
             {
                 update_model_loadflag(tempmodel, GET_INT_ARG(2));
             }
@@ -15432,7 +16346,7 @@ void load_level(char *filename)
             addhole(GET_FLOAT_ARG(1), GET_FLOAT_ARG(2), GET_FLOAT_ARG(3), GET_FLOAT_ARG(4), GET_FLOAT_ARG(5), GET_FLOAT_ARG(6), GET_FLOAT_ARG(7), GET_FLOAT_ARG(8), GET_FLOAT_ARG(9));
             break;
         case CMD_LEVEL_WALL:
-            addwall(GET_FLOAT_ARG(1), GET_FLOAT_ARG(2), GET_FLOAT_ARG(3), GET_FLOAT_ARG(4), GET_FLOAT_ARG(5), GET_FLOAT_ARG(6), GET_FLOAT_ARG(7), GET_FLOAT_ARG(8), GET_FLOAT_ARG(9));
+            addwall(GET_FLOAT_ARG(1), GET_FLOAT_ARG(2), GET_FLOAT_ARG(3), GET_FLOAT_ARG(4), GET_FLOAT_ARG(5), GET_FLOAT_ARG(6), GET_FLOAT_ARG(7), GET_FLOAT_ARG(8), GET_FLOAT_ARG(9), (obor_profile_features & OBOR_PROFILE_LNS_6330) ? GET_FLOAT_ARG(10) : 0);
             break;
         case CMD_LEVEL_BASEMAP:
             addbasemap(GET_FLOAT_ARG(1), GET_FLOAT_ARG(2), GET_FLOAT_ARG(3), GET_FLOAT_ARG(4), GET_FLOAT_ARG(5), GET_FLOAT_ARG(6), GET_FLOAT_ARG(7));
@@ -15589,7 +16503,8 @@ void load_level(char *filename)
             }
             else
             {
-                tempmodel = load_cached_model(GET_ARG(1), filename, 0);
+                tempmodel = load_cached_model(GET_ARG(1), filename,
+                    (obor_profile_features & OBOR_PROFILE_LNS_6330) ? 3 : 0);
             }
             if(tempmodel)
             {
@@ -15708,7 +16623,8 @@ void load_level(char *filename)
             }
             else
             {
-                tempmodel = load_cached_model(GET_ARG(1), filename, 0);
+                tempmodel = load_cached_model(GET_ARG(1), filename,
+                    (obor_profile_features & OBOR_PROFILE_LNS_6330) ? 3 : 0);
             }
             if(tempmodel)
             {
@@ -15735,7 +16651,8 @@ void load_level(char *filename)
             }
             else
             {
-                tempmodel = load_cached_model(GET_ARG(1), filename, 0);
+                tempmodel = load_cached_model(GET_ARG(1), filename,
+                    (obor_profile_features & OBOR_PROFILE_LNS_6330) ? 3 : 0);
             }
             if(tempmodel)
             {
@@ -15999,7 +16916,7 @@ void load_level(char *filename)
 
     if(exit_blocked)
     {
-        addwall(level->width - 30, PLAYER_MAX_Z, -panel_height, 0, 1000, 1000, panel_height, MAX_WALL_HEIGHT + 1, 0);
+        addwall(level->width - 30, PLAYER_MAX_Z, -panel_height, 0, 1000, 1000, panel_height, MAX_WALL_HEIGHT + 1, 0, 0);
     }
     if(exit_hole)
     {
@@ -16103,7 +17020,8 @@ void bar(int x, int y, int value, int maxvalue, s_barstatus *pstatus)
             }
             else
             {
-                colourindex = value / (max + 1) + 3;
+                colourindex = (obor_profile_features & OBOR_PROFILE_LNS_6330)
+                    ? ((value - 1) / max) + 3 : value / (max + 1) + 3;
                 bgindex = colourindex - 1;
             }
             if(colourindex > 10)
@@ -16184,6 +17102,17 @@ void bar(int x, int y, int value, int maxvalue, s_barstatus *pstatus)
 /* The reconstructed test profile keeps four incoming attack IDs. */
 static int obor_attack_seen(const entity *target, unsigned int id, int ignore)
 {
+    if(obor_profile_features & OBOR_PROFILE_LNS_6330)
+    {
+        int index = target->lns_attack_id_incoming_index;
+        for(int i = 0; i < 100; ++i)
+        {
+            if(target->lns_attack_id_incoming[index] == id) return 1;
+            if(target->lns_attack_id_incoming[index] == 0) break;
+            if(--index < 0) index = 99;
+        }
+        return 0;
+    }
     if(ignore) return 0;
     if(target->attack_id_incoming == id) return 1;
     return (obor_profile_features & OBOR_PROFILE_ATTACK_HISTORY_FOUR) && !multihitcheat &&
@@ -16192,8 +17121,16 @@ static int obor_attack_seen(const entity *target, unsigned int id, int ignore)
          target->attack_id_incoming4 == id);
 }
 
-static void obor_remember_attack(entity *target, unsigned int id)
+/* LNS v0.10g circular history: Hechelion and Gonzalo MVP enhancements. */
+void obor_remember_attack(entity *target, unsigned int id)
 {
+    if(obor_profile_features & OBOR_PROFILE_LNS_6330)
+    {
+        if(++target->lns_attack_id_incoming_index >= 100)
+            target->lns_attack_id_incoming_index = 0;
+        target->lns_attack_id_incoming[target->lns_attack_id_incoming_index] = id;
+        return;
+    }
     if((obor_profile_features & OBOR_PROFILE_ATTACK_HISTORY_FOUR))
     {
         target->attack_id_incoming4 = target->attack_id_incoming3;
@@ -16351,6 +17288,9 @@ void updatestatus()
 {
 
     int dt;
+    const bool lns = (obor_profile_features & OBOR_PROFILE_LNS_6330) != 0;
+    bool all_dead = true, hurry_time = false;
+    char *name = NULL;
     int i;
     s_model *model = NULL;
     s_set_entry *set = levelsets + current_set;
@@ -16359,12 +17299,12 @@ void updatestatus()
     {
         if(player[i].ent)
         {
-            ;
+            all_dead = false;
         }
         else if(player[i].joining && player[i].name[0])
         {
             model = findmodel(player[i].name);
-            if((player[i].playkeys & FLAG_ANYBUTTON || skipselect[i][0]) && !freezeall && !nojoin)    // Can't join while animations are frozen
+            if((player[i].playkeys & (lns ? (FLAG_START | FLAG_ATTACK) : FLAG_ANYBUTTON) || skipselect[i][0]) && !freezeall && !nojoin)    // Can't join while animations are frozen
             {
                 if(!model) continue;
                 player[i].lives = PLAYER_LIVES;            // to address new lives settings
@@ -16401,12 +17341,29 @@ void updatestatus()
 
                 player[i].playkeys = 0;
             }
-            // don't like a characters color try a new one!
-            else if(player[i].playkeys & (FLAG_MOVEUP | FLAG_MOVEDOWN) && colourselect)
+            else if(lns && (player[i].playkeys & (FLAG_MOVEUP | FLAG_MOVEDOWN)))
             {
                 if(!model) continue;
-                player[i].colourmap = ((player[i].playkeys & FLAG_MOVEUP) ? nextcolourmapn : prevcolourmapn)(model, player[i].colourmap, i);
+                model = ((player[i].playkeys & FLAG_MOVEUP) ? prevplayermodelcoln : nextplayermodelcoln)(model, i);
+                if(!model) continue;
+                strcpy(player[i].name, model->name);
+                player[i].colourmap = (colourselect && (set->nosame & 2)) ? nextcolourmapn(model, -1, i) : 0;
+                player[i].playkeys = 0;
+            }
+            // don't like a characters color try a new one!
+            else if(player[i].playkeys & (lns ? (FLAG_JUMP | FLAG_SPECIAL) : (FLAG_MOVEUP | FLAG_MOVEDOWN)) && colourselect)
+            {
+                if(!model) continue;
+                player[i].colourmap = ((player[i].playkeys & (lns ? FLAG_JUMP : FLAG_MOVEUP)) ? nextcolourmapn : prevcolourmapn)(model, player[i].colourmap, i);
 
+                player[i].playkeys = 0;
+            }
+            else if(lns && (player[i].playkeys & FLAG_ATTACK2))
+            {
+                model = selectrandomplayer(model);
+                if(!model) continue;
+                strcpy(player[i].name, model->name);
+                player[i].colourmap = colourselect ? selectrandomcolourmap(model, i) : 0;
                 player[i].playkeys = 0;
             }
         }
@@ -16415,12 +17372,32 @@ void updatestatus()
             if(player[i].playkeys & FLAG_START)
             {
                 player[i].lives = 0;
-                model = skipselect[i][0] ? findmodel(skipselect[i]) : nextplayermodeln(NULL, i);
+                int prev_color = 0;
+                if(lns)
+                {
+                    obor_lns_players[i] = 1;
+                    if(skipselect[i][0])
+                    {
+                        name = skipselect[i];
+                        model = findmodel(name);
+                    }
+                    else if(player[i].name[0])
+                    {
+                        name = player[i].name;
+                        model = findmodel(name);
+                        prev_color = player[i].colourmap;
+                    }
+                    else model = nextplayermodeln(NULL, i);
+                    if(!model && name)
+                        model = load_cached_model(name, "continue_screen", OBOR_LNS_QUICK_MODEL);
+                }
+                else model = skipselect[i][0] ? findmodel(skipselect[i]) : nextplayermodeln(NULL, i);
                 /* AnyBOR: keep unresolved selections outside model storage. */
                 if(!model) continue;
                 strncpy(player[i].name, model->name, MAX_NAME_LEN);
 
-                player[i].colourmap = (colourselect && (set->nosame & 2)) ? nextcolourmapn(model, -1, i) : 0;
+                player[i].colourmap = (colourselect && (set->nosame & 2)) ?
+                    nextcolourmapn(model, (lns ? prev_color : 0) - 1, i) : (lns ? prev_color : 0);
 
                 player[i].joining = 1;
                 player[i].disablekeys = player[i].playkeys = player[i].newkeys = player[i].releasekeys = 0;
@@ -16456,9 +17433,15 @@ void updatestatus()
                 }
             }
         }
+        if(lns && !player[i].ent && player[i].hasplayed && (player[i].playkeys & FLAG_ATTACK))
+        {
+            hurry_time = true;
+            player[i].playkeys = 0;
+        }
     }// end of for
 
     dt = timeleft / COUNTER_SPEED;
+    if(lns && hurry_time && all_dead) timeleft = dt * COUNTER_SPEED;
     if(dt >= 99)
     {
         dt      = 99;
@@ -18554,6 +19537,9 @@ unsigned char *model_get_colourmap(s_model *model, unsigned which)
 // 0 = none, 1+ = alternative
 void ent_set_colourmap(entity *ent, unsigned int which)
 {
+    if((obor_profile_features & OBOR_PROFILE_LNS_6330) && which <= 0 && ent->owner)
+        which = ent->owner->map;
+
     if(which > ent->modeldata.maps_loaded)
     {
         which = 0;
@@ -18743,6 +19729,53 @@ void ent_set_model(entity *ent, char *modelname, int syncAnim)
 }
 
 
+/* Spawn locks a newly loaded, non-player model only above ten frames.
+ * The physical engine allocates animation tables lazily, so absent slots
+ * beyond animation_capacity represent the original table's NULL entries. */
+static s_model *obor_lns_spawn_model(char *name, int index, s_model *model)
+{
+    int i, count_frames = 0;
+    if(model) return model;
+    if(index < 0 && name) index = get_cached_model_index(name);
+    if(index < 0 || index >= models_cached) return NULL;
+    model = model_cache[index].model;
+    if(model) return model;
+    model = load_cached_model(model_cache[index].name, "spawn", 3);
+    if(!model) return NULL;
+    for(i = 0; model->animation && i < max_animations && i < model->animation_capacity; ++i)
+    {
+        s_anim *anim = model->animation[i];
+        if(anim && anim->numframes > 0)
+        {
+            if(count_frames > INT_MAX - anim->numframes) count_frames = INT_MAX;
+            else count_frames += anim->numframes;
+        }
+    }
+    if(count_frames > 10 && model->type != TYPE_PLAYER && model->type != TYPE_TEXTBOX)
+    {
+        update_model_loadflag(model, 0);
+        printf("Locked in memory model %s with %d frames\n", model->name, count_frames);
+    }
+    return model;
+}
+
+static s_model *obor_lns_changed_model(char *name, int index, s_model *model)
+{
+    if(model) return model;
+    if(index >= 0)
+    {
+        if(index >= models_cached) return NULL;
+        model = model_cache[index].model;
+        if(!model) model = load_cached_model(model_cache[index].name, "change_model", 3);
+    }
+    else
+    {
+        model = findmodel(name);
+        if(!model && name) model = load_cached_model(name, "change_model", 3);
+    }
+    return model;
+}
+
 entity *spawn(float x, float z, float a, int direction, char *name, int index, s_model *model)
 {
     entity *e = NULL;
@@ -18752,7 +19785,9 @@ entity *spawn(float x, float z, float a, int direction, char *name, int index, s
     Varlist *vars;
     s_scripts *scripts;
 
-    if(!model)
+    if(obor_profile_features & OBOR_PROFILE_LNS_6330)
+        model = obor_lns_spawn_model(name, index, model);
+    else if(!model)
     {
         if(index >= 0)
         {
@@ -19819,11 +20854,11 @@ int testmove(entity *ent, float sx, float sz, float x, float z)
     // screen checking
     if(ent->modeldata.subject_to_screen > 0)
     {
-        if(x < advancex + 10)
+        if(((obor_profile_features & OBOR_PROFILE_LNS_6330) ? x + 0.5f : x) < advancex + 10)
         {
             return 0;
         }
-        else if(x > advancex + (videomodes.hRes - 10))
+        else if(((obor_profile_features & OBOR_PROFILE_LNS_6330) ? x - 0.5f : x) > advancex + (videomodes.hRes - 10))
         {
             return 0;
         }
@@ -20324,7 +21359,7 @@ void do_attack(entity *e)
     int fdefense_blockthreshold; //max damage that can be blocked for attack type.
 
     // Can't get hit after this
-    if(level_completed)
+    if(!(obor_profile_features & OBOR_PROFILE_LNS_6330) && level_completed)
     {
         return;
     }
@@ -20366,6 +21401,12 @@ void do_attack(entity *e)
         target = ent_list[i];
 
         if(!target->exists)
+        {
+            continue;
+        }
+
+        if((obor_profile_features & OBOR_PROFILE_LNS_6330) &&
+           level_completed && (target->modeldata.type & TYPE_PLAYER))
         {
             continue;
         }
@@ -20543,7 +21584,8 @@ void do_attack(entity *e)
                 self->toexplode = 2;    // Used so the bomb type entity explodes when hit
             }
             //if #052
-            if(e->toexplode == 1)
+            if(e->toexplode == 1 &&
+               (!(obor_profile_features & OBOR_PROFILE_LNS_6330) || !e->modeldata.noexplode))
             {
                 e->toexplode = 2;    // Used so the bomb type entity explodes when hitting
             }
@@ -20566,7 +21608,8 @@ void do_attack(entity *e)
                       inair(self) ||
                       self->frozen ||
                       (self->direction == e->direction && self->modeldata.blockback < 1) ||                       // Can't block an attack that is from behind unless blockback flag is enabled
-                      (!self->idling && self->attacking != ATTACKING_INACTIVE)) &&                                                 // Can't block if busy, attack <0 means the character is preparing to attack, he can block during this time
+                      (!self->idling && ((obor_profile_features & OBOR_PROFILE_LNS_6330)
+                        ? self->attacking >= 0 : self->attacking != ATTACKING_INACTIVE))) &&                                                 // Can't block if busy, attack <0 means the character is preparing to attack, he can block during this time
                     attack->no_block <= self->defense[attack->attack_type].blockpower &&       // If unblockable, will automatically hit
                     (rand32()&self->modeldata.blockodds) == 1 && // Randomly blocks depending on blockodds (1 : blockodds ratio)
                     (!self->modeldata.thold || (self->modeldata.thold > 0 && self->modeldata.thold > force)) &&
@@ -20769,7 +21812,13 @@ void do_attack(entity *e)
                 else
                 if(!attack->no_flash)
                 {
-                    if(!self->modeldata.noatflash)
+                    if((obor_profile_features & OBOR_PROFILE_LNS_6330) &&
+                       self->modeldata.flashoverridesource >= 0 &&
+                       self->modeldata.flashoverridesource == attack->hitflash)
+                    {
+                        flash = spawn(lasthit.position.x, lasthit.position.z, lasthit.position.y, 0, NULL, self->modeldata.flashoverridetarget, NULL);
+                    }
+                    else if(!self->modeldata.noatflash)
                     {
                         if(attack->hitflash >= 0)
                         {
@@ -21580,6 +22629,11 @@ void adjust_base(entity *e, entity **pla)
     {
         *pla = other = self->landed_on_platform = NULL;
     }
+
+    if((obor_profile_features & OBOR_PROFILE_LNS_6330) &&
+       (self->spawntype == SPAWN_TYPE_PROJECTILE_NORMAL || self->spawntype == SPAWN_TYPE_PROJECTILE_BOMB) &&
+       other && (other->modeldata.ignore_projectile_wall_collision || other->modeldata.type == TYPE_OBSTACLE))
+        return;
 
     if(other && !(other->update_mark & 8))
     {
@@ -22929,8 +23983,10 @@ void display_ents()
                     {
                         // If this entity is not an exception to the rule,
                         // move its display order in front of owner.
-                        if (!(self->modeldata.aimove & AIMOVE1_STAR) &&
-                            (obor_profile_build != 6330 || !(self->modeldata.aimove & AIMOVE1_BOOMERANG)))
+                        if (((obor_profile_features & OBOR_PROFILE_LNS_6330)
+                            ? (!(e->modeldata.aimove & AIMOVE1_BOOMERANG) && !(e->modeldata.aimove & AIMOVE1_STAR))
+                            : (!(self->modeldata.aimove & AIMOVE1_STAR) &&
+                            (obor_profile_build != 6330 || !(self->modeldata.aimove & AIMOVE1_BOOMERANG)))))
                         {
                             sortid = e->owner->sortid + 1;
                         }
@@ -23042,7 +24098,7 @@ void display_ents()
                         spriteq_add_sprite((int)(e->position.x - scrx), (int)(e->position.z - e->position.y - scry), z, f, drawmethod, sortid);
                     }
 
-                    can_mirror = (use_mirror && self->position.z > MIRROR_Z);
+                    can_mirror = (use_mirror && ((obor_profile_features & OBOR_PROFILE_LNS_6330) ? e->position.z : self->position.z) > MIRROR_Z);
                     if(can_mirror)
                     {
                         spriteq_add_sprite((int)(e->position.x - scrx), (int)((2 * MIRROR_Z - e->position.z) - e->position.y - scry), 2 * PANEL_Z - z , f, drawmethod, ent_list_size * 100 - sortid);
@@ -23651,6 +24707,13 @@ int set_riseattack(entity *iRiseattack, int type, int reset)
         type = 0;
     }
 
+    if((obor_profile_features & OBOR_PROFILE_LNS_6330) && (!validanim(iRiseattack, animriseattacks[type]) ||
+        (iRiseattack->inbackpain && !validanim(iRiseattack, animbackriseattacks[type]) && !validanim(iRiseattack, animriseattacks[type]))) &&
+       iRiseattack->modeldata.riseattacktype == 3 )
+    {
+        return 0;
+    }
+
     if ( iRiseattack->inbackpain ) riseattack = animbackriseattacks[type];
     else riseattack = animriseattacks[type];
 
@@ -23688,6 +24751,7 @@ int set_riseattack(entity *iRiseattack, int type, int reset)
     iRiseattack->rising = 0;
     iRiseattack->riseattacking = 1;
     iRiseattack->drop = 0;
+    if(obor_profile_features & OBOR_PROFILE_LNS_6330) iRiseattack->projectile = 0;
     iRiseattack->nograb = iRiseattack->nograb_default; //iRiseattack->nograb = 0;
     iRiseattack->modeldata.jugglepoints.current = iRiseattack->modeldata.jugglepoints.max; //reset jugglepoints
     return 1;
@@ -23889,7 +24953,9 @@ void set_model_ex(entity *ent, char *modelname, int index, s_model *newmodel, in
     model = ent->model;
     tempe.exists = 0;
 
-    if(!newmodel)
+    if(obor_profile_features & OBOR_PROFILE_LNS_6330)
+        newmodel = obor_lns_changed_model(modelname, index, newmodel);
+    else if(!newmodel)
     {
         if(index >= 0)
         {
@@ -25118,11 +26184,11 @@ entity *drop_item(entity *e)
         }
         if(!(level->scrolldir & (SCROLL_UP | SCROLL_DOWN)))
         {
-            if(item->position.z - item->position.y < advancey)
+            if(((obor_profile_features & OBOR_PROFILE_LNS_6330) ? item->position.z : item->position.z - item->position.y) < advancey)
             {
                 item->position.z = advancey + 10;
             }
-            else if(item->position.z - item->position.y > advancey + videomodes.vRes)
+            else if(((obor_profile_features & OBOR_PROFILE_LNS_6330) ? item->position.z : item->position.z - item->position.y) > advancey + videomodes.vRes)
             {
                 item->position.z = advancey + videomodes.vRes - 10;
             }
@@ -25234,7 +26300,28 @@ void checkdeath()
 
 void checkdamageflip(entity *other, s_collision_attack *attack)
 {
+    e_direction_adjust force_direction = DIRECTION_ADJUST_NONE;
     self->normaldamageflipdir = -1;
+
+    if((obor_profile_features & OBOR_PROFILE_LNS_6330) && other && attack)
+    {
+        force_direction =  attack->force_direction;
+
+        // if override is set use next value instead of the attack value
+        if(other->override_next_force_direction > 0)
+        {
+            force_direction = other->next_force_direction;
+
+            // disable override if it was set to only override once
+            if(other->override_next_force_direction == 1)
+            {
+                other->override_next_force_direction = 0;
+            }
+        }
+
+        // save used force_direction for next time
+        other->next_force_direction = force_direction;
+    }
 
     if(other == NULL || other == self || (!self->drop && (attack->no_pain || self->modeldata.nopain || (self->defense[attack->attack_type].pain && attack->attack_force < self->defense[attack->attack_type].pain))))
     {
@@ -25243,7 +26330,8 @@ void checkdamageflip(entity *other, s_collision_attack *attack)
 
     if(!self->frozen && !self->modeldata.noflip)// && !inair(self))
     {
-        switch(attack->force_direction)
+        switch((obor_profile_features & OBOR_PROFILE_LNS_6330)
+               ? force_direction : attack->force_direction)
         {
             case DIRECTION_ADJUST_NONE:
                 if( !self->inbackpain )
@@ -26517,8 +27605,80 @@ void npc_warp()
     }
 }
 
+static int obor_lns_adjust_grabposition(entity *ent, entity *other, float dist, int grabin)
+{
+    float x1, z1, x2, z2, x;
+    int ent_testmove, other_testmove;
+
+    //if(ent->position.y != other->position.y)
+    if(diff(ent->position.y,other->position.y) > T_WALKOFF)
+    {
+        return 0;
+    }
+    //if(ent->base != other->base)
+    if(diff(ent->base,other->base) > T_WALKOFF)
+    {
+        return 0;
+    }
+
+    if(grabin == 1)
+    {
+        x1 = ent->position.x;
+        z1 = z2 = ent->position.z;
+        x2 = ent->position.x + ((other->position.x > ent->position.x) ? dist : -dist);
+    }
+    else
+    {
+        x = (ent->position.x + other->position.x) / 2;
+        x1 = x + ((ent->position.x >= other->position.x) ? (dist / 2) : (-dist / 2));
+        x2 = x + ((other->position.x > ent->position.x) ? (dist / 2) : (-dist / 2));
+        z1 = z2 = (ent->position.z + other->position.z) / 2;
+    }
+
+    other_testmove = testmove(other, other->position.x, other->position.z, x2, z2);
+    // If it is not possible to move the opponent we try to move only the attacker
+    if(other_testmove <= 0)
+    {
+        x1 = other->position.x + ((ent->position.x >= other->position.x) ? dist : -dist);
+        x2 = other->position.x;
+        z1 = z2 = other->position.z;
+        ent_testmove = testmove(ent, ent->position.x, ent->position.z, x1, z1);
+        if(ent_testmove <= 0)
+        {
+            return 0;
+        }
+    }
+    else
+    {
+        ent_testmove = testmove(ent, ent->position.x, ent->position.z, x1, z1);
+        // If it is not possible to move the attacker we try to move only the opponent
+        if(ent_testmove <= 0)
+        {
+            x1 = ent->position.x;
+            x2 = ent->position.x + ((other->position.x > ent->position.x) ? dist : -dist);
+            z1 = z2 = ent->position.z;
+            other_testmove = testmove(other, other->position.x, other->position.z, x2, z2);
+            if(other_testmove <= 0)
+            {
+                return 0;
+            }
+        }
+    }
+
+    ent->position.x = x1;
+    ent->position.z = z1;
+    other->position.x = x2;
+    other->position.z = z2;
+    //other->position.y = ent->position.y;
+    //other->base = ent->base;
+    return 1;
+}
+
 int adjust_grabposition(entity *ent, entity *other, float dist, int grabin)
 {
+    if(obor_profile_features & OBOR_PROFILE_LNS_6330)
+        return obor_lns_adjust_grabposition(ent, other, dist, grabin);
+
     float x1, z1, x2, z2, x;
 
     //if(ent->position.y != other->position.y)
@@ -28909,7 +30069,10 @@ int arrow_move()
     if(level)
     {
         // Bounce off walls or platforms.
-        projectile_wall_deflect(self);
+        if(obor_profile_features & OBOR_PROFILE_LNS_6330)
+            check_projectile_wall_collision(self);
+        else
+            projectile_wall_deflect(self);
     }
 
     if(self->projectile_prime & PROJECTILE_PRIME_BASE_FLOOR)
@@ -28983,6 +30146,7 @@ entity *check_block_obstacle(entity *ent)
         // Add Y position to get the exact Y axis
         // height of the entity's top edge.
         height += ent->position.y;
+        if((obor_profile_features & OBOR_PROFILE_LNS_6330) && height < 0) height = 0;
 
         // Find obstacle at entitiy's position (if any).
         obstacle = check_platform_between(ent->position.x, ent->position.z, ent->position.y, height, ent);
@@ -28998,6 +30162,8 @@ entity *check_block_obstacle(entity *ent)
 // Returns 1 on successful ricochet. 0 otherwise.
 int projectile_wall_deflect(entity *ent)
 {
+    if(obor_profile_features & OBOR_PROFILE_LNS_6330) return 0;
+
     #define FALL_FORCE                  1000    // Knockdown force that will be applied to projectile entity.
     #define RICHOCHET_VELOCITY_X_FACTOR 0.25    // This value is multiplied by current velocity to get an X velocity value to bounce off wall..
     #define RICHOCHET_VELOCITY_Y        2.5     // Base Y velocity applied when projectile bounces off wall.
@@ -29050,6 +30216,186 @@ int projectile_wall_deflect(entity *ent)
     #undef RICHOCHET_VELOCITY_X_FACTOR
     #undef RICHOCHET_VELOCITY_Y
     #undef RICHOCHET_VELOCITY_Y_RAND
+}
+
+/* Keep undefined floating-to-integer conversions out of collision handling. */
+static int obor_lns_wall_integer(double value, int *out)
+{
+    if(!(value >= INT_MIN && value <= INT_MAX)) return 0;
+    *out = (int)value;
+    return 1;
+}
+
+int check_projectile_wall_collision(entity *ent)
+{
+    int blocking_wall;
+    entity *blocking_obstacle = NULL;
+    s_collision_attack *attack = NULL;
+    int attack_min_y = 0;
+    int attack_max_y = 0;
+    int hit_pos_x = 0;
+    int hit_pos_y = 0;
+    int hit_pos_z = 0;
+    bool use_attack_anim = true;
+
+    // skip if the projectile is forced to ignore wall collisions
+    if(!ent || !level || ent->modeldata.ignore_projectile_wall_collision || ent->hitwall)
+    {
+       return 0; 
+    }
+
+    // skip if there is no attack collider enabled
+    if(ent->animation && ent->animation->numframes > 0 &&
+        ent->animpos < (unsigned)ent->animation->numframes &&
+        ent->animation->collision_attack &&
+        ent->animation->collision_attack[ent->animpos] &&
+        ent->animation->collision_attack[ent->animpos]->instance &&
+        ent->animation->collision_attack[ent->animpos]->obor_instance_capacity &&
+        ent->animation->collision_attack[ent->animpos]->instance[0] &&
+        ent->animation->collision_attack[ent->animpos]->instance[0]->coords)
+    {
+        attack = ent->animation->collision_attack[ent->animpos]->instance[0];
+    }
+    else
+    {
+        return 0;
+    }
+
+    // Calculate attack collider min and max height positions
+    if(!obor_lns_wall_integer(ent->position.y - attack->coords->height, &attack_min_y) ||
+       !obor_lns_wall_integer(ent->position.y - attack->coords->y, &attack_max_y) ||
+       (int64_t)attack_min_y + attack_max_y < INT_MIN ||
+       (int64_t)attack_min_y + attack_max_y > INT_MAX ||
+       !obor_lns_wall_integer(ent->direction == DIRECTION_LEFT ?
+           ent->position.x - attack->coords->width : ent->position.x + attack->coords->width, &hit_pos_x) ||
+       !obor_lns_wall_integer((attack_min_y + attack_max_y) * 0.5, &hit_pos_y) ||
+       hit_pos_y < INT_MIN + 17 ||
+       !obor_lns_wall_integer(ent->position.z + 1, &hit_pos_z)) return 0;
+
+    blocking_wall = check_block_wall(self);
+    if(blocking_wall >= level->numwalls || !level->walls) blocking_wall = -1;
+    if(blocking_wall >= 0)
+    {
+        // Check wall height
+        if(attack_min_y > level->walls[blocking_wall].height)
+        {
+            blocking_wall = -1;
+        }
+
+         // Some walls should be ignored
+        if(blocking_wall >= 0 && level->walls[blocking_wall].ignore_projectile_wall_collision)
+        {
+            blocking_wall = -1;
+        }
+    }
+
+    if(blocking_wall < 0)
+    {
+        blocking_obstacle = check_block_obstacle(self);
+
+        if(blocking_obstacle && (!blocking_obstacle->animation ||
+           blocking_obstacle->animation->numframes <= 0 ||
+           blocking_obstacle->animpos >= (unsigned)blocking_obstacle->animation->numframes ||
+           !blocking_obstacle->animation->platform)) blocking_obstacle = NULL;
+        if(blocking_obstacle)
+        {
+            // Check obstacle height
+            if(attack_max_y < blocking_obstacle->position.y ||
+            attack_min_y > blocking_obstacle->position.y + blocking_obstacle->animation->platform[blocking_obstacle->animpos][PLATFORM_HEIGHT])
+            {
+                blocking_obstacle = NULL;
+            }
+
+            // Some obstacles should be ignored
+            if(blocking_obstacle &&
+            (blocking_obstacle->modeldata.ignore_projectile_wall_collision || blocking_obstacle->modeldata.type == TYPE_OBSTACLE))
+            {
+                blocking_obstacle = NULL;
+            }
+        }        
+    }
+
+    if(blocking_wall >= 0 || blocking_obstacle)
+    {
+        // disable next wall collision checks for this entity
+        ent->hitwall = 1;
+
+        // The following code is copying the projectile behavior when its attack hits a target
+
+        if(ent->pausetime < _time || (inair(ent) && !equalairpause))        // if equalairpause is set, inair(e) is nolonger a condition for extra pausetime
+        {
+            // Adds pause to the current animation
+            ent->toss_time += attack->pause_add;      // So jump height pauses in midair
+            ent->nextmove += attack->pause_add;      // xdir, zdir
+            ent->nextanim += attack->pause_add;       //Pause animation for a bit
+            ent->nextthink += attack->pause_add;      // So anything that auto moves will pause
+            ent->pausetime = _time + attack->pause_add ; //UT: temporary solution
+        }
+
+        // Integer coordinates were range-checked before mutating the projectile.
+        hit_pos_y -= 17;
+
+        entity *flash = spawn(hit_pos_x, hit_pos_z, hit_pos_y, 0, NULL, 2, NULL);
+        if(flash)
+        {
+            flash->spawntype = SPAWN_TYPE_FLASH;
+            execute_onspawn_script(flash);
+            if(flash->modeldata.toflip)
+            {
+                flash->direction = (ent->direction == DIRECTION_LEFT);    // Now the flash will flip depending on which side the attacker is on
+            }
+            flash->base = hit_pos_y;
+            flash->autokill = 2;
+        }
+
+        // projectiles with a followup animation
+        if(ent->animation->followup.animation > 0 &&
+           ent->animation->followup.animation <= max_follows && animfollows)
+        {
+            int current_follow_id = animfollows[ent->animation->followup.animation - 1];
+            if(validanim(ent, current_follow_id))
+            {
+                if(!ent->modeldata.animation[current_follow_id]->attackone)
+                {
+                    ent->modeldata.animation[current_follow_id]->attackone = ent->animation->attackone;
+                }
+                ent_set_anim(ent, current_follow_id, 1);          // Then go to it!
+                use_attack_anim = false; // if there is a folloup anim we don't need to use the attack anim
+            }
+        }
+        // bombs
+        if(ent->toexplode == 1)
+        {
+            ent->toexplode = 2;    // Used so the bomb type entity explodes when hitting
+            use_attack_anim = false; // attack anim will be set during bomb_move
+        }
+
+        if(use_attack_anim)
+        {
+            if(validanim(ent, ANI_ATTACK2))
+            {
+                ent_set_anim(ent, ANI_ATTACK2, 0);
+            }
+            else if (validanim(ent, ANI_ATTACK1))
+            {
+                ent_set_anim(ent, ANI_ATTACK1, 0);
+            }
+        }
+
+        // play a block sound
+        sound_play_sample(SAMPLE_BLOCK, 0, savedata.effectvol, savedata.effectvol, 100);
+        
+        // if the projectile is configured to be removed on attack, kill it immediately
+        if(ent->remove_on_attack)
+        {
+            kill_entity(ent);
+        }
+        
+        return 1;
+    }
+    
+    // Did not collide, so return false.
+    return 0;
 }
 
 // Caskey, Damon V.
@@ -29482,6 +30828,7 @@ entity *boomerang_spawn(char *name, int index, float x, float z, float a, int di
 
     e->spawntype = SPAWN_TYPE_PROJECTILE_BOOMERANG;
     e->owner = self;                                                     // Added so projectiles don't hit the owner
+    if(obor_profile_features & OBOR_PROFILE_LNS_6330) e->playerindex = self->playerindex;
     e->nograb = 1;                                                       // Prevents trying to grab a projectile
     e->attacking = ATTACKING_ACTIVE;
     //e->direction = direction;
@@ -29583,6 +30930,9 @@ int bomb_move()
             ent_set_anim(self, ANI_ATTACK1, 0);
         }
     }
+    if((obor_profile_features & OBOR_PROFILE_LNS_6330) && level)
+        check_projectile_wall_collision(self);
+
     return 1;
 }
 
@@ -33259,6 +34609,7 @@ entity *knife_spawn(char *name, int index, float x, float z, float a, int direct
 
     e->spawntype = SPAWN_TYPE_PROJECTILE_NORMAL;
     e->owner = self;                                                     // Added so projectiles don't hit the owner
+    if(obor_profile_features & OBOR_PROFILE_LNS_6330) e->playerindex = self->playerindex;
     e->nograb = 1;                                                       // Prevents trying to grab a projectile
     e->attacking = ATTACKING_ACTIVE;
     //e->direction = direction;
@@ -33357,6 +34708,7 @@ entity *bomb_spawn(char *name, int index, float x, float z, float a, int directi
     e->spawntype = SPAWN_TYPE_PROJECTILE_BOMB;
     e->attacking = ATTACKING_ACTIVE;
     e->owner = self;                                                     // Added so projectiles don't hit the owner
+    if(obor_profile_features & OBOR_PROFILE_LNS_6330) e->playerindex = self->playerindex;
     e->nograb = 1;                                                       // Prevents trying to grab a projectile
     e->toexplode = 1;                                                    // Set to distinguish exploding projectiles and also so stops falling when hitting an opponent
     ent_set_colourmap(e, map);
@@ -33431,6 +34783,7 @@ int star_spawn(float x, float z, float a, int direction)  // added entity to kno
         e->sortid = first_sortid - i;
         e->takedamage = arrow_takedamage;//enemy_takedamage;    // Players can now hit projectiles
         e->owner = self;    // Added so enemy projectiles don't hit the owner
+        if(obor_profile_features & OBOR_PROFILE_LNS_6330) e->playerindex = self->playerindex;
         e->attacking = ATTACKING_ACTIVE;
         e->nograb = 1;    // Prevents trying to grab a projectile
         if (self->animation->starvelocity)
@@ -33955,10 +35308,19 @@ int is_incam(float x, float z, float a, float threshold)
 void spawnplayer(int index)
 {
     s_spawn_entry p;
-    //s_model * model = NULL;
+    s_model *model = NULL;
     int wall;
     int xc, zc, find = 0;
     index &= 3;
+    if(obor_profile_features & OBOR_PROFILE_LNS_6330)
+    {
+        model = findmodel(player[index].name);
+        if(model && model->quickload)
+        {
+            unload_model(model);
+            load_cached_model(player[index].name, "spawn_player", 3);
+        }
+    }
 
 //    model = find_model(player[index].name);
 //    if(model == NULL) return;
@@ -35861,6 +37223,24 @@ void fade_out(int type, int speed)
 
 
 
+int allow_default_keys(void)
+{
+    int allowed = 0;
+
+    // allow default keys if not playing a level and not in select screen
+    if (level == NULL)
+    {
+        allowed = !selectScreen;
+    }
+    // during levels only allow default keys in pause
+    else
+    {
+       allowed = _pause;
+    }
+
+    return allowed;
+}
+
 void apply_controls()
 {
     int p;
@@ -35879,7 +37259,8 @@ void apply_controls()
         control_setkey(playercontrolpointers[p], FLAG_JUMP,       savedata.keys[p][SDID_JUMP]);
         control_setkey(playercontrolpointers[p], FLAG_SPECIAL,    savedata.keys[p][SDID_SPECIAL]);
         control_setkey(playercontrolpointers[p], FLAG_START,      savedata.keys[p][SDID_START]);
-        control_setkey(playercontrolpointers[p], FLAG_SCREENSHOT, savedata.keys[p][SDID_SCREENSHOT]);
+        if(!(obor_profile_features & OBOR_PROFILE_LNS_6330) || p == 0)
+            control_setkey(playercontrolpointers[p], FLAG_SCREENSHOT, savedata.keys[p][SDID_SCREENSHOT]);
     }
 }
 
@@ -35891,14 +37272,14 @@ void display_credits()
 {
     u32 finishtime = _time + 10 * GAME_SPEED;
     int done = 0;
-    int s = videomodes.vShift / 2 + 3;
+    int s = videomodes.vShift / 2 + ((obor_profile_features & OBOR_PROFILE_LNS_6330) ? 2 : 3);
     int v = (videomodes.vRes - videomodes.vShift) / 24;
     int m = 0;
     int h = videomodes.hRes / 2;
     int col1 = h - fontmonowidth(0) * 16;
     int col2 = h + fontmonowidth(0) * 4;
 
-    if(savedata.logo != 1)
+    if(!(obor_profile_features & OBOR_PROFILE_LNS_6330) && savedata.logo != 1)
     {
         return;
     }
@@ -35957,6 +37338,16 @@ void display_credits()
 
         font_printf(col1,  s + v * m, 0, 0, "PS Vita");
         font_printf(col2, s + v * m, 0, 0, "Plombo"); ++m;
+
+        if(obor_profile_features & OBOR_PROFILE_LNS_6330)
+        {
+            font_printf(_strmidx(1, "LNS Enhancements"), s + v * m,  1, 0, "LNS Enhancements"); ++m;
+            font_printf(col1, s + v * m, 0, 0, "Hechelion");
+            font_printf(col2, s + v * m, 0, 0, "Developer"); ++m;
+    
+            font_printf(col1, s + v * m, 0, 0, "Gonzalo MVP");
+            font_printf(col2, s + v * m, 0, 0, "Developer"); ++m;
+        }
 
         update(2, 0);
 
@@ -36306,7 +37697,7 @@ void startup()
 #endif
 
     ob_inittrans();
-    loadHighScoreFile();
+    if(!(obor_profile_features & OBOR_PROFILE_LNS_6330)) loadHighScoreFile();
     clearSavedGame();
 
     init_videomodes(1);
@@ -36626,7 +38017,8 @@ void playscene(char *filename)
                 skipone = GET_INT_ARG(4);
                 noskip = GET_INT_ARG(5);
                 status = playgif(videofile, x, y, noskip);
-                if(status == -1 && !skipone)
+                if((status == -1 && !skipone) ||
+                   ((obor_profile_features & OBOR_PROFILE_LNS_6330) && (bothnewkeys & FLAG_ESC)))
                 {
                     closing = 1;
                 }
@@ -36721,6 +38113,415 @@ void gameover()
 
 
 
+static void obor_lns_score_name(char destination[MAX_NAME_LEN], const char *source)
+{
+    size_t length = 0;
+    while(length < MAX_NAME_LEN - 1 && source[length]) ++length;
+    memcpy(destination, source, length);
+    destination[length] = 0;
+}
+
+void hallfame_add()
+{
+    if(!(obor_profile_features & OBOR_PROFILE_LNS_6330) || !levelsets ||
+       current_set < 0 || current_set >= num_difficulties ||
+       savescore_difficulty_count == 0 || savescore_difficulty_count > MAX_DIFFICULTIES)
+    {
+        return;
+    }
+    const char *initials_alphabet = savescore_initials ? savescore_initials : savescore_initials_default;
+    size_t initials_count = strlen(initials_alphabet);
+    if(initials_count == 0) initials_count = 1; /* The sole safe character is the stored NUL. */
+    int done = 0;
+    bool allow_skip = true;
+    bool all_players_done = true;
+    int p, y;
+    int col1 = -14;
+    int col2 = 11;
+
+    int new_record_player[10];
+    int player_ranking_pos[MAX_PLAYERS];
+    int player_initials[MAX_PLAYERS][NUM_INITIALS];
+    int player_initial_index[MAX_PLAYERS];
+    s_savescore *savescore_mode = NULL;
+    int difficulty = 0;
+    int time_limit = savescore_min_time;
+
+    // initializations
+    memset(new_record_player, -1, sizeof(int) * 10);
+    memset(player_ranking_pos, -1, sizeof(int) * MAX_PLAYERS);
+    memset(player_initials, 0, sizeof(int) * MAX_PLAYERS * NUM_INITIALS);
+    memset(player_initial_index, 0, sizeof(int) * MAX_PLAYERS);
+
+    // get current difficulty
+    if(savescore_difficulty_variable && List_FindByName(global_var_list.list, savescore_difficulty_variable))
+    {
+        ScriptVariant *var = (ScriptVariant *)List_Retrieve(global_var_list.list);
+        if(var && var->vt == VT_INTEGER)
+        {
+            difficulty = var->lVal;
+        }
+    }
+
+    // check if it is a valid mode and difficulty
+    if(difficulty >= 0 && difficulty < savescore_difficulty_count && levelsets[current_set].savescore)
+    {
+        savescore_mode = &levelsets[current_set].savescore[difficulty];
+    }
+    if(!savescore_mode || savescore_mode->compatibleversion != CV_HIGH_SCORE)
+    {
+        return;
+    }
+
+    // only enter record if gameover or finished game
+    bool isFinished = (current_level >= levelsets[current_set].numlevels);
+    bool isGameOver = true;
+    for(p = 0; p < MAX_PLAYERS; ++p)
+    {
+        if(player[p].ent)
+        {
+            isGameOver = false;
+            break;
+        }
+    }
+
+    if(isFinished || isGameOver)
+    {
+        // insert each player score in the correct table position
+        for(p = 0; p < MAX_PLAYERS; ++p)
+        {
+            bool isAlive = player[p].ent;
+            bool is1CC = isFinished && isAlive && noshare && (player[p].credits == savescore_mode->credits - 1);
+            char initials[NUM_INITIALS];
+            for(int initial_index = 0; initial_index < NUM_INITIALS; ++initial_index)
+            {
+                int initial = player_initials[p][initial_index];
+                initials[initial_index] = initials_alphabet[initial];
+            }
+            for(int table_pos = 9; table_pos >= 0 && player[p].score > savescore_mode->highsc[table_pos]; --table_pos)
+            {
+                // if there is a new record give some time to enter initials
+                allow_skip = false;
+                all_players_done = false;
+                time_limit = savescore_max_time;
+                
+                // if not the last row we move the info one row below
+                if(table_pos < 9)
+                {
+                    savescore_mode->highsc[table_pos + 1] = savescore_mode->highsc[table_pos];
+                    strcpy(savescore_mode->hscoren[table_pos + 1], savescore_mode->hscoren[table_pos]);
+                    memcpy(savescore_mode->hscorei[table_pos + 1], savescore_mode->hscorei[table_pos], sizeof(char) * NUM_INITIALS);
+                    savescore_mode->is1CC[table_pos + 1] = savescore_mode->is1CC[table_pos];
+                    new_record_player[table_pos + 1] = new_record_player[table_pos];
+                }
+
+                // move other player positions in table if necessary
+                if(new_record_player[table_pos] >= 0)
+                {
+                    player_ranking_pos[new_record_player[table_pos]] = table_pos + 1;
+                }
+
+                // copy player info to the current row
+                savescore_mode->highsc[table_pos] = player[p].score;
+                obor_lns_score_name(savescore_mode->hscoren[table_pos], player[p].name);
+                memcpy(savescore_mode->hscorei[table_pos], initials, sizeof(char) * NUM_INITIALS);
+                savescore_mode->is1CC[table_pos] = is1CC;
+                new_record_player[table_pos] = p;
+
+                // save current player position in table
+                player_ranking_pos[p] = table_pos;
+            }
+        }
+    }
+
+    _time = 0;
+
+    while(!done)
+    {
+        y = 56;
+        if(!hiscorebg)
+        {
+            font_printf(_strmidx(3, Tr("Hall Of Fame")), y - fontheight(3) - 10 + videomodes.vShift, 3, 0, Tr("Hall Of Fame"));
+        }
+
+        // mode and difficulty
+        _menutextm(0, -10, 0, "%s", levelsets[current_set].name);
+        _menutextm(0, -9, 0, "%s", savescore_difficulty_names[difficulty]);
+        
+        for(int i = 0; i < 10; i++)
+        {
+            int player = new_record_player[i];
+            int highlighted_line = player >= 0;
+            
+            // player number
+            if(highlighted_line)
+            {
+                font_printf(_colx(highlighted_line, col1 - 2), y + videomodes.vShift, highlighted_line, 0, "P%d", player + 1);
+            }
+
+            // rank position
+            font_printf(_colx(highlighted_line, col1), y + videomodes.vShift, highlighted_line, 0, "%2i.", i + 1);
+
+            // initials
+            int initial_colx = _colx(0, col1 + 2);
+            int initial_extra_separation = font_string_width(0, "[");
+            for(int initial_index = 0; initial_index < NUM_INITIALS; ++initial_index)
+            {
+                int selected_initial = highlighted_line && player_initial_index[player] == initial_index;
+                int highlighted_initial = highlighted_line && !selected_initial;
+                if(selected_initial)
+                {
+                    font_printf(initial_colx - initial_extra_separation, y + videomodes.vShift, 0, 0, "[");
+                }
+                font_printf(initial_colx, y + videomodes.vShift, highlighted_initial, 0, "%c", savescore_mode->hscorei[i][initial_index]);
+                if(selected_initial)
+                {
+                    font_printf(initial_colx + fontmonowidth(0), y + videomodes.vShift, 0, 0, "]");
+                }
+                initial_colx += fontmonowidth(0) + initial_extra_separation;
+            }
+
+            // name
+            font_printf(_colx(highlighted_line, col1 + 7), y + videomodes.vShift, highlighted_line, 0, "%s", savescore_mode->hscoren[i]);
+
+            // score
+            int score_width = font_string_width(highlighted_line, (scoreformat ? "%09u" : "%u"), savescore_mode->highsc[i]);
+            font_printf(_colx(highlighted_line, col2) - score_width, y + videomodes.vShift, highlighted_line, 0, (scoreformat ? "%09u" : "%u"), savescore_mode->highsc[i]);
+            
+            // 1CC
+            if(savescore_mode->is1CC[i])
+            {
+                font_printf(_colx(highlighted_line, col2 + 1), y + videomodes.vShift, highlighted_line, 0, "1CC");
+            }
+            y += (videomodes.vRes - videomodes.vShift - 56 - 32) / 10; //font_heights[topten[i]] + 6;
+        }
+
+        update(0, 0);
+        
+        // check elapsed time
+        done |= (_time > (u32)((int64_t)GAME_SPEED * time_limit));
+        // check skip
+        done |= allow_skip && (bothnewkeys & (FLAG_START | FLAG_ESC));
+        
+        if(!all_players_done)
+        {
+            all_players_done = true;
+
+            // process player inputs
+            for(p = 0; p < levelsets[current_set].maxplayers && p < MAX_PLAYERS; ++p)
+            {   
+                int ranking_pos = player_ranking_pos[p];
+                int *initial_index = &player_initial_index[p];
+                int *initial = &player_initials[p][*initial_index];
+                // check if in rank and not already done
+                if(ranking_pos >= 0 && ranking_pos < 10 && *initial_index < NUM_INITIALS)
+                {
+                    // previous character
+                    if(player[p].newkeys & FLAG_MOVEDOWN)
+                    {
+                        sound_play_sample(SAMPLE_BEEP, 0, savedata.effectvol, savedata.effectvol, 100);
+                        --*initial;
+                        if(*initial < 0)
+                        {
+                            *initial = initials_count - 1;
+                        }
+                    }
+                    // next character
+                    else if(player[p].newkeys & FLAG_MOVEUP)
+                    {
+                        sound_play_sample(SAMPLE_BEEP, 0, savedata.effectvol, savedata.effectvol, 100);
+                        ++*initial;
+                        if(*initial > initials_count - 1)
+                        {
+                            *initial = 0;
+                        }
+                    }
+                    // previous initial
+                    else if(player[p].newkeys & FLAG_MOVELEFT)
+                    {
+                        sound_play_sample(SAMPLE_BEEP, 0, savedata.effectvol, savedata.effectvol, 100);
+                        --*initial_index;
+                        if(*initial_index < 0)
+                        {
+                            *initial_index = 0;
+                        }
+                    }
+                    // next initial
+                    else if(player[p].newkeys & (FLAG_MOVERIGHT | FLAG_ATTACK))
+                    {
+                        if((*initial_index < NUM_INITIALS - 1) || (player[p].newkeys & FLAG_ATTACK))
+                        {
+                            sound_play_sample(SAMPLE_BEEP, 0, savedata.effectvol, savedata.effectvol, 100);
+                            ++*initial_index;
+                        }
+                    }
+                    // done
+                    else if(player[p].newkeys & FLAG_START)
+                    {
+                        sound_play_sample(SAMPLE_BEEP, 0, savedata.effectvol, savedata.effectvol, 100);
+                        *initial_index = NUM_INITIALS;
+                    }
+
+                    // update status
+                    if(*initial_index < NUM_INITIALS)
+                    {
+                        initial = &player_initials[p][*initial_index];
+                        savescore_mode->hscorei[ranking_pos][*initial_index] = initials_alphabet[*initial];
+                        all_players_done = false;
+                    }
+                }
+            }
+            // if all players are done give a few more seconds before exiting
+            if(all_players_done)
+            {
+                time_limit = (_time / GAME_SPEED) + savescore_extra_time;
+            }
+            // otherwise print remaining time
+            else
+            {
+                _menutextm(0, 10, 0, "Time: %02d", time_limit - (_time / GAME_SPEED));
+            }
+        }
+    }
+
+    saveHighScoreFile();
+}
+
+void hallfame_show()
+{
+    if(!(obor_profile_features & OBOR_PROFILE_LNS_6330) || !levelsets || !savescore_modes ||
+       savescore_modes_count == 0 || savescore_difficulty_count == 0 ||
+       savescore_difficulty_count > MAX_DIFFICULTIES)
+    {
+        return;
+    }
+    int done = 0;
+    int y;
+    int col1 = -14;
+    int col2 = 11;
+
+    s_savescore *savescore_mode = NULL;
+    bool selected_menu = 0;
+    int mode = 0;
+    int difficulty = 0;
+    
+    while(!done)
+    {
+        y = 56;
+        if(!hiscorebg)
+        {
+            font_printf(_strmidx(3, Tr("Hall Of Fame")), y - fontheight(3) - 10 + videomodes.vShift, 3, 0, Tr("Hall Of Fame"));
+        }
+
+        savescore_mode = &savescore_modes[mode * savescore_difficulty_count + difficulty];
+        if(savescore_mode->mode >= num_difficulties)
+        {
+            return;
+        }
+
+        // Mode selection
+        _menutextm((selected_menu ? 0 : 1), -10, 0, (selected_menu ? "%s" : "< %s >"), levelsets[savescore_mode->mode].name);
+
+        // Difficulty selection
+        _menutextm((selected_menu ? 1 : 0), -9, 0, (selected_menu ? "< %s >" : "%s"), savescore_difficulty_names[difficulty]);
+        
+        if(savescore_mode->compatibleversion == CV_HIGH_SCORE)
+        {
+            for(int i = 0; i < 10; i++)
+            {
+                // rank position
+                font_printf(_colx(0, col1), y + videomodes.vShift, 0, 0, "%2i.", i + 1);
+
+                // initials
+                int initial_colx = _colx(0, col1 + 2);
+                int initial_extra_separation = font_string_width(0, "[");
+                for(int initial_index = 0; initial_index < NUM_INITIALS; ++initial_index)
+                {
+                    font_printf(initial_colx, y + videomodes.vShift, 0, 0, "%c", savescore_mode->hscorei[i][initial_index]);
+                    initial_colx += fontmonowidth(0) + initial_extra_separation;
+                }
+
+                // name
+                font_printf(_colx(0, col1 + 7), y + videomodes.vShift, 0, 0, "%s", savescore_mode->hscoren[i]);
+
+                // score
+                int score_width = font_string_width(0, (scoreformat ? "%09u" : "%u"), savescore_mode->highsc[i]);
+                font_printf(_colx(0, col2) - score_width, y + videomodes.vShift, 0, 0, (scoreformat ? "%09u" : "%u"), savescore_mode->highsc[i]);
+                
+                // 1CC
+                if(savescore_mode->is1CC[i])
+                {
+                    font_printf(_colx(0, col2 + 1), y + videomodes.vShift, 0, 0, "1CC");
+                }
+                y += (videomodes.vRes - videomodes.vShift - 56 - 32) / 10; //font_heights[topten[i]] + 6;
+            }
+        }
+        else
+        {
+            _menutextm(0, -1, 0, "Not available");
+        }
+
+        update(0, 0);
+        
+        // check exit
+        done |= (bothnewkeys & (FLAG_ESC | FLAG_ANYBUTTON));
+
+        // process player inputs
+        if(bothnewkeys & FLAG_MOVELEFT)
+        {
+            sound_play_sample(SAMPLE_BEEP, 0, savedata.effectvol, savedata.effectvol, 100);
+            // previous mode
+            if(!selected_menu)
+            {
+                --mode;
+            }
+            // previous difficulty
+            else
+            {
+                --difficulty;
+            }
+        }
+        else if(bothnewkeys & FLAG_MOVERIGHT)
+        {
+            sound_play_sample(SAMPLE_BEEP, 0, savedata.effectvol, savedata.effectvol, 100);
+             // next mode
+            if(!selected_menu)
+            {
+                ++mode;
+            }
+            // next difficulty
+            else
+            {
+                ++difficulty;
+            }
+        }
+        // change menu item
+        if(bothnewkeys & (FLAG_MOVEUP | FLAG_MOVEDOWN))
+        {
+           sound_play_sample(SAMPLE_BEEP, 0, savedata.effectvol, savedata.effectvol, 100);
+           selected_menu = !selected_menu;
+        }
+
+        // clamp values
+        if(mode >= savescore_modes_count)
+        {
+            mode = 0;
+        }
+        else if(mode < 0)
+        {
+            mode = savescore_modes_count - 1; 
+        }
+        if(difficulty >= savescore_difficulty_count)
+        {
+            difficulty = 0;
+        }
+        else if(difficulty < 0)
+        {
+            difficulty = savescore_difficulty_count - 1; 
+        }
+    }
+}
+
 void hallfame(int addtoscore)
 {
     int done = 0;
@@ -36747,6 +38548,15 @@ void hallfame(int addtoscore)
         {
             load_cached_background("data/bgs/hiscore", 0);
         }
+    }
+
+    if((obor_profile_features & OBOR_PROFILE_LNS_6330) && savescore_modes)
+    {
+        if(addtoscore) hallfame_add();
+        else hallfame_show();
+        unload_background();
+        hallOfFame = 0;
+        return;
     }
 
     if(addtoscore)
@@ -36968,6 +38778,7 @@ void savelevelinfo()
     s_set_entry *set = levelsets + current_set;
     s_savelevel *save = savelevel + current_set;
 
+    if(obor_profile_features & OBOR_PROFILE_LNS_6330) save->compatibleversion = CV_SAVED_GAME;
     save->flag = set->saveflag;
     // don't check flag here save all info, for simple logic
     for(i = 0; i < set->maxplayers; i++)
@@ -37195,14 +39006,20 @@ static void load_select_screen_info(s_savelevel *save)
     char *filename = ""; // not used, just fused into GET_INT_ARG()
     char *command = ""; // not used, just fused into GET_INT_ARG()
 
+    if(save->selectLoadCount > MAX_SELECT_LOADS)
+    {
+        borShutdown(1, "Too many saved selection model commands.\n");
+        return;
+    }
+
     // load model_loads
     for(i = 0; i < save->selectLoadCount; i++)
     {
         s_model *tempmodel;
+        ParseArgs(&arglist, save->selectLoad[i], argbuf);
         command = GET_ARG(0);
 
         if(!command || !command[0]) continue;
-        ParseArgs(&arglist, save->selectLoad[i], argbuf);
 
         tempmodel = findmodel(GET_ARG(1));
         if (tempmodel)
@@ -37244,12 +39061,15 @@ int selectplayer(int *players, char *filename, int useSavedGame)
     s_savelevel *save = savelevel + current_set;
     int load_count = 0, saved_select_screen = 0;
     int is_first_select = 1;
+    const bool lns = (obor_profile_features & OBOR_PROFILE_LNS_6330) != 0;
+    s_player player_copy[MAX_PLAYERS];
 
     savelevelinfo();
 
     selectScreen = 1;
     kill_all();
     if( allowselect_args[0] != 'a' && allowselect_args[0] != 'A' ) reset_playable_list(1); // 'a' is the first char of allowselect, if there's 'a' then there is allowselect
+    if(lns) memcpy(player_copy, player, sizeof(*player) * 4);
     memset(player, 0, sizeof(*player) * 4);
 
     if(useSavedGame && save)
@@ -37267,6 +39087,7 @@ int selectplayer(int *players, char *filename, int useSavedGame)
     for(i = 0; i < set->maxplayers; i++)
     {
         player[i].hasplayed = players[i];
+        if(lns && player[i].hasplayed) strcpy(player[i].name, player_copy[i].name);
     }
 
     for(i = 0; i < set->maxplayers; i++)
@@ -37312,9 +39133,10 @@ int selectplayer(int *players, char *filename, int useSavedGame)
                     tempmodel = findmodel(GET_ARG(1));
                     if (!tempmodel)
                     {
-                        load_cached_model(GET_ARG(1), filename, GET_INT_ARG(2));
+                        load_cached_model(GET_ARG(1), filename,
+                    (obor_profile_features & OBOR_PROFILE_LNS_6330) ? 3 : GET_INT_ARG(2));
                     }
-                    else
+                    else if(!lns)
                     {
                         update_model_loadflag(tempmodel, GET_INT_ARG(2));
                     }
@@ -37440,7 +39262,7 @@ int selectplayer(int *players, char *filename, int useSavedGame)
     {
         if(players[i])
         {
-            example[i] = spawnexample(i);
+            if(!lns) example[i] = spawnexample(i);
             player[i].playkeys = 0;
             if(defaultselect)
             {
@@ -37464,6 +39286,7 @@ int selectplayer(int *players, char *filename, int useSavedGame)
                 if(noshare) player[i].credits = savelevel[current_set].pCredits[i];
                 else credits = savelevel[current_set].credits;
             }
+            if(lns && player[i].lives > 0) example[i] = spawnexample(i);
         }
     }
 
@@ -37476,12 +39299,14 @@ int selectplayer(int *players, char *filename, int useSavedGame)
         {
             if(!ready[i])
             {
-                if(!player[i].hasplayed && (noshare || credits > 0) && (player[i].newkeys & FLAG_ANYBUTTON))
+                if((lns ? (!example[i] && (player[i].credits || credits || (!player[i].hasplayed && noshare))) :
+                          (!player[i].hasplayed && (noshare || credits > 0))) && (player[i].newkeys & FLAG_ANYBUTTON))
                 {
+                    if(lns && !player[i].hasplayed && noshare) player[i].credits = CONTINUES;
                     players[i] = player[i].hasplayed = 1;
                     //printf("%d %d %d\n", i, player[i].lives, immediate[i]);
 
-                    if(noshare)
+                    if(!lns && noshare)
                     {
                         player[i].credits = CONTINUES;
                     }
@@ -37518,13 +39343,37 @@ int selectplayer(int *players, char *filename, int useSavedGame)
                     player[i].colourmap = (colourselect && (set->nosame & 2)) ? nextcolourmapn(example[i]->model, -1, i) : 0;
                     ent_set_colourmap(example[i], player[i].colourmap);
                 }
+				else if(lns && player[i].newkeys & (FLAG_MOVEUP | FLAG_MOVEDOWN) && example[i])
+				{
+					if(SAMPLE_BEEP >= 0)
+                    {
+                        sound_play_sample(SAMPLE_BEEP, 0, savedata.effectvol, savedata.effectvol, 100);
+                    }
+                    ent_set_model(example[i], ((player[i].newkeys & FLAG_MOVEUP) ? prevplayermodelcoln : nextplayermodelcoln)(example[i]->model,i)->name, 0);
+
+                    strcpy(player[i].name, example[i]->model->name);
+                    player[i].colourmap = (colourselect && (set->nosame & 2)) ? nextcolourmapn(example[i]->model, -1, i) : 0;
+                    ent_set_colourmap(example[i], player[i].colourmap);
+				}
                 // oooh pretty colors! - selectable color scheme for player characters
-                else if(player[i].newkeys & (FLAG_MOVEUP | FLAG_MOVEDOWN) && colourselect && example[i])
+                else if(player[i].newkeys & (lns ? (FLAG_JUMP | FLAG_SPECIAL) : (FLAG_MOVEUP | FLAG_MOVEDOWN)) && colourselect && example[i])
                 {
-                    player[i].colourmap = ((player[i].newkeys & FLAG_MOVEUP) ? nextcolourmapn : prevcolourmapn)(example[i]->model, player[i].colourmap, i);
+                    player[i].colourmap = ((player[i].newkeys & (lns ? FLAG_JUMP : FLAG_MOVEUP)) ? nextcolourmapn : prevcolourmapn)(example[i]->model, player[i].colourmap, i);
                     ent_set_colourmap(example[i], player[i].colourmap);
                 }
-                else if((player[i].newkeys & FLAG_ANYBUTTON) && example[i])
+                else if(lns && player[i].newkeys & FLAG_ATTACK2 && example[i])
+                {
+                    if(SAMPLE_BEEP >= 0)
+                    {
+                        sound_play_sample(SAMPLE_BEEP, 0, savedata.effectvol, savedata.effectvol, 100);
+                    }
+                    ent_set_model(example[i], selectrandomplayer(example[i]->model)->name, 0);
+                    strcpy(player[i].name, example[i]->model->name);
+
+                    player[i].colourmap = (colourselect) ? selectrandomcolourmap(example[i]->model, i) : 0;
+                    ent_set_colourmap(example[i], player[i].colourmap);
+                }
+                else if((player[i].newkeys & (lns ? FLAG_ATTACK : FLAG_ANYBUTTON)) && example[i])
                 {
                     if(SAMPLE_BEEP2 >= 0)
                     {
@@ -37632,6 +39481,10 @@ void playgame(int *players,  unsigned which_set, int useSavedGame)
         }
         current_level = save->level;
         current_stage = save->stage;
+        if((obor_profile_features & OBOR_PROFILE_LNS_6330) && current_level >= set->numlevels)
+        {
+            return;
+        }
         if(save->flag == 2) // don't check 1 or 0 becuase if we use saved game the flag must be >0
         {
             for(i = 0; i < set->maxplayers; i++)
@@ -37643,6 +39496,8 @@ void playgame(int *players,  unsigned which_set, int useSavedGame)
                 player[i].weapnum = save->pWeapnum[i];
                 player[i].spawnhealth = save->pSpawnhealth[i];
                 player[i].spawnmp = save->pSpawnmp[i];
+                if(obor_profile_features & OBOR_PROFILE_LNS_6330)
+                    player[i].hasplayed = players[i] = save->pName[i][0] ? 1 : 0;
                 strncpy(player[i].name, save->pName[i], MAX_NAME_LEN);
                 if(!memchr(player[i].name, 0, sizeof(player[i].name)))
                     player[i].name[sizeof(player[i].name) - 1] = 0;
@@ -37709,14 +39564,17 @@ void playgame(int *players,  unsigned which_set, int useSavedGame)
                 set->noselect = 0;
                 for(i = 0; i < set->maxplayers; i++) // reset skipselect
                 {
-                    if(le->skipselect[i])
+                    if((obor_profile_features & OBOR_PROFILE_LNS_6330) ? le->skipselect[i] == NULL : le->skipselect[i] != NULL)
                     {
                         skipselect[i][0] = 0;
                     }
                 }
-                for(i = 0; i < set->maxplayers ; i++)
+                if(!(obor_profile_features & OBOR_PROFILE_LNS_6330))
                 {
-                    players[i] = (player[i].lives > 0);
+                    for(i = 0; i < set->maxplayers ; i++)
+                    {
+                        players[i] = (player[i].lives > 0);
+                    }
                 }
                 if(selectplayer(players, le->filename, useSavedGame) == 0)
                 {
@@ -37796,6 +39654,7 @@ void playgame(int *players,  unsigned which_set, int useSavedGame)
         if(current_level >= set->numlevels)
         {
             bonus += save->times_completed++;
+            if(obor_profile_features & OBOR_PROFILE_LNS_6330) save->level = current_level;
             saveGameFile();
             if(!nofadeout)
             {
@@ -37810,6 +39669,7 @@ void playgame(int *players,  unsigned which_set, int useSavedGame)
 
 endgame:
     // clear global script variant list
+    if(obor_profile_features & OBOR_PROFILE_LNS_6330) memset(player, 0, sizeof(*player) * MAX_PLAYERS);
     branch_name[0] = 0;
     sound_close_music();
 }
@@ -37818,7 +39678,9 @@ int menu_difficulty()
 {
     int quit = 0;
     int selector = 0;
-    int maxdisplay = 5;
+    const bool lns = (obor_profile_features & OBOR_PROFILE_LNS_6330) != 0;
+    int maxdisplay = lns ? 14 : 5;
+    int init_menu_y = lns ? -5 : 0;
     int i, j, t;
     //float slider = 0;
     int barx, bary, barw, barh;
@@ -37838,7 +39700,7 @@ int menu_difficulty()
     {
         if(num_difficulties > 1)
         {
-            _menutextm(2, -2, 0, Tr("Game Mode"));
+            _menutextm(2, lns ? -5 : -2, 0, Tr("Game Mode"));
             t = (selector - (selector == num_difficulties)) / maxdisplay * maxdisplay;
             for(j = 0, i = t; i < maxdisplay + t && i < num_difficulties; j++, i++)
             {
@@ -37846,17 +39708,17 @@ int menu_difficulty()
                 {
                     if(bonus >= levelsets[i].ifcomplete)
                     {
-                        _menutextm((selector == i), j, 0, "%s", levelsets[i].name);
+                        _menutextm((selector == i), init_menu_y + j, 0, "%s", levelsets[i].name);
                     }
                     else
                     {
                         if(levelsets[i].ifcomplete > 1)
                         {
-                            _menutextm((selector == i), j, 0, Tr("%s - Finish Game %i Times To UnLock"), levelsets[i].name, levelsets[i].ifcomplete);
+                            _menutextm((selector == i), init_menu_y + j, 0, Tr("%s - Finish Game %i Times To UnLock"), levelsets[i].name, levelsets[i].ifcomplete);
                         }
                         else
                         {
-                            _menutextm((selector == i), j, 0, Tr("%s - Finish Game To UnLock"), levelsets[i].name);
+                            _menutextm((selector == i), init_menu_y + j, 0, Tr("%s - Finish Game To UnLock"), levelsets[i].name);
                         }
                     }
                 }
@@ -37865,7 +39727,7 @@ int menu_difficulty()
                     break;
                 }
             }
-            _menutextm((selector == i), 6, 0, Tr("Back"));
+            _menutextm((selector == i), lns ? init_menu_y + MIN(num_difficulties, maxdisplay) + 3 : 6, 0, Tr("Back"));
 
             //draw the scroll bar
             if(num_difficulties > maxdisplay)
@@ -37957,6 +39819,8 @@ int load_saved_game()
     int quit = 0;
     int selector = 0;
     int savedStatus = 0;
+    const bool lns = (obor_profile_features & OBOR_PROFILE_LNS_6330) != 0;
+    bool allow_load = true;
     char name[MAX_BUFFER_LEN] = {""};
     int col1 = -8, col2 = 6;
 
@@ -37996,7 +39860,51 @@ int load_saved_game()
                 _menutext(0, col2, -2, Tr("Not Found!"));
             }
 
-            if(savedStatus)
+            if(savedStatus && lns)
+            {
+                _menutext((selector == 0), col1, -1, Tr("Mode:"));
+
+                allow_load = true;
+                // Don't load finished saves
+                if(savelevel[saveslot].level >= levelsets[saveslot].numlevels)
+                {
+                    allow_load = false;
+                    _menutext(0, col2, -1, "%.*s", (int)sizeof(savelevel[saveslot].dName), savelevel[saveslot].dName);
+                    _menutext(0, col2, 0, "(Finished)");
+                }
+                // Don't load saves with a different version
+                else if(savelevel[saveslot].compatibleversion != CV_SAVED_GAME)
+                {
+                    allow_load = false;
+                    _menutext(0, col2, -1, "%.*s", (int)sizeof(savelevel[saveslot].dName), savelevel[saveslot].dName);
+                    _menutext(0, col2, 0, "(Not compatible)");
+                }
+                else
+                {
+                    _menutext((selector == 0), col2, -1, "%.*s", (int)sizeof(savelevel[saveslot].dName), savelevel[saveslot].dName);
+                    _menutext(0, col1, 0, Tr("Stage:"));
+                    _menutext(0, col2, 0, "%d", savelevel[saveslot].stage);
+                    _menutext(0, col1, 1, Tr("Level:"));
+                    _menutext(0, col2, 1, "%d", savelevel[saveslot].level);
+                    _menutext(0, col1, 2, Tr("Credits:"));
+
+                    if(noshare){
+                        _menutext(0, col2, 2, "%d/%d/%d/%d",
+                                    savelevel[saveslot].pCredits[0],
+                                    savelevel[saveslot].pCredits[1], savelevel[saveslot].pCredits[2],
+                                    savelevel[saveslot].pCredits[3]);
+                    } else {
+                        _menutext(0, col2, 2, "%d", savelevel[saveslot].credits);
+                    }
+
+                    _menutext(0, col1, 3, Tr("Player Lives:"));
+                    _menutext(0, col2, 3, "%d/%d/%d/%d",
+                            savelevel[saveslot].pLives[0],
+                            savelevel[saveslot].pLives[1], savelevel[saveslot].pLives[2],
+                            savelevel[saveslot].pLives[3]);
+                }
+            }
+            else if(savedStatus)
             {
                 _menutext((selector == 0), col1, -1, Tr("Mode:"));
                 _menutext((selector == 0), col2, -1, "%.*s", (int)sizeof(savelevel[saveslot].dName), savelevel[saveslot].dName);
@@ -38089,13 +39997,18 @@ int load_saved_game()
 
         if((bothnewkeys & FLAG_ANYBUTTON))
         {
-            sound_play_sample(SAMPLE_BEEP2, 0, savedata.effectvol, savedata.effectvol, 100);
+            if(!lns) sound_play_sample(SAMPLE_BEEP2, 0, savedata.effectvol, savedata.effectvol, 100);
             switch(selector)
             {
             case 0:
-                return saveslot;
+                if(!lns || allow_load)
+                {
+                    if(lns) sound_play_sample(SAMPLE_BEEP2, 0, savedata.effectvol, savedata.effectvol, 100);
+                    return saveslot;
+                }
                 break;
             case 1:
+                if(lns) sound_play_sample(SAMPLE_BEEP2, 0, savedata.effectvol, savedata.effectvol, 100);
                 quit = 1;
                 break;
             }
@@ -38118,7 +40031,7 @@ int choose_mode(int *players)
 
     while(!quit)
     {
-        _menutextm(2, 1, 0, Tr("Choose Mode"));
+        _menutextm(2, (obor_profile_features & OBOR_PROFILE_LNS_6330) ? -5 : 1, 0, Tr("Choose Mode"));
         _menutextm((selector == 0), 3, 0, Tr("New Game"));
         _menutextm((selector == 1), 4, 0, Tr("Load Game"));
         _menutextm((selector == 2), 6, 0, Tr("Back"));
@@ -38610,7 +40523,7 @@ void keyboard_setup(int player)
     while(!quit)
     {
         voffset = -6;
-        _menutextm(2, -8, 0, Tr("Player %i"), player + 1);
+        _menutextm(2, (obor_profile_features & OBOR_PROFILE_LNS_6330) ? -5 : -8, 0, Tr("Player %i"), player + 1);
         for(i = 0; i < btnnum; i++)
         {
             if(!disabledkey[i])
@@ -38772,7 +40685,7 @@ void menu_options_input()
 
     while(!quit)
     {
-        _menutextm(2, x_pos-1, 0, Tr("Control Options"));
+        _menutextm(2, (obor_profile_features & OBOR_PROFILE_LNS_6330) ? -5 : x_pos-1, 0, Tr("Control Options"));
 
         #if PSP
         if(savedata.usejoy)
@@ -38867,18 +40780,19 @@ void menu_options_input()
             {
             case 0:
                 control_usejoy((savedata.usejoy ^= 1));
+                if(obor_profile_features & OBOR_PROFILE_LNS_6330) control_init(savedata.usejoy);
                 break;
             case 1:
-                keyboard_setup(0);
+                if(!(obor_profile_features & OBOR_PROFILE_LNS_6330) || (bothnewkeys & FLAG_ANYBUTTON)) keyboard_setup(0);
                 break;
             case 2:
-                keyboard_setup(1);
+                if(!(obor_profile_features & OBOR_PROFILE_LNS_6330) || (bothnewkeys & FLAG_ANYBUTTON)) keyboard_setup(1);
                 break;
             case 3:
-                keyboard_setup(2);
+                if(!(obor_profile_features & OBOR_PROFILE_LNS_6330) || (bothnewkeys & FLAG_ANYBUTTON)) keyboard_setup(2);
                 break;
             case 4:
-                keyboard_setup(3);
+                if(!(obor_profile_features & OBOR_PROFILE_LNS_6330) || (bothnewkeys & FLAG_ANYBUTTON)) keyboard_setup(3);
                 break;
             #if ANDROID
             case 5:
@@ -39033,10 +40947,10 @@ void menu_options_sound()
                 savedata.showtitles = !savedata.showtitles;
                 break;
             case 5:
-                menu_options_soundcard();
+                if(!(obor_profile_features & OBOR_PROFILE_LNS_6330) || (bothnewkeys & FLAG_ANYBUTTON)) menu_options_soundcard();
                 break;
             default:
-                quit = 1;
+                quit = (obor_profile_features & OBOR_PROFILE_LNS_6330) ? (bothnewkeys & FLAG_ANYBUTTON) : 1;
             }
         }
     }
@@ -39130,39 +41044,42 @@ void menu_options_config()     //  OX. Load from / save to default.cfg. Restore 
                 sound_play_sample(SAMPLE_BEEP2, 0, savedata.effectvol, savedata.effectvol, 100);
             }
 
-            switch(selector)
+            if(!(obor_profile_features & OBOR_PROFILE_LNS_6330) || (bothnewkeys & FLAG_ANYBUTTON))
             {
-            case 0:
-                saveasdefault();
-                saved = 1;
-                break;
-
-            case 1:
-                loadfromdefault();
-                //borShutdown(2, "\nSettings Loaded From Default.cfg. Restart Required.\n\n");
-                init_videomodes(0);
-                if(!video_set_mode(videomodes))
+                switch(selector)
                 {
-                    borShutdown(1, "Unable to set video mode: %d x %d!\n", videomodes.hRes, videomodes.vRes);
+                case 0:
+                    saveasdefault();
+                    saved = 1;
+                    break;
+    
+                case 1:
+                    loadfromdefault();
+                    //borShutdown(2, "\nSettings Loaded From Default.cfg. Restart Required.\n\n");
+                    init_videomodes(0);
+                    if(!video_set_mode(videomodes))
+                    {
+                        borShutdown(1, "Unable to set video mode: %d x %d!\n", videomodes.hRes, videomodes.vRes);
+                    }
+                    SB_setvolume(SB_VOICEVOL, savedata.soundvol);
+                    sound_volume_music(savedata.musicvol, savedata.musicvol);
+                    loaded = 1;
+                    break;
+                case 2:
+                    clearsettings();
+                    //borShutdown(2, "\nSettings Loaded From Default.cfg. Restart Required.\n\n");
+                    init_videomodes(0);
+                    if(!video_set_mode(videomodes))
+                    {
+                        borShutdown(1, "Unable to set video mode: %d x %d!\n", videomodes.hRes, videomodes.vRes);
+                    }
+                    SB_setvolume(SB_VOICEVOL, savedata.soundvol);
+                    sound_volume_music(savedata.musicvol, savedata.musicvol);
+                    restored = 1;
+                    break;
+                default:
+                    quit = 1;
                 }
-                SB_setvolume(SB_VOICEVOL, savedata.soundvol);
-                sound_volume_music(savedata.musicvol, savedata.musicvol);
-                loaded = 1;
-                break;
-            case 2:
-                clearsettings();
-                //borShutdown(2, "\nSettings Loaded From Default.cfg. Restart Required.\n\n");
-                init_videomodes(0);
-                if(!video_set_mode(videomodes))
-                {
-                    borShutdown(1, "Unable to set video mode: %d x %d!\n", videomodes.hRes, videomodes.vRes);
-                }
-                SB_setvolume(SB_VOICEVOL, savedata.soundvol);
-                sound_volume_music(savedata.musicvol, savedata.musicvol);
-                restored = 1;
-                break;
-            default:
-                quit = 1;
             }
         }
     }
@@ -39214,7 +41131,7 @@ void menu_options_debug()
     while(!quit)
     {
         // Display menu title.
-        _menutextm(2, MENU_POS_Y, 0, Tr("Debug Settings"));
+        _menutextm(2, (obor_profile_features & OBOR_PROFILE_LNS_6330) ? -5 : MENU_POS_Y, 0, Tr("Debug Settings"));
 
         // Menu items.
         // Y position is controlled by a incremented integer.
@@ -39350,7 +41267,7 @@ void menu_options_debug()
                     savedata.debug_collision_range = !savedata.debug_collision_range;
                     break;
                 case ITEM_EXIT:
-                    quit = 1;
+                    quit = (obor_profile_features & OBOR_PROFILE_LNS_6330) ? (bothnewkeys & FLAG_ANYBUTTON) : 1;
             }
         }
     }
@@ -39400,7 +41317,7 @@ void menu_options_system()
 
     while(!quit)
     {
-        _menutextm(2, SYS_OPT_Y_POS-2, 0, Tr("System Options"));
+        _menutextm(2, (obor_profile_features & OBOR_PROFILE_LNS_6330) ? -5 : SYS_OPT_Y_POS-2, 0, Tr("System Options"));
 
         _menutext(0, col1, SYS_OPT_Y_POS, Tr("Total RAM:"));
         _menutext(0, col2, SYS_OPT_Y_POS, Tr("%s KB"), commaprint(getSystemRam(KBYTES)));
@@ -39516,7 +41433,7 @@ void menu_options_system()
 
             sound_play_sample(SAMPLE_BEEP2, 0, savedata.effectvol, savedata.effectvol, 100);
 
-                 if (selector==RET) quit = 1;
+                 if (selector==RET) quit = (obor_profile_features & OBOR_PROFILE_LNS_6330) ? (bothnewkeys & FLAG_ANYBUTTON) : 1;
             else if (selector==SYS_OPT_LOG) savedata.uselog =  !savedata.uselog;
             else if (selector==SYS_OPT_VSDAMAGE)
             {
@@ -39533,9 +41450,9 @@ void menu_options_system()
                 }
             }
             else if (selector==SYS_OPT_CHEATS) cheats = !cheats;
-            else if (selector==SYS_OPT_DEBUG && !nodebugoptions) menu_options_debug();
+            else if (selector==SYS_OPT_DEBUG && !nodebugoptions && (!(obor_profile_features & OBOR_PROFILE_LNS_6330) || (bothnewkeys & FLAG_ANYBUTTON))) menu_options_debug();
 #ifndef DC
-            else if (selector==SYS_OPT_CONFIG-ex_labels) menu_options_config();
+            else if (selector==SYS_OPT_CONFIG-ex_labels && (!(obor_profile_features & OBOR_PROFILE_LNS_6330) || (bothnewkeys & FLAG_ANYBUTTON))) menu_options_config();
 #endif
 
 #ifdef PSP
@@ -39565,7 +41482,7 @@ void menu_options_system()
                 }
             }
 #endif
-            else quit = 1;
+            else quit = (obor_profile_features & OBOR_PROFILE_LNS_6330) ? (bothnewkeys & FLAG_ANYBUTTON) : 1;
         }
     }
     savesettings();
@@ -39975,7 +41892,7 @@ void menu_options_video()
 #endif
 #endif
             default:
-                quit = 1;
+                quit = (obor_profile_features & OBOR_PROFILE_LNS_6330) ? (bothnewkeys & FLAG_ANYBUTTON) : 1;
             }
         }
     }
@@ -40026,7 +41943,7 @@ void menu_options()
 
     while(!quit)
     {
-        if (!cheats || forcecheatsoff) _menutextm(2, y_offset-1, 0, Tr("Options")); else _menutextm(2, y_offset-1, 0, Tr("Cheat Options"));
+        if (!cheats || forcecheatsoff) _menutextm(2, (obor_profile_features & OBOR_PROFILE_LNS_6330) ? -5 : y_offset-1, 0, Tr("Options")); else _menutextm(2, (obor_profile_features & OBOR_PROFILE_LNS_6330) ? -5 : y_offset-1, 0, Tr("Cheat Options"));
 
         _menutextm((selector == VIDEO_OPTION), y_offset+VIDEO_OPTION, 0, Tr("Video Options..."));
         _menutextm((selector == SOUND_OPTION), y_offset+SOUND_OPTION, 0, Tr("Sound Options..."));
@@ -40084,6 +42001,8 @@ void menu_options()
                 sound_play_sample(SAMPLE_BEEP2, 0, savedata.effectvol, savedata.effectvol, 100);
             }
 
+            if(!(obor_profile_features & OBOR_PROFILE_LNS_6330) || (bothnewkeys & FLAG_ANYBUTTON))
+            {
                 if(selector==BACK_OPTION) quit = 1;
            else if(selector==VIDEO_OPTION) menu_options_video();
            else if(selector==SOUND_OPTION) menu_options_sound();
@@ -40110,6 +42029,7 @@ void menu_options()
            else if(selector==HEALTH_CHEAT) healthcheat = !healthcheat;
            else if((obor_profile_features & OBOR_PROFILE_ATTACK_HISTORY_FOUR) && selector==MULTIHIT_CHEAT) multihitcheat = !multihitcheat;
            else quit = 1;
+            }
         }
     }
     savesettings();
@@ -40240,11 +42160,16 @@ void openborMain(int argc, char **argv)
     u32 introtime = 0;
     int started = 0;
     char tmpBuff[MAX_BUFFER_LEN] = {""};
-    int players[MAX_PLAYERS] = {0, 0, 0, 0};
+    int ordinary_players[MAX_PLAYERS] = {0, 0, 0, 0};
+    int *players = (obor_profile_features & OBOR_PROFILE_LNS_6330) ? obor_lns_players : ordinary_players;
     int i;
     int argl;
 
-    printf("OpenBoR %s, Compile Date: " __DATE__ "\n\n", VERSION);
+    printf((obor_profile_features & OBOR_PROFILE_LNS_6330)
+               ? "OpenBoR %s Compile Date: " __DATE__ "\n\n"
+               : "OpenBoR %s, Compile Date: " __DATE__ "\n\n",
+           (obor_profile_features & OBOR_PROFILE_LNS_6330)
+               ? "v3.0 Build 6330 LNS v0.10g" : VERSION);
 
     if(argc > 1)
     {
@@ -40259,6 +42184,17 @@ void openborMain(int argc, char **argv)
         }
     }
 
+
+    if(argc > 1)
+    {
+        argl = strlen(argv[argc - 1]);
+        if((obor_profile_features & OBOR_PROFILE_LNS_6330) && argl > 10 && !memcmp(argv[argc - 1], "cheatcode=", 10))
+        {
+          cheatcode = getValidInt((char *)argv[argc - 1] + 10, "", "");
+          bonus = cheatcode >= 0 ? cheatcode : 999;
+          printf("cheatcode=%d\n", cheatcode);
+        }
+    }
 
     modelcmdlist = createModelCommandList();
     modelstxtcmdlist = createModelstxtCommandList();

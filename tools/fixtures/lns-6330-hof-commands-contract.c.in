@@ -1,0 +1,157 @@
+/* SPDX-License-Identifier: BSD-3-Clause
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me> */
+#include <assert.h>
+#include <stdbool.h>
+#include <stdint.h>
+#include <stddef.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <setjmp.h>
+#include @ABI@
+@LIMITS@
+@RECORD@
+@ARGLIST@
+@ENUM@
+@REFERENCE_ENUMS@
+static unsigned obor_profile_features;
+static int num_difficulties;
+@GLOBALS@
+/* Own source stores exactly 41 raw alphabet bytes. It is never read as a
+ * string in this provider; the attribute preserves those bytes and layout. */
+#ifndef __has_attribute
+#define __has_attribute(name) 0
+#endif
+#if __has_attribute(nonstring)
+#define SOURCE_NONSTRING __attribute__((nonstring))
+#else
+#define SOURCE_NONSTRING
+#endif
+@REFERENCE_GLOBALS@
+static jmp_buf invalid;
+static int fail_allocation;
+static void borShutdown(int status,const char *format,...) {(void)format;assert(status==1);longjmp(invalid,1);}
+static void *candidate_realloc(void *ptr,size_t size) {return fail_allocation?NULL:realloc(ptr,size);}
+static struct {void *ptr;int source;} names[2048];
+static unsigned name_count;
+static int source_name_owner;
+static char *name_copy(const char *text) {
+ size_t n=strlen(text)+1;char *copy=malloc(n);assert(copy && name_count<2048);memcpy(copy,text,n);
+ names[name_count].ptr=copy;names[name_count++].source=source_name_owner;return copy;
+}
+static void tracked_free(void *ptr) {
+ for(unsigned i=0;i<name_count;++i)if(names[i].ptr==ptr)names[i].ptr=NULL;
+ free(ptr);
+}
+static void release_source_names(void) {
+ for(unsigned i=0;i<name_count;++i)if(names[i].ptr){assert(names[i].source);free(names[i].ptr);names[i].ptr=NULL;}
+}
+#define free tracked_free
+#define NAME(text) name_copy(text)
+#define GET_ARG(n) ((n)<arglist.count?arglist.args[(n)]:"")
+#define GET_INT_ARG(n) atoi(GET_ARG(n))
+@PARSER@
+typedef struct {unsigned count;struct {intptr_t code;char name[96];} rows[256];} List;
+static List entries;
+static List *prepareList(void) {memset(&entries,0,sizeof(entries));return &entries;}
+static void List_InsertAfter(List *list,void *code,const char *name) {
+ assert(list->count<256);unsigned i=list->count++;list->rows[i].code=(intptr_t)code;snprintf(list->rows[i].name,96,"%s",name);
+}
+@REGISTRATIONS@
+static int lookup(const List *list,const char *name) {
+ for(unsigned i=0;i<list->count;++i) {if(!strcmp(list->rows[i].name,name))return (int)list->rows[i].code;}
+ return 0;
+}
+static void reference_command(int cmd,char *text) {
+ ArgList arglist;char argbuf[MAX_ARG_LEN+1];ParseArgs(&arglist,text,argbuf);
+ switch(cmd) {@REFERENCE_CASES@ default:break;}
+}
+#define realloc candidate_realloc
+static void candidate_command(int cmd,char *text) {
+ ArgList arglist;char argbuf[MAX_ARG_LEN+1];ParseArgs(&arglist,text,argbuf);
+ switch(cmd) {@CANDIDATE_CASES@ default:break;}
+}
+#undef realloc
+static void candidate_reset(void) {@CLEANUP@}
+static void reference_reset(void) {
+ free(reference_modes);reference_modes=NULL;reference_modes_count=0;reference_difficulty_count=0;
+ free(reference_variable);reference_variable=NULL;free(reference_initials);reference_initials=NULL;
+ for(unsigned i=0;i<MAX_DIFFICULTIES;++i){free(reference_names[i]);reference_names[i]=NULL;}
+ reference_max=20;reference_min=8;reference_extra=3;
+}
+static void equal_string(const char *a,const char *b) {assert((a==NULL)==(b==NULL));if(a)assert(!strcmp(a,b));}
+static void compare_state(void) {
+ assert(savescore_modes_count==reference_modes_count && savescore_difficulty_count==reference_difficulty_count);
+ assert(savescore_max_time==reference_max && savescore_min_time==reference_min && savescore_extra_time==reference_extra);
+ equal_string(savescore_difficulty_variable,reference_variable);equal_string(savescore_initials,reference_initials);
+ for(unsigned i=0;i<MAX_DIFFICULTIES;++i)equal_string(savescore_difficulty_names[i],reference_names[i]);
+ assert((savescore_modes==NULL)==(reference_modes==NULL));
+ if(savescore_modes)assert(!memcmp(savescore_modes,reference_modes,
+  (size_t)savescore_modes_count*savescore_difficulty_count*sizeof(*savescore_modes)));
+}
+static void invoke(int code,const char *text) {
+ char buffer[2048];snprintf(buffer,sizeof(buffer),"%s",text);candidate_command(code,buffer);
+ snprintf(buffer,sizeof(buffer),"%s",text);source_name_owner=1;reference_command(code,buffer);source_name_owner=0;compare_state();
+}
+static void table_controls(void) {
+ const char *special[]={"hallfame","hallfame_difficulties","hallfame_difficulty_credits","hallfame_initials","hallfame_times"};
+ int codes[]={CMD_LEVELORDER_HALLFAME,CMD_LEVELORDER_HALLFAMEDIFFICULTIES,CMD_LEVELORDER_HALLFAMEDIFFICULTYCREDITS,CMD_LEVELORDER_HALLFAMEINITIALS,CMD_LEVELORDER_HALLFAMETIMES};
+ unsigned features[]={0,OBOR_PROFILE_ATTACK_HISTORY_FOUR,OBOR_PROFILE_LNS_6330};
+ for(unsigned profile=0;profile<3;++profile) {
+  obor_profile_features=features[profile];List actual=*createLevelOrderCommandList();
+  List official=*official_createLevelOrderCommandList();List physical=*physical_createLevelOrderCommandList();List lns=*lns_createLevelOrderCommandList();
+  for(unsigned i=0;i<official.count;++i)assert(lookup(&actual,official.rows[i].name));
+  for(unsigned i=0;i<physical.count;++i)assert(lookup(&actual,physical.rows[i].name));
+  for(unsigned i=0;i<5;++i) {
+   assert(lookup(&actual,special[i])==(profile==2?codes[i]:0));assert(lookup(&lns,special[i]));
+   assert(!lookup(&official,special[i]) && !lookup(&physical,special[i]));
+   if(profile<2)candidate_command(lookup(&actual,special[i]),"hallfame_difficulties variable EASY HARD");
+  }
+  if(profile==2) {
+   for(unsigned i=0;i<lns.count;++i)assert(lookup(&actual,lns.rows[i].name));
+   candidate_command(lookup(&actual,"hallfame_difficulty_credits"),"hallfame_difficulty_credits 0 10");
+   reference_command(CMD_LEVELORDER_HALLFAMEDIFFICULTYCREDITS,"hallfame_difficulty_credits 0 10");
+  }
+  assert(!savescore_modes && savescore_difficulty_count==0 && !savescore_initials);
+ }
+}
+static void refused(int code,const char *text) {
+ char buffer[2048];snprintf(buffer,sizeof(buffer),"%s",text);
+ if(!setjmp(invalid)){candidate_command(code,buffer);assert(0);}
+}
+int main(void) {
+ assert(!memcmp(savescore_initials_default,reference_default,sizeof(reference_default)));
+ assert(strlen(savescore_initials_default)==sizeof(reference_default));compare_state();table_controls();
+ obor_profile_features=OBOR_PROFILE_LNS_6330;
+ for(int count=0;count<=10;++count) {
+  char text[2048]="hallfame_difficulties mode";
+  for(int i=0;i<count;++i){char tail[32];snprintf(tail,sizeof(tail)," DIFF_%d",i);strcat(text,tail);}
+  invoke(CMD_LEVELORDER_HALLFAMEDIFFICULTIES,text);
+  invoke(CMD_LEVELORDER_HALLFAMEINITIALS,"hallfame_initials ZYX_0123");
+  invoke(CMD_LEVELORDER_HALLFAMEINITIALS,"hallfame_initials");
+  invoke(CMD_LEVELORDER_HALLFAMETIMES,"hallfame_times -2147483648 0 2147483647");
+  invoke(CMD_LEVELORDER_HALLFAMETIMES,"hallfame_times 17 -1 4");
+  invoke(CMD_LEVELORDER_HALLFAMETIMES,"hallfame_times");
+  num_difficulties=1;
+  invoke(CMD_LEVELORDER_HALLFAME,"hallfame -1 100 0 -1 0 2 1 65536 9 65535 10 7 200 8");
+  num_difficulties=2;
+  invoke(CMD_LEVELORDER_HALLFAME,"hallfame 0 1 2 3 5 -65537 7 -2 9 10 3");
+  invoke(CMD_LEVELORDER_HALLFAME,"hallfame");
+  if(count)invoke(CMD_LEVELORDER_HALLFAMEDIFFICULTIES,text);
+  candidate_reset();reference_reset();compare_state();
+ }
+ /* Storage bounds and failed allocations reject before replacing owned data. */
+ refused(CMD_LEVELORDER_HALLFAMEDIFFICULTIES,"hallfame_difficulties");
+ refused(CMD_LEVELORDER_HALLFAMEDIFFICULTIES,"hallfame_difficulties v a b c d e f g h i j k");
+ invoke(CMD_LEVELORDER_HALLFAMEDIFFICULTIES,"hallfame_difficulties v easy hard");num_difficulties=0;
+ refused(CMD_LEVELORDER_HALLFAME,"hallfame 0 1");assert(!savescore_modes && !savescore_modes_count);
+ num_difficulties=1;fail_allocation=1;refused(CMD_LEVELORDER_HALLFAME,"hallfame 0 1");
+ assert(!savescore_modes && !savescore_modes_count);fail_allocation=0;
+ num_difficulties=65537;invoke(CMD_LEVELORDER_HALLFAME,"hallfame 0 1");s_savescore *prior=savescore_modes;
+ fail_allocation=1;refused(CMD_LEVELORDER_HALLFAME,"hallfame 1 2");
+ assert(savescore_modes==prior && savescore_modes_count==1);fail_allocation=0;
+ refused(CMD_LEVELORDER_HALLFAMEDIFFICULTIES,"hallfame_difficulties v easy");
+ assert(savescore_difficulty_count==2 && savescore_modes==prior);
+ savescore_modes_count=UINT16_MAX;refused(CMD_LEVELORDER_HALLFAME,"hallfame 0 1");assert(savescore_modes==prior);
+ candidate_reset();reference_reset();compare_state();release_source_names();return 0;
+}

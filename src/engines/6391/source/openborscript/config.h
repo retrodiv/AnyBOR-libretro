@@ -1,11 +1,12 @@
-/* AnyBOR modification record: 2026-10-22.
+/* AnyBOR modification record: 2026-11-15.
  * Port maintained by retrodiv <retrodiv@proton.me>.
  * Copyright (c) 2026 retrodiv <retrodiv@proton.me> (original contributions).
  * These contributions are licensed under BSD-3-Clause; see LICENSE at the root.
  * Upstream code retains its original license and notices.
  * Declare the modern logical profiles' unload_model script entry point.
  * Expose the reconstructed 6392 test profile's earlier backtotitle alias
- * only in that profile.
+ * only in that profile. Reserve the modified 6330 LNS entity-property
+ * namespace capacity.
  * Existing changes recorded here; this is not their implementation date.
  * See MODIFICATIONS.md and docs/modifications/6391.md
  * at the source repository root. Original notices follow below.
@@ -487,6 +488,7 @@ enum systemvariant_enum
     _sv_waiting,
     _sv_xpos,
     _sv_ypos,
+    _sv_in_sa_count,
     _sv_the_end
 };
 

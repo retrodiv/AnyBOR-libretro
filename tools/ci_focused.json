@@ -1792,6 +1792,36 @@
       "ci": "shared"
     },
     {
+      "id": "test_lns_6330",
+      "memory_mib": 512,
+      "seconds": 180,
+      "command": [
+        "python3",
+        "tools/test_lns_6330.py"
+      ],
+      "ci": "shared"
+    },
+    {
+      "id": "test_native_metadata_profile",
+      "memory_mib": 512,
+      "seconds": 180,
+      "command": [
+        "python3",
+        "tools/test_native_metadata_profile.py"
+      ],
+      "ci": "shared"
+    },
+    {
+      "id": "test_pak_multipart",
+      "memory_mib": 512,
+      "seconds": 180,
+      "command": [
+        "python3",
+        "tools/test_pak_multipart.py"
+      ],
+      "ci": "shared"
+    },
+    {
       "id": "test_profile_identity",
       "memory_mib": 512,
       "seconds": 90,
