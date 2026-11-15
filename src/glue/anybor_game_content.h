@@ -163,4 +163,84 @@ static bool obor_game_wave_asset(const char *path)
     fclose(file);
     return result;
 }
+
+/* A complete CRC-checked PNG is a media resource regardless of its suffix. */
+static uint32_t obor_game_big32(const unsigned char *p)
+{ return (uint32_t)p[0]<<24 | (uint32_t)p[1]<<16 | (uint32_t)p[2]<<8 | p[3]; }
+static bool obor_game_png_asset(const char *path)
+{
+    FILE *file=fopen(path,"rb");
+    if(!file) return false;
+    unsigned char header[8], buffer[65536], expected[4];
+    bool ok=fread(header,1,8,file)==8 && !memcmp(header,"\x89PNG\r\n\x1a\n",8);
+    bool first=true, image=false, ended=false;
+    unsigned chunks=0;
+    while(ok && !ended && ++chunks<=8192U && obor_prepare_checkpoint()) {
+        if(fread(header,1,8,file)!=8) {ok=false;break;}
+        uint32_t left=obor_game_big32(header);
+        bool ihdr=!memcmp(header+4,"IHDR",4), idat=!memcmp(header+4,"IDAT",4), iend=!memcmp(header+4,"IEND",4);
+        if((first && (!ihdr || left!=13)) || (!first && ihdr) || (iend && (left || !image)) ||
+           (!(header[4]&32) && !ihdr && !idat && !iend && memcmp(header+4,"PLTE",4))) {ok=false;break;}
+        mz_ulong crc=mz_crc32(MZ_CRC32_INIT,header+4,4);
+        while(left && ok) {
+            size_t bytes=left<sizeof(buffer)?left:sizeof(buffer);
+            if(fread(buffer,1,bytes,file)!=bytes || !obor_prepare_checkpoint()) {ok=false;break;}
+            if(ihdr && (!obor_game_big32(buffer) || !obor_game_big32(buffer+4) || buffer[10] || buffer[11] || buffer[12]>1)) ok=false;
+            crc=mz_crc32(crc,buffer,bytes);left-=(uint32_t)bytes;
+        }
+        if(!ok || fread(expected,1,4,file)!=4 || crc!=obor_game_big32(expected)) {ok=false;break;}
+        first=false;image=image||idat;ended=iend;
+    }
+    ok=ok && ended && fgetc(file)==EOF && !ferror(file);
+    fclose(file);return ok;
+}
+
+/* Accept a complete model-shaped text resource only within the sole verified
+ * loose game's own root. Require resolved image references and closed inline
+ * script blocks; arbitrary failed packed content remains inconclusive. */
+static bool obor_game_model_asset(const char *path,const char *root)
+{
+    size_t prefix=strlen(root);
+    if(strncmp(path,root,prefix) || (prefix && root[prefix-1]!='/' && path[prefix]!='/')) return false;
+    FILE *file=fopen(path,"rb");if(!file) return false;
+    struct stat status;
+    if(stat(path,&status) || status.st_size<=0 || status.st_size>(4<<20)) {fclose(file);return false;}
+    char line[4096];bool ok=true, name=false,type=false,health=false,animation=false,frame=false,script=false;
+    long position=0;
+    while(fgets(line,sizeof(line),file) && obor_prepare_checkpoint()) {
+        size_t n=strlen(line);
+        long next_position=ftell(file);
+        if(next_position-position!=(long)n) {ok=false;break;}
+        position=next_position;
+        if((n==sizeof(line)-1 && line[n-1]!='\n') || n==0) {ok=false;break;}
+        for(size_t i=0;i<n;++i) if((unsigned char)line[i]<32 && line[i]!='\t' && line[i]!='\r' && line[i]!='\n') ok=false;
+        char command[64],argument[512];
+        const char *next=obor_game_token(line,command,sizeof(command));obor_game_token(next,argument,sizeof(argument));
+        if(!strcmp(command,"@script")) {if(script) ok=false;script=true;continue;}
+        if(!strcmp(command,"@end_script")) {if(!script) ok=false;script=false;continue;}
+        if(script || !command[0] || command[0]=='#') continue;
+        if(!name && strcasecmp(command,"name")) {ok=false;break;}
+        if(!strcasecmp(command,"name")) {if(name || !argument[0]) ok=false;name=true;}
+        if(!strcasecmp(command,"type")) {
+            static const char *types[]={"none","player","enemy","npc","obstacle","endlevel","item","pshot","shot","steamer","panel","text","trap"};
+            for(unsigned i=0;i<sizeof(types)/sizeof(*types);++i) if(!strcasecmp(argument,types[i])) type=true;
+        }
+        if(!strcasecmp(command,"health")) {char *end=NULL;strtol(argument,&end,10);health=argument[0] && end && !*end;}
+        if(!strcasecmp(command,"anim") && argument[0]) animation=true;
+        if(animation && !strcasecmp(command,"frame")) {
+            char resource[4096],asset[600];
+            for(unsigned i=0;i<5;++i) {
+                static const char *suffix[]={"",".png",".gif",".pcx",".bmp"};
+                snprintf(asset,sizeof(asset),"%s%s",argument,suffix[i]);
+                if(obor_game_disk_path(root,asset,resource,sizeof(resource))) {
+                    struct stat image;
+                    if(!stat(resource,&image) && S_ISREG(image.st_mode) && image.st_size>0) frame=true;
+                }
+            }
+        }
+        if(!ok) break;
+    }
+    ok=ok && !script && !ferror(file) && feof(file) && name && type && health && animation && frame;
+    fclose(file);return ok;
+}
 #endif

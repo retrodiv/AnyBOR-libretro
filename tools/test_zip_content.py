@@ -21,7 +21,7 @@ GLUE = Path(os.environ.get('OBOR_GLUE_DIR', ROOT / 'src/glue'))
 THIRD = Path(os.environ.get('OBOR_THIRD_PARTY', ROOT / 'src/third_party'))
 
 
-def build_probe(directory, *, synthetic=True, program=None):
+def build_probe(directory, *, synthetic=True, program=None, archive_reader=None):
     source = directory / 'zip-probe.cpp'
     table = ''
     if synthetic:
@@ -46,7 +46,10 @@ static void log_cb(int,const char *format,...) {
 static void mkdir_p(const char *path) { std::filesystem::create_directories(path); }
 @TABLE@
 #include "anybor_zip.h"
+static unsigned checkpoints;
+static int checkpoint(void) { return ++checkpoints<(unsigned)atoi(getenv("OBOR_TEST_CANCEL_AFTER")); }
 int main(int argc, char **argv) {
+    if(getenv("OBOR_TEST_CANCEL_AFTER")) obor_prepare_progress=checkpoint;
     if(argc!=3 && argc!=4) return 2;
     char path[4096] = "";
     obor_engine_identity identity = {};
@@ -65,6 +68,10 @@ int main(int argc, char **argv) {
         subprocess.run([*shlex.split(os.environ.get('HOST_CC', 'cc')), '-std=gnu99',
                         *flags, '-c', str(path), '-o', str(obj)], check=True, timeout=60)
         objects.append(str(obj))
+    if archive_reader:
+        include,library=archive_reader
+        flags += ['-DOBOR_WITH_RAR5=1','-I',str(include)]
+        objects.append(str(library))
     binary = directory / 'zip-probe'
     subprocess.run([*shlex.split(os.environ.get('HOST_CXX', 'c++')), '-std=c++17',
         '-Wall', '-Wextra', '-Werror', '-Wno-unused-function', *flags,
@@ -143,7 +150,7 @@ class ZipContentTests(unittest.TestCase):
         cache = chosen.parents[1]
         self.assertRegex(cache.name, r'^content-[0-9a-f]{8}$')
         self.assertRegex((cache / '.complete').read_text(),
-                         r'^oborzip-imohash-v1 [0-9a-f]{32}\n$')
+                         r'^oborzip-imohash-v2 [0-9a-f]{32}\n$')
         sentinel = cache / 'reuse-sentinel'
         sentinel.write_text('keep')
         second = run()
@@ -153,7 +160,7 @@ class ZipContentTests(unittest.TestCase):
         # A rejected occupied slot must survive loading and select a stable alternative.
         marker = cache / '.complete'
         original_marker = marker.read_bytes()
-        for bad_marker in (b'unreadable marker\n', b'oborzip-imohash-v1 ' + b'0' * 32 + b'\n'):
+        for bad_marker in (b'unreadable marker\n', b'oborzip-imohash-v2 ' + b'0' * 32 + b'\n'):
             marker.write_bytes(bad_marker)
             alternative = run()
             self.assertTrue(alternative.stdout.startswith('1 '), alternative.stderr)

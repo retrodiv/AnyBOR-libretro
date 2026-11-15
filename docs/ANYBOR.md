@@ -427,3 +427,24 @@ and actual stdio/stat imports before a long build. Forced headers selecting an
 incompatible ABI reject the build; Windows and Darwin retain their file-ABI
 policy. Dependency and engine cache identities include effective flags and the
 policy revision. File binding audits remain mandatory.
+
+
+## Nested content archives
+
+ZIP packages may contain ZIP or RAR5 archives. RAR5 payloads may also follow a
+validated PE section boundary in a self-extracting wrapper. Wrappers are never
+executed or treated as engine executables; resolved engines and game content use
+the ordinary selection rules. The original ZIP names the save namespace and its
+external ZIP override. A packed member retains its original decompressed PAK
+identity before transforms; loose data trees do not acquire a PAK identity.
+
+All levels share 8192 entries, 4 GiB total expansion, 2 GiB per file, a 1000:1
+expansion bound and at most four nested containers. Encrypted, split-volume and
+unsupported RAR5 streams are refused. Service metadata is ignored with a
+shared 16 MiB declared-size budget and counts toward the entry/total quotas. Paths, links, CRCs, portable
+collisions, free space and cancellation are checked before atomic cache
+publication. Reuse verifies cached bytes against the archive streams. Nested
+extraction directories use a reserved `.unpacked` suffix; a conflicting member
+is refused. Complete PNG/audio resources can have packed-file suffixes; model
+text requires a unique recognizable loose game and resolved frame references
+within its own root. Other inconclusive packed candidates remain errors.

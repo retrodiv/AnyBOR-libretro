@@ -178,3 +178,13 @@ retain Jim Kalafut's MIT notice. Full notices accompany source and binaries in
 `LICENSES/imohash.txt` and `LICENSES/murmur3.txt`.
 `tools/content_key.py` implements the same sampled selector in Python under MIT,
 with the same algorithm credits; its vectors are checked against the core.
+
+
+The pinned libarchive 3.8.11 source archive supplies the standalone RAR5 reader.
+Only the RAR5 format and unfiltered input are registered; static linking selects
+its reachable closure. External codec/crypto libraries and command-line tools
+are disabled. Source pruning removes examples, test media and unused programs,
+while retaining build templates and original notices. Per-file manifests bind
+the archive and distributed sources. BLAKE2's offered CC0-1.0 option is selected;
+other libarchive sources retain their own BSD terms. Build-support scripts keep
+their individual terms and exceptions, independently of the runtime grant.

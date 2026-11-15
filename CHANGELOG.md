@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.2.19
+
+- Resolve bounded nested ZIP and RAR5 containers, including structurally validated
+  PE self-extractors, without executing their wrappers.
+- Verify reused extraction streams, retain ordinary engine selection and reject
+  incomplete or ambiguous content before publishing a cache.
+
 ## 0.2.18 — external build flags
 
 - Keep isolated engines and their dependencies in native object form with inherited LTO flags.

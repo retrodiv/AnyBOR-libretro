@@ -1,7 +1,7 @@
 {
   "core_name": "AnyBOR",
   "core_basename": "anybor_libretro",
-  "version": "0.2.18",
+  "version": "0.2.19",
   "fallback_build": "6391",
   "profiles": [
     {
@@ -3045,6 +3045,11 @@
       "url": "https://github.com/richgel999/miniz/releases/download/3.1.1/miniz-3.1.1.zip",
       "sha256": "cb28402bb2af93bdc331b60d16807e89727d1712a2d0a7ba0cac79a3e406fe40",
       "note": "zip reader for the glue's .zip content support (MIT)"
+    },
+    "libarchive": {
+      "version": "3.8.11",
+      "url": "https://www.libarchive.org/downloads/libarchive-3.8.11.tar.gz",
+      "sha256": "900fe9fc7237c2b04f090f3c3648de8fe597525771f5035016537ce2d667d12b"
     }
   },
   "transform_vm": {

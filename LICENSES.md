@@ -53,7 +53,8 @@ the other component notices and the OpenBOR 3400 and 3741 conditions with the di
 Licensing the original port under BSD-3-Clause does not grant permission to sell the
 combined core containing either engine.
 
-Every supported binary statically includes the five libraries in `src/deps/`.
+Every supported binary statically includes the image/audio/video libraries and
+the reachable RAR5 reader in `src/deps/`.
 Decoder-only libvpx builds are used. The source distribution also retains
 build-support files with their original licenses, including GPL Autoconf
 auxiliary scripts and their applicable exceptions. These scripts are build
@@ -92,3 +93,11 @@ does not grant trademark rights.
 
 The generic content-transform compiler and interpreter are original AnyBOR
 components and are covered by the repository's BSD-3-Clause license.
+
+
+libarchive's RAR5 reader retains the BSD terms in `LICENSES/libarchive.txt` and
+its individual source headers in `LICENSES/Embedded-source-notices.txt`.
+BLAKE2 reference helpers use their offered CC0-1.0 option; the complete text is
+in `LICENSES/CC0-1.0.txt`. Build-support notices and exceptions remain in their
+source files. The runtime license dossier is embedded in the core and included
+with release packages.

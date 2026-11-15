@@ -3780,6 +3780,16 @@
         "tools/test_external_flags.py"
       ],
       "ci": "shared"
+    },
+    {
+      "id": "test_nested_archives",
+      "memory_mib": 1024,
+      "seconds": 600,
+      "command": [
+        "python3",
+        "tools/test_nested_archives.py"
+      ],
+      "ci": "shared"
     }
   ]
 }

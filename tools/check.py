@@ -158,7 +158,7 @@ def check_sources():
         for rel, data in manifest["files"].items():
             if release.sha256(root / rel) != data["distributed_sha256"]:
                 raise RuntimeError("Engine source changed: " + eng["build"] + "/" + rel)
-    for name in ("zlib", "libpng", "libogg", "libvorbis", "libvpx"):
+    for name in ("zlib", "libpng", "libogg", "libvorbis", "libvpx", "libarchive"):
         root = ROOT / "src/deps" / name
         manifest = release.read_json(root / "ANYBOR-SOURCE.json")
         if manifest["archive_sha256"] != pin["deps"][name]["sha256"]:

@@ -252,6 +252,13 @@
     "source": "src/deps/libvpx/third_party/x86inc/LICENSE"
   },
   {
+    "file": "LICENSES/libarchive.txt",
+    "license": "BSD-2-Clause AND BSD-3-Clause AND CC0-1.0",
+    "scope": "source and binary",
+    "sha256": "30e556b3959e3985d66efefec5eaac51d4995053caa1d3cffe6eb916f146f229",
+    "source": "src/deps/libarchive/COPYING"
+  },
+  {
     "file": "LICENSES/libco-ISC.txt",
     "license": "ISC",
     "scope": "source and binary",
@@ -367,7 +374,7 @@
     "file": "LICENSES/Embedded-source-notices.txt",
     "license": "see each notice",
     "scope": "source and binary",
-    "sha256": "7dce724091fa9436ea8420aeabd2979c9dc71cd6e3503727a72b17335c7c35e8",
+    "sha256": "8d8188a6d49e9e906d892ed4e3aa2c26845ab87e628ba61ea4b2ec35e218472c",
     "source": "Individual source headers listed in this document"
   },
   {

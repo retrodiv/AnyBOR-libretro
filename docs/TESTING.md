@@ -199,3 +199,11 @@ during later model loading in each physical family, checks the error pixels and 
 the content and loads a valid script without a final newline in the same core
 module and process. It also checks continued video callbacks and resource cleanup:
 `python3 tools/run_guarded.py --memory-mib 2048 --seconds 300 -- python3 tools/check_content_errors.py --core path/to/anybor_libretro.so`.
+
+
+`test_nested_archives.py` builds the pinned standalone reader with native
+address/undefined sanitizers and exercises authored stored RAR5, PE wrappers,
+nested ZIPs, packed/loose selection, cache integrity and refusal boundaries.
+It also repeats the ordinary ZIP recognition controls with the reader enabled.
+Run under the focused inventory's 1024 MiB / 600 s process-tree limit. Native
+macOS execution is required to establish that host's sanitizer support.

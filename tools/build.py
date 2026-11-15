@@ -664,6 +664,47 @@ def build_engine(target, eng, spec, outdir, check_only=False):
     stamp.write_text(fingerprint, encoding="utf-8")
 
 
+def build_archive_reader(target):
+    """Build the pinned standalone reader; only the registered RAR5 closure links.
+
+    No host codecs, crypto libraries, executables or command-line tools are used.
+    The reader is outside the engine symbol-rewriting/state regions.
+    """
+    spec = TARGETS[target]
+    source = SRC / "deps/libarchive"
+    root = BUILD_ROOT / "archive" / target
+    flags = ["-Os", "-fPIC", "-fvisibility=hidden", "-ffunction-sections", "-fdata-sections",
+             *arch_flags(spec), *native_io_flags(spec),
+             *external_flag_args("CFLAGS", spec), *external_flag_args("CPPFLAGS", spec)]
+    payload = dict(schema=1, target=spec, compiler=tool_identity(spec["cc"]), flags=flags,
+                   ldflags=external_flag_args("LDFLAGS", spec),
+                   sources={p.relative_to(source).as_posix():sha256_file(p)
+                            for p in sorted(source.rglob("*")) if p.is_file()})
+    fingerprint = hashlib.sha256(json.dumps(payload, sort_keys=True).encode()).hexdigest()
+    marker = root / ".fingerprint"
+    library = root / ".libs/libarchive.a"
+    if marker.is_file() and marker.read_text() == fingerprint and library.is_file():
+        return root / "libarchive", library
+    if root.exists(): shutil.rmtree(root)
+    shutil.copytree(source, root)
+    env = os.environ.copy()
+    env.update(CC=spec["cc"], CXX=spec["cxx"], AR=spec["ar"], RANLIB=spec["ranlib"],
+               CFLAGS=shlex.join(flags), CPPFLAGS="", CXXFLAGS=shlex.join(flags),
+               LDFLAGS=shlex.join([*arch_flags(spec), *external_flag_args("LDFLAGS",spec)]))
+    options = ["--disable-shared", "--enable-static", "--disable-bsdtar", "--disable-bsdcpio",
+               "--disable-bsdcat", "--disable-bsdunzip", "--disable-acl", "--disable-xattr",
+               "--disable-dependency-tracking"]
+    options += ["--without-" + name for name in ("zlib", "bz2lib", "lzma", "lz4", "zstd",
+                "xml2", "expat", "bsdxml", "xmllite", "openssl", "mbedtls", "nettle", "md",
+                "libb2", "iconv", "cng")]
+    if spec.get("configure_host"): options += ["--host="+spec["configure_host"]]
+    if spec.get("configure_build"): options += ["--build="+spec["configure_build"]]
+    run(["sh", "./configure", *options], root, env)
+    run(["make", "-j"+str(JOBS), "libarchive.la"], root, env)
+    marker.write_text(fingerprint)
+    return root / "libarchive", library
+
+
 def build_glue(target, spec, outdir):
     pin = load_pin()
     core = pin.get("core_basename", CORE)
@@ -687,6 +728,7 @@ def build_glue(target, spec, outdir):
                  if spec["plat"] == "linux" else [])
     gc_ldflags = (["-Wl,--gc-sections"] if spec["plat"] == "linux" else
                   ["-Wl,-dead_strip"] if uses_macho(spec) else [])
+    archive_include, archive_library = build_archive_reader(target)
     miniz_o = outdir / "miniz.o"
     run([spec["cc"], "-O2", "-fPIC", "-fvisibility=hidden",
          *arch_flags(spec), *native_io_flags(spec),
@@ -732,11 +774,12 @@ def build_glue(target, spec, outdir):
         *gc_cflags,
         *glue_defs,
         "-ffile-prefix-map=" + str(HERE) + "=.",
+        "-DOBOR_WITH_RAR5=1", "-DLIBARCHIVE_STATIC", "-I", archive_include,
         "-I", outdir, "-I", SRC / "glue", "-I", third,
         SRC / "glue" / "libretro.cpp",
         miniz_o,
         *compat_objs,
-        *engines,
+        *engines, archive_library,
         "-o", out,
         *gc_ldflags,
         *spec["glue_link"],
