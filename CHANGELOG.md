@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.2.22
+
+- Link bounded import guards into the standalone script-library probe and
+  observe terminal parser rejection without changing its historical oracles.
+
 ## 0.2.21
 
 - Check balanced import scopes in the historical script-control test harness

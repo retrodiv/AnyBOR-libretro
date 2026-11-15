@@ -52,6 +52,45 @@ class ImportTests(unittest.TestCase):
         if has_opcode_display:
             with mapped_header.open('a') as stream:
                 stream.write('\n' + function(interpreter_text, 'obor_profile_opcode'))
+        # The real parser can terminate a malformed script through the porter
+        # error channel. Observe that boundary without a frontend coroutine;
+        # retain the existing acceptance/result and arena-retirement controls.
+        port_source = SOURCE / 'src/port/libretro/libretroport.c'
+        port = port_source.read_text()
+        hooks = r'''
+#include "anybor_content_error.h"
+static jmp_buf content_return;
+static int content_boundary;
+static char content_reason[512];
+static const char *engine_content_imports[128];
+static unsigned engine_content_import_depth;
+void obor_content_error(const char *path,unsigned long row,unsigned long col,const char *reason) {
+ (void)row;(void)col;assert(path && reason && content_boundary);
+ snprintf(content_reason,sizeof(content_reason),"%s",reason);longjmp(content_return,1);
+}
+@BEGIN@
+@END@
+static HRESULT scoped_parse(Interpreter *interpreter,LPSTR text,ULONG row,LPCSTR path) {
+ assert(!content_boundary);content_boundary=1;content_reason[0]=0;
+ if(setjmp(content_return)) {assert(content_reason[0]);content_boundary=0;engine_content_import_depth=0;return E_FAIL;}
+ HRESULT result=Interpreter_ParseText(interpreter,text,row,path);
+ content_boundary=0;assert(!engine_content_import_depth);return result;
+}
+static ImportNode *scoped_import(const char *path) {
+ if(expected_refusal) return ImportCache_ImportFile(path);
+ assert(!content_boundary);content_boundary=1;content_reason[0]=0;
+ if(setjmp(content_return)) {assert(content_reason[0]);content_boundary=0;engine_content_import_depth=0;return NULL;}
+ ImportNode *result=ImportCache_ImportFile(path);
+ content_boundary=0;assert(!engine_content_import_depth);return result;
+}
+#define Interpreter_ParseText scoped_parse
+#define ImportCache_ImportFile scoped_import
+'''.replace('@BEGIN@',function(port,'obor_content_import_begin')).replace('@END@',function(port,'obor_content_import_end'))
+        native_probe = work / 'historical_imports_probe.c'
+        text = (TOOLS / 'historical_imports_probe.c').read_text()
+        anchor = 'static struct {void *pointer;size_t bytes;int live;} allocations[32768];'
+        assert text.count(anchor)==1
+        native_probe.write_text(text.replace(anchor,hooks+'\n'+anchor))
         includes = [work, engine, SOURCE / 'src/port/libretro', SOURCE / 'src/glue', engine / 'source',
                     *sorted(p for p in (engine / 'source').iterdir() if p.is_dir())]
         sources = sorted((engine / 'source/scriptlib').glob('*.c'))
@@ -79,13 +118,13 @@ class ImportTests(unittest.TestCase):
             '-DPROBE_HAS_OPCODE_DISPLAY='+str(int(has_opcode_display)),
             '-DPROBE_HAS_CONSTANT_REFRESH='+str(int(has_constant_refresh)),
             '-include', str(TOOLS / 'imports_probe_alloc.h'),
-            str(TOOLS / 'historical_imports_probe.c'), *map(str, sources),
+            str(native_probe), *map(str, sources),
             *links, '-lm', '-o', str(cls.executable)]
         result = subprocess.run(cls.command, capture_output=True, text=True, timeout=120)
         if result.returncode:
             raise RuntimeError('Native import compilation failed:\n'+result.stdout+result.stderr)
         if os.environ.get('OBOR_IMPORT_OBSERVATIONS'):
-            inputs = [TOOLS / 'historical_imports_probe.c', TOOLS / 'imports_probe_alloc.h',
+            inputs = [native_probe, port_source, TOOLS / 'historical_imports_probe.c', TOOLS / 'imports_probe_alloc.h',
                       script_source, engine / 'source/utils.c', mapped_header, *sources]
             for directory in (engine, SOURCE / 'src/port/libretro', SOURCE / 'src/glue'):
                 inputs += sorted(directory.rglob('*.h'))
