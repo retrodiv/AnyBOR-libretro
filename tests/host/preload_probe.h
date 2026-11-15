@@ -212,9 +212,8 @@ static int preload_probe_after_run(size_t (*capacity)(void),
         else memset(probe, 0xa5, size);
         int ok = !save(probe, size) && capacity() == size;
         for (size_t i = 0; ok && i < size; ++i)
-            ok = probe[i] == (i < sizeof(uint32_t) ? 0 :
-                             stale ? preload_reference[i] : 0xa5);
-        if (!ok) { fprintf(stderr, "refused preload capture did not invalidate only its header\n"); return 0; }
+            ok = probe[i] == 0;
+        if (!ok) { fprintf(stderr, "refused preload capture did not clear its complete buffer\n"); return 0; }
         if (preload_reference) {
             if (load(preload_reference, preload_reference_size) || capacity() != size) {
                 fprintf(stderr, "preload accepted a previously valid state\n");

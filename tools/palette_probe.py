@@ -29,10 +29,18 @@ def program(image_source, engine_source):
     pcx = ''
     if 'static int openpcx(' in image_source:
         pcx = image_source[image_source.index('// ============================== PCX loading'):auto]
-    case = engine_source.index('case CMD_MODEL_PALETTE:')
-    case_end = engine_source.index('case CMD_MODEL_ALTERNATEPAL:', case)
+    # A command-classification switch may repeat these labels without loading
+    # a palette. Require the unique implementation that accesses the model.
+    model_cases = []
+    for match in re.finditer(r'\bcase CMD_MODEL_PALETTE:', engine_source):
+        end = engine_source.index('case CMD_MODEL_ALTERNATEPAL:', match.start())
+        candidate = engine_source[match.start():end]
+        if 'newchar->palette' in candidate:
+            model_cases.append(candidate)
+    if len(model_cases) != 1:
+        raise ValueError('Expected one model palette implementation')
     return PREFIX + pcx + image_source[auto:interface] + '\n' + function(image_source, 'loadimagepalette') + '\n' + ''.join(
-        function(engine_source, name) for name in ('_load_palette16', '_load_palette32', 'load_palette')) + MODEL_PREFIX + engine_source[case:case_end] + MODEL_SUFFIX + MAIN
+        function(engine_source, name) for name in ('_load_palette16', '_load_palette32', 'load_palette')) + MODEL_PREFIX + model_cases[0] + MODEL_SUFFIX + MAIN
 
 
 PREFIX = r'''

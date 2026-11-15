@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.2.35
+
+- Extract palette loading implementations for native contract probes.
+- Supply selectable-player metadata and quick-selection animations in nested
+  rewind fixtures for metadata-only startup profiles.
+- Check complete buffer clearing after refused state captures.
+
 ## 0.2.34
 
 - Name the LNS v0.10g profile `v3.0 6330-lns-010g` consistently in selection,

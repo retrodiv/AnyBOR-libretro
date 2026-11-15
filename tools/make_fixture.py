@@ -67,9 +67,18 @@ def files():
 
 
 
-def preload_files():
+def preload_files(deferred=False):
     """Original nested model fixture with parser-end witnesses for rewind."""
     members = files()
+    if deferred:
+        # LNS discovers selectable players before the first type command and
+        # retains only selection/waiting animations in its quick loader.
+        members['data/chars/block.txt'] = members['data/chars/block.txt'].replace(
+            b'type player\n', b'selectcol 1\ntype player\n', 1)
+        for animation in ('select', 'waiting'):
+            members['data/chars/block.txt'] += (
+                f'anim {animation}\nloop 1\ndelay 10\noffset 8 31\n'
+                'frame data/chars/block.png\n').encode('ascii')
     model = members['data/chars/block.txt'].replace(b'type player\n', b'type enemy\n')
     # This final optional entry is safely ignored by the existing bounds
     # correction in every profile. Its flushed warning identifies the
@@ -87,6 +96,16 @@ def preload_files():
         members[f'data/chars/{parent}.txt'] = model.replace(
             b'name TestBlock\n', f'name {parent}\nload {first} 0\nload {second} 0\n'.encode()) + witness
     members['data/models.txt'] = b''.join(declarations)
+    if deferred:
+        # Exercise all boot parser witnesses after metadata-only startup.
+        members['data/scripts/loading.c'] = b'''void main() {
+    if(getlocalvar("value") != getlocalvar("max")) return;
+    if(getglobalvar("nested_boot_loaded") == 1) return;
+    setglobalvar("nested_boot_loaded", 1);
+    loadmodel("TestBlock", 0);
+    loadmodel("BootParent", 0);
+}
+'''
     members['data/levels/room.txt'] = b'load LevelParent 0\n' + members['data/levels/room.txt']
     members['data/video.txt'] = b'video 1\n'
     return members

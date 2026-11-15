@@ -171,10 +171,14 @@ def main():
         # The ordinary fixture above intentionally retains its no-throttle
         # fallback contract. This original fixture also crosses three refused
         # history entries and checks that none advances the live engine.
-        preload_pak = work / "nested.pak"
-        make_fixture.write_pak(preload_pak, make_fixture.preload_files())
+        preload_paks = {}
         for entry in profiles:
             profile = entry["build"]
+            deferred = "lns_6330" in entry.get("features", [])
+            if deferred not in preload_paks:
+                preload_paks[deferred] = work / ("deferred" if deferred else "eager") / "nested.pak"
+                make_fixture.write_pak(preload_paks[deferred], make_fixture.preload_files(deferred))
+            preload_pak = preload_paks[deferred]
             system = work / ("nested-" + profile)
             system.mkdir()
             env = {k: v for k, v in os.environ.items() if not k.startswith("OBOR_")}

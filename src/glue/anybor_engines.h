@@ -3,7 +3,7 @@
 /* Engine ABI table generated from src/pin.json. */
 #include "anybor_abi.h"
 
-#define OBOR_CORE_VERSION "0.2.34"
+#define OBOR_CORE_VERSION "0.2.35"
 #define OBOR_FALLBACK_BUILD 6391
 
 typedef struct {
