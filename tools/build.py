@@ -681,6 +681,7 @@ def build_archive_reader(target):
     if spec["plat"] == "windows": flags.append("-DLIBARCHIVE_STATIC")
     if spec.get("android"): flags += ["-I", str(root / "contrib/android/include")]
     payload = dict(schema=1, target=spec, compiler=tool_identity(spec["cc"]), flags=flags,
+                   maintainer_mode=False,
                    ldflags=external_flag_args("LDFLAGS", spec),
                    sources={p.relative_to(source).as_posix():sha256_file(p)
                             for p in sorted(source.rglob("*")) if p.is_file()})
@@ -695,7 +696,9 @@ def build_archive_reader(target):
     env.update(CC=spec["cc"], CXX=spec["cxx"], AR=spec["ar"], RANLIB=spec["ranlib"],
                CFLAGS=shlex.join(flags), CPPFLAGS="", CXXFLAGS=shlex.join(flags),
                LDFLAGS=shlex.join([*arch_flags(spec), *external_flag_args("LDFLAGS",spec)]))
-    options = ["--disable-shared", "--enable-static", "--disable-bsdtar", "--disable-bsdcpio",
+    # Build the supplied release scripts. Checkout/copy timestamps must not
+    # require the upstream maintainer's Autoconf/Automake versions.
+    options = ["--disable-maintainer-mode", "--disable-shared", "--enable-static", "--disable-bsdtar", "--disable-bsdcpio",
                "--disable-bsdcat", "--disable-bsdunzip", "--disable-acl", "--disable-xattr",
                "--disable-dependency-tracking"]
     options += ["--without-" + name for name in ("zlib", "bz2lib", "lzma", "lz4", "zstd",
@@ -823,7 +826,9 @@ def build_glue(target, spec, outdir):
         # PE savestates carry the same module pointers as ELF states.  Disable
         # loader randomization and request the same otherwise-unused high base;
         # retain relocations so an actual collision fails safely at state load.
-        cmd += ["-lwinmm", "-lpsapi", "-Wl,-Bstatic", "-lpthread",
+        # The archive reader's Windows random provider uses the system RNG
+        # independently of its optional archive-crypto backend.
+        cmd += ["-lwinmm", "-lpsapi", "-lbcrypt", "-Wl,-Bstatic", "-lpthread",
                 "-Wl,--image-base," + FIXED_PE_IMAGE_BASE,
                 "-Wl,--disable-dynamicbase"]
     cmd += (["-Wl,-map," + str(outdir / "link.map")] if uses_macho(spec)

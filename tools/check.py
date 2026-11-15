@@ -283,7 +283,7 @@ def check_binary(path, target=None):
         dependencies = re.findall(r"DLL Name:\s*(\S+)", listing)
         require_dependencies([d.lower() for d in dependencies],
                              {"kernel32.dll", "msvcrt.dll", "advapi32.dll", "psapi.dll",
-                              "winmm.dll", "user32.dll"})
+                              "winmm.dll", "user32.dll", "bcrypt.dll"})
         print("PE core: arch=x86_64 exports=%d deps=%s: OK" %
               (len(names), ",".join(dependencies)))
         return

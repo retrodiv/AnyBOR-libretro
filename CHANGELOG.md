@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.2.31
+
+- Build the bundled archive reader with its supplied generated scripts,
+  independently of checkout timestamps and maintainer Autotools versions.
+- Link its Windows random provider against the system library.
+- Retain explicit modified 6330 coverage in native text-argument contracts.
+
 ## 0.2.30
 
 - Add the v3.0 6330-mod profile with deferred model loading, character selection,
