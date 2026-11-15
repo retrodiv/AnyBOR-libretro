@@ -399,7 +399,24 @@ class HistoricalBehaviorTests(unittest.TestCase):
         registered = contract_profiles(data, json.loads((ROOT / 'src/pin.json').read_text())['profiles'])
         self.assertTrue({int(row.get('revision', row['build'])) for row in registered
                          if row['engine'] == data['engine']} <= set(revisions))
-        actual = [json.loads(line) for line in native_output(program(ROOT, data), data).splitlines()]
+        control = program(ROOT, data)
+        if 'obor_content_import_begin(' in control:
+            # Recording services keep the original contract output intact and
+            # require every guarded import attempt to release its active scope.
+            control = r'''#include <assert.h>
+static unsigned active_import, import_attempts;
+void obor_content_import_begin(const char *path) {
+ assert(path && *path && !active_import);active_import=1;++import_attempts;
+}
+void obor_content_import_end(void) {assert(active_import==1);active_import=0;}
+#define main original_import_contract_main
+''' + control + r'''
+#undef main
+int main(void) {
+ int result=original_import_contract_main();assert(!active_import && import_attempts);return result;
+}
+'''
+        actual = [json.loads(line) for line in native_output(control, data).splitlines()]
         self.assertEqual(actual, [dict(revision=r, cases=9, status='PASS') for r in revisions])
 
     def test_classic_default_shutdown_message_contracts(self):

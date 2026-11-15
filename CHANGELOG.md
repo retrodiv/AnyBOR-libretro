@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.2.21
+
+- Check balanced import scopes in the historical script-control test harness
+  while retaining its original failure and post-reset call expectations.
+
 ## 0.2.20
 
 - Exercise shutdown diagnostics in the historical cleanup test with the actual
