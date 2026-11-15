@@ -680,13 +680,14 @@
       "upstream_sha256": "96e752389fab92900232e9602385dd98944d0b1c1ff20107e81f463fc3b11ace"
     },
     "source/preprocessorlib/pp_parser.c": {
-      "distributed_sha256": "5b97b50de7403023c51d67084cc282a04af0a7ead6beb5d72459a0cf8a2c6626",
+      "distributed_sha256": "9ffb80a9ac2edf81057ff61ee5145e996d8b256e5aa4adada209ff7aa9119e6f",
       "modified": true,
-      "summary": "Drop the glibc-only <malloc.h> and rely on the standard library declarations the parser already includes.",
+      "summary": "Drop the glibc-only <malloc.h> and rely on the standard library declarations the parser already includes. Bound active preprocessing nesting to 128 levels.",
       "topics": [
         "darwin-platform-support",
         "logical-profile-compatibility",
         "record-dates-and-file-notices",
+        "script-parser-table-safety",
         "script-preprocessor-safety"
       ],
       "upstream_sha256": "32b6fb41ac505fb55ab7661855ef1aa10208b70f7c7ebc809a1607095bad02c3"
@@ -732,13 +733,14 @@
       "upstream_sha256": "14ac04b440c4a6532246feb1a8ac534ddf0024309ef71b31634d2220a84c4fea"
     },
     "source/scriptlib/ImportCache.c": {
-      "distributed_sha256": "ecb891907895e910987f57afa81f0f3186281deb8bec99dc3b4484b29766a1a9",
+      "distributed_sha256": "d3f71a5a488c83d415eeb86f2b48bf81014239c8937931ff47817f316be88812",
       "modified": true,
-      "summary": "Guard parser-only import metadata after compilation. Compact compiler-only instruction records after resolving value ownership, preserving branch and export anchors, all mutable values and exactly-once pool cleanup. Read import metadata only while an interpreter still owns parser state.",
+      "summary": "Guard parser-only import metadata after compilation. Compact compiler-only instruction records after resolving value ownership, preserving branch and export anchors, all mutable values and exactly-once pool cleanup. Read import metadata only while an interpreter still owns parser state. Bound active import nesting and refuse active import cycles before recursive compilation.",
       "topics": [
         "record-dates-and-file-notices",
         "script-import-initialization",
-        "script-memory-layout"
+        "script-memory-layout",
+        "script-parser-table-safety"
       ],
       "upstream_sha256": "0747de65374204accbc8311d554052482c97e207b868b2e80a395ce03e6f0157"
     },
@@ -792,12 +794,13 @@
       "upstream_sha256": "2cbf7ead1fe80d6fc115764d2ee0fec4268fd8555a31f9f809d3ddb929f7254a"
     },
     "source/scriptlib/Lexer.c": {
-      "distributed_sha256": "8afcf322a6524f5f23b37081e7901e47b653b3b53b736af7fedc5d59b2871d45",
+      "distributed_sha256": "e302f9a33f7b3880a44dae9bab56b72254f3d14758d3dc592d2fe9f5835bd023",
       "modified": true,
-      "summary": "Select native string-escape advancement and unknown-token handling for each profile.",
+      "summary": "Select native string-escape advancement and unknown-token handling for each profile. Report terminal preprocessing failure with the resource and position before parking the engine coroutine.",
       "topics": [
         "logical-profile-compatibility",
-        "record-dates-and-file-notices"
+        "record-dates-and-file-notices",
+        "script-parser-table-safety"
       ],
       "upstream_sha256": "91832f762d75b612f1399fc8c22c188f02191e4746eb57ea86bf7fa212169c84"
     },
@@ -828,9 +831,9 @@
       "upstream_sha256": "caa94af01feec48313574fcdb38815834a355bbbc8d789b395441975f2d061be"
     },
     "source/scriptlib/Parser.c": {
-      "distributed_sha256": "b5be259fac94a79c22af64cc77c6ebfbf87295e56d04049d251bf34e659019bc",
+      "distributed_sha256": "0d3d122b28ee1ca2594c837b10760db9de7b692c26ed0b866ae2b94721ad7c04",
       "modified": true,
-      "summary": "Preserve native parser instruction, label and expression allocation failure feedback.",
+      "summary": "Preserve native parser instruction, label and expression allocation failure feedback. Stop terminal lexer failures and EOF recovery without changing finite historical recovery.",
       "topics": [
         "logical-profile-compatibility",
         "record-dates-and-file-notices",

@@ -1753,3 +1753,7 @@ their data. Model-copy callbacks can query the previous entity.
 Animation cleanup releases the initialized frame tables and collision entries
 using their allocation counts. Script edits to the visible frame count do
 not change which storage the animation owns.
+
+Script loading stops on terminal preprocessing failures, EOF during error
+recovery, or preprocessing or import nesting beyond 128 levels, and cyclic active imports. The error screen retains
+the resource and source position while the frontend can close the content.

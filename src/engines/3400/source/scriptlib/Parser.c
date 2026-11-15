@@ -1,10 +1,11 @@
-/* AnyBOR modification record: 2026-09-12.
+/* AnyBOR modification record: 2026-11-15.
  * Port maintained by retrodiv <retrodiv@proton.me>.
  * Copyright (c) 2026 retrodiv <retrodiv@proton.me> (original contributions).
  * These contributions are licensed under BSD-3-Clause; see LICENSE at the root.
  * Upstream code retains its original license and notices.
  * Preserve native parser instruction, label and expression allocation
- * failure feedback.
+ * failure feedback. Stop terminal lexer failures and EOF recovery without
+ * changing finite historical recovery.
  * Existing changes recorded here; this is not their implementation date.
  * See MODIFICATIONS.md and docs/modifications/3400.md
  * at the source repository root. Original notices follow below.
@@ -19,6 +20,9 @@
  */
 
 #include "Parser.h"
+#ifdef LIBRETRO
+#include "anybor_content_error.h"
+#endif
 
 Parser* pcurParser = NULL;
 
@@ -1397,7 +1401,21 @@ void Parser_Error(Parser* pparser, PRODUCTION offender )
 	//grabbing tokens until we find one we can use
 	do
 	{
-		while (!SUCCEEDED(Lexer_GetNextToken(&(pparser->theLexer), &(pparser->theNextToken))));
-		if (pparser->theNextToken.theType != TOKEN_EOF) break;
+		if (FAILED(Lexer_GetNextToken(&(pparser->theLexer), &(pparser->theNextToken))))
+        {
+            pparser->theNextToken.theType = TOKEN_EOF;
+            break;
+        }
+		if (pparser->theNextToken.theType == TOKEN_EOF)
+        {
+#ifdef LIBRETRO
+            obor_content_error(pparser->currentPath,
+                pparser->theNextToken.theTextPosition.row,
+                pparser->theNextToken.theTextPosition.col, "Unexpected end of script");
+#endif
+            break;
+        }
+        /* Historical early recovery consumes one non-EOF token. */
+        break;
 	} while (!ParserSet_Follow(&(pparser->theParserSet), offender, pparser->theNextToken.theType));
 }

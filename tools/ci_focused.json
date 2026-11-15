@@ -3760,6 +3760,16 @@
         "tools/test_linux_header_compat.py"
       ],
       "ci": "shared"
+    },
+    {
+      "id": "test_parser_error_progress",
+      "memory_mib": 512,
+      "seconds": 120,
+      "command": [
+        "python3",
+        "tools/test_parser_error_progress.py"
+      ],
+      "ci": "shared"
     }
   ]
 }

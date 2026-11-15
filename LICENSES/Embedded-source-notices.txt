@@ -73,6 +73,23 @@ Source: src/engines/3842/source/gamelib/pixelformat.c
  * at the source repository root. Original notices follow below.
  */
 
+Source: src/engines/8023/source/scriptlib/ImportCache.c
+/* AnyBOR modification record: 2026-11-15.
+ * Port maintained by retrodiv <retrodiv@proton.me>.
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me> (original contributions).
+ * These contributions are licensed under BSD-3-Clause; see LICENSE at the root.
+ * Upstream code retains its original license and notices.
+ * Guard parser-only import metadata after compilation. Compact compiler-only
+ * instruction records after resolving value ownership, preserving branch and
+ * export anchors, all mutable values and exactly-once pool cleanup. Read
+ * import metadata only while an interpreter still owns parser state. Bound
+ * active import nesting and refuse active import cycles before recursive
+ * compilation.
+ * Existing changes recorded here; this is not their implementation date.
+ * See MODIFICATIONS.md and docs/modifications/8023.md
+ * at the source repository root. Original notices follow below.
+ */
+
 Source: src/deps/zlib/inftrees.c
 /* inftrees.c -- generate Huffman trees for efficient decoding
  * Copyright (C) 1995-2026 Mark Adler
@@ -314,21 +331,26 @@ Source: src/engines/8023/openborscript.c
  * at the source repository root. Original notices follow below.
  */
 
-Source: src/deps/libvorbis/lib/lpc.c
-/* Preserved Copyright: *********************************************/
-
-Source: src/engines/7533/source/preprocessorlib/pp_parser.c
-/* AnyBOR modification record: 2026-09-29.
+Source: src/engines/4086/source/preprocessorlib/pp_parser.c
+/* AnyBOR modification record: 2026-11-15.
  * Port maintained by retrodiv <retrodiv@proton.me>.
  * Copyright (c) 2026 retrodiv <retrodiv@proton.me> (original contributions).
  * These contributions are licensed under BSD-3-Clause; see LICENSE at the root.
  * Upstream code retains its original license and notices.
  * Drop the glibc-only <malloc.h> and rely on the standard library
- * declarations the parser already includes.
+ * declarations the parser already includes. Preserve source-defined macro
+ * argument admission, whitespace, directive position, parameter scope,
+ * forwarding and concatenation. Own temporary parameter data and retain
+ * discarded parser bindings until context shutdown; initialize concatenation
+ * output storage and release owned data at its final lifetime. Bound active
+ * preprocessing nesting to 128 levels.
  * Existing changes recorded here; this is not their implementation date.
- * See MODIFICATIONS.md and docs/modifications/7533.md
+ * See MODIFICATIONS.md and docs/modifications/4086.md
  * at the source repository root. Original notices follow below.
  */
+
+Source: src/deps/libvorbis/lib/lpc.c
+/* Preserved Copyright: *********************************************/
 
 Source: src/engines/3400/source/scriptlib/ScriptVariant.h
 /* AnyBOR modification record: 2026-09-12.
@@ -397,6 +419,20 @@ Source: src/deps/libvorbis/lib/highlevel.h
 
  ********************************************************************/
 
+Source: src/engines/8023/source/scriptlib/Parser.c
+/* AnyBOR modification record: 2026-11-15.
+ * Port maintained by retrodiv <retrodiv@proton.me>.
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me> (original contributions).
+ * These contributions are licensed under BSD-3-Clause; see LICENSE at the root.
+ * Upstream code retains its original license and notices.
+ * Check constant-token prefix capacity and resolve instruction labels before
+ * recording control targets. Stop terminal lexer failures and EOF recovery
+ * without changing finite historical recovery.
+ * Existing changes recorded here; this is not their implementation date.
+ * See MODIFICATIONS.md and docs/modifications/8023.md
+ * at the source repository root. Original notices follow below.
+ */
+
 Source: src/engines/3741/source/scriptlib/Interpreter.h
 /* AnyBOR modification record: 2026-10-21.
  * Port maintained by retrodiv <retrodiv@proton.me>.
@@ -410,21 +446,6 @@ Source: src/engines/3741/source/scriptlib/Interpreter.h
  * interpreters do not retain it.
  * Existing changes recorded here; this is not their implementation date.
  * See MODIFICATIONS.md and docs/modifications/3741.md
- * at the source repository root. Original notices follow below.
- */
-
-Source: src/engines/3400/source/scriptlib/ImportCache.c
-/* AnyBOR modification record: 2026-10-10.
- * Port maintained by retrodiv <retrodiv@proton.me>.
- * Copyright (c) 2026 retrodiv <retrodiv@proton.me> (original contributions).
- * These contributions are licensed under BSD-3-Clause; see LICENSE at the root.
- * Upstream code retains its original license and notices.
- * Guard parser-only import metadata after compilation. Compact compiler-only
- * instruction records after resolving value ownership, preserving branch and
- * export anchors, all mutable values and exactly-once pool cleanup. Read
- * import metadata only while an interpreter still owns parser state.
- * Existing changes recorded here; this is not their implementation date.
- * See MODIFICATIONS.md and docs/modifications/3400.md
  * at the source repository root. Original notices follow below.
  */
 
@@ -685,6 +706,23 @@ Source: src/engines/3400/source/pnglib/savepng.c
  * SPDX-License-Identifier: BSD-3-Clause
  * Copyright (c) 2026 retrodiv <retrodiv@proton.me> */
 
+Source: src/engines/6391/source/scriptlib/ImportCache.c
+/* AnyBOR modification record: 2026-11-15.
+ * Port maintained by retrodiv <retrodiv@proton.me>.
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me> (original contributions).
+ * These contributions are licensed under BSD-3-Clause; see LICENSE at the root.
+ * Upstream code retains its original license and notices.
+ * Guard parser-only import metadata after compilation. Compact compiler-only
+ * instruction records after resolving value ownership, preserving branch and
+ * export anchors, all mutable values and exactly-once pool cleanup. Read
+ * import metadata only while an interpreter still owns parser state. Bound
+ * active import nesting and refuse active import cycles before recursive
+ * compilation.
+ * Existing changes recorded here; this is not their implementation date.
+ * See MODIFICATIONS.md and docs/modifications/6391.md
+ * at the source repository root. Original notices follow below.
+ */
+
 Source: src/engines/3842/source/scriptlib/Instruction.c
 /* AnyBOR modification record: 2026-10-26.
  * Port maintained by retrodiv <retrodiv@proton.me>.
@@ -792,6 +830,20 @@ Source: src/engines/8023/source/gamelib/threads.h
  * Declare the libretro thread, mutex and condition types.
  * Existing changes recorded here; this is not their implementation date.
  * See MODIFICATIONS.md and docs/modifications/8023.md
+ * at the source repository root. Original notices follow below.
+ */
+
+Source: src/engines/4086/source/scriptlib/Lexer.c
+/* AnyBOR modification record: 2026-11-15.
+ * Port maintained by retrodiv <retrodiv@proton.me>.
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me> (original contributions).
+ * These contributions are licensed under BSD-3-Clause; see LICENSE at the root.
+ * Upstream code retains its original license and notices.
+ * Keep script tokenization bounded and propagate preprocessing failure.
+ * Report terminal preprocessing failure with the resource and position
+ * before parking the engine coroutine.
+ * Existing changes recorded here; this is not their implementation date.
+ * See MODIFICATIONS.md and docs/modifications/4086.md
  * at the source repository root. Original notices follow below.
  */
 
@@ -936,6 +988,20 @@ Source: src/engines/3400/source/scriptlib/Interpreter.c
  * release it once runtime instructions are ready.
  * Existing changes recorded here; this is not their implementation date.
  * See MODIFICATIONS.md and docs/modifications/3400.md
+ * at the source repository root. Original notices follow below.
+ */
+
+Source: src/engines/4432/source/scriptlib/Lexer.c
+/* AnyBOR modification record: 2026-11-15.
+ * Port maintained by retrodiv <retrodiv@proton.me>.
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me> (original contributions).
+ * These contributions are licensed under BSD-3-Clause; see LICENSE at the root.
+ * Upstream code retains its original license and notices.
+ * Keep script tokenization bounded and propagate preprocessing failure.
+ * Report terminal preprocessing failure with the resource and position
+ * before parking the engine coroutine.
+ * Existing changes recorded here; this is not their implementation date.
+ * See MODIFICATIONS.md and docs/modifications/4432.md
  * at the source repository root. Original notices follow below.
  */
 
@@ -1320,21 +1386,6 @@ Source: src/engines/6391/source/openborscript/entity.h
  * at the source repository root. Original notices follow below.
  */
 
-Source: src/engines/7142/source/scriptlib/ImportCache.c
-/* AnyBOR modification record: 2026-10-10.
- * Port maintained by retrodiv <retrodiv@proton.me>.
- * Copyright (c) 2026 retrodiv <retrodiv@proton.me> (original contributions).
- * These contributions are licensed under BSD-3-Clause; see LICENSE at the root.
- * Upstream code retains its original license and notices.
- * Guard parser-only import metadata after compilation. Compact compiler-only
- * instruction records after resolving value ownership, preserving branch and
- * export anchors, all mutable values and exactly-once pool cleanup. Read
- * import metadata only while an interpreter still owns parser state.
- * Existing changes recorded here; this is not their implementation date.
- * See MODIFICATIONS.md and docs/modifications/7142.md
- * at the source repository root. Original notices follow below.
- */
-
 Source: src/deps/libvpx/ivfdec.c, src/deps/libvpx/ivfdec.h, src/deps/libvpx/ivfenc.c, src/deps/libvpx/ivfenc.h, src/deps/libvpx/vp9/common/mips/dspr2/vp9_itrans16_dspr2.c, src/deps/libvpx/vp9/common/mips/dspr2/vp9_itrans4_dspr2.c, src/deps/libvpx/vp9/common/mips/dspr2/vp9_itrans8_dspr2.c, src/deps/libvpx/vp9/common/vp9_scale.c, src/deps/libvpx/vp9/common/vp9_scale.h, src/deps/libvpx/vp9/common/vp9_scan.h, src/deps/libvpx/vp9/decoder/vp9_dsubexp.h, src/deps/libvpx/vp9/encoder/vp9_aq_360.c, src/deps/libvpx/vp9/encoder/vp9_aq_360.h, src/deps/libvpx/vp9/encoder/vp9_aq_variance.c, src/deps/libvpx/vp9/encoder/vp9_aq_variance.h, src/deps/libvpx/vp9/encoder/vp9_subexp.c, src/deps/libvpx/vp9/encoder/vp9_subexp.h, src/deps/libvpx/vp9/vp9_iface_common.h, src/deps/libvpx/vpx_dsp/arm/vpx_convolve_neon.c, src/deps/libvpx/vpx_dsp/bitreader_buffer.c, src/deps/libvpx/vpx_dsp/bitreader_buffer.h, src/deps/libvpx/vpx_dsp/bitwriter_buffer.c, src/deps/libvpx/vpx_dsp/bitwriter_buffer.h, src/deps/libvpx/vpx_dsp/mips/common_dspr2.h, src/deps/libvpx/vpx_dsp/mips/convolve2_avg_dspr2.c, src/deps/libvpx/vpx_dsp/mips/convolve2_avg_horiz_dspr2.c, src/deps/libvpx/vpx_dsp/mips/convolve2_dspr2.c, src/deps/libvpx/vpx_dsp/mips/convolve2_horiz_dspr2.c, src/deps/libvpx/vpx_dsp/mips/convolve2_vert_dspr2.c, src/deps/libvpx/vpx_dsp/mips/convolve8_avg_dspr2.c, src/deps/libvpx/vpx_dsp/mips/convolve8_avg_horiz_dspr2.c, src/deps/libvpx/vpx_dsp/mips/convolve8_dspr2.c, src/deps/libvpx/vpx_dsp/mips/convolve8_horiz_dspr2.c, src/deps/libvpx/vpx_dsp/mips/convolve8_vert_dspr2.c, src/deps/libvpx/vpx_dsp/mips/convolve_common_dspr2.h, src/deps/libvpx/vpx_dsp/mips/inv_txfm_dspr2.h, src/deps/libvpx/vpx_dsp/mips/itrans32_cols_dspr2.c, src/deps/libvpx/vpx_dsp/mips/itrans32_dspr2.c, src/deps/libvpx/vpx_dsp/mips/loopfilter_filters_dspr2.c, src/deps/libvpx/vpx_dsp/mips/loopfilter_filters_dspr2.h, src/deps/libvpx/vpx_dsp/mips/loopfilter_macros_dspr2.h, src/deps/libvpx/vpx_dsp/mips/loopfilter_masks_dspr2.h, src/deps/libvpx/vpx_dsp/mips/loopfilter_mb_dspr2.c, src/deps/libvpx/vpx_dsp/mips/loopfilter_mb_horiz_dspr2.c, src/deps/libvpx/vpx_dsp/mips/loopfilter_mb_vert_dspr2.c, src/deps/libvpx/vpx_dsp/prob.c, src/deps/libvpx/vpx_dsp/prob.h, src/deps/libvpx/vpx_dsp/vpx_convolve.c, src/deps/libvpx/vpx_dsp/vpx_convolve.h, src/deps/libvpx/vpx_scale/mips/dspr2/yv12extend_dspr2.c, src/deps/libvpx/vpxenc.h, src/deps/libvpx/vpxstats.c, src/deps/libvpx/vpxstats.h, src/deps/libvpx/warnings.c, src/deps/libvpx/warnings.h, src/deps/libvpx/webmdec.cc, src/deps/libvpx/webmdec.h, src/deps/libvpx/webmenc.h
 /*
  *  Copyright (c) 2013 The WebM project authors. All Rights Reserved.
@@ -1476,23 +1527,6 @@ Source: src/deps/libogg/src/framing.c
 
 Source: src/glue/anybor_engines.h
 /* Copyright (c) 2026 retrodiv <retrodiv@proton.me> */
-
-Source: src/engines/4086/source/scriptlib/ImportCache.c
-/* AnyBOR modification record: 2026-11-08.
- * Port maintained by retrodiv <retrodiv@proton.me>.
- * Copyright (c) 2026 retrodiv <retrodiv@proton.me> (original contributions).
- * These contributions are licensed under BSD-3-Clause; see LICENSE at the root.
- * Upstream code retains its original license and notices.
- * Guard parser-only import metadata after compilation. Select each profile's
- * additional import-failure diagnostics without changing cleanup. Compact
- * compiler-only instruction records after resolving value ownership,
- * preserving branch and export anchors, all mutable values and exactly-once
- * pool cleanup. Read import metadata only while an interpreter still owns
- * parser state.
- * Existing changes recorded here; this is not their implementation date.
- * See MODIFICATIONS.md and docs/modifications/4086.md
- * at the source repository root. Original notices follow below.
- */
 
 Source: src/engines/3842/source/gamelib/transform.c
 /* AnyBOR modification record: 2026-09-12.
@@ -2105,19 +2139,6 @@ Source: src/engines/3400/source/gamelib/transform.c
  * at the source repository root. Original notices follow below.
  */
 
-Source: src/engines/3741/source/preprocessorlib/pp_parser.c
-/* AnyBOR modification record: 2026-10-21.
- * Port maintained by retrodiv <retrodiv@proton.me>.
- * Copyright (c) 2026 retrodiv <retrodiv@proton.me> (original contributions).
- * These contributions are licensed under BSD-3-Clause; see LICENSE at the root.
- * Upstream code retains its original license and notices.
- * Drop the glibc-only <malloc.h> and rely on the standard library
- * declarations the parser already includes.
- * Existing changes recorded here; this is not their implementation date.
- * See MODIFICATIONS.md and docs/modifications/3741.md
- * at the source repository root. Original notices follow below.
- */
-
 Source: src/deps/libpng/mips/filter_mmi_inline_assembly.c
 /* filter_mmi_intrinsics.c - MMI optimized filter functions
  *
@@ -2181,16 +2202,17 @@ Source: src/engines/4086/source/scriptlib/depends.h
  * at the source repository root. Original notices follow below.
  */
 
-Source: src/engines/4086/source/scriptlib/Parser.c
-/* AnyBOR modification record: 2026-10-19.
+Source: src/engines/3741/source/scriptlib/Lexer.c
+/* AnyBOR modification record: 2026-11-15.
  * Port maintained by retrodiv <retrodiv@proton.me>.
  * Copyright (c) 2026 retrodiv <retrodiv@proton.me> (original contributions).
  * These contributions are licensed under BSD-3-Clause; see LICENSE at the root.
  * Upstream code retains its original license and notices.
- * Check constant-token prefix capacity and resolve instruction labels before
- * recording control targets.
+ * Keep script tokenization bounded and propagate preprocessing failure.
+ * Report terminal preprocessing failure with the resource and position
+ * before parking the engine coroutine.
  * Existing changes recorded here; this is not their implementation date.
- * See MODIFICATIONS.md and docs/modifications/4086.md
+ * See MODIFICATIONS.md and docs/modifications/3741.md
  * at the source repository root. Original notices follow below.
  */
 
@@ -2500,19 +2522,6 @@ Source: src/deps/libvorbis/lib/codebook.h, src/deps/libvorbis/lib/sharedbook.c
 
  ********************************************************************/
 
-Source: src/engines/8023/source/preprocessorlib/pp_parser.c
-/* AnyBOR modification record: 2026-09-12.
- * Port maintained by retrodiv <retrodiv@proton.me>.
- * Copyright (c) 2026 retrodiv <retrodiv@proton.me> (original contributions).
- * These contributions are licensed under BSD-3-Clause; see LICENSE at the root.
- * Upstream code retains its original license and notices.
- * Drop the glibc-only <malloc.h> and rely on the standard library
- * declarations the parser already includes.
- * Existing changes recorded here; this is not their implementation date.
- * See MODIFICATIONS.md and docs/modifications/8023.md
- * at the source repository root. Original notices follow below.
- */
-
 Source: src/engines/7533/source/scriptlib/Instruction.h
 /* AnyBOR modification record: 2026-09-29.
  * Port maintained by retrodiv <retrodiv@proton.me>.
@@ -2524,6 +2533,21 @@ Source: src/engines/7533/source/scriptlib/Instruction.h
  * replacements.
  * Existing changes recorded here; this is not their implementation date.
  * See MODIFICATIONS.md and docs/modifications/7533.md
+ * at the source repository root. Original notices follow below.
+ */
+
+Source: src/engines/3842/source/preprocessorlib/pp_parser.c
+/* AnyBOR modification record: 2026-11-15.
+ * Port maintained by retrodiv <retrodiv@proton.me>.
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me> (original contributions).
+ * These contributions are licensed under BSD-3-Clause; see LICENSE at the root.
+ * Upstream code retains its original license and notices.
+ * Drop the glibc-only <malloc.h> and rely on the standard library
+ * declarations the parser already includes. Preserve the pre-3802 user macro
+ * namespace, retaining lexical and parser safety. Bound active preprocessing
+ * nesting to 128 levels.
+ * Existing changes recorded here; this is not their implementation date.
+ * See MODIFICATIONS.md and docs/modifications/3842.md
  * at the source repository root. Original notices follow below.
  */
 
@@ -2669,21 +2693,6 @@ Source: src/engines/3400/source/gamelib/soundmix.c
  * storage. Preserve the profile's sample-load failure diagnostic.
  * Existing changes recorded here; this is not their implementation date.
  * See MODIFICATIONS.md and docs/modifications/3400.md
- * at the source repository root. Original notices follow below.
- */
-
-Source: src/engines/8023/source/scriptlib/ImportCache.c
-/* AnyBOR modification record: 2026-10-10.
- * Port maintained by retrodiv <retrodiv@proton.me>.
- * Copyright (c) 2026 retrodiv <retrodiv@proton.me> (original contributions).
- * These contributions are licensed under BSD-3-Clause; see LICENSE at the root.
- * Upstream code retains its original license and notices.
- * Guard parser-only import metadata after compilation. Compact compiler-only
- * instruction records after resolving value ownership, preserving branch and
- * export anchors, all mutable values and exactly-once pool cleanup. Read
- * import metadata only while an interpreter still owns parser state.
- * Existing changes recorded here; this is not their implementation date.
- * See MODIFICATIONS.md and docs/modifications/8023.md
  * at the source repository root. Original notices follow below.
  */
 
@@ -3036,6 +3045,23 @@ Source: src/deps/libvorbis/lib/modes/residue_44p51.h
 
  ********************************************************************/
 
+Source: src/engines/3400/source/scriptlib/ImportCache.c
+/* AnyBOR modification record: 2026-11-15.
+ * Port maintained by retrodiv <retrodiv@proton.me>.
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me> (original contributions).
+ * These contributions are licensed under BSD-3-Clause; see LICENSE at the root.
+ * Upstream code retains its original license and notices.
+ * Guard parser-only import metadata after compilation. Compact compiler-only
+ * instruction records after resolving value ownership, preserving branch and
+ * export anchors, all mutable values and exactly-once pool cleanup. Read
+ * import metadata only while an interpreter still owns parser state. Bound
+ * active import nesting and refuse active import cycles before recursive
+ * compilation.
+ * Existing changes recorded here; this is not their implementation date.
+ * See MODIFICATIONS.md and docs/modifications/3400.md
+ * at the source repository root. Original notices follow below.
+ */
+
 Source: src/engines/3400/source/gamelib/models.c, src/engines/3400/source/gamelib/models.h, src/engines/3400/source/pnglib/pngdec.c, src/engines/3400/source/pnglib/savepng.c, src/engines/3400/source/pnglib/savepng.h, src/engines/3400/source/scriptlib/ImportCache.c, src/engines/3400/source/scriptlib/ImportCache.h, src/engines/3741/source/gamelib/models.c, src/engines/3741/source/gamelib/models.h, src/engines/3741/source/pnglib/pngdec.c, src/engines/3741/source/pnglib/savepng.c, src/engines/3741/source/pnglib/savepng.h, src/engines/3741/source/scriptlib/ImportCache.c, src/engines/3741/source/scriptlib/ImportCache.h, src/engines/3842/source/gamelib/models.c, src/engines/3842/source/gamelib/models.h, src/engines/3842/source/pnglib/pngdec.c, src/engines/3842/source/pnglib/savepng.c, src/engines/3842/source/pnglib/savepng.h, src/engines/4086/source/gamelib/models.c, src/engines/4086/source/gamelib/models.h, src/engines/4086/source/pnglib/pngdec.c, src/engines/4086/source/pnglib/savepng.c, src/engines/4086/source/pnglib/savepng.h, src/engines/4432/source/gamelib/models.c, src/engines/4432/source/gamelib/models.h, src/engines/4432/source/pnglib/pngdec.c, src/engines/4432/source/pnglib/pngdec.h, src/engines/4432/source/pnglib/savepng.c, src/engines/4432/source/pnglib/savepng.h, src/engines/6391/source/gamelib/models.c, src/engines/6391/source/gamelib/models.h, src/engines/6391/source/pnglib/pngdec.c, src/engines/6391/source/pnglib/pngdec.h, src/engines/6391/source/pnglib/savepng.c, src/engines/6391/source/pnglib/savepng.h, src/engines/7142/source/gamelib/models.c, src/engines/7142/source/gamelib/models.h, src/engines/7142/source/pnglib/pngdec.c, src/engines/7142/source/pnglib/pngdec.h, src/engines/7142/source/pnglib/savepng.c, src/engines/7142/source/pnglib/savepng.h
 /*
  * OpenBOR - http://www.LavaLit.com
@@ -3299,19 +3325,6 @@ Source: src/engines/8023/source/scriptlib/Instruction.h
  * at the source repository root. Original notices follow below.
  */
 
-Source: src/engines/7142/source/scriptlib/Parser.c
-/* AnyBOR modification record: 2026-10-06.
- * Port maintained by retrodiv <retrodiv@proton.me>.
- * Copyright (c) 2026 retrodiv <retrodiv@proton.me> (original contributions).
- * These contributions are licensed under BSD-3-Clause; see LICENSE at the root.
- * Upstream code retains its original license and notices.
- * Check constant-token prefix capacity and resolve instruction labels before
- * recording control targets.
- * Existing changes recorded here; this is not their implementation date.
- * See MODIFICATIONS.md and docs/modifications/7142.md
- * at the source repository root. Original notices follow below.
- */
-
 Source: src/deps/libvpx/vpx_dsp/fastssim.c
 /*
  *  Copyright (c) 2010 The WebM project authors. All Rights Reserved.
@@ -3370,17 +3383,17 @@ Source: src/engines/6391/source/gamelib/anigif.c
  * at the source repository root. Original notices follow below.
  */
 
-Source: src/engines/3842/source/preprocessorlib/pp_parser.c
-/* AnyBOR modification record: 2026-10-17.
+Source: src/engines/7533/source/scriptlib/Parser.c
+/* AnyBOR modification record: 2026-11-15.
  * Port maintained by retrodiv <retrodiv@proton.me>.
  * Copyright (c) 2026 retrodiv <retrodiv@proton.me> (original contributions).
  * These contributions are licensed under BSD-3-Clause; see LICENSE at the root.
  * Upstream code retains its original license and notices.
- * Drop the glibc-only <malloc.h> and rely on the standard library
- * declarations the parser already includes. Preserve the pre-3802 user macro
- * namespace, retaining lexical and parser safety.
+ * Check constant-token prefix capacity and resolve instruction labels before
+ * recording control targets. Stop terminal lexer failures and EOF recovery
+ * without changing finite historical recovery.
  * Existing changes recorded here; this is not their implementation date.
- * See MODIFICATIONS.md and docs/modifications/3842.md
+ * See MODIFICATIONS.md and docs/modifications/7533.md
  * at the source repository root. Original notices follow below.
  */
 
@@ -3519,19 +3532,6 @@ Source: src/deps/libpng/scripts/vers.c
  * and license in png.h
  */
 
-Source: src/engines/3400/source/preprocessorlib/pp_parser.c
-/* AnyBOR modification record: 2026-09-12.
- * Port maintained by retrodiv <retrodiv@proton.me>.
- * Copyright (c) 2026 retrodiv <retrodiv@proton.me> (original contributions).
- * These contributions are licensed under BSD-3-Clause; see LICENSE at the root.
- * Upstream code retains its original license and notices.
- * Drop the glibc-only <malloc.h> and rely on the standard library
- * declarations the parser already includes.
- * Existing changes recorded here; this is not their implementation date.
- * See MODIFICATIONS.md and docs/modifications/3400.md
- * at the source repository root. Original notices follow below.
- */
-
 Source: src/engines/3400/source/gamelib/screen32.c
 /* AnyBOR modification record: 2026-09-12.
  * Port maintained by retrodiv <retrodiv@proton.me>.
@@ -3556,6 +3556,20 @@ Source: src/engines/3842/source/scriptlib/Instruction.h
  * replacements.
  * Existing changes recorded here; this is not their implementation date.
  * See MODIFICATIONS.md and docs/modifications/3842.md
+ * at the source repository root. Original notices follow below.
+ */
+
+Source: src/engines/3741/source/scriptlib/Parser.c
+/* AnyBOR modification record: 2026-11-15.
+ * Port maintained by retrodiv <retrodiv@proton.me>.
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me> (original contributions).
+ * These contributions are licensed under BSD-3-Clause; see LICENSE at the root.
+ * Upstream code retains its original license and notices.
+ * Preserve each profile's loop compiler targets and continue grammar while
+ * releasing temporary labels. Stop terminal lexer failures and EOF recovery
+ * without changing finite historical recovery.
+ * Existing changes recorded here; this is not their implementation date.
+ * See MODIFICATIONS.md and docs/modifications/3741.md
  * at the source repository root. Original notices follow below.
  */
 
@@ -3956,23 +3970,6 @@ Source: src/engines/3842/source/gamelib/bitmap.c
  * at the source repository root. Original notices follow below.
  */
 
-Source: src/engines/4086/source/preprocessorlib/pp_parser.c
-/* AnyBOR modification record: 2026-11-08.
- * Port maintained by retrodiv <retrodiv@proton.me>.
- * Copyright (c) 2026 retrodiv <retrodiv@proton.me> (original contributions).
- * These contributions are licensed under BSD-3-Clause; see LICENSE at the root.
- * Upstream code retains its original license and notices.
- * Drop the glibc-only <malloc.h> and rely on the standard library
- * declarations the parser already includes. Preserve source-defined macro
- * argument admission, whitespace, directive position, parameter scope,
- * forwarding and concatenation. Own temporary parameter data and retain
- * discarded parser bindings until context shutdown; initialize concatenation
- * output storage and release owned data at its final lifetime.
- * Existing changes recorded here; this is not their implementation date.
- * See MODIFICATIONS.md and docs/modifications/4086.md
- * at the source repository root. Original notices follow below.
- */
-
 Source: src/engines/7142/source/gamelib/sprite.c
 /* AnyBOR modification record: 2026-10-08.
  * Port maintained by retrodiv <retrodiv@proton.me>.
@@ -4086,6 +4083,23 @@ Source: src/engines/8023/source/gamelib/borendian.h
  * Use the port's fixed-width endian conversions.
  * Existing changes recorded here; this is not their implementation date.
  * See MODIFICATIONS.md and docs/modifications/8023.md
+ * at the source repository root. Original notices follow below.
+ */
+
+Source: src/engines/3741/source/scriptlib/ImportCache.c
+/* AnyBOR modification record: 2026-11-15.
+ * Port maintained by retrodiv <retrodiv@proton.me>.
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me> (original contributions).
+ * These contributions are licensed under BSD-3-Clause; see LICENSE at the root.
+ * Upstream code retains its original license and notices.
+ * Guard parser-only import metadata after compilation. Compact compiler-only
+ * instruction records after resolving value ownership, preserving branch and
+ * export anchors, all mutable values and exactly-once pool cleanup. Read
+ * import metadata only while an interpreter still owns parser state. Bound
+ * active import nesting and refuse active import cycles before recursive
+ * compilation.
+ * Existing changes recorded here; this is not their implementation date.
+ * See MODIFICATIONS.md and docs/modifications/3741.md
  * at the source repository root. Original notices follow below.
  */
 
@@ -4599,19 +4613,6 @@ Source: src/engines/6391/source/openborscript/level.c
  * at the source repository root. Original notices follow below.
  */
 
-Source: src/engines/7142/source/preprocessorlib/pp_parser.c
-/* AnyBOR modification record: 2026-10-06.
- * Port maintained by retrodiv <retrodiv@proton.me>.
- * Copyright (c) 2026 retrodiv <retrodiv@proton.me> (original contributions).
- * These contributions are licensed under BSD-3-Clause; see LICENSE at the root.
- * Upstream code retains its original license and notices.
- * Drop the glibc-only <malloc.h> and rely on the standard library
- * declarations the parser already includes.
- * Existing changes recorded here; this is not their implementation date.
- * See MODIFICATIONS.md and docs/modifications/7142.md
- * at the source repository root. Original notices follow below.
- */
-
 Source: src/engines/4432/source/gamelib/threads.h
 /* AnyBOR modification record: 2026-09-30.
  * Port maintained by retrodiv <retrodiv@proton.me>.
@@ -4733,6 +4734,21 @@ Source: src/glue/anybor_imohash.h
  * imohash sampling and size encoding follow Jim Kalafut's MIT implementation.
  * See LICENSES/imohash.txt, LICENSES/murmur3.txt and docs/PROVENANCE.md. */
 
+Source: src/engines/3842/source/scriptlib/Parser.c
+/* AnyBOR modification record: 2026-11-15.
+ * Port maintained by retrodiv <retrodiv@proton.me>.
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me> (original contributions).
+ * These contributions are licensed under BSD-3-Clause; see LICENSE at the root.
+ * Upstream code retains its original license and notices.
+ * Select native syntax, assignment results, unary folding and diagnostics;
+ * refuse unresolved control targets before recording instructions. Stop
+ * terminal lexer failures and EOF recovery without changing finite
+ * historical recovery.
+ * Existing changes recorded here; this is not their implementation date.
+ * See MODIFICATIONS.md and docs/modifications/3842.md
+ * at the source repository root. Original notices follow below.
+ */
+
 Source: src/deps/libvorbis/include/vorbis/vorbisenc.h
 /********************************************************************
  *                                                                  *
@@ -4843,19 +4859,6 @@ Source: src/engines/7142/source/openborscript/constants.c
  * profile, retaining safe storage and additive APIs.
  * Existing changes recorded here; this is not their implementation date.
  * See MODIFICATIONS.md and docs/modifications/7142.md
- * at the source repository root. Original notices follow below.
- */
-
-Source: src/engines/7533/source/scriptlib/Parser.c
-/* AnyBOR modification record: 2026-09-29.
- * Port maintained by retrodiv <retrodiv@proton.me>.
- * Copyright (c) 2026 retrodiv <retrodiv@proton.me> (original contributions).
- * These contributions are licensed under BSD-3-Clause; see LICENSE at the root.
- * Upstream code retains its original license and notices.
- * Check constant-token prefix capacity and resolve instruction labels before
- * recording control targets.
- * Existing changes recorded here; this is not their implementation date.
- * See MODIFICATIONS.md and docs/modifications/7533.md
  * at the source repository root. Original notices follow below.
  */
 
@@ -5078,19 +5081,6 @@ Source: src/engines/3400/source/gamelib/draw32.c
  * at the source repository root. Original notices follow below.
  */
 
-Source: src/engines/3400/source/scriptlib/Lexer.c
-/* AnyBOR modification record: 2026-09-12.
- * Port maintained by retrodiv <retrodiv@proton.me>.
- * Copyright (c) 2026 retrodiv <retrodiv@proton.me> (original contributions).
- * These contributions are licensed under BSD-3-Clause; see LICENSE at the root.
- * Upstream code retains its original license and notices.
- * Select native string-escape advancement and unknown-token handling for
- * each profile.
- * Existing changes recorded here; this is not their implementation date.
- * See MODIFICATIONS.md and docs/modifications/3400.md
- * at the source repository root. Original notices follow below.
- */
-
 Source: src/engines/7533/source/scriptlib/Instruction.c
 /* AnyBOR modification record: 2026-09-29.
  * Port maintained by retrodiv <retrodiv@proton.me>.
@@ -5115,6 +5105,20 @@ Source: src/deps/libvpx/vp8/common/loongarch/loopfilter_filters_lsx.c
  * tree. An additional intellectual property rights grant can be found
  * in the file PATENTS. All contributing project authors may
  * be found in the AUTHORS file in the root of the source tree.
+ */
+
+Source: src/engines/6391/source/scriptlib/Parser.c
+/* AnyBOR modification record: 2026-11-15.
+ * Port maintained by retrodiv <retrodiv@proton.me>.
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me> (original contributions).
+ * These contributions are licensed under BSD-3-Clause; see LICENSE at the root.
+ * Upstream code retains its original license and notices.
+ * Check constant-token prefix capacity and resolve instruction labels before
+ * recording control targets. Stop terminal lexer failures and EOF recovery
+ * without changing finite historical recovery.
+ * Existing changes recorded here; this is not their implementation date.
+ * See MODIFICATIONS.md and docs/modifications/6391.md
+ * at the source repository root. Original notices follow below.
  */
 
 Source: src/deps/libvpx/vp9/encoder/vp9_ext_ratectrl.c, src/deps/libvpx/vp9/encoder/vp9_ext_ratectrl.h, src/deps/libvpx/vp9/ratectrl_rtc.cc, src/deps/libvpx/vp9/ratectrl_rtc.h, src/deps/libvpx/vpx/vpx_ext_ratectrl.h, src/deps/libvpx/vpx_ports/compiler_attributes.h, src/deps/libvpx/vpx_ports/mips.h, src/deps/libvpx/vpx_ports/mips_cpudetect.c, src/deps/libvpx/vpx_ports/static_assert.h
@@ -5620,6 +5624,20 @@ Source: src/engines/3842/source/scriptlib/ImportCache.h
  * Retain imported entry points as direct instruction pointers.
  * Existing changes recorded here; this is not their implementation date.
  * See MODIFICATIONS.md and docs/modifications/3842.md
+ * at the source repository root. Original notices follow below.
+ */
+
+Source: src/engines/4432/source/scriptlib/Parser.c
+/* AnyBOR modification record: 2026-11-15.
+ * Port maintained by retrodiv <retrodiv@proton.me>.
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me> (original contributions).
+ * These contributions are licensed under BSD-3-Clause; see LICENSE at the root.
+ * Upstream code retains its original license and notices.
+ * Check constant-token prefix capacity and resolve instruction labels before
+ * recording control targets. Stop terminal lexer failures and EOF recovery
+ * without changing finite historical recovery.
+ * Existing changes recorded here; this is not their implementation date.
+ * See MODIFICATIONS.md and docs/modifications/4432.md
  * at the source repository root. Original notices follow below.
  */
 
@@ -6418,19 +6436,6 @@ Source: src/deps/libvpx/vp9/vp9_iface_common.c
  *  the root of the source tree.
  */
 
-Source: src/engines/4432/source/preprocessorlib/pp_parser.c
-/* AnyBOR modification record: 2026-09-30.
- * Port maintained by retrodiv <retrodiv@proton.me>.
- * Copyright (c) 2026 retrodiv <retrodiv@proton.me> (original contributions).
- * These contributions are licensed under BSD-3-Clause; see LICENSE at the root.
- * Upstream code retains its original license and notices.
- * Drop the glibc-only <malloc.h> and rely on the standard library
- * declarations the parser already includes.
- * Existing changes recorded here; this is not their implementation date.
- * See MODIFICATIONS.md and docs/modifications/4432.md
- * at the source repository root. Original notices follow below.
- */
-
 Source: src/engines/7533/source/openborscript/audio.c
 /* AnyBOR modification record: 2026-11-09.
  * Port maintained by retrodiv <retrodiv@proton.me>.
@@ -6613,6 +6618,20 @@ Source: src/glue/anybor_transform_vm.c
  * AnyBOR adaptations: retrodiv <retrodiv@proton.me>
  * Adapted for AnyBOR: standalone bounded byte-buffer interpreter. */
 
+Source: src/engines/7533/source/preprocessorlib/pp_parser.c
+/* AnyBOR modification record: 2026-11-15.
+ * Port maintained by retrodiv <retrodiv@proton.me>.
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me> (original contributions).
+ * These contributions are licensed under BSD-3-Clause; see LICENSE at the root.
+ * Upstream code retains its original license and notices.
+ * Drop the glibc-only <malloc.h> and rely on the standard library
+ * declarations the parser already includes. Bound active preprocessing
+ * nesting to 128 levels.
+ * Existing changes recorded here; this is not their implementation date.
+ * See MODIFICATIONS.md and docs/modifications/7533.md
+ * at the source repository root. Original notices follow below.
+ */
+
 Source: src/engines/8023/source/webmlib/vidplay.c, src/engines/8023/source/webmlib/vidplay.c
 /* AnyBOR modification record: 2026-10-10.
  * Port maintained by retrodiv <retrodiv@proton.me>.
@@ -6773,6 +6792,23 @@ Source: src/engines/7533/source/gamelib/filecache.c
  * Upstream code retains its original license and notices.
  * Expose the cache descriptor for resource restoration and initialize it to
  * -1.
+ * Existing changes recorded here; this is not their implementation date.
+ * See MODIFICATIONS.md and docs/modifications/7533.md
+ * at the source repository root. Original notices follow below.
+ */
+
+Source: src/engines/7533/source/scriptlib/ImportCache.c
+/* AnyBOR modification record: 2026-11-15.
+ * Port maintained by retrodiv <retrodiv@proton.me>.
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me> (original contributions).
+ * These contributions are licensed under BSD-3-Clause; see LICENSE at the root.
+ * Upstream code retains its original license and notices.
+ * Guard parser-only import metadata after compilation. Compact compiler-only
+ * instruction records after resolving value ownership, preserving branch and
+ * export anchors, all mutable values and exactly-once pool cleanup. Read
+ * import metadata only while an interpreter still owns parser state. Bound
+ * active import nesting and refuse active import cycles before recursive
+ * compilation.
  * Existing changes recorded here; this is not their implementation date.
  * See MODIFICATIONS.md and docs/modifications/7533.md
  * at the source repository root. Original notices follow below.
@@ -7006,21 +7042,6 @@ Source: src/engines/6391/source/utils.h
  * at the source repository root. Original notices follow below.
  */
 
-Source: src/engines/4432/source/scriptlib/ImportCache.c
-/* AnyBOR modification record: 2026-10-10.
- * Port maintained by retrodiv <retrodiv@proton.me>.
- * Copyright (c) 2026 retrodiv <retrodiv@proton.me> (original contributions).
- * These contributions are licensed under BSD-3-Clause; see LICENSE at the root.
- * Upstream code retains its original license and notices.
- * Guard parser-only import metadata after compilation. Compact compiler-only
- * instruction records after resolving value ownership, preserving branch and
- * export anchors, all mutable values and exactly-once pool cleanup. Read
- * import metadata only while an interpreter still owns parser state.
- * Existing changes recorded here; this is not their implementation date.
- * See MODIFICATIONS.md and docs/modifications/4432.md
- * at the source repository root. Original notices follow below.
- */
-
 Source: src/engines/7533/source/openborscript/model.c
 /* AnyBOR modification record: 2026-11-09.
  * Port maintained by retrodiv <retrodiv@proton.me>.
@@ -7031,6 +7052,23 @@ Source: src/engines/7533/source/openborscript/model.c
  * results for each logical profile.
  * Existing changes recorded here; this is not their implementation date.
  * See MODIFICATIONS.md and docs/modifications/7533.md
+ * at the source repository root. Original notices follow below.
+ */
+
+Source: src/engines/7142/source/scriptlib/ImportCache.c
+/* AnyBOR modification record: 2026-11-15.
+ * Port maintained by retrodiv <retrodiv@proton.me>.
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me> (original contributions).
+ * These contributions are licensed under BSD-3-Clause; see LICENSE at the root.
+ * Upstream code retains its original license and notices.
+ * Guard parser-only import metadata after compilation. Compact compiler-only
+ * instruction records after resolving value ownership, preserving branch and
+ * export anchors, all mutable values and exactly-once pool cleanup. Read
+ * import metadata only while an interpreter still owns parser state. Bound
+ * active import nesting and refuse active import cycles before recursive
+ * compilation.
+ * Existing changes recorded here; this is not their implementation date.
+ * See MODIFICATIONS.md and docs/modifications/7142.md
  * at the source repository root. Original notices follow below.
  */
 
@@ -7196,6 +7234,20 @@ Source: src/deps/libvpx/vpx_dsp/arm/idct4x4_1_add_neon.asm
 ;  file in the root of the source tree.
 ;
 
+Source: src/engines/3741/source/preprocessorlib/pp_parser.c
+/* AnyBOR modification record: 2026-11-15.
+ * Port maintained by retrodiv <retrodiv@proton.me>.
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me> (original contributions).
+ * These contributions are licensed under BSD-3-Clause; see LICENSE at the root.
+ * Upstream code retains its original license and notices.
+ * Drop the glibc-only <malloc.h> and rely on the standard library
+ * declarations the parser already includes. Bound active preprocessing
+ * nesting to 128 levels.
+ * Existing changes recorded here; this is not their implementation date.
+ * See MODIFICATIONS.md and docs/modifications/3741.md
+ * at the source repository root. Original notices follow below.
+ */
+
 Source: src/engines/8023/source/webmlib/movie_playback.c, src/engines/8023/source/webmlib/movie_playback.c
 /* AnyBOR modification record: 2026-09-12.
  * Port maintained by retrodiv <retrodiv@proton.me>.
@@ -7221,7 +7273,7 @@ Source: src/engines/8023/source/gamelib/font.c
  * at the source repository root. Original notices follow below.
  */
 
-Source: src/engines/3400/source/gamelib/obor_image_assert.h, src/engines/3400/version.h, src/engines/3741/version.h, src/engines/3842/version.h, src/engines/4086/version.h, src/engines/4432/version.h, src/engines/6391/version.h, src/engines/7142/version.h, src/engines/7533/version.h, src/engines/8023/version.h, src/port/libretro/anybor_attack_query.h, src/port/libretro/anybor_block_crc.h, src/port/libretro/anybor_block_state.c, src/port/libretro/anybor_block_state.h, src/port/libretro/anybor_block_threads.h, src/port/libretro/anybor_block_worker_policy.h, src/port/libretro/anybor_content_path.h, src/port/libretro/anybor_directory.h, src/port/libretro/anybor_directory_windows.h, src/port/libretro/anybor_fault.c, src/port/libretro/anybor_fault.h, src/port/libretro/anybor_fault_context.h, src/port/libretro/anybor_files.c, src/port/libretro/anybor_framebuffer_state.h, src/port/libretro/anybor_gif_memory.h, src/port/libretro/anybor_loading.h, src/port/libretro/anybor_loose.c, src/port/libretro/anybor_loose.h, src/port/libretro/anybor_media_diag.c, src/port/libretro/anybor_media_diag.h, src/port/libretro/anybor_native_io.h, src/port/libretro/anybor_pak_name.h, src/port/libretro/anybor_paths.c, src/port/libretro/anybor_paths.h, src/port/libretro/anybor_profile_identity.h, src/port/libretro/anybor_random.h, src/port/libretro/anybor_random_additive.h, src/port/libretro/anybor_resource_catalog.c, src/port/libretro/anybor_resource_catalog.h, src/port/libretro/anybor_resource_image.c, src/port/libretro/anybor_resource_image.h, src/port/libretro/anybor_resource_recipe.c, src/port/libretro/anybor_resource_recipe.h, src/port/libretro/anybor_resource_source.c, src/port/libretro/anybor_resource_source.h, src/port/libretro/anybor_resources.c, src/port/libretro/anybor_resources.h, src/port/libretro/anybor_rise_inputs.h, src/port/libretro/anybor_runtime.h, src/port/libretro/anybor_script_compact.h, src/port/libretro/anybor_script_executable.h, src/port/libretro/anybor_snapshot_cache.h, src/port/libretro/anybor_state_cache_win.h, src/port/libretro/anybor_state_config.h, src/port/libretro/anybor_state_copy.h, src/port/libretro/anybor_state_layout.h, src/port/libretro/anybor_state_padding.h, src/port/libretro/anybor_state_stream.h, src/port/libretro/anybor_texture_bounds.h, src/port/libretro/anybor_write_watch.c, src/port/libretro/anybor_write_watch.h, src/port/libretro/assert.h, src/glue/anybor_build_identity.h, src/glue/anybor_capture_cadence.h, src/glue/anybor_content_config.h, src/glue/anybor_content_contracts.h, src/glue/anybor_content_override.h, src/glue/anybor_content_scan.h, src/glue/anybor_crt.h, src/glue/anybor_detection_clock.h, src/glue/anybor_engine_executables.h, src/glue/anybor_engine_identity.h, src/glue/anybor_engine_resources.h, src/glue/anybor_error_screen.h, src/glue/anybor_game_content.h, src/glue/anybor_legacy_api.h, src/glue/anybor_loading_screen.h, src/glue/anybor_modern_api.h, src/glue/anybor_packed_prepare.h, src/glue/anybor_pak_repair.h, src/glue/anybor_pak_validate.h, src/glue/anybor_prepare_co.h, src/glue/anybor_prepare_progress.h, src/glue/anybor_prepare_sync.h, src/glue/anybor_profile_triage.h, src/glue/anybor_rewind.h, src/glue/anybor_runtime.h, src/glue/anybor_state_padding.h, src/glue/anybor_storage.h, src/glue/anybor_transform.h, src/glue/anybor_video_config.h, src/glue/anybor_zip_path.h
+Source: src/engines/3400/source/gamelib/obor_image_assert.h, src/engines/3400/version.h, src/engines/3741/version.h, src/engines/3842/version.h, src/engines/4086/version.h, src/engines/4432/version.h, src/engines/6391/version.h, src/engines/7142/version.h, src/engines/7533/version.h, src/engines/8023/version.h, src/port/libretro/anybor_attack_query.h, src/port/libretro/anybor_block_crc.h, src/port/libretro/anybor_block_state.c, src/port/libretro/anybor_block_state.h, src/port/libretro/anybor_block_threads.h, src/port/libretro/anybor_block_worker_policy.h, src/port/libretro/anybor_content_error.h, src/port/libretro/anybor_content_path.h, src/port/libretro/anybor_directory.h, src/port/libretro/anybor_directory_windows.h, src/port/libretro/anybor_fault.c, src/port/libretro/anybor_fault.h, src/port/libretro/anybor_fault_context.h, src/port/libretro/anybor_files.c, src/port/libretro/anybor_framebuffer_state.h, src/port/libretro/anybor_gif_memory.h, src/port/libretro/anybor_loading.h, src/port/libretro/anybor_loose.c, src/port/libretro/anybor_loose.h, src/port/libretro/anybor_media_diag.c, src/port/libretro/anybor_media_diag.h, src/port/libretro/anybor_native_io.h, src/port/libretro/anybor_pak_name.h, src/port/libretro/anybor_paths.c, src/port/libretro/anybor_paths.h, src/port/libretro/anybor_profile_identity.h, src/port/libretro/anybor_random.h, src/port/libretro/anybor_random_additive.h, src/port/libretro/anybor_resource_catalog.c, src/port/libretro/anybor_resource_catalog.h, src/port/libretro/anybor_resource_image.c, src/port/libretro/anybor_resource_image.h, src/port/libretro/anybor_resource_recipe.c, src/port/libretro/anybor_resource_recipe.h, src/port/libretro/anybor_resource_source.c, src/port/libretro/anybor_resource_source.h, src/port/libretro/anybor_resources.c, src/port/libretro/anybor_resources.h, src/port/libretro/anybor_rise_inputs.h, src/port/libretro/anybor_runtime.h, src/port/libretro/anybor_script_compact.h, src/port/libretro/anybor_script_executable.h, src/port/libretro/anybor_snapshot_cache.h, src/port/libretro/anybor_state_cache_win.h, src/port/libretro/anybor_state_config.h, src/port/libretro/anybor_state_copy.h, src/port/libretro/anybor_state_layout.h, src/port/libretro/anybor_state_padding.h, src/port/libretro/anybor_state_stream.h, src/port/libretro/anybor_texture_bounds.h, src/port/libretro/anybor_write_watch.c, src/port/libretro/anybor_write_watch.h, src/port/libretro/assert.h, src/glue/anybor_build_identity.h, src/glue/anybor_capture_cadence.h, src/glue/anybor_content_config.h, src/glue/anybor_content_contracts.h, src/glue/anybor_content_override.h, src/glue/anybor_content_scan.h, src/glue/anybor_crt.h, src/glue/anybor_detection_clock.h, src/glue/anybor_engine_executables.h, src/glue/anybor_engine_identity.h, src/glue/anybor_engine_resources.h, src/glue/anybor_error_screen.h, src/glue/anybor_game_content.h, src/glue/anybor_legacy_api.h, src/glue/anybor_loading_screen.h, src/glue/anybor_modern_api.h, src/glue/anybor_packed_prepare.h, src/glue/anybor_pak_repair.h, src/glue/anybor_pak_validate.h, src/glue/anybor_prepare_co.h, src/glue/anybor_prepare_progress.h, src/glue/anybor_prepare_sync.h, src/glue/anybor_profile_triage.h, src/glue/anybor_rewind.h, src/glue/anybor_runtime.h, src/glue/anybor_state_padding.h, src/glue/anybor_storage.h, src/glue/anybor_transform.h, src/glue/anybor_video_config.h, src/glue/anybor_zip_path.h
 /* SPDX-License-Identifier: BSD-3-Clause
  * Copyright (c) 2026 retrodiv <retrodiv@proton.me> */
 
@@ -7388,6 +7440,20 @@ Source: src/port/libretro/anybor_endian.h
  * Copyright (c) 2026 retrodiv <retrodiv@proton.me>
  * Fixed-width byte-order helpers for the OpenBOR interfaces. */
 
+Source: src/engines/3400/source/scriptlib/Parser.c
+/* AnyBOR modification record: 2026-11-15.
+ * Port maintained by retrodiv <retrodiv@proton.me>.
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me> (original contributions).
+ * These contributions are licensed under BSD-3-Clause; see LICENSE at the root.
+ * Upstream code retains its original license and notices.
+ * Preserve native parser instruction, label and expression allocation
+ * failure feedback. Stop terminal lexer failures and EOF recovery without
+ * changing finite historical recovery.
+ * Existing changes recorded here; this is not their implementation date.
+ * See MODIFICATIONS.md and docs/modifications/3400.md
+ * at the source repository root. Original notices follow below.
+ */
+
 Source: src/engines/3400/source/gamelib/screen.h
 /* AnyBOR modification record: 2026-10-30.
  * Port maintained by retrodiv <retrodiv@proton.me>.
@@ -7504,6 +7570,20 @@ Source: src/engines/3741/source/globals.h
  * at the source repository root. Original notices follow below.
  */
 
+Source: src/engines/7142/source/scriptlib/Parser.c
+/* AnyBOR modification record: 2026-11-15.
+ * Port maintained by retrodiv <retrodiv@proton.me>.
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me> (original contributions).
+ * These contributions are licensed under BSD-3-Clause; see LICENSE at the root.
+ * Upstream code retains its original license and notices.
+ * Check constant-token prefix capacity and resolve instruction labels before
+ * recording control targets. Stop terminal lexer failures and EOF recovery
+ * without changing finite historical recovery.
+ * Existing changes recorded here; this is not their implementation date.
+ * See MODIFICATIONS.md and docs/modifications/7142.md
+ * at the source repository root. Original notices follow below.
+ */
+
 Source: src/engines/3741/source/gamelib/screen.c
 /* AnyBOR modification record: 2026-10-21.
  * Port maintained by retrodiv <retrodiv@proton.me>.
@@ -7516,6 +7596,20 @@ Source: src/engines/3741/source/gamelib/screen.c
  * table is unavailable.
  * Existing changes recorded here; this is not their implementation date.
  * See MODIFICATIONS.md and docs/modifications/3741.md
+ * at the source repository root. Original notices follow below.
+ */
+
+Source: src/engines/4086/source/scriptlib/Parser.c
+/* AnyBOR modification record: 2026-11-15.
+ * Port maintained by retrodiv <retrodiv@proton.me>.
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me> (original contributions).
+ * These contributions are licensed under BSD-3-Clause; see LICENSE at the root.
+ * Upstream code retains its original license and notices.
+ * Check constant-token prefix capacity and resolve instruction labels before
+ * recording control targets. Stop terminal lexer failures and EOF recovery
+ * without changing finite historical recovery.
+ * Existing changes recorded here; this is not their implementation date.
+ * See MODIFICATIONS.md and docs/modifications/4086.md
  * at the source repository root. Original notices follow below.
  */
 
@@ -7602,6 +7696,20 @@ Source: src/engines/3400/source/gamelib/obor_command_assert.h
  * at the source repository root. Original notices follow below.
  */
 
+Source: src/engines/7142/source/scriptlib/Lexer.c
+/* AnyBOR modification record: 2026-11-15.
+ * Port maintained by retrodiv <retrodiv@proton.me>.
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me> (original contributions).
+ * These contributions are licensed under BSD-3-Clause; see LICENSE at the root.
+ * Upstream code retains its original license and notices.
+ * Keep script tokenization bounded and propagate preprocessing failure.
+ * Report terminal preprocessing failure with the resource and position
+ * before parking the engine coroutine.
+ * Existing changes recorded here; this is not their implementation date.
+ * See MODIFICATIONS.md and docs/modifications/7142.md
+ * at the source repository root. Original notices follow below.
+ */
+
 Source: src/deps/libpng/pngwutil.c
 /* pngwutil.c - utilities to write a PNG file
  *
@@ -7665,6 +7773,20 @@ Source: src/engines/8023/source/webmlib/movie_playback.c, src/engines/8023/sourc
  * All rights reserved. See LICENSE in OpenBOR root for license details.
  *
  * Copyright (c) OpenBOR Team
+ */
+
+Source: src/engines/3400/source/preprocessorlib/pp_parser.c
+/* AnyBOR modification record: 2026-11-15.
+ * Port maintained by retrodiv <retrodiv@proton.me>.
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me> (original contributions).
+ * These contributions are licensed under BSD-3-Clause; see LICENSE at the root.
+ * Upstream code retains its original license and notices.
+ * Drop the glibc-only <malloc.h> and rely on the standard library
+ * declarations the parser already includes. Bound active preprocessing
+ * nesting to 128 levels.
+ * Existing changes recorded here; this is not their implementation date.
+ * See MODIFICATIONS.md and docs/modifications/3400.md
+ * at the source repository root. Original notices follow below.
  */
 
 Source: src/third_party/libretro.h
@@ -7967,19 +8089,6 @@ Source: src/engines/4432/source/webmlib/nestegg/nestegg.c, src/engines/4432/sour
  * at the source repository root. Original notices follow below.
  */
 
-Source: src/engines/4432/source/scriptlib/Parser.c
-/* AnyBOR modification record: 2026-09-30.
- * Port maintained by retrodiv <retrodiv@proton.me>.
- * Copyright (c) 2026 retrodiv <retrodiv@proton.me> (original contributions).
- * These contributions are licensed under BSD-3-Clause; see LICENSE at the root.
- * Upstream code retains its original license and notices.
- * Check constant-token prefix capacity and resolve instruction labels before
- * recording control targets.
- * Existing changes recorded here; this is not their implementation date.
- * See MODIFICATIONS.md and docs/modifications/4432.md
- * at the source repository root. Original notices follow below.
- */
-
 Source: src/deps/libvorbis/lib/modes/setup_22.h
 /********************************************************************
  *                                                                  *
@@ -8115,19 +8224,6 @@ Source: src/engines/7533/source/openborscript/config.h
  * at the source repository root. Original notices follow below.
  */
 
-Source: src/engines/3741/source/scriptlib/Parser.c
-/* AnyBOR modification record: 2026-10-21.
- * Port maintained by retrodiv <retrodiv@proton.me>.
- * Copyright (c) 2026 retrodiv <retrodiv@proton.me> (original contributions).
- * These contributions are licensed under BSD-3-Clause; see LICENSE at the root.
- * Upstream code retains its original license and notices.
- * Preserve each profile's loop compiler targets and continue grammar while
- * releasing temporary labels.
- * Existing changes recorded here; this is not their implementation date.
- * See MODIFICATIONS.md and docs/modifications/3741.md
- * at the source repository root. Original notices follow below.
- */
-
 Source: src/engines/7533/source/utils.h
 /* AnyBOR modification record: 2026-10-12.
  * Port maintained by retrodiv <retrodiv@proton.me>.
@@ -8139,19 +8235,6 @@ Source: src/engines/7533/source/utils.h
  * capacities, and reject overflowing output path joins.
  * Existing changes recorded here; this is not their implementation date.
  * See MODIFICATIONS.md and docs/modifications/7533.md
- * at the source repository root. Original notices follow below.
- */
-
-Source: src/engines/3400/source/scriptlib/Parser.c
-/* AnyBOR modification record: 2026-09-12.
- * Port maintained by retrodiv <retrodiv@proton.me>.
- * Copyright (c) 2026 retrodiv <retrodiv@proton.me> (original contributions).
- * These contributions are licensed under BSD-3-Clause; see LICENSE at the root.
- * Upstream code retains its original license and notices.
- * Preserve native parser instruction, label and expression allocation
- * failure feedback.
- * Existing changes recorded here; this is not their implementation date.
- * See MODIFICATIONS.md and docs/modifications/3400.md
  * at the source repository root. Original notices follow below.
  */
 
@@ -8347,19 +8430,6 @@ Source: src/engines/4432/source/gamelib/anigif.h
  * at the source repository root. Original notices follow below.
  */
 
-Source: src/engines/8023/source/scriptlib/Parser.c
-/* AnyBOR modification record: 2026-09-12.
- * Port maintained by retrodiv <retrodiv@proton.me>.
- * Copyright (c) 2026 retrodiv <retrodiv@proton.me> (original contributions).
- * These contributions are licensed under BSD-3-Clause; see LICENSE at the root.
- * Upstream code retains its original license and notices.
- * Check constant-token prefix capacity and resolve instruction labels before
- * recording control targets.
- * Existing changes recorded here; this is not their implementation date.
- * See MODIFICATIONS.md and docs/modifications/8023.md
- * at the source repository root. Original notices follow below.
- */
-
 Source: src/third_party/miniz.c
 /**************************************************************************
  *
@@ -8430,6 +8500,20 @@ Source: src/deps/libvorbis/lib/misc.h
  function: miscellaneous prototypes
 
  ********************************************************************/
+
+Source: src/engines/7142/source/preprocessorlib/pp_parser.c
+/* AnyBOR modification record: 2026-11-15.
+ * Port maintained by retrodiv <retrodiv@proton.me>.
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me> (original contributions).
+ * These contributions are licensed under BSD-3-Clause; see LICENSE at the root.
+ * Upstream code retains its original license and notices.
+ * Drop the glibc-only <malloc.h> and rely on the standard library
+ * declarations the parser already includes. Bound active preprocessing
+ * nesting to 128 levels.
+ * Existing changes recorded here; this is not their implementation date.
+ * See MODIFICATIONS.md and docs/modifications/7142.md
+ * at the source repository root. Original notices follow below.
+ */
 
 Source: src/deps/libvorbis/lib/bitrate.c
 /********************************************************************
@@ -8624,19 +8708,6 @@ Source: src/engines/6391/source/openborscript/commands.h
  * at the source repository root. Original notices follow below.
  */
 
-Source: src/engines/3842/source/scriptlib/Parser.c
-/* AnyBOR modification record: 2026-10-26.
- * Port maintained by retrodiv <retrodiv@proton.me>.
- * Copyright (c) 2026 retrodiv <retrodiv@proton.me> (original contributions).
- * These contributions are licensed under BSD-3-Clause; see LICENSE at the root.
- * Upstream code retains its original license and notices.
- * Select native syntax, assignment results, unary folding and diagnostics;
- * refuse unresolved control targets before recording instructions.
- * Existing changes recorded here; this is not their implementation date.
- * See MODIFICATIONS.md and docs/modifications/3842.md
- * at the source repository root. Original notices follow below.
- */
-
 Source: src/deps/libvorbis/lib/info.c
 /********************************************************************
  *                                                                  *
@@ -8781,21 +8852,6 @@ Source: src/engines/7533/source/gamelib/pixelformat.c
  * at the source repository root. Original notices follow below.
  */
 
-Source: src/engines/3741/source/scriptlib/ImportCache.c
-/* AnyBOR modification record: 2026-10-21.
- * Port maintained by retrodiv <retrodiv@proton.me>.
- * Copyright (c) 2026 retrodiv <retrodiv@proton.me> (original contributions).
- * These contributions are licensed under BSD-3-Clause; see LICENSE at the root.
- * Upstream code retains its original license and notices.
- * Guard parser-only import metadata after compilation. Compact compiler-only
- * instruction records after resolving value ownership, preserving branch and
- * export anchors, all mutable values and exactly-once pool cleanup. Read
- * import metadata only while an interpreter still owns parser state.
- * Existing changes recorded here; this is not their implementation date.
- * See MODIFICATIONS.md and docs/modifications/3741.md
- * at the source repository root. Original notices follow below.
- */
-
 Source: src/deps/zlib/gzlib.c
 /* gzlib.c -- zlib functions common to reading and writing gzip files
  * Copyright (C) 2004-2026 Mark Adler
@@ -8888,6 +8944,20 @@ Jutta Degener
 Carsten Bormann
 
 *********************************************************************/
+
+Source: src/engines/7533/source/scriptlib/Lexer.c
+/* AnyBOR modification record: 2026-11-15.
+ * Port maintained by retrodiv <retrodiv@proton.me>.
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me> (original contributions).
+ * These contributions are licensed under BSD-3-Clause; see LICENSE at the root.
+ * Upstream code retains its original license and notices.
+ * Keep script tokenization bounded and propagate preprocessing failure.
+ * Report terminal preprocessing failure with the resource and position
+ * before parking the engine coroutine.
+ * Existing changes recorded here; this is not their implementation date.
+ * See MODIFICATIONS.md and docs/modifications/7533.md
+ * at the source repository root. Original notices follow below.
+ */
 
 Source: src/deps/libpng/pngtrans.c
 /* pngtrans.c - transforms the data in a row (used by both readers and writers)
@@ -9005,19 +9075,6 @@ Source: src/engines/3400/source/scriptlib/ScriptVariant.c
  * conversion without changing result storage.
  * Existing changes recorded here; this is not their implementation date.
  * See MODIFICATIONS.md and docs/modifications/3400.md
- * at the source repository root. Original notices follow below.
- */
-
-Source: src/engines/6391/source/preprocessorlib/pp_parser.c
-/* AnyBOR modification record: 2026-10-05.
- * Port maintained by retrodiv <retrodiv@proton.me>.
- * Copyright (c) 2026 retrodiv <retrodiv@proton.me> (original contributions).
- * These contributions are licensed under BSD-3-Clause; see LICENSE at the root.
- * Upstream code retains its original license and notices.
- * Drop the glibc-only <malloc.h> and rely on the standard library
- * declarations the parser already includes.
- * Existing changes recorded here; this is not their implementation date.
- * See MODIFICATIONS.md and docs/modifications/6391.md
  * at the source repository root. Original notices follow below.
  */
 
@@ -9206,6 +9263,23 @@ Source: src/engines/7142/source/gamelib/font.c
  * true-color entries; retain atlas raster output for valid fonts.
  * Existing changes recorded here; this is not their implementation date.
  * See MODIFICATIONS.md and docs/modifications/7142.md
+ * at the source repository root. Original notices follow below.
+ */
+
+Source: src/engines/4432/source/scriptlib/ImportCache.c
+/* AnyBOR modification record: 2026-11-15.
+ * Port maintained by retrodiv <retrodiv@proton.me>.
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me> (original contributions).
+ * These contributions are licensed under BSD-3-Clause; see LICENSE at the root.
+ * Upstream code retains its original license and notices.
+ * Guard parser-only import metadata after compilation. Compact compiler-only
+ * instruction records after resolving value ownership, preserving branch and
+ * export anchors, all mutable values and exactly-once pool cleanup. Read
+ * import metadata only while an interpreter still owns parser state. Bound
+ * active import nesting and refuse active import cycles before recursive
+ * compilation.
+ * Existing changes recorded here; this is not their implementation date.
+ * See MODIFICATIONS.md and docs/modifications/4432.md
  * at the source repository root. Original notices follow below.
  */
 
@@ -9405,6 +9479,20 @@ Source: src/engines/6391/source/scriptlib/Interpreter.c
  * at the source repository root. Original notices follow below.
  */
 
+Source: src/engines/6391/source/scriptlib/Lexer.c
+/* AnyBOR modification record: 2026-11-15.
+ * Port maintained by retrodiv <retrodiv@proton.me>.
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me> (original contributions).
+ * These contributions are licensed under BSD-3-Clause; see LICENSE at the root.
+ * Upstream code retains its original license and notices.
+ * Keep script tokenization bounded and propagate preprocessing failure.
+ * Report terminal preprocessing failure with the resource and position
+ * before parking the engine coroutine.
+ * Existing changes recorded here; this is not their implementation date.
+ * See MODIFICATIONS.md and docs/modifications/6391.md
+ * at the source repository root. Original notices follow below.
+ */
+
 Source: src/deps/libvorbis/lib/envelope.h
 /********************************************************************
  *                                                                  *
@@ -9543,19 +9631,6 @@ Source: src/engines/3400/source/scriptlib/List.c
  * Preserve native list name lookup order and allocation failure feedback.
  * Existing changes recorded here; this is not their implementation date.
  * See MODIFICATIONS.md and docs/modifications/3400.md
- * at the source repository root. Original notices follow below.
- */
-
-Source: src/engines/6391/source/scriptlib/Parser.c
-/* AnyBOR modification record: 2026-10-05.
- * Port maintained by retrodiv <retrodiv@proton.me>.
- * Copyright (c) 2026 retrodiv <retrodiv@proton.me> (original contributions).
- * These contributions are licensed under BSD-3-Clause; see LICENSE at the root.
- * Upstream code retains its original license and notices.
- * Check constant-token prefix capacity and resolve instruction labels before
- * recording control targets.
- * Existing changes recorded here; this is not their implementation date.
- * See MODIFICATIONS.md and docs/modifications/6391.md
  * at the source repository root. Original notices follow below.
  */
 
@@ -9795,6 +9870,22 @@ Source: src/deps/libvpx/vp9/encoder/arm/neon/vp9_highbd_error_neon.c, src/deps/l
  *  be found in the AUTHORS file in the root of the source tree.
  */
 
+Source: src/engines/3842/source/scriptlib/ImportCache.c
+/* AnyBOR modification record: 2026-11-15.
+ * Port maintained by retrodiv <retrodiv@proton.me>.
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me> (original contributions).
+ * These contributions are licensed under BSD-3-Clause; see LICENSE at the root.
+ * Upstream code retains its original license and notices.
+ * Retain imported entry points as direct instruction pointers. Compact
+ * compiler-only instruction records after resolving value ownership,
+ * preserving branch and export anchors, all mutable values and exactly-once
+ * pool cleanup. Bound active import nesting and refuse active import cycles
+ * before recursive compilation.
+ * Existing changes recorded here; this is not their implementation date.
+ * See MODIFICATIONS.md and docs/modifications/3842.md
+ * at the source repository root. Original notices follow below.
+ */
+
 Source: src/engines/4086/source/gamelib/screen.c
 /* AnyBOR modification record: 2026-10-19.
  * Port maintained by retrodiv <retrodiv@proton.me>.
@@ -9909,6 +10000,20 @@ Source: src/engines/7142/source/scriptlib/ScriptVariant.h
  * at the source repository root. Original notices follow below.
  */
 
+Source: src/engines/8023/source/preprocessorlib/pp_parser.c
+/* AnyBOR modification record: 2026-11-15.
+ * Port maintained by retrodiv <retrodiv@proton.me>.
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me> (original contributions).
+ * These contributions are licensed under BSD-3-Clause; see LICENSE at the root.
+ * Upstream code retains its original license and notices.
+ * Drop the glibc-only <malloc.h> and rely on the standard library
+ * declarations the parser already includes. Bound active preprocessing
+ * nesting to 128 levels.
+ * Existing changes recorded here; this is not their implementation date.
+ * See MODIFICATIONS.md and docs/modifications/8023.md
+ * at the source repository root. Original notices follow below.
+ */
+
 Source: src/engines/4086/source/gamelib/commands.c
 /* AnyBOR modification record: 2026-10-19.
  * Port maintained by retrodiv <retrodiv@proton.me>.
@@ -9945,6 +10050,24 @@ Source: src/engines/4086/source/scriptlib/ImportCache.h
  * These contributions are licensed under BSD-3-Clause; see LICENSE at the root.
  * Upstream code retains its original license and notices.
  * Retain imported entry points as direct instruction pointers.
+ * Existing changes recorded here; this is not their implementation date.
+ * See MODIFICATIONS.md and docs/modifications/4086.md
+ * at the source repository root. Original notices follow below.
+ */
+
+Source: src/engines/4086/source/scriptlib/ImportCache.c
+/* AnyBOR modification record: 2026-11-15.
+ * Port maintained by retrodiv <retrodiv@proton.me>.
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me> (original contributions).
+ * These contributions are licensed under BSD-3-Clause; see LICENSE at the root.
+ * Upstream code retains its original license and notices.
+ * Guard parser-only import metadata after compilation. Select each profile's
+ * additional import-failure diagnostics without changing cleanup. Compact
+ * compiler-only instruction records after resolving value ownership,
+ * preserving branch and export anchors, all mutable values and exactly-once
+ * pool cleanup. Read import metadata only while an interpreter still owns
+ * parser state. Bound active import nesting and refuse active import cycles
+ * before recursive compilation.
  * Existing changes recorded here; this is not their implementation date.
  * See MODIFICATIONS.md and docs/modifications/4086.md
  * at the source repository root. Original notices follow below.
@@ -10011,6 +10134,20 @@ Source: src/engines/3842/source/scriptlib/ParserSet.h
  * diagnostics.
  * Existing changes recorded here; this is not their implementation date.
  * See MODIFICATIONS.md and docs/modifications/3842.md
+ * at the source repository root. Original notices follow below.
+ */
+
+Source: src/engines/8023/source/scriptlib/Lexer.c
+/* AnyBOR modification record: 2026-11-15.
+ * Port maintained by retrodiv <retrodiv@proton.me>.
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me> (original contributions).
+ * These contributions are licensed under BSD-3-Clause; see LICENSE at the root.
+ * Upstream code retains its original license and notices.
+ * Keep script tokenization bounded and propagate preprocessing failure.
+ * Report terminal preprocessing failure with the resource and position
+ * before parking the engine coroutine.
+ * Existing changes recorded here; this is not their implementation date.
+ * See MODIFICATIONS.md and docs/modifications/8023.md
  * at the source repository root. Original notices follow below.
  */
 
@@ -10118,6 +10255,20 @@ Source: src/engines/3842/source/gamelib/borendian.h
  * Use the port's fixed-width endian conversions.
  * Existing changes recorded here; this is not their implementation date.
  * See MODIFICATIONS.md and docs/modifications/3842.md
+ * at the source repository root. Original notices follow below.
+ */
+
+Source: src/engines/3400/source/scriptlib/Lexer.c
+/* AnyBOR modification record: 2026-11-15.
+ * Port maintained by retrodiv <retrodiv@proton.me>.
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me> (original contributions).
+ * These contributions are licensed under BSD-3-Clause; see LICENSE at the root.
+ * Upstream code retains its original license and notices.
+ * Select native string-escape advancement and unknown-token handling for
+ * each profile. Report terminal preprocessing failure with the resource and
+ * position before parking the engine coroutine.
+ * Existing changes recorded here; this is not their implementation date.
+ * See MODIFICATIONS.md and docs/modifications/3400.md
  * at the source repository root. Original notices follow below.
  */
 
@@ -10472,21 +10623,6 @@ Source: src/engines/7533/source/webmlib/nestegg/nestegg.c, src/engines/7533/sour
  * at the source repository root. Original notices follow below.
  */
 
-Source: src/engines/3842/source/scriptlib/ImportCache.c
-/* AnyBOR modification record: 2026-10-10.
- * Port maintained by retrodiv <retrodiv@proton.me>.
- * Copyright (c) 2026 retrodiv <retrodiv@proton.me> (original contributions).
- * These contributions are licensed under BSD-3-Clause; see LICENSE at the root.
- * Upstream code retains its original license and notices.
- * Retain imported entry points as direct instruction pointers. Compact
- * compiler-only instruction records after resolving value ownership,
- * preserving branch and export anchors, all mutable values and exactly-once
- * pool cleanup.
- * Existing changes recorded here; this is not their implementation date.
- * See MODIFICATIONS.md and docs/modifications/3842.md
- * at the source repository root. Original notices follow below.
- */
-
 Source: src/deps/libvorbis/lib/modes/setup_32.h
 /********************************************************************
  *                                                                  *
@@ -10627,31 +10763,29 @@ Source: src/engines/8023/source/gamelib/packfile.c
  * at the source repository root. Original notices follow below.
  */
 
-Source: src/engines/7533/source/scriptlib/ImportCache.c
-/* AnyBOR modification record: 2026-10-10.
+Source: src/engines/3842/source/scriptlib/Lexer.c
+/* AnyBOR modification record: 2026-11-15.
  * Port maintained by retrodiv <retrodiv@proton.me>.
  * Copyright (c) 2026 retrodiv <retrodiv@proton.me> (original contributions).
  * These contributions are licensed under BSD-3-Clause; see LICENSE at the root.
  * Upstream code retains its original license and notices.
- * Guard parser-only import metadata after compilation. Compact compiler-only
- * instruction records after resolving value ownership, preserving branch and
- * export anchors, all mutable values and exactly-once pool cleanup. Read
- * import metadata only while an interpreter still owns parser state.
+ * Keep script tokenization bounded and propagate preprocessing failure.
+ * Report terminal preprocessing failure with the resource and position
+ * before parking the engine coroutine.
  * Existing changes recorded here; this is not their implementation date.
- * See MODIFICATIONS.md and docs/modifications/7533.md
+ * See MODIFICATIONS.md and docs/modifications/3842.md
  * at the source repository root. Original notices follow below.
  */
 
-Source: src/engines/6391/source/scriptlib/ImportCache.c
-/* AnyBOR modification record: 2026-10-10.
+Source: src/engines/6391/source/preprocessorlib/pp_parser.c
+/* AnyBOR modification record: 2026-11-15.
  * Port maintained by retrodiv <retrodiv@proton.me>.
  * Copyright (c) 2026 retrodiv <retrodiv@proton.me> (original contributions).
  * These contributions are licensed under BSD-3-Clause; see LICENSE at the root.
  * Upstream code retains its original license and notices.
- * Guard parser-only import metadata after compilation. Compact compiler-only
- * instruction records after resolving value ownership, preserving branch and
- * export anchors, all mutable values and exactly-once pool cleanup. Read
- * import metadata only while an interpreter still owns parser state.
+ * Drop the glibc-only <malloc.h> and rely on the standard library
+ * declarations the parser already includes. Bound active preprocessing
+ * nesting to 128 levels.
  * Existing changes recorded here; this is not their implementation date.
  * See MODIFICATIONS.md and docs/modifications/6391.md
  * at the source repository root. Original notices follow below.
@@ -10725,6 +10859,20 @@ Source: src/deps/zlib/inffast.h
 /* inffast.h -- header to use inffast.c
  * Copyright (C) 1995-2003, 2010 Mark Adler
  * For conditions of distribution and use, see copyright notice in zlib.h
+ */
+
+Source: src/engines/4432/source/preprocessorlib/pp_parser.c
+/* AnyBOR modification record: 2026-11-15.
+ * Port maintained by retrodiv <retrodiv@proton.me>.
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me> (original contributions).
+ * These contributions are licensed under BSD-3-Clause; see LICENSE at the root.
+ * Upstream code retains its original license and notices.
+ * Drop the glibc-only <malloc.h> and rely on the standard library
+ * declarations the parser already includes. Bound active preprocessing
+ * nesting to 128 levels.
+ * Existing changes recorded here; this is not their implementation date.
+ * See MODIFICATIONS.md and docs/modifications/4432.md
+ * at the source repository root. Original notices follow below.
  */
 
 Source: src/deps/libpng/scripts/intprefix.c

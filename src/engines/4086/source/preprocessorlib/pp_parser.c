@@ -1,4 +1,4 @@
-/* AnyBOR modification record: 2026-11-08.
+/* AnyBOR modification record: 2026-11-15.
  * Port maintained by retrodiv <retrodiv@proton.me>.
  * Copyright (c) 2026 retrodiv <retrodiv@proton.me> (original contributions).
  * These contributions are licensed under BSD-3-Clause; see LICENSE at the root.
@@ -8,7 +8,8 @@
  * argument admission, whitespace, directive position, parameter scope,
  * forwarding and concatenation. Own temporary parameter data and retain
  * discarded parser bindings until context shutdown; initialize concatenation
- * output storage and release owned data at its final lifetime.
+ * output storage and release owned data at its final lifetime. Bound active
+ * preprocessing nesting to 128 levels.
  * Existing changes recorded here; this is not their implementation date.
  * See MODIFICATIONS.md and docs/modifications/4086.md
  * at the source repository root. Original notices follow below.
@@ -41,6 +42,9 @@
 extern uint32_t obor_profile_build;
 #include "List.h"
 #include "pp_parser.h"
+#ifdef LIBRETRO
+#include "anybor_content_error.h"
+#endif
 #include "pp_expr.h"
 #include "borendian.h"
 
@@ -208,6 +212,14 @@ void pp_parser_init(pp_parser *self, pp_context *ctx, const char *filename, char
  */
 pp_parser *pp_parser_alloc(pp_parser *parent, const char *filename, char *sourceCode, pp_parser_type type)
 {
+#ifdef LIBRETRO
+    unsigned nesting = 0;
+    pp_parser *ancestor;
+    for (ancestor = parent; ancestor; ancestor = ancestor->parent)
+        if (++nesting >= 128)
+            obor_content_error(filename, 1, 0, "Script preprocessing nesting limit exceeded");
+#endif
+
     pp_parser *self = malloc(sizeof(pp_parser));
     TEXTPOS initialPos = {1, 0};
 

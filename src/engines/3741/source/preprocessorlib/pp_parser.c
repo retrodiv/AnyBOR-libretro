@@ -1,10 +1,11 @@
-/* AnyBOR modification record: 2026-10-21.
+/* AnyBOR modification record: 2026-11-15.
  * Port maintained by retrodiv <retrodiv@proton.me>.
  * Copyright (c) 2026 retrodiv <retrodiv@proton.me> (original contributions).
  * These contributions are licensed under BSD-3-Clause; see LICENSE at the root.
  * Upstream code retains its original license and notices.
  * Drop the glibc-only <malloc.h> and rely on the standard library
- * declarations the parser already includes.
+ * declarations the parser already includes. Bound active preprocessing
+ * nesting to 128 levels.
  * Existing changes recorded here; this is not their implementation date.
  * See MODIFICATIONS.md and docs/modifications/3741.md
  * at the source repository root. Original notices follow below.
@@ -33,6 +34,9 @@
 #include <errno.h>
 #include "List.h"
 #include "pp_parser.h"
+#ifdef LIBRETRO
+#include "anybor_content_error.h"
+#endif
 #include "borendian.h"
 
 #if PP_TEST // using pp_test.c to test the preprocessor functionality; OpenBOR functionality is not available
@@ -141,6 +145,14 @@ void pp_parser_init(pp_parser* self, pp_context* ctx, const char* filename, char
  */
 pp_parser* pp_parser_alloc(pp_parser* parent, const char* filename, char* sourceCode, pp_parser_type type)
 {
+#ifdef LIBRETRO
+    unsigned nesting = 0;
+    pp_parser *ancestor;
+    for (ancestor = parent; ancestor; ancestor = ancestor->parent)
+        if (++nesting >= 128)
+            obor_content_error(filename, 1, 0, "Script preprocessing nesting limit exceeded");
+#endif
+
 	pp_parser* self = malloc(sizeof(pp_parser));
 	TEXTPOS initialPos = {1, 0};
 

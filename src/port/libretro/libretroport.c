@@ -17,6 +17,7 @@
 #endif
 #include "libretroport.h"
 #include "anybor_runtime.h"
+#include "anybor_content_error.h"
 #include "anybor_state_config.h"
 #include "anybor_paths.h"
 #include "anybor_abi.h"
@@ -79,6 +80,9 @@ static int engine_alive;
 static int engine_exit_status = -1;
 static obor_fault engine_fault;
 static char engine_fault_message[256];
+static char engine_content_message[512];
+static const char *engine_content_imports[128];
+static unsigned engine_content_import_depth;
 static int test_fault_at = -1, test_fault_frame;
 static char test_fault_kind[16];
 static volatile uintptr_t test_fault_address;
@@ -460,6 +464,34 @@ void borExit(int reset)
         co_switch(co_frontend);
 }
 
+void obor_content_error(const char *path, unsigned long row, unsigned long column,
+                        const char *reason)
+{
+    if (!engine_content_message[0])
+        snprintf(engine_content_message, sizeof(engine_content_message),
+                 "%s: %.320s, line %lu, column %lu", reason,
+                 path && *path ? path : "script", row, column);
+    fprintf(stderr, "[OpenBOR:%u] %s\n", obor_profile_build, engine_content_message);
+    borExit(1);
+    __builtin_unreachable();
+}
+
+void obor_content_import_begin(const char *path)
+{
+    unsigned i;
+    for (i = 0; i < engine_content_import_depth; ++i)
+        if (!strcmp(engine_content_imports[i], path))
+            obor_content_error(path, 1, 0, "Cyclic script import");
+    if (engine_content_import_depth >= 128)
+        obor_content_error(path, 1, 0, "Script import nesting limit exceeded");
+    engine_content_imports[engine_content_import_depth++] = path;
+}
+
+void obor_content_import_end(void)
+{
+    if (engine_content_import_depth) --engine_content_import_depth;
+}
+
 void obor_port_assert(int value, const char *assertion, const char *func,
                       const char *file, int line)
 {
@@ -658,6 +690,8 @@ capture_cwd:
     engine_exit_status = -1;
     memset(&engine_fault, 0, sizeof(engine_fault));
     engine_fault_message[0] = '\0';
+    engine_content_message[0] = '\0';
+    engine_content_import_depth = 0;
     obor_resource_event = info->resource_event;
     test_fault_at = -1;
     test_fault_frame = 0;
@@ -737,6 +771,10 @@ int32_t obor_startup_complete(void)
 
 int32_t obor_get_fault_message(char *out, uint32_t capacity)
 {
+    if (engine_content_message[0]) {
+        if (out && capacity) snprintf(out, capacity, "%s", engine_content_message);
+        return 1;
+    }
     if (engine_exit_status != OBOR_EXIT_MEMORY_FAULT) return 0;
     if (out && capacity) snprintf(out, capacity, "%s", engine_fault_message);
     return 1;

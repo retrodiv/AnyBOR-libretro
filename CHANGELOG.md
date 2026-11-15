@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.2.15 — terminal content errors
+
+- Stop terminal script loading failures and excessive preprocessing nesting with a resource and position diagnostic on the error screen.
+- Preserve finite historical parser recovery and keep content unload available.
+
 ## 0.2.14 — ZIP content settings
 
 - Select profiles with distinct `zip-imohash` and `pak-imohash` INI rules containing only the digest, recovering the file size from standard imohash; replace the bare `imohash` selector prefix.

@@ -1,4 +1,4 @@
-/* AnyBOR modification record: 2026-10-10.
+/* AnyBOR modification record: 2026-11-15.
  * Port maintained by retrodiv <retrodiv@proton.me>.
  * Copyright (c) 2026 retrodiv <retrodiv@proton.me> (original contributions).
  * These contributions are licensed under BSD-3-Clause; see LICENSE at the root.
@@ -6,7 +6,8 @@
  * Retain imported entry points as direct instruction pointers. Compact
  * compiler-only instruction records after resolving value ownership,
  * preserving branch and export anchors, all mutable values and exactly-once
- * pool cleanup.
+ * pool cleanup. Bound active import nesting and refuse active import cycles
+ * before recursive compilation.
  * Existing changes recorded here; this is not their implementation date.
  * See MODIFICATIONS.md and docs/modifications/3842.md
  * at the source repository root. Original notices follow below.
@@ -27,6 +28,9 @@
  */
 
 #include <stdio.h>
+#ifdef LIBRETRO
+#include "anybor_content_error.h"
+#endif
 #include <stdint.h>
 #include <limits.h>
 
@@ -86,6 +90,9 @@ error:
  */
 HRESULT ImportNode_Init(ImportNode* self, const char* path)
 {
+#ifdef LIBRETRO
+    obor_content_import_begin(path);
+#endif
 	char* scriptText;
 	int i, size;
 	List* list; // more readable than "&self->interpreter.theInstructionList"
@@ -129,13 +136,19 @@ HRESULT ImportNode_Init(ImportNode* self, const char* path)
 		List_GotoNext(&self->functions);
 	}
 
-	return S_OK;
+	#ifdef LIBRETRO
+    obor_content_import_end();
+#endif
+    return S_OK;
 
 error:
 	if(scriptText) free(scriptText);
 	Interpreter_Clear(&self->interpreter);
 	List_Clear(&self->functions);
-	return E_FAIL;
+	#ifdef LIBRETRO
+    obor_content_import_end();
+#endif
+    return E_FAIL;
 }
 
 /**

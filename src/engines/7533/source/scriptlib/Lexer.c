@@ -1,3 +1,16 @@
+/* AnyBOR modification record: 2026-11-15.
+ * Port maintained by retrodiv <retrodiv@proton.me>.
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me> (original contributions).
+ * These contributions are licensed under BSD-3-Clause; see LICENSE at the root.
+ * Upstream code retains its original license and notices.
+ * Keep script tokenization bounded and propagate preprocessing failure.
+ * Report terminal preprocessing failure with the resource and position
+ * before parking the engine coroutine.
+ * Existing changes recorded here; this is not their implementation date.
+ * See MODIFICATIONS.md and docs/modifications/7533.md
+ * at the source repository root. Original notices follow below.
+ */
+
 /*
  * OpenBOR - http://www.chronocrash.com
  * -----------------------------------------------------------------------
@@ -7,6 +20,9 @@
  */
 
 #include "Lexer.h"
+#ifdef LIBRETRO
+#include "anybor_content_error.h"
+#endif
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -409,6 +425,13 @@ HRESULT Lexer_GetNextToken(Lexer *plexer, Token *theNextToken)
         ppToken = pp_parser_emit_token(&plexer->preprocessor);
         if (ppToken == NULL)
         {
+#ifdef LIBRETRO
+            obor_content_error(plexer->preprocessor.filename,
+                plexer->preprocessor.lexer.theTokenPosition.row,
+                plexer->preprocessor.lexer.theTokenPosition.col,
+                "Script preprocessing failed");
+#endif
+            theNextToken->theType = TOKEN_EOF;
             return E_FAIL;
         }
     }

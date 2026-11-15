@@ -910,12 +910,13 @@
       "upstream_sha256": "db211b75991b558150cad257d7d22c8077413a47760676600b0861a67a4dc001"
     },
     "source/preprocessorlib/pp_parser.c": {
-      "distributed_sha256": "35eebe40cf0b29174dc0f1eda253a2b8cbc9b8cf5da1cd3ad785def640544665",
+      "distributed_sha256": "771e773cfd9b430a1d72fa3f123af8b8571719b55e4b6b85909a42c80a2f5966",
       "modified": true,
-      "summary": "Drop the glibc-only <malloc.h> and rely on the standard library declarations the parser already includes.",
+      "summary": "Drop the glibc-only <malloc.h> and rely on the standard library declarations the parser already includes. Bound active preprocessing nesting to 128 levels.",
       "topics": [
         "darwin-platform-support",
         "record-dates-and-file-notices",
+        "script-parser-table-safety",
         "script-preprocessor-safety"
       ],
       "upstream_sha256": "cf32fd0e5050c7cd9f2730534d45d9eda78835636a1a6c9c9766f4cae423c23d"
@@ -973,13 +974,14 @@
       "upstream_sha256": "2441e1bff107106625a69ef3a712bebb0e2954cf018e508b4151f127f6d21826"
     },
     "source/scriptlib/ImportCache.c": {
-      "distributed_sha256": "76d7d92228f74ed39956e505da1ce27d2b1ec2540e586a54285fd149e6a542f3",
+      "distributed_sha256": "a27152cf382d8bef76a7567a2c6509a89c4fdaf197eb02a7c9b68109b5976a17",
       "modified": true,
-      "summary": "Guard parser-only import metadata after compilation. Compact compiler-only instruction records after resolving value ownership, preserving branch and export anchors, all mutable values and exactly-once pool cleanup. Read import metadata only while an interpreter still owns parser state.",
+      "summary": "Guard parser-only import metadata after compilation. Compact compiler-only instruction records after resolving value ownership, preserving branch and export anchors, all mutable values and exactly-once pool cleanup. Read import metadata only while an interpreter still owns parser state. Bound active import nesting and refuse active import cycles before recursive compilation.",
       "topics": [
         "compiler-warning-cleanup",
         "record-dates-and-file-notices",
-        "script-memory-layout"
+        "script-memory-layout",
+        "script-parser-table-safety"
       ],
       "upstream_sha256": "d42ccb253d606fce0a7d29138c176d7c6c836be9192d4510c4d4bfd8cbb73975"
     },
@@ -1033,9 +1035,13 @@
       "upstream_sha256": "4ac5a8f1cde462dfbb991b1bd83926005a82472477273f97152a587905d876bb"
     },
     "source/scriptlib/Lexer.c": {
-      "distributed_sha256": "717fecd14553754474bd6de6f8ca30a22c7071d9c87601a0ec603f293ac30036",
-      "modified": false,
-      "topics": [],
+      "distributed_sha256": "6b2828a8964a01b634baa06b37e2b067398b909724562e347545c20bbade2b0c",
+      "modified": true,
+      "summary": "Keep script tokenization bounded and propagate preprocessing failure. Report terminal preprocessing failure with the resource and position before parking the engine coroutine.",
+      "topics": [
+        "record-dates-and-file-notices",
+        "script-parser-table-safety"
+      ],
       "upstream_sha256": "717fecd14553754474bd6de6f8ca30a22c7071d9c87601a0ec603f293ac30036"
     },
     "source/scriptlib/Lexer.h": {
@@ -1057,9 +1063,9 @@
       "upstream_sha256": "7f93b469d3f14a35b2113ed082259a372162f8d4bba91b81ee3d05b7b6c07ebb"
     },
     "source/scriptlib/Parser.c": {
-      "distributed_sha256": "604dba263686caa2d0c54b4572f8beb4c81af259eab4e08881104ab260fcb499",
+      "distributed_sha256": "0eab3e1457a338e4289ca98ce799e4188cb8f4461572fe804654e53f1fa7643b",
       "modified": true,
-      "summary": "Check constant-token prefix capacity and resolve instruction labels before recording control targets.",
+      "summary": "Check constant-token prefix capacity and resolve instruction labels before recording control targets. Stop terminal lexer failures and EOF recovery without changing finite historical recovery.",
       "topics": [
         "record-dates-and-file-notices",
         "script-parser-table-safety"
