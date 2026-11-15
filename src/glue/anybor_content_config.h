@@ -9,6 +9,7 @@
 #include <ctype.h>
 #include "anybor_zip_path.h"
 #include "anybor_abi.h"
+#include "anybor_transform_vm.h"
 
 #define OBOR_OVERRIDE_MAX_RULES 256U
 #define OBOR_DESCRIPTOR_MAX_BYTES 65536U
@@ -81,17 +82,29 @@ static bool obor_content_transform_name(const char *line, size_t size, char name
     }
     memcpy(name,line+first,end-first);name[end-first]=0;return true;
 }
+/* Value storage keeps descriptor copies independent, including ZIP routing.
+ * The compiler limits bound both buffers before anything is installed. */
+struct obor_content_function {
+    unsigned char program[OBOR_TRANSFORM_MAX_PROGRAM_BYTES];
+    unsigned char parameters[OBOR_TRANSFORM_MAX_PARAMETER_BYTES];
+    size_t program_size, parameter_size;
+    obor_content_function() : program(), parameters(), program_size(0), parameter_size(0) {}
+};
 struct obor_content_choice {
     char source[4096], archive[4096], engine[48], descriptor[4096];
     char zip_engine[48], zip_descriptor[512], transform[64];
+    obor_content_function function;
     obor_content_controls controls;
     obor_content_choice() : source(), archive(), engine(), descriptor(), zip_engine(), zip_descriptor(), transform(), controls() {}
 };
-struct obor_descriptor { char payload[512], engine[48], transform[64]; obor_content_controls controls; };
+struct obor_descriptor { char payload[512], engine[48], transform[64]; obor_content_controls controls; obor_content_function function; };
 
 static void obor_descriptor_settings(obor_content_choice &choice, const obor_descriptor &descriptor)
 {
-    if (!choice.transform[0]) snprintf(choice.transform,sizeof(choice.transform),"%s",descriptor.transform);
+    if (!choice.transform[0] && !choice.function.program_size) {
+        snprintf(choice.transform,sizeof(choice.transform),"%s",descriptor.transform);
+        choice.function=descriptor.function;
+    }
     for (unsigned i=0;i<OBOR_BTN_COUNT;++i) {
         unsigned bit=1u<<i;
         if (!(choice.controls.mapped&bit) && (descriptor.controls.mapped&bit)) choice.controls.target[i]=descriptor.controls.target[i];
@@ -204,8 +217,31 @@ static bool obor_descriptor_parse(const char *text, size_t size, obor_descriptor
             if (!section || (seen & section)) return false;
             seen |= section;
         } else if (section==2) {
-            if (!obor_content_engine_line(line,n,parsed.engine) &&
-                !obor_content_transform_name(line,n,parsed.transform)) return false;
+            if (obor_content_engine_line(line,n,parsed.engine)) continue;
+            if (parsed.transform[0] || parsed.function.program_size) return false;
+            if (obor_content_transform_name(line,n,parsed.transform)) continue;
+            const char *equal=(const char *)memchr(line,'=',n);
+            size_t key=equal ? (size_t)(equal-line) : 0;
+            while (key && (line[key-1]==' ' || line[key-1]=='\t')) --key;
+            if (!equal || key!=9 || memcmp(line,"transform",9)) return false;
+            const char *source=equal+1;
+            unsigned char *program=NULL,*parameters=NULL;
+            size_t consumed=0,program_size=0,parameter_size=0;
+            char error[256]={0};
+            bool ok=obor_content_transform_compile(source,size-(size_t)(source-text),&consumed,
+                &program,&program_size,&parameters,&parameter_size,error,sizeof(error)) != 0;
+            ok=ok && consumed && consumed<=size-(size_t)(source-text) && program_size &&
+                program_size<=sizeof(parsed.function.program) && parameter_size<=sizeof(parsed.function.parameters);
+            if (ok) {
+                memcpy(parsed.function.program,program,program_size);
+                memcpy(parsed.function.parameters,parameters,parameter_size);
+                parsed.function.program_size=program_size;parsed.function.parameter_size=parameter_size;
+            }
+            free(program);free(parameters);
+            if (!ok) return false;
+            at=(size_t)(source-text)+consumed;
+            while (at<size && (text[at]==' ' || text[at]=='\t')) ++at;
+            if (at<size && text[at]!='\r' && text[at]!='\n') return false;
         } else if (section==4 || section==8) {
             if (!obor_content_control_line(line,n,parsed.controls,section==8)) return false;
         } else if (section==1) {
@@ -223,7 +259,7 @@ static bool obor_descriptor_parse(const char *text, size_t size, obor_descriptor
                  !(allow_zip && obor_content_suffix(parsed.payload,".zip")))) return false;
         } else return false;
     }
-    if (!parsed.payload[0] || ((seen & 2) && !parsed.engine[0] && !parsed.transform[0])) return false;
+    if (!parsed.payload[0] || ((seen & 2) && !parsed.engine[0] && !parsed.transform[0] && !parsed.function.program_size)) return false;
     out = parsed;
     return true;
 }

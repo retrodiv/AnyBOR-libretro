@@ -6,6 +6,13 @@ range inside a larger container, and converting stored word order. The function
 receives bytes and returns the complete ordinary PACK that the engine will read.
 Use these adapters with content you created or have permission to adapt.
 
+## Descriptor configuration
+
+A `.anybor` descriptor can provide a function directly through its `transform`
+field in `[overrides]`, without a system configuration file. See
+[descriptor-local functions](CONTENT_CONFIGURATION.md#descriptor-local-functions).
+The same byte-buffer grammar and execution limits apply.
+
 ## System configuration
 
 Place `AnyBOR.ini` in the system directory configured by the frontend. Libretro

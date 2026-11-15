@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.2.27
+
+- Accept bounded byte-buffer functions directly in content descriptors, with
+  independent ZIP routing and cache identities, without a system configuration.
+
 ## 0.2.26
 
 - Verify warm ZIP cache bytes against current decompression streams, including

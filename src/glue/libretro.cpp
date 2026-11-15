@@ -2990,7 +2990,7 @@ static bool load_game(const struct retro_game_info *info, bool retry, bool prepa
         env_cb(RETRO_ENVIRONMENT_GET_SYSTEM_DIRECTORY, &system);
         obor_prepare_stage(total_progress, packed_start, 950, 0);
         if (!g_zip_engine_scanned &&
-            !obor_packed_prepare(g_pak_path, g_save_dir, system, prepared, sizeof(prepared), g_content_choice.transform)) {
+            !obor_packed_prepare(g_pak_path, g_save_dir, system, prepared, sizeof(prepared), g_content_choice.transform, &g_content_choice.function)) {
             error_reason("Could not read or prepare the packed content.");
             return false;
         }

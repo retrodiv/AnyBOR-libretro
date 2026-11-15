@@ -22,7 +22,8 @@ struct obor_transform_buffers {
  * encoded-format signature, recipe or automatic decoder is built in. */
 static bool obor_packed_prepare(const char *source, const char *save_dir,
                                 const char *system_dir, char *out, size_t out_cap,
-                                const char *transform_key = NULL)
+                                const char *transform_key = NULL,
+                                const obor_content_function *function = NULL)
 {
     obor_prepare_range progress = obor_prepare_phase;
     obor_input_transform transform;
@@ -31,11 +32,26 @@ static bool obor_packed_prepare(const char *source, const char *save_dir,
     bool header_repair = obor_pak_header_repair_detect(input) != 0;
     /* A complete plain PACK structure takes precedence over an unrelated
      * external transform, including a malformed or unavailable configuration. */
-    if (!header_repair && !obor_transform_load(system_dir, transform, transform_key)) {
+    bool local=function && function->program_size;
+    if (local && obor_pak_validate(source)) {
+        fclose(input);
+        log_cb(RETRO_LOG_ERROR,"[OpenBOR] Descriptor function requires an ordinary PACK input.\n");
+        return false;
+    }
+    if (!header_repair && local) {
+        if (function->program_size>OBOR_TRANSFORM_MAX_PROGRAM_BYTES ||
+            function->parameter_size>OBOR_TRANSFORM_MAX_PARAMETER_BYTES) { fclose(input);return false; }
+        transform.program=(unsigned char *)malloc(function->program_size);
+        transform.parameters=(unsigned char *)malloc(function->parameter_size ? function->parameter_size : 1u);
+        if (!transform.program || !transform.parameters) { fclose(input);return false; }
+        memcpy(transform.program,function->program,function->program_size);
+        memcpy(transform.parameters,function->parameters,function->parameter_size);
+        transform.program_size=function->program_size;transform.parameter_size=function->parameter_size;
+    } else if (!header_repair && !obor_transform_load(system_dir, transform, transform_key)) {
         fclose(input);
         return false;
     }
-    if (header_repair && transform_key && *transform_key) {
+    if (header_repair && (local || (transform_key && *transform_key))) {
         fclose(input);
         log_cb(RETRO_LOG_ERROR,"[OpenBOR] Named transform requires an ordinary PACK input.\n");
         return false;

@@ -173,7 +173,36 @@ retains the INI's `input` default. The selected named entry must exist and all
 functions must validate; an unavailable entry rejects the load.
 
 The external descriptor's transform wins over a ZIP descriptor's transform.
-Functions remain external to the core and descriptors contain only their names.
+Functions are supplied by the user through a descriptor or system configuration.
 Named transforms require an ordinary PACK input; structural header repair keeps
 its existing route for descriptors without a named transform. Engine selection
 retains its independent manual and INI priorities.
+
+## Descriptor-local functions
+
+A descriptor can contain its complete byte-buffer adjustment in `[overrides]`:
+
+```ini
+[anybor]
+payload = Paks/content.pak
+
+[overrides]
+transform = buffer unchanged() {
+    return slice(0, input_size);
+}
+```
+
+This function uses the grammar and execution limits in
+[content transforms](CONTENT_TRANSFORMS.md), within the descriptor's 64 KiB
+file limit. Local functions adjust an ordinary, structurally valid PACK input;
+other representations are rejected before execution. It requires no `AnyBOR.ini`. The compiler parses the entire function;
+section-shaped text in its strings or comments remains function text. Only one
+`transform` field is accepted. A named INI entry and a local function cannot be
+combined in one descriptor.
+
+A local function takes precedence over the INI's default `input` transform.
+The external descriptor's transform, either local or named, takes precedence
+over a transform in the ZIP's descriptor. Engine-choice priorities remain
+independent. The original packed bytes are preserved; the prepared cache is
+bound to the compiled function and its parameters. Changed functions are read
+on load/restart and obtain distinct prepared identities.

@@ -391,7 +391,8 @@ static int obor_zip_prepare(const char *zip_path, const char *save_dir,
             }
             if(raw_roots==1 && obor_game_model_asset(path,raw_root)) continue;
             if (!obor_packed_prepare(path, save_dir, system_dir, candidate, sizeof(candidate),
-                    content_choice && content_choice->transform[0] ? content_choice->transform : descriptor.transform) ||
+                    content_choice && (content_choice->transform[0] || content_choice->function.program_size) ? content_choice->transform : descriptor.transform,
+                    content_choice && (content_choice->transform[0] || content_choice->function.program_size) ? &content_choice->function : &descriptor.function) ||
                 !obor_game_recognizable(candidate, true)) { ++unknown; continue; }
             snprintf(chosen, sizeof(chosen), "%s", candidate);
             if (content_choice) snprintf(content_choice->source, sizeof(content_choice->source), "%s", path);

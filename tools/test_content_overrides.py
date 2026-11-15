@@ -54,7 +54,7 @@ int main(int argc,char **argv) {
   ok=obor_zip_prepare(archive,argv[3],out,sizeof(out),argv[4],&identity,&choice);
  }
  if(ok&&!from_zip) {
-  char prepared[4096];ok=obor_packed_prepare(out,argv[3],argv[4],prepared,sizeof(prepared),choice.transform);
+  char prepared[4096];ok=obor_packed_prepare(out,argv[3],argv[4],prepared,sizeof(prepared),choice.transform,&choice.function);
   if(ok)snprintf(out,sizeof(out),"%s",prepared);
  }
  if(ok)ok=obor_content_override(argv[4],choice,engine,evidence,sizeof(evidence));
@@ -496,6 +496,63 @@ class ContentOverrideTests(unittest.TestCase):
         result,_=self.route_content(descriptor);self.assertEqual(result['ok'],'0')
         (self.system/'AnyBOR.ini').write_text('[transforms]\nother=buffer pass(){return slice(0,input_size); }\n')
         result,_=self.route_content(descriptor);self.assertEqual(result['ok'],'0')
+
+    def test_descriptor_inline_function_without_system_configuration(self):
+        descriptor=self.descriptor(engine=None)
+        descriptor.write_text(descriptor.read_text()+'[overrides]\ntransform = buffer local() {\n'
+            'parameters("[overrides]\\nengine=7142");\n'
+            '/* [controls] is function text, not a descriptor section. */\n'
+            'write8(work,8,76); return slice(0,input_size);\n}\n[controls]\nattack=attack4\n')
+        before=self.pak.read_bytes()
+        result,_=self.route_content(descriptor)
+        self.assertEqual(result['ok'],'1');self.assertEqual(result['engine'],'')
+        self.assertEqual(Path(result['path']).read_bytes()[8],76)
+        self.assertEqual(self.pak.read_bytes(),before)
+        # A local function supersedes an INI input transform; engine rules stay independent.
+        (self.system/'AnyBOR.ini').write_text('[transforms]\ninput=buffer other(){reject();}\n')
+        again,_=self.route_content(descriptor);self.assertEqual(again['ok'],'1')
+        self.assertEqual(Path(again['path']).read_bytes(),Path(result['path']).read_bytes())
+        descriptor.write_text(descriptor.read_text().replace('work,8,76','work,8,108'))
+        changed,_=self.route_content(descriptor);self.assertEqual(changed['ok'],'1')
+        self.assertEqual(Path(changed['path']).read_bytes()[8],108)
+        self.assertNotEqual(changed['path'],result['path'])
+
+    def test_zip_inline_function_and_outer_transform_priority(self):
+        inner='[anybor]\npayload=game.pak\n[overrides]\ntransform=buffer inner(){write8(work,8,76);return slice(0,input_size);}\n'
+        archive=self.archive({'game.pak':self.pak.read_bytes(),'inside.anybor':inner.encode()})
+        result,_=self.route_content(archive);self.assertEqual(result['ok'],'1')
+        self.assertEqual(Path(result['path']).read_bytes()[8],76)
+        outer=self.folder/'Outer.anybor'
+        outer.write_text('[anybor]\npayload='+archive.name+'\n[overrides]\ntransform=buffer outer(){write8(work,8,108);return slice(0,input_size);}\n')
+        result,_=self.route_content(outer);self.assertEqual(result['ok'],'1')
+        self.assertEqual(Path(result['path']).read_bytes()[8],108)
+        (self.system/'AnyBOR.ini').write_text('[transforms]\nexternal=buffer outer(){write8(work,8,108);return slice(0,input_size);}\n')
+        outer.write_text('[anybor]\npayload='+archive.name+'\n[overrides]\ntransform=external\n')
+        result,_=self.route_content(outer);self.assertEqual(result['ok'],'1')
+        self.assertEqual(Path(result['path']).read_bytes()[8],108)
+
+    def test_inline_function_rejects_duplicate_invalid_and_oversized_programs(self):
+        valid='transform=buffer local(){return slice(0,input_size);}\n'
+        for body in (valid+valid,valid+'transform=external\n',
+                     'transform=external\n'+valid,
+                     'transform=buffer broken(){return slice(0,input_size);\n',
+                     valid.rstrip()+' trailing\n',
+                     'transform=buffer bad(){write8(work,0,1)}\n',
+                     'transform=buffer large(){'+('write8(work,8,76);'*1100)+'return slice(0,input_size);}\n'):
+            with self.subTest(body=body[:90]):
+                descriptor=self.descriptor(engine=None)
+                descriptor.write_text(descriptor.read_text()+'[overrides]\n'+body)
+                result,_=self.route_content(descriptor);self.assertEqual(result['ok'],'0')
+
+    def test_descriptor_function_requires_an_ordinary_pack(self):
+        descriptor=self.descriptor(engine=None)
+        descriptor.write_text(descriptor.read_text()+'[overrides]\ntransform=buffer repair(){write32(work,0,0x4b434150);return slice(0,input_size);}\n')
+        before=self.pak.read_bytes()
+        for header in (b'SPAK',b'xxxx'):
+            self.pak.write_bytes(header+before[4:])
+            result,log=self.route_content(descriptor)
+            self.assertEqual(result['ok'],'0')
+            self.assertIn('Descriptor function requires an ordinary PACK input',log)
 
     def test_outer_settings_win_and_unspecified_inner_controls_survive(self):
         archive=self.archive({'game.pak':self.pak.read_bytes(), 'inside.anybor':
