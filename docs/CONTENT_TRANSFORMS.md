@@ -22,12 +22,13 @@ input = buffer identity() {
 }
 ```
 
-Only the entry whose INI key is `input` runs, once before the PACK reader. The
-function name after `buffer` is descriptive and does not select it. Other declared
-functions are validated but not dispatched. Each load follows this sequence:
+The default entry whose INI key is `input` runs once before the PACK reader.
+A descriptor can instead select a named entry through its `transform` field
+as documented in [content configuration](CONTENT_CONFIGURATION.md). The
+function name after `buffer` is descriptive and does not select it. Entries other than the selected one are validated but not dispatched. Each load follows this sequence:
 
 1. Extract the selected member when the loaded content is an ordinary ZIP.
-2. Apply the explicitly configured `input` function to the packed file, if present.
+2. Apply the selected configured function to the packed file, if present.
 3. Validate the complete resulting PACK before starting the engine.
 
 An adapter can leave a representation unchanged with `return slice(0, input_size)`.

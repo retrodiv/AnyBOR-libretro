@@ -39,6 +39,7 @@ FALLBACK
 static char g_pak_path[4096],g_engine[48],g_logical_engine[48],g_selection_error[160];
 static char g_engine_source_path[4096];
 static bool g_raw;
+static bool g_engine_error_context,g_engine_log_fresh;
 static const char *system_dir, *manual="Auto";
 static bool environment(unsigned command,void *data) {
  if(command==RETRO_ENVIRONMENT_GET_SYSTEM_DIRECTORY) {*(const char **)data=system_dir;return system_dir!=NULL;}

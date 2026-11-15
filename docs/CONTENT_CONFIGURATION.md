@@ -133,3 +133,47 @@ selected engine and the external rule or descriptor used. A loose descriptor
 uses its payload's save namespace, whether the payload is a PAK or ZIP.
 ZIPs retain the namespace of the original ZIP; descriptor names do not create separate save
 namespaces.
+
+## Descriptor controls and labels
+
+`[controls]` maps the core's logical source actions to engine actions for this
+content. Names are `up`, `down`, `left`, `right`, `attack`, `attack2`, `attack3`,
+`attack4`, `jump`, `special`, `start` and `escape`. A destination of `none`
+disables that source. Unspecified sources retain their mapping. Simultaneous
+sources mapped to one action combine without releasing each other.
+
+`[labels]` supplies optional functional labels for those same source actions.
+Labels describe the action shown in the controls list, independently of the
+historical engine input it receives. Duplicate source declarations are errors.
+
+```ini
+[controls]
+attack = attack4
+special = attack3
+attack3 = special
+attack4 = none
+
+[labels]
+attack = Attack
+special = Dodge
+attack3 = HUD
+```
+
+An external descriptor takes precedence over the ZIP descriptor for each
+explicit control or label; unspecified entries can come from the ZIP descriptor.
+Directions and Start retain their defaults unless explicitly mapped.
+
+## Named input preparation
+
+`transform = adjustment` in a descriptor's `[overrides]` section selects the
+`adjustment` entry of `[transforms]` in the system directory's `AnyBOR.ini`.
+The byte-buffer language, limits and cache validation are described in
+[content transforms](CONTENT_TRANSFORMS.md). A descriptor without this field
+retains the INI's `input` default. The selected named entry must exist and all
+functions must validate; an unavailable entry rejects the load.
+
+The external descriptor's transform wins over a ZIP descriptor's transform.
+Functions remain external to the core and descriptors contain only their names.
+Named transforms require an ordinary PACK input; structural header repair keeps
+its existing route for descriptors without a named transform. Engine selection
+retains its independent manual and INI priorities.

@@ -21,7 +21,8 @@ struct obor_transform_buffers {
 /* Generic byte preparation followed by the ordinary PACK validator. No
  * encoded-format signature, recipe or automatic decoder is built in. */
 static bool obor_packed_prepare(const char *source, const char *save_dir,
-                                const char *system_dir, char *out, size_t out_cap)
+                                const char *system_dir, char *out, size_t out_cap,
+                                const char *transform_key = NULL)
 {
     obor_prepare_range progress = obor_prepare_phase;
     obor_input_transform transform;
@@ -30,8 +31,13 @@ static bool obor_packed_prepare(const char *source, const char *save_dir,
     bool header_repair = obor_pak_header_repair_detect(input) != 0;
     /* A complete plain PACK structure takes precedence over an unrelated
      * external transform, including a malformed or unavailable configuration. */
-    if (!header_repair && !obor_transform_load(system_dir, transform)) {
+    if (!header_repair && !obor_transform_load(system_dir, transform, transform_key)) {
         fclose(input);
+        return false;
+    }
+    if (header_repair && transform_key && *transform_key) {
+        fclose(input);
+        log_cb(RETRO_LOG_ERROR,"[OpenBOR] Named transform requires an ordinary PACK input.\n");
         return false;
     }
     int64_t bias = 0;

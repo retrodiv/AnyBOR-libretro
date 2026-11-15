@@ -60,6 +60,7 @@ static bool obor_content_loose(const char *path, char *out, size_t cap, obor_con
             return false;
         }
         snprintf(choice.engine,sizeof(choice.engine),"%s",descriptor.engine);
+        obor_descriptor_settings(choice,descriptor);
         snprintf(choice.descriptor,sizeof(choice.descriptor),"%s",path);
     } else if (obor_content_suffix(path,".pak") || obor_content_suffix(path,".spk") ||
                obor_content_suffix(path,".zip")) {
@@ -92,6 +93,7 @@ static bool obor_content_loose(const char *path, char *out, size_t cap, obor_con
             if (!same) continue;
             ++matched;
             snprintf(choice.engine,sizeof(choice.engine),"%s",descriptor.engine);
+        obor_descriptor_settings(choice,descriptor);
             snprintf(choice.descriptor,sizeof(choice.descriptor),"%s",descriptor_path);
         }
         closedir(dir);

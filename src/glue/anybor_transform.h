@@ -21,7 +21,8 @@ private:
  * compiler owns multiline functions, so section-shaped text in a comment or
  * string cannot escape into INI syntax. Parse everything before execution. */
 static bool obor_transform_parse(const char *text, size_t size, obor_input_transform &input,
-                                  char *error, size_t capacity, obor_content_rules *overrides = NULL)
+                                  char *error, size_t capacity, obor_content_rules *overrides = NULL,
+                                  const char *selected_key = "input")
 {
     char names[OBOR_TRANSFORM_MAX_PROGRAMS][64] = {{0}};
     unsigned count = 0;
@@ -73,7 +74,7 @@ static bool obor_transform_parse(const char *text, size_t size, obor_input_trans
         const char *source = equal+1;
         if (!obor_content_transform_compile(source, size-(size_t)(source-text), &consumed,
                 &code, &code_size, &params, &params_size, error, capacity)) goto invalid;
-        if (!strcmp(names[count], "input")) {
+        if (!strcmp(names[count], selected_key)) {
             selected = code; selected_size = code_size;
             parameters = params; parameter_size = params_size;
         } else { free(code); free(params); }
@@ -94,15 +95,16 @@ invalid:
     return false;
 }
 
-static bool obor_transform_load(const char *system_dir, obor_input_transform &input)
+static bool obor_transform_load(const char *system_dir, obor_input_transform &input,
+                                 const char *selected_key = NULL)
 {
-    if (!system_dir || !system_dir[0]) return true;
+    if (!system_dir || !system_dir[0]) return !selected_key || !*selected_key;
     char path[4096], error[256] = {0};
     int n = snprintf(path, sizeof(path), "%s/AnyBOR.ini", system_dir);
     if (n < 0 || (size_t)n >= sizeof(path)) return false;
     FILE *fp = fopen(path, "rb");
     if (!fp) {
-        if (errno == ENOENT) return true;
+        if (errno == ENOENT) return !selected_key || !*selected_key;
         log_cb(RETRO_LOG_ERROR, "[OpenBOR] Cannot read %s\n", path);
         return false;
     }
@@ -111,7 +113,11 @@ static bool obor_transform_load(const char *system_dir, obor_input_transform &in
     size_t size = fread(text, 1, OBOR_TRANSFORM_MAX_CONFIG_BYTES + 1u, fp);
     bool ok = !ferror(fp) && size <= OBOR_TRANSFORM_MAX_CONFIG_BYTES;
     fclose(fp);
-    if (ok) ok = obor_transform_parse(text, size, input, error, sizeof(error));
+    if (ok) ok = obor_transform_parse(text, size, input, error, sizeof(error), NULL,
+        selected_key && *selected_key ? selected_key : "input");
+    if (ok && selected_key && *selected_key && !input.program) {
+        snprintf(error,sizeof(error),"requested transform is not configured");ok=false;
+    }
     free(text);
     if (!ok) log_cb(RETRO_LOG_ERROR, "[OpenBOR] %s: %s\n", path,
                     error[0] ? error : "oversized or unreadable configuration");

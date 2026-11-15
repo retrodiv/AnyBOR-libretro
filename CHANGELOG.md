@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.2.17 — descriptor controls and preparation
+
+- Configure logical input mapping and functional labels in external content descriptors.
+- Select a named external input transform while preserving engine-selection priorities and original payload bytes.
+
 ## 0.2.16 — precise content diagnostics
 
 - Preserve the engine's explicit loading failure before cleanup and retain the first cause.

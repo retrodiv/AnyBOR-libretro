@@ -347,7 +347,8 @@ static int obor_zip_prepare(const char *zip_path, const char *save_dir,
                 log_cb(RETRO_LOG_INFO, "[OpenBOR] zip: auxiliary RIFF/WAVE %s\n", entry->name);
                 continue;
             }
-            if (!obor_packed_prepare(path, save_dir, system_dir, candidate, sizeof(candidate)) ||
+            if (!obor_packed_prepare(path, save_dir, system_dir, candidate, sizeof(candidate),
+                    content_choice && content_choice->transform[0] ? content_choice->transform : descriptor.transform) ||
                 !obor_game_recognizable(candidate, true)) { ++unknown; continue; }
             snprintf(chosen, sizeof(chosen), "%s", candidate);
             if (content_choice) snprintf(content_choice->source, sizeof(content_choice->source), "%s", path);
@@ -368,6 +369,7 @@ static int obor_zip_prepare(const char *zip_path, const char *save_dir,
         snprintf(content_choice->archive, sizeof(content_choice->archive), "%s", zip_path);
         snprintf(content_choice->zip_engine, sizeof(content_choice->zip_engine), "%s", descriptor.engine);
         snprintf(content_choice->zip_descriptor, sizeof(content_choice->zip_descriptor), "%s", descriptor_name);
+        obor_descriptor_settings(*content_choice,descriptor);
     }
     if (engine_identity) *engine_identity = identity;
     int written = snprintf(out, out_cap, "%s", chosen);

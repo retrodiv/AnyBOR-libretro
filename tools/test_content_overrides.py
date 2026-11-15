@@ -48,12 +48,18 @@ int main(int argc,char **argv) {
  obor_engine_identity identity={};
  bool ok=obor_storage_begin(argv[3],false,false);
  if(ok)ok=obor_content_loose(argv[2],out,sizeof(out),choice);
- if(ok&&obor_content_suffix(out,".zip")) {
+ bool from_zip=ok&&obor_content_suffix(out,".zip");
+ if(from_zip) {
   char archive[4096];snprintf(archive,sizeof(archive),"%s",out);
   ok=obor_zip_prepare(archive,argv[3],out,sizeof(out),argv[4],&identity,&choice);
  }
+ if(ok&&!from_zip) {
+  char prepared[4096];ok=obor_packed_prepare(out,argv[3],argv[4],prepared,sizeof(prepared),choice.transform);
+  if(ok)snprintf(out,sizeof(out),"%s",prepared);
+ }
  if(ok)ok=obor_content_override(argv[4],choice,engine,evidence,sizeof(evidence));
  printf("ok=%d\npath=%s\nsource=%s\nengine=%s\nevidence=%s\n",ok,out,choice.source,engine,evidence);
+ printf("transform=%s\nmask=%u\nlabel=%s\n",choice.transform,obor_content_buttons(choice.controls,(1u<<OBOR_BTN_ATTACK)|(1u<<OBOR_BTN_ATTACK3)),choice.controls.labels[OBOR_BTN_SPECIAL]);
  return 0;
 }
 '''
@@ -459,6 +465,47 @@ class ContentOverrideTests(unittest.TestCase):
         self.assertIn('using imohash cache', log)
         self.assertEqual(second['ok'], '1', log)
         self.assertEqual(second['engine'], '6330')
+
+    def test_descriptor_control_mapping_labels_and_named_transform(self):
+        self.descriptor().write_text('[anybor]\npayload='+self.pak.name+'\n[overrides]\nengine=3143\ntransform=adjustment\n[controls]\nattack=attack4\nspecial=attack3\nattack3=special\nattack4=none\n[labels]\nspecial=Dodge\n')
+        ini='[transforms]\nadjustment = buffer adjust() { write8(work,8,76); return slice(0,input_size); }\n'
+        (self.system / 'AnyBOR.ini').write_text(ini)
+        before=self.pak.read_bytes()
+        result,diagnostic=self.route_content(self.folder/'Alias.anybor')
+        self.assertEqual(result['ok'],'1',diagnostic);self.assertEqual(result['engine'],'3143')
+        self.assertEqual(result['transform'],'adjustment');self.assertEqual(result['mask'],str((1<<7)|(1<<9)))
+        self.assertEqual(result['label'],'Dodge')
+        self.assertEqual(Path(result['path']).read_bytes()[8],76)
+        self.assertEqual(self.pak.read_bytes(),before)
+        (self.folder/'Alias.anybor').unlink()
+        direct,_=self.route_content()
+        self.assertEqual(direct['ok'],'1');self.assertEqual(direct['transform'],'')
+        self.assertEqual(Path(direct['path']).read_bytes(),before)
+
+    def test_requested_transform_missing_or_invalid_is_rejected(self):
+        descriptor=self.descriptor()
+        descriptor.write_text(descriptor.read_text()+'transform=missing\n')
+        result,_=self.route_content(descriptor);self.assertEqual(result['ok'],'0')
+        (self.system/'AnyBOR.ini').write_text('[transforms]\nother=buffer pass(){return slice(0,input_size); }\n')
+        result,_=self.route_content(descriptor);self.assertEqual(result['ok'],'0')
+
+    def test_outer_settings_win_and_unspecified_inner_controls_survive(self):
+        archive=self.archive({'game.pak':self.pak.read_bytes(), 'inside.anybor':
+            b'[anybor]\npayload=game.pak\n[controls]\nattack=attack4\n[labels]\nspecial=Inner label\n'})
+        outer=self.folder/'Outer.anybor'
+        outer.write_text('[anybor]\npayload='+archive.name+'\n[controls]\nattack=attack2\nattack3=special\n[labels]\nspecial=Outer label\n')
+        result,_=self.route_content(outer)
+        self.assertEqual(result['ok'],'1');self.assertEqual(result['mask'],str((1<<5)|(1<<9)))
+        self.assertEqual(result['label'],'Outer label')
+
+    def test_control_and_label_grammar_refuses_ambiguous_declarations(self):
+        for extra in ('[controls]\nattack=bad\n', '[controls]\nattack=attack4\nattack=jump\n',
+                      '[controls]\nnone=attack\n', '[labels]\nspecial=One\nspecial=Two\n',
+                      '[labels]\nspecial=\n', '[overrides]\ntransform=bad name\n'):
+            descriptor=self.descriptor(engine=None)
+            descriptor.write_text(descriptor.read_text()+extra)
+            result,_=self.route_content(descriptor)
+            self.assertEqual(result['ok'],'0',extra)
 
 
 @unittest.skipUnless(os.environ.get('OBOR_TEST_CORE'), 'set OBOR_TEST_CORE for linked-core loading controls')

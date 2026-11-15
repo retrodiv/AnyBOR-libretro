@@ -1674,7 +1674,7 @@ void retro_reset(void)
     }
     g_booted = true;
     if (!g_raw)
-        obor_padmap_apply(env_cb, g_pak_path);
+        obor_padmap_apply(env_cb, g_pak_path, &g_content_choice.controls);
 }
 
 /* ---- test-only instrumentation, env-gated, inert in normal use ----
@@ -1935,6 +1935,7 @@ void retro_run(void)
                                     RETRO_DEVICE_INDEX_ANALOG_LEFT,
                                     RETRO_DEVICE_ID_ANALOG_Y);
             }
+            unsigned pressed = 0;
             for (size_t i = 0; i < sizeof(kPadMap) / sizeof(kPadMap[0]); i++) {
                 int16_t v = input_state_cb((unsigned)pl, RETRO_DEVICE_JOYPAD, 0,
                                            kPadMap[i].retro);
@@ -1948,8 +1949,11 @@ void retro_run(void)
                 }
                 if (pl == 0 && g_ngsegs > 0 && !v)
                     v = (int16_t)ginput_state(kPadMap[i].retro);
-                p_set_button(pl, kPadMap[i].obor, v ? 1 : 0);
+                if (v) pressed |= 1u<<kPadMap[i].obor;
             }
+            pressed = obor_content_buttons(g_content_choice.controls, pressed);
+            for (int button=0;button<OBOR_BTN_COUNT;++button)
+                p_set_button(pl, button, (pressed>>button)&1u);
         }
     }
 
@@ -2986,7 +2990,7 @@ static bool load_game(const struct retro_game_info *info, bool retry, bool prepa
         env_cb(RETRO_ENVIRONMENT_GET_SYSTEM_DIRECTORY, &system);
         obor_prepare_stage(total_progress, packed_start, 950, 0);
         if (!g_zip_engine_scanned &&
-            !obor_packed_prepare(g_pak_path, g_save_dir, system, prepared, sizeof(prepared))) {
+            !obor_packed_prepare(g_pak_path, g_save_dir, system, prepared, sizeof(prepared), g_content_choice.transform)) {
             error_reason("Could not read or prepare the packed content.");
             return false;
         }
@@ -3074,7 +3078,7 @@ static bool finish_load_game(void)
      * parsed from the pak's playable characters (anybor_padmap.h).
      * Unpacked mods keep the generic labels for now. */
     if (!g_raw)
-        obor_padmap_apply(env_cb, g_pak_path);
+        obor_padmap_apply(env_cb, g_pak_path, &g_content_choice.controls);
 
     write_license_documentation();
     obor_dbg("load_game: booted OK (%dx%d)", g_width, g_height);

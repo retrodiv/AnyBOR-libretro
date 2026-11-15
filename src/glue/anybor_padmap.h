@@ -19,6 +19,7 @@
 #define OBOR_PADMAP_H
 
 #include <stdio.h>
+#include "anybor_content_config.h"
 #include <string.h>
 
 /* per-game evidence gathered from the player entities */
@@ -366,7 +367,8 @@ static void obor_pm_collect(const char *pak_path, obor_padinfo *info)
 
 static void obor_dbg(const char *fmt, ...); /* anybor_debug.h (same TU) */
 
-static void obor_padmap_apply(retro_environment_t env, const char *pak_path)
+static void obor_padmap_apply(retro_environment_t env, const char *pak_path,
+                                 const obor_content_controls *controls = NULL)
 {
     static obor_padinfo info;
     obor_pm_collect(pak_path, &info);
@@ -417,7 +419,11 @@ static void obor_padmap_apply(retro_environment_t env, const char *pak_path)
             desc[n].device = RETRO_DEVICE_JOYPAD;
             desc[n].index = 0;
             desc[n].id = m[i].id;
-            desc[n].description = m[i].txt;
+            static const unsigned source[] = {OBOR_BTN_UP,OBOR_BTN_DOWN,OBOR_BTN_LEFT,OBOR_BTN_RIGHT,
+                OBOR_BTN_ATTACK,OBOR_BTN_JUMP,OBOR_BTN_SPECIAL,OBOR_BTN_ATTACK2,OBOR_BTN_ATTACK3,
+                OBOR_BTN_ATTACK4,OBOR_BTN_START,OBOR_BTN_ESC};
+            desc[n].description = controls && controls->labels[source[i]][0] ?
+                controls->labels[source[i]] : m[i].txt;
             n++;
         }
     }
