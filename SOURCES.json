@@ -5,7 +5,7 @@
     ".github/workflows/ci.yml": "76621d1536fdbdd5be3c8564af40322b3358070e8edecc159eb4e710c980f8ab",
     ".gitignore": "51eef046f754b4d264790dd07ff3c3d6b32b5245c682b3e1f64e92bb7a4ed39f",
     ".gitlab-ci.yml": "d0a7a43ff1dbcd3324279db48cdafb93d3963ef28f0d802f59c1741db1b2f087",
-    "CHANGELOG.md": "2abca0fe06030a66db9ee6bee59fb425dff49edf0e8e97c242a704a2551ccf4f",
+    "CHANGELOG.md": "6d80134b7a32014bce5e2c05fd85a82afb620990eab5be12ca0962eb427a38d6",
     "COMPATIBILITY.md": "2f7411c4cb1387adc6cd9e00ea4787a6601f7b0f1da8febe6c1c46640a08bf1a",
     "CONTRIBUTING.md": "823ff67603edceccac6a3d8c30d70655414e6674200c7981d1314416c7ca4869",
     "LICENSE": "abeb4a9677c142a681910f7a2e937918213c68b83849b1431ccb4f3f5466a0fa",
@@ -88,7 +88,7 @@
     "NOTICE.txt": "b7244da5be75c26d9835e701b96c486d980b84e98314cd1cb29c207f42afceb4",
     "PROVENANCE.md": "512386b72e3d5365722957d1fb09fb7bcad4c64f2cc7c42540720a892bc39117",
     "README.md": "40ff33418701b5802fd578805c948e481119f63b9c1f986572f2852e5becb787",
-    "SBOM.spdx.json": "e2f216aa0e88e16850ffa7c5359496e0ea66c6f62e64d8cd93e0206735570d71",
+    "SBOM.spdx.json": "ed409d0cbd17b5ea77b4b291793463a887f67e43afb98e1a08d41318df5dbac0",
     "SECURITY.md": "3aaf7f8f89ef7abc1cac8d4f25f358a5529410673fa04d97ddc123ae21f96f4b",
     "anybor_libretro.info": "083a01051f0c5a610372ffe4d6f45b23cb94c6b652c4e17b556da59de7a19f95",
     "docs/ANYBOR.md": "7148bafa2452c242f2498733432318bbd769444927c950f9bbc0f85f7d3bca1d",
@@ -2973,7 +2973,7 @@
     "src/glue/anybor_engine_executables.h": "06d357e48670990b9275615663bbf7e53f71e2eba94cc64bf8937d631642f85b",
     "src/glue/anybor_engine_identity.h": "5419b31620c56e859365c3845c7d318ca77840a5c89e2b1f65e26dc9b4ea0773",
     "src/glue/anybor_engine_resources.h": "8196f17ba5110e51c4b71388f005e3beb26c2cc72aaf0fb559a255c10842223b",
-    "src/glue/anybor_engines.h": "c517452104999295d26930f4ff96c050ad2ab7cdb9d2b30ba157a9341f846907",
+    "src/glue/anybor_engines.h": "8b17242e628c18d2621ddbde897b29697e336eee10407c222ff207164881e57c",
     "src/glue/anybor_error_screen.h": "15c6d9c150494aaa425086d41b74277f3472fe2b2b749611632f4d85cfa3aeb0",
     "src/glue/anybor_game_content.h": "e20106cfbfb443afa760098c8a72d3dbdeb7723da1c01445ac714deb6d2f528d",
     "src/glue/anybor_hankaku.h": "639d8236cb4a82eaacafd1ec0f5f904ba734fdb6e8771db5b96ae03cb06e88ea",
@@ -3016,7 +3016,7 @@
     "src/glue/exports.macho": "97150280ad24c4636b55e7fa760bbb3060bd9b200716547c5b939899751fde31",
     "src/glue/exports.map": "6313cbda366a9d3f60c42ace4a660baf39b6037f40a92bf486741a424c754c50",
     "src/glue/libretro.cpp": "c7ecd1cdec3986d814f4b1608420c8a9240adffa6dff82bff885716103d7153c",
-    "src/pin.json": "274e8cf512785074ccca3e16c69eedc8ef49772388e72f226fafaefcf99eacec",
+    "src/pin.json": "c869cc46ff58d0606db5dafb2be17277426f8ae890dee9bc1294d5faf6ef997c",
     "src/port/libretro/anybor_abi.h": "4cac6476d8370315856ecf0dbf273be32b8d61dc3244f828631e078ce1229511",
     "src/port/libretro/anybor_adpcm.c": "40eed9f1f6f51f7b3a8d06083b7033945c014d763b896e6319e5e637b475ccc6",
     "src/port/libretro/anybor_alloc.c": "3e20df23a318d294581c29b46035eb0dcada030c9990e7b8bd43266a5b566f79",
@@ -4309,7 +4309,7 @@
     "tools/test_color_blends.py": "d81193d7c7e921966ed0501cf10eb65cac781edd21d1826ca0e9e1df6e354089",
     "tools/test_colourtable_bounds.py": "ee845331a6dc91e340c8f67493e816507c622d278b6e6639d7339232b7bf5ecb",
     "tools/test_command_table_ownership.py": "33b8e41cdadb0fad07f88d693d5ec62fe129faabc752337f7be0d413ecfedd52",
-    "tools/test_content_overrides.py": "7b51a677b30c9b121ff342faf91c47dc15cf78b5739937cba23d233b3a1891dc",
+    "tools/test_content_overrides.py": "06f93e9ec633e1be3025c34a1a936e1c8ac1200a241bad102a8f4316f7600a70",
     "tools/test_content_triage.py": "3f8e0c33e0aee58bda4ba77255f294eab98bc79e7283791f0faca9fe20f1894f",
     "tools/test_contract_fixtures.py": "fd9a253fd66fffb8b96fd3710e55873112f4fad434ed8faa042d034410c1e01a",
     "tools/test_core_options.py": "c785e68d3ddb90ed5c64a3c45f4f36419f8fb8bbea66e5074f9e29c233fcfe01",
@@ -4701,5 +4701,5 @@
     "tools/zoom_pixels.c.in": "b1964154c7ee6eb28300e75a8cfff5bc7cc59d1e8f544e42bfa7f1fd3ba21763"
   },
   "schema": 1,
-  "version": "0.2.24"
+  "version": "0.2.25"
 }

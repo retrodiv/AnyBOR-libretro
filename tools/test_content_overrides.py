@@ -454,17 +454,25 @@ class ContentOverrideTests(unittest.TestCase):
         self.descriptor(self.folder / 'Second.anybor', payload=archive.name)
         self.assertEqual(self.route_content(archive)[0]['ok'], '0')
 
-    def test_warm_cache_uses_descriptor_in_original_zip(self):
+    def test_warm_cache_rejects_mutated_descriptor_and_recovers_original(self):
         members = {'x.anybor': b'[anybor]\npayload=game.pak\n[overrides]\nengine=6330\n',
                    'game.pak': self.pak.read_bytes()}
         path = self.archive(members)
         first, _ = self.route_content(path, zip=True)
         cached_descriptor = Path(first['source']).parent / 'x.anybor'
-        cached_descriptor.write_text('[anybor]\npayload=missing.pak\n')
+        changed = members['x.anybor'].replace(b'engine=6330', b'engine=7142')
+        cached_descriptor.write_bytes(changed)
         second, log = self.route_content(path, zip=True)
+        self.assertEqual(second['ok'], '0', log)
+        self.assertEqual(cached_descriptor.read_bytes(), changed)
+        with zipfile.ZipFile(path) as stream:
+            original = stream.read('x.anybor')
+        self.assertEqual(original, members['x.anybor'])
+        cached_descriptor.write_bytes(original)
+        restored, log = self.route_content(path, zip=True)
         self.assertIn('using imohash cache', log)
-        self.assertEqual(second['ok'], '1', log)
-        self.assertEqual(second['engine'], '6330')
+        self.assertEqual(restored['ok'], '1', log)
+        self.assertEqual(restored['engine'], '6330')
 
     def test_descriptor_control_mapping_labels_and_named_transform(self):
         self.descriptor().write_text('[anybor]\npayload='+self.pak.name+'\n[overrides]\nengine=3143\ntransform=adjustment\n[controls]\nattack=attack4\nspecial=attack3\nattack3=special\nattack4=none\n[labels]\nspecial=Dodge\n')

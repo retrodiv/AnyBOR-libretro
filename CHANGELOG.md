@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.2.25
+
+- Check rejection of altered cached descriptors and recovery from the original
+  archive configuration under the verified-cache contract.
+
 ## 0.2.24
 
 - Link a fail-fast content-error observer in the standalone script cleanup VM
