@@ -63,6 +63,12 @@ class EarlyScriptClearTests(unittest.TestCase):
                      'Script_Set_Local_Variant', 'Script_Local_Clear', 'system_getlocalvar']
         # Fresh script storage must not enter the core stop path in this VM test.
         bodies = 'void borExit(int reset){(void)reset;abort();}\n'
+        bodies += r'''void obor_content_error(const char *path,unsigned long row,unsigned long col,const char *reason) {
+ fprintf(stderr,"Unexpected script rejection: %s:%lu:%lu: %s\n",path?path:"script",row,col,reason?reason:"");
+ abort();
+}
+'''
+
         bodies += '\n'.join(function(script, name) for name in functions)
         bodies += '\n' + '\n'.join(function(core, name) for name in
                                   ('alloc_all_scripts', 'clear_all_scripts', 'free_all_scripts', 'kill_all'))

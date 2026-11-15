@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.2.24
+
+- Link a fail-fast content-error observer in the standalone script cleanup VM
+  contract, keeping valid-script lifetime expectations unchanged.
+
 ## 0.2.23
 
 - Observe balanced import scopes in the standalone initialization contract for
