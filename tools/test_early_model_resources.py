@@ -916,6 +916,8 @@ static void *co_frontend=&frontend_token;
 static jmp_buf frontend_return;
 static unsigned stops,cleanup_calls,payloads,payloads_at_cleanup,prints,credits;
 static char expected[512];
+static char engine_content_message[512];
+@REASON@
 void co_switch(void *target) {
  CHECK(target==co_frontend&&!engine_alive&&engine_exit_status==expected_status);
  ++stops;longjmp(frontend_return,1);
@@ -923,7 +925,10 @@ void co_switch(void *target) {
 @STOP@
 static void cleanup_event(const char *name) {
  CHECK(name);
- if(!cleanup_calls) payloads_at_cleanup=payloads;
+ if(!cleanup_calls) {
+  CHECK(expected_status ? !strcmp(engine_content_message,expected) : !engine_content_message[0]);
+  payloads_at_cleanup=payloads;
+ }
  ++cleanup_calls;
  if(!strcmp(name,"display_credits")) ++credits;
 }
@@ -971,7 +976,7 @@ int main(void) {
    ++scenario;expected_status=kind==3?0:(int)kind;
    disablelog=(int)quiet;startup_done=0;
    stops=cleanup_calls=payloads=payloads_at_cleanup=prints=credits=0;
-   engine_alive=1;engine_exit_status=-1;
+   engine_alive=1;engine_exit_status=-1;engine_content_message[0]=0;
    if(kind==3) {
     int n=snprintf(expected,sizeof(expected),rows[context].normal_format,VERSION,__DATE__);
     CHECK(n>=0&&(size_t)n<sizeof(expected));
@@ -995,6 +1000,7 @@ int main(void) {
  return 0;
 }
 '''
+        program = program.replace('@REASON@', function(port, 'obor_content_reason_v'))
         program = program.replace('@STOP@', function(port, 'borExit'))
         program = program.replace('@SHUTDOWN@', function(source, 'shutdown'))
         program = program.replace('@ROWS@', ',\n'.join(entries))

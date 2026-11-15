@@ -5,7 +5,7 @@
     ".github/workflows/ci.yml": "76621d1536fdbdd5be3c8564af40322b3358070e8edecc159eb4e710c980f8ab",
     ".gitignore": "51eef046f754b4d264790dd07ff3c3d6b32b5245c682b3e1f64e92bb7a4ed39f",
     ".gitlab-ci.yml": "d0a7a43ff1dbcd3324279db48cdafb93d3963ef28f0d802f59c1741db1b2f087",
-    "CHANGELOG.md": "6e9d2154a594590aca64fb25c1e291e94fd4b468db89154ecc11c69253b83f6e",
+    "CHANGELOG.md": "99a24c65bc5bc76b5e945244d71a77bb95c87bc397116fe4240d7bfe49515b69",
     "COMPATIBILITY.md": "2f7411c4cb1387adc6cd9e00ea4787a6601f7b0f1da8febe6c1c46640a08bf1a",
     "CONTRIBUTING.md": "823ff67603edceccac6a3d8c30d70655414e6674200c7981d1314416c7ca4869",
     "LICENSE": "abeb4a9677c142a681910f7a2e937918213c68b83849b1431ccb4f3f5466a0fa",
@@ -88,7 +88,7 @@
     "NOTICE.txt": "b7244da5be75c26d9835e701b96c486d980b84e98314cd1cb29c207f42afceb4",
     "PROVENANCE.md": "512386b72e3d5365722957d1fb09fb7bcad4c64f2cc7c42540720a892bc39117",
     "README.md": "40ff33418701b5802fd578805c948e481119f63b9c1f986572f2852e5becb787",
-    "SBOM.spdx.json": "06c442bb0d0f6f623c0191f473faf701312ed819941ae964ac198842df5c26d6",
+    "SBOM.spdx.json": "633f661cbc0a6b63e829e4baa556d2514db18c3606c22216dadaa2adf1c9cb0e",
     "SECURITY.md": "3aaf7f8f89ef7abc1cac8d4f25f358a5529410673fa04d97ddc123ae21f96f4b",
     "anybor_libretro.info": "083a01051f0c5a610372ffe4d6f45b23cb94c6b652c4e17b556da59de7a19f95",
     "docs/ANYBOR.md": "7148bafa2452c242f2498733432318bbd769444927c950f9bbc0f85f7d3bca1d",
@@ -2973,7 +2973,7 @@
     "src/glue/anybor_engine_executables.h": "06d357e48670990b9275615663bbf7e53f71e2eba94cc64bf8937d631642f85b",
     "src/glue/anybor_engine_identity.h": "5419b31620c56e859365c3845c7d318ca77840a5c89e2b1f65e26dc9b4ea0773",
     "src/glue/anybor_engine_resources.h": "8196f17ba5110e51c4b71388f005e3beb26c2cc72aaf0fb559a255c10842223b",
-    "src/glue/anybor_engines.h": "2a1a69fefbf2af3ceb6580cb603f5aa75ee1e83192e06e1f6ba4751b32a62ea5",
+    "src/glue/anybor_engines.h": "7e28e96e6b08f88ee46dc03a07ee09ac0dd418cae3972367c6952d746ff80d50",
     "src/glue/anybor_error_screen.h": "15c6d9c150494aaa425086d41b74277f3472fe2b2b749611632f4d85cfa3aeb0",
     "src/glue/anybor_game_content.h": "e20106cfbfb443afa760098c8a72d3dbdeb7723da1c01445ac714deb6d2f528d",
     "src/glue/anybor_hankaku.h": "639d8236cb4a82eaacafd1ec0f5f904ba734fdb6e8771db5b96ae03cb06e88ea",
@@ -3016,7 +3016,7 @@
     "src/glue/exports.macho": "97150280ad24c4636b55e7fa760bbb3060bd9b200716547c5b939899751fde31",
     "src/glue/exports.map": "6313cbda366a9d3f60c42ace4a660baf39b6037f40a92bf486741a424c754c50",
     "src/glue/libretro.cpp": "c7ecd1cdec3986d814f4b1608420c8a9240adffa6dff82bff885716103d7153c",
-    "src/pin.json": "ef1e3988c872a1dd50af3b98bc5673680578b9780a617976fdc9bb817b38838b",
+    "src/pin.json": "074b3ad70d5397d1869966153a290156962c8d45acd4a99c64d1051531e066f6",
     "src/port/libretro/anybor_abi.h": "4cac6476d8370315856ecf0dbf273be32b8d61dc3244f828631e078ce1229511",
     "src/port/libretro/anybor_adpcm.c": "40eed9f1f6f51f7b3a8d06083b7033945c014d763b896e6319e5e637b475ccc6",
     "src/port/libretro/anybor_alloc.c": "3e20df23a318d294581c29b46035eb0dcada030c9990e7b8bd43266a5b566f79",
@@ -4355,7 +4355,7 @@
     "tools/test_early_model_level_state.py": "f3b742492f4554efbc2e69f9f26aacfee141b63e2e6452681365b53b73344c64",
     "tools/test_early_model_lifecycle.py": "a8b68bfbbebbabe1748fe0b7a1c2b883abe8c84d20fb5a772fc8064c461fe7e6",
     "tools/test_early_model_passes.py": "4059bc0d3f37134e10196e06846a637230b8b4f7ac269569327b16aa4a512822",
-    "tools/test_early_model_resources.py": "b52daad72490c9aab6d18c286fafb3fd6585921d032961a094a8b53975c52e11",
+    "tools/test_early_model_resources.py": "8adc173a6c5e96edad30d74a229ab2422f4e7934811e96a5c970c7e7c7e86e01",
     "tools/test_early_models_feedback.py": "2fc6ffe58a3e642ae1d7914189e728a42ba4c72f4671b9a03cbf6f4cdeb0b077",
     "tools/test_early_nodropspawn.py": "9eb02f96324d83c33d1a46d6a36420b788b46f4984159a2e62eeb36ccee20597",
     "tools/test_early_nokill.py": "491e0416bf71c710a6867112f3e59f5683b2bb8728981ed044474b0b4f0c7c8e",
@@ -4701,5 +4701,5 @@
     "tools/zoom_pixels.c.in": "b1964154c7ee6eb28300e75a8cfff5bc7cc59d1e8f544e42bfa7f1fd3ba21763"
   },
   "schema": 1,
-  "version": "0.2.19"
+  "version": "0.2.20"
 }

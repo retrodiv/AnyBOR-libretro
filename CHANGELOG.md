@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.2.20
+
+- Exercise shutdown diagnostics in the historical cleanup test with the actual
+  bounded reason callback, preserving its per-profile output and cleanup checks.
+
 ## 0.2.19
 
 - Resolve bounded nested ZIP and RAR5 containers, including structurally validated
