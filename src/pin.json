@@ -1,7 +1,7 @@
 {
   "core_name": "AnyBOR",
   "core_basename": "anybor_libretro",
-  "version": "0.2.17",
+  "version": "0.2.18",
   "fallback_build": "6391",
   "profiles": [
     {

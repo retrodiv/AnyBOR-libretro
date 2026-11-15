@@ -3770,6 +3770,16 @@
         "tools/test_parser_error_progress.py"
       ],
       "ci": "shared"
+    },
+    {
+      "id": "test_external_flags",
+      "memory_mib": 512,
+      "seconds": 120,
+      "command": [
+        "python3",
+        "tools/test_external_flags.py"
+      ],
+      "ci": "shared"
     }
   ]
 }

@@ -1344,7 +1344,7 @@ int main(int argc, char **argv)
             if (p_retro_serialize(rejected, sizeof(rejected)) ||
                 p_retro_unserialize(rejected, sizeof(rejected))) return 1;
             for (size_t i = 0; i < sizeof(rejected); ++i)
-                if (rejected[i] != (i < sizeof(uint32_t) ? 0 : 0xa5)) return 1;
+                if (rejected[i] != 0) return 1;
             printf("error_screen=320x240 black_white=1 state_rejected=1 frame=%d\n", g_frame);
         }
         if (g_frame == expect_recover_at) {

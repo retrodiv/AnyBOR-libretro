@@ -111,6 +111,7 @@ jobs:
           python3 tools/run_guarded.py --memory-mib 2048 --seconds 180 -- python3 tools/test_animation_scripts.py --core anybor_libretro.so
           python3 tools/run_guarded.py --memory-mib 1024 --seconds 180 -- python3 tools/test_script_timestamps.py
           python3 tools/run_guarded.py --memory-mib 1024 --seconds 180 -- python3 tools/test_native_io.py
+          python3 tools/run_guarded.py --memory-mib 2048 --seconds 300 -- python3 tools/check_content_errors.py --core anybor_libretro.so
           python3 tools/run_guarded.py --memory-mib 1024 --seconds 180 -- python3 tools/test_write_watch.py
       - name: Exercise RISC-V fixed-base states under user emulation
         if: matrix.target == 'linux-riscv64'

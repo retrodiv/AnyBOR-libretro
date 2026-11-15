@@ -18,7 +18,7 @@ import sys
 from pathlib import Path
 from state_layout import write_bss_script, audit_runtime_storage
 from state_build_identity import stamp as stamp_state_identity
-from native_io_bindings import audit_engine, verify_darwin_names
+from native_io_bindings import audit_engine, verify_darwin_names, symbol_sets
 
 HERE = Path(__file__).resolve().parent.parent
 SRC = HERE / "src"
@@ -68,6 +68,56 @@ def native_io_flags(spec):
         # stdio/dirent ABI; the glue's calls remain outside engine namespaces.
         return ["-D_DARWIN_C_SOURCE=1"]
     return []
+
+
+EXTERNAL_FLAG_POLICY = 1
+
+
+def external_flag_args(name, spec, *, isolated=False):
+    """Interpret inherited arguments; keep native 64-bit Linux stdio names.
+
+    Every supported Linux ABI is 64 bit. The real compiler probe below verifies
+    that assumption before a long build. Windows and Darwin keep their macros.
+    Isolated objects and dependencies require machine code before partial-link
+    wrapping and objcopy; the final override follows all inherited arguments.
+    """
+    values = shlex.split(os.environ.get(name, ""))
+    result, at = [], 0
+    while at < len(values):
+        value = values[at]
+        if spec["plat"] == "linux" and value in ("-D", "-U") and at+1 < len(values):
+            if values[at+1].split("=", 1)[0] == "_FILE_OFFSET_BITS":
+                at += 2
+                continue
+        if (spec["plat"] == "linux" and value.startswith(("-D", "-U")) and
+                value[2:].split("=", 1)[0] == "_FILE_OFFSET_BITS"):
+            at += 1
+            continue
+        result.append(value)
+        at += 1
+    if spec["plat"] == "linux": result.append("-U_FILE_OFFSET_BITS")
+    if isolated: result.append("-fno-lto")
+    return result
+
+
+def verify_external_file_abi(spec, outdir):
+    """Compile actual declarations before dependencies and engine isolation."""
+    if spec["plat"] != "linux": return
+    outdir = Path(outdir) / "native-file-abi"
+    outdir.mkdir(parents=True, exist_ok=True)
+    source, obj = outdir / "probe.c", outdir / "probe.o"
+    source.write_text("#include <stdio.h>\n#include <sys/types.h>\n#include <sys/stat.h>\n"
+        "_Static_assert(sizeof(void*)==8 && sizeof(off_t)>=8, \"AnyBOR requires a native 64-bit file ABI\");\n"
+        "int probe(const char *p,struct stat *s){FILE *f=fopen(p,\"rb\");int r=stat(p,s);if(f)fclose(f);return r;}\n")
+    flags = ["-O2", "-fPIC", *arch_flags(spec), *native_io_flags(spec),
+             *external_flag_args("CFLAGS",spec,isolated=True),
+             *external_flag_args("CPPFLAGS",spec,isolated=True)]
+    run([spec["cc"], *flags, "-c", source, "-o", obj])
+    _, undefined = symbol_sets(obj, spec.get("nm", "nm"))
+    if not {"fopen", "stat"} <= undefined or {"fopen64", "open64", "stat64"} & undefined:
+        raise RuntimeError("Compiler-selected file ABI bypasses native engine wrappers; check forced headers and external flags")
+    (outdir / "receipt.json").write_text(json.dumps(dict(policy=EXTERNAL_FLAG_POLICY,
+        compiler=spec["cc"], flags=flags, imports=sorted(undefined)),indent=2)+"\n")
 
 
 def arch_flags(spec):
@@ -301,7 +351,9 @@ def deps_fingerprint(target):
     spec, pin = TARGETS[target], load_pin()
     dep_names = set(spec["dep_builds"])
     payload = {
-        "schema": 4,
+        "schema": 5,
+        "external_flag_policy": EXTERNAL_FLAG_POLICY,
+        "effective_flags": {name:external_flag_args(name,spec,isolated=True) for name in ("CFLAGS","CXXFLAGS","CPPFLAGS","LDFLAGS")},
         "target": target,
         "install_prefix": str(deps_prefix(target)),
         "cc": tool_identity(spec["cc"]),
@@ -369,11 +421,10 @@ def build_dep(target, name, fingerprint):
     # the two Mach-O targets.
     darwin = " ".join(arch_flags(spec))
     io_flags = " ".join(native_io_flags(spec))
-    env["CFLAGS"] = "-O2 -fPIC -fstack-protector-strong " + darwin + " " + io_flags + " " + os.environ.get("CFLAGS", "")
-    if io_flags:
-        env["CXXFLAGS"] = os.environ.get("CXXFLAGS", "-g -O2") + " " + darwin + " " + io_flags
-    if darwin:
-        env["LDFLAGS"] = darwin + " " + os.environ.get("LDFLAGS", "")
+    env["CFLAGS"] = shlex.join(["-O2","-fPIC","-fstack-protector-strong",*arch_flags(spec),*native_io_flags(spec),*external_flag_args("CFLAGS",spec,isolated=True)])
+    env["CXXFLAGS"] = shlex.join(["-O2",*arch_flags(spec),*native_io_flags(spec),*external_flag_args("CXXFLAGS",spec,isolated=True)])
+    env["CPPFLAGS"] = shlex.join(external_flag_args("CPPFLAGS",spec,isolated=True))
+    env["LDFLAGS"] = shlex.join([*arch_flags(spec),*external_flag_args("LDFLAGS",spec,isolated=True)])
     host = (["--host=" + spec["configure_host"]]
             if spec.get("configure_host") else [])
     if spec.get("configure_build"):
@@ -382,7 +433,7 @@ def build_dep(target, name, fingerprint):
         if spec["plat"] == "windows":
             run(["make", "-f", "win32/Makefile.gcc",
                  "CC=" + spec["cc"], "AR=" + spec["ar"], "RC=" + os.environ.get("WINDRES", spec["cc"][:-3] + "windres"),
-                 "CFLAGS=" + env["CFLAGS"],
+                 "CFLAGS=" + env["CFLAGS"] + " " + env["CPPFLAGS"],
                  "BINARY_PATH=" + str(prefix / "bin"),
                  "INCLUDE_PATH=" + str(prefix / "include"),
                  "LIBRARY_PATH=" + str(prefix / "lib"), "install"], src, env)
@@ -391,8 +442,8 @@ def build_dep(target, name, fingerprint):
             run(["make", "-s", "install"], src, env)
     elif name == "libpng":
         run(["sh", "./configure", "--prefix=" + str(prefix), "--disable-shared",
-             "--enable-static", "--disable-tests", "--disable-tools", "CPPFLAGS=-I" + str(prefix / "include"),
-             "LDFLAGS=-L" + str(prefix / "lib") + ((" " + darwin) if darwin else ""), *host], src, env)
+             "--enable-static", "--disable-tests", "--disable-tools", "CPPFLAGS=-I" + str(prefix / "include") + " " + env["CPPFLAGS"],
+             "LDFLAGS=-L" + str(prefix / "lib") + " " + env["LDFLAGS"], *host], src, env)
         run(["make", "-s", "-j" + str(JOBS), "install"], src, env)
     elif name == "libogg":
         run(["sh", "./configure", "--prefix=" + str(prefix), "--disable-shared",
@@ -402,11 +453,14 @@ def build_dep(target, name, fingerprint):
     elif name == "libvorbis":
         run(["sh", "./configure", "--prefix=" + str(prefix), "--disable-shared",
              "--enable-static", "--disable-dependency-tracking", "--with-ogg=" + str(prefix),
-             "CPPFLAGS=-I" + str(prefix / "include"),
-             "LDFLAGS=-L" + str(prefix / "lib") + ((" " + darwin) if darwin else ""), *host], src, env)
+             "CPPFLAGS=-I" + str(prefix / "include") + " " + env["CPPFLAGS"],
+             "LDFLAGS=-L" + str(prefix / "lib") + " " + env["LDFLAGS"], *host], src, env)
         for directory in ("lib", "include"):
             run(["make", "-s", "-C", directory, "-j" + str(JOBS), "install"], src, env)
     elif name == "libvpx":
+        # Its make rules consume CFLAGS/CXXFLAGS directly, not CPPFLAGS.
+        env["CFLAGS"] += " " + env["CPPFLAGS"]
+        env["CXXFLAGS"] += " " + env["CPPFLAGS"]
         if spec["plat"] == "windows": vpx_target = "x86_64-win64-gcc"
         elif spec.get("android"): vpx_target = "arm64-android-gcc"
         elif uses_macho(spec):
@@ -539,7 +593,7 @@ def build_engine(target, eng, spec, outdir, check_only=False):
     objdir = BUILD_ROOT / "objs" / target / build
     # Make's timestamps alone cannot detect compiler/flag changes or a source
     # regenerated with an older mtime. Fingerprint the actual local inputs.
-    engine_flags = " ".join(native_io_flags(spec)) + " " + os.environ.get("CFLAGS", "")
+    engine_flags = shlex.join([*native_io_flags(spec),*external_flag_args("CFLAGS",spec,isolated=True),*external_flag_args("CPPFLAGS",spec,isolated=True), "-fno-stack-protector"])
     if uses_macho(spec):
         # Darwin has no fixed image address: dyld slides and rebases every
         # loaded image, so save states take the rebasing path instead of the
@@ -550,7 +604,7 @@ def build_engine(target, eng, spec, outdir, check_only=False):
         engine_flags += " -DOBOR_FIXED_ELF_IMAGE=1"
     elif uses_fixed_pe_image(spec):
         engine_flags += " -DOBOR_FIXED_PE_IMAGE=1"
-    payload = {"spec": spec, "deps": (dep / ".obor-deps-fingerprint").read_text(encoding="utf-8"),
+    payload = {"external_flag_policy": EXTERNAL_FLAG_POLICY, "spec": spec, "deps": (dep / ".obor-deps-fingerprint").read_text(encoding="utf-8"),
                "flags": engine_flags,
                "files": {str(p.relative_to(SRC)): sha256_file(p)
                          for root in (tree, SRC / "port/libretro")
@@ -636,6 +690,7 @@ def build_glue(target, spec, outdir):
     miniz_o = outdir / "miniz.o"
     run([spec["cc"], "-O2", "-fPIC", "-fvisibility=hidden",
          *arch_flags(spec), *native_io_flags(spec),
+         *external_flag_args("CFLAGS",spec), *external_flag_args("CPPFLAGS",spec),
          "-fstack-protector-strong", *gc_cflags,
          "-ffile-prefix-map=" + str(HERE) + "=.",
          "-c", third / "miniz.c", "-o", miniz_o])
@@ -645,6 +700,7 @@ def build_glue(target, spec, outdir):
         obj = outdir / (name + ".o")
         run([spec["cc"], "-O2", "-std=c99", "-fPIC", "-fvisibility=hidden",
              *arch_flags(spec), *native_io_flags(spec),
+             *external_flag_args("CFLAGS",spec), *external_flag_args("CPPFLAGS",spec),
              "-fstack-protector-strong", *gc_cflags,
              "-ffile-prefix-map=" + str(HERE) + "=.",
              "-I", SRC / "port/libretro",
@@ -654,6 +710,8 @@ def build_glue(target, spec, outdir):
     if spec["plat"] == "linux" and not spec.get("android"):
         compat_o = outdir / "glibc_compat_math.o"
         run([spec["cc"], "-O2", "-fPIC", "-fvisibility=hidden",
+             *arch_flags(spec), *native_io_flags(spec),
+             *external_flag_args("CFLAGS",spec,isolated=True), *external_flag_args("CPPFLAGS",spec,isolated=True),
              "-fstack-protector-strong", *gc_cflags,
              "-ffile-prefix-map=" + str(HERE) + "=.",
              "-c",
@@ -699,7 +757,7 @@ def build_glue(target, spec, outdir):
     else:
         cmd += ["-Wl,-T," + str(bss_script)]
     if spec["plat"] == "linux":
-        cmd += ["-Wl,-z,relro", "-Wl,-z,now",
+        cmd += ["-Wl,-z,relro", "-Wl,-z,now", "-Wl,-z,defs",
                 '-Wl,--version-script={0}'.format(SRC / 'glue' / 'exports.map'),
                 "-ldl", "-lm"]
         if spec.get("android"):
@@ -723,8 +781,9 @@ def build_glue(target, spec, outdir):
                 "-Wl,--disable-dynamicbase"]
     cmd += (["-Wl,-map," + str(outdir / "link.map")] if uses_macho(spec)
             else ["-Wl,-Map=" + str(outdir / "link.map")])
-    cmd += shlex.split(os.environ.get("CXXFLAGS", ""))
-    cmd += shlex.split(os.environ.get("LDFLAGS", ""))
+    cmd += external_flag_args("CXXFLAGS",spec)
+    cmd += external_flag_args("CPPFLAGS",spec)
+    cmd += external_flag_args("LDFLAGS",spec)
     run(cmd)
     audit = audit_runtime_storage(out, outdir / "link.map")
     (outdir / "runtime-state-audit.json").write_text(json.dumps(audit, indent=2) + "\n")
@@ -945,8 +1004,11 @@ def main():
     outdir = BUILD_ROOT / "dist" / args.target
     outdir.mkdir(parents=True, exist_ok=True)
     if uses_macho(spec):
-        verify_darwin_names(spec['cc'], arch_flags(spec) + native_io_flags(spec),
+        verify_darwin_names(spec['cc'], arch_flags(spec) + native_io_flags(spec) +
+                            external_flag_args('CFLAGS',spec,isolated=True) +
+                            external_flag_args('CPPFLAGS',spec,isolated=True),
                             SRC / 'port/libretro', outdir / 'native-io-sdk')
+    verify_external_file_abi(spec, outdir)
     import release
     source_snapshot = release.source_files(strict=False)
     ensure_deps(args.target)

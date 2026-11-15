@@ -408,3 +408,22 @@ and interlacing.
 - For a report, include the core version, platform, selected engine and a small
   reproduction you can share. Follow [SECURITY.md](../SECURITY.md) for private
   reports; avoid attaching third-party PAKs or memory dumps.
+
+## External compiler flags
+
+CFLAGS, CXXFLAGS, CPPFLAGS and LDFLAGS retain supported integrator options.
+Engine objects and their static dependencies finish with `-fno-lto`: symbol
+isolation operates on native machine code before partial linking and objcopy.
+Independent glue objects retain their inherited LTO selection. The Linux math
+compatibility object retains native assembler symbol-version bindings and
+finishes with `-fno-lto`; the final ELF link rejects unresolved references. Engine coroutine
+stacks finish with `-fno-stack-protector`, since their saved bytes must not carry
+a per-process stack canary. Dependencies and glue retain supported stack hardening.
+
+Supported Linux targets use native 64-bit file offsets. The build normalizes
+`_FILE_OFFSET_BITS` definitions/undefinitions from inherited flags and uses the
+native declarations consistently. A compiler probe checks pointer/offset width
+and actual stdio/stat imports before a long build. Forced headers selecting an
+incompatible ABI reject the build; Windows and Darwin retain their file-ABI
+policy. Dependency and engine cache identities include effective flags and the
+policy revision. File binding audits remain mandatory.

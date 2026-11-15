@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.2.18 — external build flags
+
+- Keep isolated engines and their dependencies in native object form with inherited LTO flags.
+- Normalize native 64-bit Linux file declarations, probe their actual bindings early and preserve supported integrator flags.
+
 ## 0.2.17 — descriptor controls and preparation
 
 - Configure logical input mapping and functional labels in external content descriptors.

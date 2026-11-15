@@ -193,3 +193,9 @@ repacking behavior and standard imohash keys with synthetic inputs under native
 sanitizers. Set `OBOR_TEST_CORE` to a freshly built core to run the additional
 linked-core loading, restart and save-namespace controls. These controls compile
 the maintained test host; no frontend installation is modified.
+
+The native content-error check runs authored truncated scripts at startup and
+during later model loading in each physical family, checks the error pixels and rejected state calls, then unloads
+the content and loads a valid script without a final newline in the same core
+module and process. It also checks continued video callbacks and resource cleanup:
+`python3 tools/run_guarded.py --memory-mib 2048 --seconds 300 -- python3 tools/check_content_errors.py --core path/to/anybor_libretro.so`.
