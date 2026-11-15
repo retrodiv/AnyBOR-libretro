@@ -676,6 +676,9 @@ def build_archive_reader(target):
     flags = ["-Os", "-fPIC", "-fvisibility=hidden", "-ffunction-sections", "-fdata-sections",
              *arch_flags(spec), *native_io_flags(spec),
              *external_flag_args("CFLAGS", spec), *external_flag_args("CPPFLAGS", spec)]
+    # archive.h requires this for both producer and consumer of a PE static
+    # library; visibility flags do not suppress explicit dllexport directives.
+    if spec["plat"] == "windows": flags.append("-DLIBARCHIVE_STATIC")
     payload = dict(schema=1, target=spec, compiler=tool_identity(spec["cc"]), flags=flags,
                    ldflags=external_flag_args("LDFLAGS", spec),
                    sources={p.relative_to(source).as_posix():sha256_file(p)
@@ -827,6 +830,7 @@ def build_glue(target, spec, outdir):
     cmd += external_flag_args("CXXFLAGS",spec)
     cmd += external_flag_args("CPPFLAGS",spec)
     cmd += external_flag_args("LDFLAGS",spec)
+    if spec["plat"] == "windows": cmd += ["-DLIBARCHIVE_STATIC"]
     run(cmd)
     audit = audit_runtime_storage(out, outdir / "link.map")
     (outdir / "runtime-state-audit.json").write_text(json.dumps(audit, indent=2) + "\n")

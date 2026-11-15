@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.2.28
+
+- Compile the static archive reader and its caller with the Windows static
+  interface contract, retaining only libretro exports in the core DLL.
+
 ## 0.2.27
 
 - Accept bounded byte-buffer functions directly in content descriptors, with
