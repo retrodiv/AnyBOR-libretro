@@ -85,6 +85,23 @@ class NestedArchiveTests(base.ZipContentTests):
                 reader=build.build_archive_reader(target)
         finally:build.BUILD_ROOT=cls.old_build
         cls.binary=base.build_probe(cls.directory,archive_reader=reader)
+        traced=(cls.directory/'zip-probe.cpp').read_text()
+        traced=traced.replace('#include "anybor_zip.h"', r'''
+static unsigned traced_opens;
+static FILE *traced_fopen(const char *path,const char *mode) {
+    const char *wanted=getenv("OBOR_TEST_OPEN_MODE");
+    if(wanted && !strcmp(mode,wanted) && strstr(path,"_padding/")) ++traced_opens;
+    return fopen(path,mode);
+}
+#define fopen traced_fopen
+#include "anybor_zip.h"
+''')
+        traced=traced.replace('return ++checkpoints<(unsigned)atoi(getenv("OBOR_TEST_CANCEL_AFTER"));',
+                             '++checkpoints; return traced_opens<5;')
+        ending=traced.rfind('\n}')
+        traced=traced[:ending]+'\n    printf("tracked=%u\\n",traced_opens);'+traced[ending:]
+        traced_dir=cls.directory/'traced';traced_dir.mkdir()
+        cls.traced=base.build_probe(traced_dir,program=traced,archive_reader=reader)
         from test_content_overrides import PROGRAM
         route=cls.directory/'route';route.mkdir()
         cls.route=base.build_probe(route,program=PROGRAM,archive_reader=reader)
@@ -193,6 +210,57 @@ class NestedArchiveTests(base.ZipContentTests):
         command=[str(self.binary),str(self.folder/'content.zip'),str(self.folder/'save')]
         warm=subprocess.run(command,capture_output=True,text=True,check=True,timeout=30,env=sanitizer_environment())
         self.assertTrue(warm.stdout.startswith('0 '),warm.stderr)
+
+    def test_same_size_crc_collision_cannot_change_cached_profile(self):
+        original=b'[anybor]\npayload=one.pak\n[overrides]\nengine=6330\n#00000000AAAA\n'
+        collision=b'[anybor]\npayload=one.pak\n[overrides]\nengine=7142\n#00000094b:IF\n'
+        self.assertEqual(len(original),len(collision))
+        self.assertEqual(zlib.crc32(original),zlib.crc32(collision))
+        system=self.folder/'system';system.mkdir()
+        for nested in (False,True):
+            with self.subTest(nested=nested):
+                members={'one.pak':self.pak(),'choice.anybor':original}
+                result,path,_=self.run_zip({'nested.zip':zip_bytes(members)} if nested else members)
+                self.assertEqual(result[0],1)
+                original_container=(self.folder/'content.zip').read_bytes()
+                command=[str(self.route),'zip',str(self.folder/'content.zip'),str(self.folder/'save'),str(system)]
+                def route():
+                    run=subprocess.run(command,capture_output=True,text=True,check=True,timeout=30,env=sanitizer_environment())
+                    return dict(line.split('=',1) for line in run.stdout.splitlines()),run.stderr
+                fields,errors=route()
+                self.assertEqual((fields['ok'],fields['engine']),('1','6330'),errors)
+                cached=Path(path).with_name('choice.anybor')
+                cached.write_bytes(collision)
+                fields,errors=route()
+                self.assertEqual(fields['ok'],'0',errors)
+                self.assertEqual((self.folder/'content.zip').read_bytes(),original_container)
+                cached.write_bytes(original)
+                fields,errors=route()
+                self.assertEqual((fields['ok'],fields['engine']),('1','6330'),errors)
+
+    def test_empty_entries_cancel_before_traversing_the_tree(self):
+        members={f'_padding/{i:03d}':b'' for i in range(100)}
+        members.update(self.game())
+        for nested in (False,True):
+            archive=self.folder/('nested.zip' if nested else 'outer.zip')
+            with zipfile.ZipFile(archive,'w') as stream:
+                for name,data in ({'inner.zip':zip_bytes(members)} if nested else members).items():
+                    stream.writestr(name,data)
+            for warm,mode in ((False,'wb'),(False,'rb'),(True,'rb')):
+                with self.subTest(nested=nested,warm=warm,mode=mode):
+                    save=self.folder/f'save-{nested}-{warm}-{mode}'
+                    command=[str(self.traced),str(archive),str(save)]
+                    if warm:
+                        prepared=subprocess.run(command,capture_output=True,text=True,check=True,timeout=30,env=sanitizer_environment())
+                        self.assertTrue(prepared.stdout.startswith('1 '),prepared.stderr)
+                    env=sanitizer_environment(dict(os.environ,OBOR_TEST_CANCEL_AFTER='1',OBOR_TEST_OPEN_MODE=mode))
+                    cancelled=subprocess.run(command,capture_output=True,text=True,check=True,timeout=30,env=env)
+                    self.assertTrue(cancelled.stdout.startswith('0 '),cancelled.stderr)
+                    opened=int(cancelled.stdout.rsplit('tracked=',1)[1])
+                    self.assertGreaterEqual(opened,5)
+                    self.assertLessEqual(opened,6,'Cancellation traversed empty entries without yielding')
+                    self.assertFalse(list(save.rglob('*.partial-*')))
+                    if not warm:self.assertFalse(list(save.rglob('.complete')))
 
 
 if __name__=='__main__':unittest.main()

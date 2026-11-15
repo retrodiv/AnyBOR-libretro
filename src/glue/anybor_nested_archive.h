@@ -35,24 +35,44 @@ static bool obor_archive_disk_path(const char *root, const char *name, char *out
 #endif
 }
 
-static bool obor_archive_check_file(const char *root, const obor_zip_content_entry &entry)
+struct obor_archive_zip_compare {
+    FILE *file;
+    uint64_t position;
+};
+
+static size_t obor_archive_compare_zip(void *opaque, mz_uint64 offset,
+                                      const void *data, size_t bytes)
 {
+    obor_archive_zip_compare *context = (obor_archive_zip_compare *)opaque;
+    if (offset != context->position) return 0;
+    unsigned char buffer[65536];
+    const unsigned char *expected = (const unsigned char *)data;
+    size_t left = bytes;
+    while (left) {
+        size_t amount = left < sizeof(buffer) ? left : sizeof(buffer);
+        if (!obor_prepare_checkpoint() ||
+            fread(buffer, 1, amount, context->file) != amount ||
+            memcmp(buffer, expected, amount)) return 0;
+        expected += amount;
+        left -= amount;
+    }
+    context->position += bytes;
+    return bytes;
+}
+
+static bool obor_archive_check_zip(const char *root, const obor_zip_content_entry &entry,
+                                   mz_zip_archive *archive, unsigned index)
+{
+    if (!obor_prepare_checkpoint()) return false;
     char path[2200];
     if (!obor_archive_disk_path(root, entry.name, path, sizeof(path), false, entry.directory)) return false;
     if (entry.directory) return true;
     FILE *file = fopen(path, "rb");
     if (!file) return false;
-    unsigned char buffer[65536];
-    uint64_t size = 0;
-    mz_ulong crc = MZ_CRC32_INIT;
-    size_t got;
-    bool ok = true;
-    while ((got = fread(buffer, 1, sizeof(buffer), file))) {
-        size += got;
-        if (size > entry.size || !obor_prepare_checkpoint()) { ok = false; break; }
-        crc = mz_crc32(crc, buffer, got);
-    }
-    ok = ok && !ferror(file) && size == entry.size && crc == entry.crc;
+    obor_archive_zip_compare context = {file, 0};
+    bool ok = mz_zip_reader_extract_to_callback(archive, index,
+                obor_archive_compare_zip, &context, 0) &&
+              context.position == entry.size && fgetc(file) == EOF && !ferror(file);
     fclose(file);
     return ok;
 }
@@ -286,6 +306,7 @@ static bool obor_archive_zip(const char *root, const char *path, const char *pre
     unsigned files=mz_zip_reader_get_num_files(archive);
     if (!files || files>OBOR_ZIP_MAX_ENTRIES-count-entries.overhead) return false;
     for (unsigned i=0;i<files;++i) {
+        if (!obor_prepare_checkpoint()) return false;
         mz_zip_archive_file_stat st;
         if (!mz_zip_reader_file_stat(archive,i,&st) || ((st.m_external_attr>>16)&0170000)==0120000 ||
             st.m_uncomp_size>OBOR_ZIP_MAX_FILE || total>OBOR_ZIP_MAX_TOTAL-st.m_uncomp_size ||
@@ -302,7 +323,7 @@ static bool obor_archive_zip(const char *root, const char *path, const char *pre
             bool ok=output && mz_zip_reader_extract_to_callback(archive,i,obor_zip_write,output,0);
             if (output && fclose(output)) ok=false;
             if (!ok) return false;
-        } else if (!obor_archive_check_file(root,*entry)) return false;
+        } else if (!obor_archive_check_zip(root,*entry,archive,i)) return false;
     }
     return true;
 }
@@ -311,6 +332,7 @@ static bool obor_archive_expand(const char *root, obor_zip_content_entries &entr
                                unsigned &count, uint64_t &total, bool cold)
 {
     for (unsigned i=0;i<count;++i) {
+        if (!obor_prepare_checkpoint()) return false;
         obor_zip_content_entry &entry=entries.data[i];
         if (entry.directory) continue;
         char path[2200];

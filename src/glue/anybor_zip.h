@@ -209,6 +209,7 @@ static int obor_zip_prepare(const char *zip_path, const char *save_dir,
     unsigned count = 0;
     uint64_t total_sz = 0;
     for (unsigned i = 0; i < n; ++i) {
+        if (!obor_prepare_checkpoint()) return 0;
         mz_zip_archive_file_stat st;
         char name[512], low[512];
         if (!mz_zip_reader_file_stat(za, i, &st) ||
@@ -238,6 +239,7 @@ static int obor_zip_prepare(const char *zip_path, const char *save_dir,
     entries.overhead = n-count;
     qsort(entries.data, count, sizeof(*entries.data), obor_zip_compare_entries);
     for (unsigned i = 0; i < count; ++i) {
+        if (!obor_prepare_checkpoint()) return 0;
         const obor_zip_content_entry *entry = entries.data + i;
         if (i && !strcmp(entry->lower, entries.data[i - 1].lower) &&
             (!entry->directory || !entries.data[i - 1].directory)) {
@@ -275,6 +277,7 @@ static int obor_zip_prepare(const char *zip_path, const char *save_dir,
         obor_prepare_stage(progress, 150, 800, total_sz);
         unsigned extracted = 0;
         for (unsigned i = 0; i < count; ++i) {
+            if (!obor_prepare_checkpoint()) return 0;
             const obor_zip_content_entry *entry = entries.data + i;
             char dst[2200];
             if (entry->directory) {
@@ -302,7 +305,7 @@ static int obor_zip_prepare(const char *zip_path, const char *save_dir,
         log_cb(RETRO_LOG_INFO, "[OpenBOR] zip: extracted %u files\n", extracted);
     } else {
         for (unsigned i=0;i<count;++i)
-            if (!obor_archive_check_file(cache,entries.data[i])) return 0;
+            if (!obor_archive_check_zip(cache,entries.data[i],za,entries.data[i].index)) return 0;
         if (!obor_archive_expand(cache,entries,count,total_sz,false)) return 0;
         log_cb(RETRO_LOG_INFO, "[OpenBOR] zip: using imohash cache\n");
     }
@@ -314,6 +317,7 @@ static int obor_zip_prepare(const char *zip_path, const char *save_dir,
     obor_descriptor descriptor = {};
     char descriptor_name[512] = "";
     for (unsigned i = 0; i < count; ++i) {
+        if (!obor_prepare_checkpoint()) return 0;
         const obor_zip_content_entry *entry = entries.data + i;
         size_t len = strlen(entry->lower);
         if (entry->directory || len < 7 || strcmp(entry->lower + len - 7, ".anybor")) continue;
@@ -345,6 +349,7 @@ static int obor_zip_prepare(const char *zip_path, const char *save_dir,
     char raw_root[2200]="";
     unsigned raw_roots=0;
     for(unsigned i=0;i<count;++i) {
+        if (!obor_prepare_checkpoint()) return 0;
         const obor_zip_content_entry &entry=entries.data[i];
         size_t n=strlen(entry.lower);
         static const char suffix[]="data/models.txt";
@@ -360,6 +365,7 @@ static int obor_zip_prepare(const char *zip_path, const char *save_dir,
     obor_engine_identity identity = {};
     obor_prepare_stage(progress, 800, 1000, 0);
     for (unsigned i = 0; i < count; ++i) {
+        if (!obor_prepare_checkpoint()) return 0;
         const obor_zip_content_entry *entry = entries.data + i;
         if (entry->directory || entry->container) continue;
         char path[2200];

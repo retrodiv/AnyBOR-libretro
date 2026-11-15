@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.2.26
+
+- Verify warm ZIP cache bytes against current decompression streams, including
+  routing descriptors with colliding CRC32 values.
+- Yield between archive entries during metadata scans, extraction and game
+  selection so cancellation remains responsive with empty files.
+
 ## 0.2.25
 
 - Check rejection of altered cached descriptors and recovery from the original
