@@ -1,4 +1,4 @@
-/* AnyBOR modification record: 2026-11-06.
+/* AnyBOR modification record: 2026-11-15.
  * Port maintained by retrodiv <retrodiv@proton.me>.
  * Copyright (c) 2026 retrodiv <retrodiv@proton.me> (original contributions).
  * These contributions are licensed under BSD-3-Clause; see LICENSE at the root.
@@ -70,7 +70,9 @@
  * nodes. Preserve each profile's native argument-finder comment recognition
  * and retained parser bytes. Preserve source-defined colour-map cycling,
  * model rotation, selection confirmation and deadlines, camera bounds,
- * reverse scrolling and damage attribution by profile.
+ * reverse scrolling and damage attribution by profile. Capture explicit
+ * shutdown failure text before cleanup and bound legacy diagnostic
+ * formatting.
  * Existing changes recorded here; this is not their implementation date.
  * See MODIFICATIONS.md and docs/modifications/3842.md
  * at the source repository root. Original notices follow below.
@@ -22368,7 +22370,15 @@ void shutdown(int status, char *msg, ...)
 	//printf("savedata.logo %d\n", savedata.logo);
 
 	va_start(arglist, msg);
-	vsprintf(buf, msg, arglist);
+#ifdef LIBRETRO
+    if (status) {
+        va_list reason_arguments;
+        va_copy(reason_arguments, arglist);
+        obor_content_reason_v(msg, reason_arguments);
+        va_end(reason_arguments);
+    }
+#endif
+	vsnprintf(buf, sizeof(buf), msg, arglist);
 	va_end(arglist);
 
 	if(!disablelog)

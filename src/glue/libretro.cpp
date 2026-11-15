@@ -16,6 +16,8 @@
 #include <stdarg.h>
 #include <stdint.h>
 #include <stdio.h>
+#include <fcntl.h>
+#include <sys/stat.h>
 #include <stdlib.h>
 #include <string.h>
 #if !defined(_WIN32)
@@ -88,6 +90,7 @@ static bool g_startup_reported;
 static bool g_error_active;
 static bool g_fault_pending;
 static char g_error_reason[512];
+static bool g_engine_error_context, g_engine_log_fresh;
 static char g_error_engine[48];
 static char g_error_path[4096];
 static uint32_t g_error_pixels[OBOR_ERROR_WIDTH * OBOR_ERROR_HEIGHT];
@@ -1039,6 +1042,7 @@ static void content_stop(bool preserve_geometry = false)
     g_raw = false;
     g_engine[0] = '\0';
     g_logical_engine[0] = '\0';
+    g_engine_error_context = g_engine_log_fresh = false;
     g_pak_path[0] = '\0';
     g_engine_source_path[0] = '\0';
     g_zip_engine_scanned = false;
@@ -1055,27 +1059,73 @@ static void content_stop(bool preserve_geometry = false)
     }
 }
 
+/* Explicit engine reasons survive cleanup; log fallback is session-scoped. */
+
 static void error_reason(const char *reason)
 {
     snprintf(g_error_reason, sizeof(g_error_reason), "%s",
              reason && reason[0] ? reason : "The game could not be loaded.");
 }
 
+static void engine_log_begin(void)
+{
+    char path[2048];
+    g_engine_error_context = true;
+    g_engine_log_fresh = false;
+    int n = snprintf(path, sizeof(path), "%s/%s/Logs/OpenBorLog.txt",
+                     g_game_dir, g_logical_engine);
+    if (n < 0 || (size_t)n >= sizeof(path)) return;
+    /* The engine truncates this per-session log itself. Remove the old entry
+     * first so a boot failure before its logger opens cannot reuse old text. */
+    g_engine_log_fresh = !remove(path) || errno == ENOENT;
+}
+
 /* Read only the active profile's log. Some engines append the reason after
  * shutdown accounting; that accounting is not the game loading error. */
 static bool engine_log_error(char *out, size_t cap)
 {
-    if (g_vtbl && p_get_fault_message(out, (uint32_t)cap)) return true;
-    if (!g_game_dir[0] || !g_logical_engine[0]) return false;
+    if (!out || !cap) return false;
+    if (g_engine_error_context && g_vtbl && p_get_fault_message(out, (uint32_t)cap)) return true;
+    if (!g_engine_error_context || !g_engine_log_fresh || !g_game_dir[0] || !g_logical_engine[0]) return false;
     char path[2048];
     int n = snprintf(path, sizeof(path), "%s/%s/Logs/OpenBorLog.txt",
                      g_game_dir, g_logical_engine);
     if (n < 0 || (size_t)n >= sizeof(path)) return false;
+#if defined(_WIN32)
+    DWORD attributes = GetFileAttributesA(path);
+    if (attributes == INVALID_FILE_ATTRIBUTES ||
+        (attributes & (FILE_ATTRIBUTE_DIRECTORY | FILE_ATTRIBUTE_REPARSE_POINT | FILE_ATTRIBUTE_DEVICE))) return false;
     FILE *fp = fopen(path, "rb");
+#else
+    int fd = open(path, O_RDONLY | O_NONBLOCK | O_NOFOLLOW);
+    if (fd < 0) return false;
+    struct stat st;
+    if (fstat(fd, &st) || !S_ISREG(st.st_mode)) { close(fd); return false; }
+    FILE *fp = fdopen(fd, "rb");
+    if (!fp) close(fd);
+#endif
     if (!fp) return false;
+    /* A log is a diagnostic fallback, with bounded work even if replaced by
+     * an unexpectedly large file. Do not interpret a leading partial line. */
+    if (fseek(fp, 0, SEEK_END)) { fclose(fp); return false; }
+    long bytes = ftell(fp);
+    if (bytes < 0) { fclose(fp); return false; }
+    long start = bytes > 65536 ? bytes - 65536 : 0;
+    if (fseek(fp, start, SEEK_SET)) { fclose(fp); return false; }
     char line[512];
+    size_t remaining = 65536;
+    long position = start;
+    bool discard = start != 0;
     bool marker = false, found = false, shutdown_summary = false;
-    while (fgets(line, sizeof(line), fp)) {
+    while (remaining && fgets(line, (int)(remaining < sizeof(line)-1 ? remaining+1 : sizeof(line)), fp)) {
+        long next = ftell(fp);
+        if (next <= position || (uint64_t)(next-position) > remaining) break;
+        remaining -= (size_t)(next-position);
+        position = next;
+        if (discard) {
+            if (strchr(line, '\n')) discard = false;
+            continue;
+        }
         if (strstr(line, "An Error Occurred")) {
             marker = true;
             found = false;
@@ -1534,6 +1584,7 @@ static bool boot_engine(void)
     boot.engine_regions = regions;
     boot.engine_region_count = (uint32_t)n_eng;
     obor_dbg("boot: p_boot enter (engine %s)", g_engine);
+    engine_log_begin();
     int r = p_boot(&boot);
     /* Loose data has no packed-resource reserve hint. Finish its initial
      * resource load before the frontend fixes the state allocation. */
@@ -2465,6 +2516,7 @@ static void decide_engine(void)
         if (filename_profile < 0) {
             g_engine[0] = '\0';
             g_logical_engine[0] = '\0';
+    g_engine_error_context = g_engine_log_fresh = false;
             snprintf(g_selection_error, sizeof(g_selection_error),
                      "No available engine lies in or above the filename build interval. Select an engine manually to override it.");
             log_cb(RETRO_LOG_ERROR, "[OpenBOR] %s Bounds: %s\n",
@@ -2556,6 +2608,7 @@ static void decide_engine(void)
     if (!selected) {
         g_engine[0] = '\0';
         g_logical_engine[0] = '\0';
+    g_engine_error_context = g_engine_log_fresh = false;
         return;
     }
     snprintf(g_logical_engine, sizeof(g_logical_engine), "%s", selected->name);

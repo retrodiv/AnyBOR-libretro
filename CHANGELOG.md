@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.2.16 — precise content diagnostics
+
+- Preserve the engine's explicit loading failure before cleanup and retain the first cause.
+- Bound log fallback work and prevent reuse of another loading session's diagnostic.
+
 ## 0.2.15 — terminal content errors
 
 - Stop terminal script loading failures and excessive preprocessing nesting with a resource and position diagnostic on the error screen.

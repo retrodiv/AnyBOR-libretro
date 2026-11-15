@@ -1757,3 +1757,10 @@ not change which storage the animation owns.
 Script loading stops on terminal preprocessing failures, EOF during error
 recovery, or preprocessing or import nesting beyond 128 levels, and cyclic active imports. The error screen retains
 the resource and source position while the frontend can close the content.
+
+## Content error reason
+
+Capture explicit engine shutdown diagnostics before cleanup through a bounded
+session channel. Preserve the initial reason and use a bounded current-session
+log only as fallback. Historical shutdown formatting retains its text within
+the destination capacity.

@@ -1,4 +1,4 @@
-/* AnyBOR modification record: 2026-10-27.
+/* AnyBOR modification record: 2026-11-15.
  * Port maintained by retrodiv <retrodiv@proton.me>.
  * Copyright (c) 2026 retrodiv <retrodiv@proton.me> (original contributions).
  * These contributions are licensed under BSD-3-Clause; see LICENSE at the root.
@@ -38,7 +38,8 @@
  * capacity when growth is unavailable. Validate sprite-node allocations and
  * release partial resources without changing existing owners. Check cached
  * sprite availability before reading metadata and ignore cache requests for
- * absent nodes.
+ * absent nodes. Capture explicit shutdown failure text before cleanup and
+ * bound legacy diagnostic formatting.
  * Existing changes recorded here; this is not their implementation date.
  * See MODIFICATIONS.md and docs/modifications/6391.md
  * at the source repository root. Original notices follow below.
@@ -35985,7 +35986,15 @@ void borShutdown(int status, char *msg, ...)
     //printf("savedata.logo %d\n", savedata.logo);
 
     va_start(arglist, msg);
-    vsprintf(buf, msg, arglist);
+#ifdef LIBRETRO
+    if (status) {
+        va_list reason_arguments;
+        va_copy(reason_arguments, arglist);
+        obor_content_reason_v(msg, reason_arguments);
+        va_end(reason_arguments);
+    }
+#endif
+    vsnprintf(buf, sizeof(buf), msg, arglist);
     va_end(arglist);
 
     if(!disablelog)

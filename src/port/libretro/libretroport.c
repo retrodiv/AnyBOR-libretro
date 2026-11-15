@@ -476,6 +476,17 @@ void obor_content_error(const char *path, unsigned long row, unsigned long colum
     __builtin_unreachable();
 }
 
+void obor_content_reason_v(const char *format, va_list arguments)
+{
+    char reason[sizeof(engine_content_message)];
+    const char *text;
+    if (engine_content_message[0] || !format) return;
+    vsnprintf(reason, sizeof(reason), format, arguments);
+    text = reason;
+    while (*text == ' ' || *text == '\t' || *text == '\r' || *text == '\n') ++text;
+    if (*text) snprintf(engine_content_message, sizeof(engine_content_message), "%s", text);
+}
+
 void obor_content_import_begin(const char *path)
 {
     unsigned i;

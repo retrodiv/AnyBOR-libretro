@@ -15,6 +15,7 @@
 #include <string.h>
 #include "anybor_abi.h"
 #include "anybor_fault.h"
+#include "anybor_content_error.h"
 #include "anybor_loading.h"
 #include "anybor_pak_name.h"
 
