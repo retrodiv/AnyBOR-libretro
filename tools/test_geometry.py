@@ -76,7 +76,7 @@ def main():
             value = str(path)
             return 'Z:' + value.replace('/', '\\') if args.windows else value
 
-        def run(label, frames=400, content=pak, initial_max='320x240', **options):
+        def run(label, frames=400, content=pak, initial_max='320x240', growth_count=None, **options):
             system = work / label
             system.mkdir()
             env = {k: v for k, v in os.environ.items() if not k.startswith('OBOR_')}
@@ -91,11 +91,19 @@ def main():
             assert 'cwd_restored=1' in log and 'arena_released=1' in log, log
             assert 'FAILED' not in log and 'MISMATCH' not in log, log
             assert 'initial_maximum=' + initial_max in log, log
-            assert 'final_maximum=2048x1152' in log, log
+            fitted_only = options.get('OBOR_CRT_TV') == 'On' and not options.get('OBOR_CRT_TOGGLE_AT')
+            maximum = '640x480' if fitted_only else '2048x1152'
+            assert 'final_maximum=' + maximum in log, log
             growth = re.findall(r'^av_info=.*$', log, re.M)
-            assert len(growth) == 1 and 'max=2048x1152' in growth[0], log
-            # CRT can fit a large native screen into 640x480 while still
-            # reserving its complete native bounds for a later live toggle.
+            if growth_count is None:
+                growth_count = 0 if fitted_only and initial_max == '640x480' else 1
+            assert len(growth) == growth_count, log
+            if growth:
+                assert 'max=' + maximum in growth[-1], log
+                if growth_count == 2:
+                    assert 'max=640x480' in growth[0], log
+            # Reserve only composed output while CRT is enabled. Native
+            # bounds grow when a live toggle actually exposes that output.
             native_crossings = (0 if options.get('OBOR_CRT_TV') == 'On' else
                                 1 if options.get('OBOR_CRT_TOGGLE_AT') else 2)
             assert log.count('video=2048x1152') >= native_crossings, log
@@ -108,7 +116,7 @@ def main():
                 assert 'video=640x480' in log and 'video=320x240' in log, log
             else:
                 assert 'video=320x200' in log, log
-        run('live-toggles', OBOR_CRT_TOGGLE_AT='30,110,160,210')
+        run('live-toggles', growth_count=2, OBOR_CRT_TOGGLE_AT='30,110,160,210')
         run('av-info-refused-fallback', OBOR_HOST_REJECT_AV_INFO=1)
         _, system = run('high-resolution-pixels', OBOR_DUMP_EVERY=60)
         width, height, pixels = read_ppm(system / 'frame000060.ppm')
@@ -127,7 +135,7 @@ def main():
             assert any(any(data) for _, data in pcm), 'Audio control was silent'
             assert 'load state at frame 300: ok' in log, log
         state = work / 'crt-before-toggle.state'
-        log, _ = run('load-after-crt-toggle', frames=450, OBOR_CRT_TV='On',
+        log, _ = run('load-after-crt-toggle', frames=450, growth_count=2, OBOR_CRT_TV='On',
             OBOR_CRT_TOGGLE_AT=110, OBOR_SAVE_AT=65, OBOR_SAVE_STATE=state,
             OBOR_LOAD_AT=200, OBOR_LOAD_STATE=state)
         assert 'video=2048x1152 frame=201' in log, log
@@ -159,6 +167,8 @@ def main():
             wide = work / ('wide-%d.pak' % width)
             make_fixture.write_pak(wide, wide_members)
             run('crt-reserve-%d' % width, content=wide, initial_max=bounds)
+            run('crt-movie-%d' % width, content=wide, initial_max='640x480',
+                OBOR_CRT_TV='On')
         print('Geometry: CRT, monotonic bounds, exact load/rewind and >1080p: OK', flush=True)
 
 

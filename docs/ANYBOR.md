@@ -392,10 +392,13 @@ enabled; see [DEBUGGING.md](DEBUGGING.md). They are off by default.
 ## Geometry and timing
 
 The frontend frame rate is **60 Hz** and the audio sample rate is **44,100 Hz**.
-Geometry follows the game. The declared maximum uses the known content
-resolution, or 1920x1080 while the mode is unknown, and covers both the native
-raster and its CRT output. Larger modes expand the maximum on demand; smaller
-modes and CRT option changes reuse the existing allocation. Growth requests
+Geometry follows the presented image. The declared maximum uses the known
+content resolution, or 1920x1080 while the mode is unknown. With CRT adjustment
+disabled it covers both the native raster and its CRT output; with adjustment
+enabled it reserves the composed output. Larger internal images that keep the
+same CRT output do not request AV reinitialization. Larger output modes and
+live option changes expand the maximum as needed. Smaller modes reuse the
+existing allocation. Growth requests
 frontend AV-info support, with geometry-only updates as the fallback. Restored
 frames reannounce their geometry. The default aspect ratio follows the game
 framebuffer. The CRT option changes frontend

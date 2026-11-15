@@ -106,10 +106,11 @@ replacement supplies none.
 
 The port includes an independently authored RISC-V LP64D
 coroutine backend, Linux RISC-V build selection and Sv39-compatible fixed
-module/arena addresses. Video allocation follows native and CRT bounds,
-grows for larger runtime modes, and preserves its current reservation across
-state restoration. Focused tests cover register preservation, fault recovery,
-geometry changes, and exact restored output.
+module/arena addresses. Video allocation follows the presented raster,
+reserving native bounds when CRT adjustment is disabled and composed bounds
+when it is enabled. Larger output modes and live option changes grow the
+reservation as needed; state restoration preserves it. Focused tests cover
+register preservation, fault recovery, geometry changes, and exact restored output.
 RISC-V protected-page tracking uses readable, non-executable data mappings
 and the saved instruction pointer to distinguish writes from execution
 faults without an access-kind register. It retains hot-page learning and

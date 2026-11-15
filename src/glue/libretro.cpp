@@ -1498,8 +1498,12 @@ static void video_geometry(int width, int height, bool notify)
 {
     int crt_width = width, crt_height = height;
     obor_crt_output_size(width, height, &crt_width, &crt_height);
-    unsigned reserve_width = (unsigned)(width > crt_width ? width : crt_width);
-    unsigned reserve_height = (unsigned)(height > crt_height ? height : crt_height);
+    /* With CRT enabled only the composed raster reaches the frontend. A
+     * larger internal movie surface must not restart its video driver while
+     * that raster stays unchanged. Reserve native bounds when CRT is off;
+     * a live toggle will announce any required growth before presenting. */
+    unsigned reserve_width = (unsigned)(g_crt_on || crt_width > width ? crt_width : width);
+    unsigned reserve_height = (unsigned)(g_crt_on || crt_height > height ? crt_height : height);
     output_geometry(g_crt_on ? crt_width : width, g_crt_on ? crt_height : height,
                     notify, reserve_width, reserve_height);
 }

@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.2.33
+
+- Avoid video reinitialization when larger internal images keep the same CRT
+  output size, preserving resolution transitions and live option changes.
+
 ## 0.2.32
 
 - Read large configured inputs lazily with 64-bit offsets, preserving transform
