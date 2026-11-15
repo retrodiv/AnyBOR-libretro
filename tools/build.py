@@ -679,6 +679,7 @@ def build_archive_reader(target):
     # archive.h requires this for both producer and consumer of a PE static
     # library; visibility flags do not suppress explicit dllexport directives.
     if spec["plat"] == "windows": flags.append("-DLIBARCHIVE_STATIC")
+    if spec.get("android"): flags += ["-I", str(root / "contrib/android/include")]
     payload = dict(schema=1, target=spec, compiler=tool_identity(spec["cc"]), flags=flags,
                    ldflags=external_flag_args("LDFLAGS", spec),
                    sources={p.relative_to(source).as_posix():sha256_file(p)

@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.2.29
+
+- Retain the pinned archive reader's Android large-file header and provide
+  its include path when building the static reader for Android.
+
 ## 0.2.28
 
 - Compile the static archive reader and its caller with the Windows static

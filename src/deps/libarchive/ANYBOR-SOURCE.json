@@ -55,6 +55,7 @@
     "configure": "747dd133efafe15d6440f700711184749b655a8686b704ee7c53cfb9927a6590",
     "configure.ac": "05a9533fd9fd894db147e9284612223de9aac260d31b4f1a1b9bf63873b8c72b",
     "contrib/android/Android.mk": "ab9ae2d3dfed6315bb4fa056e2778c1082786e5da9f03474f32b375aa8cea836",
+    "contrib/android/include/android_lf.h": "4539a22e5f709e9ea004ac78fd145461a61693effca7d1a824ce808cef3d03e7",
     "contrib/libarchive_autodetect-st_lib_archive.m4": "29128b2d92b1a6acb14a3be27f0c3f714dd01efe835cf84b0bc42e4169fb6eab",
     "libarchive/CMakeLists.txt": "971d1ae22a5b96beb672a80b1ac5e8ad8e9a4f4e62f53d7b01e4d9a90560a9bd",
     "libarchive/archive.h": "7c1f9a5858cf11b4097e61489eb498ea955067287a9f754312c60cce3a3e54de",
