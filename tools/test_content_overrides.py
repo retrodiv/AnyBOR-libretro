@@ -531,6 +531,77 @@ class ContentOverrideTests(unittest.TestCase):
         result,_=self.route_content(outer);self.assertEqual(result['ok'],'1')
         self.assertEqual(Path(result['path']).read_bytes()[8],108)
 
+    def loose_function(self, value=66):
+        name='data/chars/block.txt'
+        model=b'name Block\ntype player\n# A\n'
+        offset=model.index(b'A')
+        return model, ('buffer file_adjustment(){parameters("'+name+'");'
+            f'if(metadata_size!={len(name)})return slice(0,input_size);'
+            'for(uint64_t i=0;i<metadata_size;i=i+1){'
+            'if(read8(metadata,i)!=read8(parameters,i))return slice(0,input_size);}'
+            f'if(input_size!={len(model)} || read8(input,{offset})!=65)reject();'
+            f'write8(work,{offset},{value});return slice(0,input_size);}}')
+
+    def test_zip_loose_file_function_preserves_source_and_rebuilds_untrusted_prepared_tree(self):
+        model,function=self.loose_function()
+        archive=self.archive({'Root/data/models.txt':b'load Block data/chars/block.txt\n',
+                              'Root/data/chars/block.txt':model})
+        original=archive.read_bytes()
+        descriptor=self.descriptor(engine='6330',payload=archive.name)
+        descriptor.write_text(descriptor.read_text()+'transform='+function+'\n[controls]\nattack=attack4\n')
+        result,log=self.route_content(descriptor)
+        self.assertEqual(result['ok'],'1',log)
+        self.assertEqual(result['engine'],'6330')
+        prepared=Path(result['path']).parents[1]
+        self.assertRegex(prepared.name,r'^files-[0-9a-f]{16}$')
+        edited=prepared/'data/chars/block.txt'
+        self.assertEqual(edited.read_bytes(),model.replace(b'# A',b'# B'))
+        self.assertEqual(archive.read_bytes(),original)
+        extraction=next((self.folder/'save/AnyBOR-cache/zipcache').glob('authored-????????'))
+        self.assertEqual((extraction/'Root/data/chars/block.txt').read_bytes(),model)
+        edited.write_bytes(b'altered cached model')
+        (prepared/'injected.txt').write_text('not in the selected game')
+        again,log=self.route_content(descriptor)
+        self.assertEqual(again['ok'],'1',log)
+        self.assertEqual(again['path'],result['path'])
+        self.assertEqual(edited.read_bytes(),model.replace(b'# A',b'# B'))
+        self.assertFalse((prepared/'injected.txt').exists())
+        self.assertEqual(archive.read_bytes(),original)
+        descriptor.write_text(descriptor.read_text().replace(function,self.loose_function(67)[1]))
+        changed,log=self.route_content(descriptor)
+        self.assertEqual(changed['ok'],'1',log)
+        self.assertNotEqual(changed['path'],result['path'])
+        self.assertEqual((Path(changed['path']).parent/'chars/block.txt').read_bytes(),model.replace(b'# A',b'# C'))
+
+    def test_zip_loose_named_function_is_explicit_and_independent_of_default_input(self):
+        model,function=self.loose_function()
+        archive=self.archive({'data/models.txt':b'load Block data/chars/block.txt\n',
+                              'data/chars/block.txt':model})
+        descriptor=self.descriptor(payload=archive.name)
+        (self.system/'AnyBOR.ini').write_text('[transforms]\ninput=buffer other(){reject();}\nadjust='+function+'\n')
+        unmodified,log=self.route_content(descriptor)
+        self.assertEqual(unmodified['ok'],'1',log)
+        self.assertEqual((Path(unmodified['path']).parent/'chars/block.txt').read_bytes(),model)
+        descriptor.write_text(descriptor.read_text()+'transform=adjust\n')
+        result,log=self.route_content(descriptor)
+        self.assertEqual(result['ok'],'1',log)
+        self.assertEqual((Path(result['path']).parent/'chars/block.txt').read_bytes(),model.replace(b'# A',b'# B'))
+        (self.system/'AnyBOR.ini').write_text('[transforms]\ninput=buffer other(){reject();}\n')
+        missing,_=self.route_content(descriptor)
+        self.assertEqual(missing['ok'],'0')
+
+    def test_zip_loose_function_rejection_cleans_partial_and_keeps_original_zip(self):
+        archive=self.archive({'data/models.txt':b'load Block data/chars/block.txt\n',
+                              'data/chars/block.txt':b'name Block\ntype player\n'})
+        original=archive.read_bytes()
+        descriptor=self.descriptor(payload=archive.name)
+        descriptor.write_text(descriptor.read_text()+'transform=buffer reject_file(){reject();}\n')
+        result,log=self.route_content(descriptor)
+        self.assertEqual(result['ok'],'0')
+        self.assertIn('File preparation failed',log)
+        self.assertFalse(list((self.folder/'save').rglob('.files-partial-*')))
+        self.assertEqual(archive.read_bytes(),original)
+
     def test_inline_function_rejects_duplicate_invalid_and_oversized_programs(self):
         valid='transform=buffer local(){return slice(0,input_size);}\n'
         for body in (valid+valid,valid+'transform=external\n',

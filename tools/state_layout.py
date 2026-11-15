@@ -36,7 +36,8 @@ def write_bss_script(path, engines, *, pe=False):
     # locks and exception pools must survive reset and cross-process loads.
     # Classify linked runtime archives by object provenance. Compiler-emitted
     # process metadata inside engine objects is handled separately below.
-    runtime_archives, runtime_objects = RUNTIME_ARCHIVES, RUNTIME_OBJECTS
+    runtime_archives = RUNTIME_ARCHIVES + PREPARATION_ARCHIVES
+    runtime_objects = RUNTIME_OBJECTS
     alignment = '__section_alignment__' if pe else '64'
     lines += ['  obor_rt ALIGN(' + alignment + ') : {']
     data = ['.data', '.data.*']
@@ -81,6 +82,11 @@ RUNTIME_ARCHIVES = ('libpthread.a', 'libwinpthread.a', 'libgcc.a', 'libgcc_eh.a'
     'libunwind.a', 'libclang_rt.*.a', 'libmingw32.a', 'libmingwex.a',
     'libmoldname.a', 'libmsvcrt.a', 'libucrt.a', 'libucrtbase.a')
 RUNTIME_OBJECTS = ('dllcrt2.o', 'crt2.o', 'crtbegin*.o', 'crtend*.o', 'crti.o', 'crtn.o')
+# Container readers run before engine startup, retain no live reader during
+# gameplay and are recreated for each load. Their process storage must remain
+# outside snapshots just like the host runtime, independently of whether a
+# compiler emits their constants in .data or read-only sections.
+PREPARATION_ARCHIVES = ('libarchive.a',)
 EMULATED_TLS_INPUTS = ('.data*__emutls_v.*', '.sdata*__emutls_v.*')
 
 
@@ -97,6 +103,11 @@ def runtime_origin(origin):
     archive = match[1] if match else name
     return (any(fnmatch.fnmatchcase(archive, pattern) for pattern in RUNTIME_ARCHIVES) or
             any(fnmatch.fnmatchcase(name, pattern) for pattern in RUNTIME_OBJECTS))
+
+
+def preparation_origin(origin):
+    match = re.search(r'([^/\s]+\.a)\([^)]*\)$', origin.strip())
+    return bool(match and match[1] in PREPARATION_ARCHIVES)
 
 
 def gnu_map_inputs(text):
@@ -276,7 +287,7 @@ def audit_runtime_storage(binary, link_map):
     for section, address, size, origin in gnu_map_inputs(text):
         overlaps = [(max(address, lo), min(address+size, hi)) for lo, hi in captured
                     if address < hi and lo < address+size]
-        if not runtime_origin(origin) and not emulated_tls_input(section):
+        if not runtime_origin(origin) and not preparation_origin(origin) and not emulated_tls_input(section):
             if '.a(' in origin and overlaps:
                 raise ValueError('Unclassified mutable archive input enters the state: '+origin+' '+section)
             continue

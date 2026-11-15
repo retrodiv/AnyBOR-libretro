@@ -14,6 +14,7 @@
 #define OBOR_TRANSFORM_MAX_PIPELINE_STEPS 16u
 #define OBOR_TRANSFORM_SCRATCH_BYTES 65536u
 #define OBOR_TRANSFORM_MAX_INPUT_BYTES UINT64_C(1610612736)
+#define OBOR_TRANSFORM_MAX_READER_BYTES UINT64_C(17179869184)
 #define OBOR_TRANSFORM_MAX_STEPS (UINT64_C(1000000)+OBOR_TRANSFORM_MAX_INPUT_BYTES*128u)
 #define OBOR_TRANSFORM_INSTRUCTION_BYTES 12u
 
@@ -46,7 +47,16 @@ typedef struct obor_transform_result {
   const uint8_t *data;
   size_t size;
   uint8_t *owned;
+  uint64_t input_offset;
+  unsigned reader_view;
 } obor_transform_result;
+/* A bounded caller-owned reader supplies input lazily. An unchanged input or
+ * subslice is returned as reader_view/input_offset, without an allocation.
+ * Creating a mutable work copy retains MAX_INPUT_BYTES as its memory ceiling. */
+typedef int (*obor_transform_read)(void *,uint64_t,void *,size_t);
+int obor_content_transform_execute_reader(const void *,size_t,const void *,size_t,
+    obor_transform_read,void *,uint64_t,const void *,size_t,uint64_t,
+    obor_transform_result *,char *,size_t);
 int obor_content_transform_execute_view(const void *,size_t,const void *,size_t,const void *,size_t,const void *,size_t,uint64_t,obor_transform_result *,char *,size_t);
 void obor_content_transform_result_release(obor_transform_result *);
 /* This compatibility API always returns independently owned output. */

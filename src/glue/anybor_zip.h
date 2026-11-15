@@ -182,6 +182,7 @@ static int obor_zip_hash_read(void *context, uint64_t offset, void *data, size_t
 }
 
 #include "anybor_nested_archive.h"
+#include "anybor_loose_prepare.h"
 
 static int obor_zip_prepare(const char *zip_path, const char *save_dir,
                             char *out, size_t out_cap, const char *system_dir = NULL,
@@ -361,6 +362,7 @@ static int obor_zip_prepare(const char *zip_path, const char *save_dir,
         if(obor_game_recognizable(root,false)) {++raw_roots;snprintf(raw_root,sizeof(raw_root),"%s",root);}
     }
     unsigned games = 0, unknown = 0;
+    bool chosen_raw=false;
     char chosen[4096] = "";
     obor_engine_identity identity = {};
     obor_prepare_stage(progress, 800, 1000, 0);
@@ -402,12 +404,24 @@ static int obor_zip_prepare(const char *zip_path, const char *save_dir,
             candidate[root_length] = 0;
             if (!obor_game_recognizable(candidate, false)) { ++unknown; continue; }
             snprintf(chosen, sizeof(chosen), "%s", path);
+            chosen_raw=true;
         }
         ++games;
     }
     if (games != 1 || unknown) {
         log_cb(RETRO_LOG_ERROR, "[OpenBOR] zip: %u recognizable games, %u inconclusive candidates; one game and no inconclusive candidates required\n", games, unknown);
         return 0;
+    }
+    if (chosen_raw) {
+        char prepared[4096];
+        bool outer=content_choice && (content_choice->transform[0] || content_choice->function.program_size);
+        if (!obor_loose_prepare(cache,chosen,entries,count,save_dir,system_dir,
+                outer?content_choice->transform:descriptor.transform,
+                outer?&content_choice->function:&descriptor.function,prepared,sizeof(prepared))) {
+            log_cb(RETRO_LOG_ERROR,"[OpenBOR] Could not prepare descriptor-selected loose files.\n");
+            return 0;
+        }
+        snprintf(chosen,sizeof(chosen),"%s",prepared);
     }
     if (content_choice) {
         snprintf(content_choice->archive, sizeof(content_choice->archive), "%s", zip_path);

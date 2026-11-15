@@ -18,6 +18,40 @@ struct obor_transform_buffers {
     }
 };
 
+/* Large inputs stay on disk. VM loads request only the bytes they inspect;
+ * readonly passthrough therefore has bounded memory independent of PAK size. */
+struct obor_transform_file {
+    FILE *file;
+    uint64_t size, offset;
+    size_t available;
+    unsigned char *cache;
+    obor_transform_file(FILE *input, uint64_t bytes)
+        : file(input), size(bytes), offset(0), available(0), cache(NULL) {}
+    ~obor_transform_file() { free(cache); }
+    static int read(void *opaque, uint64_t at, void *data, size_t bytes) {
+        obor_transform_file &source = *(obor_transform_file *)opaque;
+        if (at > source.size || bytes > source.size-at) return 0;
+        unsigned char *out = (unsigned char *)data;
+        if (!source.cache && bytes) source.cache = (unsigned char *)malloc(65536);
+        if (!source.cache && bytes) return 0;
+        while (bytes) {
+            if (!source.available || at < source.offset || at-source.offset >= source.available) {
+                source.offset = at & ~UINT64_C(65535);
+                size_t amount = (size_t)((source.size-source.offset) < 65536 ? source.size-source.offset : 65536);
+                if (obor_file_seek64(source.file, (int64_t)source.offset, SEEK_SET) ||
+                    fread(source.cache, 1, amount, source.file) != amount || !obor_prepare_checkpoint()) return 0;
+                source.available = amount;
+            }
+            size_t within = (size_t)(at-source.offset);
+            size_t amount = source.available-within;
+            if (amount > bytes) amount = bytes;
+            memcpy(out, source.cache+within, amount);
+            out += amount; at += amount; bytes -= amount;
+        }
+        return 1;
+    }
+};
+
 /* Generic byte preparation followed by the ordinary PACK validator. No
  * encoded-format signature, recipe or automatic decoder is built in. */
 static bool obor_packed_prepare(const char *source, const char *save_dir,
@@ -65,15 +99,17 @@ static bool obor_packed_prepare(const char *source, const char *save_dir,
     }
     char source_hash[65], config_hash[65], result_hash[65], current_hash[65];
     char parent[1400], cache[1800], temp[1500], error[256] = {0};
-    if (fseek(input, 0, SEEK_END)) { fclose(input); return false; }
-    long bytes = ftell(input);
-    if (bytes < 0 || (uint64_t)bytes > OBOR_TRANSFORM_MAX_INPUT_BYTES) { fclose(input); return false; }
+    if (obor_file_seek64(input, 0, SEEK_END)) { fclose(input); return false; }
+    int64_t bytes = obor_file_tell64(input);
+    if (bytes < 0 || (uint64_t)bytes > OBOR_TRANSFORM_MAX_READER_BYTES || (uint64_t)bytes > SIZE_MAX) { fclose(input); return false; }
+    bool streamed = (uint64_t)bytes > OBOR_TRANSFORM_MAX_INPUT_BYTES;
+    obor_transform_file reader(input, (uint64_t)bytes);
     obor_transform_buffers buffers;
     if (transform.program) {
         obor_prepare_stage(progress, 0, 100, bytes);
-        buffers.input = (unsigned char *)malloc(bytes ? (size_t)bytes : 1u);
-        bool ok = buffers.input && !fseek(input, 0, SEEK_SET);
-        for (size_t offset = 0; ok && offset < (size_t)bytes;) {
+        if (!streamed) buffers.input = (unsigned char *)malloc(bytes ? (size_t)bytes : 1u);
+        bool ok = streamed || (buffers.input && !obor_file_seek64(input, 0, SEEK_SET));
+        for (size_t offset = 0; !streamed && ok && offset < (size_t)bytes;) {
             size_t chunk = (size_t)bytes - offset;
             if (chunk > 65536) chunk = 65536;
             ok = fread(buffers.input + offset, 1, chunk, input) == chunk;
@@ -83,16 +119,24 @@ static bool obor_packed_prepare(const char *source, const char *save_dir,
         /* The external program's running time is unknown: hold this phase
          * until it returns instead of fabricating progress from its clock. */
         obor_prepare_stage(progress, 100, 200, 0);
-        if (ok) ok = obor_content_transform_execute_view(transform.program, transform.program_size,
-            transform.parameters, transform.parameter_size, buffers.input, (size_t)bytes, NULL, 0, 0,
-            &buffers.result, error, sizeof(error)) != 0;
+        if (ok) {
+            if (streamed) ok = obor_content_transform_execute_reader(transform.program, transform.program_size,
+                transform.parameters, transform.parameter_size, obor_transform_file::read, &reader, (uint64_t)bytes,
+                NULL, 0, 0, &buffers.result, error, sizeof(error)) != 0;
+            else ok = obor_content_transform_execute_view(transform.program, transform.program_size,
+                transform.parameters, transform.parameter_size, buffers.input, (size_t)bytes, NULL, 0, 0,
+                &buffers.result, error, sizeof(error)) != 0;
+        }
         if (!ok) {
             fclose(input);
             log_cb(RETRO_LOG_ERROR, "[OpenBOR] Content preparation failed: %s\n",
                    error[0] ? error : "cannot read transform input");
             return false;
         }
-        if (buffers.result.size == (size_t)bytes && !memcmp(buffers.input, buffers.result.data, buffers.result.size)) {
+        bool unchanged = buffers.result.reader_view ?
+            !buffers.result.input_offset && buffers.result.size == (size_t)bytes :
+            buffers.input && buffers.result.size == (size_t)bytes && !memcmp(buffers.input, buffers.result.data, buffers.result.size);
+        if (unchanged) {
             repair = obor_pak_repair_detect(input, &bias) != 0;
             if (!repair) {
                 /* The transform declined this input. Keep the ordinary
@@ -105,20 +149,24 @@ static bool obor_packed_prepare(const char *source, const char *save_dir,
         }
         /* Identify the exact bytes the VM saw, then recheck the source
          * before publishing a prepared result. */
-        obor_sha256_ctx hash;
-        unsigned char digest[32];
         obor_prepare_stage(progress, 200, 350, bytes);
-        obor_sha256_init(&hash);
-        for (size_t offset = 0; offset < (size_t)bytes;) {
-            size_t chunk = (size_t)bytes - offset;
-            if (chunk > 65536) chunk = 65536;
-            obor_sha256_update(&hash, buffers.input + offset, chunk);
-            obor_prepare_advance(chunk);
-            if (!obor_prepare_checkpoint()) { fclose(input); return false; }
-            offset += chunk;
+        if (streamed) {
+            if (!obor_sha256_file(source, source_hash)) { fclose(input); return false; }
+        } else {
+            obor_sha256_ctx hash;
+            unsigned char digest[32];
+            obor_sha256_init(&hash);
+            for (size_t offset = 0; offset < (size_t)bytes;) {
+                size_t chunk = (size_t)bytes - offset;
+                if (chunk > 65536) chunk = 65536;
+                obor_sha256_update(&hash, buffers.input + offset, chunk);
+                obor_prepare_advance(chunk);
+                if (!obor_prepare_checkpoint()) { fclose(input); return false; }
+                offset += chunk;
+            }
+            obor_sha256_final(&hash, digest);
+            for (unsigned i = 0; i < 32; ++i) snprintf(source_hash + 2*i, 3, "%02x", digest[i]);
         }
-        obor_sha256_final(&hash, digest);
-        for (unsigned i = 0; i < 32; ++i) snprintf(source_hash + 2*i, 3, "%02x", digest[i]);
         /* An unchanged slice still borrows the input until publication. */
         if (buffers.result.owned) { free(buffers.input); buffers.input = NULL; }
         obor_transform_identity(transform, config_hash);
@@ -157,10 +205,16 @@ static bool obor_packed_prepare(const char *source, const char *save_dir,
         ok = obor_pak_repair_bias(input, output, bias) != 0;
     } else {
         ok = true;
+        unsigned char block[65536];
         for (size_t offset = 0; ok && offset < buffers.result.size;) {
             size_t chunk = buffers.result.size - offset;
             if (chunk > 65536) chunk = 65536;
-            ok = fwrite(buffers.result.data + offset, 1, chunk, output) == chunk;
+            const unsigned char *data;
+            if (buffers.result.reader_view) {
+                ok = obor_transform_file::read(&reader, buffers.result.input_offset+offset, block, chunk) != 0;
+                data = block;
+            } else data = buffers.result.data + offset;
+            if (ok) ok = fwrite(data, 1, chunk, output) == chunk;
             if (ok) { obor_prepare_advance(chunk); ok = obor_prepare_checkpoint(); }
             offset += chunk;
         }

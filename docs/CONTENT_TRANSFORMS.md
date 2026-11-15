@@ -36,14 +36,19 @@ function name after `buffer` is descriptive and does not select it. Entries othe
 
 1. Extract the selected member when the loaded content is an ordinary ZIP.
 2. Apply the selected configured function to the packed file, if present.
-3. Validate the complete resulting PACK before starting the engine.
+   An explicit descriptor function for a ZIP resolving to a loose game runs
+   per file with its relative filename in `metadata` instead.
+3. Validate the prepared PACK or loose-game structure before starting the engine.
 
 An adapter can leave a representation unchanged with `return slice(0, input_size)`.
 A rejected operation or invalid result fails the load. An unchanged PACK retains
-ordinary structural index recovery when applicable. Unpacked mods do not use this
-interface. It has no pipelines, per-record hooks, native plugins, external commands,
-filesystem operations or network operations. In particular, a function cannot
-return a ZIP for another extraction pass or normalize individual script records.
+ordinary structural index recovery when applicable. The INI's default `input`
+entry does not run on loose games; ZIP file preparation requires an explicit
+descriptor selection. Functions have no pipelines, native plugins, external
+commands, filesystem operations or network operations. A filename supplied as
+metadata is only a byte buffer; the function cannot open it or request another
+file. A function cannot return a ZIP for another extraction pass, and no
+script-specific parser or correction is built in.
 
 This example removes a four-byte `DEMO` prefix from an archive you authored:
 
@@ -140,11 +145,19 @@ exhausting the instruction budget reject without producing a result.
 
 Configuration is limited to 512 KiB and 16 named functions. One source function
 is at most 64 KiB, compiled instructions at most 12 KiB, parameters at most 4 KiB,
-and input at most 1.5 GiB. Execution allows at most `1,000,000 + 128 * input_size`
-instructions; that is a resource bound, not a promise of short loading time.
+and an in-memory input at most 1.5 GiB. Larger files, up to 16 GiB, use a
+read-only reader with a 64 KiB cache and 64-bit file offsets. The same function
+runs, including its checks and rejection branches. An unchanged result keeps
+the original path without reading or allocating the complete file. A returned
+subslice is streamed into the validated prepared cache.
+
+Execution allows at most `1,000,000 + 128 * input_size` instructions, capped at
+the budget for a 1.5 GiB input; that is a resource bound, not a promise of short loading time.
 Work cannot grow beyond the input size. Preparation retains only input and
 scratch until the program writes to work; such a write can require input, work
-and scratch together (up to 3 GiB plus 64 KiB for these buffers).
+and scratch together (up to 3 GiB plus 64 KiB for these buffers). Creating a
+mutable work copy of an input larger than 1.5 GiB rejects before allocation;
+scratch remains available for bounded output.
 The returned buffer borrows unchanged input or reuses work or scratch; it is not
 another full input copy. Borrowed input remains alive through validation and
 publication of the result.

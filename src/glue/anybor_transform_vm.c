@@ -41,16 +41,18 @@ static int valid_program(const uint8_t *code,size_t size){
   return 1;
 }
 
-int obor_content_transform_execute_view(const void *program,size_t program_size,
+static int execute_view(const void *program,size_t program_size,
                                      const void *parameters,size_t parameter_size,
                                      const void *input,size_t input_size,
                                      const void *metadata,size_t metadata_size,uint64_t step_limit,
                                      obor_transform_result *output,
-                                     char *error,size_t error_size){
+                                     char *error,size_t error_size,
+                                     obor_transform_read reader,void *reader_context){
   if(error && error_size) error[0]=0;
   if(output) memset(output,0,sizeof(*output));
-  if(!output || (input_size && !input) ||
-     (parameter_size && !parameters) || input_size>OBOR_TRANSFORM_MAX_INPUT_BYTES ||
+  if(!output || (input_size && !input && !reader) ||
+     (parameter_size && !parameters) ||
+     input_size>(reader?OBOR_TRANSFORM_MAX_READER_BYTES:OBOR_TRANSFORM_MAX_INPUT_BYTES) ||
      (metadata_size && !metadata) || metadata_size>OBOR_TRANSFORM_MAX_METADATA_BYTES ||
      parameter_size>OBOR_TRANSFORM_MAX_PARAMETER_BYTES ||
      !valid_program((const uint8_t*)program,program_size))
@@ -83,7 +85,8 @@ int obor_content_transform_execute_view(const void *program,size_t program_size,
           if(right) memmove(output->owned,result+(size_t)left,(size_t)right);
           output->data=output->owned;
         } else {
-          output->data=left?result+(size_t)left:result;
+          if(reader){ output->reader_view=1; output->input_offset=left; }
+          else output->data=left?result+(size_t)left:result;
         }
         output->size=(size_t)right;
         free(d?work:scratch); return 1;
@@ -119,12 +122,23 @@ int obor_content_transform_execute_view(const void *program,size_t program_size,
         if(address<left || address>lengths[b] || width>lengths[b]-address){
           reason="buffer access out of bounds"; goto rejected;
         }
-        if(op<=OBOR_TRANSFORM_LOAD64) registers[d]=read_le(memory[b]+(size_t)address,width);
+        if(op<=OBOR_TRANSFORM_LOAD64){
+          if(reader && (b==0 || (b==1 && !work))){
+            uint8_t value[8];
+            if(!reader(reader_context,address,value,width)){ reason="input read failed"; goto rejected; }
+            registers[d]=read_le(value,width);
+          } else registers[d]=read_le(memory[b]+(size_t)address,width);
+        }
         else {
           if(b==1 && !work){
+            if(input_size>OBOR_TRANSFORM_MAX_INPUT_BYTES){ reason="working copy exceeds buffer limit"; goto rejected; }
             work=(uint8_t*)malloc(input_size?input_size:1u);
             if(!work){ reason="allocation failed"; goto rejected; }
-            if(input_size) memcpy(work,input,input_size);
+            if(input_size){
+              if(reader){
+                if(!reader(reader_context,0,work,input_size)){ reason="input read failed"; goto rejected; }
+              } else memcpy(work,input,input_size);
+            }
             memory[1]=work;
           }
           uint8_t *destination=b==1?work:scratch;
@@ -139,6 +153,26 @@ int obor_content_transform_execute_view(const void *program,size_t program_size,
   }
 rejected:
   free(work); free(scratch); return fail(error,error_size,reason);
+}
+
+int obor_content_transform_execute_view(const void *program,size_t program_size,
+    const void *parameters,size_t parameter_size,const void *input,size_t input_size,
+    const void *metadata,size_t metadata_size,uint64_t step_limit,
+    obor_transform_result *output,char *error,size_t error_size){
+  return execute_view(program,program_size,parameters,parameter_size,input,input_size,
+      metadata,metadata_size,step_limit,output,error,error_size,NULL,NULL);
+}
+
+int obor_content_transform_execute_reader(const void *program,size_t program_size,
+    const void *parameters,size_t parameter_size,obor_transform_read reader,void *context,
+    uint64_t input_size,const void *metadata,size_t metadata_size,uint64_t step_limit,
+    obor_transform_result *output,char *error,size_t error_size){
+  if(!reader || input_size>SIZE_MAX){
+    if(output) memset(output,0,sizeof(*output));
+    return fail(error,error_size,"invalid reader or input size");
+  }
+  return execute_view(program,program_size,parameters,parameter_size,NULL,(size_t)input_size,
+      metadata,metadata_size,step_limit,output,error,error_size,reader,context);
 }
 
 void obor_content_transform_result_release(obor_transform_result *result){

@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.2.32
+
+- Read large configured inputs lazily with 64-bit offsets, preserving transform
+  checks and bounded mutable buffers.
+- Apply explicit descriptor functions to loose files resolved from ZIP archives,
+  using relative filename metadata and a separate prepared tree.
+- Keep archive-reader process storage outside engine snapshots on ELF and PE.
+
 ## 0.2.31
 
 - Build the bundled archive reader with its supplied generated scripts,
