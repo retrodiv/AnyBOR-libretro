@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.2.23
+
+- Observe balanced import scopes in the standalone initialization contract for
+  every engine family, preserving its original ownership and diagnostic checks.
+
 ## 0.2.22
 
 - Link bounded import guards into the standalone script-library probe and

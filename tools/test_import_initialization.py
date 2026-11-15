@@ -29,6 +29,16 @@ def program(engine, profiles):
                                    for p in profiles))
     for name, value in parts.items():
         text = text.replace('@' + name + '@', value)
+    if 'obor_content_import_begin(' in parts['INIT']:
+        hooks = r'''static unsigned import_scope, import_attempts;
+void obor_content_import_begin(const char *name) {
+ CHECK(name && !strcmp(name,path) && !import_scope);import_scope=1;++import_attempts;
+}
+void obor_content_import_end(void) {CHECK(import_scope==1);import_scope=0;}
+'''
+        text = text.replace('static void event(char value)',hooks+'\nstatic void event(char value)',1)
+        text = text.replace('        const char *wanted =', '        CHECK(!import_scope);\n        const char *wanted =',1)
+        text = text.replace('    free(parent.theParser);','    CHECK(!import_scope && import_attempts);\n    free(parent.theParser);',1)
     return text
 
 

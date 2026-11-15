@@ -5,7 +5,7 @@
     ".github/workflows/ci.yml": "76621d1536fdbdd5be3c8564af40322b3358070e8edecc159eb4e710c980f8ab",
     ".gitignore": "51eef046f754b4d264790dd07ff3c3d6b32b5245c682b3e1f64e92bb7a4ed39f",
     ".gitlab-ci.yml": "d0a7a43ff1dbcd3324279db48cdafb93d3963ef28f0d802f59c1741db1b2f087",
-    "CHANGELOG.md": "7f4d11d2b03263b0e70c44d9f85d269f0639b4fc1dc0cbe8d42d66cec926c043",
+    "CHANGELOG.md": "40af62e6b834f87c2ba93dbea892fbba3bcff23e794fab6b8af0d8a765fd9138",
     "COMPATIBILITY.md": "2f7411c4cb1387adc6cd9e00ea4787a6601f7b0f1da8febe6c1c46640a08bf1a",
     "CONTRIBUTING.md": "823ff67603edceccac6a3d8c30d70655414e6674200c7981d1314416c7ca4869",
     "LICENSE": "abeb4a9677c142a681910f7a2e937918213c68b83849b1431ccb4f3f5466a0fa",
@@ -88,7 +88,7 @@
     "NOTICE.txt": "b7244da5be75c26d9835e701b96c486d980b84e98314cd1cb29c207f42afceb4",
     "PROVENANCE.md": "512386b72e3d5365722957d1fb09fb7bcad4c64f2cc7c42540720a892bc39117",
     "README.md": "40ff33418701b5802fd578805c948e481119f63b9c1f986572f2852e5becb787",
-    "SBOM.spdx.json": "f63e45ec3430caddcfd3c19adb34c423160b48a90ac4d2b4a0306fdcd35fd8b7",
+    "SBOM.spdx.json": "46818d5a3dedbed320a6896370be821748a90e5d513f251aa5d91a1e948db134",
     "SECURITY.md": "3aaf7f8f89ef7abc1cac8d4f25f358a5529410673fa04d97ddc123ae21f96f4b",
     "anybor_libretro.info": "083a01051f0c5a610372ffe4d6f45b23cb94c6b652c4e17b556da59de7a19f95",
     "docs/ANYBOR.md": "7148bafa2452c242f2498733432318bbd769444927c950f9bbc0f85f7d3bca1d",
@@ -2973,7 +2973,7 @@
     "src/glue/anybor_engine_executables.h": "06d357e48670990b9275615663bbf7e53f71e2eba94cc64bf8937d631642f85b",
     "src/glue/anybor_engine_identity.h": "5419b31620c56e859365c3845c7d318ca77840a5c89e2b1f65e26dc9b4ea0773",
     "src/glue/anybor_engine_resources.h": "8196f17ba5110e51c4b71388f005e3beb26c2cc72aaf0fb559a255c10842223b",
-    "src/glue/anybor_engines.h": "6c58488be00e24b455889769b2969b376c7e451d8cb80b84d4023765199a1740",
+    "src/glue/anybor_engines.h": "659143054a5975198c123e9ff9191df3f62407a4c2f7ffba2a109788f158f81f",
     "src/glue/anybor_error_screen.h": "15c6d9c150494aaa425086d41b74277f3472fe2b2b749611632f4d85cfa3aeb0",
     "src/glue/anybor_game_content.h": "e20106cfbfb443afa760098c8a72d3dbdeb7723da1c01445ac714deb6d2f528d",
     "src/glue/anybor_hankaku.h": "639d8236cb4a82eaacafd1ec0f5f904ba734fdb6e8771db5b96ae03cb06e88ea",
@@ -3016,7 +3016,7 @@
     "src/glue/exports.macho": "97150280ad24c4636b55e7fa760bbb3060bd9b200716547c5b939899751fde31",
     "src/glue/exports.map": "6313cbda366a9d3f60c42ace4a660baf39b6037f40a92bf486741a424c754c50",
     "src/glue/libretro.cpp": "c7ecd1cdec3986d814f4b1608420c8a9240adffa6dff82bff885716103d7153c",
-    "src/pin.json": "cd6f7d143cb0d49c4906f25a12d5678adde56e7c939c33f267b560798418fcb7",
+    "src/pin.json": "c65d2e448c42a45eef615425a4b742559f57b3ef0371561a7b6981d3b79b9c05",
     "src/port/libretro/anybor_abi.h": "4cac6476d8370315856ecf0dbf273be32b8d61dc3244f828631e078ce1229511",
     "src/port/libretro/anybor_adpcm.c": "40eed9f1f6f51f7b3a8d06083b7033945c014d763b896e6319e5e637b475ccc6",
     "src/port/libretro/anybor_alloc.c": "3e20df23a318d294581c29b46035eb0dcada030c9990e7b8bd43266a5b566f79",
@@ -4530,7 +4530,7 @@
     "tools/test_host_ppm.py": "1e2b050503526efaedfa83d2dc1d92ffc26afe85581724b7a5cbfbfe5e3111b0",
     "tools/test_hud_model_inputs.py": "f6c632a9a0f8a71bff32228519a3d03c592a04373d46a9ad76dd78e616f0e7ec",
     "tools/test_image_rows.py": "9093a42bf2f1d8284e9ccc580e4bc0029e664ce8fc2551ac756ed8840fdc8d8f",
-    "tools/test_import_initialization.py": "b4dba159726160ef24fc49476283e6e167b30d5fab214f310f1adbb9f05f47fc",
+    "tools/test_import_initialization.py": "e52bc479389af2c724ad11f6abf078e4e33cb934bae206e9e6d1398a7df5d301",
     "tools/test_integer_value.py": "bdb10007518e188cc842f7502f26dc15b988b94ac2b0e95487a59f1bb0514f9d",
     "tools/test_legacy_texture_bounds.py": "f56a6845a85565d67c0655da51e8ddfe52230a3989ac8dee7bdc723f10df483b",
     "tools/test_level_cleanup_ownership.py": "eb7e73c6f2b024c239572f928a23fb28611ad9c2f0490966f3f5d96f6976ab37",
@@ -4701,5 +4701,5 @@
     "tools/zoom_pixels.c.in": "b1964154c7ee6eb28300e75a8cfff5bc7cc59d1e8f544e42bfa7f1fd3ba21763"
   },
   "schema": 1,
-  "version": "0.2.22"
+  "version": "0.2.23"
 }
