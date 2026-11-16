@@ -49,6 +49,7 @@ def render_frames(parts, *, visible_components, revision, labels,
 #endif
 #define assert(condition) do {if(!(condition))abort();} while(0)
 uint32_t obor_profile_build=@REVISION@;
+uint32_t obor_profile_features;
 @ASSERTIONS@
 /* Some native headers declare these interpreter entries inline. The frame
    contract does not link the VM; refuse unexpected execution explicitly. */

@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.2.36
+
+- Complete LNS v0.10g palette, animation-property and drawing-diagnostic contracts.
+- Preserve the LNS source locations in drawing assertion diagnostics.
+
 ## 0.2.35
 
 - Extract palette loading implementations for native contract probes.

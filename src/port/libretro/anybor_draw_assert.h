@@ -7,7 +7,9 @@
 #include <stdint.h>
 #include <string.h>
 #if defined(LIBRETRO) && defined(OBOR_ENGINE_BUILD)
+#include "anybor_abi.h"
 extern uint32_t obor_profile_build;
+extern uint32_t obor_profile_features;
 void obor_port_assert(int value, const char *assertion, const char *function,
                       const char *file, int line);
 #if OBOR_ENGINE_BUILD >= 3811
@@ -214,6 +216,13 @@ static inline void obor_draw_assert(int value, const char *expression,
                 break;
             }
         }
+#if OBOR_ENGINE_BUILD == 6391
+        if(obor_profile_features & OBOR_PROFILE_LNS_6330) {
+            static const uint32_t locations[7] = {797u, 798u, 799u, 800u, 806u, 807u, 808u};
+            file = "openbor.c";
+            line = (int)locations[site];
+        }
+#endif
     }
 #if OBOR_ENGINE_BUILD >= 3811
     if(obor_profile_build >= 3811) {

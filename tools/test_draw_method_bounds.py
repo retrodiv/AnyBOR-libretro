@@ -68,7 +68,8 @@ def program(engine, profiles, *, release=False, remove_guard=False,
         lines = list(row['lines'])
         if tamper_line:
             lines[0] += 1
-        contexts.append('{%du,%d,%d,{%s}}' % (revision, any(row['lines']), row['logged'],
+        features = 'OBOR_PROFILE_LNS_6330' if 'lns_6330' in profile.get('features', []) else '0'
+        contexts.append('{%du,%s,%d,%d,{%s}}' % (revision, features, any(row['lines']), row['logged'],
                                              ','.join(str(n)+'u' for n in lines)))
     values = dict(CONFIG='#include "config.h"' if (engine / 'config.h').is_file() else '',
                   ASSERTION_POLICY='#define NDEBUG 1' if release else '#undef NDEBUG',
@@ -113,7 +114,7 @@ class DrawMethodBoundsTests(unittest.TestCase):
         self.assertEqual({r['revision'] for r in rows}, set(fixture['boundary_controls']))
         engine = ROOT / 'src/engines' / rows[0]['engine']
         self.assertTrue(all(r['engine'] == engine.name for r in rows))
-        profiles = [dict(build=r['profile'], revision=r['revision']) for r in rows]
+        profiles = [dict(build=r['profile'], revision=r['revision'], features=r.get('features', [])) for r in rows]
         for release in (False, True):
             result = run_native(engine, program(engine, profiles, release=release))
             self.assertEqual(result.returncode, 0, result.stdout+result.stderr)

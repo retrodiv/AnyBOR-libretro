@@ -12,7 +12,7 @@
 #endif
 #include "scriptcommon.h"
 #undef printf
-uint32_t obor_profile_build;
+uint32_t obor_profile_build,obor_profile_features;
 @DEFAULT@
 s_drawmethod drawmethod;
 static int token,queue_count;

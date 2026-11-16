@@ -16,7 +16,7 @@
 #include "globals.h"
 #undef printf
 #define CHECK(c) do {if(!(c)){fprintf(stderr,"draw-method contract profile=%u case=%u line=%d: %s\n",obor_profile_build,active_case,__LINE__,#c);abort();}}while(0)
-uint32_t obor_profile_build;
+uint32_t obor_profile_build,obor_profile_features;
 static unsigned active_case,stopped,records,flushes;
 static int engine_alive,engine_exit_status,frontend_token;
 static void *co_frontend=&frontend_token;
@@ -54,7 +54,7 @@ static s_drawmethod *display_method(entity *e) {
     @LOOKUP@
     return drawmethod;
 }
-struct context {unsigned revision;int asserts,logged;unsigned line[7];};
+struct context {unsigned revision,features;int asserts,logged;unsigned line[7];};
 static const struct context contexts[]={@CONTEXTS@};
 static s_anim animation;
 static entity display_entity;
@@ -115,6 +115,7 @@ static void execute_case(void) {
 int main(void) {
     for(volatile unsigned r=0;r<sizeof(contexts)/sizeof(*contexts);++r) {
         obor_profile_build=contexts[r].revision;
+        obor_profile_features=contexts[r].features;
         for(active_case=0;active_case<27;++active_case) {
             setup();volatile int expected=contexts[r].asserts && site()>=0;
 #ifdef NDEBUG
