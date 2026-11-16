@@ -9,7 +9,8 @@ from pathlib import Path
 import re
 import shlex
 
-PROFILE_COUNT_LIMITS = {'linux': 13, 'windows': 12, 'macos': 36}
+# Linux rewind timings require headroom below the unchanged 900-second guard.
+PROFILE_COUNT_LIMITS = {'linux': 10, 'windows': 12, 'macos': 36}
 
 
 def balanced_boundaries(weights, count):

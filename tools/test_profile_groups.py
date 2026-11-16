@@ -7,7 +7,7 @@ import os
 import unittest
 from pathlib import Path
 from profile_groups import (balanced_boundaries, policy_weights,
-                            select_profile_group, check_workflow_groups)
+                            select_profile_group, check_workflow_groups, PROFILE_COUNT_LIMITS)
 
 
 class ProfileGroupsTests(unittest.TestCase):
@@ -134,26 +134,27 @@ class ProfileGroupsTests(unittest.TestCase):
                 for flags in ('', '--windows --runner wine', '--core anybor_libretro.dylib'):
                     if script == 'regression' and '--windows' in flags:
                         continue
-                    limit = 12 if '--windows' in flags else 13
+                    platform = 'windows' if '--windows' in flags else 'linux'
+                    limit = PROFILE_COUNT_LIMITS[platform]
                     groups = native_count if 'dylib' in flags else (size + limit - 1) // limit
                     for index in range(1, groups + 1):
                         lines.append('python3 tools/' + script + '.py ' + flags +
                                      ' --profile-group ' + str(index) + '/' + str(groups))
             return '\n'.join(lines)
 
-        for size in (12, 13, 14, 36):
+        for size in (10, 11, 12, 13, 14, 36):
             check_workflow_groups(workflow(size, 1),
                                   [dict(build=str(n)) for n in range(size)])
         with self.assertRaisesRegex(ValueError, 'platform budget: macos'):
             check_workflow_groups(workflow(37, 1),
                                   [dict(build=str(n)) for n in range(37)])
         with self.assertRaisesRegex(ValueError, 'platform budget: linux'):
-            check_workflow_groups(workflow(14, 1).replace('--profile-group 1/2',
+            check_workflow_groups(workflow(11, 1).replace('--profile-group 1/2',
                                   '--profile-group 1/1', 1),
-                                  [dict(build=str(n)) for n in range(14)])
+                                  [dict(build=str(n)) for n in range(11)])
         with self.assertRaisesRegex(ValueError, 'platform budget: windows'):
-            check_workflow_groups(workflow(13, 1).replace('--profile-group 1/2',
-                                  '--profile-group 1/1', 1),
+            check_workflow_groups(workflow(13, 1).replace('--windows --runner wine --profile-group 1/2',
+                                  '--windows --runner wine --profile-group 1/1', 1),
                                   [dict(build=str(n)) for n in range(13)])
 
 

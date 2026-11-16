@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.2.37
+
+- Bound Linux runtime groups to ten profiles to retain headroom within the
+  existing rewind test limit.
+
 ## 0.2.36
 
 - Complete LNS v0.10g palette, animation-property and drawing-diagnostic contracts.
