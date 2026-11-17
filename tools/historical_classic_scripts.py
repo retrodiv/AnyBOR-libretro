@@ -101,9 +101,9 @@ def player_properties_program(root, data):
         SEARCH=function(utils, 'searchList'),
         VARIANTS='\n'.join(function(variant, name) for name in
             ('ScriptVariant_Clear', 'ScriptVariant_ChangeType', 'ScriptVariant_IntegerValue', 'ScriptVariant_ToString')),
-        METHODS='\n'.join(function(source, name) for name in
-            ('obor_playerproperty_native', 'mapstrings_playerproperty',
-             'openbor_getplayerproperty', 'openbor_changeplayerproperty')),
+        METHODS=source[enum.end():source.index('int mapstrings_playerproperty(', enum.end())] +
+            '\n'.join(function(source, name) for name in
+            ('mapstrings_playerproperty', 'openbor_getplayerproperty', 'openbor_changeplayerproperty')),
         CONTEXTS=','.join('{%du,%d,{%s}}' % (row['revision'], len(row['properties']),
             ','.join(json.dumps(name) for name in row['properties'])) for row in data['sources']))
     # Every own source must retain its declared API shape; a native default arm

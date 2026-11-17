@@ -1,0 +1,101 @@
+/* SPDX-License-Identifier: BSD-3-Clause
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me>
+ * Complete native registry/list/name/mapper dispatch and menu wrappers.
+ */
+#include <stdint.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include "openbor.h"
+#undef printf
+#undef assert
+
+/* These consumer contracts observe successful delegated allocations.
+ * Native wrapper outputs are covered by the separate compatibility suite. */
+void *checkAlloc(void *pointer,size_t size,const char *function,const char *file,int line)
+{
+    (void)function; (void)file; (void)line;
+    if(size && !pointer) abort();
+    return pointer;
+}
+#ifdef NDEBUG
+#error Registry/menu assertions must remain enabled
+#endif
+uint32_t obor_profile_build;
+static unsigned active_case;
+#define CHECK(c) do {if(!(c)){fprintf(stderr,"REGISTRY_UI revision=%u case=%u line=%d: %s\n",obor_profile_build,active_case,__LINE__,#c);abort();}}while(0)
+#define assert(c) CHECK(c)
+HRESULT Interpreter_Call(Interpreter *p){(void)p;abort();}
+HRESULT Interpreter_EvalInstruction(Interpreter *p){(void)p;abort();}
+void borExit(int value){(void)value;abort();}
+@LIST@
+#undef assert
+#define assert(c) CHECK(c)
+static unsigned unexpected[@SYMBOL_COUNT@];
+@STUBS@
+static unsigned normal_calls,cheat_calls,hall_calls;
+int cheats,forcecheatsoff;
+void options(void){++normal_calls;}
+void cheatoptions(void){++cheat_calls;}
+void hallfame(int addtoscore){assert(addtoscore==0);++hall_calls;}
+@CHEAT@
+@CALLBACKS@
+List theFunctionList;
+@METHODS@
+static void *targets[]={@TARGETS@};
+static void *mappers[]={@MAPPERS@};
+static const char *labels[]={@LABELS@};
+static const struct {unsigned revision;int bindings[6];const char *reverse[6];int maps[6];int cheat_options;} contexts[]={@CONTEXTS@};
+static void registry(unsigned p)
+{
+ List_Init(&theFunctionList);Script_LoadSystemFunctions();
+ for(unsigned i=0;i<6;++i)
+ {
+  ++active_case;int binding=contexts[p].bindings[i];int found=List_FindByName(&theFunctionList,(char *)labels[i]);
+  assert(!!found==(binding>=0));
+  if(found)assert(List_Retrieve(&theFunctionList)==targets[binding]);
+  assert(!strcmp(Script_GetFunctionName(targets[i]),contexts[p].reverse[i]));
+  assert(Script_GetStringMapFunction(targets[i])==(contexts[p].maps[i]>=0?mappers[contexts[p].maps[i]]:NULL));
+ }
+ assert(!strcmp(Script_GetFunctionName(NULL),"<unknown function>"));
+ assert(Script_GetStringMapFunction(NULL)==NULL);
+ /* Repeated native lookups retain the selected identities. */
+ for(unsigned i=0;i<6;++i)
+ {
+  int binding=contexts[p].bindings[i];int found=List_FindByName(&theFunctionList,(char *)labels[i]);
+  assert(!!found==(binding>=0));if(found)assert(List_Retrieve(&theFunctionList)==targets[binding]);
+ }
+}
+static void menus(unsigned p)
+{
+ const int states[]={-3,0,2},counts[]={-1,0,1,7};
+ for(unsigned c=0;c<3;++c)for(unsigned f=0;f<3;++f)for(unsigned n=0;n<4;++n)
+ {
+  ++active_case;cheats=states[c];forcecheatsoff=states[f];normal_calls=cheat_calls=hall_calls=0;
+  ScriptVariant result;memset(&result,0,sizeof(result));result.vt=VT_PTR;result.ptrVal=&result;
+  unsigned char before[sizeof(result)];memcpy(before,&result,sizeof(result));ScriptVariant *out=&result;assert(List_FindByName(&theFunctionList,"options"));
+  HRESULT (*call)(ScriptVariant **,ScriptVariant **,int)=(void *)List_Retrieve(&theFunctionList);
+  assert(call(NULL,&out,counts[n])==S_OK && out==NULL && !memcmp(&result,before,sizeof(result)));
+  int routed=contexts[p].cheat_options && states[c]!=0 && states[f]==0;
+  assert(cheat_calls==(unsigned)routed && normal_calls==(unsigned)!routed && !hall_calls);
+  normal_calls=cheat_calls=hall_calls=0;
+  assert(call(NULL,NULL,counts[n])==E_FAIL && !normal_calls && !cheat_calls && !hall_calls);
+  if(contexts[p].bindings[4]>=0)
+  {
+   assert(List_FindByName(&theFunctionList,"hallfame"));call=(void *)List_Retrieve(&theFunctionList);out=&result;
+   assert(call(NULL,&out,counts[n])==S_OK && out==NULL && !memcmp(&result,before,sizeof(result)));
+   assert(hall_calls==1 && !normal_calls && !cheat_calls);hall_calls=0;
+   assert(call(NULL,NULL,counts[n])==E_FAIL && !hall_calls);
+  }
+ }
+}
+int main(void)
+{
+ for(unsigned p=0;p<sizeof(contexts)/sizeof(*contexts);++p)
+ {
+  obor_profile_build=contexts[p].revision;active_case=0;registry(p);menus(p);List_Clear(&theFunctionList);
+  for(unsigned i=0;i<sizeof(unexpected)/sizeof(*unexpected);++i)assert(!unexpected[i]);
+  printf("{\"revision\":%u,\"status\":\"PASS\"}\n",obor_profile_build);
+ }
+ return 0;
+}

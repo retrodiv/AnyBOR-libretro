@@ -1,0 +1,104 @@
+/* SPDX-License-Identifier: BSD-3-Clause
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me>
+ * Actual wrapper bodies/macros and checkAlloc with bounded allocator services.
+ */
+#include <stdint.h>
+#include <stddef.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <stdarg.h>
+#include <setjmp.h>
+#include "types.h"
+#include "utils.h"
+#undef printf
+#undef assert
+#define CHECK(c) do{if(!(c)){fprintf(stderr,"ALLOCATION revision=%u line=%d: %s\n",obor_profile_build,__LINE__,#c);abort();}}while(0)
+uint32_t obor_profile_build;
+static const struct{unsigned revision;int checked;}contexts[]={@CONTEXTS@};
+static jmp_buf stopped;
+static int failure,exit_status,raw_calls,raw_kind,huge_length;
+static size_t raw_size,raw_count;
+static void *owned;
+static char log_text[2048];
+static void *record_malloc(size_t size)
+{++raw_calls;raw_kind=0;raw_size=size;if(failure)return NULL;CHECK(size<128);owned=malloc(size?size:1);CHECK(owned);return owned;}
+static void *record_calloc(size_t count,size_t size)
+{++raw_calls;raw_kind=1;raw_count=count;raw_size=size;if(failure)return NULL;CHECK(count<16 && size<128);owned=calloc(count?count:1,size?size:1);CHECK(owned);return owned;}
+static void *record_realloc(void *ptr,size_t size)
+{++raw_calls;raw_kind=2;raw_size=size;CHECK(ptr==owned);if(failure)return NULL;CHECK(size<128);owned=realloc(ptr,size?size:1);CHECK(owned);return owned;}
+static char *record_strdup(const char *text)
+{++raw_calls;raw_kind=3;if(failure)return NULL;CHECK(!strcmp(text,"abc"));owned=strdup(text);CHECK(owned);return owned;}
+static size_t record_strlen(const char *text)
+{CHECK(!strcmp(text,"abc"));return huge_length?(size_t)INT32_MAX:strlen(text);}
+void writeToLogFile(const char *format,...)
+{va_list args;size_t used=strlen(log_text);va_start(args,format);int n=vsnprintf(log_text+used,sizeof(log_text)-used,format,args);va_end(args);CHECK(n>=0 && used+(size_t)n<sizeof(log_text));}
+static void stop_allocation(int status){exit_status=status;longjmp(stopped,1);}
+#define exit stop_allocation
+@HELPER@
+#undef exit
+#define malloc record_malloc
+#define calloc record_calloc
+#define realloc record_realloc
+#define strdup record_strdup
+#define strlen record_strlen
+@HEADER@
+static void *(*native_realloc_pointer)(void *,size_t)=realloc;
+static void *request(int operation,size_t size)
+{
+ switch(operation){
+#line 100 "allocation-profile.c"
+ case 0:return malloc(size);
+#line 200 "allocation-profile.c"
+ case 1:return calloc(3,size);
+#line 300 "allocation-profile.c"
+ case 2:return realloc(owned,size);
+#line 400 "allocation-profile.c"
+ case 3:return strdup("abc");
+#line 500 "allocation-profile.c"
+ case 4:return calloc(0,size);
+ default:abort();}
+}
+#undef malloc
+#undef calloc
+#undef realloc
+#undef strdup
+static void expected_log(size_t size,const char *name,const char *file,int line)
+{
+ char expected[2048];snprintf(expected,sizeof(expected),"\n\n********** An Error Occurred **********\n*            Shutting Down            *\n\nOut of memory!\nAllocation of size %i failed in function '%s' at %s:%i.\n",(int)size,name,file,line);
+ CHECK(exit_status==2 && !strcmp(expected,log_text));
+}
+int main(void)
+{
+ for(volatile unsigned p=0;p<sizeof(contexts)/sizeof(*contexts);++p){
+  obor_profile_build=contexts[p].revision;
+  for(volatile int operation=0;operation<5;++operation)for(failure=0;failure<2;++failure)for(volatile size_t size=0;size<=8;size+=8){
+   owned=NULL;huge_length=0;raw_calls=exit_status=0;raw_count=raw_size=0;log_text[0]=0;
+   if(operation==2){owned=malloc(4);CHECK(owned);memcpy(owned,"abc",4);}
+   int jump=setjmp(stopped);void *result=NULL;
+   if(!jump)result=request(operation,size);
+   size_t requested=operation==3?4:size;int refusal=contexts[p].checked && failure && requested>0;
+   CHECK(jump==refusal && raw_calls==1);
+   CHECK(raw_kind==(operation==3?(contexts[p].checked?0:3):operation==4?1:operation));
+   if(operation==1||operation==4)CHECK(raw_count==(operation==4?0:3));
+   if(refusal)expected_log(requested,"request","allocation-profile.c",(operation+1)*100);
+   else{CHECK(!exit_status && !log_text[0]);CHECK(failure?!result:result==owned);if(operation==3&&!failure)CHECK(!strcmp(result,"abc"));}
+   free(owned);owned=NULL;
+  }
+  /* The wrapper keeps a raw realloc function pointer usable by halloc. */
+  void *ptr=native_realloc_pointer(NULL,4);CHECK(ptr);free(ptr);
+  for(volatile int nonnull=0;nonnull<2;++nonnull)for(volatile size_t size=0;size<=8;size+=8){
+   int token;void *volatile ptr=nonnull?&token:NULL;log_text[0]=0;exit_status=0;
+   int jump=setjmp(stopped);if(!jump)CHECK(checkAlloc(ptr,size,"allocate","source.c",7)==ptr);
+   int refusal=contexts[p].checked&&!nonnull&&size;CHECK(jump==refusal);
+   if(refusal)expected_log(size,"allocate","source.c",7);else CHECK(!exit_status && !log_text[0]);
+  }
+  if(contexts[p].checked){
+   huge_length=1;failure=0;owned=NULL;raw_calls=exit_status=0;log_text[0]=0;
+   int jump=setjmp(stopped);if(!jump)request(3,0);CHECK(jump==1 && !raw_calls && !owned);
+   expected_log((size_t)INT32_MAX+1,"request","allocation-profile.c",400);
+  }
+  printf("{\"revision\":%u,\"allocation\":\"PASS\"}\n",obor_profile_build);
+ }
+ return 0;
+}

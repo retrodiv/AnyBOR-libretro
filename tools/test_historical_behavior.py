@@ -58,17 +58,41 @@ def native(program, include_dirs=(), extra_flags=()):
 
 
 def system_variant_methods(source):
-    names = ('obor_systemvariant_legacy_native', 'obor_systemvariant_available',
+    names = ('obor_profile_systemvariant_order', 'obor_systemvariant_legacy_native', 'obor_systemvariant_available',
              'obor_systemvariant_native', 'obor_changesystemvariant_native',
              'mapstrings_systemvariant', 'mapstrings_changesystemvariant',
              'openbor_systemvariant', 'openbor_changesystemvariant')
-    optional = {'obor_systemvariant_legacy_native', 'obor_changesystemvariant_native',
+    optional = {'obor_profile_systemvariant_order', 'obor_systemvariant_legacy_native', 'obor_changesystemvariant_native',
                 'mapstrings_changesystemvariant'}
     return '\n'.join(function(source, name) for name in names
                      if name not in optional or re.search(r'\b' + name + r'\s*\([^;{}]*\)\s*\{', source))
 
 
 class HistoricalBehaviorTests(unittest.TestCase):
+    def test_classic_entity_declarations_keep_mapper_without_animation_bodies(self):
+        from historical_classic_entities import entity_declarations
+        source = ('enum _axis_enum { axis };\n'
+                  'typedef enum obor_forward_animationprop_enum { animation };\n'
+                  'static void unrelated_animation_body(void) {}\n'
+                  'enum obor_forward_entityproperty_enum { property };\n'
+                  'int mapstrings_entityproperty(void) { return property; }\n'
+                  'HRESULT openbor_getanimationproperty(void) {}\n')
+        selected = entity_declarations(source)
+        self.assertIn('enum _axis_enum', selected)
+        self.assertIn('int mapstrings_entityproperty', selected)
+        self.assertNotIn('unrelated_animation_body', selected)
+        self.assertNotIn('HRESULT openbor_getanimationproperty', selected)
+
+    def test_classic_entity_declarations_refuse_missing_scope_markers(self):
+        from historical_classic_entities import entity_declarations
+        markers = ('enum _axis_enum', 'typedef enum obor_forward_animationprop_enum',
+                   'enum obor_forward_entityproperty_enum',
+                   'HRESULT openbor_getanimationproperty(')
+        source = '\n'.join(markers)
+        for marker in markers:
+            with self.subTest(marker=marker), self.assertRaises(ValueError):
+                entity_declarations(source.replace(marker, 'missing marker'))
+
     def test_classic_rush_script_arithmetic_persistence_and_hud(self):
         from historical_classic_rush import rush_program
         from test_historical_common_think import native_output
@@ -78,7 +102,8 @@ class HistoricalBehaviorTests(unittest.TestCase):
         revisions = [row['revision'] for row in data['sources']]
         self.assertEqual(len(revisions), len(set(revisions)))
         self.assertEqual(set(revisions), contract_revisions(data, data['expected_revisions']))
-        registered = contract_profiles(data, json.loads((ROOT / 'src/pin.json').read_text())['profiles'])
+        registered = contract_profiles(data, json.loads((ROOT / 'src/pin.json').read_text())['profiles'],
+            source_range=(min(data['expected_revisions']), max(data['expected_revisions'])))
         self.assertTrue({int(row.get('revision', row['build'])) for row in registered
                          if row['engine'] == data['engine']} <= set(revisions))
         count = len(data['inputs'])*6 + len(data['counter_cases'])*2*(1+len(data['hud_cases'])+3+2)
@@ -95,7 +120,8 @@ class HistoricalBehaviorTests(unittest.TestCase):
         revisions = [row['revision'] for row in data['sources']]
         self.assertEqual(len(revisions), len(set(revisions)))
         self.assertEqual(set(revisions), contract_revisions(data, data['expected_revisions']))
-        registered = contract_profiles(data, json.loads((ROOT / 'src/pin.json').read_text())['profiles'])
+        registered = contract_profiles(data, json.loads((ROOT / 'src/pin.json').read_text())['profiles'],
+            source_range=(min(data['expected_revisions']), max(data['expected_revisions'])))
         self.assertTrue({int(row.get('revision', row['build'])) for row in registered
                          if row['engine'] == data['engine']} <= set(revisions))
         count = 1 + sum(2 * (1 + 2 * (row['value'] == int(row['value']))) for row in data['inputs'])
@@ -111,7 +137,8 @@ class HistoricalBehaviorTests(unittest.TestCase):
         revisions = [row['revision'] for row in data['sources']]
         self.assertEqual(len(revisions), len(set(revisions)))
         self.assertEqual(set(revisions), contract_revisions(data, data['expected_revisions']))
-        registered = contract_profiles(data, json.loads((ROOT / 'src/pin.json').read_text())['profiles'])
+        registered = contract_profiles(data, json.loads((ROOT / 'src/pin.json').read_text())['profiles'],
+            source_range=(min(data['expected_revisions']), max(data['expected_revisions'])))
         self.assertTrue({int(row.get('revision', row['build'])) for row in registered
                          if row['engine'] == data['engine']} <= set(revisions))
         actual = [json.loads(line) for line in native_output(follow_program(ROOT, data), data).splitlines()]
@@ -126,7 +153,8 @@ class HistoricalBehaviorTests(unittest.TestCase):
         revisions = [row['revision'] for row in data['sources']]
         self.assertEqual(len(revisions), len(set(revisions)))
         self.assertEqual(set(revisions), contract_revisions(data, data['expected_revisions']))
-        registered = contract_profiles(data, json.loads((ROOT / 'src/pin.json').read_text())['profiles'])
+        registered = contract_profiles(data, json.loads((ROOT / 'src/pin.json').read_text())['profiles'],
+            source_range=(min(data['expected_revisions']), max(data['expected_revisions'])))
         self.assertTrue({int(row.get('revision', row['build'])) for row in registered
                          if row['engine'] == data['engine']} <= set(revisions))
         count = sum(2 + (row['blocktype'] == int(row['blocktype'])) for row in data['cases'])
@@ -142,7 +170,8 @@ class HistoricalBehaviorTests(unittest.TestCase):
         revisions = [row['revision'] for row in data['sources']]
         self.assertEqual(len(revisions), len(set(revisions)))
         self.assertEqual(set(revisions), contract_revisions(data, data['expected_revisions']))
-        registered = contract_profiles(data, json.loads((ROOT / 'src/pin.json').read_text())['profiles'])
+        registered = contract_profiles(data, json.loads((ROOT / 'src/pin.json').read_text())['profiles'],
+            source_range=(min(data['expected_revisions']), max(data['expected_revisions'])))
         self.assertTrue({int(row.get('revision', row['build'])) for row in registered
                          if row['engine'] == data['engine']} <= set(revisions))
         self.assertTrue(all(row['whole_routes'] for row in data['sources']
@@ -161,7 +190,8 @@ class HistoricalBehaviorTests(unittest.TestCase):
         revisions = [row['revision'] for row in data['sources']]
         self.assertEqual(len(revisions), len(set(revisions)))
         self.assertEqual(set(revisions), contract_revisions(data, data['expected_revisions']))
-        registered = contract_profiles(data, json.loads((ROOT / 'src/pin.json').read_text())['profiles'])
+        registered = contract_profiles(data, json.loads((ROOT / 'src/pin.json').read_text())['profiles'],
+            source_range=(min(data['expected_revisions']), max(data['expected_revisions'])))
         self.assertTrue({int(row.get('revision', row['build'])) for row in registered
                          if row['engine'] == data['engine']} <= set(revisions))
         actual = [json.loads(line) for line in native_output(dot_program(ROOT, data), data).splitlines()]
@@ -176,7 +206,8 @@ class HistoricalBehaviorTests(unittest.TestCase):
         revisions = [row['revision'] for row in data['sources']]
         self.assertEqual(len(revisions), len(set(revisions)))
         self.assertEqual(set(revisions), contract_revisions(data, data['expected_revisions']))
-        registered = contract_profiles(data, json.loads((ROOT / 'src/pin.json').read_text())['profiles'])
+        registered = contract_profiles(data, json.loads((ROOT / 'src/pin.json').read_text())['profiles'],
+            source_range=(min(data['expected_revisions']), max(data['expected_revisions'])))
         self.assertTrue({int(row.get('revision', row['build'])) for row in registered
                          if row['engine'] == data['engine']} <= set(revisions))
         actual = [json.loads(line) for line in native_output(cancellation_program(ROOT, data), data).splitlines()]
@@ -200,7 +231,8 @@ class HistoricalBehaviorTests(unittest.TestCase):
         revisions = [row['revision'] for row in data['sources']]
         self.assertEqual(len(revisions), len(set(revisions)))
         self.assertEqual(set(revisions), contract_revisions(data, data['expected_revisions']))
-        registered = contract_profiles(data, json.loads((ROOT / 'src/pin.json').read_text())['profiles'])
+        registered = contract_profiles(data, json.loads((ROOT / 'src/pin.json').read_text())['profiles'],
+            source_range=(min(data['expected_revisions']), max(data['expected_revisions'])))
         self.assertTrue({int(row.get('revision', row['build'])) for row in registered
                          if row['engine'] == data['engine']} <= set(revisions))
         actual = [json.loads(line) for line in native_output(model_program(ROOT, data), data).splitlines()]
@@ -224,7 +256,8 @@ class HistoricalBehaviorTests(unittest.TestCase):
         revisions = [row['revision'] for row in data['sources']]
         self.assertEqual(len(revisions), len(set(revisions)))
         self.assertEqual(set(revisions), contract_revisions(data, data['expected_revisions']))
-        registered = contract_profiles(data, json.loads((ROOT / 'src/pin.json').read_text())['profiles'])
+        registered = contract_profiles(data, json.loads((ROOT / 'src/pin.json').read_text())['profiles'],
+            source_range=(min(data['expected_revisions']), max(data['expected_revisions'])))
         self.assertTrue({int(row.get('revision', row['build'])) for row in registered
                          if row['engine'] == data['engine']} <= set(revisions))
         actual = [json.loads(line) for line in native_output(rng_program(ROOT, data), data).splitlines()]
@@ -256,7 +289,8 @@ class HistoricalBehaviorTests(unittest.TestCase):
         revisions = [row['revision'] for row in data['sources']]
         self.assertEqual(len(revisions), len(set(revisions)))
         self.assertEqual(set(revisions), contract_revisions(data, data['expected_revisions']))
-        registered = contract_profiles(data, json.loads((ROOT / 'src/pin.json').read_text())['profiles'])
+        registered = contract_profiles(data, json.loads((ROOT / 'src/pin.json').read_text())['profiles'],
+            source_range=(min(data['expected_revisions']), max(data['expected_revisions'])))
         self.assertTrue({int(row.get('revision', row['build'])) for row in registered
                          if row['engine'] == data['engine']} <= set(revisions))
         actual = [json.loads(line) for line in native_output(slowmotion_program(ROOT, data), data).splitlines()]
@@ -273,7 +307,8 @@ class HistoricalBehaviorTests(unittest.TestCase):
         revisions = [row['revision'] for row in data['sources']]
         self.assertEqual(len(revisions), len(set(revisions)))
         self.assertEqual(set(revisions), contract_revisions(data, data['expected_revisions']))
-        registered = contract_profiles(data, json.loads((ROOT / 'src/pin.json').read_text())['profiles'])
+        registered = contract_profiles(data, json.loads((ROOT / 'src/pin.json').read_text())['profiles'],
+            source_range=(min(data['expected_revisions']), max(data['expected_revisions'])))
         self.assertTrue({int(row.get('revision', row['build'])) for row in registered
                          if row['engine'] == data['engine']} <= set(revisions))
         actual = [json.loads(line) for line in native_output(dograb_program(ROOT, data), data).splitlines()]
@@ -288,7 +323,8 @@ class HistoricalBehaviorTests(unittest.TestCase):
         revisions = [row['revision'] for row in data['sources']]
         self.assertEqual(len(revisions), len(set(revisions)))
         self.assertEqual(set(revisions), contract_revisions(data, data['expected_revisions']))
-        registered = contract_profiles(data, json.loads((ROOT / 'src/pin.json').read_text())['profiles'])
+        registered = contract_profiles(data, json.loads((ROOT / 'src/pin.json').read_text())['profiles'],
+            source_range=(min(data['expected_revisions']), max(data['expected_revisions'])))
         self.assertTrue({int(row.get('revision', row['build'])) for row in registered
                          if row['engine'] == data['engine']} <= set(revisions))
         actual = [json.loads(line) for line in native_output(vault_program(ROOT, data), data).splitlines()]
@@ -308,7 +344,8 @@ class HistoricalBehaviorTests(unittest.TestCase):
         revisions = [row['revision'] for row in data['sources']]
         self.assertEqual(len(revisions), len(set(revisions)))
         self.assertEqual(set(revisions), contract_revisions(data, data['expected_revisions']))
-        registered = contract_profiles(data, json.loads((ROOT / 'src/pin.json').read_text())['profiles'])
+        registered = contract_profiles(data, json.loads((ROOT / 'src/pin.json').read_text())['profiles'],
+            source_range=(min(data['expected_revisions']), max(data['expected_revisions'])))
         self.assertTrue({int(row.get('revision', row['build'])) for row in registered
                          if row['engine'] == data['engine']} <= set(revisions))
         actual = [json.loads(line) for line in native_output(script_id_program(ROOT, data), data).splitlines()]
@@ -324,7 +361,8 @@ class HistoricalBehaviorTests(unittest.TestCase):
         revisions = [row['revision'] for row in data['sources']]
         self.assertEqual(len(revisions), len(set(revisions)))
         self.assertEqual(set(revisions), contract_revisions(data, data['expected_revisions']))
-        registered = contract_profiles(data, json.loads((ROOT / 'src/pin.json').read_text())['profiles'])
+        registered = contract_profiles(data, json.loads((ROOT / 'src/pin.json').read_text())['profiles'],
+            source_range=(min(data['expected_revisions']), max(data['expected_revisions'])))
         self.assertTrue({int(row.get('revision', row['build'])) for row in registered
                          if row['engine'] == data['engine']} <= set(revisions))
         actual = [json.loads(line) for line in native_output(animation_index_program(ROOT, data), data).splitlines()]
@@ -347,7 +385,8 @@ class HistoricalBehaviorTests(unittest.TestCase):
         revisions = [row['revision'] for row in data['sources']]
         self.assertEqual(len(revisions), len(set(revisions)))
         self.assertEqual(set(revisions), contract_revisions(data, data['expected_revisions']))
-        registered = contract_profiles(data, json.loads((ROOT / 'src/pin.json').read_text())['profiles'])
+        registered = contract_profiles(data, json.loads((ROOT / 'src/pin.json').read_text())['profiles'],
+            source_range=(min(data['expected_revisions']), max(data['expected_revisions'])))
         self.assertTrue({int(row.get('revision', row['build'])) for row in registered
                          if row['engine'] == data['engine']} <= set(revisions))
         for case in data['cases']:
@@ -368,7 +407,8 @@ class HistoricalBehaviorTests(unittest.TestCase):
         revisions = [row['revision'] for row in data['sources']]
         self.assertEqual(len(revisions), len(set(revisions)))
         self.assertEqual(set(revisions), contract_revisions(data, data['expected_revisions']))
-        registered = contract_profiles(data, json.loads((ROOT / 'src/pin.json').read_text())['profiles'])
+        registered = contract_profiles(data, json.loads((ROOT / 'src/pin.json').read_text())['profiles'],
+            source_range=(min(data['expected_revisions']), max(data['expected_revisions'])))
         self.assertTrue({int(row.get('revision', row['build'])) for row in registered
                          if row['engine'] == data['engine']} <= set(revisions))
         actual = [json.loads(line) for line in native_output(animation_registry_program(ROOT, data), data).splitlines()]
@@ -382,7 +422,8 @@ class HistoricalBehaviorTests(unittest.TestCase):
         revisions = [row['revision'] for row in data['sources']]
         self.assertEqual(len(revisions), len(set(revisions)))
         self.assertEqual(set(revisions), contract_revisions(data, data['expected_revisions']))
-        registered = contract_profiles(data, json.loads((ROOT / 'src/pin.json').read_text())['profiles'])
+        registered = contract_profiles(data, json.loads((ROOT / 'src/pin.json').read_text())['profiles'],
+            source_range=(min(data['expected_revisions']), max(data['expected_revisions'])))
         self.assertTrue({int(row.get('revision', row['build'])) for row in registered
                          if row['engine'] == data['engine']} <= set(revisions))
         actual = [json.loads(line) for line in native_output(defense_program(ROOT, data), data).splitlines()]
@@ -396,7 +437,8 @@ class HistoricalBehaviorTests(unittest.TestCase):
         revisions = [row['revision'] for row in data['sources']]
         self.assertEqual(len(revisions), len(set(revisions)))
         self.assertEqual(set(revisions), contract_revisions(data, data['expected_revisions']))
-        registered = contract_profiles(data, json.loads((ROOT / 'src/pin.json').read_text())['profiles'])
+        registered = contract_profiles(data, json.loads((ROOT / 'src/pin.json').read_text())['profiles'],
+            source_range=(min(data['expected_revisions']), max(data['expected_revisions'])))
         self.assertTrue({int(row.get('revision', row['build'])) for row in registered
                          if row['engine'] == data['engine']} <= set(revisions))
         control = program(ROOT, data)
@@ -427,7 +469,8 @@ int main(void) {
         revisions = [row['revision'] for row in data['sources']]
         self.assertEqual(len(revisions), len(set(revisions)))
         self.assertEqual(set(revisions), contract_revisions(data, data['expected_revisions']))
-        registered = contract_profiles(data, json.loads((ROOT / 'src/pin.json').read_text())['profiles'])
+        registered = contract_profiles(data, json.loads((ROOT / 'src/pin.json').read_text())['profiles'],
+            source_range=(min(data['expected_revisions']), max(data['expected_revisions'])))
         self.assertTrue({int(row.get('revision', row['build'])) for row in registered
                          if row['engine'] == data['engine']} <= set(revisions))
         actual = [json.loads(line) for line in native_output(shutdown_program(ROOT, data), data).splitlines()]
@@ -441,7 +484,8 @@ int main(void) {
         revisions = [row['revision'] for row in data['sources']]
         self.assertEqual(len(revisions), len(set(revisions)))
         self.assertEqual(set(revisions), contract_revisions(data, data['expected_revisions']))
-        registered = contract_profiles(data, json.loads((ROOT / 'src/pin.json').read_text())['profiles'])
+        registered = contract_profiles(data, json.loads((ROOT / 'src/pin.json').read_text())['profiles'],
+            source_range=(min(data['expected_revisions']), max(data['expected_revisions'])))
         self.assertTrue({int(row.get('revision', row['build'])) for row in registered
                          if row['engine'] == data['engine']} <= set(revisions))
         actual = [json.loads(line) for line in native_output(text_property_program(ROOT, data), data).splitlines()]
@@ -457,7 +501,8 @@ int main(void) {
         revisions = [row['revision'] for row in data['sources']]
         self.assertEqual(len(revisions), len(set(revisions)))
         self.assertEqual(set(revisions), contract_revisions(data, data['expected_revisions']))
-        registered = contract_profiles(data, json.loads((ROOT / 'src/pin.json').read_text())['profiles'])
+        registered = contract_profiles(data, json.loads((ROOT / 'src/pin.json').read_text())['profiles'],
+            source_range=(min(data['expected_revisions']), max(data['expected_revisions'])))
         self.assertTrue({int(row.get('revision', row['build'])) for row in registered
                          if row['engine'] == data['engine']} <= set(revisions))
         actual = [json.loads(line) for line in native_output(system_program(ROOT, data), data).splitlines()]
@@ -474,7 +519,8 @@ int main(void) {
         revisions = [row['revision'] for row in data['sources']]
         self.assertEqual(len(revisions), len(set(revisions)))
         self.assertEqual(set(revisions), contract_revisions(data, data['expected_revisions']))
-        registered = contract_profiles(data, json.loads((ROOT / 'src/pin.json').read_text())['profiles'])
+        registered = contract_profiles(data, json.loads((ROOT / 'src/pin.json').read_text())['profiles'],
+            source_range=(min(data['expected_revisions']), max(data['expected_revisions'])))
         self.assertTrue({int(row.get('revision', row['build'])) for row in registered
                          if row['engine'] == data['engine']} <= set(revisions))
         actual = [json.loads(line) for line in native_output(animation_height_program(ROOT, data), data).splitlines()]
@@ -502,12 +548,16 @@ int main(void) {
             source, re.MULTILINE)
         energy = re.search(r'enum gep_energycost_enum\s*\{[^}]+\};', source)
         self.assertTrue(actor_scope and properties and energy)
-        original = {4079, 4080, 4082, 4085, 4086, 4088, 4107, 4111, 4129, 4153}
+        original = {4079, 4080, 4082, 4085, 4086, 4088, 4107, 4111, 4129, 4153, 4161}
         pin = json.loads((ROOT / 'src/pin.json').read_text())
-        revisions = [int(p.get('revision', p['build'])) for p in pin['profiles'] if p['engine'] == '4086']
+        # The forward source family has its own model-animation contract.
+        # This contract retains the original current-animation component.
+        revisions = [int(p.get('revision', p['build'])) for p in pin['profiles']
+                     if p['engine'] == '4086' and int(p.get('revision', p['build'])) <= 4161]
         self.assertTrue(original <= set(revisions))
         parts = dict(ACTOR_SCOPE=actor_scope[0], PROPERTIES=properties[0], ENERGY=energy[0],
-                     CURRENT=function(core, 'obor_script_current_animation'),
+                     CURRENT='\n'.join(function(core,name) for name in
+                        ('obor_script_animation_owner','obor_script_current_animation')),
                      CALLBACK=function(core, 'execute_onmodelcopy_script'),
                      GETTER=function(source, 'openbor_getanimationproperty'),
                      REGISTRATION=registration[1],
@@ -527,7 +577,8 @@ int main(void) {
         revisions = [row['revision'] for row in data['sources']]
         self.assertEqual(len(revisions), len(set(revisions)))
         self.assertEqual(set(revisions), contract_revisions(data, data['expected_revisions']))
-        registered = contract_profiles(data, json.loads((ROOT / 'src/pin.json').read_text())['profiles'])
+        registered = contract_profiles(data, json.loads((ROOT / 'src/pin.json').read_text())['profiles'],
+            source_range=(min(data['expected_revisions']), max(data['expected_revisions'])))
         self.assertTrue({int(row.get('revision', row['build'])) for row in registered
                          if row['engine'] == data['engine']} <= set(revisions))
         actual = [json.loads(line) for line in native_output(terrain_program(ROOT, data), data).splitlines()]
@@ -542,7 +593,8 @@ int main(void) {
         revisions = [row['revision'] for row in data['sources']]
         self.assertEqual(len(revisions), len(set(revisions)))
         self.assertEqual(set(revisions), contract_revisions(data, data['expected_revisions']))
-        registered = contract_profiles(data, json.loads((ROOT / 'src/pin.json').read_text())['profiles'])
+        registered = contract_profiles(data, json.loads((ROOT / 'src/pin.json').read_text())['profiles'],
+            source_range=(min(data['expected_revisions']), max(data['expected_revisions'])))
         self.assertTrue({int(row.get('revision', row['build'])) for row in registered
                          if row['engine'] == data['engine']} <= set(revisions))
         actual = [json.loads(line) for line in native_output(removed_constants_program(ROOT, data), data).splitlines()]
@@ -564,7 +616,8 @@ int main(void) {
         revisions = [row['revision'] for row in data['sources']]
         self.assertEqual(len(revisions), len(set(revisions)))
         self.assertEqual(set(revisions), contract_revisions(data, data['expected_revisions']))
-        registered = contract_profiles(data, json.loads((ROOT / 'src/pin.json').read_text())['profiles'])
+        registered = contract_profiles(data, json.loads((ROOT / 'src/pin.json').read_text())['profiles'],
+            source_range=(min(data['expected_revisions']), max(data['expected_revisions'])))
         self.assertTrue({int(row.get('revision', row['build'])) for row in registered
                          if row['engine'] == data['engine']} <= set(revisions))
         actual = [json.loads(line) for line in native_output(program(ROOT, data), data).splitlines()]
@@ -578,7 +631,8 @@ int main(void) {
         revisions = [row['revision'] for row in data['sources']]
         self.assertEqual(len(revisions), len(set(revisions)))
         self.assertEqual(set(revisions), contract_revisions(data, data['expected_revisions']))
-        registered = contract_profiles(data, json.loads((ROOT / 'src/pin.json').read_text())['profiles'])
+        registered = contract_profiles(data, json.loads((ROOT / 'src/pin.json').read_text())['profiles'],
+            source_range=(min(data['expected_revisions']), max(data['expected_revisions'])))
         self.assertTrue({int(row.get('revision', row['build'])) for row in registered
                          if row['engine'] == data['engine']} <= set(revisions))
         actual = [json.loads(line) for line in native_output(spawn_callback_program(ROOT, data), data).splitlines()]
@@ -592,7 +646,8 @@ int main(void) {
         revisions = [row['revision'] for row in data['sources']]
         self.assertEqual(len(revisions), len(set(revisions)))
         self.assertEqual(set(revisions), contract_revisions(data, data['expected_revisions']))
-        registered = contract_profiles(data, json.loads((ROOT / 'src/pin.json').read_text())['profiles'])
+        registered = contract_profiles(data, json.loads((ROOT / 'src/pin.json').read_text())['profiles'],
+            source_range=(min(data['expected_revisions']), max(data['expected_revisions'])))
         self.assertTrue({int(row.get('revision', row['build'])) for row in registered
                          if row['engine'] == data['engine']} <= set(revisions))
         actual = [json.loads(line) for line in native_output(selection_program(ROOT, data), data).splitlines()]
@@ -606,7 +661,8 @@ int main(void) {
         revisions = [row['revision'] for row in data['sources']]
         self.assertEqual(len(revisions), len(set(revisions)))
         self.assertEqual(set(revisions), contract_revisions(data, data['expected_revisions']))
-        registered = contract_profiles(data, json.loads((ROOT / 'src/pin.json').read_text())['profiles'])
+        registered = contract_profiles(data, json.loads((ROOT / 'src/pin.json').read_text())['profiles'],
+            source_range=(min(data['expected_revisions']), max(data['expected_revisions'])))
         self.assertTrue({int(row.get('revision', row['build'])) for row in registered
                          if row['engine'] == data['engine']} <= set(revisions))
         self.assertTrue(all(len(row['cases']) == 9 for row in data['sources']))
@@ -621,7 +677,8 @@ int main(void) {
         revisions = [row['revision'] for row in data['sources']]
         self.assertEqual(len(revisions), len(set(revisions)))
         self.assertEqual(set(revisions), contract_revisions(data, data['expected_revisions']))
-        registered = contract_profiles(data, json.loads((ROOT / 'src/pin.json').read_text())['profiles'])
+        registered = contract_profiles(data, json.loads((ROOT / 'src/pin.json').read_text())['profiles'],
+            source_range=(min(data['expected_revisions']), max(data['expected_revisions'])))
         self.assertTrue({int(row.get('revision', row['build'])) for row in registered
                          if row['engine'] == data['engine']} <= set(revisions))
         actual = [json.loads(line) for line in native_output(time_program(ROOT, data), data).splitlines()]
@@ -640,7 +697,8 @@ int main(void) {
         revisions = [row['revision'] for row in data['sources']]
         self.assertEqual(len(revisions), len(set(revisions)))
         self.assertEqual(set(revisions), contract_revisions(data, data['expected_revisions']))
-        registered = contract_profiles(data, json.loads((ROOT / 'src/pin.json').read_text())['profiles'])
+        registered = contract_profiles(data, json.loads((ROOT / 'src/pin.json').read_text())['profiles'],
+            source_range=(min(data['expected_revisions']), max(data['expected_revisions'])))
         self.assertTrue({int(row.get('revision', row['build'])) for row in registered
                          if row['engine'] == data['engine']} <= set(revisions))
         actual = [json.loads(line) for line in native_output(staydown_program(ROOT, data), data).splitlines()]
@@ -655,7 +713,8 @@ int main(void) {
         revisions = [row['revision'] for row in data['sources']]
         self.assertEqual(len(revisions), len(set(revisions)))
         self.assertEqual(set(revisions), contract_revisions(data, data['expected_revisions']))
-        registered = contract_profiles(data, json.loads((ROOT / 'src/pin.json').read_text())['profiles'])
+        registered = contract_profiles(data, json.loads((ROOT / 'src/pin.json').read_text())['profiles'],
+            source_range=(min(data['expected_revisions']), max(data['expected_revisions'])))
         self.assertTrue({int(row.get('revision', row['build'])) for row in registered
                          if row['engine'] == data['engine']} <= set(revisions))
         actual = [json.loads(line) for line in native_output(dropv_program(ROOT, data), data).splitlines()]
@@ -670,7 +729,8 @@ int main(void) {
         revisions = [row['revision'] for row in data['sources']]
         self.assertEqual(len(revisions), len(set(revisions)))
         self.assertEqual(set(revisions), contract_revisions(data, data['expected_revisions']))
-        registered = contract_profiles(data, json.loads((ROOT / 'src/pin.json').read_text())['profiles'])
+        registered = contract_profiles(data, json.loads((ROOT / 'src/pin.json').read_text())['profiles'],
+            source_range=(min(data['expected_revisions']), max(data['expected_revisions'])))
         self.assertTrue({int(row.get('revision', row['build'])) for row in registered
                          if row['engine'] == data['engine']} <= set(revisions))
         actual = [json.loads(line) for line in native_output(namespace_program(ROOT, data), data).splitlines()]
@@ -686,7 +746,8 @@ int main(void) {
         revisions = [row['revision'] for row in data['sources']]
         self.assertEqual(len(revisions), len(set(revisions)))
         self.assertEqual(set(revisions), contract_revisions(data, data['expected_revisions']))
-        registered = contract_profiles(data, json.loads((ROOT / 'src/pin.json').read_text())['profiles'])
+        registered = contract_profiles(data, json.loads((ROOT / 'src/pin.json').read_text())['profiles'],
+            source_range=(min(data['expected_revisions']), max(data['expected_revisions'])))
         self.assertTrue({int(row.get('revision', row['build'])) for row in registered
                          if row['engine'] == data['engine']} <= set(revisions))
         actual = [json.loads(line) for line in native_output(drawmethod_program(ROOT, data), data).splitlines()]
@@ -701,7 +762,8 @@ int main(void) {
         revisions = [row['revision'] for row in data['sources']]
         self.assertEqual(len(revisions), len(set(revisions)))
         self.assertEqual(set(revisions), contract_revisions(data, data['expected_revisions']))
-        registered = contract_profiles(data, json.loads((ROOT / 'src/pin.json').read_text())['profiles'])
+        registered = contract_profiles(data, json.loads((ROOT / 'src/pin.json').read_text())['profiles'],
+            source_range=(min(data['expected_revisions']), max(data['expected_revisions'])))
         self.assertTrue({int(row.get('revision', row['build'])) for row in registered
                          if row['engine'] == data['engine']} <= set(revisions))
         actual = [json.loads(line) for line in native_output(player_properties_program(ROOT, data), data).splitlines()]
@@ -717,7 +779,8 @@ int main(void) {
         revisions = [row['revision'] for row in data['sources']]
         self.assertEqual(len(revisions), len(set(revisions)))
         self.assertEqual(set(revisions), contract_revisions(data, data['expected_revisions']))
-        registered = contract_profiles(data, json.loads((ROOT / 'src/pin.json').read_text())['profiles'])
+        registered = contract_profiles(data, json.loads((ROOT / 'src/pin.json').read_text())['profiles'],
+            source_range=(min(data['expected_revisions']), max(data['expected_revisions'])))
         self.assertTrue({int(row.get('revision', row['build'])) for row in registered
                          if row['engine'] == data['engine']} <= set(revisions))
         for row in data['sources']:
@@ -733,7 +796,8 @@ int main(void) {
         revisions = [row['revision'] for row in data['sources']]
         self.assertEqual(len(revisions), len(set(revisions)))
         self.assertEqual(set(revisions), contract_revisions(data, data['expected_revisions']))
-        registered = contract_profiles(data, json.loads((ROOT / 'src/pin.json').read_text())['profiles'])
+        registered = contract_profiles(data, json.loads((ROOT / 'src/pin.json').read_text())['profiles'],
+            source_range=(min(data['expected_revisions']), max(data['expected_revisions'])))
         self.assertTrue({int(row.get('revision', row['build'])) for row in registered
                          if row['engine'] == data['engine']} <= set(revisions))
         for row in data['sources']:
@@ -750,7 +814,8 @@ int main(void) {
         revisions = [row['revision'] for row in data['sources']]
         self.assertEqual(len(revisions), len(set(revisions)))
         self.assertEqual(set(revisions), contract_revisions(data, data['expected_revisions']))
-        registered = contract_profiles(data, json.loads((ROOT / 'src/pin.json').read_text())['profiles'])
+        registered = contract_profiles(data, json.loads((ROOT / 'src/pin.json').read_text())['profiles'],
+            source_range=(min(data['expected_revisions']), max(data['expected_revisions'])))
         self.assertTrue({int(row.get('revision', row['build'])) for row in registered
                          if row['engine'] == data['engine']} <= set(revisions))
         actual = [json.loads(line) for line in native_output(program(ROOT, data), data).splitlines()]
@@ -764,7 +829,8 @@ int main(void) {
         revisions = [row['revision'] for row in data['sources']]
         self.assertEqual(len(revisions), len(set(revisions)))
         self.assertEqual(set(revisions), contract_revisions(data, data['expected_revisions']))
-        registered = contract_profiles(data, json.loads((ROOT / 'src/pin.json').read_text())['profiles'])
+        registered = contract_profiles(data, json.loads((ROOT / 'src/pin.json').read_text())['profiles'],
+            source_range=(min(data['expected_revisions']), max(data['expected_revisions'])))
         self.assertTrue({int(row.get('revision', row['build'])) for row in registered
                          if row['engine'] == data['engine']} <= set(revisions))
         actual = [json.loads(line) for line in native_output(policy_program(ROOT, data), data).splitlines()]
@@ -778,7 +844,8 @@ int main(void) {
         revisions = [row['revision'] for row in data['sources']]
         self.assertEqual(len(revisions), len(set(revisions)))
         self.assertEqual(set(revisions), contract_revisions(data, data['expected_revisions']))
-        registered = contract_profiles(data, json.loads((ROOT / 'src/pin.json').read_text())['profiles'])
+        registered = contract_profiles(data, json.loads((ROOT / 'src/pin.json').read_text())['profiles'],
+            source_range=(min(data['expected_revisions']), max(data['expected_revisions'])))
         self.assertTrue({int(row.get('revision', row['build'])) for row in registered
                          if row['engine'] == data['engine']} <= set(revisions))
         actual = [json.loads(line) for line in native_output(program(ROOT, data), data).splitlines()]
@@ -793,7 +860,8 @@ int main(void) {
         revisions = [row['revision'] for row in data['sources']]
         self.assertEqual(len(revisions), len(set(revisions)))
         self.assertEqual(set(revisions), contract_revisions(data, data['expected_revisions']))
-        registered = contract_profiles(data, json.loads((ROOT / 'src/pin.json').read_text())['profiles'])
+        registered = contract_profiles(data, json.loads((ROOT / 'src/pin.json').read_text())['profiles'],
+            source_range=(min(data['expected_revisions']), max(data['expected_revisions'])))
         self.assertTrue({int(row.get('revision', row['build'])) for row in registered
                          if row['engine'] == data['engine']} <= set(revisions))
         for row in data['sources']:
@@ -810,7 +878,8 @@ int main(void) {
         revisions = [row['revision'] for row in data['sources']]
         self.assertEqual(len(revisions), len(set(revisions)))
         self.assertEqual(set(revisions), contract_revisions(data, data['expected_revisions']))
-        registered = contract_profiles(data, json.loads((ROOT / 'src/pin.json').read_text())['profiles'])
+        registered = contract_profiles(data, json.loads((ROOT / 'src/pin.json').read_text())['profiles'],
+            source_range=(min(data['expected_revisions']), max(data['expected_revisions'])))
         self.assertTrue({int(row.get('revision', row['build'])) for row in registered
                          if row['engine'] == data['engine']} <= set(revisions))
         with patch.dict(os.environ, sanitizer_environment()):

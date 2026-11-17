@@ -1,0 +1,127 @@
+/* SPDX-License-Identifier: BSD-3-Clause
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me> */
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <strings.h>
+#include <stdarg.h>
+@HEADER@
+#undef printf
+/* This consumer uses real successful allocations; native allocation
+ * output is verified by its separate compatibility contract. */
+void *checkAlloc(void *ptr,size_t bytes,const char *func,const char *file,int line)
+{(void)func;(void)file;(void)line;if(bytes && !ptr)abort();return ptr;}
+#undef assert
+uint32_t obor_profile_build;
+static unsigned active_case;
+#define CHECK(c) do{if(!(c)){fprintf(stderr,"ATTACK_API revision=%u case=%u line=%d: %s\n",obor_profile_build,active_case,__LINE__,#c);abort();}}while(0)
+#define assert(c) CHECK(c)
+HRESULT Interpreter_Call(Interpreter *value){(void)value;abort();}
+HRESULT Interpreter_EvalInstruction(Interpreter *value){(void)value;abort();}
+void borExit(int value){(void)value;abort();}
+@LIST@
+#undef assert
+#define assert(c) CHECK(c)
+#ifndef stricmp
+#define stricmp strcasecmp
+#endif
+static unsigned refs[128];
+static const char *strings[128];
+static char diagnostic[1024];
+CHAR *StrCache_Get(int key){assert(key>=0 && key<128 && refs[key] && strings[key]);return (CHAR*)strings[key];}
+void StrCache_Collect(int key){assert(key>=0 && key<128 && refs[key]);--refs[key];}
+int StrCache_Pop(void){abort();}
+static int message(const char *format,...){
+ size_t length=strlen(diagnostic);va_list args;va_start(args,format);
+ int n=vsnprintf(diagnostic+length,sizeof(diagnostic)-length,format,args);va_end(args);return n;
+}
+@VARIANTS@
+@ENUM@
+@NAMES@
+@SEARCH@
+static s_attack attack,emptyattack;
+#define printf message
+@MACRO@
+@APIS@
+@STUBS@
+List theFunctionList;
+@METHODS@
+#undef printf
+static const struct{unsigned revision;int available;} contexts[]={@CONTEXTS@};
+static const struct{const char *name;int success;} properties[]={@PROPERTIES@};
+static const struct{int count,bad,success;float expected[3];} partial[]={@PARTIAL@};
+static void baseline(void){
+ memset(&attack,0,sizeof(attack));memset(&emptyattack,0,sizeof(emptyattack));
+ attack.attack_force=11;attack.blast=12;attack.dropv.x=1;attack.dropv.y=2;attack.dropv.z=3;
+ emptyattack.attack_force=77;emptyattack.dropv.y=8;diagnostic[0]=0;
+ for(unsigned key=0;key<128;++key)assert(!refs[key]);
+}
+static void text_value(ScriptVariant *value,unsigned key,const char *text){
+ assert(key<128 && !refs[key]);strings[key]=text;refs[key]=1;value->vt=VT_STR;value->strVal=(int)key;
+}
+static void registry(int available){
+ List_Init(&theFunctionList);Script_LoadSystemFunctions();
+ assert(!!List_FindByName(&theFunctionList,"changeattackproperty")==available);
+ if(available)assert(List_Retrieve(&theFunctionList)==(void*)openbor_changeattackproperty);
+ assert(!strcmp(Script_GetFunctionName((void*)openbor_changeattackproperty),available?"changeattackproperty":"<unknown function>"));
+ assert(Script_GetStringMapFunction((void*)openbor_changeattackproperty)==(available?(void*)mapstrings_attackproperty:NULL));
+ assert(List_FindByName(&theFunctionList,"changepalette") && List_GotoNext(&theFunctionList));
+ if(available){assert(!strcmp(List_GetName(&theFunctionList),"changeattackproperty"));assert(List_GotoNext(&theFunctionList));}
+ assert(!strcmp(List_GetName(&theFunctionList),"damageentity"));List_Clear(&theFunctionList);
+}
+static void property_cases(void){
+ assert(sizeof(properties)/sizeof(*properties)==sizeof(eplist_attack)/sizeof(*eplist_attack));
+ for(active_case=0;active_case<sizeof(properties)/sizeof(*properties);++active_case)
+  for(int named=0;named<2;++named)for(int bad=0;bad<2;++bad){
+   baseline();s_attack want=attack;
+   if(!bad)switch(active_case){@EXPECTED@}
+   ScriptVariant values[2],result={0},*out=&result,*args[]={values,values+1};memset(values,0,sizeof(values));
+   if(named)text_value(values,active_case,properties[active_case].name);
+   else {values[0].vt=VT_INTEGER;values[0].lVal=(LONG)active_case;}
+   if(bad)text_value(values+1,81,"invalid");else {values[1].vt=VT_DECIMAL;values[1].dblVal=24.75;}
+   result.vt=VT_INTEGER;result.lVal=777;
+   HRESULT status=openbor_changeattackproperty(args,&out,2);
+   assert(SUCCEEDED(status)==(!bad && properties[active_case].success) && !out);
+   assert(result.vt==VT_INTEGER && result.lVal==777 && !memcmp(&attack,&want,sizeof(want)) && !diagnostic[0]);
+   assert(values[0].vt==VT_INTEGER && values[0].lVal==(LONG)active_case);
+   ScriptVariant_Clear(values);ScriptVariant_Clear(values+1);
+   for(unsigned key=0;key<128;++key)assert(!refs[key]);
+  }
+}
+static void partial_cases(void){
+ for(active_case=0;active_case<sizeof(partial)/sizeof(*partial);++active_case){
+  baseline();s_attack want=attack;want.dropv.x=partial[active_case].expected[0];want.dropv.y=partial[active_case].expected[1];want.dropv.z=partial[active_case].expected[2];
+  ScriptVariant values[4],result={0},*out=&result,*args[]={values,values+1,values+2,values+3};memset(values,0,sizeof(values));
+  text_value(values,0,"dropv");
+  for(int i=1;i<4;++i){values[i].vt=partial[active_case].bad==i?VT_PTR:VT_DECIMAL;values[i].dblVal=i==1?24.75:i==2?-2.5:3.5;}
+  HRESULT status=openbor_changeattackproperty(args,&out,partial[active_case].count);
+  assert(SUCCEEDED(status)==partial[active_case].success && !out && !memcmp(&attack,&want,sizeof(want)) && !diagnostic[0]);
+ }
+}
+static void errors(void){
+ const char *bad_names[]={"bogus"};
+ for(unsigned name=0;name<sizeof(bad_names)/sizeof(*bad_names);++name){
+  baseline();s_attack want=attack;ScriptVariant values[2],result={0},*out=&result,*args[]={values,values+1};memset(values,0,sizeof(values));
+  text_value(values,0,bad_names[name]);values[1].vt=VT_INTEGER;values[1].lVal=5;
+  assert(openbor_changeattackproperty(args,&out,2)==E_FAIL && !out && !memcmp(&attack,&want,sizeof(want)));
+  char expected[256];snprintf(expected,sizeof(expected),"'%s' is not a valid attack property.\nYou must give a string value for spawn entry property name.\n",bad_names[name]);assert(!strcmp(diagnostic,expected));ScriptVariant_Clear(values);
+ }
+ baseline();
+ {ScriptVariant values[2],result={0},*out=&result,*args[]={values,values+1};memset(values,0,sizeof(values));
+  text_value(values,0,"BLAST");values[1].vt=VT_INTEGER;values[1].lVal=5;
+  s_attack want=attack;want.blast=5;
+  assert(openbor_changeattackproperty(args,&out,2)==S_OK && !out && !memcmp(&attack,&want,sizeof(want)) && !diagnostic[0]);
+  assert(values[0].vt==VT_INTEGER && values[0].lVal==_ep_attack_blast);}
+ baseline();ScriptVariant result={0},*out=&result;
+ assert(openbor_changeattackproperty(NULL,&out,0)==E_FAIL && !out);
+ out=&result;assert(openbor_changeattackproperty(NULL,&out,2)==E_FAIL && !out);
+ assert(openbor_changeattackproperty(NULL,NULL,2)==E_FAIL);
+}
+int main(void){
+ for(unsigned row=0;row<sizeof(contexts)/sizeof(*contexts);++row){
+  obor_profile_build=contexts[row].revision;active_case=0;registry(contexts[row].available);
+  if(contexts[row].available){property_cases();partial_cases();errors();}
+  printf("{\"revision\":%u,\"status\":\"PASS\"}\n",obor_profile_build);
+ }
+ return 0;
+}

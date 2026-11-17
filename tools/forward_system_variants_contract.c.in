@@ -1,0 +1,150 @@
+/* SPDX-License-Identifier: BSD-3-Clause
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me>
+ * Native namespace/mapper/callback with selected actual field results.
+ */
+#include <stdint.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <strings.h>
+#include <stdarg.h>
+#include <ctype.h>
+#include <limits.h>
+#include "openbor.h"
+#undef printf
+#undef assert
+#ifdef NDEBUG
+#error System-variable assertions must remain enabled
+#endif
+uint32_t obor_profile_build;
+static unsigned active_case;
+static const char *active_name;
+#define assert(c) do{if(!(c)){fprintf(stderr,"SYSTEM_VARIANTS revision=%u case=%u name=%s line=%d: %s\n",obor_profile_build,active_case,active_name?active_name:"?",__LINE__,#c);abort();}}while(0)
+HRESULT Interpreter_Call(Interpreter *p){(void)p;abort();}
+HRESULT Interpreter_EvalInstruction(Interpreter *p){(void)p;abort();}
+static char strings[32][128],diagnostic[4096];
+static int used[32],observed_index,delegate_calls,field_mode,unused_calls;
+int cheats,forcecheatsoff;
+static s_level level_record;
+s_level *level=&level_record;
+int StrCache_Pop(void){for(int i=0;i<32;++i)if(!used[i]){used[i]=1;strings[i][0]=0;return i;}abort();}
+void StrCache_Collect(int i){assert(i>=0 && i<32 && used[i]);used[i]=0;}
+CHAR *StrCache_Get(int i){assert(i>=0 && i<32 && used[i]);return strings[i];}
+CHAR *StrCache_GetIfPresent(int i){return i>=0 && i<32 && used[i]?strings[i]:NULL;}
+void StrCache_Copy(int i,CHAR *text){assert(i>=0 && i<32 && used[i] && strlen(text)<sizeof(strings[i]));strcpy(strings[i],text);}
+static int record_printf(const char *format,...){va_list args;va_start(args,format);size_t n=strlen(diagnostic);int count=vsnprintf(diagnostic+n,sizeof(diagnostic)-n,format,args);va_end(args);assert(count>=0 && (size_t)count<sizeof(diagnostic)-n);return count;}
+@VARIANTS@
+#define printf record_printf
+#ifndef stricmp
+#define stricmp strcasecmp
+#endif
+@CHEATS@
+@FIELDS@
+int getsyspropertybyindex(ScriptVariant *value,int index){
+ observed_index=index;++delegate_calls;
+ if(field_mode || index==_sv_the_end)return probe_getsyspropertybyindex(value,index);
+ assert(index>=0 && index<_sv_the_end);ScriptVariant_ChangeType(value,VT_INTEGER);value->lVal=index;return 1;
+}
+int changesyspropertybyindex(int index,ScriptVariant *value){
+ observed_index=index;++delegate_calls;
+ if(field_mode || index==_sv_the_end)return probe_changesyspropertybyindex(index,value);
+ assert(index>=0 && index<_sv_the_end);return 1;
+}
+@SEARCH@
+@DECLARATION@
+@METHODS@
+@STUBS@
+@DISPATCH@
+#undef printf
+static const char *queries[]={@QUERIES@};
+static const struct{unsigned revision;int count;int physical[_sv_the_end];int lookup[@QUERY_COUNT@];} contexts[]={@CONTEXTS@};
+typedef int (*map_function)(ScriptVariant **,int);
+static map_function mapper_for(int setter){
+ map_function mapper=(map_function)Script_GetStringMapFunction(setter?(void*)openbor_changesystemvariant:(void*)openbor_systemvariant);
+ assert(mapper==mapstrings_systemvariant);return mapper;
+}
+static void named(ScriptVariant *v,const char *name,int uppercase){
+ ScriptVariant_ChangeType(v,VT_STR);StrCache_Copy(v->strVal,(char*)name);
+ if(uppercase){char *s=StrCache_Get(v->strVal);for(;*s;++s)*s=(char)toupper((unsigned char)*s);}
+}
+static void unknown_message(const char *name,char *out,size_t capacity){snprintf(out,capacity,"openborvariant: System variable name not found: '%s'\n",name);}
+static void namespace_checks(unsigned row){
+ const int count=contexts[row].count;field_mode=0;
+ assert(sizeof(svlist)/sizeof(*svlist)==_sv_the_end);
+ for(int index=0;index<count;++index)for(int setter=0;setter<2;++setter)for(int repeat=0;repeat<2;++repeat){
+  ++active_case;active_name="cached numeric";diagnostic[0]=0;delegate_calls=0;
+  ScriptVariant property={.vt=VT_INTEGER},value={.vt=VT_INTEGER},result={.vt=VT_INTEGER},*out=&result,*args[]={&property,&value};
+  property.lVal=index;result.lVal=777;
+  assert((setter?openbor_changesystemvariant(args,&out,2):openbor_systemvariant(args,&out,1))==S_OK);
+  assert(out==&result && result.vt==VT_INTEGER && result.lVal==(setter?777:contexts[row].physical[index]));
+  assert(delegate_calls==1 && observed_index==contexts[row].physical[index] && property.lVal==index && !diagnostic[0]);
+  assert(obor_systemvariant_native(index)==contexts[row].physical[index]);
+ }
+ for(unsigned q=0;q<sizeof(queries)/sizeof(*queries);++q)for(int uppercase=0;uppercase<2;++uppercase)
+ for(int setter=0;setter<2;++setter)for(int premap=0;premap<2;++premap){
+  ++active_case;active_name=queries[q];int found=contexts[row].lookup[q];
+  ScriptVariant property={0},value={.vt=VT_INTEGER},*args[]={&property,&value};named(&property,queries[q],uppercase);
+  char name[128],wanted[256];strcpy(name,StrCache_Get(property.strVal));unknown_message(name,wanted,sizeof(wanted));
+  diagnostic[0]=0;
+  if(premap){assert(mapper_for(setter)(args,setter?2:1)==(found>=0));assert(!strcmp(diagnostic,found>=0?"":wanted));}
+  for(int repeat=0;repeat<2;++repeat){
+   diagnostic[0]=0;delegate_calls=0;ScriptVariant result={.vt=VT_INTEGER},*out=&result;result.lVal=777;
+   HRESULT status=setter?openbor_changesystemvariant(args,&out,2):openbor_systemvariant(args,&out,1);
+   assert(status==(found>=0?S_OK:E_FAIL));
+   if(found>=0){
+    assert(out==&result && result.vt==VT_INTEGER && result.lVal==(setter?777:contexts[row].physical[found]));
+    assert(property.vt==VT_INTEGER && property.lVal==found && delegate_calls==1 && observed_index==contexts[row].physical[found] && !diagnostic[0]);
+   }else{
+    assert(!out && !delegate_calls && result.vt==VT_INTEGER && result.lVal==777 && property.vt==VT_STR);
+    assert(!strcmp(diagnostic,wanted) && !strcmp(StrCache_Get(property.strVal),name));
+   }
+   ScriptVariant_Clear(&result);
+  }
+  ScriptVariant_Clear(&property);
+ }
+ for(int setter=0;setter<2;++setter)for(int edge=0;edge<4;++edge){
+  ++active_case;active_name="numeric bounds";ScriptVariant property={.vt=VT_INTEGER},value={.vt=VT_INTEGER},result={.vt=VT_INTEGER},*out=&result,*args[]={&property,&value};
+  property.lVal=edge==0?-1:edge==1?count:edge==2?INT_MAX:INT_MIN;result.lVal=777;diagnostic[0]=0;delegate_calls=0;
+  assert((setter?openbor_changesystemvariant(args,&out,2):openbor_systemvariant(args,&out,1))==E_FAIL && !out);
+  assert(delegate_calls==1 && observed_index==_sv_the_end && result.vt==(setter?VT_INTEGER:VT_EMPTY));
+  assert(!strcmp(diagnostic,setter?"":"Unknown system property name.\n"));
+ }
+ for(int setter=0;setter<2;++setter){diagnostic[0]=0;assert(mapper_for(setter)(NULL,0)==0 && !diagnostic[0]);}
+}
+static void field_checks(unsigned row){
+ const char *names[]={"cheats","numholes","numlayers","numwalls"};const int physical[]={_sv_cheats,_sv_numholes,_sv_numlayers,_sv_numwalls};
+ const int values[]={-7,0,1,INT_MAX};field_mode=1;
+ for(unsigned q=0;q<4;++q){
+  int logical=-1;for(int i=0;i<contexts[row].count;++i)if(contexts[row].physical[i]==physical[q])logical=i;
+  if(logical<0)continue;
+  for(int numeric=0;numeric<2;++numeric)for(unsigned a=0;a<4;++a)for(unsigned b=0;b<4;++b){
+   ++active_case;active_name=names[q];cheats=values[a];forcecheatsoff=values[b];
+   level_record.numholes=values[a];level_record.numlayers=values[a];level_record.numwalls=values[a];
+   s_level before=level_record;
+   ScriptVariant property={0},result={.vt=VT_INTEGER},value={.vt=VT_INTEGER},*out=&result,*args[]={&property,&value};
+   if(numeric){property.vt=VT_INTEGER;property.lVal=logical;}else named(&property,names[q],0);
+   diagnostic[0]=0;delegate_calls=0;
+   assert(openbor_systemvariant(args,&out,1)==S_OK && out==&result && result.vt==VT_INTEGER);
+   assert(result.lVal==(q==0?(cheats!=0 && forcecheatsoff==0):values[a]));
+   assert(delegate_calls==1 && observed_index==physical[q] && !diagnostic[0]);
+   assert(!memcmp(&before,&level_record,sizeof(before)) && cheats==values[a] && forcecheatsoff==values[b]);
+   result.lVal=777;out=&result;diagnostic[0]=0;delegate_calls=0;
+   assert(openbor_changesystemvariant(args,&out,2)==E_FAIL && !out && result.vt==VT_INTEGER && result.lVal==777);
+   assert(delegate_calls==1 && observed_index==physical[q] && !diagnostic[0] && !memcmp(&before,&level_record,sizeof(before)));
+   ScriptVariant_Clear(&property);ScriptVariant_Clear(&result);
+  }
+  if(q>0){ /* Separate safe refusal where original level dereference is undefined. */
+   level=NULL;ScriptVariant property={.vt=VT_INTEGER},result={.vt=VT_INTEGER},*out=&result,*args[]={&property};property.lVal=logical;
+   assert(openbor_systemvariant(args,&out,1)==E_FAIL && !out && result.vt==VT_EMPTY);level=&level_record;
+  }
+ }
+}
+int main(void){
+ for(unsigned row=0;row<sizeof(contexts)/sizeof(*contexts);++row){
+  obor_profile_build=contexts[row].revision;active_case=0;
+  namespace_checks(row);field_checks(row);assert(!unused_calls);
+  for(int i=0;i<32;++i)assert(!used[i]);
+  printf("{\"revision\":%u,\"status\":\"PASS\"}\n",obor_profile_build);
+ }
+ return 0;
+}

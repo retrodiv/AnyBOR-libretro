@@ -1,4 +1,4 @@
-/* AnyBOR modification record: 2026-11-15.
+/* AnyBOR modification record: 2026-11-17.
  * Port maintained by retrodiv <retrodiv@proton.me>.
  * Copyright (c) 2026 retrodiv <retrodiv@proton.me> (original contributions).
  * These contributions are licensed under BSD-3-Clause; see LICENSE at the root.
@@ -45,7 +45,47 @@
  * resources without changing existing owners. Check cached sprite
  * availability before reading metadata and ignore cache requests for absent
  * nodes. Capture explicit shutdown failure text before cleanup and bound
- * legacy diagnostic formatting.
+ * legacy diagnostic formatting. Preserve native settings file layouts at the
+ * shared-filter and auxiliary-pair boundaries, partial reads, and profile-
+ * specific built-in/custom video-mode initialization. Preserve native
+ * walking transitions, saved grab defaults and per-axis binding movement by
+ * profile. Preserve the native unsigned byte reader. Preserve native saved-
+ * player credits, level-local selection ownership and transitions, and
+ * tokenized saved-selection replay by profile. Keep each profile's saved-
+ * game row size and partial-read semantics independent of shared live
+ * storage. Preserve native character-repeat flags, join and preview palette
+ * collision scans, loop-stop epochs and engine-credit rows by profile.
+ * Refuse legacy selection palette reads through an absent current model
+ * while retaining NULL-current navigation when no palette is consumed.
+ * Preserve native pause sample loading, fallback and entry order, and song-
+ * title debug placement, expiration and unload resets by profile. Preserve
+ * native vertical background command admission, travel accumulation and
+ * upward/diagonal layer geometry by profile. Check background coordinate
+ * conversions and local translations before integer use, skipping layers
+ * whose positions are undefined. Track owned animation frame extents
+ * independently of visible counts, preserve existing rows during checked
+ * growth and release every owned row after count edits. Preserve native per-
+ * frame offset presence and values with owned storage and checked allocation
+ * failures. Validate animation actors through active pool or callback scopes
+ * and check model-table allocation extents and registered animation owners.
+ * Select native enemy-icon palette use by profile. Preserve native spawn
+ * type and parent assignment before spawn callbacks by profile. Preserve
+ * native integer or floating rotation storage by profile, with unchanged
+ * slot size and typed script, parser, mirror, copy and raster access. Bound
+ * integer rotation results and initial trigonometric table indices. Preserve
+ * native broken-down running, bounding-box and attack command effects,
+ * script loader labels and active script-slot allocation order by profile.
+ * Reject undefined floating-to-integer run flag conversions without changing
+ * the record. Preserve native cheat-state and level-count system queries,
+ * refusing absent level storage safely. Preserve native attack-tag callback
+ * locals, caller forwarding, cleanup and unconfirmed-contact entity context
+ * by profile. Preserve source-defined wall/platform edge inclusion, hole-
+ * height loading, altitude searches, base adjustment and movement checks by
+ * profile. Preserve platform, wall-index and hole callback locals, cleanup
+ * and corresponding movement events. Initialize the complete platform
+ * variant before retaining its native decimal-tagged pointer representation.
+ * Preserve native platform-relative entity sort order, shadow geometry and
+ * depth, and height-aware shadow hole tests by profile.
  * Existing changes recorded here; this is not their implementation date.
  * See MODIFICATIONS.md and docs/modifications/4086.md
  * at the source repository root. Original notices follow below.
@@ -73,17 +113,21 @@
 #include "commands.h"
 #include "models.h"
 #include "translation.h"
+#include <stddef.h>
+#include <limits.h>
 
 #define NaN 0xAAAAAAAA
 
 static const char *E_OUT_OF_MEMORY = "Error: Could not allocate sufficient memory.\n";
 static int DEFAULT_OFFSCREEN_KILL = 3000;
+static int obor_animation_reserve_frames(s_anim *anim, int count, int initialize);
 
 
 s_sprite_list *sprite_list;
 s_sprite_map *sprite_map;
 
 s_savelevel *savelevel;
+static char allowselect_args[MAX_ARG_LEN + 1];
 s_savescore savescore;
 s_savedata savedata;
 
@@ -279,6 +323,7 @@ int                 current_stage = 1;
 
 int					timevar;
 float               bgtravelled;
+float               vbgtravelled;
 int                 traveltime;
 int                 texttime;
 int					timetoshow;
@@ -324,6 +369,8 @@ int                 SAMPLE_1UP			= -1;
 int                 SAMPLE_TIMEOVER		= -1;
 int                 SAMPLE_BEEP			= -1;
 int                 SAMPLE_BEEP2		= -1;
+int                 SAMPLE_PAUSE = -1;
+s_debug_xy_msg      debug_xy_msg;
 int                 SAMPLE_BIKE			= -1;
 
 int                 max_downs           = MAX_DOWNS;
@@ -971,6 +1018,24 @@ int handle_txt_include(char *command, ArgList *arglist, char **fn, char *namebuf
 //this method is used by script engine, we move it here
 // it will get a system property, put it in the ScriptVariant
 // if failed return 0, otherwise return 1
+int is_cheat_actived(void)
+{
+    if(!cheats)
+    {
+        return 0;
+    }
+    else
+    {
+        if(!forcecheatsoff)
+        {
+            return 1;
+        }
+        else
+        {
+            return 0;
+        }
+    }
+}
 int getsyspropertybyindex(ScriptVariant *var, int index)
 {
     if(!var)
@@ -980,6 +1045,27 @@ int getsyspropertybyindex(ScriptVariant *var, int index)
 
     switch(index)
     {
+    case _sv_cheats:
+        if(obor_profile_build < 4174) return 0;
+        ScriptVariant_ChangeType(var, VT_INTEGER);
+        var->lVal = (LONG)(is_cheat_actived());
+        break;
+        case _sv_numholes:
+        if(obor_profile_build < 4207 || !level) return 0;
+        ScriptVariant_ChangeType(var, VT_INTEGER);
+        var->lVal = (LONG)(level->numholes);
+        break;
+        case _sv_numlayers:
+        if(obor_profile_build < 4207 || !level) return 0;
+        ScriptVariant_ChangeType(var, VT_INTEGER);
+        var->lVal = (LONG)(level->numlayers);
+        break;
+        case _sv_numwalls:
+        if(obor_profile_build < 4207 || !level) return 0;
+        ScriptVariant_ChangeType(var, VT_INTEGER);
+        var->lVal = (LONG)(level->numwalls);
+        break;
+    
     case _sv_count_enemies:
         ScriptVariant_ChangeType(var, VT_INTEGER);
         var->lVal = (LONG)count_ents(TYPE_ENEMY);
@@ -1912,6 +1998,14 @@ void clear_scripts()
     Script_Global_Clear();
 }
 
+#include <stddef.h>
+static int obor_profile_script_slot_enabled(size_t offset)
+{
+    if(offset == offsetof(s_scripts, onblockp_script)) return obor_profile_build >= 4182;
+    if(offset == offsetof(s_scripts, inhole_script)) return obor_profile_build >= 4211;
+    return 1;
+}
+
 #define scripts_membercount (sizeof(s_scripts) / sizeof(Script*))
 
 void alloc_all_scripts(void* s)
@@ -1926,7 +2020,7 @@ void alloc_all_scripts(void* s)
     if(!scripts) return;
     for(i = 0; i < scripts_membercount; ++i)
     {
-        Script *script = alloc_script();
+        Script *script = obor_profile_script_slot_enabled(i * sizeof(Script*)) ? alloc_script() : NULL;
         memcpy((unsigned char*)scripts + i * sizeof(script), &script, sizeof(script));
     }
 }
@@ -2032,7 +2126,7 @@ void execute_animation_script(entity *ent)
     }
 }
 
-void execute_takedamage_script(entity *ent, entity *other, int force, int drop, int type, int noblock, int guardcost, int jugglecost, int pauseadd)
+void execute_takedamage_script(entity *ent, entity *other, int force, int drop, int type, int noblock, int guardcost, int jugglecost, int pauseadd, int tag)
 {
     ScriptVariant tempvar;
     Script *cs = ent->scripts->takedamage_script;
@@ -2059,6 +2153,11 @@ void execute_takedamage_script(entity *ent, entity *other, int force, int drop, 
         Script_Set_Local_Variant(cs, "jugglecost",  &tempvar);
         tempvar.lVal = (LONG)pauseadd;
         Script_Set_Local_Variant(cs, "pauseadd",    &tempvar);
+        if(obor_profile_build >= 4183)
+        {
+            tempvar.lVal = (LONG)tag;
+            Script_Set_Local_Variant(cs, "tag", &tempvar);
+        }
         Script_Execute(cs);
         //clear to save variant space
         ScriptVariant_Clear(&tempvar);
@@ -2071,6 +2170,7 @@ void execute_takedamage_script(entity *ent, entity *other, int force, int drop, 
         Script_Set_Local_Variant(cs, "guardcost",   &tempvar);
         Script_Set_Local_Variant(cs, "jugglecost",  &tempvar);
         Script_Set_Local_Variant(cs, "pauseadd",    &tempvar);
+        if(obor_profile_build >= 4183) Script_Set_Local_Variant(cs, "tag", &tempvar);
     }
 }
 
@@ -2097,7 +2197,7 @@ void execute_onpain_script(entity *ent, int iType, int iReset)
     }
 }
 
-void execute_onfall_script(entity *ent, entity *other, int force, int drop, int type, int noblock, int guardcost, int jugglecost, int pauseadd)
+void execute_onfall_script(entity *ent, entity *other, int force, int drop, int type, int noblock, int guardcost, int jugglecost, int pauseadd, int tag)
 {
     ScriptVariant tempvar;
     Script *cs = ent->scripts->onfall_script;
@@ -2124,6 +2224,11 @@ void execute_onfall_script(entity *ent, entity *other, int force, int drop, int 
         Script_Set_Local_Variant(cs, "jugglecost",  &tempvar);
         tempvar.lVal = (LONG)pauseadd;
         Script_Set_Local_Variant(cs, "pauseadd",    &tempvar);
+        if(obor_profile_build >= 4183)
+        {
+            tempvar.lVal = (LONG)tag;
+            Script_Set_Local_Variant(cs, "tag", &tempvar);
+        }
         Script_Execute(cs);
         //clear to save variant space
         ScriptVariant_Clear(&tempvar);
@@ -2136,6 +2241,7 @@ void execute_onfall_script(entity *ent, entity *other, int force, int drop, int 
         Script_Set_Local_Variant(cs, "guardcost",   &tempvar);
         Script_Set_Local_Variant(cs, "jugglecost",  &tempvar);
         Script_Set_Local_Variant(cs, "pauseadd",    &tempvar);
+        if(obor_profile_build >= 4183) Script_Set_Local_Variant(cs, "tag", &tempvar);
     }
 }
 
@@ -2157,7 +2263,7 @@ void execute_onblocks_script(entity *ent)
     }
 }
 
-void execute_onblockw_script(entity *ent, int plane, float height)
+void execute_onblockw_script(entity *ent, int plane, float height, int index)
 {
     ScriptVariant tempvar;
     Script *cs = ent->scripts->onblockw_script;
@@ -2173,6 +2279,12 @@ void execute_onblockw_script(entity *ent, int plane, float height)
         ScriptVariant_ChangeType(&tempvar, VT_DECIMAL);
         tempvar.dblVal = (DOUBLE)height;
         Script_Set_Local_Variant(cs, "height",      &tempvar);
+        if(obor_profile_build >= 4197)
+        {
+            ScriptVariant_ChangeType(&tempvar, VT_INTEGER);
+            tempvar.lVal = (LONG)index;
+            Script_Set_Local_Variant(cs, "index", &tempvar);
+        }
         Script_Execute(cs);
 
         //clear to save variant space
@@ -2182,6 +2294,74 @@ void execute_onblockw_script(entity *ent, int plane, float height)
         Script_Set_Local_Variant(cs, "plane", &tempvar);
         ScriptVariant_Clear(&tempvar);
         Script_Set_Local_Variant(cs, "height", &tempvar);
+        if(obor_profile_build >= 4197)
+        {
+            ScriptVariant_Clear(&tempvar);
+            Script_Set_Local_Variant(cs, "index", &tempvar);
+        }
+    }
+}
+
+void execute_onblockp_script(entity *ent, int plane, entity *platform)
+{
+    if(obor_profile_build < 4182) return;
+    ScriptVariant tempvar = {0};
+    Script *cs = ent->scripts->onblockp_script;
+    if(Script_IsInitialized(cs))
+    {
+        ScriptVariant_Init(&tempvar);
+        ScriptVariant_ChangeType(&tempvar, VT_PTR);
+        tempvar.ptrVal = (VOID *)ent;
+        Script_Set_Local_Variant(cs, "self", &tempvar);
+        ScriptVariant_ChangeType(&tempvar, VT_INTEGER);
+        tempvar.lVal = (LONG)plane;
+        Script_Set_Local_Variant(cs, "plane",      &tempvar);
+        ScriptVariant_ChangeType(&tempvar, VT_DECIMAL);
+        tempvar.ptrVal = (VOID *)platform;
+        Script_Set_Local_Variant(cs, "platform",      &tempvar);
+        Script_Execute(cs);
+
+        //clear to save variant space
+        ScriptVariant_Clear(&tempvar);
+        Script_Set_Local_Variant(cs, "self", &tempvar);
+        ScriptVariant_Clear(&tempvar);
+        Script_Set_Local_Variant(cs, "plane", &tempvar);
+        ScriptVariant_Clear(&tempvar);
+        Script_Set_Local_Variant(cs, "platform", &tempvar);
+    }
+}
+
+void execute_inhole_script(entity *ent, int plane, float height, int index)
+{
+    if(obor_profile_build < 4211) return;
+    ScriptVariant tempvar;
+    Script *cs = ent->scripts->inhole_script;
+    if(Script_IsInitialized(cs))
+    {
+        ScriptVariant_Init(&tempvar);
+        ScriptVariant_ChangeType(&tempvar, VT_PTR);
+        tempvar.ptrVal = (VOID *)ent;
+        Script_Set_Local_Variant(cs, "self", &tempvar);
+        ScriptVariant_ChangeType(&tempvar, VT_INTEGER);
+        tempvar.lVal = (LONG)plane;
+        Script_Set_Local_Variant(cs, "plane",      &tempvar);
+        ScriptVariant_ChangeType(&tempvar, VT_DECIMAL);
+        tempvar.dblVal = (DOUBLE)height;
+        Script_Set_Local_Variant(cs, "height",      &tempvar);
+        ScriptVariant_ChangeType(&tempvar, VT_INTEGER);
+        tempvar.lVal = (LONG)index;
+        Script_Set_Local_Variant(cs, "index",      &tempvar);
+        Script_Execute(cs);
+
+        //clear to save variant space
+        ScriptVariant_Clear(&tempvar);
+        Script_Set_Local_Variant(cs, "self", &tempvar);
+        ScriptVariant_Clear(&tempvar);
+        Script_Set_Local_Variant(cs, "plane", &tempvar);
+        ScriptVariant_Clear(&tempvar);
+        Script_Set_Local_Variant(cs, "height", &tempvar);
+        ScriptVariant_Clear(&tempvar);
+        Script_Set_Local_Variant(cs, "index", &tempvar);
     }
 }
 
@@ -2298,7 +2478,7 @@ void execute_onmovea_script(entity *ent)
     }
 }
 
-void execute_ondeath_script(entity *ent, entity *other, int force, int drop, int type, int noblock, int guardcost, int jugglecost, int pauseadd)
+void execute_ondeath_script(entity *ent, entity *other, int force, int drop, int type, int noblock, int guardcost, int jugglecost, int pauseadd, int tag)
 {
     ScriptVariant tempvar;
     Script *cs = ent->scripts->ondeath_script;
@@ -2325,6 +2505,11 @@ void execute_ondeath_script(entity *ent, entity *other, int force, int drop, int
         Script_Set_Local_Variant(cs, "jugglecost",  &tempvar);
         tempvar.lVal = (LONG)pauseadd;
         Script_Set_Local_Variant(cs, "pauseadd",    &tempvar);
+        if(obor_profile_build >= 4183)
+        {
+            tempvar.lVal = (LONG)tag;
+            Script_Set_Local_Variant(cs, "tag", &tempvar);
+        }
         Script_Execute(cs);
         //clear to save variant space
         ScriptVariant_Clear(&tempvar);
@@ -2337,6 +2522,7 @@ void execute_ondeath_script(entity *ent, entity *other, int force, int drop, int
         Script_Set_Local_Variant(cs, "guardcost",   &tempvar);
         Script_Set_Local_Variant(cs, "jugglecost",  &tempvar);
         Script_Set_Local_Variant(cs, "pauseadd",    &tempvar);
+        if(obor_profile_build >= 4183) Script_Set_Local_Variant(cs, "tag", &tempvar);
     }
 }
 
@@ -2357,7 +2543,7 @@ void execute_onkill_script(entity *ent)
     }
 }
 
-void execute_didblock_script(entity *ent, entity *other, int force, int drop, int type, int noblock, int guardcost, int jugglecost, int pauseadd)
+void execute_didblock_script(entity *ent, entity *other, int force, int drop, int type, int noblock, int guardcost, int jugglecost, int pauseadd, int tag)
 {
     ScriptVariant tempvar;
     Script *cs = ent->scripts->didblock_script;
@@ -2384,6 +2570,11 @@ void execute_didblock_script(entity *ent, entity *other, int force, int drop, in
         Script_Set_Local_Variant(cs, "jugglecost",  &tempvar);
         tempvar.lVal = (LONG)pauseadd;
         Script_Set_Local_Variant(cs, "pauseadd",    &tempvar);
+        if(obor_profile_build >= 4183)
+        {
+            tempvar.lVal = (LONG)tag;
+            Script_Set_Local_Variant(cs, "tag", &tempvar);
+        }
         Script_Execute(cs);
         //clear to save variant space
         ScriptVariant_Clear(&tempvar);
@@ -2396,10 +2587,11 @@ void execute_didblock_script(entity *ent, entity *other, int force, int drop, in
         Script_Set_Local_Variant(cs, "guardcost",   &tempvar);
         Script_Set_Local_Variant(cs, "jugglecost",  &tempvar);
         Script_Set_Local_Variant(cs, "pauseadd",    &tempvar);
+        if(obor_profile_build >= 4183) Script_Set_Local_Variant(cs, "tag", &tempvar);
     }
 }
 
-void execute_ondoattack_script(entity *ent, entity *other, int force, int drop, int type, int noblock, int guardcost, int jugglecost, int pauseadd, int iWhich, int iAtkID)
+void execute_ondoattack_script(entity *ent, entity *other, int force, int drop, int type, int noblock, int guardcost, int jugglecost, int pauseadd, int iWhich, int iAtkID, int tag)
 {
     ScriptVariant tempvar;
     Script *cs = ent->scripts->ondoattack_script;
@@ -2430,6 +2622,11 @@ void execute_ondoattack_script(entity *ent, entity *other, int force, int drop, 
         Script_Set_Local_Variant(cs, "which",    &tempvar);
         tempvar.lVal = (LONG)iAtkID;
         Script_Set_Local_Variant(cs, "attackid",    &tempvar);
+        if(obor_profile_build >= 4183)
+        {
+            tempvar.lVal = (LONG)tag;
+            Script_Set_Local_Variant(cs, "tag", &tempvar);
+        }
         Script_Execute(cs);
         //clear to save variant space
         ScriptVariant_Clear(&tempvar);
@@ -2444,6 +2641,7 @@ void execute_ondoattack_script(entity *ent, entity *other, int force, int drop, 
         Script_Set_Local_Variant(cs, "pauseadd",    &tempvar);
         Script_Set_Local_Variant(cs, "which",		&tempvar);
         Script_Set_Local_Variant(cs, "attackid",	&tempvar);
+        if(obor_profile_build >= 4183) Script_Set_Local_Variant(cs, "tag", &tempvar);
     }
 }
 
@@ -2481,7 +2679,7 @@ void execute_think_script(entity *ent)
     }
 }
 
-static void _execute_didhit_script(Script *cs, entity *ent, entity *other, int force, int drop, int type, int noblock, int guardcost, int jugglecost, int pauseadd, int blocked)
+static void _execute_didhit_script(Script *cs, entity *ent, entity *other, int force, int drop, int type, int noblock, int guardcost, int jugglecost, int pauseadd, int blocked, int tag)
 {
     ScriptVariant tempvar;
     ScriptVariant_Init(&tempvar);
@@ -2507,6 +2705,11 @@ static void _execute_didhit_script(Script *cs, entity *ent, entity *other, int f
     Script_Set_Local_Variant(cs, "pauseadd",    &tempvar);
     tempvar.lVal = (LONG)blocked;
     Script_Set_Local_Variant(cs, "blocked",     &tempvar);
+    if(obor_profile_build >= 4183)
+    {
+        tempvar.lVal = (LONG)tag;
+        Script_Set_Local_Variant(cs, "tag", &tempvar);
+    }
     Script_Execute(cs);
     //clear to save variant space
     ScriptVariant_Clear(&tempvar);
@@ -2520,19 +2723,20 @@ static void _execute_didhit_script(Script *cs, entity *ent, entity *other, int f
     Script_Set_Local_Variant(cs, "jugglecost",  &tempvar);
     Script_Set_Local_Variant(cs, "pauseadd",    &tempvar);
     Script_Set_Local_Variant(cs, "blocked",     &tempvar);
+    if(obor_profile_build >= 4183) Script_Set_Local_Variant(cs, "tag", &tempvar);
 }
 
-void execute_didhit_script(entity *ent, entity *other, int force, int drop, int type, int noblock, int guardcost, int jugglecost, int pauseadd, int blocked)
+void execute_didhit_script(entity *ent, entity *other, int force, int drop, int type, int noblock, int guardcost, int jugglecost, int pauseadd, int blocked, int tag)
 {
     Script *cs;
     s_scripts *gs = global_model_scripts;
     if(gs && (cs = gs->didhit_script) && Script_IsInitialized(cs))
     {
-        _execute_didhit_script(cs, ent, other, force, drop, type, noblock, guardcost, jugglecost, pauseadd, blocked);
+        _execute_didhit_script(cs, ent, other, force, drop, type, noblock, guardcost, jugglecost, pauseadd, blocked, tag);
     }
     if(Script_IsInitialized(cs = ent->scripts->didhit_script))
     {
-        _execute_didhit_script(cs, ent, other, force, drop, type, noblock, guardcost, jugglecost, pauseadd, blocked);
+        _execute_didhit_script(cs, ent, other, force, drop, type, noblock, guardcost, jugglecost, pauseadd, blocked, tag);
     }
 }
 
@@ -2563,35 +2767,40 @@ void execute_onspawn_script(entity *ent)
     }
 }
 
-const s_anim *obor_script_current_animation(const entity *actor)
+const entity *obor_script_animation_owner(const entity *actor)
 {
     if(!actor) return NULL;
-    const entity *owner = NULL;
     for(struct obor_animation_actor_scope *scope = obor_animation_actors;
         scope; scope = scope->previous)
-    {
-        if(scope->actor == actor)
-        {
-            owner = actor;
-            break;
-        }
-    }
-    if(!owner && ent_list)
-    {
+        if(scope->actor == actor) return actor;
+    if(ent_list)
         for(int i = 0; i < ent_list_size; ++i)
-        {
-            if(ent_list[i] == actor)
-            {
-                owner = actor;
-                break;
-            }
-        }
-    }
+            if(ent_list[i] == actor) return actor;
+    return NULL;
+}
+
+const s_anim *obor_script_current_animation(const entity *actor)
+{
+    const entity *owner = obor_script_animation_owner(actor);
     if(!owner || !owner->animation) return NULL;
     for(s_anim_list *entry = anim_list; entry; entry = entry->next)
-    {
         if(entry->anim == owner->animation) return entry->anim;
-    }
+    return NULL;
+}
+
+s_anim *obor_script_model_animation(const entity *actor, int id)
+{
+    const entity *owner = obor_script_animation_owner(actor);
+    s_anim *animation;
+    size_t capacity;
+    if(!owner || id < 0 || id >= owner->modeldata.animation_capacity ||
+       !owner->modeldata.animation) return NULL;
+    capacity = obor_allocation_size(owner->modeldata.animation) / sizeof(*owner->modeldata.animation);
+    if((size_t)id >= capacity) return NULL;
+    animation = owner->modeldata.animation[id];
+    if(!animation) return NULL;
+    for(s_anim_list *entry = anim_list; entry; entry = entry->next)
+        if(entry->anim == animation) return animation;
     return NULL;
 }
 
@@ -2814,6 +3023,7 @@ void execute_pdie_script(int index)
 
 void clearsettings()
 {
+    savedata.swfilter = 0;
     savedata.compatibleversion = COMPATIBLEVERSION;
     savedata.gamma = 0;
     savedata.brightness = 0;
@@ -2847,20 +3057,23 @@ void clearsettings()
     savedata.glfilter[1] = 0;
 #endif
 
-    savedata.screen[0][0] = 0;
-    savedata.screen[0][1] = 0;
-    savedata.screen[1][0] = 0;
-    savedata.screen[1][1] = 0;
-    savedata.screen[2][0] = 0;
-    savedata.screen[2][1] = 0;
-    savedata.screen[3][0] = 0;
-    savedata.screen[3][1] = 0;
-    savedata.screen[4][0] = 0;
-    savedata.screen[4][1] = 0;
-    savedata.screen[5][0] = 0;
-    savedata.screen[5][1] = 0;
-    savedata.screen[6][0] = 0;
-    savedata.screen[6][1] = 0;
+    if(obor_profile_build < 4160)
+    {
+        savedata.screen[0][0] = 0;
+        savedata.screen[0][1] = 0;
+        savedata.screen[1][0] = 0;
+        savedata.screen[1][1] = 0;
+        savedata.screen[2][0] = 0;
+        savedata.screen[2][1] = 0;
+        savedata.screen[3][0] = 0;
+        savedata.screen[3][1] = 0;
+        savedata.screen[4][0] = 0;
+        savedata.screen[4][1] = 0;
+        savedata.screen[5][0] = 0;
+        savedata.screen[5][1] = 0;
+        savedata.screen[6][0] = 0;
+        savedata.screen[6][1] = 0;
+    }
 
 #ifdef PSP
     savedata.screen[1][0] = 3;
@@ -2925,6 +3138,61 @@ void clearsettings()
 }
 
 
+/* Keep native settings bytes independent of the shared live representation. */
+static void obor_settings_record_copy(unsigned char **cursor, void *field,
+                                      size_t bytes, int reading)
+{
+    if(reading) memcpy(field, *cursor, bytes);
+    else memcpy(*cursor, field, bytes);
+    *cursor += bytes;
+}
+
+static size_t obor_settings_record(unsigned char *record, int reading)
+{
+    unsigned char *cursor = record;
+    size_t original_size = offsetof(s_savedata, swfilter);
+    size_t prefix = offsetof(s_savedata, screen);
+    size_t tail = offsetof(s_savedata, logo);
+    size_t platform = offsetof(s_savedata, stretch) + sizeof(savedata.stretch);
+
+    if(obor_profile_build < 4160)
+    {
+        obor_settings_record_copy(&cursor, &savedata, original_size, reading);
+    }
+    else
+    {
+        obor_settings_record_copy(&cursor, &savedata, prefix, reading);
+        obor_settings_record_copy(&cursor, &savedata.swfilter,
+                                  sizeof(savedata.swfilter), reading);
+        obor_settings_record_copy(&cursor, (unsigned char *)&savedata + tail,
+                                  platform - tail, reading);
+        if(obor_profile_build >= 4168)
+            obor_settings_record_copy(&cursor, savedata.screen[0],
+                                      sizeof(savedata.screen[0]), reading);
+        obor_settings_record_copy(&cursor, (unsigned char *)&savedata + platform,
+                                  original_size - platform, reading);
+    }
+    return (size_t)(cursor - record);
+}
+
+static size_t obor_profile_write_settings(FILE *stream)
+{
+    unsigned char record[sizeof(savedata)];
+    size_t bytes = obor_settings_record(record, 0);
+    return fwrite(record, 1, bytes, stream);
+}
+
+static size_t obor_profile_read_settings(FILE *stream)
+{
+    unsigned char record[sizeof(savedata)];
+    size_t bytes = obor_settings_record(record, 0);
+    size_t received = fread(record, 1, bytes, stream);
+    /* An unread byte retains its previous value, including partial fields. */
+    obor_settings_record(record, 1);
+    return received;
+}
+
+
 void savesettings()
 {
 #ifndef DC
@@ -2939,7 +3207,7 @@ void savesettings()
     {
         return;
     }
-    fwrite(&savedata, 1, sizeof(savedata), handle);
+    obor_profile_write_settings(handle);
     fclose(handle);
 #endif
 }
@@ -2956,7 +3224,7 @@ void saveasdefault()
     {
         return;
     }
-    fwrite(&savedata, 1, sizeof(savedata), handle);
+    obor_profile_write_settings(handle);
     fclose(handle);
 #endif
 }
@@ -2982,7 +3250,7 @@ void loadsettings()
     {
         return;
     }
-    fread(&savedata, 1, sizeof(savedata), handle);
+    obor_profile_read_settings(handle);
     fclose(handle);
     if(savedata.compatibleversion != COMPATIBLEVERSION)
     {
@@ -3006,7 +3274,7 @@ void loadfromdefault()
     {
         return;
     }
-    fread(&savedata, 1, sizeof(savedata), handle);
+    obor_profile_read_settings(handle);
     fclose(handle);
     if(savedata.compatibleversion != COMPATIBLEVERSION)
     {
@@ -3019,6 +3287,41 @@ void loadfromdefault()
 
 
 
+
+/* The live record retains the appended field; older profiles keep their
+ * original row stride and partial-read bytes on disk. */
+static size_t obor_saved_level_record_size(void)
+{
+    return obor_profile_build >= 4194 ? sizeof(s_savelevel) : offsetof(s_savelevel, allowSelectArgs);
+}
+
+static size_t obor_profile_write_saved_game(FILE *stream)
+{
+    size_t bytes = obor_saved_level_record_size(), rows = 0;
+    if(num_difficulties < 0 || (!savelevel && num_difficulties)) return 0;
+    for(int i = 0; i < num_difficulties; ++i)
+    {
+        if(fwrite(savelevel + i, bytes, 1, stream) != 1) break;
+        ++rows;
+    }
+    return rows;
+}
+
+static size_t obor_profile_read_saved_game(FILE *stream)
+{
+    unsigned char record[sizeof(s_savelevel)];
+    size_t bytes = obor_saved_level_record_size(), rows = 0, received;
+    if(num_difficulties < 0 || (!savelevel && num_difficulties)) return 0;
+    for(int i = 0; i < num_difficulties; ++i)
+    {
+        memcpy(record, savelevel + i, bytes);
+        received = fread(record, 1, bytes, stream);
+        memcpy(savelevel + i, record, bytes);
+        if(received != bytes) break;
+        ++rows;
+    }
+    return rows;
+}
 
 void clearSavedGame()
 {
@@ -3055,7 +3358,7 @@ int saveGameFile()
     {
         return 0;
     }
-    fwrite(savelevel, sizeof(*savelevel), num_difficulties, handle);
+    obor_profile_write_saved_game(handle);
     fclose(handle);
     return 1;
 #else
@@ -3079,7 +3382,7 @@ int loadGameFile()
     {
         return 0;
     }
-    if(fread(savelevel, sizeof(*savelevel), num_difficulties, handle) >= sizeof(*savelevel) && savelevel[0].compatibleversion != CV_SAVED_GAME) //TODO: check file length
+    if(obor_profile_read_saved_game(handle) >= obor_saved_level_record_size() && savelevel[0].compatibleversion != CV_SAVED_GAME) //TODO: check file length
     {
         clearSavedGame();
         result = 0;
@@ -3358,6 +3661,13 @@ int music(char *filename, int loop, long offset)
     char t[64];
     char a[64];
     int res = 1;
+    int v = 0, h = 0, col1 = 0;
+    if(obor_profile_build >= 4188)
+    {
+        v = videomodes.vRes - videomodes.vShift;
+        h = videomodes.hRes / 2;
+        col1 = h - fontmonowidth(0) * 16;
+    }
     if(!savedata.usemusic)
     {
         return 0;
@@ -3369,6 +3679,12 @@ int music(char *filename, int loop, long offset)
     }
     if(savedata.showtitles && sound_query_music(a, t))
     {
+        if(obor_profile_build >= 4188)
+        {
+            debug_xy_msg.x = col1;
+            debug_xy_msg.y = v;
+            debug_xy_msg.font_index = 0;
+        }
         if(a[0] && t[0])
         {
             debug_printf("Playing \"%s\" by %s", t, a);
@@ -3543,6 +3859,11 @@ size_t ParseArgs(ArgList *list, char *input, char *output)
     }
     list->count = item;
     return item;
+}
+
+int readByte(char *command)
+{
+    return (unsigned int)command[0] & 0xFF;
 }
 
 char *findarg(char *command, int which)
@@ -4916,12 +5237,16 @@ int load_special_sounds()
     SAMPLE_TIMEOVER = sound_load_sample("data/sounds/timeover.wav", packfile,	0);
     SAMPLE_BEEP		= sound_load_sample("data/sounds/beep.wav",		packfile,	0);
     SAMPLE_BEEP2	= sound_load_sample("data/sounds/beep2.wav",	packfile,	0);
+    SAMPLE_PAUSE = -1;
+    if(obor_profile_build >= 4170)
+        SAMPLE_PAUSE = sound_load_sample("data/sounds/pause.wav", packfile, 0);
     SAMPLE_BIKE		= sound_load_sample("data/sounds/bike.wav",		packfile,	0);
+    if(obor_profile_build >= 4170 && SAMPLE_PAUSE < 0) SAMPLE_PAUSE = SAMPLE_BEEP2;
     if(SAMPLE_GO < 0 || SAMPLE_BEAT < 0 || SAMPLE_BLOCK < 0 ||
             SAMPLE_FALL < 0 || SAMPLE_GET < 0 || SAMPLE_GET2 < 0 ||
             SAMPLE_JUMP < 0 || SAMPLE_INDIRECT < 0 || SAMPLE_PUNCH < 0 ||
             SAMPLE_1UP < 0 || SAMPLE_TIMEOVER < 0 || SAMPLE_BEEP < 0 ||
-            SAMPLE_BEEP2 < 0 || SAMPLE_BIKE < 0)
+            SAMPLE_BEEP2 < 0 || (obor_profile_build >= 4170 && SAMPLE_PAUSE < 0) || SAMPLE_BIKE < 0)
     {
         return 0;
     }
@@ -5006,7 +5331,7 @@ s_model *nextplayermodeln(s_model *current, int p)
     int i;
     s_set_entry *set = levelsets + current_set;
     s_model *model = nextplayermodel(current);
-    if(set->nosame)
+    if(obor_profile_build >= 4178 ? (set->nosame & 1) : set->nosame)
     {
         for(i = 0; model && i < set->maxplayers; i++)
         {
@@ -5061,7 +5386,7 @@ s_model *prevplayermodeln(s_model *current, int p)
     int i;
     s_set_entry *set = levelsets + current_set;
     s_model *model = prevplayermodel(current);
-    if(set->nosame)
+    if(obor_profile_build >= 4178 ? (set->nosame & 1) : set->nosame)
     {
         for(i = 0; model && i < set->maxplayers; i++)
         {
@@ -5098,6 +5423,7 @@ static void load_playable_list(char *buf)
 
     reset_playable_list(0);
     ParseArgs(&arglist, buf, argbuf);
+    if(obor_profile_build >= 4194) memcpy(allowselect_args, argbuf, sizeof(allowselect_args));
 
     for(i = 1; (value = GET_ARG(i))[0]; i++)
     {
@@ -5157,17 +5483,103 @@ void alloc_specials(s_model *newchar)
 
 void alloc_frames(s_anim *anim, int fcount)
 {
-    anim->sprite = malloc(fcount * sizeof(*anim->sprite));
-    anim->delay = malloc(fcount * sizeof(*anim->delay));
-    anim->vulnerable = malloc(fcount * sizeof(*anim->vulnerable));
-    memset(anim->sprite, 0, fcount * sizeof(*anim->sprite));
-    memset(anim->delay, 0, fcount * sizeof(*anim->delay));
-    memset(anim->vulnerable, 0, fcount * sizeof(*anim->vulnerable));
+    if(!obor_animation_reserve_frames(anim, fcount, 1))
+        shutdown(1, (char *)E_OUT_OF_MEMORY);
 }
+
+
+/* Script-visible numframes may shrink or grow independently of owned rows. */
+static void *obor_animation_alloc_table(int count, size_t width, int fill)
+{
+    void *table;
+    if(count <= 0 || !width || (size_t)count > SIZE_MAX / width) return NULL;
+    table = malloc((size_t)count * width);
+    if(table) memset(table, fill, (size_t)count * width);
+    return table;
+}
+
+static int obor_animation_reserve_frames(s_anim *anim, int count, int initialize)
+{
+    s_anim grown;
+    int previous, capacity;
+    if(!anim || count < 0 || anim->obor_frame_capacity < 0) return 0;
+    previous = anim->obor_frame_capacity;
+    capacity = count > previous ? count : previous;
+    if(capacity == previous && (!initialize || (anim->sprite && anim->delay && anim->vulnerable))) return 1;
+    if(capacity <= 0) return 0;
+    grown = *anim;
+#define OBOR_FRAME_TABLES(APPLY) \
+    APPLY(sprite, 0, initialize) \
+    APPLY(delay, 0, initialize) \
+    APPLY(vulnerable, 0, initialize) \
+    APPLY(bbox_coords, 0, 0) \
+    APPLY(attacks, 0, 0) \
+    APPLY(drawmethods, 0, 0) \
+    APPLY(idle, 0, 0) \
+    APPLY(move, 0, 0) \
+    APPLY(shadow, -1, 0) \
+    APPLY(shadow_coords, 0, 0) \
+    APPLY(offset, 0, 0) \
+    APPLY(platform, 0, 0) \
+    APPLY(soundtoplay, -1, 0)
+#define OBOR_GROW_FRAME(member, fill, required) \
+    do { \
+        if((anim->member && capacity != previous) || ((required) && !anim->member)) \
+        { \
+            grown.member = obor_animation_alloc_table(capacity, sizeof(*grown.member), fill); \
+            if(!grown.member) goto refuse; \
+            if(anim->member && previous) \
+                memcpy(grown.member, anim->member, (size_t)previous * sizeof(*grown.member)); \
+        } \
+    } while(0);
+    OBOR_FRAME_TABLES(OBOR_GROW_FRAME)
+#undef OBOR_GROW_FRAME
+#define OBOR_COMMIT_FRAME(member, fill, required) \
+    do { if(grown.member != anim->member) free(anim->member); } while(0);
+    OBOR_FRAME_TABLES(OBOR_COMMIT_FRAME)
+#undef OBOR_COMMIT_FRAME
+    grown.obor_frame_capacity = capacity;
+    *anim = grown;
+    return 1;
+refuse:
+#define OBOR_REFUSE_FRAME(member, fill, required) \
+    do { if(grown.member != anim->member) free(grown.member); } while(0);
+    OBOR_FRAME_TABLES(OBOR_REFUSE_FRAME)
+#undef OBOR_REFUSE_FRAME
+#undef OBOR_FRAME_TABLES
+    return 0;
+}
+
+int obor_animation_set_numframes(s_anim *anim, int count)
+{
+    if(!anim) return 0;
+    if(count > anim->obor_frame_capacity && !obor_animation_reserve_frames(anim, count, 0)) return 0;
+    anim->numframes = count;
+    return 1;
+}
+
+static int obor_animation_store_offset(s_anim *anim, int frame, const int offset[2])
+{
+    if(obor_profile_build < 4170) return 1;
+    if(!anim || !offset || frame < 0 || frame >= anim->obor_frame_capacity) return 0;
+    if(offset[0] || offset[1])
+    {
+        if(!anim->offset)
+        {
+            anim->offset = obor_animation_alloc_table(anim->obor_frame_capacity, sizeof(*anim->offset), 0);
+            if(!anim->offset) return 0;
+        }
+        memcpy(anim->offset[frame], offset, sizeof(*anim->offset));
+    }
+    return 1;
+}
+
+
 
 void free_frames(s_anim *anim)
 {
     int i;
+    if(!anim) return;
     if(anim->idle)
     {
         free(anim->idle);
@@ -5176,7 +5588,7 @@ void free_frames(s_anim *anim)
 
     if(anim->move)
     {
-        for(i = 0; i < anim->numframes; i++)
+        for(i = 0; i < anim->obor_frame_capacity; i++)
         {
             if(anim->move[i])
             {
@@ -5230,7 +5642,7 @@ void free_frames(s_anim *anim)
     }
     if(anim->attacks)
     {
-        for(i = 0; i < anim->numframes; i++)
+        for(i = 0; i < anim->obor_frame_capacity; i++)
         {
             if(anim->attacks[i])
             {
@@ -5243,7 +5655,7 @@ void free_frames(s_anim *anim)
     }
     if(anim->drawmethods)
     {
-        for(i = 0; i < anim->numframes; i++)
+        for(i = 0; i < anim->obor_frame_capacity; i++)
         {
             if(anim->drawmethods[i])
             {
@@ -5254,6 +5666,9 @@ void free_frames(s_anim *anim)
         free(anim->drawmethods);
         anim->drawmethods = NULL;
     }
+    free(anim->offset);
+    anim->offset = NULL;
+    anim->obor_frame_capacity = 0;
     anim->obor_classic_seta_active = 0;
     anim->obor_classic_move_active = 0;
 }
@@ -5603,6 +6018,11 @@ int addframe(s_anim *a, int spriteindex, int framecount, int delay, unsigned idl
              float *platform, int frameshadow, int *shadow_coords, int soundtoplay, s_drawmethod *drawmethod)
 {
     ptrdiff_t currentframe;
+    if(!a || !bbox || !attack || !platform || !shadow_coords || !drawmethod || framecount == INT_MIN)
+    {
+        shutdown(1, (char *)E_OUT_OF_MEMORY);
+        return -1;
+    }
     if(framecount > 0)
     {
         alloc_frames(a, framecount);
@@ -5610,6 +6030,13 @@ int addframe(s_anim *a, int spriteindex, int framecount, int delay, unsigned idl
     else
     {
         framecount = -framecount;    // for alloc method, use a negative value
+    }
+
+    if(a->numframes < 0 || a->numframes >= framecount || a->numframes >= a->obor_frame_capacity ||
+       !a->sprite || !a->delay || !a->vulnerable)
+    {
+        shutdown(1, (char *)E_OUT_OF_MEMORY);
+        return -1;
     }
 
     currentframe = a->numframes;
@@ -5622,8 +6049,8 @@ int addframe(s_anim *a, int spriteindex, int framecount, int delay, unsigned idl
     {
         if(!a->bbox_coords)
         {
-            a->bbox_coords = malloc(framecount * sizeof(*a->bbox_coords));
-            memset(a->bbox_coords, 0, framecount * sizeof(*a->bbox_coords));
+            a->bbox_coords = obor_animation_alloc_table(framecount, sizeof(*a->bbox_coords), 0);
+            if(!a->bbox_coords) { shutdown(1, (char *)E_OUT_OF_MEMORY); return -1; }
         }
         memcpy(a->bbox_coords[currentframe], bbox, sizeof(*a->bbox_coords));
         a->vulnerable[currentframe] = 1;
@@ -5633,28 +6060,33 @@ int addframe(s_anim *a, int spriteindex, int framecount, int delay, unsigned idl
     {
         if(!a->attacks)
         {
-            a->attacks = malloc(framecount * sizeof(*a->attacks));
-            memset(a->attacks, 0, framecount * sizeof(*a->attacks));
+            a->attacks = obor_animation_alloc_table(framecount, sizeof(*a->attacks), 0);
+            if(!a->attacks) { shutdown(1, (char *)E_OUT_OF_MEMORY); return -1; }
         }
+        free(a->attacks[currentframe]);
         a->attacks[currentframe] = malloc(sizeof(**a->attacks));
+        if(!a->attacks[currentframe]) { shutdown(1, (char *)E_OUT_OF_MEMORY); return -1; }
         memcpy(a->attacks[currentframe], attack, sizeof(**a->attacks));
     }
     if(drawmethod->flag)
     {
         if(!a->drawmethods)
         {
-            a->drawmethods = malloc(framecount * sizeof(*a->drawmethods));
-            memset(a->drawmethods, 0, framecount * sizeof(*a->drawmethods));
+            a->drawmethods = obor_animation_alloc_table(framecount, sizeof(*a->drawmethods), 0);
+            if(!a->drawmethods) { shutdown(1, (char *)E_OUT_OF_MEMORY); return -1; }
         }
-        setDrawMethod(a, currentframe, malloc(sizeof(**a->drawmethods)));
+        s_drawmethod *method = malloc(sizeof(**a->drawmethods));
+        if(!method) { shutdown(1, (char *)E_OUT_OF_MEMORY); return -1; }
+        free(a->drawmethods[currentframe]);
+        setDrawMethod(a, currentframe, method);
         //a->drawmethods[currenframe] = malloc(sizeof(s_drawmethod));
         memcpy(getDrawMethod(a, currentframe), drawmethod, sizeof(**a->drawmethods));
         //memcpy(a->drawmethods[currentframe], drawmethod, sizeof(s_drawmethod));
     }
     if(idle && !a->idle)
     {
-        a->idle = malloc(framecount * sizeof(*a->idle));
-        memset(a->idle, 0, framecount * sizeof(*a->idle));
+        a->idle = obor_animation_alloc_table(framecount, sizeof(*a->idle), 0);
+        if(!a->idle) { shutdown(1, (char *)E_OUT_OF_MEMORY); return -1; }
     }
     if(a->idle)
     {
@@ -5665,10 +6097,12 @@ int addframe(s_anim *a, int spriteindex, int framecount, int delay, unsigned idl
     {
         if(!a->move)
         {
-            a->move = malloc(framecount * sizeof(*a->move));
-            memset(a->move, 0, framecount * sizeof(*a->move));
+            a->move = obor_animation_alloc_table(framecount, sizeof(*a->move), 0);
+            if(!a->move) { shutdown(1, (char *)E_OUT_OF_MEMORY); return -1; }
         }
+        free(a->move[currentframe]);
         a->move[currentframe] = malloc(sizeof(**a->move));
+        if(!a->move[currentframe]) { shutdown(1, (char *)E_OUT_OF_MEMORY); return -1; }
         memcpy(a->move[currentframe], move, sizeof(**a->move));
         if(obor_profile_build < 4064)
         {
@@ -5680,8 +6114,8 @@ int addframe(s_anim *a, int spriteindex, int framecount, int delay, unsigned idl
 
     if(frameshadow >= 0 && !a->shadow)
     {
-        a->shadow = malloc(framecount * sizeof(*a->shadow));
-        memset(a->shadow, -1, framecount * sizeof(*a->shadow)); //default to -1
+        a->shadow = obor_animation_alloc_table(framecount, sizeof(*a->shadow), -1);
+        if(!a->shadow) { shutdown(1, (char *)E_OUT_OF_MEMORY); return -1; } //default to -1
     }
     if(a->shadow)
     {
@@ -5691,8 +6125,8 @@ int addframe(s_anim *a, int spriteindex, int framecount, int delay, unsigned idl
     {
         if(!a->shadow_coords)
         {
-            a->shadow_coords = malloc(framecount * sizeof(*a->shadow_coords));
-            memset(a->shadow_coords, 0, framecount * sizeof(*a->shadow_coords));
+            a->shadow_coords = obor_animation_alloc_table(framecount, sizeof(*a->shadow_coords), 0);
+            if(!a->shadow_coords) { shutdown(1, (char *)E_OUT_OF_MEMORY); return -1; }
         }
         memcpy(a->shadow_coords[currentframe], shadow_coords, sizeof(*a->shadow_coords));
     }
@@ -5700,8 +6134,8 @@ int addframe(s_anim *a, int spriteindex, int framecount, int delay, unsigned idl
     {
         if(!a->platform)
         {
-            a->platform = malloc(framecount * sizeof(*a->platform));
-            memset(a->platform, 0, framecount * sizeof(*a->platform));
+            a->platform = obor_animation_alloc_table(framecount, sizeof(*a->platform), 0);
+            if(!a->platform) { shutdown(1, (char *)E_OUT_OF_MEMORY); return -1; }
         }
         memcpy(a->platform[currentframe], platform, sizeof(*a->platform));// Used so entity can be landed on
     }
@@ -5709,8 +6143,8 @@ int addframe(s_anim *a, int spriteindex, int framecount, int delay, unsigned idl
     {
         if(!a->soundtoplay)
         {
-            a->soundtoplay = malloc(framecount * sizeof(*a->soundtoplay));
-            memset(a->soundtoplay, -1, framecount * sizeof(*a->soundtoplay)); // default to -1
+            a->soundtoplay = obor_animation_alloc_table(framecount, sizeof(*a->soundtoplay), -1);
+            if(!a->soundtoplay) { shutdown(1, (char *)E_OUT_OF_MEMORY); return -1; } // default to -1
         }
         a->soundtoplay[currentframe] = soundtoplay;
     }
@@ -8275,6 +8709,25 @@ s_model *load_cached_model(char *name, char *owner, char unload)
                 // Threshold for enemies/players block
                 newchar->thold = GET_INT_ARG(1);
                 break;
+            case CMD_MODEL_RUNNING_CONTINUE:
+                { float parsed = GET_FLOAT_ARG(1);
+                    if(parsed >= -2147483648.0f && parsed < 2147483648.0f)
+                        newchar->runhold = (int)parsed; }
+                break;
+            case CMD_MODEL_RUNNING_JUMP_VELOCITY_X:
+                newchar->runjumpdist = GET_FLOAT_ARG(1);
+                break;
+            case CMD_MODEL_RUNNING_JUMP_VELOCITY_Y:
+                newchar->runjumpheight = GET_FLOAT_ARG(1);
+                break;
+            case CMD_MODEL_RUNNING_SPEED:
+                newchar->runspeed = GET_FLOAT_ARG(1);
+                break;
+            case CMD_MODEL_RUNNING_Z_MOVE:
+                { float parsed = GET_FLOAT_ARG(1);
+                    if(parsed >= -2147483648.0f && parsed < 2147483648.0f)
+                        newchar->runupdown = (int)parsed; }
+                break;
             case CMD_MODEL_RUNNING:
                 // The speed at which the player runs
                 newchar->runspeed = GET_FLOAT_ARG(1);
@@ -8709,6 +9162,12 @@ s_model *load_cached_model(char *name, char *owner, char unload)
                 break;
             case CMD_MODEL_ONBLOCKSSCRIPT:
                 pos += lcmHandleCommandScripts(&arglist, buf + pos, newchar->scripts->onblocks_script, "onblocksscript", filename, 1, 0);
+                break;
+            case CMD_MODEL_ONBLOCKPSCRIPT:
+                pos += lcmHandleCommandScripts(&arglist, buf + pos, newchar->scripts->onblockp_script, (obor_profile_build < 4211 ? "onblockwscript" : "onblockpscript"), filename, 1, 0);
+                break;
+            case CMD_MODEL_INHOLESCRIPT:
+                pos += lcmHandleCommandScripts(&arglist, buf + pos, newchar->scripts->inhole_script, "inholescript", filename, 1, 0);
                 break;
             case CMD_MODEL_ONBLOCKWSCRIPT:
                 pos += lcmHandleCommandScripts(&arglist, buf + pos, newchar->scripts->onblockw_script, "onblockwscript", filename, 1, 0);
@@ -9147,6 +9606,27 @@ s_model *load_cached_model(char *name, char *owner, char unload)
                     attack.pain_time = GAME_SPEED / 20;
                 }
                 break;
+            case CMD_MODEL_BBOX_INDEX:
+                // Nothing yet - for future support of multiple boxes.
+                break;
+            case CMD_MODEL_BBOX_POSITION_X:
+                bbox[0] = GET_INT_ARG(1);
+                break;
+            case CMD_MODEL_BBOX_POSITION_Y:
+                bbox[1] = GET_INT_ARG(1);
+                break;
+            case CMD_MODEL_BBOX_SIZE_X:
+                bbox[2] = GET_INT_ARG(1);
+                break;
+            case CMD_MODEL_BBOX_SIZE_Y:
+                bbox[3] = GET_INT_ARG(1);
+                break;
+            case CMD_MODEL_BBOX_SIZE_Z_1:
+                bbox[4] = GET_INT_ARG(1);
+                break;
+            case CMD_MODEL_BBOX_SIZE_Z_2:
+                bbox[5] = GET_INT_ARG(1);
+                break;
             case CMD_MODEL_BBOX:
                 bbox[0] = GET_INT_ARG(1);
                 bbox[1] = GET_INT_ARG(2);
@@ -9189,7 +9669,7 @@ s_model *load_cached_model(char *name, char *owner, char unload)
                     drawmethod.alpha = GET_INT_ARG(6);
                     drawmethod.remap = GET_INT_ARG(7);
                     drawmethod.fillcolor = parsecolor(GET_ARG(8));
-                    drawmethod.rotate = GET_INT_ARG(9);
+                    (void)obor_drawmethod_store_rotation(&drawmethod, GET_INT_ARG(9));
                     drawmethod.fliprotate = GET_INT_ARG(10);
                 }
                 else if (0 == stricmp(value, "scale"))
@@ -9235,7 +9715,7 @@ s_model *load_cached_model(char *name, char *owner, char unload)
                 }
                 else if (0 == stricmp(value, "rotate"))
                 {
-                    drawmethod.rotate = GET_INT_ARG(2);
+                    (void)obor_drawmethod_store_rotation(&drawmethod, GET_INT_ARG(2));
                 }
                 else if (0 == stricmp(value, "fliprotate"))
                 {
@@ -9296,9 +9776,13 @@ s_model *load_cached_model(char *name, char *owner, char unload)
                     drawmethod.scaley = -drawmethod.scaley;
                     drawmethod.flipy = !drawmethod.flipy;
                 }
-                if(drawmethod.rotate)
+                if(obor_drawmethod_rotation(&drawmethod))
                 {
-                    drawmethod.rotate = (drawmethod.rotate % 360 + 360) % 360;
+                    if(!obor_drawmethod_normalize_rotation(&drawmethod))
+                    {
+                        shutdown(1, "Invalid drawmethod rotation.\n");
+                        return NULL;
+                    }
                 }
                 if(!blendfx_is_set)
                 {
@@ -9329,6 +9813,185 @@ s_model *load_cached_model(char *name, char *owner, char unload)
             case CMD_MODEL_STEAL:
             case CMD_MODEL_FREEZE:
             case CMD_MODEL_ITEMBOX:
+            case CMD_MODEL_ATTACK_BLOCK_COST:
+                attack.guardcost = GET_INT_ARG(1);
+                break;
+            case CMD_MODEL_ATTACK_BLOCK_PENETRATE:
+                attack.no_block = GET_INT_ARG(1);
+                break;
+            case CMD_MODEL_ATTACK_COUNTER:
+                attack.counterattack = GET_INT_ARG(1);
+                break;
+            case CMD_MODEL_ATTACK_DAMAGE_FORCE:
+                attack.attack_force = GET_INT_ARG(1);
+                break;
+            case CMD_MODEL_ATTACK_DAMAGE_LAND_FORCE:
+                attack.damage_on_landing = GET_INT_ARG(1);
+                break;
+            case CMD_MODEL_ATTACK_DAMAGE_LAND_MODE:
+                attack.blast = GET_INT_ARG(1);
+                break;
+            case CMD_MODEL_ATTACK_DAMAGE_LETHAL_DISABLE:
+                attack.no_kill = GET_INT_ARG(1);
+                break;
+            case CMD_MODEL_ATTACK_DAMAGE_STEAL:
+                attack.steal = GET_INT_ARG(1);
+                break;
+            case CMD_MODEL_ATTACK_DAMAGE_TYPE:
+                attack.attack_type = GET_INT_ARG(1);
+                break;
+            case CMD_MODEL_ATTACK_DAMAGE_RECURSIVE_FORCE:
+                attack.dot_force = GET_INT_ARG(1);
+                break;
+            case CMD_MODEL_ATTACK_DAMAGE_RECURSIVE_INDEX:
+                attack.dot_index = GET_INT_ARG(1);
+                break;
+            case CMD_MODEL_ATTACK_DAMAGE_RECURSIVE_MODE:
+                attack.dot = GET_INT_ARG(1);
+                break;
+            case CMD_MODEL_ATTACK_DAMAGE_RECURSIVE_TIME_RATE:
+                attack.dot_rate = GET_INT_ARG(1);
+                break;
+            case CMD_MODEL_ATTACK_DAMAGE_RECURSIVE_TIME_EXPIRE:
+                attack.dot_time = GET_INT_ARG(1);
+                break;
+            case CMD_MODEL_ATTACK_REACTION_FALL_FORCE:
+                attack.attack_drop = GET_INT_ARG(1);
+                break;
+            case CMD_MODEL_ATTACK_REACTION_FALL_VELOCITY_X:
+                attack.dropv.x = GET_FLOAT_ARG(1);
+                break;
+            case CMD_MODEL_ATTACK_REACTION_FALL_VELOCITY_Y:
+                attack.dropv.y = GET_FLOAT_ARG(1);
+                break;
+            case CMD_MODEL_ATTACK_REACTION_FALL_VELOCITY_Z:
+                attack.dropv.z = GET_FLOAT_ARG(1);
+                break;
+            case CMD_MODEL_ATTACK_EFFECT_BLOCK_FLASH:
+
+                value = GET_ARG(1);
+
+                if(stricmp(value, "none") == 0 || value == 0)
+                {
+                    newchar->bflash = -1;
+                }
+                else
+                {
+                    newchar->bflash = get_cached_model_index(value);
+                }
+                break;
+
+            case CMD_MODEL_ATTACK_EFFECT_BLOCK_SOUND:
+
+                value = GET_ARG(1);
+
+                if(stricmp(value, "none") == 0)
+                {
+                    attack.blocksound = -1;
+                }
+                else
+                {
+                    attack.blocksound = sound_load_sample(value, packfile, 1);
+                }
+                break;
+
+            case CMD_MODEL_ATTACK_EFFECT_HIT_FLASH:
+
+                value = GET_ARG(1);
+
+                if(stricmp(value, "none") == 0 || value == 0)
+                {
+                    newchar->flash = -1;
+                }
+                else
+                {
+                    newchar->flash = get_cached_model_index(value);
+                }
+                break;
+
+            case CMD_MODEL_ATTACK_EFFECT_HIT_FLASH_DISABLE:
+                attack.no_flash = GET_INT_ARG(1);
+                break;
+
+            case CMD_MODEL_ATTACK_EFFECT_HIT_SOUND:
+
+                value = GET_ARG(1);
+
+                if(stricmp(value, "none") == 0)
+                {
+                    attack.hitsound = -1;
+                }
+                else
+                {
+                    attack.hitsound = sound_load_sample(value, packfile, 1);
+                }
+                break;
+            case CMD_MODEL_ATTACK_INDEX:
+                attack.obor_attack_index = GET_INT_ARG(1);
+                break;
+            case CMD_MODEL_ATTACK_GROUND:
+                attack.otg = GET_INT_ARG(1);
+                break;
+            case CMD_MODEL_ATTACK_MAP_INDEX:
+                attack.forcemap = GET_INT_ARG(1);
+                break;
+            case CMD_MODEL_ATTACK_MAP_TIME:
+                attack.maptime = GET_INT_ARG(1);
+                break;
+            case CMD_MODEL_ATTACK_POSITION_X:
+                abox[0] = GET_INT_ARG(1);
+                break;
+            case CMD_MODEL_ATTACK_POSITION_Y:
+                abox[1] = GET_INT_ARG(1);
+                break;
+            case CMD_MODEL_ATTACK_REACTION_FREEZE_MODE:
+                attack.freeze = GET_INT_ARG(1);
+                break;
+            case CMD_MODEL_ATTACK_REACTION_FREEZE_TIME:
+                attack.freezetime = GET_INT_ARG(1);
+                break;
+            case CMD_MODEL_ATTACK_REACTION_INVINCIBLE_TIME:
+                attack.pain_time = GET_INT_ARG(1);
+                break;
+            case CMD_MODEL_ATTACK_REACTION_REPOSITION_DISTANCE:
+                attack.grab_distance = GET_INT_ARG(1);
+                break;
+            case CMD_MODEL_ATTACK_REACTION_REPOSITION_MODE:
+                attack.grab = GET_INT_ARG(1);
+                break;
+            case CMD_MODEL_ATTACK_REACTION_PAIN_SKIP:
+                attack.no_pain = GET_INT_ARG(1);
+                break;
+            case CMD_MODEL_ATTACK_REACTION_PAUSE_TIME:
+                attack.pause_add = GET_INT_ARG(1);
+                break;
+            case CMD_MODEL_ATTACK_SEAL_COST:
+                attack.seal = GET_INT_ARG(1);
+                break;
+            case CMD_MODEL_ATTACK_SEAL_TIME:
+                attack.sealtime = GET_INT_ARG(1);
+                break;
+            case CMD_MODEL_ATTACK_SIZE_X:
+                abox[2] = GET_INT_ARG(1);
+                break;
+            case CMD_MODEL_ATTACK_SIZE_Y:
+                abox[3] = GET_INT_ARG(1);
+                break;
+            case CMD_MODEL_ATTACK_SIZE_Z_1:
+                attack.attack_coords[4] = GET_INT_ARG(1);
+                break;
+            case CMD_MODEL_ATTACK_SIZE_Z_2:
+                attack.attack_coords[5] = GET_INT_ARG(1);
+                break;
+            case CMD_MODEL_ATTACK_STAYDOWN_RISE:
+                attack.staydown.rise = GET_INT_ARG(1);
+                break;
+            case CMD_MODEL_ATTACK_STAYDOWN_RISEATTACK:
+                attack.staydown.riseattack = GET_INT_ARG(1);
+                break;
+            case CMD_MODEL_ATTACK_TAG:
+                attack.tag = GET_INT_ARG(1);
+                break;
             case CMD_MODEL_ATTACK_ETC:
                 abox[0] = GET_INT_ARG(1);
                 abox[1] = GET_INT_ARG(2);
@@ -9702,6 +10365,12 @@ s_model *load_cached_model(char *name, char *owner, char unload)
 
                 curframe = addframe(newanim, index, framecount, delay, idle,
                                     bbox_con, &attack, &move, platform_con, frameshadow, shadow_coords, soundtoplay, &dm);
+
+                if(!obor_animation_store_offset(newanim, curframe - 1, offset))
+                {
+                    shutdownmessage = (char *)E_OUT_OF_MEMORY;
+                    goto lCleanup;
+                }
 
                 memset(bbox_con, 0, sizeof(bbox_con));
                 soundtoplay = -1;
@@ -10800,7 +11469,7 @@ int load_models()
 
 void unload_levelorder()
 {
-    int i, j;
+    int i, j, t;
     s_level_entry *le;
     s_set_entry *se;
 
@@ -10832,6 +11501,10 @@ void unload_levelorder()
                     if(le->filename)
                     {
                         free(le->filename);
+                    }
+                    for(t = 0; t < MAX_PLAYERS; ++t)
+                    {
+                        if(le->skipselect[t]) free(le->skipselect[t]);
                     }
                 }
                 free(se->levelorder);
@@ -10929,6 +11602,70 @@ s_level_entry *add_select(char *filename, s_set_entry *set)
     le->type = LE_TYPE_SELECT_SCREEN;
     return le;
 }
+/* Level-local names are owned separately from the legacy per-set names. */
+static int obor_copy_skipselect_name(char *destination, const char *source)
+{
+    size_t length;
+    if(!source) { destination[0] = 0; return 1; }
+    length = strlen(source);
+    if(length >= MAX_NAME_LEN)
+    {
+        shutdown(1, "Skipselect name exceeds its destination.\n");
+        return 0;
+    }
+    memcpy(destination, source, length + 1);
+    return 1;
+}
+
+static int obor_apply_level_skipselect(s_set_entry *set, const s_level_entry *entry)
+{
+    set->noselect = entry->noselect;
+    for(int i = 0; i < MAX_PLAYERS; ++i)
+        if(!obor_copy_skipselect_name(skipselect[i], entry->skipselect[i])) return 0;
+    return 1;
+}
+
+s_level_entry *add_skipselect(ArgList arglist, s_set_entry *set)
+{
+    s_level_entry *le, *grown;
+    char *arg;
+    size_t count;
+    if(!set || set->numlevels < 0 || set->numlevels == INT_MAX)
+    {
+        shutdown(1, "Invalid skipselect level count.\n");
+        return NULL;
+    }
+    count = (size_t)set->numlevels + 1;
+    if(count > SIZE_MAX / sizeof(*grown))
+    {
+        shutdown(1, "Invalid skipselect level count.\n");
+        return NULL;
+    }
+    grown = realloc(set->levelorder, count * sizeof(*grown));
+    if(!grown) { shutdown(1, "Out of memory!\n"); return NULL; }
+    set->levelorder = grown;
+    le = grown + set->numlevels++;
+    memset(le, 0, sizeof(*le));
+    if(branch_name[0])
+    {
+        le->branchname = malloc(strlen(branch_name) + 1);
+        if(!le->branchname) { shutdown(1, "Out of memory!\n"); return NULL; }
+        strcpy(le->branchname, branch_name);
+    }
+    if(arglist.count == 1) le->noselect = 1;
+    else for(int i = 0; i < MAX_PLAYERS; ++i)
+    {
+        if((arg = GET_ARG(i + 1))[0])
+        {
+            le->skipselect[i] = malloc(strlen(arg) + 1);
+            if(!le->skipselect[i]) { shutdown(1, "Out of memory!\n"); return NULL; }
+            strcpy(le->skipselect[i], arg);
+        }
+    }
+    le->type = LE_TYPE_SKIP_SELECT;
+    return le;
+}
+
 
 static void _readbarstatus(char *buf, s_barstatus *pstatus)
 {
@@ -11170,6 +11907,11 @@ void load_levelorder()
             break;
         case CMD_LEVELORDER_SKIPSELECT:
             CHKDEF;
+            if(obor_profile_build >= 4190)
+            {
+                le = add_skipselect(arglist, set);
+                break;
+            }
             if(arglist.count == 1)
             {
                 set->noselect = 1;
@@ -12416,6 +13158,11 @@ void unload_level()
     endgame = 0;
     go_time = 0;
     debug_time = 0;
+    if(obor_profile_build >= 4188)
+    {
+        debug_xy_msg.x = -1;
+        debug_xy_msg.y = -1;
+    }
     neon_time = 0;
     time = 0;
     cameratype = 0;
@@ -12425,7 +13172,7 @@ void unload_level()
 }
 
 
-static void addhole(float x, float z, float x1, float x2, float x3, float x4, float depth)
+static void addhole(float x, float z, float x1, float x2, float x3, float x4, float depth, float alt)
 {
     __realloc(level->holes, level->numholes);
     level->holes[level->numholes].x = x;
@@ -12435,6 +13182,7 @@ static void addhole(float x, float z, float x1, float x2, float x3, float x4, fl
     level->holes[level->numholes].upperright = x3;
     level->holes[level->numholes].lowerright = x4;
     level->holes[level->numholes].depth = depth;
+    if(obor_profile_build >= 4211) level->holes[level->numholes].height = alt;
     level->numholes++;
 }
 
@@ -12566,6 +13314,7 @@ void load_level(char *filename)
     level->bosses = 0;
     blendfx[BLEND_MULTIPLY] = 1;
     bgtravelled = 0;
+    if(obor_profile_build >= 4201) vbgtravelled = 0;
     traveltime = 0;
     texttime = 0;
     nopause = 0;
@@ -12870,6 +13619,14 @@ void load_level(char *filename)
                 level->bgspeed *= -1;
             }
             break;
+        case CMD_LEVEL_VBGSPEED:
+            if(obor_profile_build < 4201) break;
+            level->vbgspeed = GET_FLOAT_ARG(1);
+            if(GET_INT_ARG(2))
+            {
+                level->vbgspeed *= -1;
+            }
+            break;
         case CMD_LEVEL_SCROLLSPEED:
             level->scrollspeed = GET_FLOAT_ARG(1);
             break;
@@ -13095,7 +13852,7 @@ void load_level(char *filename)
                 }
             }
 
-            addhole(GET_FLOAT_ARG(1), GET_FLOAT_ARG(2), GET_FLOAT_ARG(3), GET_FLOAT_ARG(4), GET_FLOAT_ARG(5), GET_FLOAT_ARG(6), GET_FLOAT_ARG(7));
+            addhole(GET_FLOAT_ARG(1), GET_FLOAT_ARG(2), GET_FLOAT_ARG(3), GET_FLOAT_ARG(4), GET_FLOAT_ARG(5), GET_FLOAT_ARG(6), GET_FLOAT_ARG(7), obor_profile_build >= 4211 ? GET_FLOAT_ARG(8) : 0);
             break;
         case CMD_LEVEL_WALL:
             addwall(GET_FLOAT_ARG(1), GET_FLOAT_ARG(2), GET_FLOAT_ARG(3), GET_FLOAT_ARG(4), GET_FLOAT_ARG(5), GET_FLOAT_ARG(6), GET_FLOAT_ARG(7), GET_FLOAT_ARG(8));
@@ -13660,7 +14417,7 @@ void load_level(char *filename)
     }
     if(exit_hole)
     {
-        addhole(level->width, PLAYER_MAX_Z, -panel_height, 0, 1000, 1000, panel_height);
+        addhole(level->width, PLAYER_MAX_Z, -panel_height, 0, 1000, 1000, panel_height, 0);
     }
 
     if(crlf)
@@ -13983,11 +14740,36 @@ void updatestatus()
             }
             else if(player[i].playkeys & (FLAG_MOVELEFT | FLAG_MOVERIGHT))
             {
-                player[i].colourmap = (colourselect && (set->nosame & 2)) ? nextcolourmap(model, i - 1) : 0;
+                /* The old palette read precedes NULL-current navigation. */
+                if(obor_profile_build < 4178 && colourselect && (set->nosame & 2) && !model) continue;
+                if(obor_profile_build < 4178) player[i].colourmap = (colourselect && (set->nosame & 2)) ? nextcolourmap(model, i - 1) : 0;
                 model = ((player[i].playkeys & FLAG_MOVELEFT) ? prevplayermodeln : nextplayermodeln)(model, i);
                 /* AnyBOR: keep unresolved selections outside model storage. */
                 if(!model) continue;
                 strcpy(player[i].name, model->name);
+                if(obor_profile_build >= 4178)
+                {
+                    player[i].colourmap = 0;
+                    if ( colourselect && (set->nosame & 2) )
+                    {
+                        int nosamef = -1;
+                        int ii = 0;
+                        for(ii = 0; ii < set->maxplayers; ii++)
+                        {
+                            if ( i != ii && stricmp(player[i].name,player[ii].name) == 0 )
+                            {
+                                if ( player[i].colourmap == player[ii].colourmap  )
+                                {
+                                    if ( obor_profile_build >= 4179 && nosamef == player[ii].colourmap ) break; // avoid infinite loop
+                                    player[i].colourmap = nextcolourmap(model,player[i].colourmap);
+                                    ii = 0;
+                                    if ( nosamef == -1 ) nosamef = player[ii].colourmap;
+                                    continue;
+                                }
+                            } else continue;
+                        }
+                    }
+                }
                 player[i].playkeys = 0;
             }
             // don't like a characters color try a new one!
@@ -13995,6 +14777,28 @@ void updatestatus()
             {
                 if(!model) continue;
                 player[i].colourmap = ((player[i].playkeys & FLAG_MOVEUP) ? nextcolourmap : prevcolourmap)(model, player[i].colourmap);
+                if(obor_profile_build >= 4178)
+                {
+                    if ( colourselect && (set->nosame & 2) )
+                    {
+                        int nosamef = -1;
+                        int ii = 0;
+                        for(ii = 0; ii < set->maxplayers; ii++)
+                        {
+                            if ( i != ii && stricmp(player[i].name,player[ii].name) == 0 )
+                            {
+                                if ( player[i].colourmap == player[ii].colourmap  )
+                                {
+                                    if ( obor_profile_build >= 4179 && nosamef == player[ii].colourmap ) break; // avoid infinite loop
+                                    player[i].colourmap = ((player[i].playkeys & FLAG_MOVEUP) ? nextcolourmap : prevcolourmap)(model,player[i].colourmap);
+                                    ii = 0;
+                                    if ( nosamef == -1 ) nosamef = player[ii].colourmap;
+                                    continue;
+                                }
+                            } else continue;
+                        }
+                    }
+                }
                 player[i].playkeys = 0;
             }
         }
@@ -14007,7 +14811,30 @@ void updatestatus()
                 /* AnyBOR: keep unresolved selections outside model storage. */
                 if(!model) continue;
                 strncpy(player[i].name, model->name, MAX_NAME_LEN);
-                player[i].colourmap = (colourselect && (set->nosame & 2)) ? nextcolourmap(model, i - 1) : 0;
+                if(obor_profile_build < 4178) player[i].colourmap = (colourselect && (set->nosame & 2)) ? nextcolourmap(model, i - 1) : 0;
+                if(obor_profile_build >= 4178)
+                {
+                    player[i].colourmap = 0;
+                    if ( colourselect && (set->nosame & 2) )
+                    {
+                        int nosamef = -1;
+                        int ii = 0;
+                        for(ii = 0; ii < set->maxplayers; ii++)
+                        {
+                            if ( i != ii && stricmp(player[i].name,player[ii].name) == 0 )
+                            {
+                                if ( player[i].colourmap == player[ii].colourmap  )
+                                {
+                                    if ( obor_profile_build >= 4179 && nosamef == player[ii].colourmap ) break; // avoid infinite loop
+                                    player[i].colourmap = nextcolourmap(model,player[i].colourmap);
+                                    ii = 0;
+                                    if ( nosamef == -1 ) nosamef = player[ii].colourmap;
+                                    continue;
+                                }
+                            } else continue;
+                        }
+                    }
+                }
                 player[i].joining = 1;
                 player[i].playkeys = player[i].newkeys = player[i].releasekeys = 0;
 
@@ -14370,7 +15197,7 @@ void drawenemystatus(entity *ent)
         if(icon >= 0)
         {
             drawmethod = plainmethod;
-            drawmethod.table = ent->colourmap;
+            drawmethod.table = obor_profile_build < 4195 || ent->modeldata.icon.usemap ? ent->colourmap : NULL;
             spriteq_add_sprite(ent->modeldata.icon.position.x, ent->modeldata.icon.position.y, HUD_Z, icon, &drawmethod, 0);
         }
     }
@@ -14686,6 +15513,9 @@ static int common_anim_series(entity *ent, int arraya[], int maxa, int forcemode
             if (forcemode || normal_find_target(iAni, 0))                           //Opponent in range of current animation?
             {
                 ent_set_anim(ent, iAni, 0);                                         //Set animation.
+                if(obor_profile_build >= 4168 &&
+                   (defaulta == ANI_WALK || defaulta == ANI_UP || defaulta == ANI_DOWN))
+                    ent->walking = 1;
                 return 1;                                                           //Return 1 and exit.
             }
         }
@@ -14694,6 +15524,9 @@ static int common_anim_series(entity *ent, int arraya[], int maxa, int forcemode
     if (validanim(ent, defaulta))
     {
         ent_set_anim(ent, defaulta, 0);                                             //No alternates were set. Set default..
+                if(obor_profile_build >= 4168 &&
+                   (defaulta == ANI_WALK || defaulta == ANI_UP || defaulta == ANI_DOWN))
+                    ent->walking = 1;
         return 1;                                                                   //Return 1 and exit.
     }
 
@@ -14829,6 +15662,8 @@ void ent_default_init(entity *e)
         return;
     }
 
+    if(obor_profile_build >= 4170) e->nograb_default = 0;
+
     switch(e->modeldata.type)
     {
     case TYPE_RESERVED:
@@ -14837,6 +15672,7 @@ void ent_default_init(entity *e)
     case TYPE_ENDLEVEL:
     case TYPE_ITEM:
         e->nograb = 1;
+        if(obor_profile_build >= 4170) e->nograb_default = e->nograb;
         break;
 
     case TYPE_PLAYER:
@@ -14881,6 +15717,7 @@ void ent_default_init(entity *e)
         if(e->modeldata.subtype == SUBTYPE_BIKER)
         {
             e->nograb = 1;
+            if(obor_profile_build >= 4170) e->nograb_default = e->nograb;
             e->attacking = 1;
             //e->direction = (e->position.x<0);
             if(e->modeldata.speed)
@@ -14916,6 +15753,7 @@ void ent_default_init(entity *e)
                 e->base = e->position.y;
             }
             e->nograb = 1;
+            if(obor_profile_build >= 4170) e->nograb_default = e->nograb;
             e->attacking = 1;
             e->takedamage = arrow_takedamage;
             e->speedmul = 2;
@@ -14943,6 +15781,7 @@ void ent_default_init(entity *e)
         if(e->modeldata.subtype == SUBTYPE_NOTGRAB)
         {
             e->nograb = 1;
+            if(obor_profile_build >= 4170) e->nograb_default = e->nograb;
         }
 
         if(validanim(e, ANI_SPAWN) || validanim(e, ANI_RESPAWN))
@@ -14975,6 +15814,7 @@ void ent_default_init(entity *e)
         break;
     case TYPE_OBSTACLE:
         e->nograb = 1;
+        if(obor_profile_build >= 4170) e->nograb_default = e->nograb;
         if(e->health <= 0)
         {
             e->dead = 1;    // so it won't get hit
@@ -14983,16 +15823,19 @@ void ent_default_init(entity *e)
         break;
     case TYPE_STEAMER:
         e->nograb = 1;
+        if(obor_profile_build >= 4170) e->nograb_default = e->nograb;
         e->think = steamer_think;
         e->base = e->position.y;
         break;
     case TYPE_TEXTBOX:    // New type for displaying text purposes
         e->nograb = 1;
+        if(obor_profile_build >= 4170) e->nograb_default = e->nograb;
         e->think = text_think;
         break;
     case TYPE_SHOT:
         e->health = 1;
         e->nograb = 1;
+        if(obor_profile_build >= 4170) e->nograb_default = e->nograb;
         e->think = common_think;
         e->takedamage = arrow_takedamage;
         e->attacking = 1;
@@ -15016,6 +15859,7 @@ void ent_default_init(entity *e)
         break;
     case TYPE_NONE:
         e->nograb = 1;
+        if(obor_profile_build >= 4170) e->nograb_default = e->nograb;
         if(e->modeldata.subject_to_gravity < 0)
         {
             e->modeldata.subject_to_gravity = 1;
@@ -15048,6 +15892,7 @@ void ent_default_init(entity *e)
         break;
     case TYPE_PANEL:
         e->nograb = 1;
+        if(obor_profile_build >= 4170) e->nograb_default = e->nograb;
         break;
     }
 
@@ -15470,6 +16315,7 @@ void ent_set_anim(entity *ent, int aninum, int resetable)
         ent->animnum = aninum;
         ent->animation = ani;
         ent->animpos = animpos;
+        if(obor_profile_build >= 4168) ent->walking = 0;
     }
     else
     {
@@ -15480,6 +16326,7 @@ void ent_set_anim(entity *ent, int aninum, int resetable)
         ent->animating = 1;
         ent->lasthit = ent->grabbing;
         ent->altbase = 0;
+        if(obor_profile_build >= 4168) ent->walking = 0;
 
         update_frame(ent, 0);
     }
@@ -16215,6 +17062,84 @@ int checkhole(float x, float z)
     return 0;
 }
 
+int checkhole_between(float x, float z, float a1, float a2)
+{
+    int i, c;
+    if(!level) return 0;
+
+    for(i = 0, c = 0; i < level->numholes; i++)
+    {
+        c += (testhole(i, x, z) && level->holes[i].height >= a1 && level->holes[i].height <= a2);
+    }
+
+    return c;
+}
+int checkhole_in(float x, float z, float a)
+{
+    float maxa;
+    int i, ind;
+
+    if(level == NULL)
+    {
+        return -1;
+    }
+
+    maxa = 0;
+    ind = -1;
+    for(i = 0; i < level->numholes; i++)
+    {
+        if(testhole(i, x, z) && level->holes[i].height+2.0 >= a && level->holes[i].height >= maxa)
+        {
+            maxa = level->holes[i].height;
+            ind = i;
+        }
+    }
+
+    if ( ind >= 0 ) return 1;
+    else return 0;
+}
+int checkholeindex_in(float x, float z, float a)
+{
+    float maxa;
+    int i, ind;
+
+    if(level == NULL)
+    {
+        return -1;
+    }
+
+    maxa = 0;
+    ind = -1;
+    for(i = 0; i < level->numholes; i++)
+    {
+        if(testhole(i, x, z) && level->holes[i].height+2.0 >= a && level->holes[i].height >= maxa)
+        {
+            maxa = level->holes[i].height;
+            ind = i;
+        }
+    }
+
+    return ind;
+}
+int checkhole_index(float x, float z)
+{
+    int i;
+
+    if(level == NULL)
+    {
+        return -1;
+    }
+
+    for(i = 0; i < level->numholes; i++)
+    {
+        if(testhole(i, x, z))
+        {
+            //holez = i;
+            return i;
+        }
+    }
+    return -1;
+}
 /*
 Calculates the coef relative to the bottom left point. This is done by figuring out how far the entity is from
 the bottom of the platform and multiplying the result by the difference of the bottom left point and the top
@@ -16225,11 +17150,15 @@ int testwall(int wall, float x, float z)
 {
     float coef1, coef2;
 //    if(wall >= level->numwalls || wall < 0) return 0;
-    if(z < level->walls[wall].z && z > level->walls[wall].z - level->walls[wall].depth)
+    if(obor_profile_build >= 4208 ?
+       (z <= level->walls[wall].z && z >= level->walls[wall].z - level->walls[wall].depth) :
+       (z < level->walls[wall].z && z > level->walls[wall].z - level->walls[wall].depth))
     {
         coef1 = (level->walls[wall].z - z) * ((level->walls[wall].upperleft - level->walls[wall].lowerleft) / level->walls[wall].depth);
         coef2 = (level->walls[wall].z - z) * ((level->walls[wall].upperright - level->walls[wall].lowerright) / level->walls[wall].depth);
-        if(x > level->walls[wall].x + level->walls[wall].lowerleft + coef1 && x < level->walls[wall].x + level->walls[wall].lowerright + coef2)
+        if(obor_profile_build >= 4208 ?
+           (x >= level->walls[wall].x + level->walls[wall].lowerleft + coef1 && x <= level->walls[wall].x + level->walls[wall].lowerright + coef2) :
+           (x > level->walls[wall].x + level->walls[wall].lowerleft + coef1 && x < level->walls[wall].x + level->walls[wall].lowerright + coef2))
         {
             return 1;
         }
@@ -16314,15 +17243,18 @@ int testplatform(entity *plat, float x, float z, entity *exclude)
     }
     offz = plat->position.z + plat->animation->platform[plat->animpos][1];
     offx = plat->position.x + plat->animation->platform[plat->animpos][0];
-    if(z <= offz && z > offz - plat->animation->platform[plat->animpos][6])
+    if(z <= offz && (obor_profile_build >= 4208 ? z >= offz - plat->animation->platform[plat->animpos][6] : z > offz - plat->animation->platform[plat->animpos][6]))
     {
         coef1 = (offz - z) * ((plat->animation->platform[plat->animpos][2] -
                                plat->animation->platform[plat->animpos][3]) / plat->animation->platform[plat->animpos][6]);
         coef2 = (offz - z) * ((plat->animation->platform[plat->animpos][4] -
                                plat->animation->platform[plat->animpos][5]) / plat->animation->platform[plat->animpos][6]);
 
-        if(x > offx + plat->animation->platform[plat->animpos][3] + coef1 &&
-                x < offx + plat->animation->platform[plat->animpos][5] + coef2)
+        if(obor_profile_build >= 4208 ?
+           (x >= offx + plat->animation->platform[plat->animpos][3] + coef1 &&
+            x <= offx + plat->animation->platform[plat->animpos][5] + coef2) :
+           (x > offx + plat->animation->platform[plat->animpos][3] + coef1 &&
+            x < offx + plat->animation->platform[plat->animpos][5] + coef2))
         {
             return 1;
         }
@@ -16553,7 +17485,7 @@ int testmove(entity *ent, float sx, float sz, float x, float z)
     //-------------hole checking ---------------------
     if(ent->modeldata.subject_to_hole > 0)
     {
-        if(checkhole(x, z) && checkwall(x, z) < 0 && !check_platform_below(x, z, ent->position.y, ent))
+        if((obor_profile_build >= 4211 ? checkhole_in(x, z, ent->position.y) : checkhole(x, z)) && checkwall(x, z) < 0 && !check_platform_below(x, z, ent->position.y, ent))
         {
             return -2;
         }
@@ -16719,8 +17651,8 @@ void do_attack(entity *e)
             temp = self;
             self = ent_list[i];
 
-            execute_ondoattack_script(self, e, force, attack->attack_drop, attack->attack_type, attack->no_block, attack->guardcost, attack->jugglecost, attack->pause_add, 0, current_attack_id);	//Execute on defender.
-            execute_ondoattack_script(e, self, force, attack->attack_drop, attack->attack_type, attack->no_block, attack->guardcost, attack->jugglecost, attack->pause_add, 1, current_attack_id);	//Execute on attacker.
+            execute_ondoattack_script(self, e, force, attack->attack_drop, attack->attack_type, attack->no_block, attack->guardcost, attack->jugglecost, attack->pause_add, 0, current_attack_id, (obor_profile_build >= 4183 ? attack->tag : 0));	//Execute on defender.
+            execute_ondoattack_script(e, self, force, attack->attack_drop, attack->attack_type, attack->no_block, attack->guardcost, attack->jugglecost, attack->pause_add, 1, current_attack_id, (obor_profile_build >= 4183 ? attack->tag : 0));	//Execute on attacker.
 
             /*
                 2010-12-31
@@ -16761,7 +17693,7 @@ void do_attack(entity *e)
                 {
                     if(attack->attack_type == obor_attack_type_number(ATK_ITEM, obor_profile_build))
                     {
-                        execute_didhit_script(e, self, force, attack->attack_drop, self->modeldata.subtype, attack->no_block, attack->guardcost, attack->jugglecost, attack->pause_add, 1);
+                        execute_didhit_script(e, self, force, attack->attack_drop, self->modeldata.subtype, attack->no_block, attack->guardcost, attack->jugglecost, attack->pause_add, 1, (obor_profile_build >= 4183 ? attack->tag : 0));
                         didfind_item(e);
                         return;
                     }
@@ -16797,12 +17729,12 @@ void do_attack(entity *e)
                              (fdefense_blockthreshold > force)))
                     {
                         //execute the didhit script
-                        execute_didhit_script(e, self, force, attack->attack_drop, attack->attack_type, attack->no_block, attack->guardcost, attack->jugglecost, attack->pause_add, 1);
+                        execute_didhit_script(e, self, force, attack->attack_drop, attack->attack_type, attack->no_block, attack->guardcost, attack->jugglecost, attack->pause_add, 1, (obor_profile_build >= 4183 ? attack->tag : 0));
                         self->takeaction = common_block;
                         set_blocking(self);
                         self->velocity.x = self->velocity.z = 0;
                         ent_set_anim(self, ANI_BLOCK, 0);
-                        execute_didblock_script(self, e, force, attack->attack_drop, attack->attack_type, attack->no_block, attack->guardcost, attack->jugglecost, attack->pause_add);
+                        execute_didblock_script(self, e, force, attack->attack_drop, attack->attack_type, attack->no_block, attack->guardcost, attack->jugglecost, attack->pause_add, (obor_profile_build >= 4183 ? attack->tag : 0));
                         if(self->modeldata.guardpoints.max > 0)
                         {
                             self->modeldata.guardpoints.current = self->modeldata.guardpoints.current - attack->guardcost;
@@ -16850,7 +17782,7 @@ void do_attack(entity *e)
                     {
                         // Only block if the attack is less than the players threshold
                         //execute the didhit script
-                        execute_didhit_script(e, self, force, attack->attack_drop, attack->attack_type, attack->no_block, attack->guardcost, attack->jugglecost, attack->pause_add, 1);
+                        execute_didhit_script(e, self, force, attack->attack_drop, attack->attack_type, attack->no_block, attack->guardcost, attack->jugglecost, attack->pause_add, 1, (obor_profile_build >= 4183 ? attack->tag : 0));
                         if(self->modeldata.guardpoints.max > 0)
                         {
                             self->modeldata.guardpoints.current = self->modeldata.guardpoints.current - attack->guardcost;
@@ -16862,7 +17794,7 @@ void do_attack(entity *e)
                         {
                             set_blockpain(self, attack->attack_type, 0);
                         }
-                        execute_didblock_script(self, e, force, attack->attack_drop, attack->attack_type, attack->no_block, attack->guardcost, attack->jugglecost, attack->pause_add);
+                        execute_didblock_script(self, e, force, attack->attack_drop, attack->attack_type, attack->no_block, attack->guardcost, attack->jugglecost, attack->pause_add, (obor_profile_build >= 4183 ? attack->tag : 0));
 
                         // Spawn a flash
                         if(!attack->no_flash)
@@ -16942,7 +17874,7 @@ void do_attack(entity *e)
                     else if(self->takedamage(e, attack))
                     {
                         // Didn't block so go ahead and take the damage
-                        execute_didhit_script(e, self, force, attack->attack_drop, attack->attack_type, attack->no_block, attack->guardcost, attack->jugglecost, attack->pause_add, 0);
+                        execute_didhit_script(e, self, force, attack->attack_drop, attack->attack_type, attack->no_block, attack->guardcost, attack->jugglecost, attack->pause_add, 0, (obor_profile_build >= 4183 ? attack->tag : 0));
                         ++e->animation->animhits;
 
                         e->lasthit = self;
@@ -17044,6 +17976,10 @@ void do_attack(entity *e)
                 }//end of if #05
                 self = temp;
             }//if lasthit.confirm
+            else if(obor_profile_build >= 4181)
+            {
+                self = temp;
+            }
         }//end of if #0
 
     }//end of for
@@ -17683,7 +18619,14 @@ void adjust_base(entity *e, entity **pla)
 
         if(maxbase == -1000 && self->modeldata.subject_to_hole > 0)
         {
-            hole = (wall < 0 && !other) ? checkhole(self->position.x, self->position.z) : 0;
+            hole = (wall < 0 && !other) ?
+                (obor_profile_build >= 4211 ? checkhole_in(self->position.x, self->position.z, self->position.y) :
+                 checkhole(self->position.x, self->position.z)) : 0;
+            if(obor_profile_build >= 4212 && hole)
+            {
+                int holeind = checkholeindex_in(self->position.x, self->position.z, self->position.y);
+                execute_inhole_script(self, 0, (double)level->holes[holeind].height, holeind);
+            }
 
             if(seta < 0 && hole)
             {
@@ -18147,7 +19090,7 @@ void common_dot()
                         {
                             self->health = 1;                                                   //Set min health.
                         }
-                        execute_takedamage_script(self, eOpp, iForce, 0, iType, 0, 0, 0, 0);    //Execute the takedamage script.
+                        execute_takedamage_script(self, eOpp, iForce, 0, iType, 0, 0, 0, 0, 0);    //Execute the takedamage script.
                     }
                 }
 
@@ -18167,6 +19110,8 @@ void common_dot()
 
 void adjust_bind(entity *e)
 {
+    if(!e || !e->binding.ent) return;
+
     if(e->binding.ani_bind)
     {
         if(e->animnum != e->binding.ent->animnum)
@@ -18187,52 +19132,63 @@ void adjust_bind(entity *e)
             update_frame(e, e->binding.ent->animpos);
         }
     }
-    e->position.z = e->binding.ent->position.z + e->binding.offset.z;
-    e->position.y = e->binding.ent->position.y + e->binding.offset.y;
+    if(obor_profile_build < 4181 || e->binding.offset_flag.z)
+        e->position.z = e->binding.ent->position.z + e->binding.offset.z;
+    if(obor_profile_build < 4181 || e->binding.offset_flag.y)
+        e->position.y = e->binding.ent->position.y + e->binding.offset.y;
     switch(e->binding.direction)
     {
     case DIRECTION_ADJUST_NONE:
         if(obor_direction_right(e->binding.ent->direction, obor_profile_build))
         {
-            e->position.x = e->binding.ent->position.x + e->binding.offset.x;
+            if(obor_profile_build < 4181 || e->binding.offset_flag.x)
+                e->position.x = e->binding.ent->position.x + e->binding.offset.x;
         }
         else
         {
-            e->position.x = e->binding.ent->position.x - e->binding.offset.x;
+            if(obor_profile_build < 4181 || e->binding.offset_flag.x)
+                e->position.x = e->binding.ent->position.x - e->binding.offset.x;
         }
         break;
     case DIRECTION_ADJUST_SAME:
         e->direction = e->binding.ent->direction;
         if(obor_direction_right(e->binding.ent->direction, obor_profile_build))
         {
-            e->position.x = e->binding.ent->position.x + e->binding.offset.x;
+            if(obor_profile_build < 4181 || e->binding.offset_flag.x)
+                e->position.x = e->binding.ent->position.x + e->binding.offset.x;
         }
         else
         {
-            e->position.x = e->binding.ent->position.x - e->binding.offset.x;
+            if(obor_profile_build < 4181 || e->binding.offset_flag.x)
+                e->position.x = e->binding.ent->position.x - e->binding.offset.x;
         }
         break;
     case DIRECTION_ADJUST_OPPOSITE:
         e->direction = !e->binding.ent->direction;
         if(obor_direction_right(e->binding.ent->direction, obor_profile_build))
         {
-            e->position.x = e->binding.ent->position.x + e->binding.offset.x;
+            if(obor_profile_build < 4181 || e->binding.offset_flag.x)
+                e->position.x = e->binding.ent->position.x + e->binding.offset.x;
         }
         else
         {
-            e->position.x = e->binding.ent->position.x - e->binding.offset.x;
+            if(obor_profile_build < 4181 || e->binding.offset_flag.x)
+                e->position.x = e->binding.ent->position.x - e->binding.offset.x;
         }
         break;
     case DIRECTION_ADJUST_RIGHT:
         e->direction = DIRECTION_RIGHT;
-        e->position.x = e->binding.ent->position.x + e->binding.offset.x;
+        if(obor_profile_build < 4181 || e->binding.offset_flag.x)
+            e->position.x = e->binding.ent->position.x + e->binding.offset.x;
         break;
     case DIRECTION_ADJUST_LEFT:
         e->direction = DIRECTION_LEFT;
-        e->position.x = e->binding.ent->position.x + e->binding.offset.x;
+        if(obor_profile_build < 4181 || e->binding.offset_flag.x)
+            e->position.x = e->binding.ent->position.x + e->binding.offset.x;
         break;
     default:
-        e->position.x = e->binding.ent->position.x + e->binding.offset.x;
+        if(obor_profile_build < 4181 || e->binding.offset_flag.x)
+            e->position.x = e->binding.ent->position.x + e->binding.offset.x;
         break;
         // the default is no change :), just give a value of 12345 or so
     }
@@ -18536,12 +19492,28 @@ void display_ents()
                              e->grabbing)
                         )
                         {
-                            z = (int)(other->position.z + 2);    // Make sure entities get displayed in front of obstacle and grabbee
+                            if(obor_profile_build >= 4213)
+                            {
+                                float zdepth = (float)((float)e->position.z - (float)other->position.z +
+                                    (float)other->animation->platform[other->animpos][6] -
+                                    (float)other->animation->platform[other->animpos][1]);
+                                z = (int)(other->position.z + 2);
+                                sortid = other->sortid + 2 + zdepth;
+                            }
+                            else z = (int)(other->position.z + 2);
                         }
 
                         else
                         {
-                            z = (int)(other->position.z + 1);    // Entity should always display in front of the obstacle
+                            if(obor_profile_build >= 4213)
+                            {
+                                float zdepth = (float)((float)e->position.z - (float)other->position.z +
+                                    (float)other->animation->platform[other->animpos][6] -
+                                    (float)other->animation->platform[other->animpos][1]);
+                                z = (int)(other->position.z + 1);
+                                sortid = other->sortid + 1 + zdepth;
+                            }
+                            else z = (int)(other->position.z + 1);
                         }
 
                     }
@@ -18629,9 +19601,9 @@ void display_ents()
                     if(e->direction == DIRECTION_LEFT)
                     {
                         drawmethod->flipx = !drawmethod->flipx;
-                        if(drawmethod->fliprotate && drawmethod->rotate)
+                        if(drawmethod->fliprotate && obor_drawmethod_rotation(drawmethod))
                         {
-                            drawmethod->rotate = 360 - drawmethod->rotate;
+                            obor_drawmethod_mirror_rotation(drawmethod);
                         }
                     }
 
@@ -18679,8 +19651,19 @@ void display_ents()
 
                         wall2 = checkwall_below(e->position.x + temp1, e->position.z + temp2, e->position.y); // check if the shadow drop into a hole or fall on another wall
 
+                        if(obor_profile_build >= 4196 && other && other != e && e->position.y >= other->position.y + other->animation->platform[other->animpos][7])
+                        {
+                            alty = (int)(e->position.y - other->position.y + other->animation->platform[other->animpos][7]);
+                            temp1 = -1 * (e->position.y - (other->position.y + other->animation->platform[other->animpos][7])) * light.x / 256; // xshift
+                            temp2 = (float)(-e->position.y * light.y / 256);
+
+                            qx = (int)( e->position.x - scrx + 10 );
+                            qy = (int)( e->position.z - other->position.y - other->animation->platform[other->animpos][7] - scry + 20 );
+                        }
+
+
                         //TODO check platforms, don't want to go through the entity list again right now
-                        if(!(checkhole(e->position.x + temp1, e->position.z + temp2) && wall2 < 0 && !other) ) //&& !(wall>=0 && level->walls[wall].height>e->position.y))
+                        if(!((obor_profile_build >= 4211 ? checkhole_in(e->position.x + temp1, e->position.z + temp2, e->position.y) : checkhole(e->position.x + temp1, e->position.z + temp2)) && wall2 < 0 && !other) ) //&& !(wall>=0 && level->walls[wall].height>e->position.y))
                         {
                             if(wall >= 0 && wall2 >= 0)
                             {
@@ -18701,7 +19684,8 @@ void display_ents()
                                 qy -= level->walls[wall2].height - level->walls[wall2].height*light.y/256;*/
                             }
                             sy = (2 * MIRROR_Z - qy) - 2 * scry;
-                            z = shadowz;
+                            if(obor_profile_build >= 4213 && other) z = other->position.z + 1;
+                            else z = shadowz;
                             sz = PANEL_Z - HUD_Z;
                             if(e->animation->shadow_coords)
                             {
@@ -18734,7 +19718,7 @@ void display_ents()
                                 shadowmethod.scaley = -shadowmethod.scaley;
                                 shadowmethod.flipy = !shadowmethod.flipy;
                             }
-                            shadowmethod.rotate = drawmethod->rotate;
+                            obor_drawmethod_copy_rotation(&shadowmethod, drawmethod);
                             shadowmethod.shiftx = drawmethod->shiftx + light.x;
 
                             spriteq_add_sprite(qx, qy, z, f, &shadowmethod, 0);
@@ -18754,7 +19738,7 @@ void display_ents()
                     {
                         useshadow = e->modeldata.shadow;
                     }
-                    if(useshadow && e->position.y >= 0 && !(checkhole(e->position.x, e->position.z) && checkwall_below(e->position.x, e->position.z, e->position.y) < 0) && (!e->modeldata.aironly || (e->modeldata.aironly && inair(e))))
+                    if(useshadow && e->position.y >= 0 && !((obor_profile_build >= 4211 ? checkhole_in(e->position.x, e->position.z, e->position.y) : checkhole(e->position.x, e->position.z)) && checkwall_below(e->position.x, e->position.z, e->position.y) < 0) && (!e->modeldata.aironly || (e->modeldata.aironly && inair(e))))
                     {
                         if(other && other != e && e->position.y >= other->position.y + other->animation->platform[other->animpos][7])
                         {
@@ -19049,7 +20033,7 @@ int set_death(entity *iDie, int type, int reset)
 }
 
 
-int set_fall(entity *iFall, int type, int reset, entity *other, int force, int drop, int noblock, int guardcost, int jugglecost, int pauseadd)
+int set_fall(entity *iFall, int type, int reset, entity *other, int force, int drop, int noblock, int guardcost, int jugglecost, int pauseadd, int tag)
 {
     if(type < 0 || type >= max_attack_types || !validanim(iFall, animfalls[type]))
     {
@@ -19081,7 +20065,7 @@ int set_fall(entity *iFall, int type, int reset, entity *other, int force, int d
     {
         iFall->freezetime = 0;
     }
-    execute_onfall_script(iFall, other, force, drop, type, noblock, guardcost, jugglecost, pauseadd);
+    execute_onfall_script(iFall, other, force, drop, type, noblock, guardcost, jugglecost, pauseadd, tag);
 
     return 1;
 }
@@ -19105,7 +20089,7 @@ int set_rise(entity *iRise, int type, int reset)
     iRise->drop = 0;
     iRise->falling = 0;
     iRise->projectile = 0;
-    iRise->nograb = 0;
+    iRise->nograb = obor_profile_build >= 4170 ? iRise->nograb_default : 0;
     iRise->velocity.x = self->velocity.z = self->velocity.y = 0;
     iRise->modeldata.jugglepoints.current = iRise->modeldata.jugglepoints.max; //reset jugglepoints
     return 1;
@@ -19135,7 +20119,7 @@ int set_riseattack(entity *iRiseattack, int type, int reset)
     self->staydown.riseattack_stall = 0;			//Reset riseattack delay.
     set_attacking(iRiseattack);
     iRiseattack->drop = 0;
-    iRiseattack->nograb = 0;
+    iRiseattack->nograb = obor_profile_build >= 4170 ? iRiseattack->nograb_default : 0;
     iRiseattack->modeldata.jugglepoints.current = iRiseattack->modeldata.jugglepoints.max; //reset jugglepoints
     ent_set_anim(iRiseattack, animriseattacks[type], 0);
     return 1;
@@ -20685,7 +21669,7 @@ void checkdamage(entity *other, s_attack *attack)
         self->health = 1;
     }
 
-    execute_takedamage_script(self, other, force, attack->attack_drop, type, attack->no_block, attack->guardcost, attack->jugglecost, attack->pause_add);                       //Execute the take damage script.
+    execute_takedamage_script(self, other, force, attack->attack_drop, type, attack->no_block, attack->guardcost, attack->jugglecost, attack->pause_add, (obor_profile_build >= 4183 ? attack->tag : 0));                       //Execute the take damage script.
 
     if (self->health <= 0)                                      //Health at 0?
     {
@@ -20700,7 +21684,7 @@ void checkdamage(entity *other, s_attack *attack)
                 self->health = self->modeldata.health;          //Reset to max health.
             }
         }
-        execute_ondeath_script(self, other, force, attack->attack_drop, type, attack->no_block, attack->guardcost, attack->jugglecost, attack->pause_add);   //Execute ondeath script.
+        execute_ondeath_script(self, other, force, attack->attack_drop, type, attack->no_block, attack->guardcost, attack->jugglecost, attack->pause_add, (obor_profile_build >= 4183 ? attack->tag : 0));   //Execute ondeath script.
     }
 }
 
@@ -20866,7 +21850,7 @@ int common_takedamage(entity *other, s_attack *attack)
 
             // Now if no fall/die animations exist, entity simply disapears
             //set_fall(entity *iFall, int type, int reset, entity* other, int force, int drop)
-            if(!set_fall(self, self->damagetype, 1, other, attack->attack_force, attack->attack_drop, attack->no_block, attack->guardcost, attack->jugglecost, attack->pause_add))
+            if(!set_fall(self, self->damagetype, 1, other, attack->attack_force, attack->attack_drop, attack->no_block, attack->guardcost, attack->jugglecost, attack->pause_add, (obor_profile_build >= 4183 ? attack->tag : 0)))
             {
                 if(self->modeldata.type & TYPE_PLAYER)
                 {
@@ -21361,7 +22345,7 @@ void dothrow()
 
     other->takeaction = common_fall;
     self->takeaction = common_throw;
-    set_fall(other, obor_attack_type_number(ATK_NORMAL, obor_profile_build), 0, self, 0, 0, 0, 0, 0, 0);
+    set_fall(other, obor_attack_type_number(ATK_NORMAL, obor_profile_build), 0, self, 0, 0, 0, 0, 0, 0, 0);
     ent_set_anim(self, ANI_THROW, 0);
 }
 
@@ -21670,11 +22654,11 @@ int common_trymove(float xdir, float zdir)
     {
 
         needcheckhole = 1;
-        if(zdir && checkhole(self->position.x, z) && checkwall(self->position.x, z) < 0 && !check_platform_below(self->position.x, z, self->position.y, self))
+        if(zdir && (obor_profile_build >= 4211 ? checkhole_in(self->position.x, z, self->position.y) : checkhole(self->position.x, z)) && checkwall(self->position.x, z) < 0 && !check_platform_below(self->position.x, z, self->position.y, self))
         {
             zdir = 0;
         }
-        if(xdir && checkhole(x, self->position.z) && checkwall(x, self->position.z) < 0 && !check_platform_below(x, self->position.z, self->position.y, self))
+        if(xdir && (obor_profile_build >= 4211 ? checkhole_in(x, self->position.z, self->position.y) : checkhole(x, self->position.z)) && checkwall(x, self->position.z) < 0 && !check_platform_below(x, self->position.z, self->position.y, self))
         {
             xdir = 0;
         }
@@ -21742,10 +22726,12 @@ int common_trymove(float xdir, float zdir)
         if(xdir && (other = check_platform_between(x, self->position.z, self->position.y, self->position.y + heightvar, self))  )
         {
             xdir = 0;
+            if(obor_profile_build >= 4182) execute_onblockp_script(self, 1, other);
         }
         if(zdir && (other = check_platform_between(self->position.x, z, self->position.y, self->position.y + heightvar, self))  )
         {
             zdir = 0;
+            if(obor_profile_build >= 4182) execute_onblockp_script(self, 2, other);
         }
     }
 
@@ -21765,12 +22751,12 @@ int common_trymove(float xdir, float zdir)
         if(xdir && (wall = checkwall_below(x, self->position.z, 999999)) >= 0 && level->walls[wall].height > self->position.y)
         {
             xdir = 0;
-            execute_onblockw_script(self, 1, (double)level->walls[wall].height);
+            execute_onblockw_script(self, 1, (double)level->walls[wall].height, obor_profile_build >= 4197 ? wall : 0);
         }
         if(zdir && (wall = checkwall_below(self->position.x, z, 999999)) >= 0 && level->walls[wall].height > self->position.y)
         {
             zdir = 0;
-            execute_onblockw_script(self, 2, (double)level->walls[wall].height);
+            execute_onblockw_script(self, 2, (double)level->walls[wall].height, obor_profile_build >= 4197 ? wall : 0);
         }
     }
 
@@ -23357,7 +24343,7 @@ void common_pickupitem(entity *other)
     // hide it
     if(pickup)
     {
-        execute_didhit_script(other, self, 0, 0, other->modeldata.subtype, 0, 0, 0, 0, 0); //Execute didhit script as if item "hit" collecter to allow easy item scripting.
+        execute_didhit_script(other, self, 0, 0, other->modeldata.subtype, 0, 0, 0, 0, 0, 0); //Execute didhit script as if item "hit" collecter to allow easy item scripting.
         other->position.z = 100000;
     }
 }
@@ -23501,7 +24487,7 @@ int arrow_move()
                 toss(self, 2.5 + randf(1));
                 self->modeldata.no_adjust_base = 0;
                 self->modeldata.subject_to_wall = self->modeldata.subject_to_platform = self->modeldata.subject_to_hole = self->modeldata.subject_to_gravity = 1;
-                set_fall(self, obor_attack_type_number(ATK_NORMAL, obor_profile_build), 0, self, 100000, 0, 0, 0, 0, 0);
+                set_fall(self, obor_attack_type_number(ATK_NORMAL, obor_profile_build), 0, self, 100000, 0, 0, 0, 0, 0, 0);
             }
         }
     }
@@ -23580,7 +24566,7 @@ int star_move()
             self->velocity.x = (obor_direction_right(self->direction, obor_profile_build)) ? (-1.2) : 1.2;
             self->damage_on_landing = 0;
             toss(self, 2.5 + randf(1));
-            set_fall(self, obor_attack_type_number(ATK_NORMAL, obor_profile_build), 0, self, 100000, 0, 0, 0, 0, 0);
+            set_fall(self, obor_attack_type_number(ATK_NORMAL, obor_profile_build), 0, self, 100000, 0, 0, 0, 0, 0, 0);
         }
     }
 
@@ -25864,7 +26850,7 @@ void player_think()
             set_getting(self);
             self->takeaction = common_get;
             ent_set_anim(self, ANI_GET, 0);
-            execute_didhit_script(other, self, 0, 0, other->modeldata.subtype, 0, 0, 0, 0, 0); //Execute didhit script as if item "hit" collecter to allow easy item scripting.
+            execute_didhit_script(other, self, 0, 0, other->modeldata.subtype, 0, 0, 0, 0, 0, 0); //Execute didhit script as if item "hit" collecter to allow easy item scripting.
             didfind_item(other);
             goto endthinkcheck;
         }
@@ -26216,7 +27202,7 @@ void player_think()
 
     if((other = find_ent_here(self, self->position.x, self->position.z, TYPE_ITEM, player_test_touch))  )
     {
-        execute_didhit_script(other, self, 0, 0, other->modeldata.subtype, 0, 0, 0, 0, 0); //Execute didhit script as if item "hit" collecter to allow easy item scripting.
+        execute_didhit_script(other, self, 0, 0, other->modeldata.subtype, 0, 0, 0, 0, 0, 0); //Execute didhit script as if item "hit" collecter to allow easy item scripting.
         didfind_item(other);    // Added function to clean code up a bit
     }
 
@@ -26436,7 +27422,7 @@ void drop_all_enemies()
             ent_list[i]->knockdowncount = ent_list[i]->modeldata.knockdowncount;
 
             ent_list[i]->knockdowntime = 0;
-            set_fall(ent_list[i], obor_attack_type_number(ATK_NORMAL, obor_profile_build), 1, self, 0, 0, 0, 0, 0, 0);
+            set_fall(ent_list[i], obor_attack_type_number(ATK_NORMAL, obor_profile_build), 1, self, 0, 0, 0, 0, 0, 0, 0);
         }
     }
     self = weapself;
@@ -27267,6 +28253,12 @@ entity *smartspawn(s_spawn_entry *props)      // 7-1-2005 Entire section replace
             set_weapon(e, wp->modeldata.weapnum, 0);
             e->weapent = wp;
         }
+    }
+
+    if(obor_profile_build >= 4186)
+    {
+        if(props->entitytype) e->modeldata.type = props->entitytype;
+        if(props->parent) e->parent = props->parent;
     }
 
     //ent_default_init(e);
@@ -28130,6 +29122,8 @@ void update_scrolled_bg()
             rocktravel = -rocktravel;
         }
         bgtravelled += (time - traveltime) * level->bgspeed / 30 * 4 + rocktravel;
+        if(obor_profile_build >= 4201)
+            vbgtravelled += (time - traveltime) * level->vbgspeed / 30 * 4;
     }
     else
     {
@@ -28176,6 +29170,21 @@ void update_scrolled_bg()
         level->quake /= 2;
         level->quaketime = time + (GAME_SPEED / 25);
     }
+}
+
+/* Keep defined coordinate truncation and reject undefined layer positions. */
+static int obor_background_coordinate(double value, int *output)
+{
+    if(!(value > (double)INT_MIN - 1.0 && value < (double)INT_MAX + 1.0)) return 0;
+    *output = (int)value;
+    return 1;
+}
+
+static int obor_background_shift(int *value, int64_t offset)
+{
+    if(offset < (int64_t)INT_MIN - *value || offset > (int64_t)INT_MAX - *value) return 0;
+    *value = (int)((int64_t)*value + offset);
+    return 1;
 }
 
 void draw_scrolled_bg()
@@ -28225,29 +29234,30 @@ void draw_scrolled_bg()
         width = screenmethod.xspan = layer->size.x + layer->spacing.x;
         height = screenmethod.yspan = layer->size.y + layer->spacing.z;
 
-        x = (int)(layer->offset.x - (advancex + bgtravelled * layer->bgspeedratio) * (1.0 - layer->ratio.x) ) ;
+        if(!obor_background_coordinate(layer->offset.x - (advancex + bgtravelled * layer->bgspeedratio) * (1.0 - layer->ratio.x) , &x)) continue;
 
         //printf("layerxratio %f  %d %f\n ", layer->xratio, x, layer->bgspeedratio);
 
-        if((level->scrolldir & SCROLL_UP))
+        if(obor_profile_build >= 4201)
         {
-            z = (int)(layer->offset.z + advancey * (1.0 - layer->ratio.z) ) ;
+            if(!obor_background_coordinate(layer->offset.z - (advancey + vbgtravelled * layer->bgspeedratio) * (1.0 - layer->ratio.z), &z)) continue;
+        }
+        else if((level->scrolldir & SCROLL_UP))
+        {
+            if(!obor_background_coordinate(layer->offset.z + advancey * (1.0 - layer->ratio.z) , &z)) continue;
         }
         else
         {
-            z = (int)(layer->offset.z - advancey * (1.0 - layer->ratio.z) ) ;
+            if(!obor_background_coordinate(layer->offset.z - advancey * (1.0 - layer->ratio.z) , &z)) continue;
         }
 
-        if(layer->quake)
-        {
-            x += gfx_x_offset;
-            z += gfx_y_offset;
-            //printf("%d y %d %d\n", index, gfx_y_offset, z);
-        }
-
-        x -= vpx;
-        z -= vpy;
-
+        if(layer->quake &&
+           (!obor_background_shift(&x, gfx_x_offset) ||
+            !obor_background_shift(&z, gfx_y_offset))) continue;
+        if(!obor_background_shift(&x, -(int64_t)vpx) ||
+           !obor_background_shift(&z, -(int64_t)vpy)) continue;
+        /* The native negative-position path negates these integers. */
+        if(x == INT_MIN || z == INT_MIN) continue;
 
         if(x < 0)
         {
@@ -28610,7 +29620,7 @@ void update(int ingame, int usevwait)
     {
         sound_pause_music(1);
         sound_pause_sample(1);
-        sound_play_sample(SAMPLE_BEEP2, 0, savedata.effectvol, savedata.effectvol, 100);
+        sound_play_sample(obor_profile_build >= 4170 ? SAMPLE_PAUSE : SAMPLE_BEEP2, 0, savedata.effectvol, savedata.effectvol, 100);
         pausemenu();
         return;
     }
@@ -28631,11 +29641,21 @@ void update(int ingame, int usevwait)
     }
     if(time < debug_time && debug_msg[0])
     {
-        screen_printf(vscreen, 0 , 230, 0, debug_msg);
+        if(obor_profile_build >= 4188 && debug_xy_msg.x && debug_xy_msg.y && debug_xy_msg.x != -1 && debug_xy_msg.y != -1)
+        {
+            if(!debug_xy_msg.font_index) debug_xy_msg.font_index = 0;
+            screen_printf(vscreen, debug_xy_msg.x, debug_xy_msg.y, debug_xy_msg.font_index, debug_msg);
+        }
+        else screen_printf(vscreen, 0, 230, 0, debug_msg);
     }
     else
     {
         debug_msg[0] = 0;
+        if(obor_profile_build >= 4188)
+        {
+            debug_xy_msg.x = -1;
+            debug_xy_msg.y = -1;
+        }
 #ifdef DEBUG_MODE
         if(level->pos)
         {
@@ -28825,7 +29845,7 @@ void display_credits()
     int menu_row = obor_profile_build >= 4146 ? 20 : 21;
     const char *port_label = obor_profile_build >= 4095 ? "Ports" : "Consoles";
     int s = videomodes.vShift / 2 + 3;
-    int v = (videomodes.vRes - videomodes.vShift) / 23;
+    int v = (videomodes.vRes - videomodes.vShift) / (obor_profile_build >= 4177 ? 24 : 23);
     int h = videomodes.hRes / 2;
     int col1 = h - fontmonowidth(0) * 16;
     int col2 = h + fontmonowidth(0) * 4;
@@ -28842,49 +29862,96 @@ void display_credits()
 
     while(!done)
     {
-        font_printf(_strmidx(2, "Credits"), s,   2, 0, "Credits");
-        font_printf(_strmidx(1, "Beats Of Rage"), s + v * 2,  1, 0, "Beats Of Rage");
-        font_printf(_strmidx(0, "Senile Team"), s + v * 3,  0, 0, "Senile Team");
-
-        font_printf(_strmidx(1, "OpenBOR"), s + v * 5,  1, 0, "OpenBOR");
-        font_printf(_strmidx(0, "SX"), s + v * 6,  0, 0, "SX");
-        font_printf(col1,  s + v * 7,  0, 0, "CGRemakes");
-        font_printf(col2, s + v * 7,  0, 0, "Fugue");
-        font_printf(col1,  s + v * 8,  0, 0, "uTunnels");
-        font_printf(col2, s + v * 8,  0, 0, "Kirby");
-        font_printf(col1,  s + v * 9,  0, 0, "LordBall");
-        font_printf(col2, s + v * 9,  0, 0, "Tails");
-        font_printf(col1,  s + v * 10, 0, 0, "KBAndressen");
-        font_printf(col2, s + v * 10, 0, 0, "Damon Caskey");
-        font_printf(col1,  s + v * 11, 0, 0, "Plombo");
-        font_printf(col2, s + v * 11, 0, 0, "Orochi_X");
-
-        font_printf(_strmidx(1, port_label), s + v * 12, 1, 0, port_label);
-        font_printf(col1,  s + v * 13, 0, 0, obor_profile_build >= 4146 ? "PSP/Linux/OSX" : "PSP/PS3/Linux/OSX");
-        font_printf(col2, s + v * 13, 0, 0, "SX");
-        font_printf(col1,  s + v * 14, 0, 0, "OpenDingux");
-        font_printf(col2, s + v * 14, 0, 0, "Shin-NiL");
-        font_printf(col1,  s + v * 15, 0, 0, "Windows");
-        font_printf(col2, s + v * 15, 0, 0, "SX & Nazo");
-        font_printf(col1,  s + v * 16, 0, 0, "GamePark");
-        font_printf(col2, s + v * 16, 0, 0, "SX & Lemon");
-        font_printf(col1,  s + v * 17, 0, 0, "DreamCast");
-        font_printf(col2, s + v * 17, 0, 0, "SX & Neill Corlett");
-        if(obor_profile_build < 4146)
+        if(obor_profile_build >= 4177)
         {
-            font_printf(col1, s + v * 18, 0, 0, "MS XBoX");
-            font_printf(col2, s + v * 18, 0, 0, "SX & XPort");
+            int m = 2;
+
+            font_printf(_strmidx(2, "Credits"), s,  2, 0, "Credits");
+            font_printf(_strmidx(1, "Beats Of Rage"), s + v * m,  1, 0, "Beats Of Rage"); ++m;
+            font_printf(_strmidx(0, "Senile Team"), s + v * m,  0, 0, "Senile Team"); m+=2;
+
+            font_printf(_strmidx(1, "OpenBOR"), s + v * m,  1, 0, "OpenBOR"); ++m;
+            font_printf(_strmidx(0, "SX"), s + v * m,  0, 0, "SX"); ++m;
+            font_printf(col1,  s + v * m,  0, 0, "CGRemakes");
+            font_printf(col2, s + v * m,  0, 0, "Fugue"); ++m;
+            font_printf(col1,  s + v * m,  0, 0, "uTunnels");
+            font_printf(col2, s + v * m,  0, 0, "Kirby"); ++m;
+            font_printf(col1,  s + v * m,  0, 0, "LordBall");
+            font_printf(col2, s + v * m,  0, 0, "Tails"); ++m;
+            font_printf(col1,  s + v * m, 0, 0, "KBAndressen");
+            font_printf(col2, s + v * m, 0, 0, "Damon Caskey"); ++m;
+            font_printf(col1,  s + v * m, 0, 0, "Plombo");
+            font_printf(col2, s + v * m, 0, 0, "Orochi_X");  ++m;
+            font_printf(col1, s + v * m, 0, 0, "White Dragon");  ++m;
+
+            font_printf(_strmidx(1, "Ports"), s + v * m,  1, 0, "Ports"); ++m;
+            font_printf(col1,  s + v * m, 0, 0, "PSP/Linux/OSX");
+            font_printf(col2, s + v * m, 0, 0, "SX"); ++m;
+            font_printf(col1,  s + v * m, 0, 0, "OpenDingux");
+            font_printf(col2, s + v * m, 0, 0, "Shin-NiL"); ++m;
+            font_printf(col1,  s + v * m, 0, 0, "Windows");
+            font_printf(col2, s + v * m, 0, 0, "SX & Nazo"); ++m;
+            font_printf(col1,  s + v * m, 0, 0, "GamePark");
+            font_printf(col2, s + v * m, 0, 0, "SX & Lemon"); ++m;
+            font_printf(col1,  s + v * m, 0, 0, "DreamCast");
+            font_printf(col2, s + v * m, 0, 0, "SX & Neill Corlett"); ++m;
+            font_printf(col1,  s + v * m, 0, 0, "Wii");
+            font_printf(col2, s + v * m, 0, 0, "SX & Plombo"); ++m;
+            font_printf(col1,  s + v * m, 0, 0, "Android");
+            font_printf(col2, s + v * m, 0, 0, "uTunnels & CRxTRDude"); ++m;
+
+            font_printf(_strmidx(1, "Menu Design"), s + v * m,  1, 0, "Menu Design"); ++m;
+            font_printf(col1, s + v * m,  0, 0, "SX");
+            font_printf(col2, s + v * m, 0, 0, "Fightn Words");
+
         }
-        font_printf(col1, s + v * wii_row, 0, 0, "Wii");
-        font_printf(col2, s + v * wii_row, 0, 0, "SX & Plombo");
-        if(obor_profile_build >= 4095)
+        else
         {
-            font_printf(col1, s + v * (wii_row + 1), 0, 0, "Android");
-            font_printf(col2, s + v * (wii_row + 1), 0, 0, "uTunnels & CRxTRDude");
+            font_printf(_strmidx(2, "Credits"), s,   2, 0, "Credits");
+            font_printf(_strmidx(1, "Beats Of Rage"), s + v * 2,  1, 0, "Beats Of Rage");
+            font_printf(_strmidx(0, "Senile Team"), s + v * 3,  0, 0, "Senile Team");
+
+            font_printf(_strmidx(1, "OpenBOR"), s + v * 5,  1, 0, "OpenBOR");
+            font_printf(_strmidx(0, "SX"), s + v * 6,  0, 0, "SX");
+            font_printf(col1,  s + v * 7,  0, 0, "CGRemakes");
+            font_printf(col2, s + v * 7,  0, 0, "Fugue");
+            font_printf(col1,  s + v * 8,  0, 0, "uTunnels");
+            font_printf(col2, s + v * 8,  0, 0, "Kirby");
+            font_printf(col1,  s + v * 9,  0, 0, "LordBall");
+            font_printf(col2, s + v * 9,  0, 0, "Tails");
+            font_printf(col1,  s + v * 10, 0, 0, "KBAndressen");
+            font_printf(col2, s + v * 10, 0, 0, "Damon Caskey");
+            font_printf(col1,  s + v * 11, 0, 0, "Plombo");
+            font_printf(col2, s + v * 11, 0, 0, "Orochi_X");
+
+            font_printf(_strmidx(1, port_label), s + v * 12, 1, 0, port_label);
+            font_printf(col1,  s + v * 13, 0, 0, obor_profile_build >= 4146 ? "PSP/Linux/OSX" : "PSP/PS3/Linux/OSX");
+            font_printf(col2, s + v * 13, 0, 0, "SX");
+            font_printf(col1,  s + v * 14, 0, 0, "OpenDingux");
+            font_printf(col2, s + v * 14, 0, 0, "Shin-NiL");
+            font_printf(col1,  s + v * 15, 0, 0, "Windows");
+            font_printf(col2, s + v * 15, 0, 0, "SX & Nazo");
+            font_printf(col1,  s + v * 16, 0, 0, "GamePark");
+            font_printf(col2, s + v * 16, 0, 0, "SX & Lemon");
+            font_printf(col1,  s + v * 17, 0, 0, "DreamCast");
+            font_printf(col2, s + v * 17, 0, 0, "SX & Neill Corlett");
+            if(obor_profile_build < 4146)
+            {
+                font_printf(col1, s + v * 18, 0, 0, "MS XBoX");
+                font_printf(col2, s + v * 18, 0, 0, "SX & XPort");
+            }
+            font_printf(col1, s + v * wii_row, 0, 0, "Wii");
+            font_printf(col2, s + v * wii_row, 0, 0, "SX & Plombo");
+            if(obor_profile_build >= 4095)
+            {
+                font_printf(col1, s + v * (wii_row + 1), 0, 0, "Android");
+                font_printf(col2, s + v * (wii_row + 1), 0, 0, "uTunnels & CRxTRDude");
+            }
+            font_printf(_strmidx(1, "Menu Design"), s + v * menu_row, 1, 0, "Menu Design");
+            font_printf(col1, s + v * (menu_row + 1), 0, 0, "SX");
+            font_printf(col2, s + v * (menu_row + 1), 0, 0, "Fightn Words");
+
         }
-        font_printf(_strmidx(1, "Menu Design"), s + v * menu_row, 1, 0, "Menu Design");
-        font_printf(col1, s + v * (menu_row + 1), 0, 0, "SX");
-        font_printf(col2, s + v * (menu_row + 1), 0, 0, "Fightn Words");
 
         update(2, 0);
 
@@ -29915,6 +30982,7 @@ void savelevelinfo()
     save->stage = current_stage;
     save->which_set = current_set;
     strncpy(save->dName, set->name, MAX_NAME_LEN);
+    if(obor_profile_build >= 4194) memcpy(save->allowSelectArgs, allowselect_args, sizeof(save->allowSelectArgs));
 }
 
 
@@ -30019,7 +31087,31 @@ static entity *spawnexample(int i)
     s_set_entry *set = levelsets + current_set;
     example = spawn((float)psmenu[i][0], (float)psmenu[i][1], 0, spdirection[i], NULL, -1, nextplayermodeln(NULL, i));
     strcpy(player[i].name, example->model->name);
-    player[i].colourmap = (colourselect && (set->nosame & 2)) ? nextcolourmap(example->model, i - 1) : 0;
+    if(obor_profile_build < 4180)
+        player[i].colourmap = (colourselect && (set->nosame & 2)) ? nextcolourmap(example->model, i - 1) : 0;
+    else
+    {
+        player[i].colourmap = 0;
+        if ( colourselect && (set->nosame & 2) )
+        {
+            int nosamef = -1;
+            int ii = 0;
+            for(ii = 0; ii < set->maxplayers; ii++)
+            {
+                if ( i != ii && stricmp(player[i].name,player[ii].name) == 0 )
+                {
+                    if ( player[i].colourmap == player[ii].colourmap  )
+                    {
+                        if ( obor_profile_build >= 4179 && nosamef == player[ii].colourmap ) break; // avoid infinite loop
+                        player[i].colourmap = nextcolourmap(example->model,player[i].colourmap);
+                        ii = 0;
+                        if ( nosamef == -1 ) nosamef = player[ii].colourmap;
+                        continue;
+                    }
+                } else continue;
+            }
+        }
+    }
     ent_set_colourmap(example, player[i].colourmap);
     return example;
 }
@@ -30373,11 +31465,12 @@ void playgame(int *players,  unsigned which_set, int useSavedGame)
     sameplayer = set->nosame;
 
 
+    if(obor_profile_build < 4190)
     for(i = 0; i < MAX_PLAYERS; i++)
     {
         if(set->skipselect[i])
         {
-            strcpy(skipselect[i], set->skipselect[i]);
+            if(!obor_copy_skipselect_name(skipselect[i], set->skipselect[i])) goto endgame;
         }
         else
         {
@@ -30399,6 +31492,7 @@ void playgame(int *players,  unsigned which_set, int useSavedGame)
             for(i = 0; i < set->maxplayers; i++)
             {
                 player[i].lives = save->pLives[i];
+                if(obor_profile_build >= 4166) player[i].credits = save->pCredits[i];
                 player[i].score = save->pScores[i];
                 player[i].colourmap = save->pColourmap[i];
                 player[i].weapnum = save->pWeapnum[i];
@@ -30411,10 +31505,18 @@ void playgame(int *players,  unsigned which_set, int useSavedGame)
             credits = save->credits;
             //reset_playable_list(1); // add this because there's no select screen, temporary solution
             //TODO: change sav format to support custom allowselect list.
+            if(obor_profile_build >= 4194) load_playable_list(save->allowSelectArgs);
         }
     }
 
     nosave = 1;
+    if(obor_profile_build >= 4190)
+    {
+        if(current_level < 0 || current_level >= set->numlevels || !set->levelorder) goto endgame;
+        le = set->levelorder + current_level;
+        if(!obor_apply_level_skipselect(set, le)) goto endgame;
+    }
+
 
     if((useSavedGame == 1 && save->flag == 2) || useSavedGame == 2 || selectplayer(players, NULL)) // if save flag is 2 don't select player
     {
@@ -30445,6 +31547,12 @@ void playgame(int *players,  unsigned which_set, int useSavedGame)
             }
             else if(le->type == LE_TYPE_SELECT_SCREEN)
             {
+                if(obor_profile_build >= 4190)
+                {
+                    set->noselect = 0;
+                    for(i = 0; i < set->maxplayers; ++i)
+                        if(le->skipselect[i]) skipselect[i][0] = 0;
+                }
                 for(i = 0; i < set->maxplayers ; i++)
                 {
                     players[i] = (player[i].lives > 0);
@@ -30453,6 +31561,11 @@ void playgame(int *players,  unsigned which_set, int useSavedGame)
                 {
                     break;
                 }
+            }
+            else if(obor_profile_build >= 4190 && le->type == LE_TYPE_SKIP_SELECT)
+            {
+                if(!obor_apply_level_skipselect(set, le)) goto endgame;
+                selectplayer(players, NULL);
             }
             else if(!playlevel(le->filename))
             {
@@ -30708,6 +31821,11 @@ int load_saved_game()
                 _menutext(0, col1, 1, Tr("Level:"));
                 _menutext(0, col2, 1, "%d", savelevel[saveslot].level);
                 _menutext(0, col1, 2, Tr("Credits:"));
+                if(obor_profile_build >= 4166 && noshare)
+                    _menutext(0, col2, 2, "%d/%d/%d/%d",
+                              savelevel[saveslot].pCredits[0], savelevel[saveslot].pCredits[1],
+                              savelevel[saveslot].pCredits[2], savelevel[saveslot].pCredits[3]);
+                else
                 _menutext(0, col2, 2, "%d", savelevel[saveslot].credits);
                 _menutext(0, col1, 3, Tr("Player Lives:"));
                 _menutext(0, col2, 3, "%d/%d/%d/%d",
@@ -31082,12 +32200,20 @@ readfile:
 #endif
 
 VIDEOMODES:
+    if(obor_profile_build >= 4160)
+    {
+        videomodes.mode = videoMode;
+        videomodes.filter = savedata.swfilter;
+    }
     switch (videoMode)
     {
         // 320x240 - All Platforms
     case 0:
-        videomodes.mode    = savedata.screen[videoMode][0];
-        videomodes.filter  = savedata.screen[videoMode][1];
+        if(obor_profile_build < 4160)
+        {
+            videomodes.mode    = savedata.screen[videoMode][0];
+            videomodes.filter  = savedata.screen[videoMode][1];
+        }
         videomodes.hRes    = 320;
         videomodes.vRes    = 240;
         videomodes.hScale  = 1;
@@ -31102,8 +32228,11 @@ VIDEOMODES:
 
         // 480x272 - All Platforms
     case 1:
-        videomodes.mode    = savedata.screen[videoMode][0];
-        videomodes.filter  = savedata.screen[videoMode][1];
+        if(obor_profile_build < 4160)
+        {
+            videomodes.mode    = savedata.screen[videoMode][0];
+            videomodes.filter  = savedata.screen[videoMode][1];
+        }
         videomodes.hRes    = 480;
         videomodes.vRes    = 272;
         videomodes.hScale  = (float)1.5;
@@ -31118,8 +32247,11 @@ VIDEOMODES:
 
         // 640x480 - PC, Dreamcast, Wii
     case 2:
-        videomodes.mode    = savedata.screen[videoMode][0];
-        videomodes.filter  = savedata.screen[videoMode][1];
+        if(obor_profile_build < 4160)
+        {
+            videomodes.mode    = savedata.screen[videoMode][0];
+            videomodes.filter  = savedata.screen[videoMode][1];
+        }
         videomodes.hRes    = 640;
         videomodes.vRes    = 480;
         videomodes.hScale  = 2;
@@ -31134,8 +32266,11 @@ VIDEOMODES:
 
         // 720x480 - PC, Wii
     case 3:
-        videomodes.mode    = savedata.screen[videoMode][0];
-        videomodes.filter  = savedata.screen[videoMode][1];
+        if(obor_profile_build < 4160)
+        {
+            videomodes.mode    = savedata.screen[videoMode][0];
+            videomodes.filter  = savedata.screen[videoMode][1];
+        }
         videomodes.hRes    = 720;
         videomodes.vRes    = 480;
         videomodes.hScale  = 2.25;
@@ -31150,8 +32285,11 @@ VIDEOMODES:
 
         // 800x480 - PC, Wii, Pandora
     case 4:
-        videomodes.mode    = savedata.screen[videoMode][0];
-        videomodes.filter  = savedata.screen[videoMode][1];
+        if(obor_profile_build < 4160)
+        {
+            videomodes.mode    = savedata.screen[videoMode][0];
+            videomodes.filter  = savedata.screen[videoMode][1];
+        }
         videomodes.hRes    = 800;
         videomodes.vRes    = 480;
         videomodes.hScale  = 2.5;
@@ -31166,8 +32304,11 @@ VIDEOMODES:
 
         // 800x600 - PC, Dreamcast, Wii
     case 5:
-        videomodes.mode    = savedata.screen[videoMode][0];
-        videomodes.filter  = savedata.screen[videoMode][1];
+        if(obor_profile_build < 4160)
+        {
+            videomodes.mode    = savedata.screen[videoMode][0];
+            videomodes.filter  = savedata.screen[videoMode][1];
+        }
         videomodes.hRes    = 800;
         videomodes.vRes    = 600;
         videomodes.hScale  = 2.5;
@@ -31182,8 +32323,11 @@ VIDEOMODES:
 
         // 960x540 - PC, Wii
     case 6:
-        videomodes.mode    = savedata.screen[videoMode][0];
-        videomodes.filter  = savedata.screen[videoMode][1];
+        if(obor_profile_build < 4160)
+        {
+            videomodes.mode    = savedata.screen[videoMode][0];
+            videomodes.filter  = savedata.screen[videoMode][1];
+        }
         videomodes.hRes    = 960;
         videomodes.vRes    = 540;
         videomodes.hScale  = 3;

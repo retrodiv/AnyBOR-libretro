@@ -1,0 +1,159 @@
+/* SPDX-License-Identifier: BSD-3-Clause
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me>
+ * Native entity mapper, getter prefix and selected complete getter cases.
+ * The reused allocation/cache providers do not establish their internals.
+ */
+@NAMESPACE@
+@HELPERS@
+int obor_allocation_query(const void *address,const void **base,size_t *remaining){
+ size_t size=obor_allocation_size(address);
+ if(base)*base=size?address:NULL;
+ if(remaining)*remaining=size;
+ return size!=0;
+}
+@NAME_READER@
+#define printf message
+@MAPPER@
+@GETTER@
+#undef printf
+static const struct {
+ unsigned revision;int count;const char *names[_ep_the_end+6];
+ int coordinates,legacy_attack,current_animation,model_animation,sprite_offsets;
+ const char *coordinate_errors[6],*get_reverse;
+} entity_contexts[]={@CONTEXTS@};
+static int entity_index(unsigned row,const char *name){
+ for(int i=0;i<entity_contexts[row].count;++i)
+  if(!strcmp(entity_contexts[row].names[i],name))return i;
+ return -1;
+}
+static void entity_property(unsigned row,const char *name,int named){
+ int index=entity_index(row,name);assert(index>=0);
+ ScriptVariant_Clear(values+1);
+ if(named)text_value(values+1,1,name);
+ else{values[1].vt=VT_INTEGER;values[1].lVal=index;}
+}
+static void entity_namespace_cases(unsigned row){
+ for(int index=0;index<entity_contexts[row].count;++index){
+  active_case=7000+(unsigned)index;fresh();entity_property(row,entity_contexts[row].names[index],1);
+  assert(mapstrings_entityproperty(args,2)==1 && !diagnostic[0]);
+  assert(values[1].vt==VT_INTEGER && values[1].lVal==index);
+  assert(mapstrings_entityproperty(args,2)==1 && !diagnostic[0] && values[1].lVal==index);
+ }
+ const char *removed[]={"attack","anim","anim.handle","animation","animation.handle",
+  "attack.coords.location.x","attack.coords.location.y","attack.coords.size.x",
+  "attack.coords.size.y","attack.coords.size.z.in","attack.coords.size.z.out"};
+ for(unsigned i=0;i<sizeof(removed)/sizeof(*removed);++i){
+  if(entity_index(row,removed[i])>=0)continue;
+  active_case=7200+i;fresh();text_value(values+1,1,removed[i]);
+  assert(mapstrings_entityproperty(args,2)==0 && values[1].vt==VT_STR);
+  char expected[256];snprintf(expected,sizeof(expected),"Property name '%s' is not supported by function getentityproperty.\n",removed[i]);
+  assert(!strcmp(diagnostic,expected));
+ }
+ for(int extra=0;extra<8;++extra){
+  active_case=7250+(unsigned)extra;fresh();
+  values[1].vt=VT_INTEGER;values[1].lVal=entity_contexts[row].count+extra;
+  assert(entity_query(args,&out,2)==E_FAIL && out==NULL && !diagnostic[0]);
+ }
+}
+static void entity_coordinate_cases(unsigned row){
+ if(!entity_contexts[row].coordinates)return;
+ for(unsigned field=0;field<6;++field)for(int named=0;named<2;++named)for(int lowered=0;lowered<2;++lowered){
+  active_case=7300+field*4+(unsigned)(2*named+lowered);frame_setup();
+  for(int i=0;i<6;++i)hit.attack_coords[i]=11+2*i;
+  entity_property(row,obor_forward_entity_attack_names[field],named);
+  values[2].vt=VT_INTEGER;values[2].lVal=1;values[3].vt=VT_INTEGER;values[3].lVal=1;
+  args[4]=NULL; /* Native optional attack index is never consumed. */
+  if(lowered)mapstrings_entityproperty(args,5);
+  assert(entity_query(args,&out,5)==S_OK && !diagnostic[0]);result_value(VT_INTEGER,11+2*field);
+  text_value(&result,15,"old-result");args[3]=NULL;
+  assert(entity_query(args,&out,3)==S_OK && !diagnostic[0] && result.vt==VT_EMPTY && !refs[15]);
+  args[3]=values+3;
+  for(unsigned position=2;position<4;++position){
+   diagnostic[0]=0;values[position].vt=VT_DECIMAL;values[position].dblVal=1.25;
+   assert(entity_query(args,&out,4)==E_FAIL && !strcmp(diagnostic,entity_contexts[row].coordinate_errors[field]));
+   values[position].vt=VT_INTEGER;values[position].lVal=1;
+  }
+  diagnostic[0]=0;values[2].lVal=0;
+  assert(entity_query(args,&out,4)==S_OK && !diagnostic[0] && result.vt==VT_EMPTY);
+  values[2].lVal=1;target.numframes=0;
+  assert(entity_query(args,&out,4)==S_OK && !diagnostic[0] && result.vt==VT_EMPTY);
+ }
+}
+static void entity_legacy_attack_cases(unsigned row){
+ if(!entity_contexts[row].legacy_attack)return;
+ const char *leaves[]={"force","coords","dropv"};
+ for(unsigned leaf=0;leaf<3;++leaf)for(int lowered=0;lowered<2;++lowered){
+  active_case=7350+leaf*2+(unsigned)lowered;frame_setup();target.numframes=2;
+  hit.attack_force=17;hit.attack_coords[0]=19;hit.dropv.x=21.25;
+  entity_property(row,"attack",1);text_value(values+2,2,leaves[leaf]);
+  values[3].vt=VT_INTEGER;values[3].lVal=99; /* The typed box index is ignored. */
+  values[4].vt=VT_INTEGER;values[4].lVal=1;values[5].vt=VT_INTEGER;values[5].lVal=1;
+  values[6].vt=VT_INTEGER;values[6].lVal=0;
+  if(leaf==2)text_value(values+6,6,"x");
+  if(lowered)mapstrings_entityproperty(args,7);
+  assert(entity_query(args,&out,7)==S_OK && !diagnostic[0]);
+  result_value(leaf==2?VT_DECIMAL:VT_INTEGER,leaf==0?17:leaf==1?19:21.25);
+ }
+}
+static void entity_animation_cases(unsigned row){
+ if(entity_index(row,"animation")>=0)for(int named=0;named<2;++named){
+  active_case=7400+(unsigned)named;fresh();entity_property(row,"animation",named);
+  int status=entity_query(args,&out,2);assert(!diagnostic[0]);
+  if(entity_contexts[row].current_animation)assert(status==S_OK && result.vt==VT_PTR && result.ptrVal==&legacy);
+  else assert(status==E_FAIL && out==NULL);
+ }
+ const char *reserved=entity_index(row,"anim")>=0?"anim":entity_index(row,"anim.handle")>=0?"anim.handle":NULL;
+ if(reserved){fresh();entity_property(row,reserved,1);assert(entity_query(args,&out,2)==E_FAIL && out==NULL && !diagnostic[0]);}
+ if(!entity_contexts[row].model_animation)return;
+ for(int named=0;named<2;++named)for(int lowered=0;lowered<2;++lowered){
+  active_case=7410+(unsigned)(2*named+lowered);fresh();actor.animnum=1;
+  entity_property(row,"animation.handle",named);
+  if(lowered)mapstrings_entityproperty(args,2);
+  assert(entity_query(args,&out,2)==S_OK && !diagnostic[0] && result.vt==VT_PTR && result.ptrVal==&target);
+  values[2].vt=VT_DECIMAL;values[2].dblVal=1.75;
+  assert(entity_query(args,&out,3)==S_OK && !diagnostic[0] && result.vt==VT_PTR && result.ptrVal==&target);
+  text_value(values+2,2,"bad-id");
+  assert(entity_query(args,&out,3)==S_OK && !diagnostic[0] && result.vt==VT_PTR && result.ptrVal==&target);
+  ScriptVariant_Clear(values+2);values[2].vt=VT_INTEGER;values[2].lVal=0;
+  assert(entity_query(args,&out,3)==S_OK && !diagnostic[0] && result.vt==VT_PTR && !result.ptrVal);
+  table[0]=(s_anim*)(uintptr_t)123;
+  assert(entity_query(args,&out,3)==S_OK && !diagnostic[0] && result.vt==VT_PTR && result.ptrVal==(void*)(uintptr_t)123);
+  values[2].lVal=2;assert(entity_query(args,&out,3)==E_FAIL && !diagnostic[0]);
+ }
+}
+static void entity_sprite_cases(unsigned row){
+ for(unsigned leaf=0;leaf<2;++leaf)for(int named=0;named<2;++named){
+  active_case=7500+leaf*2+(unsigned)named;sprite_setup();target.numframes=2;
+  sprites[1]=1;sprite_pixels.offsetx=17;sprite_pixels.offsety=19;
+  entity_property(row,"spritea",named);text_value(values+2,2,leaf?"offsety":"offsetx");
+  values[3].vt=VT_INTEGER;values[3].lVal=1;values[4].vt=VT_INTEGER;values[4].lVal=1;
+  if(entity_contexts[row].sprite_offsets){
+   target.numframes=1; /* The original accepts the logical endpoint when allocated. */
+   assert(entity_query(args,&out,5)==S_OK && !diagnostic[0]);result_value(VT_INTEGER,leaf?19:17);
+   target.numframes=0;assert(entity_query(args,&out,5)==S_OK && !diagnostic[0] && result.vt==VT_EMPTY);
+  }else assert(entity_query(args,&out,5)==E_FAIL && !diagnostic[0] && out==NULL);
+ }
+ if(obor_profile_build>=4161){
+  active_case=7510;sprite_setup();target.numframes=1;
+  entity_property(row,"spritea",1);
+  values[2].vt=VT_DECIMAL;values[2].dblVal=0.0; /* Raw native leaf zero is centrex. */
+  values[3].vt=VT_EMPTY;values[3].lVal=1;
+  values[4].vt=VT_EMPTY;values[4].lVal=1;
+  assert(entity_query(args,&out,5)==S_OK && !diagnostic[0]);result_value(VT_INTEGER,21);
+  values[4].lVal=3;assert(entity_query(args,&out,5)==S_OK && !diagnostic[0] && result.vt==VT_EMPTY);
+ }
+}
+int main(void){
+ for(unsigned row=0;row<sizeof(entity_contexts)/sizeof(*entity_contexts);++row){
+  obor_profile_build=entity_contexts[row].revision;active_case=0;
+  List_Init(&theFunctionList);Script_LoadSystemFunctions();
+  assert(List_FindByName(&theFunctionList,"getentityproperty") && List_Retrieve(&theFunctionList)==(void*)entity_query);
+  assert(Script_GetStringMapFunction((void*)entity_query)==(void*)mapstrings_entityproperty);
+  assert(!strcmp(Script_GetFunctionName((void*)entity_query),entity_contexts[row].get_reverse));
+  entity_namespace_cases(row);entity_coordinate_cases(row);entity_legacy_attack_cases(row);
+  entity_animation_cases(row);entity_sprite_cases(row);
+  List_Clear(&theFunctionList);fresh();
+  printf("{\"revision\":%u,\"status\":\"PASS\"}\n",obor_profile_build);
+ }
+ return 0;
+}

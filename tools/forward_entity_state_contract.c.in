@@ -1,0 +1,179 @@
+/* SPDX-License-Identifier: BSD-3-Clause
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me> */
+#include <stdint.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <stdarg.h>
+@HEADER@
+#undef assert
+#undef printf
+uint32_t obor_profile_build;
+#define assert(c) do {if(!(c)){fprintf(stderr,"ENTITY_STATE revision=%u case=%u line=%d\n",obor_profile_build,active_case,__LINE__);abort();}}while(0)
+static unsigned active_case;
+HRESULT Interpreter_Call(Interpreter *p) {(void)p;abort();}
+HRESULT Interpreter_EvalInstruction(Interpreter *p) {(void)p;abort();}
+static entity actor,parent,previous;
+entity *self=&actor;
+int max_animations=256,max_attack_types=2;
+static unsigned int fixture_time;
+static s_level level_record,*level=&level_record;
+static s_model model;
+static s_anim animations[256],*animation_table[256];
+static s_videomodes videomodes;
+static int selectScreen,nodropspawn=1,advancex,MAX_WALL_HEIGHT=1000;
+static int rises[2]={1,2},riseattacks[2]={1,2};
+int *animrises=rises,*animriseattacks=riseattacks;
+static int walks[1]={1},*animwalks=walks,max_walks=1;
+static unsigned frame_calls,kill_calls,target_calls;
+static int target_available;
+static char diagnostic[1024];
+static int record_printf(const char *format,...) {
+ va_list args;va_start(args,format);int n=vsnprintf(diagnostic,sizeof(diagnostic),format,args);va_end(args);return n;
+}
+#define printf record_printf
+void StrCache_Collect(int index) {(void)index;abort();}
+int StrCache_Pop(void) {abort();}
+@VARIANTS@
+#define NO_ACTION(name) void name(void){abort();}
+NO_ACTION(player_think) NO_ACTION(common_think) NO_ACTION(trap_think)
+NO_ACTION(steamer_think) NO_ACTION(text_think) NO_ACTION(anything_walk)
+NO_ACTION(common_spawn) NO_ACTION(common_drop) NO_ACTION(common_rise) NO_ACTION(common_attack_proc)
+#define NO_DAMAGE(name) int name(entity *e,s_attack *a){(void)e;(void)a;abort();}
+NO_DAMAGE(player_takedamage) NO_DAMAGE(biker_takedamage) NO_DAMAGE(arrow_takedamage)
+NO_DAMAGE(common_takedamage) NO_DAMAGE(obstacle_takedamage)
+int player_trymove(float x,float z){(void)x;(void)z;abort();}
+int common_trymove(float x,float z){(void)x;(void)z;abort();}
+void update_frame(entity *e,int frame){assert(e==&actor);e->animpos=frame;++frame_calls;}
+void kill(entity *e){assert(e==&actor);++kill_calls;}
+int set_idle(entity *e){assert(e==&actor);e->animation=&animations[1];return 1;}
+float randf(float maximum){(void)maximum;abort();}
+entity *normal_find_target(int animation,int type){assert(animation>=0 && !type);++target_calls;return target_available?&parent:NULL;}
+entity *check_platform_below(float x,float z,float y,entity *e){(void)x;(void)z;(void)y;(void)e;abort();}
+int checkwall_below(float x,float z,float y){(void)x;(void)z;(void)y;abort();}
+static float find_nearest_wall_x(int wall,float x,float z){(void)wall;(void)x;(void)z;abort();}
+#define common_walk_anim(e) common_anim_series(e,animwalks,max_walks,(e)->walkmode,ANI_WALK)
+/* The native NPC default deliberately continues through the enemy branch. */
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wimplicit-fallthrough"
+@CORE@
+#pragma GCC diagnostic pop
+@SCRIPT@
+@FLAGS@
+static LONG get_walking(entity *ent) {
+ ScriptVariant value={0},*out=&value,**pretvar=&out;
+ /* Native getentityproperty clears its result before the selected dispatch. */
+ ScriptVariant_Clear(out);
+ switch(0){case 0: ScriptVariant_ChangeType(out,VT_INTEGER);@GET_WALKING@}
+ assert(value.vt==VT_INTEGER);return value.lVal;
+}
+static void set_walking(entity *ent,ScriptVariant *value) {
+ LONG ltemp;
+ if(SUCCEEDED(ScriptVariant_IntegerValue(value,&ltemp))) {
+  switch(0){case 0:@SET_WALKING@}
+ }
+}
+static const struct {unsigned revision;int walking,grab_defaults,partial_bind;} contexts[]={@CONTEXTS@};
+static const struct {int type,subtype,nograb;} default_cases[]={@DEFAULT_CASES@};
+/* Results: success,bound,flags,offset.x/z/y,position.x/z/y,direction,binding.direction,ani_bind. */
+static const struct {int count,actor,target,empty,bad,initial_flags,direction,parent_direction;int legacy[12],partial[12];} bind_cases[]={@BIND_CASES@};
+static void reset(void) {
+ memset(&actor,0,sizeof(actor));memset(&parent,0,sizeof(parent));memset(&previous,0,sizeof(previous));
+ memset(&level_record,0,sizeof(level_record));memset(&model,0,sizeof(model));
+ memset(animations,0,sizeof(animations));memset(animation_table,0,sizeof(animation_table));
+ for(int i=0;i<256;++i){animations[i].numframes=2;animations[i].sync=-1;}
+ actor.modeldata.animation=animation_table;actor.modeldata.animation_capacity=256;
+ actor.animation=&animations[1];actor.animnum=1;actor.model=&model;model.speed=1;
+ animation_table[1]=&animations[1];animation_table[2]=&animations[2];
+ actor.modeldata.speed=1;actor.modeldata.nomove=1;actor.position.x=10;actor.position.z=20;actor.position.y=30;
+ parent.position.x=100;parent.position.z=200;parent.position.y=300;
+ frame_calls=kill_calls=target_calls=0;diagnostic[0]=0;level=&level_record;fixture_time=0;
+}
+static void walking_controls(int modern) {
+ reset();actor.walking=7;assert(get_walking(&actor)==(modern?7:0));
+ ScriptVariant v={0};v.vt=VT_DECIMAL;v.dblVal=-2.75;set_walking(&actor,&v);assert(actor.walking==(modern?-2:7));
+ v.vt=VT_EMPTY;set_walking(&actor,&v);assert(actor.walking==(modern?-2:7));
+ /* Early returns do not reset walking; both effective transition routes do. */
+ for(int route=0;route<6;++route) {
+  reset();actor.walking=7;animations[2].sync=0;
+  if(route==0)ent_set_anim(NULL,2,0);
+  if(route==1)ent_set_anim(&actor,-1,0);
+  if(route==2)ent_set_anim(&actor,1,0);
+  if(route==3){animations[2].numframes=0;ent_set_anim(&actor,2,0);}
+  if(route==4){animations[1].sync=0;actor.animpos=1;ent_set_anim(&actor,2,0);assert(actor.animpos==1 && !frame_calls);}
+  if(route==5){ent_set_anim(&actor,2,0);assert(frame_calls==1 && actor.animpos==0);}
+  assert(actor.walking==(modern && route>=4?0:7));
+ }
+ const int defaults[]={ANI_WALK,ANI_UP,ANI_DOWN,ANI_BACKWALK,ANI_IDLE};
+ for(unsigned d=0;d<sizeof(defaults)/sizeof(*defaults);++d)
+  for(int route=0;route<3;++route) {
+   reset();actor.walking=7;int alternatives[1]={1},def=defaults[d];assert(def<256);
+   animation_table[def]=&animations[def];actor.animation=&animations[2];actor.animnum=2;
+   target_available=route==0;
+   int force=route==2;assert(common_anim_series(&actor,alternatives,1,force,def)==1);
+   assert(actor.walking==(modern?(d<3?1:0):7));
+  }
+ reset();actor.walking=7;animation_table[1]=NULL;assert(!common_anim_series(&actor,walks,1,0,ANI_WALK));assert(actor.walking==7);
+}
+static void grab_controls(int modern) {
+ for(unsigned i=0;i<sizeof(default_cases)/sizeof(*default_cases);++i) {
+  reset();actor.nograb=7;actor.nograb_default=23;
+  actor.modeldata.type=default_cases[i].type;actor.modeldata.subtype=default_cases[i].subtype;
+  actor.modeldata.multiple=1;actor.position.y=actor.base=0;
+  ent_default_init(&actor);
+  assert(actor.nograb==(default_cases[i].nograb?1:7));
+  assert(actor.nograb_default==(modern?default_cases[i].nograb:23));
+ }
+ reset();level=NULL;actor.nograb=7;actor.nograb_default=23;actor.modeldata.type=TYPE_ITEM;ent_default_init(&actor);
+ assert(actor.nograb==7 && actor.nograb_default==23);level=&level_record;
+ for(int saved=-1;saved<=1;++saved) {
+  reset();actor.nograb=9;actor.nograb_default=saved;
+  assert(set_rise(&actor,0,0));assert(actor.nograb==(modern?saved:0));
+  actor.nograb=9;actor.modeldata.riseattacktype=1;
+  assert(set_riseattack(&actor,0,0));assert(actor.nograb==(modern?saved:0));
+  actor.nograb=9;ScriptVariant arg={0},result={0},*out=&result,*args[]={&arg};arg.vt=VT_PTR;arg.ptrVal=&actor;
+  assert(openbor_setidle(args,&out,1)==S_OK && !out && actor.nograb==(modern?saved:0));
+ }
+}
+static void binding_controls(int partial) {
+ for(active_case=0;active_case<sizeof(bind_cases)/sizeof(*bind_cases);++active_case) {
+  reset();const int *want=partial?bind_cases[active_case].partial:bind_cases[active_case].legacy;
+  actor.binding.ent=&previous;actor.binding.offset.x=3;actor.binding.offset.z=4;actor.binding.offset.y=5;
+  actor.binding.offset_flag.x=!!(bind_cases[active_case].initial_flags&1);
+  actor.binding.offset_flag.z=!!(bind_cases[active_case].initial_flags&2);
+  actor.binding.offset_flag.y=!!(bind_cases[active_case].initial_flags&4);
+  actor.binding.direction=DIRECTION_ADJUST_NONE;parent.direction=bind_cases[active_case].parent_direction;
+  parent.animnum=actor.animnum;parent.animpos=actor.animpos;
+  ScriptVariant values[7],result={0},*out=&result,*args[7];
+  memset(values,0,sizeof(values));
+  for(int k=0;k<7;++k){args[k]=values+k;values[k].vt=VT_INTEGER;}
+  values[0].vt=values[1].vt=VT_PTR;
+  values[0].ptrVal=bind_cases[active_case].actor?&actor:NULL;
+  values[1].ptrVal=bind_cases[active_case].target?&parent:NULL;
+  values[2].lVal=2;values[3].lVal=4;values[4].lVal=6;values[5].lVal=bind_cases[active_case].direction;values[6].lVal=0;
+  for(int k=2;k<7;++k)if(bind_cases[active_case].empty&(1<<(k-2)))values[k].vt=VT_EMPTY;
+  if(bind_cases[active_case].bad>=0)values[bind_cases[active_case].bad].vt=VT_PTR;
+  int status=SUCCEEDED(openbor_bindentity(args,&out,bind_cases[active_case].count));assert(!out);
+  int observed[]={status,actor.binding.ent==&parent?1:actor.binding.ent==&previous?2:0,
+   !!actor.binding.offset_flag.x+2*!!actor.binding.offset_flag.z+4*!!actor.binding.offset_flag.y,
+   actor.binding.offset.x,actor.binding.offset.z,actor.binding.offset.y,
+   (int)actor.position.x,(int)actor.position.z,(int)actor.position.y,actor.direction,actor.binding.direction,actor.binding.ani_bind};
+  for(unsigned k=0;k<12;++k)if(observed[k]!=want[k]){fprintf(stderr,"binding field=%u got=%d expected=%d\n",k,observed[k],want[k]);assert(0);}
+ }
+ /* Animation invalidation precedes movement, including when partial axes are disabled. */
+ for(int mode=1;mode<=7;++mode) {
+  reset();actor.binding.ent=&parent;actor.binding.ani_bind=mode;parent.animnum=255;
+  adjust_bind(&actor);assert(!actor.binding.ent && kill_calls==!!(mode&4));
+  assert(actor.position.x==10 && actor.position.z==20 && actor.position.y==30);
+ }
+ reset();adjust_bind(NULL);actor.binding.ent=NULL;adjust_bind(&actor);
+ ScriptVariant result={0},*out=&result;assert(openbor_bindentity(NULL,&out,2)==E_FAIL && !out);
+}
+int main(void) {
+ for(unsigned i=0;i<sizeof(contexts)/sizeof(*contexts);++i) {
+  obor_profile_build=contexts[i].revision;active_case=0;
+  walking_controls(contexts[i].walking);grab_controls(contexts[i].grab_defaults);binding_controls(contexts[i].partial_bind);
+  fprintf(stdout,"{\"revision\":%u,\"status\":\"PASS\"}\n",obor_profile_build);
+ }
+ return 0;
+}

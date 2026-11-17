@@ -7,6 +7,7 @@ import json
 from pathlib import Path
 import re
 
+from historical_classic_entities import entity_declarations
 from test_historical_player import function, rename_identifiers, switch_cases
 
 
@@ -16,8 +17,7 @@ def vault_program(root, data):
     source = (engine / 'openborscript.c').read_text()
     variant = (engine / 'source/scriptlib/ScriptVariant.c').read_text()
     utils = (engine / 'source/utils.c').read_text()
-    first = source.index('enum _axis_enum')
-    declarations = source[first:source.index('HRESULT openbor_getanimationproperty(', first)]
+    declarations = entity_declarations(source)
     callbacks = []
     symbols = set()
     for name in ('openbor_changeentityproperty',):

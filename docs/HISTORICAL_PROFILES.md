@@ -34,7 +34,7 @@ v3.0 3837, v3.0 3839, v3.0 3842, v3.0 3846, v3.0 3847-dev, v3.0 3849, v3.0 3854,
 v3.0 3968-dev, v3.0 3970-dev, v3.0 3978, v3.0 3984, v3.0 3993, v3.0 3994, v3.0
 4011, v3.0 4046, v3.0 4051, v3.0 4054, v3.0 4055, v3.0 4079, v3.0 4080, v3.0
 4082, v3.0 4085, v3.0 4086, v3.0 4088-dev, v3.0 4107, v3.0 4111, v3.0 4129, v3.0
-4153, v3.0 4432, v3.0 4453, v3.0 6330, v3.0 6330-lns-010g, v3.0 6391, v3.0 6391-mod, v3.0 6392-dev,
+4153, v3.0 4161-dev, v3.0 4183-dev, v3.0 4213, v3.0 4432, v3.0 4453, v3.0 6330, v3.0 6330-lns-010g, v3.0 6391, v3.0 6391-mod, v3.0 6392-dev,
 v3.0 6412-dev, v3.0 6510-dev, v3.0 7086-dev, v3.0 7123-dev, v4.0 7142-alpha,
 v4.0 7530, v4.0 7533, v4.0 7555, v4.0 7556, v4.0 7735 and v4.0 8023-dev.
 
@@ -346,12 +346,48 @@ bounded result. Camera bounds change at 3846; reverse scrolling, blockade
 clamping and smoothing follow 3851. Damage owner and biker attacker forwarding
 follow 3853; omitted text lifetime is defined as zero.
 
+## Forward profiles through 4213
+
+Profiles 4161-dev, 4183-dev and 4213 use the 4086 physical engine with
+source-defined compatibility conditions. The development profiles require
+an exact build tag or manual selection; automatic declared revisions
+4154–4213 select official profile 4213.
+
+The source revisions and dates are recorded in `src/pin.json`. The two
+4183 histories have the same complete source tree, as do the two 4213
+histories. Their source equivalence does not identify which history produced
+an independently compiled executable.
+
+| Profile | Original source | Source date | Selection |
+|---|---|---|---|
+| v3.0 4161-dev | [`baab46acb654`](https://github.com/DCurrent/openbor/tree/baab46acb6545655d104f5a717364766890089f2/engine) | 2015-04-27 | Exact tag or manual |
+| v3.0 4183-dev | [`f1a221a00eda`](https://github.com/DCurrent/openbor/tree/f1a221a00eda2ed45b779dc6df165a5e93db0773/engine) | 2016-10-12 | Exact tag or manual |
+| v3.0 4213 | [`7d343fe28e53`](https://github.com/DCurrent/openbor/tree/7d343fe28e53b9eb3066693392cc0a1353afdde0/engine) | 2016-10-21 | Automatic, exact tag or manual |
+
+The corresponding complete-tree aliases are
+`9018b24ce8e9891eaa32353bce528df02ef62e68` for 4183 and
+`5c292cb8b80a91803fe1fa06ea70b886fc41335b` for 4213.
+The 4161 source retains the original registered current-animation getter;
+the later profiles use their own model-animation interfaces and registry bindings.
+
+Settings and saved-selection records retain each profile's native layout.
+Animation and entity properties preserve native names, numeric IDs, argument
+use, result types and registry bindings. Frame offsets, rotation, attack tags,
+platform and hole callbacks, level-local selection, vertical backgrounds,
+pause audio and script mathematics follow their own source boundaries.
+The older profiles retain their own behavior on the shared physical engine.
+
+The public focused fixtures retain behavior boundaries, preceding controls
+and family endpoints. Selected functions run with controlled platform and
+script services; these contracts do not certify every original platform or
+complete gameplay. Defined native output and return behavior is reproduced;
+undefined consumed values are refused safely.
+
 ## Early profile contracts
 
 The early family uses the 4086 physical source with contracts taken from each
-profile's own upstream revision. The unofficial development snapshot is
-exact-tag/manual only. Official automatic profiles cover declared revisions
-through 4153. Source commits and dates are recorded in [src/pin.json](../src/pin.json).
+profile's own upstream revision. The unofficial development snapshots use exact tags or manual selection.
+Official automatic profiles cover declared revisions through 4213. Source commits and dates are recorded in [src/pin.json](../src/pin.json).
 
 | Boundary | Native behavior |
 |---|---|
@@ -720,6 +756,9 @@ Profiles are compatibility selections. Several profiles use one physical source 
 | v3.0 4111 | `4086` |
 | v3.0 4129 | `4086` |
 | v3.0 4153 | `4086` |
+| v3.0 4161-dev | `4086` |
+| v3.0 4183-dev | `4086` |
+| v3.0 4213 | `4086` |
 | v3.0 4432 | `4432` |
 | v3.0 4453 | `4432` |
 | v3.0 6330 | `6391` |

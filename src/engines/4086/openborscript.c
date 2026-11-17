@@ -1,4 +1,4 @@
-/* AnyBOR modification record: 2026-11-08.
+/* AnyBOR modification record: 2026-11-17.
  * Port maintained by retrodiv <retrodiv@proton.me>.
  * Copyright (c) 2026 retrodiv <retrodiv@proton.me> (original contributions).
  * These contributions are licensed under BSD-3-Clause; see LICENSE at the root.
@@ -26,7 +26,40 @@
  * defined. Use the declared staydown name-table length for lookup. Transfer
  * loaded stream buffers through aligned local outputs while preserving
  * native record layout and results. Close owned input files after stream
- * loading and on buffer allocation failure.
+ * loading and on buffer allocation failure. Preserve native mathematical API
+ * availability, angle units and inverse-trigonometric branches, with bounded
+ * argument access. Select native walking flag access and grab restoration;
+ * retain absent versus empty binding axes and partial failure state with
+ * bounded arguments. Preserve native indexed array edits, named deletion and
+ * size selection; keep aliased values valid across growth and shifting and
+ * release deleted list owners safely. Select native byte reads, stream
+ * append offsets and counts, save paths and final-newline behavior; bound
+ * conversions, allocations, paths and cursor access. Preserve the native
+ * attack-property setter availability, reverse names and compiler mapping by
+ * profile, with bounded arguments. Restore native animation property reads
+ * and writes with profile-selected selectors and registry bindings. Select
+ * native player reverse names and custom-menu option routing and hall-of-
+ * fame registration by profile. Preserve native player-property ordinals,
+ * input arrays, map queries and direction constant admission by profile.
+ * Preserve native level-property names, ordinals, speed conversions and
+ * integer-member results under decimal tags; refuse undefined integer
+ * conversions. Retain native visible frame-count edits with checked integer
+ * conversion and physical table growth. Check animation arguments when
+ * consumed, retaining ignored trailing slots and source-defined diagnostic
+ * order. Bound native per-frame accesses by owned table capacity and
+ * validate referenced attack, movement and drawing records before use.
+ * Preserve sparse fallbacks, logical-count searches and native reset
+ * targets. Bound fixed animation records and sprite-map, node, header and
+ * filename access while retaining native pointer assignments, centre updates
+ * and accepted filename-value types. Preserve native spawn-property names,
+ * numeric order, type conversion and raw parent-value admission by profile.
+ * Preserve native integer or floating rotation storage by profile, with
+ * unchanged slot size and typed script, parser, mirror, copy and raster
+ * access. Bound integer rotation results and initial trigonometric table
+ * indices. Preserve native system-variable names, numeric order, source-
+ * defined name-search results and cached selectors by profile. Preserve
+ * native terrain-query availability, aliases, defaults, consumed arguments
+ * and altitude selection, with bounded missing-argument refusal.
  * Existing changes recorded here; this is not their implementation date.
  * See MODIFICATIONS.md and docs/modifications/4086.md
  * at the source repository root. Original notices follow below.
@@ -68,6 +101,7 @@
 #include "libretroport.h"
 #include "soundmix.h"
 #include "globals.h"
+#include "omath.h"
 #include "ImportCache.h"
 #include "models.h"
 
@@ -307,6 +341,71 @@ int Varlist_SetByIndex(Varlist *varlist, int index, ScriptVariant *var)
             var = (ScriptVariant *)((char *)grown + source_offset);
     }
     ScriptVariant_Copy(varlist->vars + index + 1, var);
+    return 1;
+}
+
+/* Native array interfaces by White Dragon. Keep variant aliases and owners valid. */
+int Varlist_AddByIndex(Varlist *array, int index, ScriptVariant *var)
+{
+    int size, i;
+    size_t old_slots, new_slots, source_offset = SIZE_MAX;
+    uintptr_t begin, source;
+    ScriptVariant *grown;
+    if(!array || !array->vars || !var) return 0;
+    size = array->vars->lVal;
+    if(size < 0 || size > INT_MAX - 2 || index < 0 || index > size) return 0;
+    old_slots = (size_t)size + 1;
+    new_slots = old_slots + 1;
+    if(new_slots > SIZE_MAX / sizeof(*grown)) return 0;
+    begin = (uintptr_t)array->vars;
+    source = (uintptr_t)var;
+    if(source >= begin && source - begin < old_slots * sizeof(*grown) &&
+       (source - begin) % sizeof(*grown) == 0)
+        source_offset = (size_t)(source - begin);
+    grown = realloc(array->vars, new_slots * sizeof(*grown));
+    if(!grown) return 0;
+    memset(grown + old_slots, 0, sizeof(*grown));
+    array->vars = grown;
+    size = ++array->vars->lVal;
+    for(i = size - 1; i > index; --i)
+        ScriptVariant_Copy(array->vars + 1 + i, array->vars + i);
+    /* Resolve an aliased source after shifting, as the native in-place edit
+     * does; snapshotting its earlier value would change defined results. */
+    if(source_offset != SIZE_MAX)
+        var = (ScriptVariant *)((char *)grown + source_offset);
+    if(array->vars + 1 + index != var)
+        ScriptVariant_Copy(array->vars + 1 + index, var);
+    return 1;
+}
+
+int Varlist_DeleteByIndex(Varlist *array, int index)
+{
+    int size, i;
+    ScriptVariant *shrunk;
+    if(!array || !array->vars) return 0;
+    size = array->vars->lVal;
+    if(size <= 0 || index < 0 || index >= size) return 0;
+    for(i = index; i < size - 1; ++i)
+        ScriptVariant_Copy(array->vars + 1 + i, array->vars + 2 + i);
+    --array->vars->lVal;
+    ScriptVariant_Clear(array->vars + size);
+    /* One header plus the indexed domain is sufficient in every profile.
+     * The older native unused spare is not an indexed value. */
+    shrunk = realloc(array->vars, (size_t)size * sizeof(*shrunk));
+    if(shrunk) array->vars = shrunk;
+    return 1;
+}
+
+int Varlist_DeleteByName(Varlist *array, char *theName)
+{
+    ScriptVariant *value;
+    if(!array || !array->list || !theName || !theName[0] ||
+       !List_FindByName(array->list, theName)) return 0;
+    value = (ScriptVariant *)List_Retrieve(array->list);
+    if(value) { ScriptVariant_Clear(value); free(value); }
+    /* Remove the name, node, hash/index entries and dangling cursor together.
+     * The native direct node free left these owners stale or leaked. */
+    List_Remove(array->list);
     return 1;
 }
 
@@ -668,6 +767,9 @@ int Script_AppendText(Script *pscript, char *text, char *path)
 }
 
 //return name of function from pointer to function
+static int obor_forward_mapstrings_animationproperty(ScriptVariant **, int);
+static HRESULT obor_forward_getanimationproperty(ScriptVariant **, ScriptVariant **, int);
+
 const char *Script_GetFunctionName(void *functionRef)
 {
     if(obor_profile_build < 4058)
@@ -735,6 +837,30 @@ const char *Script_GetFunctionName(void *functionRef)
     else if (functionRef == ((void *)math_cos))
     {
         return "cos";
+    }
+    else if (functionRef == ((void *)math_ssin))
+    {
+        return obor_profile_build >= 4173 ? "ssin" : "<unknown function>";
+    }
+    else if (functionRef == ((void *)math_scos))
+    {
+        return obor_profile_build >= 4173 ? "scos" : "<unknown function>";
+    }
+    else if (functionRef == ((void *)math_pow))
+    {
+        return obor_profile_build >= 4173 ? "pow" : "<unknown function>";
+    }
+    else if (functionRef == ((void *)math_asin))
+    {
+        return obor_profile_build >= 4173 ? "asin" : "<unknown function>";
+    }
+    else if (functionRef == ((void *)math_acos))
+    {
+        return obor_profile_build >= 4173 ? "acos" : "<unknown function>";
+    }
+    else if (functionRef == ((void *)math_atan))
+    {
+        return obor_profile_build >= 4173 ? "atan" : "<unknown function>";
     }
     else if (functionRef == ((void *)math_sqrt))
     {
@@ -804,13 +930,21 @@ const char *Script_GetFunctionName(void *functionRef)
     {
         return "changeentityproperty";
     }
+    else if(functionRef == (void *)openbor_getplayerproperty)
+    {
+        return obor_profile_build >= 4169 ? "getplayerproperty" : "<unknown function>";
+    }
     else if (functionRef == ((void *)openbor_getentityproperty))
     {
-        return "getanimationproperty";
+        return obor_profile_build >= 4169 ? "getentityproperty" : "getanimationproperty";
     }
     else if (functionRef == ((void *)openbor_getanimationproperty))
     {
-        return "getplayerproperty";
+        return obor_profile_build >= 4169 ? "getanimationproperty" : "getplayerproperty";
+    }
+    else if(functionRef == (void *)openbor_changeanimationproperty)
+    {
+        return obor_profile_build >= 4172 ? "changeanimationproperty" : "<unknown function>";
     }
     else if (functionRef == ((void *)openbor_getentityproperty))
     {
@@ -894,7 +1028,7 @@ const char *Script_GetFunctionName(void *functionRef)
     }
     else if (functionRef == ((void *)openbor_changeattackproperty))
     {
-        return "changeattackproperty";
+        return obor_profile_build < 4167 ? "changeattackproperty" : "<unknown function>";
     }
     else if (functionRef == ((void *)openbor_damageentity))
     {
@@ -952,13 +1086,29 @@ const char *Script_GetFunctionName(void *functionRef)
     {
         return "checkhole";
     }
+    else if(obor_profile_build >= 4200 && functionRef == (void *)openbor_checkholeindex)
+    {
+        return "checkholeindex";
+    }
     else if (functionRef == ((void *)openbor_checkwall))
     {
         return "checkwall";
     }
+    else if(obor_profile_build >= 4200 && functionRef == (void *)openbor_checkwallindex)
+    {
+        return "checkwallindex";
+    }
     else if (functionRef == ((void *)openbor_checkplatformbelow))
     {
         return "checkplatformbelow";
+    }
+    else if(obor_profile_build >= 4182 && functionRef == (void *)openbor_checkplatformabove)
+    {
+        return "checkplatformabove";
+    }
+    else if(obor_profile_build >= 4182 && functionRef == (void *)openbor_checkplatformbetween)
+    {
+        return "checkplatformbetween";
     }
     else if (functionRef == ((void *)openbor_openfilestream))
     {
@@ -1060,6 +1210,14 @@ const char *Script_GetFunctionName(void *functionRef)
     {
         return "set";
     }
+    else if (functionRef == ((void *)openbor_delete))
+    {
+        return obor_profile_build >= 4175 ? "delete" : "<unknown function>";
+    }
+    else if (functionRef == ((void *)openbor_add))
+    {
+        return obor_profile_build >= 4175 ? "add" : "<unknown function>";
+    }
     else if (functionRef == ((void *)openbor_reset))
     {
         return "reset";
@@ -1115,6 +1273,10 @@ const char *Script_GetFunctionName(void *functionRef)
     else if (functionRef == ((void *)openbor_loadsprite))
     {
         return "loadsprite";
+    }
+    else if(functionRef == (void *)openbor_hallfame)
+    {
+        return obor_profile_build >= 4174 ? "hallfame" : "<unknown function>";
     }
     else if (functionRef == ((void *)openbor_options))
     {
@@ -1249,6 +1411,10 @@ void *Script_GetStringMapFunction(void *functionRef)
     {
         return (void *)mapstrings_animationproperty;
     }
+    else if(functionRef == (void *)openbor_changeanimationproperty)
+    {
+        return obor_profile_build >= 4172 ? (void *)mapstrings_animationproperty : NULL;
+    }
     else if (functionRef == ((void *)openbor_getentityproperty))
     {
         return (void *)mapstrings_entityproperty;
@@ -1267,7 +1433,7 @@ void *Script_GetStringMapFunction(void *functionRef)
     }
     else if (functionRef == ((void *)openbor_changeattackproperty))
     {
-        return (void *)mapstrings_attackproperty;
+        return obor_profile_build < 4167 ? (void *)mapstrings_attackproperty : NULL;
     }
     else if (functionRef == ((void *)openbor_setspawnentry))
     {
@@ -1463,10 +1629,21 @@ void Script_LoadSystemFunctions()
                      (void *)system_typeof, "typeof");
     List_InsertAfter(&theFunctionList,
                      (void *)math_sin, "sin");
+    if(obor_profile_build >= 4173)
+        List_InsertAfter(&theFunctionList, (void *)math_ssin, "ssin");
     List_InsertAfter(&theFunctionList,
                      (void *)math_cos, "cos");
+    if(obor_profile_build >= 4173)
+        List_InsertAfter(&theFunctionList, (void *)math_scos, "scos");
     List_InsertAfter(&theFunctionList,
                      (void *)math_sqrt, "sqrt");
+    if(obor_profile_build >= 4173)
+    {
+        List_InsertAfter(&theFunctionList, (void *)math_pow, "pow");
+        List_InsertAfter(&theFunctionList, (void *)math_asin, "asin");
+        List_InsertAfter(&theFunctionList, (void *)math_acos, "acos");
+        List_InsertAfter(&theFunctionList, (void *)math_atan, "atan");
+    }
     List_InsertAfter(&theFunctionList,
                      (void *)openbor_systemvariant, "openborvariant");
     List_InsertAfter(&theFunctionList,
@@ -1505,6 +1682,10 @@ void Script_LoadSystemFunctions()
     {
         List_InsertAfter(&theFunctionList,
                          (void *)openbor_getanimationproperty, "getanimationproperty");
+    if(obor_profile_build >= 4172)
+        List_InsertAfter(&theFunctionList, obor_profile_build < 4180 ?
+                         (void *)openbor_getanimationproperty : (void *)openbor_changeanimationproperty,
+                         "changeanimationproperty");
     }
     List_InsertAfter(&theFunctionList,
                      (void *)openbor_getentityproperty, "getentityproperty");
@@ -1546,6 +1727,7 @@ void Script_LoadSystemFunctions()
                      (void *)openbor_playerkeys, "playerkeys");
     List_InsertAfter(&theFunctionList,
                      (void *)openbor_changepalette, "changepalette");
+    if(obor_profile_build < 4167)
     List_InsertAfter(&theFunctionList,
                      (void *)openbor_changeattackproperty, "changeattackproperty");
     List_InsertAfter(&theFunctionList,
@@ -1577,10 +1759,19 @@ void Script_LoadSystemFunctions()
                      (void *)openbor_changelevelproperty, "changelevelproperty");
     List_InsertAfter(&theFunctionList,
                      (void *)openbor_checkhole, "checkhole");
+    if(obor_profile_build >= 4200)
+        List_InsertAfter(&theFunctionList, (void *)openbor_checkholeindex, "checkholeindex");
     List_InsertAfter(&theFunctionList,
                      (void *)openbor_checkwall, "checkwall");
+    if(obor_profile_build >= 4200)
+        List_InsertAfter(&theFunctionList, (void *)openbor_checkholeindex, "checkwallindex");
     List_InsertAfter(&theFunctionList,
                      (void *)openbor_checkplatformbelow, "checkplatformbelow");
+    if(obor_profile_build >= 4182)
+    {
+        List_InsertAfter(&theFunctionList, (void *)openbor_checkplatformbelow, "checkplatformabove");
+        List_InsertAfter(&theFunctionList, (void *)openbor_checkplatformbelow, "checkplatformbetween");
+    }
     List_InsertAfter(&theFunctionList,
                      (void *)openbor_openfilestream, "openfilestream");
     List_InsertAfter(&theFunctionList,
@@ -1631,6 +1822,11 @@ void Script_LoadSystemFunctions()
                      (void *)openbor_get, "get");
     List_InsertAfter(&theFunctionList,
                      (void *)openbor_set, "set");
+    if(obor_profile_build >= 4175)
+    {
+        List_InsertAfter(&theFunctionList, (void *)openbor_delete, "delete");
+        List_InsertAfter(&theFunctionList, (void *)openbor_add, "add");
+    }
     List_InsertAfter(&theFunctionList,
                      (void *)openbor_reset, "reset");
     List_InsertAfter(&theFunctionList,
@@ -1659,6 +1855,8 @@ void Script_LoadSystemFunctions()
                      (void *)openbor_loadmodel, "loadmodel");
     List_InsertAfter(&theFunctionList,
                      (void *)openbor_loadsprite, "loadsprite");
+    if(obor_profile_build >= 4174)
+        List_InsertAfter(&theFunctionList, (void *)openbor_hallfame, "hallfame");
     List_InsertAfter(&theFunctionList,
                      (void *)openbor_options, "options");
     List_InsertAfter(&theFunctionList,
@@ -1986,6 +2184,136 @@ HRESULT math_cos(ScriptVariant **varlist , ScriptVariant **pretvar, int paramCou
     return E_FAIL;
 }
 
+HRESULT math_ssin(ScriptVariant **varlist , ScriptVariant **pretvar, int paramCount)
+{
+    if(paramCount < 1 || !varlist || !varlist[0])
+    {
+        *pretvar = NULL;
+        return E_FAIL;
+    }
+    DOUBLE dbltemp;
+
+    if(SUCCEEDED(ScriptVariant_DecimalValue(varlist[0], &dbltemp)))
+    {
+        ScriptVariant_ChangeType(*pretvar, VT_DECIMAL);
+        /* Native 4187 changed these functions from radians to degrees. */
+        double angle = obor_profile_build >= 4187 ? dbltemp * 3.14159265 / 180.0 : dbltemp;
+        (*pretvar)->dblVal = (DOUBLE)sin(angle);
+        return S_OK;
+    }
+    *pretvar = NULL;
+    return E_FAIL;
+}
+
+
+HRESULT math_scos(ScriptVariant **varlist , ScriptVariant **pretvar, int paramCount)
+{
+    if(paramCount < 1 || !varlist || !varlist[0])
+    {
+        *pretvar = NULL;
+        return E_FAIL;
+    }
+    DOUBLE dbltemp;
+
+    if(SUCCEEDED(ScriptVariant_DecimalValue(varlist[0], &dbltemp)))
+    {
+        ScriptVariant_ChangeType(*pretvar, VT_DECIMAL);
+        /* Native 4187 changed these functions from radians to degrees. */
+        double angle = obor_profile_build >= 4187 ? dbltemp * 3.14159265 / 180.0 : dbltemp;
+        (*pretvar)->dblVal = (DOUBLE)cos(angle);
+        return S_OK;
+    }
+    *pretvar = NULL;
+    return E_FAIL;
+}
+
+
+HRESULT math_pow(ScriptVariant **varlist , ScriptVariant **pretvar, int paramCount)
+{
+    if(paramCount < 2 || !varlist || !varlist[0] || !varlist[1])
+    {
+        *pretvar = NULL;
+        return E_FAIL;
+    }
+    DOUBLE dbltempA, dbltempB;
+
+    if( SUCCEEDED(ScriptVariant_DecimalValue(varlist[0], &dbltempA)) && SUCCEEDED(ScriptVariant_DecimalValue(varlist[1], &dbltempB)) )
+    {
+        ScriptVariant_ChangeType(*pretvar, VT_DECIMAL);
+        (*pretvar)->dblVal = pow((double)dbltempA,(double)dbltempB);
+        return S_OK;
+    }
+    *pretvar = NULL;
+    return E_FAIL;
+}
+
+
+HRESULT math_asin(ScriptVariant **varlist , ScriptVariant **pretvar, int paramCount)
+{
+    if(paramCount < 1 || !varlist || !varlist[0])
+    {
+        *pretvar = NULL;
+        return E_FAIL;
+    }
+    DOUBLE dbltemp;
+
+    if(SUCCEEDED(ScriptVariant_DecimalValue(varlist[0], &dbltemp)))
+    {
+        double PI = 3.14159265;
+
+        ScriptVariant_ChangeType(*pretvar, VT_DECIMAL);
+        (*pretvar)->dblVal = (DOUBLE)(asin((double)dbltemp) * 180.0 / PI);
+        return S_OK;
+    }
+    *pretvar = NULL;
+    return E_FAIL;
+}
+
+
+HRESULT math_acos(ScriptVariant **varlist , ScriptVariant **pretvar, int paramCount)
+{
+    if(paramCount < 1 || !varlist || !varlist[0])
+    {
+        *pretvar = NULL;
+        return E_FAIL;
+    }
+    DOUBLE dbltemp;
+
+    if(SUCCEEDED(ScriptVariant_DecimalValue(varlist[0], &dbltemp)))
+    {
+        double PI = 3.14159265;
+
+        ScriptVariant_ChangeType(*pretvar, VT_DECIMAL);
+        (*pretvar)->dblVal = (DOUBLE)(aacos((double)dbltemp) * 180.0 / PI);
+        return S_OK;
+    }
+    *pretvar = NULL;
+    return E_FAIL;
+}
+
+
+HRESULT math_atan(ScriptVariant **varlist , ScriptVariant **pretvar, int paramCount)
+{
+    if(paramCount < 1 || !varlist || !varlist[0])
+    {
+        *pretvar = NULL;
+        return E_FAIL;
+    }
+    DOUBLE dbltemp;
+
+    if(SUCCEEDED(ScriptVariant_DecimalValue(varlist[0], &dbltemp)))
+    {
+        double PI = 3.14159265;
+
+        ScriptVariant_ChangeType(*pretvar, VT_DECIMAL);
+        (*pretvar)->dblVal = (DOUBLE)(aatan((double)dbltemp) * 180.0 / PI);
+        return S_OK;
+    }
+    *pretvar = NULL;
+    return E_FAIL;
+}
+
+
 HRESULT math_sqrt(ScriptVariant **varlist , ScriptVariant **pretvar, int paramCount)
 {
     DOUBLE dbltemp;
@@ -2113,24 +2441,266 @@ static const char *svlist[] =
     "waiting",
     "xpos",
     "ypos",
+    "cheats",
+    "numholes",
+    "numlayers",
+    "numwalls",
 };
 
 
 // ===== openborvariant =====
+static int obor_profile_systemvariant_order(int index)
+{
+    static const int intermediate[] = {
+        _sv_background,
+        _sv_blockade,
+        _sv_branchname,
+        _sv_count_enemies,
+        _sv_count_entities,
+        _sv_count_npcs,
+        _sv_count_players,
+        _sv_current_branch,
+        _sv_current_level,
+        _sv_current_palette,
+        _sv_current_scene,
+        _sv_current_set,
+        _sv_current_stage,
+        _sv_effectvol,
+        _sv_elapsed_time,
+        _sv_ent_max,
+        _sv_freeram,
+        _sv_game_paused,
+        _sv_game_speed,
+        _sv_gfx_x_offset,
+        _sv_gfx_y_offset,
+        _sv_gfx_y_offset_adj,
+        _sv_hResolution,
+        _sv_in_cheat_options,
+        _sv_in_control_options,
+        _sv_in_gameoverscreen,
+        _sv_in_halloffamescreen,
+        _sv_in_level,
+        _sv_in_load_game,
+        _sv_in_menuscreen,
+        _sv_in_enginecreditsscreen,
+        _sv_in_new_game,
+        _sv_in_options,
+        _sv_in_selectscreen,
+        _sv_in_showcomplete,
+        _sv_in_sound_options,
+        _sv_in_start_game,
+        _sv_in_system_options,
+        _sv_in_titlescreen,
+        _sv_in_video_options,
+        _sv_lasthita,
+        _sv_lasthitc,
+        _sv_lasthitt,
+        _sv_lasthitx,
+        _sv_lasthity,
+        _sv_lasthitz,
+        _sv_levelheight,
+        _sv_levelpos,
+        _sv_levelwidth,
+        _sv_lightx,
+        _sv_lightz,
+        _sv_maxanimations,
+        _sv_maxattacktypes,
+        _sv_maxentityvars,
+        _sv_maxglobalvars,
+        _sv_maxindexedvars,
+        _sv_maxplayers,
+        _sv_maxscriptvars,
+        _sv_models_cached,
+        _sv_models_loaded,
+        _sv_musicvol,
+        _sv_nofadeout,
+        _sv_nojoin,
+        _sv_nopause,
+        _sv_nosave,
+        _sv_noscreenshot,
+        _sv_numpalettes,
+        _sv_pakname,
+        _sv_pause,
+        _sv_pixelformat,
+        _sv_player,
+        _sv_player1,
+        _sv_player2,
+        _sv_player3,
+        _sv_player4,
+        _sv_player_max_z,
+        _sv_player_min_z,
+        _sv_sample_play_id,
+        _sv_scrollmaxx,
+        _sv_scrollmaxz,
+        _sv_scrollminx,
+        _sv_scrollminz,
+        _sv_self,
+        _sv_shadowalpha,
+        _sv_shadowcolor,
+        _sv_skiptoset,
+        _sv_slowmotion,
+        _sv_slowmotion_duration,
+        _sv_smartbomber,
+        _sv_soundvol,
+        _sv_textbox,
+        _sv_ticks,
+        _sv_totalram,
+        _sv_usedram,
+        _sv_viewporth,
+        _sv_viewportw,
+        _sv_viewportx,
+        _sv_viewporty,
+        _sv_vResolution,
+        _sv_vscreen,
+        _sv_waiting,
+        _sv_xpos,
+        _sv_ypos,
+    };
+    static const int ordered[] = {
+        _sv_background,
+        _sv_blockade,
+        _sv_branchname,
+        _sv_cheats,
+        _sv_count_enemies,
+        _sv_count_entities,
+        _sv_count_npcs,
+        _sv_count_players,
+        _sv_current_branch,
+        _sv_current_level,
+        _sv_current_palette,
+        _sv_current_scene,
+        _sv_current_set,
+        _sv_current_stage,
+        _sv_effectvol,
+        _sv_elapsed_time,
+        _sv_ent_max,
+        _sv_freeram,
+        _sv_game_paused,
+        _sv_game_speed,
+        _sv_gfx_x_offset,
+        _sv_gfx_y_offset,
+        _sv_gfx_y_offset_adj,
+        _sv_hResolution,
+        _sv_in_cheat_options,
+        _sv_in_control_options,
+        _sv_in_enginecreditsscreen,
+        _sv_in_gameoverscreen,
+        _sv_in_halloffamescreen,
+        _sv_in_level,
+        _sv_in_load_game,
+        _sv_in_menuscreen,
+        _sv_in_new_game,
+        _sv_in_options,
+        _sv_in_selectscreen,
+        _sv_in_showcomplete,
+        _sv_in_sound_options,
+        _sv_in_start_game,
+        _sv_in_system_options,
+        _sv_in_titlescreen,
+        _sv_in_video_options,
+        _sv_lasthita,
+        _sv_lasthitc,
+        _sv_lasthitt,
+        _sv_lasthitx,
+        _sv_lasthity,
+        _sv_lasthitz,
+        _sv_levelheight,
+        _sv_levelpos,
+        _sv_levelwidth,
+        _sv_lightx,
+        _sv_lightz,
+        _sv_maxanimations,
+        _sv_maxattacktypes,
+        _sv_maxentityvars,
+        _sv_maxglobalvars,
+        _sv_maxindexedvars,
+        _sv_maxplayers,
+        _sv_maxscriptvars,
+        _sv_models_cached,
+        _sv_models_loaded,
+        _sv_musicvol,
+        _sv_nofadeout,
+        _sv_nojoin,
+        _sv_nopause,
+        _sv_nosave,
+        _sv_noscreenshot,
+        _sv_numholes,
+        _sv_numlayers,
+        _sv_numpalettes,
+        _sv_numwalls,
+        _sv_pakname,
+        _sv_pause,
+        _sv_pixelformat,
+        _sv_player,
+        _sv_player1,
+        _sv_player2,
+        _sv_player3,
+        _sv_player4,
+        _sv_player_max_z,
+        _sv_player_min_z,
+        _sv_sample_play_id,
+        _sv_scrollmaxx,
+        _sv_scrollmaxz,
+        _sv_scrollminx,
+        _sv_scrollminz,
+        _sv_self,
+        _sv_shadowalpha,
+        _sv_shadowcolor,
+        _sv_skiptoset,
+        _sv_slowmotion,
+        _sv_slowmotion_duration,
+        _sv_smartbomber,
+        _sv_soundvol,
+        _sv_textbox,
+        _sv_ticks,
+        _sv_totalram,
+        _sv_usedram,
+        _sv_viewporth,
+        _sv_viewportw,
+        _sv_viewportx,
+        _sv_viewporty,
+        _sv_vResolution,
+        _sv_vscreen,
+        _sv_waiting,
+        _sv_xpos,
+        _sv_ypos,
+    };
+    if(index < 0) return _sv_the_end;
+    if(obor_profile_build >= 4174)
+        return (unsigned)index < sizeof(ordered) / sizeof(*ordered) ? ordered[index] : _sv_the_end;
+    if(obor_profile_build >= 4171)
+        return (unsigned)index < sizeof(intermediate) / sizeof(*intermediate) ? intermediate[index] : _sv_the_end;
+    return index < _sv_the_end ? index : _sv_the_end;
+}
+
 static int obor_systemvariant_available(int property)
 {
     return (obor_profile_build >= 4095 || property != _sv_in_enginecreditsscreen) &&
-           (obor_profile_build >= 4015 || property != _sv_lasthity);
+           (obor_profile_build >= 4015 || property != _sv_lasthity) &&
+           (obor_profile_build >= 4174 || property != _sv_cheats) &&
+           (obor_profile_build >= 4207 || (property != _sv_numholes &&
+            property != _sv_numlayers && property != _sv_numwalls));
 }
 
 static int obor_systemvariant_native(int property)
 {
     if(property < 0 || property >= _sv_the_end) return _sv_the_end;
+    if(obor_profile_build >= 4161)
+    {
+        for(int i = 0; i < _sv_the_end; ++i)
+        {
+            int physical = obor_profile_systemvariant_order(i);
+            if(physical == _sv_the_end) break;
+            if(!obor_systemvariant_available(physical)) continue;
+            if(property-- == 0) return physical;
+        }
+        return _sv_the_end;
+    }
     if(obor_profile_build < 4095 && property >= _sv_in_enginecreditsscreen)
         ++property;
     if(obor_profile_build < 4015 && property >= _sv_lasthity)
         ++property;
-    return property < _sv_the_end ? property : _sv_the_end;
+    return property < _sv_cheats ? property : _sv_the_end;
 }
 
 int mapstrings_systemvariant(ScriptVariant **varlist, int paramCount)
@@ -2140,6 +2710,30 @@ int mapstrings_systemvariant(ScriptVariant **varlist, int paramCount)
     if(varlist[0]->vt != VT_STR) return 1;
     char *name = StrCache_GetIfPresent(varlist[0]->strVal);
     if(!name) return 0;
+    if(obor_profile_build >= 4161)
+    {
+        const char *names[_sv_the_end];
+        int count = 0;
+        for(int i = 0; i < _sv_the_end; ++i)
+        {
+            int physical = obor_profile_systemvariant_order(i);
+            if(physical == _sv_the_end) break;
+            if(!obor_systemvariant_available(physical)) continue;
+            const char *entry = svlist[physical];
+            if(obor_profile_build >= 4171 && physical == _sv_hResolution) entry = "hresolution";
+            if(obor_profile_build >= 4171 && physical == _sv_vResolution) entry = "vresolution";
+            names[count++] = entry;
+        }
+        int found = searchList(names, name, count);
+        if(found >= 0)
+        {
+            ScriptVariant_ChangeType(varlist[0], VT_INTEGER);
+            varlist[0]->lVal = found;
+            return 1;
+        }
+        printf("openborvariant: System variable name not found: '%s'\n", name);
+        return 0;
+    }
     /* Walk only available names within the actual table, preserving their
      * original numeric positions without an out-of-range search lookahead. */
     for(int native = 0; native < _sv_the_end; ++native)
@@ -4070,8 +4664,6015 @@ enum cep_think_enum   // 2011_03_03, DC: Think types.
     _ep_th_the_end,
 };
 
+/* Native animation property bodies by Damon V. Caskey and White Dragon.
+ * Keep their source-defined selectors and observable quirks by profile. */
+typedef enum obor_forward_animationprop_enum
+{
+    obor_forward__ANI_PROP_ANIMHITS,     // Does the attack need to hit before cancel is allowed?
+    obor_forward__ANI_PROP_ANTIGRAV,     // UT: make dive a similar property as antigravity.
+    obor_forward__ANI_PROP_ATTACK,
+    obor_forward__ANI_PROP_ATTACKONE,    // stick on the only one victim
+    obor_forward__ANI_PROP_BBOX,
+    obor_forward__ANI_PROP_BOUNCE,       //FLOAT -tossv/bounce = new tossv
+    obor_forward__ANI_PROP_CANCEL,       // Cancel anims with freespecial
+    obor_forward__ANI_PROP_CHARGETIME,   //FLOAT charge time for an animation
+    obor_forward__ANI_PROP_COUNTERRANGE, //SUB Auto counter attack. 2011_04_01, DC: Moved to struct.
+    obor_forward__ANI_PROP_DELAY,
+    obor_forward__ANI_PROP_DRAWMETHODS,
+    obor_forward__ANI_PROP_DROPFRAME,    // SUB if tossv < 0, this frame will be set
+    obor_forward__ANI_PROP_DROPV,    // SUB if tossv < 0, this frame will be set
+    obor_forward__ANI_PROP_ENERGYCOST,   //SUB. 1-10-05 to adjust the amount of energy used for specials. 2011_03_31, DC: Moved to struct.
+    obor_forward__ANI_PROP_FLIPFRAME,    // Turns entities around on the desired frame
+    obor_forward__ANI_PROP_FOLLOWUP,     // use which FOLLOW anim?
+    obor_forward__ANI_PROP_IDLE,
+    obor_forward__ANI_PROP_INDEX,        //unique id
+    obor_forward__ANI_PROP_JUMPFRAME,    //SUB
+    obor_forward__ANI_PROP_LANDFRAME,    // SUB Landing behavior. 2011_04_01, DC: Moved to struct.
+    obor_forward__ANI_PROP_LOOP,         // Animation looping. 2011_03_31, DC: Moved to struct.
+    obor_forward__ANI_PROP_MODEL_INDEX,
+    obor_forward__ANI_PROP_MOVE,
+    obor_forward__ANI_PROP_NUMFRAMES,    //Framecount.
+    obor_forward__ANI_PROP_OFFSET,
+    obor_forward__ANI_PROP_PLATFORM,
+    obor_forward__ANI_PROP_PROJECTILE,
+    obor_forward__ANI_PROP_QUAKEFRAME,   // SUB Screen shake effect. 2011_04_01, DC; Moved to struct.
+    obor_forward__ANI_PROP_RANGE,        //SUB Verify distance to target, jump landings, etc.. 2011_04_01, DC: Moved to struct.
+    obor_forward__ANI_PROP_SHADOW,
+    obor_forward__ANI_PROP_SIZE,         // SUB entity's size (height) during animation
+    obor_forward__ANI_PROP_SOUNDTOPLAY,
+    obor_forward__ANI_PROP_SPAWNFRAME,   // SUB Spawn the subentity as its default type. {frame} {x} {z} {a} {relative?}
+    obor_forward__ANI_PROP_SPRITE,
+    obor_forward__ANI_PROP_SPRITEA,
+    obor_forward__ANI_PROP_SUBENTITY,    // Store the sub-entity's name for further use
+    obor_forward__ANI_PROP_SUMMONFRAME,  // SUB Summon the subentity as an ally, only one though {frame} {x} {z} {a} {relative?}
+    obor_forward__ANI_PROP_SYNC,         // sychronize frame to previous animation if they matches
+    obor_forward__ANI_PROP_UNSUMMONFRAME,// SUB Un-summon the entity
+    obor_forward__ANI_PROP_VULNERABLE,
+    obor_forward__ANI_PROP_WEAPONFRAME,  // SUB Specify with a frame when to switch to a weapon model
+    obor_forward__ANI_PROP_THE_END
+} obor_forward_e_animation_properties;
+
+static const char *obor_forward_list_animation_prop[] =
+{
+    "animhits",
+    "antigrav",
+    "attack",
+    "attackone",
+    "bbox",
+    "bounce",
+    "cancel",
+    "chargetime",
+    "counterrange",
+    "delay",
+    "drawmethods",
+    "dropframe",
+    "dropv",
+    "energycost",
+    "flipframe",
+    "followup",
+    "idle",
+    "index",
+    "jumpframe",
+    "landframe",
+    "loop",
+    "model_index",
+    "move",
+    "numframes",
+    "offset",
+    "platform",
+    "projectile",
+    "quakeframe",
+    "range",
+    "shadow",
+    "size",
+    "soundtoplay",
+    "spawnframe",
+    "sprite",
+    "spritea",
+    "subentity",
+    "summonframe",
+    "sync",
+    "unsummonframe",
+    "vulnerable",
+    "weaponframe"
+};
+
+// ===== changedrawmethod ======
+enum obor_forward_drawmethod_enum
+{
+    obor_forward__dm_alpha,
+    obor_forward__dm_amplitude,
+    obor_forward__dm_beginsize,
+    obor_forward__dm_centerx,
+    obor_forward__dm_centery,
+    obor_forward__dm_channelb,
+    obor_forward__dm_channelg,
+    obor_forward__dm_channelr,
+    obor_forward__dm_clip,
+    obor_forward__dm_cliph,
+    obor_forward__dm_clipw,
+    obor_forward__dm_clipx,
+    obor_forward__dm_clipy,
+    obor_forward__dm_enabled,
+    obor_forward__dm_endsize,
+    obor_forward__dm_fillcolor,
+    obor_forward__dm_flag,
+    obor_forward__dm_fliprotate,
+    obor_forward__dm_flipx,
+    obor_forward__dm_flipy,
+    obor_forward__dm_perspective,
+    obor_forward__dm_remap,
+    obor_forward__dm_reset,
+    obor_forward__dm_rotate,
+    obor_forward__dm_scalex,
+    obor_forward__dm_scaley,
+    obor_forward__dm_shiftx,
+    obor_forward__dm_table,
+    obor_forward__dm_tintcolor,
+    obor_forward__dm_tintmode,
+    obor_forward__dm_transbg,
+    obor_forward__dm_watermode,
+    obor_forward__dm_wavelength,
+    obor_forward__dm_wavespeed,
+    obor_forward__dm_wavetime,
+    obor_forward__dm_xrepeat,
+    obor_forward__dm_xspan,
+    obor_forward__dm_yrepeat,
+    obor_forward__dm_yspan,
+    obor_forward__dm_the_end,
+};
+
+/*
+ * Attack Properties
+ */
+ enum obor_forward__prop_attack_enum
+{
+    obor_forward__PROP_ATTACK_BLAST,
+    obor_forward__PROP_ATTACK_BLOCKFLASH,
+    obor_forward__PROP_ATTACK_BLOCKSOUND,
+    obor_forward__PROP_ATTACK_COORDS,
+    obor_forward__PROP_ATTACK_COUNTERATTACK,
+    obor_forward__PROP_ATTACK_DIRECTION,
+    obor_forward__PROP_ATTACK_DOL,
+    obor_forward__PROP_ATTACK_DOT,
+    obor_forward__PROP_ATTACK_DOTFORCE,
+    obor_forward__PROP_ATTACK_DOTINDEX,
+    obor_forward__PROP_ATTACK_DOTRATE,
+    obor_forward__PROP_ATTACK_DOTTIME,
+    obor_forward__PROP_ATTACK_DROP,
+    obor_forward__PROP_ATTACK_DROPV,
+    obor_forward__PROP_ATTACK_FASTATTACK,
+    obor_forward__PROP_ATTACK_FORCE,
+    obor_forward__PROP_ATTACK_FORCEMAP,
+    obor_forward__PROP_ATTACK_FREEZE,
+    obor_forward__PROP_ATTACK_FREEZETIME,
+    obor_forward__PROP_ATTACK_GRAB,
+    obor_forward__PROP_ATTACK_GRABDISTANCE,
+    obor_forward__PROP_ATTACK_GUARDCOST,
+    obor_forward__PROP_ATTACK_HITFLASH,
+    obor_forward__PROP_ATTACK_HITSOUND,
+    obor_forward__PROP_ATTACK_JUGGLECOST,
+    obor_forward__PROP_ATTACK_MAPTIME,
+    obor_forward__PROP_ATTACK_NOBLOCK,
+    obor_forward__PROP_ATTACK_NOFLASH,
+    obor_forward__PROP_ATTACK_NOKILL,
+    obor_forward__PROP_ATTACK_NOPAIN,
+    obor_forward__PROP_ATTACK_OTG,
+    obor_forward__PROP_ATTACK_PAINTIME,
+    obor_forward__PROP_ATTACK_PAUSE,
+    obor_forward__PROP_ATTACK_RESET,
+    obor_forward__PROP_ATTACK_SEAL,
+    obor_forward__PROP_ATTACK_SEALTIME,
+    obor_forward__PROP_ATTACK_STAYDOWN,
+    obor_forward__PROP_ATTACK_STEAL,
+    obor_forward__PROP_ATTACK_TAG,
+    obor_forward__PROP_ATTACK_TYPE,
+    obor_forward__PROP_ATTACK_THE_END
+};
+
+enum obor_forward__prop_attack_coords_enum
+{
+    obor_forward__PROP_ATTACK_COORDS_HEIGHT,
+    obor_forward__PROP_ATTACK_COORDS_WIDTH,
+    obor_forward__PROP_ATTACK_COORDS_X,
+    obor_forward__PROP_ATTACK_COORDS_Y,
+    obor_forward__PROP_ATTACK_COORDS_Z1,
+    obor_forward__PROP_ATTACK_COORDS_Z2,
+    obor_forward__PROP_ATTACK_COORDS_THE_END
+};
+
+enum obor_forward__prop_attack_dropv_enum
+{
+    obor_forward__PROP_ATTACK_DROPV_X,
+    obor_forward__PROP_ATTACK_DROPV_Y,
+    obor_forward__PROP_ATTACK_DROPV_Z,
+    obor_forward__PROP_ATTACK_DROPV_THE_END
+};
+
+enum obor_forward__prop_attack_staydown_enum
+{
+    obor_forward__PROP_ATTACK_STAYDOWN_RISE,
+    obor_forward__PROP_ATTACK_STAYDOWN_RISEATTACK,
+    obor_forward__PROP_ATTACK_STAYDOWN_RISEATTACK_STALL,
+    obor_forward__PROP_ATTACK_STAYDOWN_THE_END
+};
+/*
+ * End Attack Properties
+ */
+
+ enum obor_forward__prop_bbox_enum
+{
+    obor_forward__PROP_BBOX_HEIGHT,
+    obor_forward__PROP_BBOX_WIDTH,
+    obor_forward__PROP_BBOX_X,
+    obor_forward__PROP_BBOX_Y,
+    obor_forward__PROP_BBOX_Z1,
+    obor_forward__PROP_BBOX_Z2,
+    obor_forward__PROP_BBOX_THE_END
+};
+
+enum obor_forward__prop_counterrange_enum
+{
+    obor_forward__PROP_COUNTERRANGE_CONDITION,
+    obor_forward__PROP_COUNTERRANGE_DAMAGED,
+    obor_forward__PROP_COUNTERRANGE_FRAME_MAX,
+    obor_forward__PROP_COUNTERRANGE_FRAME_MIN,
+    obor_forward__PROP_COUNTERRANGE_THE_END
+};
+
+enum obor_forward__prop_dropframe_enum
+{
+    obor_forward__PROP_DROPFRAME_FRAME,
+    obor_forward__PROP_DROPFRAME_VELOCITY_X,
+    obor_forward__PROP_DROPFRAME_VELOCITY_Y,
+    obor_forward__PROP_DROPFRAME_VELOCITY_Z,
+    obor_forward__PROP_DROPFRAME_THE_END
+};
+
+enum obor_forward__prop_followup_enum
+{
+    obor_forward__PROP_FOLLOWUP_ANIMATION,
+    obor_forward__PROP_FOLLOWUP_CONDITION,
+    obor_forward__PROP_FOLLOWUP_THE_END
+};
+
+enum obor_forward__prop_jumpframe_enum
+{
+    obor_forward__PROP_JUMPFRAME_FRAME,
+    obor_forward__PROP_JUMPFRAME_VELOCITY_X,
+    obor_forward__PROP_JUMPFRAME_VELOCITY_Y,
+    obor_forward__PROP_JUMPFRAME_VELOCITY_Z,
+    obor_forward__PROP_JUMPFRAME_THE_END
+};
+
+enum obor_forward__prop_landframe_enum
+{
+    obor_forward__PROP_LANDFRAME_FRAME,
+    obor_forward__PROP_LANDFRAME_VELOCITY_X,
+    obor_forward__PROP_LANDFRAME_VELOCITY_Y,
+    obor_forward__PROP_LANDFRAME_VELOCITY_Z,
+    obor_forward__PROP_LANDFRAME_THE_END
+};
+
+enum obor_forward__prop_loop_enum
+{
+    obor_forward__PROP_LOOP_FRAME_MAX,
+    obor_forward__PROP_LOOP_FRAME_MIN,
+    obor_forward__PROP_LOOP_MODE,
+    obor_forward__PROP_LOOP_THE_END
+};
+
+ enum obor_forward__prop_move_enum
+{
+    obor_forward__PROP_MOVE_BASE,
+    obor_forward__PROP_MOVE_X,
+    obor_forward__PROP_MOVE_Y,
+    obor_forward__PROP_MOVE_Z,
+    obor_forward__PROP_MOVE_THE_END
+};
+
+ enum obor_forward__prop_offset_enum
+{
+    obor_forward__PROP_OFFSET_X,
+    obor_forward__PROP_OFFSET_Y,
+    obor_forward__PROP_OFFSET_THE_END
+};
+
+ enum obor_forward__prop_platform_enum
+{
+    obor_forward__PROP_PLATFORM_ALT,
+    obor_forward__PROP_PLATFORM_DEPTH,
+    obor_forward__PROP_PLATFORM_LOWERLEFT,
+    obor_forward__PROP_PLATFORM_LOWERRIGHT,
+    obor_forward__PROP_PLATFORM_UPPERLEFT,
+    obor_forward__PROP_PLATFORM_UPPERRIGHT,
+    obor_forward__PROP_PLATFORM_X,
+    obor_forward__PROP_PLATFORM_Z,
+    obor_forward__PROP_PLATFORM_THE_END
+};
+
+enum obor_forward__prop_projectile_enum
+{
+    obor_forward__PROP_PROJECTILE_BOMB,
+    obor_forward__PROP_PROJECTILE_FLASH,
+    obor_forward__PROP_PROJECTILE_KNIFE,
+    obor_forward__PROP_PROJECTILE_SHOOTFRAME,
+    obor_forward__PROP_PROJECTILE_STAR,
+    obor_forward__PROP_PROJECTILE_THROWFRAME,
+    obor_forward__PROP_PROJECTILE_THROWPOSITION_BASE,
+    obor_forward__PROP_PROJECTILE_THROWPOSITION_X,
+    obor_forward__PROP_PROJECTILE_THROWPOSITION_Y,
+    obor_forward__PROP_PROJECTILE_THROWPOSITION_Z,
+    obor_forward__PROP_PROJECTILE_TOSSFRAME,
+    obor_forward__PROP_PROJECTILE_THE_END
+};
+
+enum obor_forward__prop_quakeframe_enum
+{
+    obor_forward__PROP_QUAKEFRAME_FRAMESTART,
+    obor_forward__PROP_QUAKEFRAME_INTENSITY,
+    obor_forward__PROP_QUAKEFRAME_REPEAT,
+    obor_forward__PROP_QUAKEFRAME_THE_END
+};
+
+enum obor_forward__prop_range_enum
+{
+    obor_forward__PROP_RANGEA_MAX,
+    obor_forward__PROP_RANGEA_MIN,
+    obor_forward__PROP_RANGEB_MAX,
+    obor_forward__PROP_RANGEB_MIN,
+    obor_forward__PROP_RANGEX_MAX,
+    obor_forward__PROP_RANGEX_MIN,
+    obor_forward__PROP_RANGEZ_MAX,
+    obor_forward__PROP_RANGEZ_MIN,
+    obor_forward__PROP_RANGE_THE_END
+};
+
+enum obor_forward__prop_size_enum
+{
+    obor_forward__PROP_SIZE_BASE,
+    obor_forward__PROP_SIZE_X,
+    obor_forward__PROP_SIZE_Y,
+    obor_forward__PROP_SIZE_Z,
+    obor_forward__PROP_SIZE_THE_END
+};
+
+ enum obor_forward__prop_shadow_enum
+{
+    obor_forward__PROP_FSHADOW,
+    obor_forward__PROP_SHADOW_COORDS_X,
+    obor_forward__PROP_SHADOW_COORDS_Y,
+    obor_forward__PROP_SHADOW_THE_END
+};
+
+enum obor_forward__prop_spawnframe_enum
+{
+    obor_forward__PROP_SPAWNFRAME_FRAME,
+    obor_forward__PROP_SPAWNFRAME_RELATIVE,
+    obor_forward__PROP_SPAWNFRAME_X,
+    obor_forward__PROP_SPAWNFRAME_Y,
+    obor_forward__PROP_SPAWNFRAME_Z,
+    obor_forward__PROP_SPAWNFRAME_THE_END
+};
+
+enum obor_forward__prop_spritea_enum
+{
+    obor_forward__PROP_SPRITEA_CENTERX,
+    obor_forward__PROP_SPRITEA_CENTERY,
+    obor_forward__PROP_SPRITEA_FILE,
+    obor_forward__PROP_SPRITEA_OFFSETX,
+    obor_forward__PROP_SPRITEA_OFFSETY,
+    obor_forward__PROP_SPRITEA_SPRITE,
+    obor_forward__PROP_SPRITEA_THE_END
+};
+
+enum obor_forward__prop_summonframe_enum
+{
+    obor_forward__PROP_SUMMONFRAME_FRAME,
+    obor_forward__PROP_SUMMONFRAME_RELATIVE,
+    obor_forward__PROP_SUMMONFRAME_X,
+    obor_forward__PROP_SUMMONFRAME_Y,
+    obor_forward__PROP_SUMMONFRAME_Z,
+    obor_forward__PROP_SUMMONFRAME_THE_END
+};
+
+enum obor_forward__prop_weaponframe_enum
+{
+    obor_forward__PROP_WEAPONFRAME_FRAME,
+    obor_forward__PROP_WEAPONFRAME_WEAPON,
+    obor_forward__PROP_WEAPONFRAME_THE_END
+};
+
+enum obor_forward__ep_defense_enum
+{
+    obor_forward__ep_defense_blockpower,
+    obor_forward__ep_defense_blockratio,
+    obor_forward__ep_defense_blockthreshold,
+    obor_forward__ep_defense_blocktype,
+    obor_forward__ep_defense_factor,
+    obor_forward__ep_defense_knockdown,
+    obor_forward__ep_defense_pain,
+    obor_forward__ep_defense_the_end,
+};
+
+enum obor_forward_gep_dot_enum
+{
+    obor_forward__ep_dot_force,
+    obor_forward__ep_dot_mode,
+    obor_forward__ep_dot_owner,
+    obor_forward__ep_dot_rate,
+    obor_forward__ep_dot_time,
+    obor_forward__ep_dot_type,
+    obor_forward__ep_dot_the_end,
+};
+
+enum obor_forward_gep_edelay_enum
+{
+    obor_forward__ep_edelay_cap_max,
+    obor_forward__ep_edelay_cap_min,
+    obor_forward__ep_edelay_factor,
+    obor_forward__ep_edelay_mode,
+    obor_forward__ep_edelay_range_max,
+    obor_forward__ep_edelay_range_min,
+    obor_forward__ep_edelay_the_end,
+};
+
+enum obor_forward_gep_energycost_enum
+{
+    obor_forward__ep_energycost_cost,
+    obor_forward__ep_energycost_disable,
+    obor_forward__ep_energycost_mponly,
+    obor_forward__ep_energycost_the_end,
+};
+
+enum obor_forward_gep_flash_enum
+{
+    obor_forward__ep_flash_block,
+    obor_forward__ep_flash_def,
+    obor_forward__ep_flash_noattack,
+    obor_forward__ep_flash_the_end,
+};
+
+enum obor_forward_gep_icon_enum
+{
+    obor_forward__ep_icon_def,
+    obor_forward__ep_icon_die,
+    obor_forward__ep_icon_get,
+    obor_forward__ep_icon_mphigh,
+    obor_forward__ep_icon_mplow,
+    obor_forward__ep_icon_mpmed,
+    obor_forward__ep_icon_pain,
+    obor_forward__ep_icon_weapon,
+    obor_forward__ep_icon_x,
+    obor_forward__ep_icon_y,
+    obor_forward__ep_icon_the_end,
+};
+
+enum obor_forward__ep_knockdowncount_enum
+{
+    obor_forward__ep_knockdowncount_current,
+    obor_forward__ep_knockdowncount_max,
+    obor_forward__ep_knockdowncount_time,
+    obor_forward__ep_knockdowncount_the_end,
+};
+
+enum obor_forward_gep_landframe_enum
+{
+    obor_forward__ep_landframe_ent,
+    obor_forward__ep_landframe_frame,
+    obor_forward__ep_landframe_the_end,
+};
+
+enum obor_forward_gep_maps_enum
+{
+    obor_forward__ep_maps_count,
+    obor_forward__ep_maps_current,
+    obor_forward__ep_maps_default,
+    obor_forward__ep_maps_dying,
+    obor_forward__ep_maps_dying_critical,
+    obor_forward__ep_maps_dying_low,
+    obor_forward__ep_maps_frozen,
+    obor_forward__ep_maps_hide_end,
+    obor_forward__ep_maps_hide_start,
+    obor_forward__ep_maps_ko,
+    obor_forward__ep_maps_kotype,
+    obor_forward__ep_maps_table,
+    obor_forward__ep_maps_time,
+    obor_forward__ep_maps_the_end,
+};
+
+enum obor_forward_gep_range_enum
+{
+    obor_forward__ep_range_amax,
+    obor_forward__ep_range_amin,
+    obor_forward__ep_range_bmax,
+    obor_forward__ep_range_bmin,
+    obor_forward__ep_range_xmax,
+    obor_forward__ep_range_xmin,
+    obor_forward__ep_range_zmax,
+    obor_forward__ep_range_zmin,
+    obor_forward__ep_range_the_end,
+};
+
+enum obor_forward_gep_running_enum
+{
+    obor_forward__ep_running_jumpx,
+    obor_forward__ep_running_jumpy,
+    obor_forward__ep_running_land,
+    obor_forward__ep_running_movez,
+    obor_forward__ep_running_speed,
+    obor_forward__ep_running_the_end,
+};
+
+enum obor_forward_gep_spritea_enum
+{
+    obor_forward__ep_spritea_centerx,
+    obor_forward__ep_spritea_centery,
+    obor_forward__ep_spritea_file,
+    obor_forward__ep_spritea_offsetx,
+    obor_forward__ep_spritea_offsety,
+    obor_forward__ep_spritea_sprite,
+    obor_forward__ep_spritea_the_end,
+};
+
+enum obor_forward_gep_staydown_enum
+{
+    obor_forward__ep_staydown_rise,
+    obor_forward__ep_staydown_riseattack,
+    obor_forward__ep_staydown_riseattack_stall,
+    obor_forward__ep_staydown_the_end,
+};
+
+enum obor_forward_cep_hostile_candamage_enum
+{
+    obor_forward__ep_hcd_ground,
+    obor_forward__ep_hcd_type_enemy,
+    obor_forward__ep_hcd_type_npc,
+    obor_forward__ep_hcd_type_obstacle,
+    obor_forward__ep_hcd_type_player,
+    obor_forward__ep_hcd_type_shot,
+    obor_forward__ep_hcd_the_end,
+};
+
+enum obor_forward_cep_takeaction_enum
+{
+    obor_forward__ep_ta_bomb_explode,
+    obor_forward__ep_ta_common_attack_proc,
+    obor_forward__ep_ta_common_block,
+    obor_forward__ep_ta_common_drop,
+    obor_forward__ep_ta_common_fall,
+    obor_forward__ep_ta_common_get,
+    obor_forward__ep_ta_common_grab,
+    obor_forward__ep_ta_common_grabattack,
+    obor_forward__ep_ta_common_grabbed,
+    obor_forward__ep_ta_common_jump,
+    obor_forward__ep_ta_common_land,
+    obor_forward__ep_ta_common_lie,
+    obor_forward__ep_ta_common_pain,
+    obor_forward__ep_ta_common_prejump,
+    obor_forward__ep_ta_common_rise,
+    obor_forward__ep_ta_common_spawn,
+    obor_forward__ep_ta_common_turn,
+    obor_forward__ep_ta_normal_prepare,
+    obor_forward__ep_ta_npc_warp,
+    obor_forward__ep_ta_player_blink,
+    obor_forward__ep_ta_suicide,
+    obor_forward__ep_ta_the_end,
+};
+
+enum obor_forward_cep_think_enum   // 2011_03_03, DC: Think types.
+{
+    obor_forward__ep_th_common_think,
+    obor_forward__ep_th_player_think,
+    obor_forward__ep_th_steam_think,
+    obor_forward__ep_th_steamer_think,
+    obor_forward__ep_th_text_think,
+    obor_forward__ep_th_trap_think,
+    obor_forward__ep_th_the_end,
+};
+
+
+static LONG obor_forward_primary_selector(LONG value)
+{
+    if(obor_profile_build < 4180 && value >= obor_forward__ANI_PROP_SPRITEA)
+        return value < obor_forward__ANI_PROP_THE_END - 1 ? value + 1 : obor_forward__ANI_PROP_THE_END;
+    return value;
+}
+
+static LONG obor_forward_attack_selector(LONG value)
+{
+    if(obor_profile_build < 4183 && value >= obor_forward__PROP_ATTACK_TAG)
+        return value < obor_forward__PROP_ATTACK_THE_END - 1 ? value + 1 : obor_forward__PROP_ATTACK_THE_END;
+    return value;
+}
+
+static int obor_forward_mapstrings_animationproperty(ScriptVariant **varlist, int paramCount)
+{
+    if(paramCount < 3 || !varlist || !varlist[1] || !varlist[2]) return 1;
+    char *propname;
+    const char *aps;
+    int prop, ap; //int prop, i, ep, t;
+    int result = 0;
+
+    static const char *obor_complete_attack_names[] =
+    {
+        "blast",
+        "blockflash",
+        "blocksound",
+        "coords",
+        "counterattack",
+        "direction",
+        "dol",
+        "dot",
+        "dotforce",
+        "dotindex",
+        "dotrate",
+        "dottime",
+        "drop",
+        "dropv",
+        "fastattack",
+        "force",
+        "forcemap",
+        "freeze",
+        "freezetime",
+        "grab",
+        "grabdistance",
+        "guardcost",
+        "hitflash",
+        "hitsound",
+        "jugglecost",
+        "maptime",
+        "noblock",
+        "noflash",
+        "nokill",
+        "nopain",
+        "otg",
+        "paintime",
+        "pause",
+        "reset",
+        "seal",
+        "sealtime",
+        "staydown",
+        "steal",
+        "tag",
+        "type"
+    };
+    const char *proplist_attack[obor_forward__PROP_ATTACK_THE_END];
+    int obor_attack_count = 0;
+    for(int obor_name = 0; obor_name < obor_forward__PROP_ATTACK_THE_END; ++obor_name)
+    {
+        const char *name = obor_complete_attack_names[obor_name];
+        if(obor_profile_build < 4183 && obor_name == obor_forward__PROP_ATTACK_TAG) continue;
+        if(obor_profile_build < 4172)
+        {
+            if(obor_name == obor_forward__PROP_ATTACK_OTG) name = "noreflect";
+            else if(obor_name == obor_forward__PROP_ATTACK_PAINTIME) name = "otg";
+        }
+        proplist_attack[obor_attack_count++] = name;
+    }
+    const char *obor_primary_names[obor_forward__ANI_PROP_THE_END];
+    int obor_primary_count = 0;
+    for(int obor_name = 0; obor_name < obor_forward__ANI_PROP_THE_END; ++obor_name)
+    {
+        if(obor_profile_build < 4180 && obor_name == obor_forward__ANI_PROP_SPRITEA) continue;
+        obor_primary_names[obor_primary_count++] = obor_forward_list_animation_prop[obor_name];
+    }
+
+
+    static const char *proplist_attack_coords[] =
+    {
+        "coords.height",
+        "coords.width",
+        "coords.x",
+        "coords.y",
+        "coords.z1",
+        "coords.z2"
+    };
+
+    static const char *proplist_attack_dropv[] =
+    {
+        "velocity.x",
+        "velocity.y",
+        "velocity.z"
+    };
+
+    static const char *proplist_attack_staydown[] =
+    {
+        "rise",
+        "riseattack",
+        "riseattack.stall"
+    };
+
+    static const char *proplist_bbox[] =
+    {
+        "height",
+        "width",
+        "x",
+        "y",
+        "z1",
+        "z2"
+    };
+
+    static const char *proplist_counterrange[] =
+    {
+        "condition",
+        "damaged",
+        "frame.max",
+        "frame.min"
+    };
+
+    static const char *proplist_drawmethods[] =
+    {
+        "alpha",
+        "amplitude",
+        "beginsize",
+        "centerx",
+        "centery",
+        "channelb",
+        "channelg",
+        "channelr",
+        "clip",
+        "cliph",
+        "clipw",
+        "clipx",
+        "clipy",
+        "enabled",
+        "endsize",
+        "fillcolor",
+        "flag",
+        "fliprotate",
+        "flipx",
+        "flipy",
+        "perspective",
+        "remap",
+        "reset",
+        "rotate",
+        "scalex",
+        "scaley",
+        "shiftx",
+        "table",
+        "tintcolor",
+        "tintmode",
+        "transbg",
+        "watermode",
+        "wavelength",
+        "wavespeed",
+        "wavetime",
+        "xrepeat",
+        "xspan",
+        "yrepeat",
+        "yspan"
+    };
+
+    static const char *proplist_energycost[] =
+    {
+        "cost",
+        "disable",
+        "mponly"
+    };
+
+    static const char *proplist_jumpframe[] =
+    {
+        "frame",
+        "velocity.x",
+        "velocity.y",
+        "velocity.z"
+    };
+
+    static const char *proplist_dropframe[] =
+    {
+        "frame",
+        "velocity.x",
+        "velocity.y",
+        "velocity.z"
+    };
+
+    static const char *proplist_followup[] =
+    {
+        "animation",
+        "condition"
+    };
+
+    static const char *proplist_landframe[] =
+    {
+        "frame",
+        "velocity.x",
+        "velocity.y",
+        "velocity.z"
+    };
+
+    static const char *proplist_loop[] =
+    {
+        "frame.max",
+        "frame.min",
+        "mode"
+    };
+
+    static const char *proplist_move[] =
+    {
+        "base",
+        "x",
+        "y",
+        "z"
+    };
+
+    static const char *proplist_offset[] =
+    {
+        "x",
+        "y"
+    };
+
+    static const char *proplist_platform[] =
+    {
+        "alt",
+        "depth",
+        "lowerleft",
+        "lowerright",
+        "upperleft",
+        "upperright",
+        "x",
+        "z"
+    };
+
+    static const char *proplist_projectile[] =
+    {
+        "bomb",
+        "flash",
+        "knife",
+        "shootframe",
+        "star",
+        "throwframe",
+        "throwframe.base",
+        "throwframe.x",
+        "throwframe.y",
+        "throwframe.z",
+        "tossframe"
+    };
+
+    static const char *proplist_quakeframe[] =
+    {
+        "framestart",
+        "intensity",
+        "repeat"
+    };
+
+    static const char *proplist_range[] =
+    {
+        "a.max",
+        "a.min",
+        "b.max",
+        "b.min",
+        "x.max",
+        "x.min",
+        "z.max",
+        "z.min"
+    };
+
+    static const char *proplist_shadow[] =
+    {
+        "frame",
+        "x",
+        "y"
+    };
+
+    static const char *proplist_size[] =
+    {
+        "x",
+        "y",
+        "z"
+    };
+
+    static const char *proplist_spawnframe[] =
+    {
+        "frame",
+        "relative",
+        "x",
+        "y",
+        "z"
+    };
+
+    static const char *proplist_spritea[] =
+    {
+        "centerx",
+        "centery",
+        "file",
+        "offsetx",
+        "offsety",
+        "sprite"
+    };
+
+    static const char *proplist_summonframe[] =
+    {
+        "frame",
+        "relative",
+        "x",
+        "y",
+        "z"
+    };
+
+    static const char *proplist_weaponframe[] =
+    {
+        "frame",
+        "weapon"
+    };
+
+    MAPSTRINGS(varlist[2], obor_primary_names, obor_primary_count,
+               "Property name '%s' is not supported by function getanimationproperty.\n");
+
+    if(paramCount < 3 || varlist[1]->vt != VT_INTEGER)
+    {
+        result =  1;
+    }
+    else
+    {
+        ap = obor_forward_primary_selector(varlist[2]->lVal);
+        aps = (ap < obor_forward__ANI_PROP_THE_END && ap >= 0) ? obor_forward_list_animation_prop[ap] : "";
+        switch(ap)
+        {
+            case obor_forward__ANI_PROP_ATTACK:
+            {
+                if(paramCount > 3)
+                {
+                    if(!varlist[3]) return 1;
+                    if(obor_profile_build == 4170)
+                    {
+                        ap = varlist[3]->lVal;
+                        aps = (ap < obor_attack_count && ap >= 0) ? proplist_attack[ap] : "";
+                    }
+                    MAPSTRINGS(varlist[3], proplist_attack, obor_attack_count,
+                               _is_not_a_known_subproperty_of_, aps);
+                    ap = varlist[3]->lVal;
+                    aps = (ap < obor_attack_count && ap >= 0) ? proplist_attack[ap] : "";
+
+                    switch(ap)
+                    {
+                        case obor_forward__PROP_ATTACK_COORDS:
+                        {
+                            if(obor_profile_build < 4172) break;
+                            if(paramCount > 4)
+                            {
+                                if(!varlist[4]) return 1;
+                                if(obor_profile_build == 4170)
+                                {
+                                    ap = varlist[4]->lVal;
+                                    aps = (ap < obor_forward__PROP_ATTACK_COORDS_THE_END && ap >= 0) ? proplist_attack_coords[ap] : "";
+                                }
+                                MAPSTRINGS(varlist[4], proplist_attack_coords, obor_forward__PROP_ATTACK_COORDS_THE_END,
+                                           _is_not_a_known_subproperty_of_, aps);
+                                ap = varlist[4]->lVal;
+                                aps = (ap < obor_forward__PROP_ATTACK_COORDS_THE_END && ap >= 0) ? proplist_attack_coords[ap] : "";
+                            }
+                            break;
+                        }
+                        case obor_forward__PROP_ATTACK_DROPV:
+                        {
+                            if(obor_profile_build == 4171) printf("crustal\n");
+                            if(paramCount > 4)
+                            {
+                                if(!varlist[4]) return 1;
+                                if(obor_profile_build == 4170)
+                                {
+                                    ap = varlist[4]->lVal;
+                                    aps = (ap < obor_forward__PROP_ATTACK_DROPV_THE_END && ap >= 0) ? proplist_attack_dropv[ap] : "";
+                                }
+                                MAPSTRINGS(varlist[4], proplist_attack_dropv, obor_forward__PROP_ATTACK_DROPV_THE_END,
+                                           _is_not_a_known_subproperty_of_, aps);
+                                ap = varlist[4]->lVal;
+                                aps = (ap < obor_forward__PROP_ATTACK_DROPV_THE_END && ap >= 0) ? proplist_attack_dropv[ap] : "";
+                            }
+                            break;
+                        }
+                        case obor_forward__PROP_ATTACK_STAYDOWN:
+                        {
+                            if(obor_profile_build < 4172) break;
+                            if(paramCount > 4)
+                            {
+                                if(!varlist[4]) return 1;
+                                if(obor_profile_build == 4170)
+                                {
+                                    ap = varlist[4]->lVal;
+                                    aps = (ap < obor_forward__PROP_ATTACK_STAYDOWN_THE_END && ap >= 0) ? proplist_attack_staydown[ap] : "";
+                                }
+                                MAPSTRINGS(varlist[4], proplist_attack_staydown, obor_forward__PROP_ATTACK_STAYDOWN_THE_END,
+                                           _is_not_a_known_subproperty_of_, aps);
+                                ap = varlist[4]->lVal;
+                                aps = (ap < obor_forward__PROP_ATTACK_STAYDOWN_THE_END && ap >= 0) ? proplist_attack_staydown[ap] : "";
+                            }
+                            break;
+                        }
+                    }
+                }
+                break;
+            }
+            case obor_forward__ANI_PROP_BBOX:
+            {
+                if(paramCount > 3)
+                {
+                    if(!varlist[3]) return 1;
+                    if(obor_profile_build == 4170)
+                    {
+                        ap = varlist[3]->lVal;
+                        aps = (ap < obor_forward__PROP_BBOX_THE_END && ap >= 0) ? proplist_bbox[ap] : "";
+                    }
+                    MAPSTRINGS(varlist[3], proplist_bbox, obor_forward__PROP_BBOX_THE_END,
+                               _is_not_a_known_subproperty_of_, aps);
+                    ap = varlist[3]->lVal;
+                    aps = (ap < obor_forward__PROP_BBOX_THE_END && ap >= 0) ? proplist_bbox[ap] : "";
+                }
+                break;
+            }
+            case obor_forward__ANI_PROP_COUNTERRANGE:
+            {
+                if(paramCount > 3)
+                {
+                    if(!varlist[3]) return 1;
+                    if(obor_profile_build == 4170)
+                    {
+                        ap = varlist[3]->lVal;
+                        aps = (ap < obor_forward__PROP_COUNTERRANGE_THE_END && ap >= 0) ? proplist_counterrange[ap] : "";
+                    }
+                    MAPSTRINGS(varlist[3], proplist_counterrange, obor_forward__PROP_COUNTERRANGE_THE_END,
+                               _is_not_a_known_subproperty_of_, aps);
+                    ap = varlist[3]->lVal;
+                    aps = (ap < obor_forward__PROP_COUNTERRANGE_THE_END && ap >= 0) ? proplist_counterrange[ap] : "";
+                }
+                break;
+            }
+            case obor_forward__ANI_PROP_DRAWMETHODS:
+            {
+                if(paramCount > 3)
+                {
+                    if(!varlist[3]) return 1;
+                    if(obor_profile_build == 4170)
+                    {
+                        ap = varlist[3]->lVal;
+                        aps = (ap < obor_forward__dm_the_end && ap >= 0) ? proplist_drawmethods[ap] : "";
+                    }
+                    MAPSTRINGS(varlist[3], proplist_drawmethods, obor_forward__dm_the_end,
+                               _is_not_a_known_subproperty_of_, aps);
+                    ap = varlist[3]->lVal;
+                    aps = (ap < obor_forward__dm_the_end && ap >= 0) ? proplist_drawmethods[ap] : "";
+                }
+                break;
+            }
+            case obor_forward__ANI_PROP_DROPFRAME:
+            {
+                if(paramCount > 3)
+                {
+                    if(!varlist[3]) return 1;
+                    if(obor_profile_build == 4170)
+                    {
+                        ap = varlist[3]->lVal;
+                        aps = (ap < obor_forward__PROP_DROPFRAME_THE_END && ap >= 0) ? proplist_dropframe[ap] : "";
+                    }
+                    MAPSTRINGS(varlist[3], proplist_dropframe, obor_forward__PROP_DROPFRAME_THE_END,
+                               _is_not_a_known_subproperty_of_, aps);
+                    ap = varlist[3]->lVal;
+                    aps = (ap < obor_forward__PROP_DROPFRAME_THE_END && ap >= 0) ? proplist_dropframe[ap] : "";
+                }
+                break;
+            }
+            case obor_forward__ANI_PROP_ENERGYCOST:
+            {
+                if(paramCount > 3)
+                {
+                    if(!varlist[3]) return 1;
+                    if(obor_profile_build == 4170)
+                    {
+                        ap = varlist[3]->lVal;
+                        aps = (ap < obor_forward__ep_energycost_the_end && ap >= 0) ? proplist_energycost[ap] : "";
+                    }
+                    MAPSTRINGS(varlist[3], proplist_energycost, obor_forward__ep_energycost_the_end,
+                               _is_not_a_known_subproperty_of_, aps);
+                    ap = varlist[3]->lVal;
+                    aps = (ap < obor_forward__ep_energycost_the_end && ap >= 0) ? proplist_energycost[ap] : "";
+                }
+                break;
+            }
+            case obor_forward__ANI_PROP_FOLLOWUP:
+            {
+                if(paramCount > 3)
+                {
+                    if(!varlist[3]) return 1;
+                    if(obor_profile_build == 4170)
+                    {
+                        ap = varlist[3]->lVal;
+                        aps = (ap < obor_forward__PROP_FOLLOWUP_THE_END && ap >= 0) ? proplist_followup[ap] : "";
+                    }
+                    MAPSTRINGS(varlist[3], proplist_followup, obor_forward__PROP_FOLLOWUP_THE_END,
+                               _is_not_a_known_subproperty_of_, aps);
+                    ap = varlist[3]->lVal;
+                    aps = (ap < obor_forward__PROP_FOLLOWUP_THE_END && ap >= 0) ? proplist_followup[ap] : "";
+                }
+                break;
+            }
+            case obor_forward__ANI_PROP_JUMPFRAME:
+            {
+                if(paramCount > 3)
+                {
+                    if(!varlist[3]) return 1;
+                    if(obor_profile_build == 4170)
+                    {
+                        ap = varlist[3]->lVal;
+                        aps = (ap < obor_forward__PROP_JUMPFRAME_THE_END && ap >= 0) ? proplist_jumpframe[ap] : "";
+                    }
+                    MAPSTRINGS(varlist[3], proplist_jumpframe, obor_forward__PROP_JUMPFRAME_THE_END,
+                               _is_not_a_known_subproperty_of_, aps);
+                    ap = varlist[3]->lVal;
+                    aps = (ap < obor_forward__PROP_JUMPFRAME_THE_END && ap >= 0) ? proplist_jumpframe[ap] : "";
+                }
+                break;
+            }
+            case obor_forward__ANI_PROP_LANDFRAME:
+            {
+                if(paramCount > 3)
+                {
+                    if(!varlist[3]) return 1;
+                    if(obor_profile_build == 4170)
+                    {
+                        ap = varlist[3]->lVal;
+                        aps = (ap < obor_forward__PROP_LANDFRAME_THE_END && ap >= 0) ? proplist_landframe[ap] : "";
+                    }
+                    MAPSTRINGS(varlist[3], proplist_landframe, obor_forward__PROP_LANDFRAME_THE_END,
+                               _is_not_a_known_subproperty_of_, aps);
+                    ap = varlist[3]->lVal;
+                    aps = (ap < obor_forward__PROP_LANDFRAME_THE_END && ap >= 0) ? proplist_landframe[ap] : "";
+                }
+                break;
+            }
+            case obor_forward__ANI_PROP_LOOP:
+            {
+                if(paramCount > 3)
+                {
+                    if(!varlist[3]) return 1;
+                    if(obor_profile_build == 4170)
+                    {
+                        ap = varlist[3]->lVal;
+                        aps = (ap < obor_forward__PROP_LOOP_THE_END && ap >= 0) ? proplist_loop[ap] : "";
+                    }
+                    MAPSTRINGS(varlist[3], proplist_loop, obor_forward__PROP_LOOP_THE_END,
+                               _is_not_a_known_subproperty_of_, aps);
+                    ap = varlist[3]->lVal;
+                    aps = (ap < obor_forward__PROP_LOOP_THE_END && ap >= 0) ? proplist_loop[ap] : "";
+                }
+                break;
+            }
+            case obor_forward__ANI_PROP_MOVE:
+            {
+                if(paramCount > 3)
+                {
+                    if(!varlist[3]) return 1;
+                    if(obor_profile_build == 4170)
+                    {
+                        ap = varlist[3]->lVal;
+                        aps = (ap < obor_forward__PROP_MOVE_THE_END && ap >= 0) ? proplist_move[ap] : "";
+                    }
+                    MAPSTRINGS(varlist[3], proplist_move, obor_forward__PROP_MOVE_THE_END,
+                               _is_not_a_known_subproperty_of_, aps);
+                    ap = varlist[3]->lVal;
+                    aps = (ap < obor_forward__PROP_MOVE_THE_END && ap >= 0) ? proplist_move[ap] : "";
+                }
+                break;
+            }
+            case obor_forward__ANI_PROP_OFFSET:
+            {
+                if(paramCount > 3)
+                {
+                    if(!varlist[3]) return 1;
+                    /*printf("START\n");
+                    printf("res: %d %s %s\n",(int)searchList(proplist_offset, (char*)StrCache_Get(varlist[3]->strVal), _PROP_OFFSET_THE_END),(char*)StrCache_Get(varlist[3]->strVal), (char*)varlist[3]);
+                    printf("END\n");*/
+                    if(obor_profile_build == 4170)
+                    {
+                        ap = varlist[3]->lVal;
+                        aps = (ap < obor_forward__PROP_OFFSET_THE_END && ap >= 0) ? proplist_offset[ap] : "";
+                    }
+                    MAPSTRINGS(varlist[3], proplist_offset, obor_forward__PROP_OFFSET_THE_END,
+                               _is_not_a_known_subproperty_of_, aps);
+                    ap = varlist[3]->lVal;
+                    aps = (ap < obor_forward__PROP_OFFSET_THE_END && ap >= 0) ? proplist_offset[ap] : "";
+                }
+                break;
+            }
+            case obor_forward__ANI_PROP_PLATFORM:
+            {
+                if(paramCount > 3)
+                {
+                    if(!varlist[3]) return 1;
+                    if(obor_profile_build == 4170)
+                    {
+                        ap = varlist[3]->lVal;
+                        aps = (ap < obor_forward__PROP_PLATFORM_THE_END && ap >= 0) ? proplist_platform[ap] : "";
+                    }
+                    MAPSTRINGS(varlist[3], proplist_platform, obor_forward__PROP_PLATFORM_THE_END,
+                               _is_not_a_known_subproperty_of_, aps);
+                    ap = varlist[3]->lVal;
+                    aps = (ap < obor_forward__PROP_PLATFORM_THE_END && ap >= 0) ? proplist_platform[ap] : "";
+                }
+                break;
+            }
+            case obor_forward__ANI_PROP_PROJECTILE:
+            {
+                if(paramCount > 3)
+                {
+                    if(!varlist[3]) return 1;
+                    if(obor_profile_build == 4170)
+                    {
+                        ap = varlist[3]->lVal;
+                        aps = (ap < obor_forward__PROP_PROJECTILE_THE_END && ap >= 0) ? proplist_projectile[ap] : "";
+                    }
+                    MAPSTRINGS(varlist[3], proplist_projectile, obor_forward__PROP_PROJECTILE_THE_END,
+                               _is_not_a_known_subproperty_of_, aps);
+                    ap = varlist[3]->lVal;
+                    aps = (ap < obor_forward__PROP_PROJECTILE_THE_END && ap >= 0) ? proplist_projectile[ap] : "";
+                }
+                break;
+            }
+            case obor_forward__ANI_PROP_QUAKEFRAME:
+            {
+                if(paramCount > 3)
+                {
+                    if(!varlist[3]) return 1;
+                    if(obor_profile_build == 4170)
+                    {
+                        ap = varlist[3]->lVal;
+                        aps = (ap < obor_forward__PROP_QUAKEFRAME_THE_END && ap >= 0) ? proplist_quakeframe[ap] : "";
+                    }
+                    MAPSTRINGS(varlist[3], proplist_quakeframe, obor_forward__PROP_QUAKEFRAME_THE_END,
+                               _is_not_a_known_subproperty_of_, aps);
+                    ap = varlist[3]->lVal;
+                    aps = (ap < obor_forward__PROP_QUAKEFRAME_THE_END && ap >= 0) ? proplist_quakeframe[ap] : "";
+                }
+                break;
+            }
+            case obor_forward__ANI_PROP_RANGE:
+            {
+                if(paramCount > 3)
+                {
+                    if(!varlist[3]) return 1;
+                    if(obor_profile_build == 4170)
+                    {
+                        ap = varlist[3]->lVal;
+                        aps = (ap < obor_forward__PROP_RANGE_THE_END && ap >= 0) ? proplist_range[ap] : "";
+                    }
+                    MAPSTRINGS(varlist[3], proplist_range, obor_forward__PROP_RANGE_THE_END,
+                               _is_not_a_known_subproperty_of_, aps);
+                    ap = varlist[3]->lVal;
+                    aps = (ap < obor_forward__PROP_RANGE_THE_END && ap >= 0) ? proplist_range[ap] : "";
+                }
+                break;
+            }
+            case obor_forward__ANI_PROP_SHADOW:
+            {
+                if(paramCount > 3)
+                {
+                    if(!varlist[3]) return 1;
+                    if(obor_profile_build == 4170)
+                    {
+                        ap = varlist[3]->lVal;
+                        aps = (ap < obor_forward__PROP_SHADOW_THE_END && ap >= 0) ? proplist_shadow[ap] : "";
+                    }
+                    MAPSTRINGS(varlist[3], proplist_shadow, obor_forward__PROP_SHADOW_THE_END,
+                               _is_not_a_known_subproperty_of_, aps);
+                    ap = varlist[3]->lVal;
+                    aps = (ap < obor_forward__PROP_SHADOW_THE_END && ap >= 0) ? proplist_shadow[ap] : "";
+                }
+                break;
+            }
+            case obor_forward__ANI_PROP_SIZE:
+            {
+                if(paramCount > 3)
+                {
+                    if(!varlist[3]) return 1;
+                    if(obor_profile_build == 4170)
+                    {
+                        ap = varlist[3]->lVal;
+                        aps = (ap < (int)(sizeof(proplist_size) / sizeof(*proplist_size)) && ap >= 0) ? proplist_size[ap] : "";
+                    }
+                    MAPSTRINGS(varlist[3], proplist_size, (int)(sizeof(proplist_size) / sizeof(*proplist_size)),
+                               _is_not_a_known_subproperty_of_, aps);
+                    ap = varlist[3]->lVal;
+                    aps = (ap < (int)(sizeof(proplist_size) / sizeof(*proplist_size)) && ap >= 0) ? proplist_size[ap] : "";
+                }
+                break;
+            }
+            case obor_forward__ANI_PROP_SPAWNFRAME:
+            {
+                if(paramCount > 3)
+                {
+                    if(!varlist[3]) return 1;
+                    if(obor_profile_build == 4170)
+                    {
+                        ap = varlist[3]->lVal;
+                        aps = (ap < obor_forward__PROP_SPAWNFRAME_THE_END && ap >= 0) ? proplist_spawnframe[ap] : "";
+                    }
+                    MAPSTRINGS(varlist[3], proplist_spawnframe, obor_forward__PROP_SPAWNFRAME_THE_END,
+                               _is_not_a_known_subproperty_of_, aps);
+                    ap = varlist[3]->lVal;
+                    aps = (ap < obor_forward__PROP_SPAWNFRAME_THE_END && ap >= 0) ? proplist_spawnframe[ap] : "";
+                }
+                break;
+            }
+            case obor_forward__ANI_PROP_SPRITEA:
+            {
+                if(paramCount > 3)
+                {
+                    if(!varlist[3]) return 1;
+                    if(obor_profile_build == 4170)
+                    {
+                        ap = varlist[3]->lVal;
+                        aps = (ap < obor_forward__PROP_SPRITEA_THE_END && ap >= 0) ? proplist_spritea[ap] : "";
+                    }
+                    MAPSTRINGS(varlist[3], proplist_spritea, obor_forward__PROP_SPRITEA_THE_END,
+                               _is_not_a_known_subproperty_of_, aps);
+                    ap = varlist[3]->lVal;
+                    aps = (ap < obor_forward__PROP_SPRITEA_THE_END && ap >= 0) ? proplist_spritea[ap] : "";
+                }
+                break;
+            }
+            case obor_forward__ANI_PROP_SUMMONFRAME:
+            {
+                if(paramCount > 3)
+                {
+                    if(!varlist[3]) return 1;
+                    if(obor_profile_build == 4170)
+                    {
+                        ap = varlist[3]->lVal;
+                        aps = (ap < obor_forward__PROP_SUMMONFRAME_THE_END && ap >= 0) ? proplist_summonframe[ap] : "";
+                    }
+                    MAPSTRINGS(varlist[3], proplist_summonframe, obor_forward__PROP_SUMMONFRAME_THE_END,
+                               _is_not_a_known_subproperty_of_, aps);
+                    ap = varlist[3]->lVal;
+                    aps = (ap < obor_forward__PROP_SUMMONFRAME_THE_END && ap >= 0) ? proplist_summonframe[ap] : "";
+                }
+                break;
+            }
+            case obor_forward__ANI_PROP_WEAPONFRAME:
+            {
+                if(paramCount > 3)
+                {
+                    if(!varlist[3]) return 1;
+                    if(obor_profile_build == 4170)
+                    {
+                        ap = varlist[3]->lVal;
+                        aps = (ap < obor_forward__PROP_WEAPONFRAME_THE_END && ap >= 0) ? proplist_weaponframe[ap] : "";
+                    }
+                    MAPSTRINGS(varlist[3], proplist_weaponframe, obor_forward__PROP_WEAPONFRAME_THE_END,
+                               _is_not_a_known_subproperty_of_, aps);
+                    ap = varlist[3]->lVal;
+                    aps = (ap < obor_forward__PROP_WEAPONFRAME_THE_END && ap >= 0) ? proplist_weaponframe[ap] : "";
+                }
+                break;
+            }
+        } // end base switch
+    }
+    return result;
+}
+
+/* Checked native animation argument access returns at the consumed read,
+ * preserving earlier conversions, diagnostics and writes in each native arm. */
+#define OBOR_ANIMATION_ARG(INDEX) \
+    (__extension__ ({ \
+        int obor_arg_index = (INDEX); \
+        if(obor_arg_index < 0 || obor_arg_index >= paramCount || !varlist[obor_arg_index]) return E_FAIL; \
+        varlist[obor_arg_index]; \
+    }))
+
+/* Bounds use owned capacity, independently of a script's logical count.
+ * Returning the element address keeps native reads and writes in their original
+ * order. Optional-array and sparse-row fallbacks remain in the native arms. */
+#include "anybor_resources.h"
+#define OBOR_ANIMATION_FRAME(OWNER, MEMBER, INDEX) \
+    (*(__extension__ ({ \
+        s_anim *obor_frames_owner = (OWNER); \
+        LONG obor_frame_index = (INDEX); \
+        if(!obor_frames_owner || obor_frame_index < 0 || \
+           obor_frame_index >= obor_frames_owner->obor_frame_capacity || \
+           !obor_frames_owner->MEMBER || \
+           (size_t)obor_frame_index >= obor_allocation_size(obor_frames_owner->MEMBER) / sizeof(*obor_frames_owner->MEMBER)) return E_FAIL; \
+        &obor_frames_owner->MEMBER[obor_frame_index]; \
+    })))
+#define OBOR_ANIMATION_OBJECT(POINTER) \
+    (__extension__ ({ \
+        __typeof__(POINTER) obor_animation_object = (POINTER); \
+        if(!obor_animation_object || obor_allocation_size(obor_animation_object) < sizeof(*obor_animation_object)) return E_FAIL; \
+        obor_animation_object; \
+    }))
+
+/* Fixed records have their own extents, independent of frame counts. */
+#define OBOR_ANIMATION_FIXED(OWNER, MEMBER, INDEX) \
+    (*(__extension__ ({ \
+        s_anim *obor_fixed_owner = (OWNER); \
+        size_t obor_fixed_index = (INDEX); \
+        if(!obor_fixed_owner || !obor_fixed_owner->MEMBER || \
+           obor_fixed_index >= obor_allocation_size(obor_fixed_owner->MEMBER) / sizeof(*obor_fixed_owner->MEMBER)) return E_FAIL; \
+        &obor_fixed_owner->MEMBER[obor_fixed_index]; \
+    })))
+extern int sprite_map_max_items;
+extern unsigned int sprites_loaded;
+#define OBOR_ANIMATION_SPRITE(INDEX) \
+    (*(__extension__ ({ \
+        int obor_sprite_index = (INDEX); \
+        if(!sprite_map || obor_sprite_index < 0 || obor_sprite_index >= sprite_map_max_items || \
+           (unsigned)obor_sprite_index >= sprites_loaded || \
+           (size_t)obor_sprite_index >= obor_allocation_size(sprite_map) / sizeof(*sprite_map)) return E_FAIL; \
+        &sprite_map[obor_sprite_index]; \
+    })))
+/* Encoded sprite allocations contain a header followed by variable data. */
+#include <stddef.h>
+#define OBOR_ANIMATION_PIXELS(POINTER) \
+    (__extension__ ({ \
+        s_sprite *obor_sprite_data = (POINTER); \
+        if(!obor_sprite_data || obor_allocation_size(obor_sprite_data) < offsetof(s_sprite, data)) return E_FAIL; \
+        obor_sprite_data; \
+    }))
+#define OBOR_ANIMATION_TEXT(POINTER) \
+    (__extension__ ({ \
+        char *obor_animation_text = (char *)(POINTER); \
+        size_t obor_text_capacity = obor_allocation_size(obor_animation_text); \
+        if(!obor_animation_text || !obor_text_capacity || !memchr(obor_animation_text, 0, obor_text_capacity)) return E_FAIL; \
+        obor_animation_text; \
+    }))
+
+/* Refuse only undefined floating-to-integer conversions at the native use.
+ * Fractional edge values retain truncation toward zero. Integer-to-unsigned
+ * assignments keep their original modulo conversion after the signed cast. */
+#define OBOR_ANIMATION_LONG(VALUE) \
+    (__extension__ ({ \
+        DOUBLE obor_numeric_long = (VALUE); \
+        if(!(obor_numeric_long > -2147483649.0 && obor_numeric_long < 2147483648.0)) return E_FAIL; \
+        (LONG)obor_numeric_long; \
+    }))
+#define OBOR_ANIMATION_UNSIGNED(VALUE) \
+    (__extension__ ({ \
+        DOUBLE obor_numeric_unsigned = (VALUE); \
+        if(!(obor_numeric_unsigned > -1.0 && obor_numeric_unsigned < 4294967296.0)) return E_FAIL; \
+        (u32)obor_numeric_unsigned; \
+    }))
+
+/* Validate a model animation only when the native arm consumes it. */
+#define OBOR_ANIMATION_MODEL(ACTOR, INDEX) \
+    (__extension__ ({ \
+        s_anim *obor_animation_model = obor_script_model_animation((ACTOR), (INDEX)); \
+        if(!obor_animation_model) return E_FAIL; \
+        obor_animation_model; \
+    }))
+
+static HRESULT obor_forward_changeanimationproperty_impl(ScriptVariant **varlist, ScriptVariant **pretvar, int paramCount)
+{
+    int result                      = S_OK; //Pass or fail?
+    entity *ent                     = NULL; //Entity;
+    int id                          = 0;    //Animation ID.
+    obor_forward_e_animation_properties property = 0;    //Property.
+
+
+
+    // Verify incoming parameters.
+    if(paramCount < 4
+       || OBOR_ANIMATION_ARG(1)->vt != VT_INTEGER
+       || OBOR_ANIMATION_ARG(2)->vt != VT_INTEGER)
+    {
+        printf("You must provide an animation ID and property: changeanimationproperty({ent}, {animation id}, {property}, {frame}, {value})\n");
+        result = E_FAIL;
+    }
+    else
+    {
+        DOUBLE value = 0;
+        LONG lvalue; //, frame
+        LONG okf = 0;
+        LONG value_index = 0;
+        s_attack *attack = NULL;
+        s_anim *anim = NULL;
+        //s_sprite *spr = NULL;
+        //int tmp_int = 0;
+        //float tmp_float = 0;*/
+
+        // Set parameter vars.
+        ent         = (entity *)OBOR_ANIMATION_ARG(0)->ptrVal;
+        id          = OBOR_ANIMATION_ARG(1)->lVal;
+        property    = OBOR_ANIMATION_ARG(2)->lVal;
+
+        // Most values returned will be integers. Set here for less repetition.
+        ScriptVariant_ChangeType(*pretvar, VT_INTEGER);
+
+        if(OBOR_ANIMATION_ARG(2)->vt != VT_INTEGER)
+        {
+            printf("You must give a string value for property name.\n");
+            return E_FAIL;
+        }
+
+        /*if(FAILED(ScriptVariant_IntegerValue(varlist[3], &frame)))
+        {
+            printf("You must give an integer value for frame.\n");
+            return E_FAIL;
+        }*/
+
+        // search and set the input value
+        value_index = paramCount-1;
+        if( SUCCEEDED(ScriptVariant_DecimalValue(varlist[value_index], &value)) )
+        {
+            //value = (DOUBLE)value;
+        } else if( SUCCEEDED(ScriptVariant_IntegerValue(varlist[value_index], &lvalue)) )
+        {
+            value = (DOUBLE)lvalue;
+        }
+
+        // Which animation property to get?
+        switch(property)
+        {
+            case obor_forward__ANI_PROP_ANIMHITS:
+                OBOR_ANIMATION_MODEL(ent, id)->animhits = OBOR_ANIMATION_LONG(value);
+                break;
+            case obor_forward__ANI_PROP_ANTIGRAV:
+                OBOR_ANIMATION_MODEL(ent, id)->antigrav = OBOR_ANIMATION_LONG(value);
+                break;
+            /*
+             * ################### ATTACK PROPERTY ###################
+             */
+            case obor_forward__ANI_PROP_ATTACK:
+                // Verify incoming parameter.
+                if(OBOR_ANIMATION_ARG(3)->vt != VT_INTEGER)
+                {
+                    printf("You must provide a sub-property: changeanimationproperty({ent}, {animation id}, 'attack', {sub-property}, {frame_index}, {value})\n");
+                    result = E_FAIL;
+                }
+                else
+                {
+                    switch(OBOR_ANIMATION_ARG(3)->lVal)
+                    {
+                        case obor_forward__PROP_ATTACK_BLAST:
+                            if(OBOR_ANIMATION_ARG(4)->vt != VT_INTEGER)
+                            {
+                                printf("You must provide an animation ID and all properties: changeanimationproperty({ent}, {animation id}, 'attack', 'blast', {frame_index}, {value})\n");
+                                result = E_FAIL;
+                                break;
+                            } else
+                            {
+                                okf = (int)OBOR_ANIMATION_ARG(4)->lVal;
+                            }
+
+                            anim = OBOR_ANIMATION_MODEL(ent, id);
+                            if( anim->attacks ) {
+                                attack = OBOR_ANIMATION_FRAME(anim, attacks, okf);
+
+                                if (attack) OBOR_ANIMATION_OBJECT(attack)->blast = OBOR_ANIMATION_LONG(value);
+                                else { (*pretvar)->lVal = (LONG)-1; break; }
+                            } else { (*pretvar)->lVal = (LONG)-1; break; }
+
+                            break;
+                        case obor_forward__PROP_ATTACK_BLOCKFLASH:
+                            if(OBOR_ANIMATION_ARG(4)->vt != VT_INTEGER)
+                            {
+                                printf("You must provide an animation ID and all properties: changeanimationproperty({ent}, {animation id}, 'attack', 'blockflash', {frame_index}, {value})\n");
+                                result = E_FAIL;
+                                break;
+                            } else
+                            {
+                                okf = (int)OBOR_ANIMATION_ARG(4)->lVal;
+                            }
+
+                            anim = OBOR_ANIMATION_MODEL(ent, id);
+                            if( anim->attacks ) {
+                                attack = OBOR_ANIMATION_FRAME(anim, attacks, okf);
+
+                                if (attack) OBOR_ANIMATION_OBJECT(attack)->blockflash = OBOR_ANIMATION_LONG(value);
+                                else { (*pretvar)->lVal = (LONG)-1; break; }
+                            } else { (*pretvar)->lVal = (LONG)-1; break; }
+
+                            break;
+                        case obor_forward__PROP_ATTACK_BLOCKSOUND:
+                            if(OBOR_ANIMATION_ARG(4)->vt != VT_INTEGER)
+                            {
+                                printf("You must provide an animation ID and all properties: changeanimationproperty({ent}, {animation id}, 'attack', 'blocksound', {frame_index}, {value})\n");
+                                result = E_FAIL;
+                                break;
+                            } else
+                            {
+                                okf = (int)OBOR_ANIMATION_ARG(4)->lVal;
+                            }
+
+                            anim = OBOR_ANIMATION_MODEL(ent, id);
+                            if( anim->attacks ) {
+                                attack = OBOR_ANIMATION_FRAME(anim, attacks, okf);
+
+                                if (attack) OBOR_ANIMATION_OBJECT(attack)->blocksound = OBOR_ANIMATION_LONG(value);
+                                else { (*pretvar)->lVal = (LONG)-1; break; }
+                            } else { (*pretvar)->lVal = (LONG)-1; break; }
+
+                            break;
+                        case obor_forward__PROP_ATTACK_COORDS:
+                            if(OBOR_ANIMATION_ARG(4)->vt != VT_INTEGER)
+                            {
+                                printf("You must provide an animation ID and all properties: changeanimationproperty({ent}, {animation id}, 'attack', 'coords', {subproperty}, {frame_index}, {value})\n");
+                                result = E_FAIL;
+                                break;
+                            }
+
+                            if(OBOR_ANIMATION_ARG(5)->vt != VT_INTEGER)
+                            {
+                                printf("You must provide an animation ID and all properties: changeanimationproperty({ent}, {animation id}, 'attack', 'coords', {subproperty}, {frame_index}, {value})\n");
+                                result = E_FAIL;
+                                break;
+                            } else
+                            {
+                                okf = (int)OBOR_ANIMATION_ARG(5)->lVal;
+                            }
+
+                            // without a optional frame_index it returns the 1st useful frame if it exists
+                            anim = OBOR_ANIMATION_MODEL(ent, id);
+                            if( anim->attacks ) {
+                                attack = OBOR_ANIMATION_FRAME(anim, attacks, okf);
+
+                                if (attack)
+                                {
+                                    switch(OBOR_ANIMATION_ARG(4)->lVal)
+                                    {
+                                        case obor_forward__PROP_ATTACK_COORDS_HEIGHT:
+                                            OBOR_ANIMATION_OBJECT(attack)->attack_coords[3] = OBOR_ANIMATION_LONG(value);
+                                            break;
+                                        case obor_forward__PROP_ATTACK_COORDS_WIDTH:
+                                            OBOR_ANIMATION_OBJECT(attack)->attack_coords[2] = OBOR_ANIMATION_LONG(value);
+                                            break;
+                                        case obor_forward__PROP_ATTACK_COORDS_X:
+                                            OBOR_ANIMATION_OBJECT(attack)->attack_coords[0] = OBOR_ANIMATION_LONG(value);
+                                            break;
+                                        case obor_forward__PROP_ATTACK_COORDS_Y:
+                                            OBOR_ANIMATION_OBJECT(attack)->attack_coords[1] = OBOR_ANIMATION_LONG(value);
+                                            break;
+                                        case obor_forward__PROP_ATTACK_COORDS_Z1:
+                                            OBOR_ANIMATION_OBJECT(attack)->attack_coords[4] = OBOR_ANIMATION_LONG(value);
+                                            break;
+                                        case obor_forward__PROP_ATTACK_COORDS_Z2:
+                                            OBOR_ANIMATION_OBJECT(attack)->attack_coords[5] = OBOR_ANIMATION_LONG(value);
+                                            break;
+                                    }
+                                }
+                                else { (*pretvar)->lVal = (LONG)-1; break; }
+                            } else { (*pretvar)->lVal = (LONG)-1; break; }
+
+                            break;
+                        case obor_forward__PROP_ATTACK_COUNTERATTACK:
+                            if(OBOR_ANIMATION_ARG(4)->vt != VT_INTEGER)
+                            {
+                                printf("You must provide an animation ID and all properties: changeanimationproperty({ent}, {animation id}, 'attack', 'counterattack', {frame_index}, {value})\n");
+                                result = E_FAIL;
+                                break;
+                            } else
+                            {
+                                okf = (int)OBOR_ANIMATION_ARG(4)->lVal;
+                            }
+
+                            anim = OBOR_ANIMATION_MODEL(ent, id);
+                            if( anim->attacks ) {
+                                attack = OBOR_ANIMATION_FRAME(anim, attacks, okf);
+
+                                if (attack) OBOR_ANIMATION_OBJECT(attack)->counterattack = OBOR_ANIMATION_LONG(value);
+                                else { (*pretvar)->lVal = (LONG)-1; break; }
+                            } else { (*pretvar)->lVal = (LONG)-1; break; }
+
+                            break;
+                        case obor_forward__PROP_ATTACK_DIRECTION:
+                            if(OBOR_ANIMATION_ARG(4)->vt != VT_INTEGER)
+                            {
+                                printf("You must provide an animation ID and all properties: changeanimationproperty({ent}, {animation id}, 'attack', 'direction', {frame_index}, {value})\n");
+                                result = E_FAIL;
+                                break;
+                            } else
+                            {
+                                okf = (int)OBOR_ANIMATION_ARG(4)->lVal;
+                            }
+
+                            anim = OBOR_ANIMATION_MODEL(ent, id);
+                            if( anim->attacks ) {
+                                attack = OBOR_ANIMATION_FRAME(anim, attacks, okf);
+
+                                if (attack) OBOR_ANIMATION_OBJECT(attack)->force_direction = OBOR_ANIMATION_LONG(value);
+                                else { (*pretvar)->lVal = (LONG)-1; break; }
+                            } else { (*pretvar)->lVal = (LONG)-1; break; }
+
+                            break;
+                        case obor_forward__PROP_ATTACK_DOL:
+                            if(OBOR_ANIMATION_ARG(4)->vt != VT_INTEGER)
+                            {
+                                printf("You must provide an animation ID and all properties: changeanimationproperty({ent}, {animation id}, 'attack', 'dol', {frame_index}, {value})\n");
+                                result = E_FAIL;
+                                break;
+                            } else
+                            {
+                                okf = (int)OBOR_ANIMATION_ARG(4)->lVal;
+                            }
+
+                            anim = OBOR_ANIMATION_MODEL(ent, id);
+                            if( anim->attacks ) {
+                                attack = OBOR_ANIMATION_FRAME(anim, attacks, okf);
+
+                                if (attack) OBOR_ANIMATION_OBJECT(attack)->damage_on_landing = OBOR_ANIMATION_LONG(value);
+                                else { (*pretvar)->lVal = (LONG)-1; break; }
+                            } else { (*pretvar)->lVal = (LONG)-1; break; }
+
+                            break;
+                        case obor_forward__PROP_ATTACK_DOT:
+                            if(OBOR_ANIMATION_ARG(4)->vt != VT_INTEGER)
+                            {
+                                printf("You must provide an animation ID and all properties: changeanimationproperty({ent}, {animation id}, 'attack', 'dot', {frame_index}, {value})\n");
+                                result = E_FAIL;
+                                break;
+                            } else
+                            {
+                                okf = (int)OBOR_ANIMATION_ARG(4)->lVal;
+                            }
+
+                            anim = OBOR_ANIMATION_MODEL(ent, id);
+                            if( anim->attacks ) {
+                                attack = OBOR_ANIMATION_FRAME(anim, attacks, okf);
+
+                                if (attack) OBOR_ANIMATION_OBJECT(attack)->dot = OBOR_ANIMATION_LONG(value);
+                                else { (*pretvar)->lVal = (LONG)-1; break; }
+                            } else { (*pretvar)->lVal = (LONG)-1; break; }
+
+                            break;
+                        case obor_forward__PROP_ATTACK_DOTFORCE:
+                            if(OBOR_ANIMATION_ARG(4)->vt != VT_INTEGER)
+                            {
+                                printf("You must provide an animation ID and all properties: changeanimationproperty({ent}, {animation id}, 'attack', 'dotforce', {frame_index}, {value})\n");
+                                result = E_FAIL;
+                                break;
+                            } else
+                            {
+                                okf = (int)OBOR_ANIMATION_ARG(4)->lVal;
+                            }
+
+                            anim = OBOR_ANIMATION_MODEL(ent, id);
+                            if( anim->attacks ) {
+                                attack = OBOR_ANIMATION_FRAME(anim, attacks, okf);
+
+                                if (attack) OBOR_ANIMATION_OBJECT(attack)->dot_force = OBOR_ANIMATION_LONG(value);
+                                else { (*pretvar)->lVal = (LONG)-1; break; }
+                            } else { (*pretvar)->lVal = (LONG)-1; break; }
+
+                            break;
+                        case obor_forward__PROP_ATTACK_DOTINDEX:
+                            if(OBOR_ANIMATION_ARG(4)->vt != VT_INTEGER)
+                            {
+                                printf("You must provide an animation ID and all properties: changeanimationproperty({ent}, {animation id}, 'attack', 'dotindex', {frame_index}, {value})\n");
+                                result = E_FAIL;
+                                break;
+                            } else
+                            {
+                                okf = (int)OBOR_ANIMATION_ARG(4)->lVal;
+                            }
+
+                            anim = OBOR_ANIMATION_MODEL(ent, id);
+                            if( anim->attacks ) {
+                                attack = OBOR_ANIMATION_FRAME(anim, attacks, okf);
+
+                                if (attack) OBOR_ANIMATION_OBJECT(attack)->dot_index = OBOR_ANIMATION_LONG(value);
+                                else { (*pretvar)->lVal = (LONG)-1; break; }
+                            } else { (*pretvar)->lVal = (LONG)-1; break; }
+
+                            break;
+                        case obor_forward__PROP_ATTACK_DOTRATE:
+                            if(OBOR_ANIMATION_ARG(4)->vt != VT_INTEGER)
+                            {
+                                printf("You must provide an animation ID and all properties: changeanimationproperty({ent}, {animation id}, 'attack', 'dotrate', {frame_index}, {value})\n");
+                                result = E_FAIL;
+                                break;
+                            } else
+                            {
+                                okf = (int)OBOR_ANIMATION_ARG(4)->lVal;
+                            }
+
+                            anim = OBOR_ANIMATION_MODEL(ent, id);
+                            if( anim->attacks ) {
+                                attack = OBOR_ANIMATION_FRAME(anim, attacks, okf);
+
+                                if (attack) OBOR_ANIMATION_OBJECT(attack)->dot_rate = OBOR_ANIMATION_LONG(value);
+                                else { (*pretvar)->lVal = (LONG)-1; break; }
+                            } else { (*pretvar)->lVal = (LONG)-1; break; }
+
+                            break;
+                        case obor_forward__PROP_ATTACK_DOTTIME:
+                            if(OBOR_ANIMATION_ARG(4)->vt != VT_INTEGER)
+                            {
+                                printf("You must provide an animation ID and all properties: changeanimationproperty({ent}, {animation id}, 'attack', 'dottime', {frame_index}, {value})\n");
+                                result = E_FAIL;
+                                break;
+                            } else
+                            {
+                                okf = (int)OBOR_ANIMATION_ARG(4)->lVal;
+                            }
+
+                            anim = OBOR_ANIMATION_MODEL(ent, id);
+                            if( anim->attacks ) {
+                                attack = OBOR_ANIMATION_FRAME(anim, attacks, okf);
+
+                                if (attack) OBOR_ANIMATION_OBJECT(attack)->dot_time = OBOR_ANIMATION_LONG(value);
+                                else { (*pretvar)->lVal = (LONG)-1; break; }
+                            } else { (*pretvar)->lVal = (LONG)-1; break; }
+
+                            break;
+                        case obor_forward__PROP_ATTACK_DROP:
+                            if(OBOR_ANIMATION_ARG(4)->vt != VT_INTEGER)
+                            {
+                                printf("You must provide an animation ID and all properties: changeanimationproperty({ent}, {animation id}, 'attack', 'drop', {frame_index}, {value})\n");
+                                result = E_FAIL;
+                                break;
+                            } else
+                            {
+                                okf = (int)OBOR_ANIMATION_ARG(4)->lVal;
+                            }
+
+                            anim = OBOR_ANIMATION_MODEL(ent, id);
+                            if( anim->attacks ) {
+                                attack = OBOR_ANIMATION_FRAME(anim, attacks, okf);
+
+                                if (attack) OBOR_ANIMATION_OBJECT(attack)->attack_drop = OBOR_ANIMATION_LONG(value);
+                                else { (*pretvar)->lVal = (LONG)-1; break; }
+                            } else { (*pretvar)->lVal = (LONG)-1; break; }
+
+                            break;
+                        case obor_forward__PROP_ATTACK_DROPV:
+                            if(OBOR_ANIMATION_ARG(4)->vt != VT_INTEGER)
+                            {
+                                printf("You must provide an animation ID and all properties: changeanimationproperty({ent}, {animation id}, 'attack', 'dropv', {subproperty}, {frame_index}, {value})\n");
+                                result = E_FAIL;
+                                break;
+                            }
+
+                            if(OBOR_ANIMATION_ARG(5)->vt != VT_INTEGER)
+                            {
+                                printf("You must provide an animation ID and all properties: changeanimationproperty({ent}, {animation id}, 'attack', 'dropv', {subproperty}, {frame_index}, {value})\n");
+                                result = E_FAIL;
+                                break;
+                            } else
+                            {
+                                okf = (int)OBOR_ANIMATION_ARG(5)->lVal;
+                            }
+
+                            // without a optional frame_index it returns the 1st useful frame if it exists
+                            anim = OBOR_ANIMATION_MODEL(ent, id);
+                            if( anim->attacks ) {
+                                attack = OBOR_ANIMATION_FRAME(anim, attacks, okf);
+
+                                if (attack)
+                                {
+                                    switch(OBOR_ANIMATION_ARG(4)->lVal)
+                                    {
+                                        case obor_forward__PROP_ATTACK_DROPV_X:
+                                            OBOR_ANIMATION_OBJECT(attack)->dropv.x = (DOUBLE)value;
+                                            break;
+                                        case obor_forward__PROP_ATTACK_DROPV_Y:
+                                            OBOR_ANIMATION_OBJECT(attack)->dropv.y = (DOUBLE)value;
+                                            break;
+                                        case obor_forward__PROP_ATTACK_DROPV_Z:
+                                            OBOR_ANIMATION_OBJECT(attack)->dropv.z = (DOUBLE)value;
+                                            break;
+                                    }
+                                }
+                                else { (*pretvar)->lVal = (LONG)-1; break; }
+                            } else { (*pretvar)->lVal = (LONG)-1; break; }
+
+                            break;
+                        case obor_forward__PROP_ATTACK_FORCE:
+                            if(OBOR_ANIMATION_ARG(4)->vt != VT_INTEGER)
+                            {
+                                printf("You must provide an animation ID and all properties: changeanimationproperty({ent}, {animation id}, 'attack', 'force', {frame_index}, {value})\n");
+                                result = E_FAIL;
+                                break;
+                            } else
+                            {
+                                okf = (int)OBOR_ANIMATION_ARG(4)->lVal;
+                            }
+
+                            anim = OBOR_ANIMATION_MODEL(ent, id);
+                            if( anim->attacks ) {
+                                attack = OBOR_ANIMATION_FRAME(anim, attacks, okf);
+
+                                if (attack) OBOR_ANIMATION_OBJECT(attack)->attack_force = OBOR_ANIMATION_LONG(value);
+                                else { (*pretvar)->lVal = (LONG)-1; break; }
+                            } else { (*pretvar)->lVal = (LONG)-1; break; }
+
+                            break;
+                        case obor_forward__PROP_ATTACK_FORCEMAP:
+                            if(OBOR_ANIMATION_ARG(4)->vt != VT_INTEGER)
+                            {
+                                printf("You must provide an animation ID and all properties: changeanimationproperty({ent}, {animation id}, 'attack', 'forcemap', {frame_index}, {value})\n");
+                                result = E_FAIL;
+                                break;
+                            } else
+                            {
+                                okf = (int)OBOR_ANIMATION_ARG(4)->lVal;
+                            }
+
+                            anim = OBOR_ANIMATION_MODEL(ent, id);
+                            if( anim->attacks ) {
+                                attack = OBOR_ANIMATION_FRAME(anim, attacks, okf);
+
+                                if (attack) OBOR_ANIMATION_OBJECT(attack)->forcemap = OBOR_ANIMATION_LONG(value);
+                                else { (*pretvar)->lVal = (LONG)-1; break; }
+                            } else { (*pretvar)->lVal = (LONG)-1; break; }
+
+                            break;
+                        case obor_forward__PROP_ATTACK_FREEZE:
+                            if(OBOR_ANIMATION_ARG(4)->vt != VT_INTEGER)
+                            {
+                                printf("You must provide an animation ID and all properties: changeanimationproperty({ent}, {animation id}, 'attack', 'freeze', {frame_index}, {value})\n");
+                                result = E_FAIL;
+                                break;
+                            } else
+                            {
+                                okf = (int)OBOR_ANIMATION_ARG(4)->lVal;
+                            }
+
+                            anim = OBOR_ANIMATION_MODEL(ent, id);
+                            if( anim->attacks ) {
+                                attack = OBOR_ANIMATION_FRAME(anim, attacks, okf);
+
+                                if (attack) OBOR_ANIMATION_OBJECT(attack)->freeze = OBOR_ANIMATION_LONG(value);
+                                else { (*pretvar)->lVal = (LONG)-1; break; }
+                            } else { (*pretvar)->lVal = (LONG)-1; break; }
+
+                            break;
+                        case obor_forward__PROP_ATTACK_FREEZETIME:
+                            if(OBOR_ANIMATION_ARG(4)->vt != VT_INTEGER)
+                            {
+                                printf("You must provide an animation ID and all properties: changeanimationproperty({ent}, {animation id}, 'attack', 'freezetime', {frame_index}, {value})\n");
+                                result = E_FAIL;
+                                break;
+                            } else
+                            {
+                                okf = (int)OBOR_ANIMATION_ARG(4)->lVal;
+                            }
+
+                            anim = OBOR_ANIMATION_MODEL(ent, id);
+                            if( anim->attacks ) {
+                                attack = OBOR_ANIMATION_FRAME(anim, attacks, okf);
+
+                                if (attack) OBOR_ANIMATION_OBJECT(attack)->freezetime = OBOR_ANIMATION_LONG(value);
+                                else { (*pretvar)->lVal = (LONG)-1; break; }
+                            } else { (*pretvar)->lVal = (LONG)-1; break; }
+
+                            break;
+                        case obor_forward__PROP_ATTACK_GRAB:
+                            if(OBOR_ANIMATION_ARG(4)->vt != VT_INTEGER)
+                            {
+                                printf("You must provide an animation ID and all properties: changeanimationproperty({ent}, {animation id}, 'attack', 'grab', {frame_index}, {value})\n");
+                                result = E_FAIL;
+                                break;
+                            } else
+                            {
+                                okf = (int)OBOR_ANIMATION_ARG(4)->lVal;
+                            }
+
+                            anim = OBOR_ANIMATION_MODEL(ent, id);
+                            if( anim->attacks ) {
+                                attack = OBOR_ANIMATION_FRAME(anim, attacks, okf);
+
+                                if (attack) OBOR_ANIMATION_OBJECT(attack)->grab = OBOR_ANIMATION_LONG(value);
+                                else { (*pretvar)->lVal = (LONG)-1; break; }
+                            } else { (*pretvar)->lVal = (LONG)-1; break; }
+
+                            break;
+                        case obor_forward__PROP_ATTACK_GRABDISTANCE:
+                            if(OBOR_ANIMATION_ARG(4)->vt != VT_INTEGER)
+                            {
+                                printf("You must provide an animation ID and all properties: changeanimationproperty({ent}, {animation id}, 'attack', 'grabdistance', {frame_index}, {value})\n");
+                                result = E_FAIL;
+                                break;
+                            } else
+                            {
+                                okf = (int)OBOR_ANIMATION_ARG(4)->lVal;
+                            }
+
+                            anim = OBOR_ANIMATION_MODEL(ent, id);
+                            if( anim->attacks ) {
+                                attack = OBOR_ANIMATION_FRAME(anim, attacks, okf);
+
+                                if (attack) OBOR_ANIMATION_OBJECT(attack)->grab_distance = OBOR_ANIMATION_LONG(value);
+                                else { (*pretvar)->lVal = (LONG)-1; break; }
+                            } else { (*pretvar)->lVal = (LONG)-1; break; }
+
+                            break;
+                        case obor_forward__PROP_ATTACK_GUARDCOST:
+                            if(OBOR_ANIMATION_ARG(4)->vt != VT_INTEGER)
+                            {
+                                printf("You must provide an animation ID and all properties: changeanimationproperty({ent}, {animation id}, 'attack', 'guardcost', {frame_index}, {value})\n");
+                                result = E_FAIL;
+                                break;
+                            } else
+                            {
+                                okf = (int)OBOR_ANIMATION_ARG(4)->lVal;
+                            }
+
+                            anim = OBOR_ANIMATION_MODEL(ent, id);
+                            if( anim->attacks ) {
+                                attack = OBOR_ANIMATION_FRAME(anim, attacks, okf);
+
+                                if (attack) OBOR_ANIMATION_OBJECT(attack)->guardcost = OBOR_ANIMATION_LONG(value);
+                                else { (*pretvar)->lVal = (LONG)-1; break; }
+                            } else { (*pretvar)->lVal = (LONG)-1; break; }
+
+                            break;
+                        case obor_forward__PROP_ATTACK_HITFLASH:
+                            if(OBOR_ANIMATION_ARG(4)->vt != VT_INTEGER)
+                            {
+                                printf("You must provide an animation ID and all properties: changeanimationproperty({ent}, {animation id}, 'attack', 'hitflash', {frame_index}, {value})\n");
+                                result = E_FAIL;
+                                break;
+                            } else
+                            {
+                                okf = (int)OBOR_ANIMATION_ARG(4)->lVal;
+                            }
+
+                            anim = OBOR_ANIMATION_MODEL(ent, id);
+                            if( anim->attacks ) {
+                                attack = OBOR_ANIMATION_FRAME(anim, attacks, okf);
+
+                                if (attack) OBOR_ANIMATION_OBJECT(attack)->hitflash = OBOR_ANIMATION_LONG(value);
+                                else { (*pretvar)->lVal = (LONG)-1; break; }
+                            } else { (*pretvar)->lVal = (LONG)-1; break; }
+
+                            break;
+                        case obor_forward__PROP_ATTACK_HITSOUND:
+                            if(OBOR_ANIMATION_ARG(4)->vt != VT_INTEGER)
+                            {
+                                printf("You must provide an animation ID and all properties: changeanimationproperty({ent}, {animation id}, 'attack', 'hitsound', {frame_index}, {value})\n");
+                                result = E_FAIL;
+                                break;
+                            } else
+                            {
+                                okf = (int)OBOR_ANIMATION_ARG(4)->lVal;
+                            }
+
+                            anim = OBOR_ANIMATION_MODEL(ent, id);
+                            if( anim->attacks ) {
+                                attack = OBOR_ANIMATION_FRAME(anim, attacks, okf);
+
+                                if (attack) OBOR_ANIMATION_OBJECT(attack)->hitsound = OBOR_ANIMATION_LONG(value);
+                                else { (*pretvar)->lVal = (LONG)-1; break; }
+                            } else { (*pretvar)->lVal = (LONG)-1; break; }
+
+                            break;
+                        case obor_forward__PROP_ATTACK_JUGGLECOST:
+                            if(OBOR_ANIMATION_ARG(4)->vt != VT_INTEGER)
+                            {
+                                printf("You must provide an animation ID and all properties: changeanimationproperty({ent}, {animation id}, 'attack', 'jugglecost', {frame_index}, {value})\n");
+                                result = E_FAIL;
+                                break;
+                            } else
+                            {
+                                okf = (int)OBOR_ANIMATION_ARG(4)->lVal;
+                            }
+
+                            anim = OBOR_ANIMATION_MODEL(ent, id);
+                            if( anim->attacks ) {
+                                attack = OBOR_ANIMATION_FRAME(anim, attacks, okf);
+
+                                if (attack) OBOR_ANIMATION_OBJECT(attack)->jugglecost = OBOR_ANIMATION_LONG(value);
+                                else { (*pretvar)->lVal = (LONG)-1; break; }
+                            } else { (*pretvar)->lVal = (LONG)-1; break; }
+
+                            break;
+                        case obor_forward__PROP_ATTACK_MAPTIME:
+                            if(OBOR_ANIMATION_ARG(4)->vt != VT_INTEGER)
+                            {
+                                printf("You must provide an animation ID and all properties: changeanimationproperty({ent}, {animation id}, 'attack', 'maptime', {frame_index}, {value})\n");
+                                result = E_FAIL;
+                                break;
+                            } else
+                            {
+                                okf = (int)OBOR_ANIMATION_ARG(4)->lVal;
+                            }
+
+                            anim = OBOR_ANIMATION_MODEL(ent, id);
+                            if( anim->attacks ) {
+                                attack = OBOR_ANIMATION_FRAME(anim, attacks, okf);
+
+                                if (attack) OBOR_ANIMATION_OBJECT(attack)->maptime = OBOR_ANIMATION_LONG(value);
+                                else { (*pretvar)->lVal = (LONG)-1; break; }
+                            } else { (*pretvar)->lVal = (LONG)-1; break; }
+
+                            break;
+                        case obor_forward__PROP_ATTACK_NOBLOCK:
+                            if(OBOR_ANIMATION_ARG(4)->vt != VT_INTEGER)
+                            {
+                                printf("You must provide an animation ID and all properties: changeanimationproperty({ent}, {animation id}, 'attack', 'noblock', {frame_index}, {value})\n");
+                                result = E_FAIL;
+                                break;
+                            } else
+                            {
+                                okf = (int)OBOR_ANIMATION_ARG(4)->lVal;
+                            }
+
+                            anim = OBOR_ANIMATION_MODEL(ent, id);
+                            if( anim->attacks ) {
+                                attack = OBOR_ANIMATION_FRAME(anim, attacks, okf);
+
+                                if (attack) OBOR_ANIMATION_OBJECT(attack)->no_block = OBOR_ANIMATION_LONG(value);
+                                else { (*pretvar)->lVal = (LONG)-1; break; }
+                            } else { (*pretvar)->lVal = (LONG)-1; break; }
+
+                            break;
+                        case obor_forward__PROP_ATTACK_NOFLASH:
+                            if(OBOR_ANIMATION_ARG(4)->vt != VT_INTEGER)
+                            {
+                                printf("You must provide an animation ID and all properties: changeanimationproperty({ent}, {animation id}, 'attack', 'noflash', {frame_index}, {value})\n");
+                                result = E_FAIL;
+                                break;
+                            } else
+                            {
+                                okf = (int)OBOR_ANIMATION_ARG(4)->lVal;
+                            }
+
+                            anim = OBOR_ANIMATION_MODEL(ent, id);
+                            if( anim->attacks ) {
+                                attack = OBOR_ANIMATION_FRAME(anim, attacks, okf);
+
+                                if (attack) OBOR_ANIMATION_OBJECT(attack)->no_flash = OBOR_ANIMATION_LONG(value);
+                                else { (*pretvar)->lVal = (LONG)-1; break; }
+                            } else { (*pretvar)->lVal = (LONG)-1; break; }
+
+                            break;
+                        case obor_forward__PROP_ATTACK_NOKILL:
+                            if(OBOR_ANIMATION_ARG(4)->vt != VT_INTEGER)
+                            {
+                                printf("You must provide an animation ID and all properties: changeanimationproperty({ent}, {animation id}, 'attack', 'nokill', {frame_index}, {value})\n");
+                                result = E_FAIL;
+                                break;
+                            } else
+                            {
+                                okf = (int)OBOR_ANIMATION_ARG(4)->lVal;
+                            }
+
+                            anim = OBOR_ANIMATION_MODEL(ent, id);
+                            if( anim->attacks ) {
+                                attack = OBOR_ANIMATION_FRAME(anim, attacks, okf);
+
+                                if (attack) OBOR_ANIMATION_OBJECT(attack)->no_kill = OBOR_ANIMATION_LONG(value);
+                                else { (*pretvar)->lVal = (LONG)-1; break; }
+                            } else { (*pretvar)->lVal = (LONG)-1; break; }
+
+                            break;
+                        case obor_forward__PROP_ATTACK_NOPAIN: // this is NOREFLECT
+                            if(OBOR_ANIMATION_ARG(4)->vt != VT_INTEGER)
+                            {
+                                printf("You must provide an animation ID and all properties: changeanimationproperty({ent}, {animation id}, 'attack', 'nopain', {frame_index}, {value})\n");
+                                result = E_FAIL;
+                                break;
+                            } else
+                            {
+                                okf = (int)OBOR_ANIMATION_ARG(4)->lVal;
+                            }
+
+                            anim = OBOR_ANIMATION_MODEL(ent, id);
+                            if( anim->attacks ) {
+                                attack = OBOR_ANIMATION_FRAME(anim, attacks, okf);
+
+                                if (attack) OBOR_ANIMATION_OBJECT(attack)->no_pain = OBOR_ANIMATION_LONG(value);
+                                else { (*pretvar)->lVal = (LONG)-1; break; }
+                            } else { (*pretvar)->lVal = (LONG)-1; break; }
+
+                            break;
+                        case obor_forward__PROP_ATTACK_OTG:
+                            if(OBOR_ANIMATION_ARG(4)->vt != VT_INTEGER)
+                            {
+                                printf("You must provide an animation ID and all properties: changeanimationproperty({ent}, {animation id}, 'attack', 'otg', {frame_index}, {value})\n");
+                                result = E_FAIL;
+                                break;
+                            } else
+                            {
+                                okf = (int)OBOR_ANIMATION_ARG(4)->lVal;
+                            }
+
+                            anim = OBOR_ANIMATION_MODEL(ent, id);
+                            if( anim->attacks ) {
+                                attack = OBOR_ANIMATION_FRAME(anim, attacks, okf);
+
+                                if (attack) OBOR_ANIMATION_OBJECT(attack)->otg = OBOR_ANIMATION_LONG(value);
+                                else { (*pretvar)->lVal = (LONG)-1; break; }
+                            } else { (*pretvar)->lVal = (LONG)-1; break; }
+
+                            break;
+                        case obor_forward__PROP_ATTACK_PAINTIME:
+                            if(OBOR_ANIMATION_ARG(4)->vt != VT_INTEGER)
+                            {
+                                printf("You must provide an animation ID and all properties: changeanimationproperty({ent}, {animation id}, 'attack', 'paintime', {frame_index}, {value})\n");
+                                result = E_FAIL;
+                                break;
+                            } else
+                            {
+                                okf = (int)OBOR_ANIMATION_ARG(4)->lVal;
+                            }
+
+                            anim = OBOR_ANIMATION_MODEL(ent, id);
+                            if( anim->attacks ) {
+                                attack = OBOR_ANIMATION_FRAME(anim, attacks, okf);
+
+                                if (attack) OBOR_ANIMATION_OBJECT(attack)->pain_time = OBOR_ANIMATION_LONG(value);
+                                else { (*pretvar)->lVal = (LONG)-1; break; }
+                            } else { (*pretvar)->lVal = (LONG)-1; break; }
+
+                            break;
+                        case obor_forward__PROP_ATTACK_PAUSE:
+                            if(OBOR_ANIMATION_ARG(4)->vt != VT_INTEGER)
+                            {
+                                printf("You must provide an animation ID and all properties: changeanimationproperty({ent}, {animation id}, 'attack', 'pause', {frame_index}, {value})\n");
+                                result = E_FAIL;
+                                break;
+                            } else
+                            {
+                                okf = (int)OBOR_ANIMATION_ARG(4)->lVal;
+                            }
+
+                            anim = OBOR_ANIMATION_MODEL(ent, id);
+                            if( anim->attacks ) {
+                                attack = OBOR_ANIMATION_FRAME(anim, attacks, okf);
+
+                                if (attack) OBOR_ANIMATION_OBJECT(attack)->pause_add = OBOR_ANIMATION_LONG(value);
+                                else { (*pretvar)->lVal = (LONG)-1; break; }
+                            } else { (*pretvar)->lVal = (LONG)-1; break; }
+
+                            break;
+                        case obor_forward__PROP_ATTACK_RESET:
+                            if(OBOR_ANIMATION_ARG(4)->vt != VT_INTEGER)
+                            {
+                                printf("You must provide an animation ID and all properties: changeanimationproperty({ent}, {animation id}, 'attack', 'reset', {frame_index}, {value})\n");
+                                result = E_FAIL;
+                                break;
+                            } else
+                            {
+                                okf = (int)OBOR_ANIMATION_ARG(4)->lVal;
+                            }
+
+                            anim = OBOR_ANIMATION_MODEL(ent, id);
+                            if( anim->attacks ) {
+                                *OBOR_ANIMATION_OBJECT(OBOR_ANIMATION_FRAME(anim, attacks, 0)) = emptyattack;
+                            } else { (*pretvar)->lVal = (LONG)-1; break; }
+
+                            break;
+                        case obor_forward__PROP_ATTACK_SEAL:
+                            if(OBOR_ANIMATION_ARG(4)->vt != VT_INTEGER)
+                            {
+                                printf("You must provide an animation ID and all properties: changeanimationproperty({ent}, {animation id}, 'attack', 'seal', {frame_index}, {value})\n");
+                                result = E_FAIL;
+                                break;
+                            } else
+                            {
+                                okf = (int)OBOR_ANIMATION_ARG(4)->lVal;
+                            }
+
+                            anim = OBOR_ANIMATION_MODEL(ent, id);
+                            if( anim->attacks ) {
+                                attack = OBOR_ANIMATION_FRAME(anim, attacks, okf);
+
+                                if (attack) OBOR_ANIMATION_OBJECT(attack)->seal = OBOR_ANIMATION_LONG(value);
+                                else { (*pretvar)->lVal = (LONG)-1; break; }
+                            } else { (*pretvar)->lVal = (LONG)-1; break; }
+
+                            break;
+                        case obor_forward__PROP_ATTACK_SEALTIME:
+                            if(OBOR_ANIMATION_ARG(4)->vt != VT_INTEGER)
+                            {
+                                printf("You must provide an animation ID and all properties: changeanimationproperty({ent}, {animation id}, 'attack', 'sealtime', {frame_index}, {value})\n");
+                                result = E_FAIL;
+                                break;
+                            } else
+                            {
+                                okf = (int)OBOR_ANIMATION_ARG(4)->lVal;
+                            }
+
+                            anim = OBOR_ANIMATION_MODEL(ent, id);
+                            if( anim->attacks ) {
+                                attack = OBOR_ANIMATION_FRAME(anim, attacks, okf);
+
+                                if (attack) OBOR_ANIMATION_OBJECT(attack)->sealtime = OBOR_ANIMATION_LONG(value);
+                                else { (*pretvar)->lVal = (LONG)-1; break; }
+                            } else { (*pretvar)->lVal = (LONG)-1; break; }
+
+                            break;
+                        case obor_forward__PROP_ATTACK_STAYDOWN:
+                            if(OBOR_ANIMATION_ARG(4)->vt != VT_INTEGER)
+                            {
+                                printf("You must provide an animation ID and all properties: changeanimationproperty({ent}, {animation id}, 'attack', 'staydown', {subproperty}, {frame_index}, {value})\n");
+                                result = E_FAIL;
+                                break;
+                            }
+
+                            if(OBOR_ANIMATION_ARG(5)->vt != VT_INTEGER)
+                            {
+                                printf("You must provide an animation ID and all properties: changeanimationproperty({ent}, {animation id}, 'attack', 'staydown', {subproperty}, {frame_index}, {value})\n");
+                                result = E_FAIL;
+                                break;
+                            } else
+                            {
+                                okf = (int)OBOR_ANIMATION_ARG(5)->lVal;
+                            }
+
+                            anim = OBOR_ANIMATION_MODEL(ent, id);
+                            if( anim->attacks ) {
+                                attack = OBOR_ANIMATION_FRAME(anim, attacks, okf);
+
+                                if (attack)
+                                {
+                                    switch(OBOR_ANIMATION_ARG(4)->lVal)
+                                    {
+                                        case obor_forward__PROP_ATTACK_STAYDOWN_RISE:
+                                            OBOR_ANIMATION_OBJECT(attack)->staydown.rise = OBOR_ANIMATION_UNSIGNED(value);
+                                            break;
+                                        case obor_forward__PROP_ATTACK_STAYDOWN_RISEATTACK:
+                                            OBOR_ANIMATION_OBJECT(attack)->staydown.riseattack = OBOR_ANIMATION_UNSIGNED(value);
+                                            break;
+                                        case obor_forward__PROP_ATTACK_STAYDOWN_RISEATTACK_STALL:
+                                            OBOR_ANIMATION_OBJECT(attack)->staydown.riseattack_stall = OBOR_ANIMATION_UNSIGNED(value);
+                                            break;
+                                    }
+                                }
+                                else { (*pretvar)->lVal = (LONG)-1; break; }
+                            } else { (*pretvar)->lVal = (LONG)-1; break; }
+
+                            break;
+                        case obor_forward__PROP_ATTACK_STEAL:
+                            if(OBOR_ANIMATION_ARG(4)->vt != VT_INTEGER)
+                            {
+                                printf("You must provide an animation ID and all properties: changeanimationproperty({ent}, {animation id}, 'attack', 'steal', {frame_index}, {value})\n");
+                                result = E_FAIL;
+                                break;
+                            } else
+                            {
+                                okf = (int)OBOR_ANIMATION_ARG(4)->lVal;
+                            }
+
+                            anim = OBOR_ANIMATION_MODEL(ent, id);
+                            if( anim->attacks ) {
+                                attack = OBOR_ANIMATION_FRAME(anim, attacks, okf);
+
+                                if (attack) OBOR_ANIMATION_OBJECT(attack)->steal = OBOR_ANIMATION_LONG(value);
+                                else { (*pretvar)->lVal = (LONG)-1; break; }
+                            } else { (*pretvar)->lVal = (LONG)-1; break; }
+
+                            break;
+                        case obor_forward__PROP_ATTACK_TAG:
+                        {
+                            if(OBOR_ANIMATION_ARG(4)->vt != VT_INTEGER)
+                            {
+                                printf("You must provide an animation ID and all properties: changeanimationproperty({ent}, {animation id}, 'attack', 'tag', {frame_index}, {value})\n");
+                                result = E_FAIL;
+                                break;
+                            } else
+                            {
+                                okf = (int)OBOR_ANIMATION_ARG(4)->lVal;
+                            }
+
+                            anim = OBOR_ANIMATION_MODEL(ent, id);
+                            if( anim->attacks ) {
+                                attack = OBOR_ANIMATION_FRAME(anim, attacks, okf);
+
+                                if (attack) OBOR_ANIMATION_OBJECT(attack)->tag = OBOR_ANIMATION_LONG(value);
+                                else { (*pretvar)->lVal = (LONG)-1; break; }
+                            } else { (*pretvar)->lVal = (LONG)-1; break; }
+
+                            break;
+                        }
+                        case obor_forward__PROP_ATTACK_TYPE:
+                        {
+                            if(OBOR_ANIMATION_ARG(4)->vt != VT_INTEGER)
+                            {
+                                printf("You must provide an animation ID and all properties: changeanimationproperty({ent}, {animation id}, 'attack', 'type', {frame_index}, {value})\n");
+                                result = E_FAIL;
+                                break;
+                            } else
+                            {
+                                okf = (int)OBOR_ANIMATION_ARG(4)->lVal;
+                            }
+
+                            anim = OBOR_ANIMATION_MODEL(ent, id);
+                            if( anim->attacks ) {
+                                attack = OBOR_ANIMATION_FRAME(anim, attacks, okf);
+
+                                if (attack) OBOR_ANIMATION_OBJECT(attack)->attack_type = OBOR_ANIMATION_LONG(value);
+                                else { (*pretvar)->lVal = (LONG)-1; break; }
+                            } else { (*pretvar)->lVal = (LONG)-1; break; }
+
+                            break;
+                        }
+                    }
+                }
+                break;
+            /*
+             * ################### END ATTACK PROPERTY ###################
+             */
+            case obor_forward__ANI_PROP_ATTACKONE:
+                OBOR_ANIMATION_MODEL(ent, id)->attackone = OBOR_ANIMATION_LONG(value);
+                break;
+            case obor_forward__ANI_PROP_BBOX:
+                // Verify incoming parameter.
+                if(OBOR_ANIMATION_ARG(3)->vt != VT_INTEGER)
+                {
+                    printf("You must provide an animation ID and all properties: changeanimationproperty({ent}, {animation id}, 'bbox', {sub-property}, {value})\n");
+                    result = E_FAIL;
+                }
+                else
+                {
+                    if(OBOR_ANIMATION_ARG(4)->vt != VT_INTEGER)
+                    {
+                        printf("You must provide an animation ID and all properties: changeanimationproperty({ent}, {animation id}, 'bbox', {sub-property}, {frame_index}, {value})\n");
+                        result = E_FAIL;
+                        break;
+                    } else
+                    {
+                        okf = (int)OBOR_ANIMATION_ARG(4)->lVal;
+                    }
+
+                    anim = OBOR_ANIMATION_MODEL(ent, id);
+
+                    if ( !anim->bbox_coords )
+                    {
+                        (*pretvar)->lVal = (LONG)-1;
+                        break;
+                    }
+                    switch(OBOR_ANIMATION_ARG(3)->lVal)
+                    {
+                        case obor_forward__PROP_BBOX_HEIGHT:
+                            OBOR_ANIMATION_FRAME(anim, bbox_coords, okf)[3] = OBOR_ANIMATION_LONG(value);
+                            break;
+                        case obor_forward__PROP_BBOX_WIDTH:
+                            OBOR_ANIMATION_FRAME(anim, bbox_coords, okf)[2] = OBOR_ANIMATION_LONG(value);
+                            break;
+                        case obor_forward__PROP_BBOX_X:
+                            OBOR_ANIMATION_FRAME(anim, bbox_coords, okf)[0] = OBOR_ANIMATION_LONG(value);
+                            break;
+                        case obor_forward__PROP_BBOX_Y:
+                            OBOR_ANIMATION_FRAME(anim, bbox_coords, okf)[1] = OBOR_ANIMATION_LONG(value);
+                            break;
+                        case obor_forward__PROP_BBOX_Z1:
+                            OBOR_ANIMATION_FRAME(anim, bbox_coords, okf)[4] = OBOR_ANIMATION_LONG(value);
+                            break;
+                        case obor_forward__PROP_BBOX_Z2:
+                            OBOR_ANIMATION_FRAME(anim, bbox_coords, okf)[5] = OBOR_ANIMATION_LONG(value);
+                            break;
+                    }
+                }
+                break;
+            case obor_forward__ANI_PROP_BOUNCE:
+                OBOR_ANIMATION_MODEL(ent, id)->bounce = OBOR_ANIMATION_LONG(value);
+                break;
+            case obor_forward__ANI_PROP_CANCEL:
+                OBOR_ANIMATION_MODEL(ent, id)->cancel = OBOR_ANIMATION_LONG(value);
+                break;
+            case obor_forward__ANI_PROP_COUNTERRANGE:
+                // Verify incoming parameter.
+                if(OBOR_ANIMATION_ARG(3)->vt != VT_INTEGER)
+                {
+                    printf("You must provide an animation ID and all properties: changeanimationproperty({ent}, {animation id}, 'counterrange', {sub-property}, {frame_index}, {value})\n");
+                    result = E_FAIL;
+                }
+                else
+                {
+                    switch(OBOR_ANIMATION_ARG(3)->lVal)
+                    {
+                        case obor_forward__PROP_COUNTERRANGE_CONDITION:
+                            OBOR_ANIMATION_MODEL(ent, id)->counterrange.condition = OBOR_ANIMATION_LONG(value);
+                            break;
+                        case obor_forward__PROP_COUNTERRANGE_DAMAGED:
+                            OBOR_ANIMATION_MODEL(ent, id)->counterrange.damaged = OBOR_ANIMATION_LONG(value);
+                            break;
+                        case obor_forward__PROP_COUNTERRANGE_FRAME_MIN:
+                            OBOR_ANIMATION_MODEL(ent, id)->counterrange.frame.min = OBOR_ANIMATION_LONG(value);
+                            break;
+                        case obor_forward__PROP_COUNTERRANGE_FRAME_MAX:
+                            OBOR_ANIMATION_MODEL(ent, id)->counterrange.frame.min = OBOR_ANIMATION_LONG(value);
+                            break;
+                    }
+                }
+                break;
+            case obor_forward__ANI_PROP_CHARGETIME:
+                ScriptVariant_ChangeType(*pretvar, VT_DECIMAL);
+                OBOR_ANIMATION_MODEL(ent, id)->chargetime = (DOUBLE)value;
+                break;
+            case obor_forward__ANI_PROP_DELAY:
+                if(OBOR_ANIMATION_ARG(3)->vt != VT_INTEGER)
+                {
+                    printf("You must provide an animation ID and all properties: changeanimationproperty({ent}, {animation id}, 'delay', {frame_index}, {value})\n");
+                    result = E_FAIL;
+                    break;
+                } else
+                {
+                    okf = (int)OBOR_ANIMATION_ARG(3)->lVal;
+                }
+
+                anim = OBOR_ANIMATION_MODEL(ent, id);
+                if( OBOR_ANIMATION_FRAME(anim, delay, okf) ) {
+                    OBOR_ANIMATION_FRAME(anim, delay, okf) = OBOR_ANIMATION_LONG(value); // = delay * GAME_SPEED / 100;
+                } else { (*pretvar)->lVal = (LONG)-1; break; }
+
+                break;
+            case obor_forward__ANI_PROP_DRAWMETHODS:
+                // Verify incoming parameter.
+                if(OBOR_ANIMATION_ARG(3)->vt != VT_INTEGER)
+                {
+                    printf("You must provide an animation ID and all properties: changeanimationproperty({ent}, {animation id}, 'drawmethods', {sub-property}, {value})\n");
+                    result = E_FAIL;
+                }
+                else
+                {
+                    s_drawmethod *pmethod = NULL;
+
+                    if(OBOR_ANIMATION_ARG(4)->vt != VT_INTEGER)
+                    {
+                        printf("You must provide an animation ID and all properties: changeanimationproperty({ent}, {animation id}, 'drawmethods', {sub-property}, {frame_index}, {value})\n");
+                        result = E_FAIL;
+                        break;
+                    } else
+                    {
+                        okf = (int)OBOR_ANIMATION_ARG(4)->lVal;
+                    }
+
+                    anim = OBOR_ANIMATION_MODEL(ent, id);
+
+                    if ( !anim->drawmethods )
+                    {
+                        (*pretvar)->lVal = (LONG)-1;
+                        break;
+                    }
+                    if ( !OBOR_ANIMATION_FRAME(anim, drawmethods, okf) )
+                    {
+                        (*pretvar)->lVal = (LONG)-1;
+                        break;
+                    }
+
+                    pmethod = OBOR_ANIMATION_FRAME(anim, drawmethods, okf);
+
+                    switch(OBOR_ANIMATION_ARG(3)->lVal)
+                    {
+                        case obor_forward__dm_alpha:
+                            OBOR_ANIMATION_OBJECT(pmethod)->alpha = OBOR_ANIMATION_LONG(value);
+                            break;
+                        case obor_forward__dm_amplitude:
+                            OBOR_ANIMATION_OBJECT(pmethod)->water.amplitude = OBOR_ANIMATION_LONG(value);
+                            break;
+                        case obor_forward__dm_beginsize:
+                            OBOR_ANIMATION_OBJECT(pmethod)->water.beginsize = (DOUBLE)value;
+                            break;
+                        case obor_forward__dm_centerx:
+                            OBOR_ANIMATION_OBJECT(pmethod)->centerx = OBOR_ANIMATION_LONG(value);
+                            break;
+                        case obor_forward__dm_centery:
+                            OBOR_ANIMATION_OBJECT(pmethod)->centery = OBOR_ANIMATION_LONG(value);
+                            break;
+                        case obor_forward__dm_channelb:
+                            OBOR_ANIMATION_OBJECT(pmethod)->channelb = OBOR_ANIMATION_LONG(value);
+                            break;
+                        case obor_forward__dm_channelg:
+                            OBOR_ANIMATION_OBJECT(pmethod)->channelg = OBOR_ANIMATION_LONG(value);
+                            break;
+                        case obor_forward__dm_channelr:
+                            OBOR_ANIMATION_OBJECT(pmethod)->channelr = OBOR_ANIMATION_LONG(value);
+                            break;
+                        case obor_forward__dm_clip:
+                            if(paramCount < 9)
+                            {
+                                return E_FAIL;
+                            }
+                            OBOR_ANIMATION_OBJECT(pmethod)->clipx = (LONG)OBOR_ANIMATION_ARG(value_index-3)->lVal;
+                            OBOR_ANIMATION_OBJECT(pmethod)->clipy = (LONG)OBOR_ANIMATION_ARG(value_index-2)->lVal;
+                            OBOR_ANIMATION_OBJECT(pmethod)->clipw = (LONG)OBOR_ANIMATION_ARG(value_index-1)->lVal;
+                            OBOR_ANIMATION_OBJECT(pmethod)->cliph = (LONG)OBOR_ANIMATION_ARG(value_index-0)->lVal;
+                            break;
+                        case obor_forward__dm_clipx:
+                            OBOR_ANIMATION_OBJECT(pmethod)->clipx = OBOR_ANIMATION_LONG(value);
+                            break;
+                        case obor_forward__dm_clipy:
+                            OBOR_ANIMATION_OBJECT(pmethod)->clipy = OBOR_ANIMATION_LONG(value);
+                            break;
+                        case obor_forward__dm_clipw:
+                            OBOR_ANIMATION_OBJECT(pmethod)->clipw = OBOR_ANIMATION_LONG(value);
+                            break;
+                        case obor_forward__dm_cliph:
+                            OBOR_ANIMATION_OBJECT(pmethod)->cliph = OBOR_ANIMATION_LONG(value);
+                            break;
+                        case obor_forward__dm_enabled:
+                        case obor_forward__dm_flag:
+                            OBOR_ANIMATION_OBJECT(pmethod)->flag = OBOR_ANIMATION_LONG(value);
+                            break;
+                        case obor_forward__dm_endsize:
+                            OBOR_ANIMATION_OBJECT(pmethod)->water.endsize = (DOUBLE)value;
+                            break;
+                        case obor_forward__dm_fillcolor:
+                            OBOR_ANIMATION_OBJECT(pmethod)->fillcolor = OBOR_ANIMATION_LONG(value);
+                            break;
+                        case obor_forward__dm_fliprotate:
+                            OBOR_ANIMATION_OBJECT(pmethod)->fliprotate = OBOR_ANIMATION_LONG(value);
+                            break;
+                        case obor_forward__dm_flipx:
+                            OBOR_ANIMATION_OBJECT(pmethod)->flipx = OBOR_ANIMATION_LONG(value);
+                            break;
+                        case obor_forward__dm_flipy:
+                            OBOR_ANIMATION_OBJECT(pmethod)->flipy = OBOR_ANIMATION_LONG(value);
+                            break;
+                        case obor_forward__dm_perspective:
+                            OBOR_ANIMATION_OBJECT(pmethod)->water.perspective = OBOR_ANIMATION_LONG(value);
+                            break;
+                        case obor_forward__dm_remap:
+                            OBOR_ANIMATION_OBJECT(pmethod)->remap = OBOR_ANIMATION_LONG(value);
+                            break;
+                        case obor_forward__dm_reset:
+                            if( OBOR_ANIMATION_LONG(value) )
+                            {
+                                *OBOR_ANIMATION_OBJECT(pmethod) = plainmethod;
+                            }
+                            break;
+                        case obor_forward__dm_rotate:
+                            if(!obor_drawmethod_store_rotation(OBOR_ANIMATION_OBJECT(pmethod), value)) return E_FAIL;
+                            break;
+                        case obor_forward__dm_scalex:
+                            OBOR_ANIMATION_OBJECT(pmethod)->scalex = OBOR_ANIMATION_LONG(value);
+                            break;
+                        case obor_forward__dm_scaley:
+                            OBOR_ANIMATION_OBJECT(pmethod)->scaley = OBOR_ANIMATION_LONG(value);
+                            break;
+                        case obor_forward__dm_shiftx:
+                            OBOR_ANIMATION_OBJECT(pmethod)->shiftx = OBOR_ANIMATION_LONG(value);
+                            break;
+                        case obor_forward__dm_table:
+                            if(OBOR_ANIMATION_ARG(value_index)->vt != VT_PTR && OBOR_ANIMATION_ARG(value_index)->vt != VT_EMPTY )
+                            {
+                                return E_FAIL;
+                            }
+                            OBOR_ANIMATION_OBJECT(pmethod)->table = (void *)OBOR_ANIMATION_ARG(value_index)->ptrVal;
+                            break;
+                        case obor_forward__dm_tintmode:
+                            OBOR_ANIMATION_OBJECT(pmethod)->tintmode = OBOR_ANIMATION_LONG(value);
+                            break;
+                        case obor_forward__dm_tintcolor:
+                            OBOR_ANIMATION_OBJECT(pmethod)->tintcolor = OBOR_ANIMATION_LONG(value);
+                            break;
+                        case obor_forward__dm_transbg:
+                            OBOR_ANIMATION_OBJECT(pmethod)->transbg = OBOR_ANIMATION_LONG(value);
+                            break;
+                        case obor_forward__dm_watermode:
+                            OBOR_ANIMATION_OBJECT(pmethod)->water.watermode = OBOR_ANIMATION_LONG(value);
+                            break;
+                        case obor_forward__dm_wavelength:
+                            OBOR_ANIMATION_OBJECT(pmethod)->water.wavelength = (DOUBLE)value;
+                            break;
+                        case obor_forward__dm_wavespeed:
+                            OBOR_ANIMATION_OBJECT(pmethod)->water.wavespeed = (DOUBLE)value;
+                            break;
+                        case obor_forward__dm_wavetime:
+                            OBOR_ANIMATION_OBJECT(pmethod)->water.wavetime = OBOR_ANIMATION_LONG(OBOR_ANIMATION_LONG(value) * OBOR_ANIMATION_OBJECT(pmethod)->water.wavespeed);
+                            break;
+                        case obor_forward__dm_xrepeat:
+                            OBOR_ANIMATION_OBJECT(pmethod)->xrepeat = OBOR_ANIMATION_LONG(value);
+                            break;
+                        case obor_forward__dm_yrepeat:
+                            OBOR_ANIMATION_OBJECT(pmethod)->yrepeat = OBOR_ANIMATION_LONG(value);
+                            break;
+                        case obor_forward__dm_xspan:
+                            OBOR_ANIMATION_OBJECT(pmethod)->xspan = OBOR_ANIMATION_LONG(value);
+                            break;
+                        case obor_forward__dm_yspan:
+                            OBOR_ANIMATION_OBJECT(pmethod)->yspan = OBOR_ANIMATION_LONG(value);
+                            break;
+                        default:
+                            break;
+                    }
+                }
+                break;
+            case obor_forward__ANI_PROP_DROPFRAME:
+                // Verify incoming parameter.
+                if(OBOR_ANIMATION_ARG(3)->vt != VT_INTEGER)
+                {
+                    printf("You must provide an animation ID and all properties: changeanimationproperty({ent}, {animation id}, 'dropframe', {sub-property}, {value})\n");
+                    result = E_FAIL;
+                }
+                else
+                {
+                    switch(OBOR_ANIMATION_ARG(3)->lVal)
+                    {
+                        case obor_forward__PROP_DROPFRAME_FRAME:
+                            OBOR_ANIMATION_MODEL(ent, id)->dropframe.frame = OBOR_ANIMATION_LONG(value);
+                            break;
+                        case obor_forward__PROP_DROPFRAME_VELOCITY_X:
+                            OBOR_ANIMATION_MODEL(ent, id)->dropframe.velocity.x = (DOUBLE)value;
+                            break;
+                        case obor_forward__PROP_DROPFRAME_VELOCITY_Y:
+                            OBOR_ANIMATION_MODEL(ent, id)->dropframe.velocity.y = (DOUBLE)value;
+                            break;
+                        case obor_forward__PROP_DROPFRAME_VELOCITY_Z:
+                            OBOR_ANIMATION_MODEL(ent, id)->dropframe.velocity.z = (DOUBLE)value;
+                            break;
+                    }
+                }
+                break;
+            case obor_forward__ANI_PROP_ENERGYCOST:
+                // Verify incoming parameter.
+                if(OBOR_ANIMATION_ARG(3)->vt != VT_INTEGER)
+                {
+                    printf("You must provide an animation ID and all properties: changeanimationproperty({ent}, {animation id}, 'energycost', {sub-property}, {value})\n");
+                    result = E_FAIL;
+                }
+                else
+                {
+                    switch(OBOR_ANIMATION_ARG(3)->lVal)
+                    {
+                        case obor_forward__ep_energycost_cost:
+                            OBOR_ANIMATION_MODEL(ent, id)->energycost.cost = OBOR_ANIMATION_LONG(value);
+                            break;
+                        case obor_forward__ep_energycost_disable:
+                            OBOR_ANIMATION_MODEL(ent, id)->energycost.disable = OBOR_ANIMATION_LONG(value);
+                            break;
+                        case obor_forward__ep_energycost_mponly:
+                            OBOR_ANIMATION_MODEL(ent, id)->energycost.mponly = OBOR_ANIMATION_LONG(value);
+                            break;
+                    }
+                }
+                break;
+            case obor_forward__ANI_PROP_FLIPFRAME:
+                OBOR_ANIMATION_MODEL(ent, id)->flipframe = OBOR_ANIMATION_LONG(value);
+                break;
+            case obor_forward__ANI_PROP_FOLLOWUP:
+                // Verify incoming parameter.
+                if(OBOR_ANIMATION_ARG(3)->vt != VT_INTEGER)
+                {
+                    printf("You must provide an animation ID and all properties: changeanimationproperty({ent}, {animation id}, 'followup', {sub-property}, {value})\n");
+                    result = E_FAIL;
+                }
+                else
+                {
+                    switch(OBOR_ANIMATION_ARG(3)->lVal)
+                    {
+                        case obor_forward__PROP_FOLLOWUP_ANIMATION:
+                            OBOR_ANIMATION_MODEL(ent, id)->followup.animation = OBOR_ANIMATION_LONG(value);
+                            break;
+                        case obor_forward__PROP_FOLLOWUP_CONDITION:
+                            OBOR_ANIMATION_MODEL(ent, id)->followup.condition = OBOR_ANIMATION_LONG(value);
+                            break;
+                    }
+                }
+                break;
+            case obor_forward__ANI_PROP_IDLE:
+                if(OBOR_ANIMATION_ARG(3)->vt != VT_INTEGER)
+                {
+                    printf("You must provide an animation ID and all properties: changeanimationproperty({ent}, {animation id}, 'idle', {frame_index}, {value})\n");
+                    result = E_FAIL;
+                    break;
+                } else
+                {
+                    okf = (int)OBOR_ANIMATION_ARG(3)->lVal;
+                }
+
+                anim = OBOR_ANIMATION_MODEL(ent, id);
+                if( OBOR_ANIMATION_FRAME(anim, idle, okf) ) {
+                    OBOR_ANIMATION_FRAME(anim, idle, okf) = OBOR_ANIMATION_LONG(value);
+                } else { (*pretvar)->lVal = (LONG)-1; break; }
+
+                break;
+            case obor_forward__ANI_PROP_INDEX:
+                OBOR_ANIMATION_MODEL(ent, id)->index = OBOR_ANIMATION_LONG(value);
+                break;
+            case obor_forward__ANI_PROP_JUMPFRAME:
+                // Verify incoming parameter.
+                if(OBOR_ANIMATION_ARG(3)->vt != VT_INTEGER)
+                {
+                    printf("You must provide an animation ID and all properties: changeanimationproperty({ent}, {animation id}, 'jumpframe', {sub-property}, {value})\n");
+                    result = E_FAIL;
+                }
+                else
+                {
+                    switch(OBOR_ANIMATION_ARG(3)->lVal)
+                    {
+                        case obor_forward__PROP_JUMPFRAME_FRAME:
+                            OBOR_ANIMATION_MODEL(ent, id)->jumpframe.frame = OBOR_ANIMATION_LONG(value);
+                            break;
+                        case obor_forward__PROP_JUMPFRAME_VELOCITY_X:
+                            OBOR_ANIMATION_MODEL(ent, id)->jumpframe.velocity.x = (DOUBLE)value;
+                            break;
+                        case obor_forward__PROP_JUMPFRAME_VELOCITY_Y:
+                            OBOR_ANIMATION_MODEL(ent, id)->jumpframe.velocity.y = (DOUBLE)value;
+                            break;
+                        case obor_forward__PROP_JUMPFRAME_VELOCITY_Z:
+                            OBOR_ANIMATION_MODEL(ent, id)->jumpframe.velocity.z = (DOUBLE)value;
+                            break;
+                    }
+                }
+                break;
+            case obor_forward__ANI_PROP_LANDFRAME:
+                // Verify incoming parameter.
+                if(OBOR_ANIMATION_ARG(3)->vt != VT_INTEGER)
+                {
+                    printf("You must provide an animation ID and all properties: changeanimationproperty({ent}, {animation id}, 'landframe', {sub-property}, {value})\n");
+                    result = E_FAIL;
+                }
+                else
+                {
+                    switch(OBOR_ANIMATION_ARG(3)->lVal)
+                    {
+                        case obor_forward__PROP_DROPFRAME_FRAME:
+                            OBOR_ANIMATION_MODEL(ent, id)->landframe.frame = OBOR_ANIMATION_LONG(value);
+                            break;
+                        case obor_forward__PROP_DROPFRAME_VELOCITY_X:
+                            OBOR_ANIMATION_MODEL(ent, id)->landframe.velocity.x = (DOUBLE)value;
+                            break;
+                        case obor_forward__PROP_DROPFRAME_VELOCITY_Y:
+                            OBOR_ANIMATION_MODEL(ent, id)->landframe.velocity.y = (DOUBLE)value;
+                            break;
+                        case obor_forward__PROP_DROPFRAME_VELOCITY_Z:
+                            OBOR_ANIMATION_MODEL(ent, id)->landframe.velocity.z = (DOUBLE)value;
+                            break;
+                    }
+                }
+                break;
+            case obor_forward__ANI_PROP_LOOP:         // Animation looping. 2011_03_31, DC: Moved to struct.
+                // Verify incoming parameter.
+                if(OBOR_ANIMATION_ARG(3)->vt != VT_INTEGER)
+                {
+                    printf("You must provide an animation ID and all properties: changeanimationproperty({ent}, {animation id}, 'loop', {sub-property}, {value})\n");
+                    result = E_FAIL;
+                }
+                else
+                {
+                    switch(OBOR_ANIMATION_ARG(3)->lVal)
+                    {
+                        case obor_forward__PROP_LOOP_MODE:
+                            OBOR_ANIMATION_MODEL(ent, id)->loop.mode = OBOR_ANIMATION_LONG(value);
+                            break;
+                        case obor_forward__PROP_LOOP_FRAME_MIN:
+                            OBOR_ANIMATION_MODEL(ent, id)->loop.frame.min = OBOR_ANIMATION_LONG(value);
+                            break;
+                        case obor_forward__PROP_LOOP_FRAME_MAX:
+                            OBOR_ANIMATION_MODEL(ent, id)->loop.frame.max = OBOR_ANIMATION_LONG(value);
+                            break;
+                    }
+                }
+                break;
+            case obor_forward__ANI_PROP_MODEL_INDEX:
+                OBOR_ANIMATION_MODEL(ent, id)->model_index = OBOR_ANIMATION_LONG(value);
+                break;
+            case obor_forward__ANI_PROP_MOVE:
+                // Verify incoming parameter.
+                if(OBOR_ANIMATION_ARG(3)->vt != VT_INTEGER)
+                {
+                    printf("You must provide an animation ID and all properties: changeanimationproperty({ent}, {animation id}, 'move', {sub-property})\n");
+                    result = E_FAIL;
+                }
+                else
+                {
+                    if(OBOR_ANIMATION_ARG(4)->vt != VT_INTEGER)
+                    {
+                        printf("You must provide an animation ID and all properties: changeanimationproperty({ent}, {animation id}, 'move', {sub-property}, {frame_index}, {value})\n");
+                        result = E_FAIL;
+                        break;
+                    } else
+                    {
+                        okf = (int)OBOR_ANIMATION_ARG(4)->lVal;
+                    }
+
+                    anim = OBOR_ANIMATION_MODEL(ent, id);
+
+                    if ( !anim->move )
+                    {
+                        (*pretvar)->lVal = (LONG)-1;
+                        break;
+                    }
+                    switch(OBOR_ANIMATION_ARG(3)->lVal)
+                    {
+                        case obor_forward__PROP_MOVE_BASE:
+                            OBOR_ANIMATION_OBJECT(OBOR_ANIMATION_FRAME(anim, move, okf))->base = OBOR_ANIMATION_LONG(value); // this is SETA
+                            break;
+                        case obor_forward__PROP_MOVE_X:
+                            OBOR_ANIMATION_OBJECT(OBOR_ANIMATION_FRAME(anim, move, okf))->x = OBOR_ANIMATION_LONG(value);
+                            break;
+                        case obor_forward__PROP_MOVE_Y:
+                            OBOR_ANIMATION_OBJECT(OBOR_ANIMATION_FRAME(anim, move, okf))->y = OBOR_ANIMATION_LONG(value);
+                            break;
+                        case obor_forward__PROP_MOVE_Z:
+                            OBOR_ANIMATION_OBJECT(OBOR_ANIMATION_FRAME(anim, move, okf))->z = OBOR_ANIMATION_LONG(value);
+                            break;
+                    }
+                }
+                break;
+            case obor_forward__ANI_PROP_NUMFRAMES:
+                if(FAILED(ScriptVariant_IntegerValue(varlist[value_index], &lvalue)) ||
+                   !obor_animation_set_numframes(OBOR_ANIMATION_MODEL(ent, id), lvalue)) return E_FAIL;
+                break;
+            case obor_forward__ANI_PROP_OFFSET:
+                // Verify incoming parameter.
+                if(OBOR_ANIMATION_ARG(3)->vt != VT_INTEGER)
+                {
+                    printf("You must provide an animation ID and all properties: changeanimationproperty({ent}, {animation id}, 'offset', {sub-property})\n");
+                    result = E_FAIL;
+                }
+                else
+                {
+                    if(OBOR_ANIMATION_ARG(4)->vt != VT_INTEGER)
+                    {
+                        printf("You must provide an animation ID and all properties: changeanimationproperty({ent}, {animation id}, 'offset', {sub-property}, {frame_index}, {value})\n");
+                        result = E_FAIL;
+                        break;
+                    } else
+                    {
+                        okf = (int)OBOR_ANIMATION_ARG(4)->lVal;
+                    }
+
+                    anim = OBOR_ANIMATION_MODEL(ent, id);
+
+                    if ( !anim->offset )
+                    {
+                        (*pretvar)->lVal = (LONG)-1;
+                        break;
+                    }
+                    (void)OBOR_ANIMATION_FRAME(anim, offset, okf);
+                    switch(OBOR_ANIMATION_ARG(3)->lVal)
+                    {
+                        case obor_forward__PROP_OFFSET_X:
+                            OBOR_ANIMATION_FRAME(anim, offset, okf)[0] = OBOR_ANIMATION_LONG(value);
+                            break;
+                        case obor_forward__PROP_OFFSET_Y:
+                            OBOR_ANIMATION_FRAME(anim, offset, okf)[1] = OBOR_ANIMATION_LONG(value);
+                            break;
+                    }
+                }
+                break;
+            case obor_forward__ANI_PROP_PLATFORM:
+                // Verify incoming parameter.
+                if(OBOR_ANIMATION_ARG(3)->vt != VT_INTEGER)
+                {
+                    printf("You must provide an animation ID and all properties: changeanimationproperty({ent}, {animation id}, 'platform', {sub-property})\n");
+                    result = E_FAIL;
+                }
+                else
+                {
+                    if(OBOR_ANIMATION_ARG(4)->vt != VT_INTEGER)
+                    {
+                        printf("You must provide an animation ID and all properties: changeanimationproperty({ent}, {animation id}, 'platform', {sub-property}, {frame_index}, {value})\n");
+                        result = E_FAIL;
+                        break;
+                    } else
+                    {
+                        okf = (int)OBOR_ANIMATION_ARG(4)->lVal;
+                    }
+
+                    anim = OBOR_ANIMATION_MODEL(ent, id);
+
+                    if ( !anim->platform )
+                    {
+                        (*pretvar)->lVal = (LONG)-1;
+                        break;
+                    }
+                    (void)OBOR_ANIMATION_FRAME(anim, platform, okf);
+                    switch(OBOR_ANIMATION_ARG(3)->lVal)
+                    {
+                        case obor_forward__PROP_PLATFORM_X:
+                            OBOR_ANIMATION_FRAME(OBOR_ANIMATION_MODEL(ent, id), platform, okf)[0] = (DOUBLE)value;
+                            break;
+                        case obor_forward__PROP_PLATFORM_Z:
+                            OBOR_ANIMATION_FRAME(OBOR_ANIMATION_MODEL(ent, id), platform, okf)[1] = (DOUBLE)value;
+                            break;
+                        case obor_forward__PROP_PLATFORM_UPPERLEFT:
+                            OBOR_ANIMATION_FRAME(OBOR_ANIMATION_MODEL(ent, id), platform, okf)[2] = (DOUBLE)value;
+                            break;
+                        case obor_forward__PROP_PLATFORM_LOWERLEFT:
+                            OBOR_ANIMATION_FRAME(OBOR_ANIMATION_MODEL(ent, id), platform, okf)[3] = (DOUBLE)value;
+                            break;
+                        case obor_forward__PROP_PLATFORM_UPPERRIGHT:
+                            OBOR_ANIMATION_FRAME(OBOR_ANIMATION_MODEL(ent, id), platform, okf)[4] = (DOUBLE)value;
+                            break;
+                        case obor_forward__PROP_PLATFORM_LOWERRIGHT:
+                            OBOR_ANIMATION_FRAME(OBOR_ANIMATION_MODEL(ent, id), platform, okf)[5] = (DOUBLE)value;
+                            break;
+                        case obor_forward__PROP_PLATFORM_DEPTH:
+                            OBOR_ANIMATION_FRAME(OBOR_ANIMATION_MODEL(ent, id), platform, okf)[6] = (DOUBLE)value;
+                            break;
+                        case obor_forward__PROP_PLATFORM_ALT:
+                            OBOR_ANIMATION_FRAME(OBOR_ANIMATION_MODEL(ent, id), platform, okf)[7] = (DOUBLE)value;
+                            break;
+                    }
+                }
+                break;
+            case obor_forward__ANI_PROP_PROJECTILE:
+                // Verify incoming parameter.
+                if(OBOR_ANIMATION_ARG(3)->vt != VT_INTEGER)
+                {
+                    printf("You must provide an animation ID and all properties: changeanimationproperty({ent}, {animation id}, 'projectile', {sub-property}, {value})\n");
+                    result = E_FAIL;
+                }
+                else
+                {
+                    switch(OBOR_ANIMATION_ARG(3)->lVal)
+                    {
+                        case obor_forward__PROP_PROJECTILE_BOMB:
+                            OBOR_ANIMATION_MODEL(ent, id)->projectile.bomb = OBOR_ANIMATION_LONG(value);
+                            break;
+                        case obor_forward__PROP_PROJECTILE_FLASH:
+                            OBOR_ANIMATION_MODEL(ent, id)->projectile.flash = OBOR_ANIMATION_LONG(value);
+                            break;
+                        case obor_forward__PROP_PROJECTILE_KNIFE:
+                            OBOR_ANIMATION_MODEL(ent, id)->projectile.knife = OBOR_ANIMATION_LONG(value);
+                            break;
+                        case obor_forward__PROP_PROJECTILE_STAR:
+                            OBOR_ANIMATION_MODEL(ent, id)->projectile.star = OBOR_ANIMATION_LONG(value);
+                            break;
+                        case obor_forward__PROP_PROJECTILE_SHOOTFRAME:
+                            OBOR_ANIMATION_MODEL(ent, id)->projectile.shootframe = OBOR_ANIMATION_LONG(value);
+                            break;
+                        case obor_forward__PROP_PROJECTILE_TOSSFRAME:
+                            OBOR_ANIMATION_MODEL(ent, id)->projectile.tossframe = OBOR_ANIMATION_LONG(value);
+                            break;
+                        case obor_forward__PROP_PROJECTILE_THROWFRAME:
+                            OBOR_ANIMATION_MODEL(ent, id)->projectile.throwframe = OBOR_ANIMATION_LONG(value);
+                            break;
+                        case obor_forward__PROP_PROJECTILE_THROWPOSITION_BASE:
+                            OBOR_ANIMATION_MODEL(ent, id)->projectile.position.base = OBOR_ANIMATION_LONG(value);
+                            break;
+                        case obor_forward__PROP_PROJECTILE_THROWPOSITION_X:
+                            OBOR_ANIMATION_MODEL(ent, id)->projectile.position.x = OBOR_ANIMATION_LONG(value);
+                            break;
+                        case obor_forward__PROP_PROJECTILE_THROWPOSITION_Y:
+                            OBOR_ANIMATION_MODEL(ent, id)->projectile.position.y = OBOR_ANIMATION_LONG(value);
+                            break;
+                        case obor_forward__PROP_PROJECTILE_THROWPOSITION_Z:
+                            OBOR_ANIMATION_MODEL(ent, id)->projectile.position.z = OBOR_ANIMATION_LONG(value);
+                            break;
+                    }
+                }
+                break;
+            case obor_forward__ANI_PROP_QUAKEFRAME:
+                // Verify incoming parameter.
+                if(OBOR_ANIMATION_ARG(3)->vt != VT_INTEGER)
+                {
+                    printf("You must provide an animation ID and all properties: changeanimationproperty({ent}, {animation id}, 'quakeframe', {sub-property}, {value})\n");
+                    result = E_FAIL;
+                }
+                else
+                {
+                    switch(OBOR_ANIMATION_ARG(3)->lVal)
+                    {
+                        case obor_forward__PROP_QUAKEFRAME_FRAMESTART:
+                            OBOR_ANIMATION_MODEL(ent, id)->quakeframe.framestart = OBOR_ANIMATION_LONG(value);
+                            break;
+                        case obor_forward__PROP_QUAKEFRAME_REPEAT:
+                            OBOR_ANIMATION_MODEL(ent, id)->quakeframe.repeat = OBOR_ANIMATION_LONG(value);
+                            break;
+                        case obor_forward__PROP_QUAKEFRAME_INTENSITY:
+                            OBOR_ANIMATION_MODEL(ent, id)->quakeframe.v = OBOR_ANIMATION_LONG(value);
+                            break;
+                    }
+                }
+                break;
+            case obor_forward__ANI_PROP_RANGE:
+                // Verify incoming parameter.
+                if(OBOR_ANIMATION_ARG(3)->vt != VT_INTEGER)
+                {
+                    printf("You must provide an animation ID and all properties: changeanimationproperty({ent}, {animation id}, 'range', {sub-property}, {value})\n");
+                    result = E_FAIL;
+                }
+                else
+                {
+                    switch(OBOR_ANIMATION_ARG(3)->lVal)
+                    {
+                        case obor_forward__PROP_RANGEX_MIN:
+                            OBOR_ANIMATION_MODEL(ent, id)->range.min.x = OBOR_ANIMATION_LONG(value);
+                            break;
+                        case obor_forward__PROP_RANGEX_MAX:
+                            OBOR_ANIMATION_MODEL(ent, id)->range.max.x = OBOR_ANIMATION_LONG(value);
+                            break;
+                        case obor_forward__PROP_RANGEA_MIN:
+                            OBOR_ANIMATION_MODEL(ent, id)->range.min.y = OBOR_ANIMATION_LONG(value);
+                            break;
+                        case obor_forward__PROP_RANGEA_MAX:
+                            OBOR_ANIMATION_MODEL(ent, id)->range.max.y = OBOR_ANIMATION_LONG(value);
+                            break;
+                        case obor_forward__PROP_RANGEB_MIN:
+                            OBOR_ANIMATION_MODEL(ent, id)->range.min.base = OBOR_ANIMATION_LONG(value);
+                            break;
+                        case obor_forward__PROP_RANGEB_MAX:
+                            OBOR_ANIMATION_MODEL(ent, id)->range.max.base = OBOR_ANIMATION_LONG(value);
+                            break;
+                        case obor_forward__PROP_RANGEZ_MIN:
+                            OBOR_ANIMATION_MODEL(ent, id)->range.min.z = OBOR_ANIMATION_LONG(value);
+                            break;
+                        case obor_forward__PROP_RANGEZ_MAX:
+                            OBOR_ANIMATION_MODEL(ent, id)->range.max.z = OBOR_ANIMATION_LONG(value);
+                            break;
+                    }
+                }
+                break;
+            case obor_forward__ANI_PROP_SHADOW:
+                // Verify incoming parameter.
+                if(OBOR_ANIMATION_ARG(3)->vt != VT_INTEGER)
+                {
+                    printf("You must provide an animation ID and all properties: changeanimationproperty({ent}, {animation id}, 'shadow', {sub-property})\n");
+                    result = E_FAIL;
+                }
+                else
+                {
+                    if(OBOR_ANIMATION_ARG(4)->vt != VT_INTEGER)
+                    {
+                        printf("You must provide an animation ID and all properties: changeanimationproperty({ent}, {animation id}, 'shadow', {sub-property}, {frame_index}, {value})\n");
+                        result = E_FAIL;
+                        break;
+                    } else
+                    {
+                        okf = (int)OBOR_ANIMATION_ARG(4)->lVal;
+                    }
+
+                    anim = OBOR_ANIMATION_MODEL(ent, id);
+
+                    switch(OBOR_ANIMATION_ARG(3)->lVal)
+                    {
+                        case obor_forward__PROP_FSHADOW:
+                            if( anim->shadow ) {
+                                OBOR_ANIMATION_FRAME(anim, shadow, okf) = OBOR_ANIMATION_LONG(value);
+                            } else (*pretvar)->lVal = (LONG)-1;
+                            break;
+                        case obor_forward__PROP_SHADOW_COORDS_X:
+                            if( anim->shadow_coords ) {
+                                OBOR_ANIMATION_FRAME(anim, shadow_coords, okf)[0] = OBOR_ANIMATION_LONG(value);
+                            } else (*pretvar)->lVal = (LONG)-1;
+                            break;
+                        case obor_forward__PROP_SHADOW_COORDS_Y:
+                            if( anim->shadow_coords ) {
+                                OBOR_ANIMATION_FRAME(anim, shadow_coords, okf)[1] = OBOR_ANIMATION_LONG(value);
+                            } else (*pretvar)->lVal = (LONG)-1;
+                            break;
+                    }
+                }
+                break;
+            case obor_forward__ANI_PROP_SIZE:
+                // Verify incoming parameter.
+                if(OBOR_ANIMATION_ARG(3)->vt != VT_INTEGER)
+                {
+                    printf("You must provide an animation ID and all properties: changeanimationproperty({ent}, {animation id}, 'size', {sub-property}, {value})\n");
+                    result = E_FAIL;
+                }
+                else
+                {
+                    switch(OBOR_ANIMATION_ARG(3)->lVal)
+                    {
+                        case obor_forward__PROP_SIZE_BASE:
+                            OBOR_ANIMATION_MODEL(ent, id)->size.base = OBOR_ANIMATION_LONG(value);
+                            break;
+                        case obor_forward__PROP_SIZE_X:
+                            OBOR_ANIMATION_MODEL(ent, id)->size.x = OBOR_ANIMATION_LONG(value);
+                            break;
+                        case obor_forward__PROP_SIZE_Y:
+                            OBOR_ANIMATION_MODEL(ent, id)->size.y = OBOR_ANIMATION_LONG(value);
+                            break;
+                        case obor_forward__PROP_SIZE_Z:
+                            OBOR_ANIMATION_MODEL(ent, id)->size.z = OBOR_ANIMATION_LONG(value);
+                            break;
+                    }
+                }
+                break;
+            case obor_forward__ANI_PROP_SOUNDTOPLAY:
+                if(OBOR_ANIMATION_ARG(3)->vt != VT_INTEGER)
+                {
+                    printf("You must provide an animation ID and all properties: changeanimationproperty({ent}, {animation id}, 'soundtoplay', {frame_index}, {value})\n");
+                    result = E_FAIL;
+                    break;
+                } else
+                {
+                    okf = (int)OBOR_ANIMATION_ARG(3)->lVal;
+                }
+
+                anim = OBOR_ANIMATION_MODEL(ent, id);
+                if( OBOR_ANIMATION_FRAME(anim, soundtoplay, okf) ) {
+                    OBOR_ANIMATION_FRAME(anim, soundtoplay, okf) = OBOR_ANIMATION_LONG(value);
+                } else (*pretvar)->lVal = (LONG)-1;
+
+                break;
+            case obor_forward__ANI_PROP_SPAWNFRAME:
+                // Verify incoming parameter.
+                if(OBOR_ANIMATION_ARG(3)->vt != VT_INTEGER)
+                {
+                    printf("You must provide an animation ID and all properties: changeanimationproperty({ent}, {animation id}, 'spawnframe', {sub-property}, {value})\n");
+                    result = E_FAIL;
+                }
+                else
+                {
+                    switch(OBOR_ANIMATION_ARG(3)->lVal)
+                    {
+                        case obor_forward__PROP_SPAWNFRAME_FRAME:
+                            OBOR_ANIMATION_FIXED(OBOR_ANIMATION_MODEL(ent, id), spawnframe, 0) = OBOR_ANIMATION_LONG(value);
+                            break;
+                        case obor_forward__PROP_SPAWNFRAME_X:
+                            OBOR_ANIMATION_FIXED(OBOR_ANIMATION_MODEL(ent, id), spawnframe, 1) = (DOUBLE)value;
+                            break;
+                        case obor_forward__PROP_SPAWNFRAME_Y:
+                            OBOR_ANIMATION_FIXED(OBOR_ANIMATION_MODEL(ent, id), spawnframe, 2) = (DOUBLE)value;
+                            break;
+                        case obor_forward__PROP_SPAWNFRAME_Z:
+                            OBOR_ANIMATION_FIXED(OBOR_ANIMATION_MODEL(ent, id), spawnframe, 3) = (DOUBLE)value;
+                            break;
+                        case obor_forward__PROP_SPAWNFRAME_RELATIVE:
+                            OBOR_ANIMATION_FIXED(OBOR_ANIMATION_MODEL(ent, id), spawnframe, 4) = OBOR_ANIMATION_LONG(value);
+                            break;
+                    }
+                }
+                break;
+            case obor_forward__ANI_PROP_SPRITE:
+                if(OBOR_ANIMATION_ARG(3)->vt != VT_INTEGER)
+                {
+                    printf("You must provide an animation ID and all properties: changeanimationproperty({ent}, {animation id}, 'sprite', {frame_index}, {value})\n");
+                    result = E_FAIL;
+                    break;
+                } else
+                {
+                    okf = (int)OBOR_ANIMATION_ARG(3)->lVal;
+                }
+
+                anim = OBOR_ANIMATION_MODEL(ent, id);
+
+                if( OBOR_ANIMATION_FRAME(anim, sprite, okf) ) {
+                    if(OBOR_ANIMATION_ARG(value_index)->vt != VT_PTR && OBOR_ANIMATION_ARG(value_index)->vt != VT_EMPTY )
+                    {
+                        return E_FAIL;
+                    }
+                    //(*pretvar)->lVal = (LONG)anim->sprite[okf];
+                    int ii = OBOR_ANIMATION_FRAME(anim, sprite, okf);
+                    OBOR_ANIMATION_OBJECT(OBOR_ANIMATION_SPRITE(ii).node)->sprite = (VOID *)OBOR_ANIMATION_ARG(value_index)->ptrVal;
+                } else
+                {
+                    printf("No sprite data.\n");
+                    result = E_FAIL;
+                    break;
+                }
+
+                break;
+            case obor_forward__ANI_PROP_SPRITEA:
+                // Verify incoming parameter.
+                if(OBOR_ANIMATION_ARG(3)->vt != VT_INTEGER)
+                {
+                    printf("You must provide an animation ID and all properties: changeanimationproperty({ent}, {animation id}, 'spritea', {sub-property})\n");
+                    result = E_FAIL;
+                }
+                else
+                {
+                    int ii = 0;
+
+                    if(OBOR_ANIMATION_ARG(4)->vt != VT_INTEGER)
+                    {
+                        printf("You must provide an animation ID and all properties: changeanimationproperty({ent}, {animation id}, 'spritea', {sub-property}, {frame_index}, {value})\n");
+                        result = E_FAIL;
+                        break;
+                    } else
+                    {
+                        okf = (int)OBOR_ANIMATION_ARG(4)->lVal;
+                    }
+
+                    anim = OBOR_ANIMATION_MODEL(ent, id);
+                    ii = OBOR_ANIMATION_FRAME(anim, sprite, okf);
+                    if (!ii)
+                    {
+                        printf("No sprite data.\n");
+                        result = E_FAIL;
+                        break;
+                    }
+
+                    switch(OBOR_ANIMATION_ARG(3)->lVal)
+                    {
+                        case obor_forward__PROP_SPRITEA_CENTERX:
+                            OBOR_ANIMATION_SPRITE(ii).centerx = OBOR_ANIMATION_LONG(value);
+                            break;
+                        case obor_forward__PROP_SPRITEA_CENTERY:
+                            OBOR_ANIMATION_SPRITE(ii).centery = OBOR_ANIMATION_LONG(value);
+                            break;
+                        case obor_forward__PROP_SPRITEA_FILE:
+                            if(OBOR_ANIMATION_ARG(value_index)->vt != VT_PTR && OBOR_ANIMATION_ARG(value_index)->vt != VT_EMPTY )
+                            {
+                                return E_FAIL;
+                            }
+                            //StrCache_Copy(sprite_map[ii].node->filename, (void *)varlist[value_index]->ptrVal);
+                            //sprite_map[ii].node->filename = (void *)varlist[value_index]->ptrVal;
+                            {
+                                char *source = OBOR_ANIMATION_TEXT(StrCache_GetIfPresent(OBOR_ANIMATION_ARG(value_index)->strVal));
+                                char *destination = OBOR_ANIMATION_OBJECT(OBOR_ANIMATION_SPRITE(ii).node)->filename;
+                                size_t capacity = obor_allocation_size(destination);
+                                size_t length = strlen(source);
+                                if(!destination || length >= capacity) return E_FAIL;
+                                memmove(destination, source, length + 1);
+                            }
+                            break;
+                        case obor_forward__PROP_SPRITEA_OFFSETX:
+                            OBOR_ANIMATION_PIXELS(OBOR_ANIMATION_OBJECT(OBOR_ANIMATION_SPRITE(ii).node)->sprite)->offsetx = OBOR_ANIMATION_LONG(value);
+                            break;
+                        case obor_forward__PROP_SPRITEA_OFFSETY:
+                            OBOR_ANIMATION_PIXELS(OBOR_ANIMATION_OBJECT(OBOR_ANIMATION_SPRITE(ii).node)->sprite)->offsety = OBOR_ANIMATION_LONG(value);
+                            break;
+                        case obor_forward__PROP_SPRITEA_SPRITE:
+                        {
+                            if(OBOR_ANIMATION_ARG(value_index)->vt != VT_PTR && OBOR_ANIMATION_ARG(value_index)->vt != VT_EMPTY )
+                            {
+                                return E_FAIL;
+                            }
+                            OBOR_ANIMATION_OBJECT(OBOR_ANIMATION_SPRITE(ii).node)->sprite = (VOID *)OBOR_ANIMATION_ARG(value_index)->ptrVal;
+                            break;
+                        }
+                    }
+                }
+                break;
+            case obor_forward__ANI_PROP_SUBENTITY:
+                OBOR_ANIMATION_MODEL(ent, id)->subentity = OBOR_ANIMATION_LONG(value);
+                break;
+            case obor_forward__ANI_PROP_SUMMONFRAME:
+                // Verify incoming parameter.
+                if(OBOR_ANIMATION_ARG(3)->vt != VT_INTEGER)
+                {
+                    printf("You must provide an animation ID and all properties: changeanimationproperty({ent}, {animation id}, 'summonframe', {sub-property}, {value})\n");
+                    result = E_FAIL;
+                }
+                else
+                {
+                    switch(OBOR_ANIMATION_ARG(3)->lVal)
+                    {
+                        case obor_forward__PROP_SUMMONFRAME_FRAME:
+                            OBOR_ANIMATION_FIXED(OBOR_ANIMATION_MODEL(ent, id), summonframe, 0) = OBOR_ANIMATION_LONG(value);
+                            break;
+                        case obor_forward__PROP_SUMMONFRAME_X:
+                            OBOR_ANIMATION_FIXED(OBOR_ANIMATION_MODEL(ent, id), summonframe, 1) = (DOUBLE)value;
+                            break;
+                        case obor_forward__PROP_SUMMONFRAME_Y:
+                            OBOR_ANIMATION_FIXED(OBOR_ANIMATION_MODEL(ent, id), summonframe, 2) = (DOUBLE)value;
+                            break;
+                        case obor_forward__PROP_SUMMONFRAME_Z:
+                            OBOR_ANIMATION_FIXED(OBOR_ANIMATION_MODEL(ent, id), summonframe, 3) = (DOUBLE)value;
+                            break;
+                        case obor_forward__PROP_SUMMONFRAME_RELATIVE:
+                            OBOR_ANIMATION_FIXED(OBOR_ANIMATION_MODEL(ent, id), summonframe, 4) = OBOR_ANIMATION_LONG(value);
+                            break;
+                    }
+                }
+                break;
+            case obor_forward__ANI_PROP_SYNC:
+                OBOR_ANIMATION_MODEL(ent, id)->sync = OBOR_ANIMATION_LONG(value);
+                break;
+            case obor_forward__ANI_PROP_UNSUMMONFRAME:
+                OBOR_ANIMATION_MODEL(ent, id)->unsummonframe = OBOR_ANIMATION_LONG(value);
+                break;
+            case obor_forward__ANI_PROP_VULNERABLE:
+                if(OBOR_ANIMATION_ARG(3)->vt != VT_INTEGER)
+                {
+                    printf("You must provide an animation ID and all properties: changeanimationproperty({ent}, {animation id}, 'vulnerable', {frame_index}, {value})\n");
+                    result = E_FAIL;
+                    break;
+                } else
+                {
+                    okf = (int)OBOR_ANIMATION_ARG(3)->lVal;
+                }
+
+                anim = OBOR_ANIMATION_MODEL(ent, id);
+
+                if (OBOR_ANIMATION_FRAME(anim, vulnerable, okf) >= 0) OBOR_ANIMATION_FRAME(anim, vulnerable, okf) = OBOR_ANIMATION_LONG(value);
+                else (*pretvar)->lVal = (LONG)-1;
+
+                break;
+            case obor_forward__ANI_PROP_WEAPONFRAME:
+                // Verify incoming parameter.
+                if(OBOR_ANIMATION_ARG(3)->vt != VT_INTEGER)
+                {
+                    printf("You must provide an animation ID and all properties: changeanimationproperty({ent}, {animation id}, 'weaponframe', {sub-property}, {value})\n");
+                    result = E_FAIL;
+                }
+                else
+                {
+                    switch(OBOR_ANIMATION_ARG(3)->lVal)
+                    {
+                        case obor_forward__PROP_WEAPONFRAME_FRAME:
+                            OBOR_ANIMATION_FIXED(OBOR_ANIMATION_MODEL(ent, id), weaponframe, 0) = OBOR_ANIMATION_LONG(value);
+                            break;
+                        case obor_forward__PROP_WEAPONFRAME_WEAPON:
+                            OBOR_ANIMATION_FIXED(OBOR_ANIMATION_MODEL(ent, id), weaponframe, 1) = OBOR_ANIMATION_LONG(value);
+                            break;
+                    }
+                }
+                break;
+            default:
+                *pretvar = NULL;
+                printf("Error: unsupported property in changeanimationproperty\n");
+                result = E_FAIL;
+                break;
+        }
+    }
+
+    return result;
+}
+
+static HRESULT obor_forward_getanimationproperty_impl(ScriptVariant **varlist, ScriptVariant **pretvar, int paramCount)
+{
+
+
+    int result                      = S_OK; //Pass or fail?
+    entity *ent                     = NULL; //Entity;
+    int id                          = 0;    //Animation ID.
+    obor_forward_e_animation_properties property = 0;    //Property.
+    //int subproperty                 = 0;    //Sub property.
+
+
+
+    // Verify incoming parameters.
+    if(paramCount < 3
+       || OBOR_ANIMATION_ARG(1)->vt != VT_INTEGER
+       || OBOR_ANIMATION_ARG(2)->vt != VT_INTEGER)
+    {
+        if(obor_profile_build < 4178)
+            printf("You must provide an animation ID and property: getanimationproperty({ent}, {animation id}, {property})\n");
+        else
+            printf("You must provide an animation ID and property: getanimationproperty({ent}, {animation id}, {property}, {frame_index})\n");
+        result = E_FAIL;
+    }
+    else
+    {
+        s_attack *attack = NULL;
+        s_anim *anim = NULL;
+        s_sprite *spr = NULL;
+        LONG aid = 0, okf = 0;
+        LONG tmp_int = 0;
+        //float tmp_float = 0;
+
+        // Set parameter vars.
+        ent         = (entity *)OBOR_ANIMATION_ARG(0)->ptrVal;
+        id          = OBOR_ANIMATION_ARG(1)->lVal;
+        property    = OBOR_ANIMATION_ARG(2)->lVal;
+
+        // Most values returned will be integers. Set here for less repetition.
+        ScriptVariant_ChangeType(*pretvar, VT_INTEGER);
+
+        // Which animation property to get?
+        switch(property)
+        {
+            case obor_forward__ANI_PROP_ANIMHITS:
+                (*pretvar)->lVal = (LONG)OBOR_ANIMATION_MODEL(ent, id)->animhits;
+                break;
+            case obor_forward__ANI_PROP_ANTIGRAV:
+                (*pretvar)->lVal = (LONG)OBOR_ANIMATION_MODEL(ent, id)->antigrav;
+                break;
+            /*
+             * ################### ATTACK PROPERTY ###################
+             */
+            case obor_forward__ANI_PROP_ATTACK:
+                // Verify incoming parameter.
+                if(OBOR_ANIMATION_ARG(3)->vt != VT_INTEGER)
+                {
+                    if(obor_profile_build < 4178)
+                        printf("You must provide an animation ID and all properties: getanimationproperty({ent}, {animation id}, 'attack', {sub-property})\n");
+                    else
+                        printf("You must provide a sub-property: getanimationproperty({ent}, {animation id}, 'attack', {sub-property}, {frame_index})\n");
+                    result = E_FAIL;
+                }
+                else
+                {
+                    /* The partial getter exposes six attack leaves. Other leaves
+                     * retain its unchanged integer result and consume no frame. */
+                    if(obor_profile_build < 4172)
+                    {
+                        LONG leaf = OBOR_ANIMATION_ARG(3)->lVal;
+                        if(leaf == obor_forward__PROP_ATTACK_FASTATTACK)
+                        {
+                            anim = OBOR_ANIMATION_MODEL(ent, id);
+                            if(anim->attacks)
+                                for(aid = 0; aid < anim->numframes; ++aid)
+                                {
+                                    attack = OBOR_ANIMATION_FRAME(anim, attacks, aid);
+                                    if(attack && OBOR_ANIMATION_OBJECT(attack)->pain_time)
+                                    {
+                                        okf = 1;
+                                        break;
+                                    }
+                                }
+                            (*pretvar)->lVal = (LONG)okf;
+                            break;
+                        }
+                        if(leaf != obor_forward__PROP_ATTACK_BLOCKFLASH &&
+                           leaf != obor_forward__PROP_ATTACK_BLOCKSOUND &&
+                           leaf != obor_forward__PROP_ATTACK_DROPV &&
+                           leaf != obor_forward__PROP_ATTACK_HITFLASH &&
+                           leaf != obor_forward__PROP_ATTACK_HITSOUND) break;
+                    }
+                    switch(OBOR_ANIMATION_ARG(3)->lVal)
+                    {
+                        case obor_forward__PROP_ATTACK_BLAST:
+                            okf = -1;
+
+                            if (paramCount > 4)
+                            {
+                                if(OBOR_ANIMATION_ARG(4)->vt != VT_INTEGER)
+                                {
+                                    printf("You must provide an animation ID and all properties: getanimationproperty({ent}, {animation id}, 'attack', 'blast', {frame_index})\n");
+                                    result = E_FAIL;
+                                    break;
+                                } else
+                                {
+                                    okf = (int)OBOR_ANIMATION_ARG(4)->lVal;
+                                }
+                            }
+
+                            // without a optional frame_index it returns the 1st useful frame if it exists
+                            anim = OBOR_ANIMATION_MODEL(ent, id);
+                            if( anim->attacks ) {
+                                // or sizeof(pointer) / sizeof(structure)
+                                if (okf < 0)
+                                    for (aid = 0; aid < anim->numframes; aid++)
+                                    {
+                                        attack = OBOR_ANIMATION_FRAME(anim, attacks, aid);
+                                        if (attack) break;
+                                    }
+                                else attack = OBOR_ANIMATION_FRAME(anim, attacks, okf);
+
+                                if (attack) (*pretvar)->lVal = (LONG)OBOR_ANIMATION_OBJECT(attack)->blast;
+                                else (*pretvar)->lVal = (LONG)0;
+                            } else (*pretvar)->lVal = (LONG)0;
+
+                            break;
+                        case obor_forward__PROP_ATTACK_BLOCKFLASH:
+                            okf = -1;
+
+                            // usage getanimationproperty({ent}, {animation id}, 'hitsound', {frame_index}) -> frame is optional
+                            if (paramCount > 4)
+                            {
+                                if(OBOR_ANIMATION_ARG(4)->vt != VT_INTEGER)
+                                {
+                                    printf("You must provide an animation ID and all properties: getanimationproperty({ent}, {animation id}, 'attack', blockflash', {frame_index})\n");
+                                    result = E_FAIL;
+                                    break;
+                                } else
+                                {
+                                    okf = (int)OBOR_ANIMATION_ARG(4)->lVal;
+                                }
+                            }
+
+                            // without a optional frame_index it returns the 1st useful frame if it exists
+                            anim = OBOR_ANIMATION_MODEL(ent, id);
+                            if( anim->attacks ) {
+                                // or sizeof(pointer) / sizeof(structure)
+                                if (okf < 0)
+                                    for (aid = 0; aid < anim->numframes; aid++)
+                                    {
+                                        attack = OBOR_ANIMATION_FRAME(anim, attacks, aid);
+                                        if (attack) break;
+                                    }
+                                else attack = OBOR_ANIMATION_FRAME(anim, attacks, okf);
+
+                                if (attack) (*pretvar)->lVal = (LONG)OBOR_ANIMATION_OBJECT(attack)->blockflash; // this is the get_cached_model_index(), so use getmodelproperty(i,2) to get the name
+                                else (*pretvar)->lVal = (LONG)-1;
+
+                                /*ScriptVariant_ChangeType(*pretvar, VT_STR);
+                                StrCache_Copy((*pretvar)->strVal, model_cache[(int)attack->hitflash].name);*/
+
+                                /*ScriptVariant_ChangeType(*pretvar, VT_PTR);
+                                (*pretvar)->ptrVal = (VOID *)(model_cache[(int)attack->hitflash].model);*/
+                            } else (*pretvar)->lVal = (LONG)-1;
+
+                            break;
+                        case obor_forward__PROP_ATTACK_BLOCKSOUND:
+                            okf = -1;
+
+                            // usage getanimationproperty({ent}, {animation id}, 'hitsound', {frame_index}) -> frame is optional
+                            if (paramCount > 4)
+                            {
+                                if(OBOR_ANIMATION_ARG(4)->vt != VT_INTEGER)
+                                {
+                                    printf("You must provide an animation ID and all properties: getanimationproperty({ent}, {animation id}, 'attack', 'blocksound', {frame_index})\n");
+                                    result = E_FAIL;
+                                    break;
+                                } else
+                                {
+                                    okf = (int)OBOR_ANIMATION_ARG(4)->lVal;
+                                }
+                            }
+
+                            // without a optional frame_index it returns the 1st useful frame if it exists
+                            anim = OBOR_ANIMATION_MODEL(ent, id);
+                            if( anim->attacks ) {
+                                // or sizeof(pointer) / sizeof(structure)
+                                if (okf < 0)
+                                    for (aid = 0; aid < anim->numframes; aid++)
+                                    {
+                                        attack = OBOR_ANIMATION_FRAME(anim, attacks, aid);
+                                        if (attack) break;
+                                    }
+                                else attack = OBOR_ANIMATION_FRAME(anim, attacks, okf);
+
+                                if (attack) (*pretvar)->lVal = (LONG)OBOR_ANIMATION_OBJECT(attack)->blocksound;
+                                else (*pretvar)->lVal = (LONG)-1;
+                            } else (*pretvar)->lVal = (LONG)-1;
+
+                            break;
+                        case obor_forward__PROP_ATTACK_COORDS:
+                            okf = -1;
+
+                            if(OBOR_ANIMATION_ARG(4)->vt != VT_INTEGER)
+                            {
+                                printf("You must provide an animation ID and all properties: getanimationproperty({ent}, {animation id}, 'attack', 'coords', {subproperty}, {frame_index})\n");
+                                result = E_FAIL;
+                                break;
+                            }
+
+                            if (paramCount > 5)
+                            {
+                                if(OBOR_ANIMATION_ARG(5)->vt != VT_INTEGER)
+                                {
+                                    printf("You must provide an animation ID and all properties: getanimationproperty({ent}, {animation id}, 'attack', 'coords', {subproperty}, {frame_index})\n");
+                                    result = E_FAIL;
+                                    break;
+                                } else
+                                {
+                                    okf = (int)OBOR_ANIMATION_ARG(5)->lVal;
+                                }
+                            }
+
+                            // without a optional frame_index it returns the 1st useful frame if it exists
+                            anim = OBOR_ANIMATION_MODEL(ent, id);
+                            if( anim->attacks ) {
+                                // or sizeof(pointer) / sizeof(structure)
+                                if (okf < 0)
+                                    for (aid = 0; aid < anim->numframes; aid++)
+                                    {
+                                        attack = OBOR_ANIMATION_FRAME(anim, attacks, aid);
+                                        if (attack) break;
+                                    }
+                                else attack = OBOR_ANIMATION_FRAME(anim, attacks, okf);
+
+                                if (attack)
+                                {
+                                    ScriptVariant_ChangeType(*pretvar, VT_DECIMAL);
+                                    switch(OBOR_ANIMATION_ARG(4)->lVal)
+                                    {
+                                        case obor_forward__PROP_ATTACK_COORDS_HEIGHT:
+                                            (*pretvar)->dblVal = (DOUBLE)OBOR_ANIMATION_OBJECT(attack)->attack_coords[3];
+                                            break;
+                                        case obor_forward__PROP_ATTACK_COORDS_WIDTH:
+                                            (*pretvar)->dblVal = (DOUBLE)OBOR_ANIMATION_OBJECT(attack)->attack_coords[2];
+                                            break;
+                                        case obor_forward__PROP_ATTACK_COORDS_X:
+                                            (*pretvar)->dblVal = (DOUBLE)OBOR_ANIMATION_OBJECT(attack)->attack_coords[0];
+                                            break;
+                                        case obor_forward__PROP_ATTACK_COORDS_Y:
+                                            (*pretvar)->dblVal = (DOUBLE)OBOR_ANIMATION_OBJECT(attack)->attack_coords[1];
+                                            break;
+                                        case obor_forward__PROP_ATTACK_COORDS_Z1:
+                                            (*pretvar)->dblVal = (DOUBLE)OBOR_ANIMATION_OBJECT(attack)->attack_coords[4];
+                                            break;
+                                        case obor_forward__PROP_ATTACK_COORDS_Z2:
+                                            (*pretvar)->dblVal = (DOUBLE)OBOR_ANIMATION_OBJECT(attack)->attack_coords[5];
+                                            break;
+                                    }
+                                }
+                                else (*pretvar)->lVal = (LONG)-1;
+                            } else (*pretvar)->lVal = (LONG)-1;
+
+                            break;
+                        case obor_forward__PROP_ATTACK_COUNTERATTACK:
+                            okf = -1;
+
+                            if (paramCount > 4)
+                            {
+                                if(OBOR_ANIMATION_ARG(4)->vt != VT_INTEGER)
+                                {
+                                    printf("You must provide an animation ID and all properties: getanimationproperty({ent}, {animation id}, 'attack', 'counterattack', {frame_index})\n");
+                                    result = E_FAIL;
+                                    break;
+                                } else
+                                {
+                                    okf = (int)OBOR_ANIMATION_ARG(4)->lVal;
+                                }
+                            }
+
+                            // without a optional frame_index it returns the 1st useful frame if it exists
+                            anim = OBOR_ANIMATION_MODEL(ent, id);
+                            if( anim->attacks ) {
+                                // or sizeof(pointer) / sizeof(structure)
+                                if (okf < 0)
+                                    for (aid = 0; aid < anim->numframes; aid++)
+                                    {
+                                        attack = OBOR_ANIMATION_FRAME(anim, attacks, aid);
+                                        if (attack) break;
+                                    }
+                                else attack = OBOR_ANIMATION_FRAME(anim, attacks, okf);
+
+                                if (attack) (*pretvar)->lVal = (LONG)OBOR_ANIMATION_OBJECT(attack)->counterattack;
+                                else (*pretvar)->lVal = (LONG)0;
+                            } else (*pretvar)->lVal = (LONG)0;
+
+                            break;
+                        case obor_forward__PROP_ATTACK_DIRECTION:
+                            okf = -1;
+
+                            if (paramCount > 4)
+                            {
+                                if(OBOR_ANIMATION_ARG(4)->vt != VT_INTEGER)
+                                {
+                                    printf("You must provide an animation ID and all properties: getanimationproperty({ent}, {animation id}, 'attack', 'direction', {frame_index})\n");
+                                    result = E_FAIL;
+                                    break;
+                                } else
+                                {
+                                    okf = (int)OBOR_ANIMATION_ARG(4)->lVal;
+                                }
+                            }
+
+                            // without a optional frame_index it returns the 1st useful frame if it exists
+                            anim = OBOR_ANIMATION_MODEL(ent, id);
+                            if( anim->attacks ) {
+                                // or sizeof(pointer) / sizeof(structure)
+                                if (okf < 0)
+                                    for (aid = 0; aid < anim->numframes; aid++)
+                                    {
+                                        attack = OBOR_ANIMATION_FRAME(anim, attacks, aid);
+                                        if (attack) break;
+                                    }
+                                else attack = OBOR_ANIMATION_FRAME(anim, attacks, okf);
+
+                                if (attack) (*pretvar)->lVal = (LONG)OBOR_ANIMATION_OBJECT(attack)->force_direction;
+                                else (*pretvar)->lVal = (LONG)-1;
+                            } else (*pretvar)->lVal = (LONG)-1;
+
+                            break;
+                        case obor_forward__PROP_ATTACK_DOL:
+                            okf = -1;
+
+                            if (paramCount > 4)
+                            {
+                                if(OBOR_ANIMATION_ARG(4)->vt != VT_INTEGER)
+                                {
+                                    printf("You must provide an animation ID and all properties: getanimationproperty({ent}, {animation id}, 'attack', 'dol', {frame_index})\n");
+                                    result = E_FAIL;
+                                    break;
+                                } else
+                                {
+                                    okf = (int)OBOR_ANIMATION_ARG(4)->lVal;
+                                }
+                            }
+
+                            // without a optional frame_index it returns the 1st useful frame if it exists
+                            anim = OBOR_ANIMATION_MODEL(ent, id);
+                            if( anim->attacks ) {
+                                // or sizeof(pointer) / sizeof(structure)
+                                if (okf < 0)
+                                    for (aid = 0; aid < anim->numframes; aid++)
+                                    {
+                                        attack = OBOR_ANIMATION_FRAME(anim, attacks, aid);
+                                        if (attack) break;
+                                    }
+                                else attack = OBOR_ANIMATION_FRAME(anim, attacks, okf);
+
+                                if (attack) (*pretvar)->lVal = (LONG)OBOR_ANIMATION_OBJECT(attack)->damage_on_landing;
+                                else (*pretvar)->lVal = (LONG)0;
+                            } else (*pretvar)->lVal = (LONG)0;
+
+                            break;
+                        case obor_forward__PROP_ATTACK_DOT:
+                            okf = -1;
+
+                            if (paramCount > 4)
+                            {
+                                if(OBOR_ANIMATION_ARG(4)->vt != VT_INTEGER)
+                                {
+                                    printf("You must provide an animation ID and all properties: getanimationproperty({ent}, {animation id}, 'attack', 'dot', {frame_index})\n");
+                                    result = E_FAIL;
+                                    break;
+                                } else
+                                {
+                                    okf = (int)OBOR_ANIMATION_ARG(4)->lVal;
+                                }
+                            }
+
+                            // without a optional frame_index it returns the 1st useful frame if it exists
+                            anim = OBOR_ANIMATION_MODEL(ent, id);
+                            if( anim->attacks ) {
+                                // or sizeof(pointer) / sizeof(structure)
+                                if (okf < 0)
+                                    for (aid = 0; aid < anim->numframes; aid++)
+                                    {
+                                        attack = OBOR_ANIMATION_FRAME(anim, attacks, aid);
+                                        if (attack) break;
+                                    }
+                                else attack = OBOR_ANIMATION_FRAME(anim, attacks, okf);
+
+                                if (attack) (*pretvar)->lVal = (LONG)OBOR_ANIMATION_OBJECT(attack)->dot;
+                                else (*pretvar)->lVal = (LONG)0;
+                            } else (*pretvar)->lVal = (LONG)0;
+
+                            break;
+                        case obor_forward__PROP_ATTACK_DOTFORCE:
+                            okf = -1;
+
+                            if (paramCount > 4)
+                            {
+                                if(OBOR_ANIMATION_ARG(4)->vt != VT_INTEGER)
+                                {
+                                    printf("You must provide an animation ID and all properties: getanimationproperty({ent}, {animation id}, 'attack', 'dotforce', {frame_index})\n");
+                                    result = E_FAIL;
+                                    break;
+                                } else
+                                {
+                                    okf = (int)OBOR_ANIMATION_ARG(4)->lVal;
+                                }
+                            }
+
+                            // without a optional frame_index it returns the 1st useful frame if it exists
+                            anim = OBOR_ANIMATION_MODEL(ent, id);
+                            if( anim->attacks ) {
+                                // or sizeof(pointer) / sizeof(structure)
+                                if (okf < 0)
+                                    for (aid = 0; aid < anim->numframes; aid++)
+                                    {
+                                        attack = OBOR_ANIMATION_FRAME(anim, attacks, aid);
+                                        if (attack) break;
+                                    }
+                                else attack = OBOR_ANIMATION_FRAME(anim, attacks, okf);
+
+                                if (attack) (*pretvar)->lVal = (LONG)OBOR_ANIMATION_OBJECT(attack)->dot_force;
+                                else (*pretvar)->lVal = (LONG)0;
+                            } else (*pretvar)->lVal = (LONG)0;
+
+                            break;
+                        case obor_forward__PROP_ATTACK_DOTINDEX:
+                            okf = -1;
+
+                            if (paramCount > 4)
+                            {
+                                if(OBOR_ANIMATION_ARG(4)->vt != VT_INTEGER)
+                                {
+                                    printf("You must provide an animation ID and all properties: getanimationproperty({ent}, {animation id}, 'attack', 'dotindex', {frame_index})\n");
+                                    result = E_FAIL;
+                                    break;
+                                } else
+                                {
+                                    okf = (int)OBOR_ANIMATION_ARG(4)->lVal;
+                                }
+                            }
+
+                            // without a optional frame_index it returns the 1st useful frame if it exists
+                            anim = OBOR_ANIMATION_MODEL(ent, id);
+                            if( anim->attacks ) {
+                                // or sizeof(pointer) / sizeof(structure)
+                                if (okf < 0)
+                                    for (aid = 0; aid < anim->numframes; aid++)
+                                    {
+                                        attack = OBOR_ANIMATION_FRAME(anim, attacks, aid);
+                                        if (attack) break;
+                                    }
+                                else attack = OBOR_ANIMATION_FRAME(anim, attacks, okf);
+
+                                if (attack) (*pretvar)->lVal = (LONG)OBOR_ANIMATION_OBJECT(attack)->dot_index;
+                                else (*pretvar)->lVal = (LONG)0;
+                            } else (*pretvar)->lVal = (LONG)0;
+
+                            break;
+                        case obor_forward__PROP_ATTACK_DOTRATE:
+                            okf = -1;
+
+                            if (paramCount > 4)
+                            {
+                                if(OBOR_ANIMATION_ARG(4)->vt != VT_INTEGER)
+                                {
+                                    printf("You must provide an animation ID and all properties: getanimationproperty({ent}, {animation id}, 'attack', 'dotrate', {frame_index})\n");
+                                    result = E_FAIL;
+                                    break;
+                                } else
+                                {
+                                    okf = (int)OBOR_ANIMATION_ARG(4)->lVal;
+                                }
+                            }
+
+                            // without a optional frame_index it returns the 1st useful frame if it exists
+                            anim = OBOR_ANIMATION_MODEL(ent, id);
+                            if( anim->attacks ) {
+                                // or sizeof(pointer) / sizeof(structure)
+                                if (okf < 0)
+                                    for (aid = 0; aid < anim->numframes; aid++)
+                                    {
+                                        attack = OBOR_ANIMATION_FRAME(anim, attacks, aid);
+                                        if (attack) break;
+                                    }
+                                else attack = OBOR_ANIMATION_FRAME(anim, attacks, okf);
+
+                                if (attack) (*pretvar)->lVal = (LONG)OBOR_ANIMATION_OBJECT(attack)->dot_rate;
+                                else (*pretvar)->lVal = (LONG)0;
+                            } else (*pretvar)->lVal = (LONG)0;
+
+                            break;
+                        case obor_forward__PROP_ATTACK_DOTTIME:
+                            okf = -1;
+
+                            if (paramCount > 4)
+                            {
+                                if(OBOR_ANIMATION_ARG(4)->vt != VT_INTEGER)
+                                {
+                                    printf("You must provide an animation ID and all properties: getanimationproperty({ent}, {animation id}, 'attack', 'dottime', {frame_index})\n");
+                                    result = E_FAIL;
+                                    break;
+                                } else
+                                {
+                                    okf = (int)OBOR_ANIMATION_ARG(4)->lVal;
+                                }
+                            }
+
+                            // without a optional frame_index it returns the 1st useful frame if it exists
+                            anim = OBOR_ANIMATION_MODEL(ent, id);
+                            if( anim->attacks ) {
+                                // or sizeof(pointer) / sizeof(structure)
+                                if (okf < 0)
+                                    for (aid = 0; aid < anim->numframes; aid++)
+                                    {
+                                        attack = OBOR_ANIMATION_FRAME(anim, attacks, aid);
+                                        if (attack) break;
+                                    }
+                                else attack = OBOR_ANIMATION_FRAME(anim, attacks, okf);
+
+                                if (attack) (*pretvar)->lVal = (LONG)OBOR_ANIMATION_OBJECT(attack)->dot_time;
+                                else (*pretvar)->lVal = (LONG)0;
+                            } else (*pretvar)->lVal = (LONG)0;
+
+                            break;
+                        case obor_forward__PROP_ATTACK_DROP:
+                            okf = -1;
+
+                            if (paramCount > 4)
+                            {
+                                if(OBOR_ANIMATION_ARG(4)->vt != VT_INTEGER)
+                                {
+                                    printf("You must provide an animation ID and all properties: getanimationproperty({ent}, {animation id}, 'attack', 'drop', {frame_index})\n");
+                                    result = E_FAIL;
+                                    break;
+                                } else
+                                {
+                                    okf = (int)OBOR_ANIMATION_ARG(4)->lVal;
+                                }
+                            }
+
+                            // without a optional frame_index it returns the 1st useful frame if it exists
+                            anim = OBOR_ANIMATION_MODEL(ent, id);
+                            if( anim->attacks ) {
+                                // or sizeof(pointer) / sizeof(structure)
+                                if (okf < 0)
+                                    for (aid = 0; aid < anim->numframes; aid++)
+                                    {
+                                        attack = OBOR_ANIMATION_FRAME(anim, attacks, aid);
+                                        if (attack) break;
+                                    }
+                                else attack = OBOR_ANIMATION_FRAME(anim, attacks, okf);
+
+                                if (attack) (*pretvar)->lVal = (LONG)OBOR_ANIMATION_OBJECT(attack)->attack_drop;
+                                else (*pretvar)->lVal = (LONG)0;
+                            } else (*pretvar)->lVal = (LONG)0;
+
+                            break;
+                        case obor_forward__PROP_ATTACK_DROPV:
+                            okf = -1;
+
+                            if(OBOR_ANIMATION_ARG(4)->vt != VT_INTEGER)
+                            {
+                                printf("You must provide an animation ID and all properties: getanimationproperty({ent}, {animation id}, 'attack', 'dropv', {subproperty}, {frame_index})\n");
+                                result = E_FAIL;
+                                break;
+                            }
+
+                            if (paramCount > 5)
+                            {
+                                if(OBOR_ANIMATION_ARG(5)->vt != VT_INTEGER)
+                                {
+                                    if(obor_profile_build < 4172)
+                                printf("You must provide an animation ID and all properties: getanimationproperty({ent}, {animation id}, 'dropv', {subproperty}, {frame_index})\n");
+                                else
+                                printf("You must provide an animation ID and all properties: getanimationproperty({ent}, {animation id}, 'attack', 'dropv', {subproperty}, {frame_index})\n");
+                                    result = E_FAIL;
+                                    break;
+                                } else
+                                {
+                                    okf = (int)OBOR_ANIMATION_ARG(5)->lVal;
+                                }
+                            }
+
+                            // without a optional frame_index it returns the 1st useful frame if it exists
+                            anim = OBOR_ANIMATION_MODEL(ent, id);
+                            if( anim->attacks ) {
+                                // or sizeof(pointer) / sizeof(structure)
+                                if (okf < 0)
+                                    for (aid = 0; aid < anim->numframes; aid++)
+                                    {
+                                        attack = OBOR_ANIMATION_FRAME(anim, attacks, aid);
+                                        if (attack) break;
+                                    }
+                                else attack = OBOR_ANIMATION_FRAME(anim, attacks, okf);
+
+                                if (attack)
+                                {
+                                    ScriptVariant_ChangeType(*pretvar, VT_DECIMAL);
+                                    switch(OBOR_ANIMATION_ARG(4)->lVal)
+                                    {
+                                        case obor_forward__PROP_ATTACK_DROPV_X:
+                                            (*pretvar)->dblVal = (DOUBLE)OBOR_ANIMATION_OBJECT(attack)->dropv.x;
+                                            break;
+                                        case obor_forward__PROP_ATTACK_DROPV_Y:
+                                            (*pretvar)->dblVal = (DOUBLE)OBOR_ANIMATION_OBJECT(attack)->dropv.y;
+                                            break;
+                                        case obor_forward__PROP_ATTACK_DROPV_Z:
+                                            (*pretvar)->dblVal = (DOUBLE)OBOR_ANIMATION_OBJECT(attack)->dropv.z;
+                                            break;
+                                    }
+                                }
+                                else (*pretvar)->lVal = (LONG)-1;
+                            } else (*pretvar)->lVal = (LONG)-1;
+
+                            break;
+                        case obor_forward__PROP_ATTACK_FASTATTACK:
+                            okf = 0;
+                            anim = OBOR_ANIMATION_MODEL(ent, id);
+                            if (anim->attacks)
+                            {
+                                for (aid = 0; aid < anim->numframes; aid++)
+                                {
+                                    attack = OBOR_ANIMATION_FRAME(anim, attacks, aid);
+                                    if (attack)
+                                    {
+                                        if (OBOR_ANIMATION_OBJECT(attack)->pain_time)
+                                        {
+                                            if ( obor_profile_build < 4179 ? OBOR_ANIMATION_OBJECT(attack)->pain_time != 0 : OBOR_ANIMATION_OBJECT(attack)->pain_time == GAME_SPEED / 20 ) { okf = 1; break; }
+                                        }
+                                    }
+                                }
+                            }
+                            (*pretvar)->lVal = (LONG)okf;
+                            break;
+                        case obor_forward__PROP_ATTACK_FORCE:
+                            okf = -1;
+
+                            if (paramCount > 4)
+                            {
+                                if(OBOR_ANIMATION_ARG(4)->vt != VT_INTEGER)
+                                {
+                                    printf("You must provide an animation ID and all properties: getanimationproperty({ent}, {animation id}, 'attack', 'force', {frame_index})\n");
+                                    result = E_FAIL;
+                                    break;
+                                } else
+                                {
+                                    okf = (int)OBOR_ANIMATION_ARG(4)->lVal;
+                                }
+                            }
+
+                            // without a optional frame_index it returns the 1st useful frame if it exists
+                            anim = OBOR_ANIMATION_MODEL(ent, id);
+                            if( anim->attacks ) {
+                                // or sizeof(pointer) / sizeof(structure)
+                                if (okf < 0)
+                                    for (aid = 0; aid < anim->numframes; aid++)
+                                    {
+                                        attack = OBOR_ANIMATION_FRAME(anim, attacks, aid);
+                                        if (attack) break;
+                                    }
+                                else attack = OBOR_ANIMATION_FRAME(anim, attacks, okf);
+
+                                if (attack) (*pretvar)->lVal = (LONG)OBOR_ANIMATION_OBJECT(attack)->attack_force;
+                                else (*pretvar)->lVal = (LONG)0;
+                            } else (*pretvar)->lVal = (LONG)0;
+
+                            break;
+                        case obor_forward__PROP_ATTACK_FORCEMAP:
+                            okf = -1;
+
+                            if (paramCount > 4)
+                            {
+                                if(OBOR_ANIMATION_ARG(4)->vt != VT_INTEGER)
+                                {
+                                    printf("You must provide an animation ID and all properties: getanimationproperty({ent}, {animation id}, 'attack', 'forcemap', {frame_index})\n");
+                                    result = E_FAIL;
+                                    break;
+                                } else
+                                {
+                                    okf = (int)OBOR_ANIMATION_ARG(4)->lVal;
+                                }
+                            }
+
+                            // without a optional frame_index it returns the 1st useful frame if it exists
+                            anim = OBOR_ANIMATION_MODEL(ent, id);
+                            if( anim->attacks ) {
+                                // or sizeof(pointer) / sizeof(structure)
+                                if (okf < 0)
+                                    for (aid = 0; aid < anim->numframes; aid++)
+                                    {
+                                        attack = OBOR_ANIMATION_FRAME(anim, attacks, aid);
+                                        if (attack) break;
+                                    }
+                                else attack = OBOR_ANIMATION_FRAME(anim, attacks, okf);
+
+                                if (attack) (*pretvar)->lVal = (LONG)OBOR_ANIMATION_OBJECT(attack)->forcemap;
+                                else (*pretvar)->lVal = (LONG)0;
+                            } else (*pretvar)->lVal = (LONG)0;
+
+                            break;
+                        case obor_forward__PROP_ATTACK_FREEZE:
+                            okf = -1;
+
+                            if (paramCount > 4)
+                            {
+                                if(OBOR_ANIMATION_ARG(4)->vt != VT_INTEGER)
+                                {
+                                    printf("You must provide an animation ID and all properties: getanimationproperty({ent}, {animation id}, 'attack', 'freeze', {frame_index})\n");
+                                    result = E_FAIL;
+                                    break;
+                                } else
+                                {
+                                    okf = (int)OBOR_ANIMATION_ARG(4)->lVal;
+                                }
+                            }
+
+                            // without a optional frame_index it returns the 1st useful frame if it exists
+                            anim = OBOR_ANIMATION_MODEL(ent, id);
+                            if( anim->attacks ) {
+                                // or sizeof(pointer) / sizeof(structure)
+                                if (okf < 0)
+                                    for (aid = 0; aid < anim->numframes; aid++)
+                                    {
+                                        attack = OBOR_ANIMATION_FRAME(anim, attacks, aid);
+                                        if (attack) break;
+                                    }
+                                else attack = OBOR_ANIMATION_FRAME(anim, attacks, okf);
+
+                                if (attack) (*pretvar)->lVal = (LONG)OBOR_ANIMATION_OBJECT(attack)->freeze;
+                                else (*pretvar)->lVal = (LONG)0;
+                            } else (*pretvar)->lVal = (LONG)0;
+
+                            break;
+                        case obor_forward__PROP_ATTACK_FREEZETIME:
+                            okf = -1;
+
+                            if (paramCount > 4)
+                            {
+                                if(OBOR_ANIMATION_ARG(4)->vt != VT_INTEGER)
+                                {
+                                    printf("You must provide an animation ID and all properties: getanimationproperty({ent}, {animation id}, 'attack', 'freezetime', {frame_index})\n");
+                                    result = E_FAIL;
+                                    break;
+                                } else
+                                {
+                                    okf = (int)OBOR_ANIMATION_ARG(4)->lVal;
+                                }
+                            }
+
+                            // without a optional frame_index it returns the 1st useful frame if it exists
+                            anim = OBOR_ANIMATION_MODEL(ent, id);
+                            if( anim->attacks ) {
+                                // or sizeof(pointer) / sizeof(structure)
+                                if (okf < 0)
+                                    for (aid = 0; aid < anim->numframes; aid++)
+                                    {
+                                        attack = OBOR_ANIMATION_FRAME(anim, attacks, aid);
+                                        if (attack) break;
+                                    }
+                                else attack = OBOR_ANIMATION_FRAME(anim, attacks, okf);
+
+                                if (attack) (*pretvar)->lVal = (LONG)OBOR_ANIMATION_OBJECT(attack)->freezetime;
+                                else (*pretvar)->lVal = (LONG)0;
+                            } else (*pretvar)->lVal = (LONG)0;
+
+                            break;
+                        case obor_forward__PROP_ATTACK_GRAB:
+                            okf = -1;
+
+                            if (paramCount > 4)
+                            {
+                                if(OBOR_ANIMATION_ARG(4)->vt != VT_INTEGER)
+                                {
+                                    printf("You must provide an animation ID and all properties: getanimationproperty({ent}, {animation id}, 'attack', 'grab', {frame_index})\n");
+                                    result = E_FAIL;
+                                    break;
+                                } else
+                                {
+                                    okf = (int)OBOR_ANIMATION_ARG(4)->lVal;
+                                }
+                            }
+
+                            // without a optional frame_index it returns the 1st useful frame if it exists
+                            anim = OBOR_ANIMATION_MODEL(ent, id);
+                            if( anim->attacks ) {
+                                // or sizeof(pointer) / sizeof(structure)
+                                if (okf < 0)
+                                    for (aid = 0; aid < anim->numframes; aid++)
+                                    {
+                                        attack = OBOR_ANIMATION_FRAME(anim, attacks, aid);
+                                        if (attack) break;
+                                    }
+                                else attack = OBOR_ANIMATION_FRAME(anim, attacks, okf);
+
+                                if (attack) (*pretvar)->lVal = (LONG)OBOR_ANIMATION_OBJECT(attack)->grab;
+                                else (*pretvar)->lVal = (LONG)0;
+                            } else (*pretvar)->lVal = (LONG)0;
+
+                            break;
+                        case obor_forward__PROP_ATTACK_GRABDISTANCE:
+                            okf = -1;
+
+                            if (paramCount > 4)
+                            {
+                                if(OBOR_ANIMATION_ARG(4)->vt != VT_INTEGER)
+                                {
+                                    printf("You must provide an animation ID and all properties: getanimationproperty({ent}, {animation id}, 'attack', 'grabdistance', {frame_index})\n");
+                                    result = E_FAIL;
+                                    break;
+                                } else
+                                {
+                                    okf = (int)OBOR_ANIMATION_ARG(4)->lVal;
+                                }
+                            }
+
+                            // without a optional frame_index it returns the 1st useful frame if it exists
+                            anim = OBOR_ANIMATION_MODEL(ent, id);
+                            if( anim->attacks ) {
+                                // or sizeof(pointer) / sizeof(structure)
+                                if (okf < 0)
+                                    for (aid = 0; aid < anim->numframes; aid++)
+                                    {
+                                        attack = OBOR_ANIMATION_FRAME(anim, attacks, aid);
+                                        if (attack) break;
+                                    }
+                                else attack = OBOR_ANIMATION_FRAME(anim, attacks, okf);
+
+                                if (attack) {
+                                    ScriptVariant_ChangeType(*pretvar, VT_DECIMAL);
+                                    (*pretvar)->dblVal = (DOUBLE)OBOR_ANIMATION_OBJECT(attack)->grab_distance;
+                                } else (*pretvar)->lVal = (LONG)0;
+                            } else (*pretvar)->lVal = (LONG)0;
+
+                            break;
+                        case obor_forward__PROP_ATTACK_GUARDCOST:
+                            okf = -1;
+
+                            if (paramCount > 4)
+                            {
+                                if(OBOR_ANIMATION_ARG(4)->vt != VT_INTEGER)
+                                {
+                                    printf("You must provide an animation ID and all properties: getanimationproperty({ent}, {animation id}, 'attack', 'guardcost', {frame_index})\n");
+                                    result = E_FAIL;
+                                    break;
+                                } else
+                                {
+                                    okf = (int)OBOR_ANIMATION_ARG(4)->lVal;
+                                }
+                            }
+
+                            // without a optional frame_index it returns the 1st useful frame if it exists
+                            anim = OBOR_ANIMATION_MODEL(ent, id);
+                            if( anim->attacks ) {
+                                // or sizeof(pointer) / sizeof(structure)
+                                if (okf < 0)
+                                    for (aid = 0; aid < anim->numframes; aid++)
+                                    {
+                                        attack = OBOR_ANIMATION_FRAME(anim, attacks, aid);
+                                        if (attack) break;
+                                    }
+                                else attack = OBOR_ANIMATION_FRAME(anim, attacks, okf);
+
+                                if (attack) (*pretvar)->lVal = (LONG)OBOR_ANIMATION_OBJECT(attack)->guardcost;
+                                else (*pretvar)->lVal = (LONG)0;
+                            } else (*pretvar)->lVal = (LONG)0;
+
+                            break;
+                        case obor_forward__PROP_ATTACK_HITFLASH:
+                            okf = -1;
+
+                            // usage getanimationproperty({ent}, {animation id}, 'hitsound', {frame_index}) -> frame is optional
+                            if (paramCount > 4)
+                            {
+                                if(OBOR_ANIMATION_ARG(4)->vt != VT_INTEGER)
+                                {
+                                    printf("You must provide an animation ID and all properties: getanimationproperty({ent}, {animation id}, 'attack', 'hitflash', {frame_index})\n");
+                                    result = E_FAIL;
+                                    break;
+                                } else
+                                {
+                                    okf = (int)OBOR_ANIMATION_ARG(4)->lVal;
+                                }
+                            }
+
+                            // without a optional frame_index it returns the 1st useful frame if it exists
+                            anim = OBOR_ANIMATION_MODEL(ent, id);
+                            if( anim->attacks ) {
+                                // or sizeof(pointer) / sizeof(structure)
+                                if (okf < 0)
+                                    for (aid = 0; aid < anim->numframes; aid++)
+                                    {
+                                        attack = OBOR_ANIMATION_FRAME(anim, attacks, aid);
+                                        if (attack) break;
+                                    }
+                                else attack = OBOR_ANIMATION_FRAME(anim, attacks, okf);
+
+                                if (attack) (*pretvar)->lVal = (LONG)OBOR_ANIMATION_OBJECT(attack)->hitflash; // this is the get_cached_model_index(), so use getmodelproperty(i,2) to get the name
+                                else (*pretvar)->lVal = (LONG)-1;
+
+                                /*ScriptVariant_ChangeType(*pretvar, VT_STR);
+                                StrCache_Copy((*pretvar)->strVal, model_cache[(int)attack->hitflash].name);*/
+
+                                /*ScriptVariant_ChangeType(*pretvar, VT_PTR);
+                                (*pretvar)->ptrVal = (VOID *)(model_cache[(int)attack->hitflash].model);*/
+                            } else (*pretvar)->lVal = (LONG)-1;
+
+                            break;
+                        case obor_forward__PROP_ATTACK_HITSOUND:
+                            okf = -1;
+
+                            // usage getanimationproperty({ent}, {animation id}, 'hitsound', {frame_index}) -> frame is optional
+                            if (paramCount > 4)
+                            {
+                                if(OBOR_ANIMATION_ARG(4)->vt != VT_INTEGER)
+                                {
+                                    printf("You must provide an animation ID and all properties: getanimationproperty({ent}, {animation id}, 'attack', 'hitsound', {frame_index})\n");
+                                    result = E_FAIL;
+                                    break;
+                                } else
+                                {
+                                    okf = (int)OBOR_ANIMATION_ARG(4)->lVal;
+                                }
+                            }
+
+                            // without a optional frame_index it returns the 1st useful frame if it exists
+                            anim = OBOR_ANIMATION_MODEL(ent, id);
+                            if( anim->attacks ) {
+                                // or sizeof(pointer) / sizeof(structure)
+                                if (okf < 0)
+                                    for (aid = 0; aid < anim->numframes; aid++)
+                                    {
+                                        attack = OBOR_ANIMATION_FRAME(anim, attacks, aid);
+                                        if (attack) break;
+                                    }
+                                else attack = OBOR_ANIMATION_FRAME(anim, attacks, okf);
+
+                                if (attack) (*pretvar)->lVal = (LONG)OBOR_ANIMATION_OBJECT(attack)->hitsound;
+                                else (*pretvar)->lVal = (LONG)-1;
+                            } else (*pretvar)->lVal = (LONG)-1;
+
+                            break;
+                        case obor_forward__PROP_ATTACK_JUGGLECOST:
+                            okf = -1;
+
+                            if (paramCount > 4)
+                            {
+                                if(OBOR_ANIMATION_ARG(4)->vt != VT_INTEGER)
+                                {
+                                    printf("You must provide an animation ID and all properties: getanimationproperty({ent}, {animation id}, 'attack', 'jugglecost', {frame_index})\n");
+                                    result = E_FAIL;
+                                    break;
+                                } else
+                                {
+                                    okf = (int)OBOR_ANIMATION_ARG(4)->lVal;
+                                }
+                            }
+
+                            // without a optional frame_index it returns the 1st useful frame if it exists
+                            anim = OBOR_ANIMATION_MODEL(ent, id);
+                            if( anim->attacks ) {
+                                // or sizeof(pointer) / sizeof(structure)
+                                if (okf < 0)
+                                    for (aid = 0; aid < anim->numframes; aid++)
+                                    {
+                                        attack = OBOR_ANIMATION_FRAME(anim, attacks, aid);
+                                        if (attack) break;
+                                    }
+                                else attack = OBOR_ANIMATION_FRAME(anim, attacks, okf);
+
+                                if (attack) (*pretvar)->lVal = (LONG)OBOR_ANIMATION_OBJECT(attack)->jugglecost;
+                                else (*pretvar)->lVal = (LONG)0;
+                            } else (*pretvar)->lVal = (LONG)0;
+
+                            break;
+                        case obor_forward__PROP_ATTACK_MAPTIME:
+                            okf = -1;
+
+                            if (paramCount > 4)
+                            {
+                                if(OBOR_ANIMATION_ARG(4)->vt != VT_INTEGER)
+                                {
+                                    printf("You must provide an animation ID and all properties: getanimationproperty({ent}, {animation id}, 'attack', 'maptime', {frame_index})\n");
+                                    result = E_FAIL;
+                                    break;
+                                } else
+                                {
+                                    okf = (int)OBOR_ANIMATION_ARG(4)->lVal;
+                                }
+                            }
+
+                            // without a optional frame_index it returns the 1st useful frame if it exists
+                            anim = OBOR_ANIMATION_MODEL(ent, id);
+                            if( anim->attacks ) {
+                                // or sizeof(pointer) / sizeof(structure)
+                                if (okf < 0)
+                                    for (aid = 0; aid < anim->numframes; aid++)
+                                    {
+                                        attack = OBOR_ANIMATION_FRAME(anim, attacks, aid);
+                                        if (attack) break;
+                                    }
+                                else attack = OBOR_ANIMATION_FRAME(anim, attacks, okf);
+
+                                if (attack) (*pretvar)->lVal = (LONG)OBOR_ANIMATION_OBJECT(attack)->maptime;
+                                else (*pretvar)->lVal = (LONG)0;
+                            } else (*pretvar)->lVal = (LONG)0;
+
+                            break;
+                        case obor_forward__PROP_ATTACK_NOBLOCK:
+                            okf = -1;
+
+                            if (paramCount > 4)
+                            {
+                                if(OBOR_ANIMATION_ARG(4)->vt != VT_INTEGER)
+                                {
+                                    printf("You must provide an animation ID and all properties: getanimationproperty({ent}, {animation id}, 'attack', 'noblock', {frame_index})\n");
+                                    result = E_FAIL;
+                                    break;
+                                } else
+                                {
+                                    okf = (int)OBOR_ANIMATION_ARG(4)->lVal;
+                                }
+                            }
+
+                            // without a optional frame_index it returns the 1st useful frame if it exists
+                            anim = OBOR_ANIMATION_MODEL(ent, id);
+                            if( anim->attacks ) {
+                                // or sizeof(pointer) / sizeof(structure)
+                                if (okf < 0)
+                                    for (aid = 0; aid < anim->numframes; aid++)
+                                    {
+                                        attack = OBOR_ANIMATION_FRAME(anim, attacks, aid);
+                                        if (attack) break;
+                                    }
+                                else attack = OBOR_ANIMATION_FRAME(anim, attacks, okf);
+
+                                if (attack) (*pretvar)->lVal = (LONG)OBOR_ANIMATION_OBJECT(attack)->no_block;
+                                else (*pretvar)->lVal = (LONG)0;
+                            } else (*pretvar)->lVal = (LONG)0;
+
+                            break;
+                        case obor_forward__PROP_ATTACK_NOFLASH:
+                            okf = -1;
+
+                            if (paramCount > 4)
+                            {
+                                if(OBOR_ANIMATION_ARG(4)->vt != VT_INTEGER)
+                                {
+                                    printf("You must provide an animation ID and all properties: getanimationproperty({ent}, {animation id}, 'attack', 'noflash', {frame_index})\n");
+                                    result = E_FAIL;
+                                    break;
+                                } else
+                                {
+                                    okf = (int)OBOR_ANIMATION_ARG(4)->lVal;
+                                }
+                            }
+
+                            // without a optional frame_index it returns the 1st useful frame if it exists
+                            anim = OBOR_ANIMATION_MODEL(ent, id);
+                            if( anim->attacks ) {
+                                // or sizeof(pointer) / sizeof(structure)
+                                if (okf < 0)
+                                    for (aid = 0; aid < anim->numframes; aid++)
+                                    {
+                                        attack = OBOR_ANIMATION_FRAME(anim, attacks, aid);
+                                        if (attack) break;
+                                    }
+                                else attack = OBOR_ANIMATION_FRAME(anim, attacks, okf);
+
+                                if (attack) (*pretvar)->lVal = (LONG)OBOR_ANIMATION_OBJECT(attack)->no_flash;
+                                else (*pretvar)->lVal = (LONG)0;
+                            } else (*pretvar)->lVal = (LONG)0;
+
+                            break;
+                        case obor_forward__PROP_ATTACK_NOKILL:
+                            okf = -1;
+
+                            if (paramCount > 4)
+                            {
+                                if(OBOR_ANIMATION_ARG(4)->vt != VT_INTEGER)
+                                {
+                                    printf("You must provide an animation ID and all properties: getanimationproperty({ent}, {animation id}, 'attack', 'nokill', {frame_index})\n");
+                                    result = E_FAIL;
+                                    break;
+                                } else
+                                {
+                                    okf = (int)OBOR_ANIMATION_ARG(4)->lVal;
+                                }
+                            }
+
+                            // without a optional frame_index it returns the 1st useful frame if it exists
+                            anim = OBOR_ANIMATION_MODEL(ent, id);
+                            if( anim->attacks ) {
+                                // or sizeof(pointer) / sizeof(structure)
+                                if (okf < 0)
+                                    for (aid = 0; aid < anim->numframes; aid++)
+                                    {
+                                        attack = OBOR_ANIMATION_FRAME(anim, attacks, aid);
+                                        if (attack) break;
+                                    }
+                                else attack = OBOR_ANIMATION_FRAME(anim, attacks, okf);
+
+                                if (attack) (*pretvar)->lVal = (LONG)OBOR_ANIMATION_OBJECT(attack)->no_kill;
+                                else (*pretvar)->lVal = (LONG)0;
+                            } else (*pretvar)->lVal = (LONG)0;
+
+                            break;
+                        case obor_forward__PROP_ATTACK_NOPAIN: // this is NOREFLECT
+                            okf = -1;
+
+                            if (paramCount > 4)
+                            {
+                                if(OBOR_ANIMATION_ARG(4)->vt != VT_INTEGER)
+                                {
+                                    printf("You must provide an animation ID and all properties: getanimationproperty({ent}, {animation id}, 'attack', 'nopain', {frame_index})\n");
+                                    result = E_FAIL;
+                                    break;
+                                } else
+                                {
+                                    okf = (int)OBOR_ANIMATION_ARG(4)->lVal;
+                                }
+                            }
+
+                            // without a optional frame_index it returns the 1st useful frame if it exists
+                            anim = OBOR_ANIMATION_MODEL(ent, id);
+                            if( anim->attacks ) {
+                                // or sizeof(pointer) / sizeof(structure)
+                                if (okf < 0)
+                                    for (aid = 0; aid < anim->numframes; aid++)
+                                    {
+                                        attack = OBOR_ANIMATION_FRAME(anim, attacks, aid);
+                                        if (attack) break;
+                                    }
+                                else attack = OBOR_ANIMATION_FRAME(anim, attacks, okf);
+
+                                if (attack) (*pretvar)->lVal = (LONG)OBOR_ANIMATION_OBJECT(attack)->no_pain;
+                                else (*pretvar)->lVal = (LONG)0;
+                            } else (*pretvar)->lVal = (LONG)0;
+
+                            break;
+                        case obor_forward__PROP_ATTACK_OTG:
+                            okf = -1;
+
+                            if (paramCount > 4)
+                            {
+                                if(OBOR_ANIMATION_ARG(4)->vt != VT_INTEGER)
+                                {
+                                    printf("You must provide an animation ID and all properties: getanimationproperty({ent}, {animation id}, 'attack', 'otg', {frame_index})\n");
+                                    result = E_FAIL;
+                                    break;
+                                } else
+                                {
+                                    okf = (int)OBOR_ANIMATION_ARG(4)->lVal;
+                                }
+                            }
+
+                            // without a optional frame_index it returns the 1st useful frame if it exists
+                            anim = OBOR_ANIMATION_MODEL(ent, id);
+                            if( anim->attacks ) {
+                                // or sizeof(pointer) / sizeof(structure)
+                                if (okf < 0)
+                                    for (aid = 0; aid < anim->numframes; aid++)
+                                    {
+                                        attack = OBOR_ANIMATION_FRAME(anim, attacks, aid);
+                                        if (attack) break;
+                                    }
+                                else attack = OBOR_ANIMATION_FRAME(anim, attacks, okf);
+
+                                if (attack) (*pretvar)->lVal = (LONG)OBOR_ANIMATION_OBJECT(attack)->otg;
+                                else (*pretvar)->lVal = (LONG)0;
+                            } else (*pretvar)->lVal = (LONG)0;
+
+                            break;
+                        case obor_forward__PROP_ATTACK_PAINTIME:
+                            okf = -1;
+
+                            if (paramCount > 4)
+                            {
+                                if(OBOR_ANIMATION_ARG(4)->vt != VT_INTEGER)
+                                {
+                                    printf("You must provide an animation ID and all properties: getanimationproperty({ent}, {animation id}, 'attack', 'paintime', {frame_index})\n");
+                                    result = E_FAIL;
+                                    break;
+                                } else
+                                {
+                                    okf = (int)OBOR_ANIMATION_ARG(4)->lVal;
+                                }
+                            }
+
+                            // without a optional frame_index it returns the 1st useful frame if it exists
+                            anim = OBOR_ANIMATION_MODEL(ent, id);
+                            if( anim->attacks ) {
+                                // or sizeof(pointer) / sizeof(structure)
+                                if (okf < 0)
+                                    for (aid = 0; aid < anim->numframes; aid++)
+                                    {
+                                        attack = OBOR_ANIMATION_FRAME(anim, attacks, aid);
+                                        if (attack) break;
+                                    }
+                                else attack = OBOR_ANIMATION_FRAME(anim, attacks, okf);
+
+                                if (attack) (*pretvar)->lVal = (LONG)OBOR_ANIMATION_OBJECT(attack)->pain_time;
+                                else (*pretvar)->lVal = (LONG)0;
+                            } else (*pretvar)->lVal = (LONG)0;
+
+                            break;
+                        case obor_forward__PROP_ATTACK_PAUSE:
+                            okf = -1;
+
+                            if (paramCount > 4)
+                            {
+                                if(OBOR_ANIMATION_ARG(4)->vt != VT_INTEGER)
+                                {
+                                    printf("You must provide an animation ID and all properties: getanimationproperty({ent}, {animation id}, 'attack', 'pause', {frame_index})\n");
+                                    result = E_FAIL;
+                                    break;
+                                } else
+                                {
+                                    okf = (int)OBOR_ANIMATION_ARG(4)->lVal;
+                                }
+                            }
+
+                            // without a optional frame_index it returns the 1st useful frame if it exists
+                            anim = OBOR_ANIMATION_MODEL(ent, id);
+                            if( anim->attacks ) {
+                                // or sizeof(pointer) / sizeof(structure)
+                                if (okf < 0)
+                                    for (aid = 0; aid < anim->numframes; aid++)
+                                    {
+                                        attack = OBOR_ANIMATION_FRAME(anim, attacks, aid);
+                                        if (attack) break;
+                                    }
+                                else attack = OBOR_ANIMATION_FRAME(anim, attacks, okf);
+
+                                if (attack) (*pretvar)->lVal = (LONG)OBOR_ANIMATION_OBJECT(attack)->pause_add;
+                                else (*pretvar)->lVal = (LONG)0;
+                            } else (*pretvar)->lVal = (LONG)0;
+
+                            break;
+                        case obor_forward__PROP_ATTACK_SEAL:
+                            okf = -1;
+
+                            if (paramCount > 4)
+                            {
+                                if(OBOR_ANIMATION_ARG(4)->vt != VT_INTEGER)
+                                {
+                                    printf("You must provide an animation ID and all properties: getanimationproperty({ent}, {animation id}, 'attack', 'seal', {frame_index})\n");
+                                    result = E_FAIL;
+                                    break;
+                                } else
+                                {
+                                    okf = (int)OBOR_ANIMATION_ARG(4)->lVal;
+                                }
+                            }
+
+                            // without a optional frame_index it returns the 1st useful frame if it exists
+                            anim = OBOR_ANIMATION_MODEL(ent, id);
+                            if( anim->attacks ) {
+                                // or sizeof(pointer) / sizeof(structure)
+                                if (okf < 0)
+                                    for (aid = 0; aid < anim->numframes; aid++)
+                                    {
+                                        attack = OBOR_ANIMATION_FRAME(anim, attacks, aid);
+                                        if (attack) break;
+                                    }
+                                else attack = OBOR_ANIMATION_FRAME(anim, attacks, okf);
+
+                                if (attack) (*pretvar)->lVal = (LONG)OBOR_ANIMATION_OBJECT(attack)->seal;
+                                else (*pretvar)->lVal = (LONG)0;
+                            } else (*pretvar)->lVal = (LONG)0;
+
+                            break;
+                        case obor_forward__PROP_ATTACK_SEALTIME:
+                            okf = -1;
+
+                            if (paramCount > 4)
+                            {
+                                if(OBOR_ANIMATION_ARG(4)->vt != VT_INTEGER)
+                                {
+                                    printf("You must provide an animation ID and all properties: getanimationproperty({ent}, {animation id}, 'attack', 'sealtime', {frame_index})\n");
+                                    result = E_FAIL;
+                                    break;
+                                } else
+                                {
+                                    okf = (int)OBOR_ANIMATION_ARG(4)->lVal;
+                                }
+                            }
+
+                            // without a optional frame_index it returns the 1st useful frame if it exists
+                            anim = OBOR_ANIMATION_MODEL(ent, id);
+                            if( anim->attacks ) {
+                                // or sizeof(pointer) / sizeof(structure)
+                                if (okf < 0)
+                                    for (aid = 0; aid < anim->numframes; aid++)
+                                    {
+                                        attack = OBOR_ANIMATION_FRAME(anim, attacks, aid);
+                                        if (attack) break;
+                                    }
+                                else attack = OBOR_ANIMATION_FRAME(anim, attacks, okf);
+
+                                if (attack) (*pretvar)->lVal = (LONG)OBOR_ANIMATION_OBJECT(attack)->sealtime;
+                                else (*pretvar)->lVal = (LONG)0;
+                            } else (*pretvar)->lVal = (LONG)0;
+
+                            break;
+                        case obor_forward__PROP_ATTACK_STAYDOWN:
+                            okf = -1;
+
+                            if(OBOR_ANIMATION_ARG(4)->vt != VT_INTEGER)
+                            {
+                                printf("You must provide an animation ID and all properties: getanimationproperty({ent}, {animation id}, 'attack', 'staydown', {subproperty}, {frame_index})\n");
+                                result = E_FAIL;
+                                break;
+                            }
+
+                            if (paramCount > 5)
+                            {
+                                if(OBOR_ANIMATION_ARG(5)->vt != VT_INTEGER)
+                                {
+                                    printf("You must provide an animation ID and all properties: getanimationproperty({ent}, {animation id}, 'attack', 'staydown', {subproperty}, {frame_index})\n");
+                                    result = E_FAIL;
+                                    break;
+                                } else
+                                {
+                                    okf = (int)OBOR_ANIMATION_ARG(5)->lVal;
+                                }
+                            }
+
+                            // without a optional frame_index it returns the 1st useful frame if it exists
+                            anim = OBOR_ANIMATION_MODEL(ent, id);
+                            if( anim->attacks ) {
+                                // or sizeof(pointer) / sizeof(structure)
+                                if (okf < 0)
+                                    for (aid = 0; aid < anim->numframes; aid++)
+                                    {
+                                        attack = OBOR_ANIMATION_FRAME(anim, attacks, aid);
+                                        if (attack) break;
+                                    }
+                                else attack = OBOR_ANIMATION_FRAME(anim, attacks, okf);
+
+                                if (attack)
+                                {
+                                    ScriptVariant_ChangeType(*pretvar, VT_DECIMAL);
+                                    switch(OBOR_ANIMATION_ARG(4)->lVal)
+                                    {
+                                        case obor_forward__PROP_ATTACK_STAYDOWN_RISE:
+                                            (*pretvar)->dblVal = (DOUBLE)OBOR_ANIMATION_OBJECT(attack)->staydown.rise;
+                                            break;
+                                        case obor_forward__PROP_ATTACK_STAYDOWN_RISEATTACK:
+                                            (*pretvar)->dblVal = (DOUBLE)OBOR_ANIMATION_OBJECT(attack)->staydown.riseattack;
+                                            break;
+                                        case obor_forward__PROP_ATTACK_STAYDOWN_RISEATTACK_STALL:
+                                            (*pretvar)->dblVal = (DOUBLE)OBOR_ANIMATION_OBJECT(attack)->staydown.riseattack_stall;
+                                            break;
+                                    }
+                                }
+                                else (*pretvar)->lVal = (LONG)-1;
+                            } else (*pretvar)->lVal = (LONG)-1;
+
+                            break;
+                        case obor_forward__PROP_ATTACK_STEAL:
+                            okf = -1;
+
+                            if (paramCount > 4)
+                            {
+                                if(OBOR_ANIMATION_ARG(4)->vt != VT_INTEGER)
+                                {
+                                    printf("You must provide an animation ID and all properties: getanimationproperty({ent}, {animation id}, 'attack', 'steal', {frame_index})\n");
+                                    result = E_FAIL;
+                                    break;
+                                } else
+                                {
+                                    okf = (int)OBOR_ANIMATION_ARG(4)->lVal;
+                                }
+                            }
+
+                            // without a optional frame_index it returns the 1st useful frame if it exists
+                            anim = OBOR_ANIMATION_MODEL(ent, id);
+                            if( anim->attacks ) {
+                                // or sizeof(pointer) / sizeof(structure)
+                                if (okf < 0)
+                                    for (aid = 0; aid < anim->numframes; aid++)
+                                    {
+                                        attack = OBOR_ANIMATION_FRAME(anim, attacks, aid);
+                                        if (attack) break;
+                                    }
+                                else attack = OBOR_ANIMATION_FRAME(anim, attacks, okf);
+
+                                if (attack) (*pretvar)->lVal = (LONG)OBOR_ANIMATION_OBJECT(attack)->steal;
+                                else (*pretvar)->lVal = (LONG)0;
+                            } else (*pretvar)->lVal = (LONG)0;
+
+                            break;
+                        case obor_forward__PROP_ATTACK_TAG:
+                        {
+                            okf = -1;
+
+                            if (paramCount > 4)
+                            {
+                                if(OBOR_ANIMATION_ARG(4)->vt != VT_INTEGER)
+                                {
+                                    printf("You must provide an animation ID and all properties: getanimationproperty({ent}, {animation id}, 'attack', 'tag', {frame_index})\n");
+                                    result = E_FAIL;
+                                    break;
+                                } else
+                                {
+                                    okf = (int)OBOR_ANIMATION_ARG(4)->lVal;
+                                }
+                            }
+
+                            // without a optional frame_index it returns the 1st useful frame if it exists
+                            anim = OBOR_ANIMATION_MODEL(ent, id);
+                            if( anim->attacks ) {
+                                // or sizeof(pointer) / sizeof(structure)
+                                if (okf < 0)
+                                    for (aid = 0; aid < anim->numframes; aid++)
+                                    {
+                                        attack = OBOR_ANIMATION_FRAME(anim, attacks, aid);
+                                        if (attack) break;
+                                    }
+                                else attack = OBOR_ANIMATION_FRAME(anim, attacks, okf);
+
+                                if (attack) (*pretvar)->lVal = (LONG)OBOR_ANIMATION_OBJECT(attack)->tag;
+                                else (*pretvar)->lVal = (LONG)0;
+                            } else (*pretvar)->lVal = (LONG)0;
+
+                            break;
+                        }
+                        case obor_forward__PROP_ATTACK_TYPE:
+                        {
+                            okf = -1;
+
+                            if (paramCount > 4)
+                            {
+                                if(OBOR_ANIMATION_ARG(4)->vt != VT_INTEGER)
+                                {
+                                    printf("You must provide an animation ID and all properties: getanimationproperty({ent}, {animation id}, 'attack', 'type', {frame_index})\n");
+                                    result = E_FAIL;
+                                    break;
+                                } else
+                                {
+                                    okf = (int)OBOR_ANIMATION_ARG(4)->lVal;
+                                }
+                            }
+
+                            // without a optional frame_index it returns the 1st useful frame if it exists
+                            anim = OBOR_ANIMATION_MODEL(ent, id);
+                            if( anim->attacks ) {
+                                // or sizeof(pointer) / sizeof(structure)
+                                if (okf < 0)
+                                    for (aid = 0; aid < anim->numframes; aid++)
+                                    {
+                                        attack = OBOR_ANIMATION_FRAME(anim, attacks, aid);
+                                        if (attack) break;
+                                    }
+                                else attack = OBOR_ANIMATION_FRAME(anim, attacks, okf);
+
+                                if (attack) (*pretvar)->lVal = (LONG)OBOR_ANIMATION_OBJECT(attack)->attack_type;
+                                else (*pretvar)->lVal = (LONG)0;
+                            } else (*pretvar)->lVal = (LONG)0;
+
+                            break;
+                        }
+                    }
+                }
+                break;
+            /*
+             * ################### END ATTACK PROPERTY ###################
+             */
+            case obor_forward__ANI_PROP_ATTACKONE:
+                (*pretvar)->lVal = (LONG)OBOR_ANIMATION_MODEL(ent, id)->attackone;
+                break;
+            case obor_forward__ANI_PROP_BBOX:
+                // Verify incoming parameter.
+                if(OBOR_ANIMATION_ARG(3)->vt != VT_INTEGER)
+                {
+                    printf("You must provide an animation ID and all properties: getanimationproperty({ent}, {animation id}, 'bbox', {sub-property})\n");
+                    result = E_FAIL;
+                }
+                else
+                {
+                    okf = 0;
+                    // usage getanimationproperty({ent}, {animation id}, 'delay', {frame_index}) -> frame is optional
+                    if (paramCount == 5)
+                    {
+                        if(OBOR_ANIMATION_ARG(4)->vt != VT_INTEGER)
+                        {
+                            printf("You must provide an animation ID and all properties: getanimationproperty({ent}, {animation id}, 'bbox', {sub-property}, {frame_index})\n");
+                            result = E_FAIL;
+                            break;
+                        } else
+                        {
+                            okf = (int)OBOR_ANIMATION_ARG(4)->lVal;
+                        }
+                    }
+
+                    // without a optional frame_index it returns the 1st useful frame if it exists
+                    anim = OBOR_ANIMATION_MODEL(ent, id);
+
+                    if ( !anim->bbox_coords )
+                    {
+                        (*pretvar)->lVal = (LONG)-1;
+                        break;
+                    }
+                    switch(OBOR_ANIMATION_ARG(3)->lVal)
+                    {
+                        case obor_forward__PROP_BBOX_HEIGHT:
+                            (*pretvar)->lVal = (LONG)OBOR_ANIMATION_FRAME(anim, bbox_coords, okf)[3];
+                            break;
+                        case obor_forward__PROP_BBOX_WIDTH:
+                            (*pretvar)->lVal = (LONG)OBOR_ANIMATION_FRAME(anim, bbox_coords, okf)[2];
+                            break;
+                        case obor_forward__PROP_BBOX_X:
+                            (*pretvar)->lVal = (LONG)OBOR_ANIMATION_FRAME(anim, bbox_coords, okf)[0];
+                            break;
+                        case obor_forward__PROP_BBOX_Y:
+                            (*pretvar)->lVal = (LONG)OBOR_ANIMATION_FRAME(anim, bbox_coords, okf)[1];
+                            break;
+                        case obor_forward__PROP_BBOX_Z1:
+                            (*pretvar)->lVal = (LONG)OBOR_ANIMATION_FRAME(anim, bbox_coords, okf)[4];
+                            break;
+                        case obor_forward__PROP_BBOX_Z2:
+                            (*pretvar)->lVal = (LONG)OBOR_ANIMATION_FRAME(anim, bbox_coords, okf)[5];
+                            break;
+                    }
+                }
+                break;
+            case obor_forward__ANI_PROP_BOUNCE:
+                (*pretvar)->lVal = OBOR_ANIMATION_LONG(OBOR_ANIMATION_MODEL(ent, id)->bounce);
+                break;
+            case obor_forward__ANI_PROP_CANCEL:
+                (*pretvar)->lVal = (LONG)OBOR_ANIMATION_MODEL(ent, id)->cancel;
+                break;
+            case obor_forward__ANI_PROP_COUNTERRANGE:
+                // Verify incoming parameter.
+                if(OBOR_ANIMATION_ARG(3)->vt != VT_INTEGER)
+                {
+                    printf("You must provide an animation ID and all properties: getanimationproperty({ent}, {animation id}, 'counterrange', {sub-property})\n");
+                    result = E_FAIL;
+                }
+                else
+                {
+                    switch(OBOR_ANIMATION_ARG(3)->lVal)
+                    {
+                        case obor_forward__PROP_COUNTERRANGE_CONDITION:
+                            (*pretvar)->lVal = (LONG)OBOR_ANIMATION_MODEL(ent, id)->counterrange.condition;
+                            break;
+                        case obor_forward__PROP_COUNTERRANGE_DAMAGED:
+                            (*pretvar)->lVal = (LONG)OBOR_ANIMATION_MODEL(ent, id)->counterrange.damaged;
+                            break;
+                        case obor_forward__PROP_COUNTERRANGE_FRAME_MIN:
+                            (*pretvar)->lVal = (LONG)OBOR_ANIMATION_MODEL(ent, id)->counterrange.frame.min;
+                            break;
+                        case obor_forward__PROP_COUNTERRANGE_FRAME_MAX:
+                            (*pretvar)->lVal = (LONG)OBOR_ANIMATION_MODEL(ent, id)->counterrange.frame.min;
+                            break;
+                    }
+                }
+                break;
+            case obor_forward__ANI_PROP_CHARGETIME:
+                ScriptVariant_ChangeType(*pretvar, VT_DECIMAL);
+                (*pretvar)->dblVal = (DOUBLE)OBOR_ANIMATION_MODEL(ent, id)->chargetime;
+                break;
+            case obor_forward__ANI_PROP_DELAY:
+                okf = 0;
+
+                // usage getanimationproperty({ent}, {animation id}, 'delay', {frame_index}) -> frame is optional
+                if (paramCount == 4)
+                {
+                    if(OBOR_ANIMATION_ARG(3)->vt != VT_INTEGER)
+                    {
+                        printf("You must provide an animation ID and all properties: getanimationproperty({ent}, {animation id}, 'delay', {frame_index})\n");
+                        result = E_FAIL;
+                        break;
+                    } else
+                    {
+                        okf = (int)OBOR_ANIMATION_ARG(3)->lVal;
+                    }
+                }
+
+                // without a optional frame_index it returns the 1st useful frame if it exists
+                anim = OBOR_ANIMATION_MODEL(ent, id);
+                if( OBOR_ANIMATION_FRAME(anim, delay, okf) ) {
+                    (*pretvar)->lVal = (LONG)OBOR_ANIMATION_FRAME(anim, delay, okf); // = delay * GAME_SPEED / 100;
+                } else (*pretvar)->lVal = (LONG)0;
+
+                break;
+            case obor_forward__ANI_PROP_DRAWMETHODS:
+                // Verify incoming parameter.
+                if(OBOR_ANIMATION_ARG(3)->vt != VT_INTEGER)
+                {
+                    printf("You must provide an animation ID and all properties: getanimationproperty({ent}, {animation id}, 'drawmethods', {sub-property})\n");
+                    result = E_FAIL;
+                }
+                else
+                {
+                    s_drawmethod *pmethod = NULL;
+
+                    okf = 0;
+                    // usage getanimationproperty({ent}, {animation id}, 'delay', {frame_index}) -> frame is optional
+                    if (paramCount == 5)
+                    {
+                        if(OBOR_ANIMATION_ARG(4)->vt != VT_INTEGER)
+                        {
+                            printf("You must provide an animation ID and all properties: getanimationproperty({ent}, {animation id}, 'drawmethods', {sub-property}, {frame_index})\n");
+                            result = E_FAIL;
+                            break;
+                        } else
+                        {
+                            okf = (int)OBOR_ANIMATION_ARG(4)->lVal;
+                        }
+                    }
+
+                    // without a optional frame_index it returns the 1st useful frame if it exists
+                    anim = OBOR_ANIMATION_MODEL(ent, id);
+
+                    if ( !anim->drawmethods )
+                    {
+                        (*pretvar)->lVal = (LONG)-1;
+                        break;
+                    }
+                    if ( !OBOR_ANIMATION_FRAME(anim, drawmethods, okf) )
+                    {
+                        (*pretvar)->lVal = (LONG)-1;
+                        break;
+                    }
+
+                    pmethod = OBOR_ANIMATION_FRAME(anim, drawmethods, okf);
+                    if(obor_profile_build < 4171 && OBOR_ANIMATION_ARG(3)->lVal != obor_forward__dm_alpha) break;
+
+                    switch(OBOR_ANIMATION_ARG(3)->lVal)
+                    {
+                        case obor_forward__dm_alpha:
+                            (*pretvar)->lVal = (LONG)OBOR_ANIMATION_OBJECT(pmethod)->alpha;
+                            break;
+                        case obor_forward__dm_amplitude:
+                            (*pretvar)->lVal = (LONG)OBOR_ANIMATION_OBJECT(pmethod)->water.amplitude;
+                            break;
+                        case obor_forward__dm_beginsize:
+                            ScriptVariant_ChangeType(*pretvar, VT_DECIMAL);
+                            (*pretvar)->dblVal = (DOUBLE)OBOR_ANIMATION_OBJECT(pmethod)->water.beginsize;
+                            break;
+                        case obor_forward__dm_centerx:
+                            (*pretvar)->lVal = (LONG)OBOR_ANIMATION_OBJECT(pmethod)->centerx;
+                            break;
+                        case obor_forward__dm_centery:
+                            (*pretvar)->lVal = (LONG)OBOR_ANIMATION_OBJECT(pmethod)->centery;
+                            break;
+                        case obor_forward__dm_channelb:
+                            (*pretvar)->lVal = (LONG)OBOR_ANIMATION_OBJECT(pmethod)->channelb;
+                            break;
+                        case obor_forward__dm_channelg:
+                            (*pretvar)->lVal = (LONG)OBOR_ANIMATION_OBJECT(pmethod)->channelg;
+                            break;
+                        case obor_forward__dm_channelr:
+                            (*pretvar)->lVal = (LONG)OBOR_ANIMATION_OBJECT(pmethod)->channelr;
+                            break;
+                        case obor_forward__dm_clipx:
+                            (*pretvar)->lVal = (LONG)OBOR_ANIMATION_OBJECT(pmethod)->clipx;
+                            break;
+                        case obor_forward__dm_clipy:
+                            (*pretvar)->lVal = (LONG)OBOR_ANIMATION_OBJECT(pmethod)->clipy;
+                            break;
+                        case obor_forward__dm_clipw:
+                            (*pretvar)->lVal = (LONG)OBOR_ANIMATION_OBJECT(pmethod)->clipw;
+                            break;
+                        case obor_forward__dm_cliph:
+                            (*pretvar)->lVal = (LONG)OBOR_ANIMATION_OBJECT(pmethod)->cliph;
+                            break;
+                        case obor_forward__dm_endsize:
+                            ScriptVariant_ChangeType(*pretvar, VT_DECIMAL);
+                            (*pretvar)->dblVal = (DOUBLE)OBOR_ANIMATION_OBJECT(pmethod)->water.endsize;
+                            break;
+                        case obor_forward__dm_fillcolor:
+                            (*pretvar)->lVal = (LONG)OBOR_ANIMATION_OBJECT(pmethod)->fillcolor;
+                            break;
+                        case obor_forward__dm_fliprotate:
+                            (*pretvar)->lVal = (LONG)OBOR_ANIMATION_OBJECT(pmethod)->fliprotate;
+                            break;
+                        case obor_forward__dm_flipx:
+                            (*pretvar)->lVal = (LONG)OBOR_ANIMATION_OBJECT(pmethod)->flipx;
+                            break;
+                        case obor_forward__dm_flipy:
+                            (*pretvar)->lVal = (LONG)OBOR_ANIMATION_OBJECT(pmethod)->flipy;
+                            break;
+                        case obor_forward__dm_perspective:
+                            (*pretvar)->lVal = (LONG)OBOR_ANIMATION_OBJECT(pmethod)->water.perspective;
+                            break;
+                        case obor_forward__dm_remap:
+                            (*pretvar)->lVal = (LONG)OBOR_ANIMATION_OBJECT(pmethod)->remap;
+                            break;
+                        case obor_forward__dm_rotate:
+                            {
+                                int rotation;
+                                if(!obor_drawmethod_rotation_integer(OBOR_ANIMATION_OBJECT(pmethod), &rotation)) return E_FAIL;
+                                (*pretvar)->lVal = (LONG)rotation;
+                            }
+                            break;
+                        case obor_forward__dm_scalex:
+                            (*pretvar)->lVal = (LONG)OBOR_ANIMATION_OBJECT(pmethod)->scalex;
+                            break;
+                        case obor_forward__dm_scaley:
+                            (*pretvar)->lVal = (LONG)OBOR_ANIMATION_OBJECT(pmethod)->scaley;
+                            break;
+                        case obor_forward__dm_shiftx:
+                            (*pretvar)->lVal = (LONG)OBOR_ANIMATION_OBJECT(pmethod)->shiftx;
+                            break;
+                        case obor_forward__dm_table:
+                            ScriptVariant_ChangeType(*pretvar, VT_PTR);
+                            (*pretvar)->ptrVal = (VOID *)OBOR_ANIMATION_OBJECT(pmethod)->table;
+                            break;
+                        case obor_forward__dm_tintmode:
+                            (*pretvar)->lVal = (LONG)OBOR_ANIMATION_OBJECT(pmethod)->tintmode;
+                            break;
+                        case obor_forward__dm_tintcolor:
+                            (*pretvar)->lVal = (LONG)OBOR_ANIMATION_OBJECT(pmethod)->tintcolor;
+                            break;
+                        case obor_forward__dm_transbg:
+                            (*pretvar)->lVal = (LONG)OBOR_ANIMATION_OBJECT(pmethod)->transbg;
+                            break;
+                        case obor_forward__dm_watermode:
+                            (*pretvar)->lVal = (LONG)OBOR_ANIMATION_OBJECT(pmethod)->water.watermode;
+                            break;
+                        case obor_forward__dm_wavelength:
+                            ScriptVariant_ChangeType(*pretvar, VT_DECIMAL);
+                            (*pretvar)->dblVal = (DOUBLE)OBOR_ANIMATION_OBJECT(pmethod)->water.wavelength;
+                            break;
+                        case obor_forward__dm_wavespeed:
+                            ScriptVariant_ChangeType(*pretvar, VT_DECIMAL);
+                            (*pretvar)->dblVal = (DOUBLE)OBOR_ANIMATION_OBJECT(pmethod)->water.wavespeed;
+                            break;
+                        case obor_forward__dm_wavetime:
+                            (*pretvar)->lVal = (LONG)OBOR_ANIMATION_OBJECT(pmethod)->water.wavetime;
+                            break;
+                        case obor_forward__dm_xrepeat:
+                            (*pretvar)->lVal = (LONG)OBOR_ANIMATION_OBJECT(pmethod)->xrepeat;
+                            break;
+                        case obor_forward__dm_yrepeat:
+                            (*pretvar)->lVal = (LONG)OBOR_ANIMATION_OBJECT(pmethod)->yrepeat;
+                            break;
+                        case obor_forward__dm_xspan:
+                            (*pretvar)->lVal = (LONG)OBOR_ANIMATION_OBJECT(pmethod)->xspan;
+                            break;
+                        case obor_forward__dm_yspan:
+                            (*pretvar)->lVal = (LONG)OBOR_ANIMATION_OBJECT(pmethod)->yspan;
+                            break;
+                        default:
+                        case obor_forward__dm_enabled:
+                        case obor_forward__dm_flag:
+                            (*pretvar)->lVal = (LONG)OBOR_ANIMATION_OBJECT(pmethod)->flag;
+                            break;
+                    }
+                }
+                break;
+            case obor_forward__ANI_PROP_DROPFRAME:
+                // Verify incoming parameter.
+                if(OBOR_ANIMATION_ARG(3)->vt != VT_INTEGER)
+                {
+                    printf("You must provide an animation ID and all properties: getanimationproperty({ent}, {animation id}, 'dropframe', {sub-property})\n");
+                    result = E_FAIL;
+                }
+                else
+                {
+                    switch(OBOR_ANIMATION_ARG(3)->lVal)
+                    {
+                        case obor_forward__PROP_DROPFRAME_FRAME:
+                            (*pretvar)->lVal = (LONG)OBOR_ANIMATION_MODEL(ent, id)->dropframe.frame;
+                            break;
+                        case obor_forward__PROP_DROPFRAME_VELOCITY_X:
+                            ScriptVariant_ChangeType(*pretvar, VT_DECIMAL);
+                            (*pretvar)->dblVal = (DOUBLE)OBOR_ANIMATION_MODEL(ent, id)->dropframe.velocity.x;
+                            break;
+                        case obor_forward__PROP_DROPFRAME_VELOCITY_Y:
+                            ScriptVariant_ChangeType(*pretvar, VT_DECIMAL);
+                            (*pretvar)->dblVal = (DOUBLE)OBOR_ANIMATION_MODEL(ent, id)->dropframe.velocity.y;
+                            break;
+                        case obor_forward__PROP_DROPFRAME_VELOCITY_Z:
+                            ScriptVariant_ChangeType(*pretvar, VT_DECIMAL);
+                            (*pretvar)->dblVal = (DOUBLE)OBOR_ANIMATION_MODEL(ent, id)->dropframe.velocity.z;
+                            break;
+                    }
+                }
+                break;
+            case obor_forward__ANI_PROP_ENERGYCOST:
+                // Verify incoming parameter.
+                if(OBOR_ANIMATION_ARG(3)->vt != VT_INTEGER)
+                {
+                    printf("You must provide an animation ID and all properties: getanimationproperty({ent}, {animation id}, 'energycost', {sub-property})\n");
+                    result = E_FAIL;
+                }
+                else
+                {
+                    switch(OBOR_ANIMATION_ARG(3)->lVal)
+                    {
+                        case obor_forward__ep_energycost_cost:
+                            (*pretvar)->lVal = (LONG)OBOR_ANIMATION_MODEL(ent, id)->energycost.cost;
+                            break;
+                        case obor_forward__ep_energycost_disable:
+                            (*pretvar)->lVal = (LONG)OBOR_ANIMATION_MODEL(ent, id)->energycost.disable;
+                            break;
+                        case obor_forward__ep_energycost_mponly:
+                            (*pretvar)->lVal = (LONG)OBOR_ANIMATION_MODEL(ent, id)->energycost.mponly;
+                            break;
+                    }
+                }
+                break;
+            case obor_forward__ANI_PROP_FLIPFRAME:
+                (*pretvar)->lVal = (LONG)OBOR_ANIMATION_MODEL(ent, id)->flipframe;
+                break;
+            case obor_forward__ANI_PROP_FOLLOWUP:
+                // Verify incoming parameter.
+                if(OBOR_ANIMATION_ARG(3)->vt != VT_INTEGER)
+                {
+                    printf("You must provide an animation ID and all properties: getanimationproperty({ent}, {animation id}, 'followup', {sub-property})\n");
+                    result = E_FAIL;
+                }
+                else
+                {
+                    switch(OBOR_ANIMATION_ARG(3)->lVal)
+                    {
+                        case obor_forward__PROP_FOLLOWUP_ANIMATION:
+                            (*pretvar)->lVal = (LONG)OBOR_ANIMATION_MODEL(ent, id)->followup.animation;
+                            break;
+                        case obor_forward__PROP_FOLLOWUP_CONDITION:
+                            (*pretvar)->lVal = (LONG)OBOR_ANIMATION_MODEL(ent, id)->followup.condition;
+                            break;
+                    }
+                }
+                break;
+            case obor_forward__ANI_PROP_IDLE:
+                okf = 0;
+
+                // usage getanimationproperty({ent}, {animation id}, 'delay', {frame_index}) -> frame is optional
+                if (paramCount == 4)
+                {
+                    if(OBOR_ANIMATION_ARG(3)->vt != VT_INTEGER)
+                    {
+                        printf("You must provide an animation ID and all properties: getanimationproperty({ent}, {animation id}, 'idle', {frame_index})\n");
+                        result = E_FAIL;
+                        break;
+                    } else
+                    {
+                        okf = (int)OBOR_ANIMATION_ARG(3)->lVal;
+                    }
+                }
+
+                // without a optional frame_index it returns the 1st useful frame if it exists
+                anim = OBOR_ANIMATION_MODEL(ent, id);
+                if( OBOR_ANIMATION_FRAME(anim, idle, okf) ) {
+                    (*pretvar)->lVal = (LONG)OBOR_ANIMATION_FRAME(anim, idle, okf);
+                } else (*pretvar)->lVal = (LONG)0;
+
+                break;
+            case obor_forward__ANI_PROP_INDEX:
+                (*pretvar)->lVal = (LONG)OBOR_ANIMATION_MODEL(ent, id)->index;
+                break;
+            case obor_forward__ANI_PROP_JUMPFRAME:
+                // Verify incoming parameter.
+                if(OBOR_ANIMATION_ARG(3)->vt != VT_INTEGER)
+                {
+                    printf("You must provide an animation ID and all properties: getanimationproperty({ent}, {animation id}, 'jumpframe', {sub-property})\n");
+                    result = E_FAIL;
+                }
+                else
+                {
+                    switch(OBOR_ANIMATION_ARG(3)->lVal)
+                    {
+                        case obor_forward__PROP_JUMPFRAME_FRAME:
+                            (*pretvar)->lVal = (LONG)OBOR_ANIMATION_MODEL(ent, id)->jumpframe.frame;
+                            break;
+                        case obor_forward__PROP_JUMPFRAME_VELOCITY_X:
+                            ScriptVariant_ChangeType(*pretvar, VT_DECIMAL);
+                            (*pretvar)->dblVal = (DOUBLE)OBOR_ANIMATION_MODEL(ent, id)->jumpframe.velocity.x;
+                            break;
+                        case obor_forward__PROP_JUMPFRAME_VELOCITY_Y:
+                            ScriptVariant_ChangeType(*pretvar, VT_DECIMAL);
+                            (*pretvar)->dblVal = (DOUBLE)OBOR_ANIMATION_MODEL(ent, id)->jumpframe.velocity.y;
+                            break;
+                        case obor_forward__PROP_JUMPFRAME_VELOCITY_Z:
+                            ScriptVariant_ChangeType(*pretvar, VT_DECIMAL);
+                            (*pretvar)->dblVal = (DOUBLE)OBOR_ANIMATION_MODEL(ent, id)->jumpframe.velocity.z;
+                            break;
+                    }
+                }
+                break;
+            case obor_forward__ANI_PROP_LANDFRAME:
+                // Verify incoming parameter.
+                if(OBOR_ANIMATION_ARG(3)->vt != VT_INTEGER)
+                {
+                    printf("You must provide an animation ID and all properties: getanimationproperty({ent}, {animation id}, 'landframe', {sub-property})\n");
+                    result = E_FAIL;
+                }
+                else
+                {
+                    switch(OBOR_ANIMATION_ARG(3)->lVal)
+                    {
+                        case obor_forward__PROP_DROPFRAME_FRAME:
+                            (*pretvar)->lVal = (LONG)OBOR_ANIMATION_MODEL(ent, id)->landframe.frame;
+                            break;
+                        case obor_forward__PROP_DROPFRAME_VELOCITY_X:
+                            ScriptVariant_ChangeType(*pretvar, VT_DECIMAL);
+                            (*pretvar)->dblVal = (DOUBLE)OBOR_ANIMATION_MODEL(ent, id)->landframe.velocity.x;
+                            break;
+                        case obor_forward__PROP_DROPFRAME_VELOCITY_Y:
+                            ScriptVariant_ChangeType(*pretvar, VT_DECIMAL);
+                            (*pretvar)->dblVal = (DOUBLE)OBOR_ANIMATION_MODEL(ent, id)->landframe.velocity.y;
+                            break;
+                        case obor_forward__PROP_DROPFRAME_VELOCITY_Z:
+                            ScriptVariant_ChangeType(*pretvar, VT_DECIMAL);
+                            (*pretvar)->dblVal = (DOUBLE)OBOR_ANIMATION_MODEL(ent, id)->landframe.velocity.z;
+                            break;
+                    }
+                }
+                break;
+            case obor_forward__ANI_PROP_LOOP:         // Animation looping. 2011_03_31, DC: Moved to struct.
+                // Verify incoming parameter.
+                if(OBOR_ANIMATION_ARG(3)->vt != VT_INTEGER)
+                {
+                    printf("You must provide an animation ID and all properties: getanimationproperty({ent}, {animation id}, 'loop', {sub-property})\n");
+                    result = E_FAIL;
+                }
+                else
+                {
+                    switch(OBOR_ANIMATION_ARG(3)->lVal)
+                    {
+                        case obor_forward__PROP_LOOP_MODE:
+                            (*pretvar)->lVal = (LONG)OBOR_ANIMATION_MODEL(ent, id)->loop.mode;
+                            break;
+                        case obor_forward__PROP_LOOP_FRAME_MIN:
+                            (*pretvar)->lVal = (LONG)OBOR_ANIMATION_MODEL(ent, id)->loop.frame.min;
+                            break;
+                        case obor_forward__PROP_LOOP_FRAME_MAX:
+                            (*pretvar)->lVal = (LONG)OBOR_ANIMATION_MODEL(ent, id)->loop.frame.max;
+                            break;
+                    }
+                }
+                break;
+            case obor_forward__ANI_PROP_MODEL_INDEX:
+                (*pretvar)->lVal = (LONG)OBOR_ANIMATION_MODEL(ent, id)->model_index;
+                break;
+            case obor_forward__ANI_PROP_MOVE:
+                // Verify incoming parameter.
+                if(OBOR_ANIMATION_ARG(3)->vt != VT_INTEGER)
+                {
+                    printf("You must provide an animation ID and all properties: getanimationproperty({ent}, {animation id}, 'move', {sub-property})\n");
+                    result = E_FAIL;
+                }
+                else
+                {
+                    okf = 0;
+                    // usage getanimationproperty({ent}, {animation id}, 'delay', {frame_index}) -> frame is optional
+                    if (paramCount == 5)
+                    {
+                        if(OBOR_ANIMATION_ARG(4)->vt != VT_INTEGER)
+                        {
+                            printf("You must provide an animation ID and all properties: getanimationproperty({ent}, {animation id}, 'move', {sub-property}, {frame_index})\n");
+                            result = E_FAIL;
+                            break;
+                        } else
+                        {
+                            okf = (int)OBOR_ANIMATION_ARG(4)->lVal;
+                        }
+                    }
+
+                    // without a optional frame_index it returns the 1st useful frame if it exists
+                    anim = OBOR_ANIMATION_MODEL(ent, id);
+
+                    if ( !anim->move )
+                    {
+                        (*pretvar)->lVal = (LONG)-1;
+                        break;
+                    }
+                    switch(OBOR_ANIMATION_ARG(3)->lVal)
+                    {
+                        case obor_forward__PROP_MOVE_BASE:
+                            ScriptVariant_ChangeType(*pretvar, VT_DECIMAL);
+                            (*pretvar)->dblVal = (DOUBLE)OBOR_ANIMATION_OBJECT(OBOR_ANIMATION_FRAME(anim, move, okf))->base; // this is SETA
+                            break;
+                        case obor_forward__PROP_MOVE_X:
+                            ScriptVariant_ChangeType(*pretvar, VT_DECIMAL);
+                            (*pretvar)->dblVal = (DOUBLE)OBOR_ANIMATION_OBJECT(OBOR_ANIMATION_FRAME(anim, move, okf))->x;
+                            break;
+                        case obor_forward__PROP_MOVE_Y:
+                            ScriptVariant_ChangeType(*pretvar, VT_DECIMAL);
+                            (*pretvar)->dblVal = (DOUBLE)OBOR_ANIMATION_OBJECT(OBOR_ANIMATION_FRAME(anim, move, okf))->y;
+                            break;
+                        case obor_forward__PROP_MOVE_Z:
+                            ScriptVariant_ChangeType(*pretvar, VT_DECIMAL);
+                            (*pretvar)->dblVal = (DOUBLE)OBOR_ANIMATION_OBJECT(OBOR_ANIMATION_FRAME(anim, move, okf))->z;
+                            break;
+                    }
+                }
+                break;
+            case obor_forward__ANI_PROP_NUMFRAMES:
+                (*pretvar)->lVal = (LONG)OBOR_ANIMATION_MODEL(ent, id)->numframes;
+                break;
+            case obor_forward__ANI_PROP_OFFSET:
+                if(obor_profile_build < 4171)
+                {
+                    (*pretvar)->lVal = (LONG)55;
+                    break;
+                }
+                // Verify incoming parameter.
+                if(OBOR_ANIMATION_ARG(3)->vt != VT_INTEGER)
+                {
+                    printf("You must provide an animation ID and all properties: getanimationproperty({ent}, {animation id}, 'offset', {sub-property})\n");
+                    result = E_FAIL;
+                }
+                else
+                {
+                    okf = 0;
+                    // usage getanimationproperty({ent}, {animation id}, 'delay', {frame_index}) -> frame is optional
+                    if (paramCount == 5)
+                    {
+                        if(OBOR_ANIMATION_ARG(4)->vt != VT_INTEGER)
+                        {
+                            printf("You must provide an animation ID and all properties: getanimationproperty({ent}, {animation id}, 'offset', {sub-property}, {frame_index})\n");
+                            result = E_FAIL;
+                            break;
+                        } else
+                        {
+                            okf = (int)OBOR_ANIMATION_ARG(4)->lVal;
+                        }
+                    }
+
+                    // without a optional frame_index it returns the 1st useful frame if it exists
+                    anim = OBOR_ANIMATION_MODEL(ent, id);
+
+                    if ( !anim->offset )
+                    {
+                        (*pretvar)->lVal = (LONG)-1;
+                        break;
+                    }
+                    (void)OBOR_ANIMATION_FRAME(anim, offset, okf);
+                    switch(OBOR_ANIMATION_ARG(3)->lVal)
+                    {
+                        case obor_forward__PROP_OFFSET_X:
+                            (*pretvar)->lVal = (LONG)OBOR_ANIMATION_FRAME(anim, offset, okf)[0];
+                            break;
+                        case obor_forward__PROP_OFFSET_Y:
+                            (*pretvar)->lVal = (LONG)OBOR_ANIMATION_FRAME(anim, offset, okf)[1];
+                            break;
+                    }
+                }
+                break;
+            case obor_forward__ANI_PROP_PLATFORM:
+                // Verify incoming parameter.
+                if(OBOR_ANIMATION_ARG(3)->vt != VT_INTEGER)
+                {
+                    printf("You must provide an animation ID and all properties: getanimationproperty({ent}, {animation id}, 'platform', {sub-property})\n");
+                    result = E_FAIL;
+                }
+                else
+                {
+                    okf = 0;
+                    // usage getanimationproperty({ent}, {animation id}, 'delay', {frame_index}) -> frame is optional
+                    if (paramCount == 5)
+                    {
+                        if(OBOR_ANIMATION_ARG(4)->vt != VT_INTEGER)
+                        {
+                            printf("You must provide an animation ID and all properties: getanimationproperty({ent}, {animation id}, 'platform', {sub-property}, {frame_index})\n");
+                            result = E_FAIL;
+                            break;
+                        } else
+                        {
+                            okf = (int)OBOR_ANIMATION_ARG(4)->lVal;
+                        }
+                    }
+
+                    // without a optional frame_index it returns the 1st useful frame if it exists
+                    anim = OBOR_ANIMATION_MODEL(ent, id);
+
+                    if ( !anim->platform )
+                    {
+                        (*pretvar)->lVal = (LONG)-1;
+                        break;
+                    }
+                    (void)OBOR_ANIMATION_FRAME(anim, platform, okf);
+                    switch(OBOR_ANIMATION_ARG(3)->lVal)
+                    {
+                        case obor_forward__PROP_PLATFORM_X:
+                            ScriptVariant_ChangeType(*pretvar, VT_DECIMAL);
+                            (*pretvar)->dblVal = (DOUBLE)OBOR_ANIMATION_FRAME(OBOR_ANIMATION_MODEL(ent, id), platform, okf)[0];
+                            break;
+                        case obor_forward__PROP_PLATFORM_Z:
+                            ScriptVariant_ChangeType(*pretvar, VT_DECIMAL);
+                            (*pretvar)->dblVal = (DOUBLE)OBOR_ANIMATION_FRAME(OBOR_ANIMATION_MODEL(ent, id), platform, okf)[1];
+                            break;
+                        case obor_forward__PROP_PLATFORM_UPPERLEFT:
+                            ScriptVariant_ChangeType(*pretvar, VT_DECIMAL);
+                            (*pretvar)->dblVal = (DOUBLE)OBOR_ANIMATION_FRAME(OBOR_ANIMATION_MODEL(ent, id), platform, okf)[2];
+                            break;
+                        case obor_forward__PROP_PLATFORM_LOWERLEFT:
+                            ScriptVariant_ChangeType(*pretvar, VT_DECIMAL);
+                            (*pretvar)->dblVal = (DOUBLE)OBOR_ANIMATION_FRAME(OBOR_ANIMATION_MODEL(ent, id), platform, okf)[3];
+                            break;
+                        case obor_forward__PROP_PLATFORM_UPPERRIGHT:
+                            ScriptVariant_ChangeType(*pretvar, VT_DECIMAL);
+                            (*pretvar)->dblVal = (DOUBLE)OBOR_ANIMATION_FRAME(OBOR_ANIMATION_MODEL(ent, id), platform, okf)[4];
+                            break;
+                        case obor_forward__PROP_PLATFORM_LOWERRIGHT:
+                            ScriptVariant_ChangeType(*pretvar, VT_DECIMAL);
+                            (*pretvar)->dblVal = (DOUBLE)OBOR_ANIMATION_FRAME(OBOR_ANIMATION_MODEL(ent, id), platform, okf)[5];
+                            break;
+                        case obor_forward__PROP_PLATFORM_DEPTH:
+                            ScriptVariant_ChangeType(*pretvar, VT_DECIMAL);
+                            (*pretvar)->dblVal = (DOUBLE)OBOR_ANIMATION_FRAME(OBOR_ANIMATION_MODEL(ent, id), platform, okf)[6];
+                            break;
+                        case obor_forward__PROP_PLATFORM_ALT:
+                            ScriptVariant_ChangeType(*pretvar, VT_DECIMAL);
+                            (*pretvar)->dblVal = (DOUBLE)OBOR_ANIMATION_FRAME(OBOR_ANIMATION_MODEL(ent, id), platform, okf)[7];
+                            break;
+                    }
+                }
+                break;
+            case obor_forward__ANI_PROP_PROJECTILE:
+                // Verify incoming parameter.
+                if(OBOR_ANIMATION_ARG(3)->vt != VT_INTEGER)
+                {
+                    printf("You must provide an animation ID and all properties: getanimationproperty({ent}, {animation id}, 'projectile', {sub-property})\n");
+                    result = E_FAIL;
+                }
+                else
+                {
+                    switch(OBOR_ANIMATION_ARG(3)->lVal)
+                    {
+                        case obor_forward__PROP_PROJECTILE_BOMB:
+                            (*pretvar)->lVal = (LONG)OBOR_ANIMATION_MODEL(ent, id)->projectile.bomb;
+                            break;
+                        case obor_forward__PROP_PROJECTILE_FLASH:
+                            (*pretvar)->lVal = (LONG)OBOR_ANIMATION_MODEL(ent, id)->projectile.flash;
+                            break;
+                        case obor_forward__PROP_PROJECTILE_KNIFE:
+                            (*pretvar)->lVal = (LONG)OBOR_ANIMATION_MODEL(ent, id)->projectile.knife;
+                            break;
+                        case obor_forward__PROP_PROJECTILE_STAR:
+                            (*pretvar)->lVal = (LONG)OBOR_ANIMATION_MODEL(ent, id)->projectile.star;
+                            break;
+                        case obor_forward__PROP_PROJECTILE_SHOOTFRAME:
+                            (*pretvar)->lVal = (LONG)OBOR_ANIMATION_MODEL(ent, id)->projectile.shootframe;
+                            break;
+                        case obor_forward__PROP_PROJECTILE_TOSSFRAME:
+                            (*pretvar)->lVal = (LONG)OBOR_ANIMATION_MODEL(ent, id)->projectile.tossframe;
+                            break;
+                        case obor_forward__PROP_PROJECTILE_THROWFRAME:
+                            (*pretvar)->lVal = (LONG)OBOR_ANIMATION_MODEL(ent, id)->projectile.throwframe;
+                            break;
+                        case obor_forward__PROP_PROJECTILE_THROWPOSITION_BASE:
+                            ScriptVariant_ChangeType(*pretvar, VT_DECIMAL);
+                            (*pretvar)->dblVal = (DOUBLE)OBOR_ANIMATION_MODEL(ent, id)->projectile.position.base;
+                            break;
+                        case obor_forward__PROP_PROJECTILE_THROWPOSITION_X:
+                            ScriptVariant_ChangeType(*pretvar, VT_DECIMAL);
+                            (*pretvar)->dblVal = (DOUBLE)OBOR_ANIMATION_MODEL(ent, id)->projectile.position.x;
+                            break;
+                        case obor_forward__PROP_PROJECTILE_THROWPOSITION_Y:
+                            ScriptVariant_ChangeType(*pretvar, VT_DECIMAL);
+                            (*pretvar)->dblVal = (DOUBLE)OBOR_ANIMATION_MODEL(ent, id)->projectile.position.y;
+                            break;
+                        case obor_forward__PROP_PROJECTILE_THROWPOSITION_Z:
+                            ScriptVariant_ChangeType(*pretvar, VT_DECIMAL);
+                            (*pretvar)->dblVal = (DOUBLE)OBOR_ANIMATION_MODEL(ent, id)->projectile.position.z;
+                            break;
+                    }
+                }
+                break;
+            case obor_forward__ANI_PROP_QUAKEFRAME:
+                // Verify incoming parameter.
+                if(OBOR_ANIMATION_ARG(3)->vt != VT_INTEGER)
+                {
+                    printf("You must provide an animation ID and all properties: getanimationproperty({ent}, {animation id}, 'quakeframe', {sub-property})\n");
+                    result = E_FAIL;
+                }
+                else
+                {
+                    switch(OBOR_ANIMATION_ARG(3)->lVal)
+                    {
+                        case obor_forward__PROP_QUAKEFRAME_FRAMESTART:
+                            (*pretvar)->lVal = (LONG)OBOR_ANIMATION_MODEL(ent, id)->quakeframe.framestart;
+                            break;
+                        case obor_forward__PROP_QUAKEFRAME_REPEAT:
+                            (*pretvar)->lVal = (LONG)OBOR_ANIMATION_MODEL(ent, id)->quakeframe.repeat;
+                            break;
+                        case obor_forward__PROP_QUAKEFRAME_INTENSITY:
+                            ScriptVariant_ChangeType(*pretvar, VT_DECIMAL);
+                            (*pretvar)->dblVal = (DOUBLE)OBOR_ANIMATION_MODEL(ent, id)->quakeframe.v;
+                            break;
+                    }
+                }
+                break;
+            case obor_forward__ANI_PROP_RANGE:
+                // Verify incoming parameter.
+                if(OBOR_ANIMATION_ARG(3)->vt != VT_INTEGER)
+                {
+                    printf("You must provide an animation ID and all properties: getanimationproperty({ent}, {animation id}, 'range', {sub-property})\n");
+                    result = E_FAIL;
+                }
+                else
+                {
+                    switch(OBOR_ANIMATION_ARG(3)->lVal)
+                    {
+                        case obor_forward__PROP_RANGEX_MIN:
+                            (*pretvar)->lVal = (LONG)OBOR_ANIMATION_MODEL(ent, id)->range.min.x;
+                            break;
+                        case obor_forward__PROP_RANGEX_MAX:
+                            (*pretvar)->lVal = (LONG)OBOR_ANIMATION_MODEL(ent, id)->range.max.x;
+                            break;
+                        case obor_forward__PROP_RANGEA_MIN:
+                            (*pretvar)->lVal = (LONG)OBOR_ANIMATION_MODEL(ent, id)->range.min.y;
+                            break;
+                        case obor_forward__PROP_RANGEA_MAX:
+                            (*pretvar)->lVal = (LONG)OBOR_ANIMATION_MODEL(ent, id)->range.max.y;
+                            break;
+                        case obor_forward__PROP_RANGEB_MIN:
+                            (*pretvar)->lVal = (LONG)OBOR_ANIMATION_MODEL(ent, id)->range.min.base;
+                            break;
+                        case obor_forward__PROP_RANGEB_MAX:
+                            (*pretvar)->lVal = (LONG)OBOR_ANIMATION_MODEL(ent, id)->range.max.base;
+                            break;
+                        case obor_forward__PROP_RANGEZ_MIN:
+                            (*pretvar)->lVal = (LONG)OBOR_ANIMATION_MODEL(ent, id)->range.min.z;
+                            break;
+                        case obor_forward__PROP_RANGEZ_MAX:
+                            (*pretvar)->lVal = (LONG)OBOR_ANIMATION_MODEL(ent, id)->range.max.z;
+                            break;
+                    }
+                }
+                break;
+            case obor_forward__ANI_PROP_SHADOW:
+                // Verify incoming parameter.
+                if(OBOR_ANIMATION_ARG(3)->vt != VT_INTEGER)
+                {
+                    printf("You must provide an animation ID and all properties: getanimationproperty({ent}, {animation id}, 'shadow', {sub-property})\n");
+                    result = E_FAIL;
+                }
+                else
+                {
+                    okf = 0;
+                    // usage getanimationproperty({ent}, {animation id}, 'delay', {frame_index}) -> frame is optional
+                    if (paramCount == 5)
+                    {
+                        if(OBOR_ANIMATION_ARG(4)->vt != VT_INTEGER)
+                        {
+                            printf("You must provide an animation ID and all properties: getanimationproperty({ent}, {animation id}, 'shadow', {sub-property}, {frame_index})\n");
+                            result = E_FAIL;
+                            break;
+                        } else
+                        {
+                            okf = (int)OBOR_ANIMATION_ARG(4)->lVal;
+                        }
+                    }
+
+                    // without a optional frame_index it returns the 1st useful frame if it exists
+                    anim = OBOR_ANIMATION_MODEL(ent, id);
+
+                    switch(OBOR_ANIMATION_ARG(3)->lVal)
+                    {
+                        case obor_forward__PROP_FSHADOW:
+                            if( anim->shadow ) {
+                                (*pretvar)->lVal = (LONG)OBOR_ANIMATION_FRAME(anim, shadow, okf);
+                            } else (*pretvar)->lVal = (LONG)-1;
+                            break;
+                        case obor_forward__PROP_SHADOW_COORDS_X:
+                            if( anim->shadow_coords ) {
+                                (*pretvar)->lVal = (LONG)OBOR_ANIMATION_FRAME(anim, shadow_coords, okf)[0];
+                            } else (*pretvar)->lVal = (LONG)-1;
+                            break;
+                        case obor_forward__PROP_SHADOW_COORDS_Y:
+                            if( anim->shadow_coords ) {
+                                (*pretvar)->lVal = (LONG)OBOR_ANIMATION_FRAME(anim, shadow_coords, okf)[1];
+                            } else (*pretvar)->lVal = (LONG)-1;
+                            break;
+                    }
+                }
+                break;
+            case obor_forward__ANI_PROP_SIZE:
+                // Verify incoming parameter.
+                if(OBOR_ANIMATION_ARG(3)->vt != VT_INTEGER)
+                {
+                    printf("You must provide an animation ID and all properties: getanimationproperty({ent}, {animation id}, 'size', {sub-property})\n");
+                    result = E_FAIL;
+                }
+                else
+                {
+                    switch(OBOR_ANIMATION_ARG(3)->lVal)
+                    {
+                        case obor_forward__PROP_SIZE_BASE:
+                            ScriptVariant_ChangeType(*pretvar, VT_DECIMAL);
+                            (*pretvar)->dblVal = (DOUBLE)OBOR_ANIMATION_MODEL(ent, id)->size.base;
+                            break;
+                        case obor_forward__PROP_SIZE_X:
+                            ScriptVariant_ChangeType(*pretvar, VT_DECIMAL);
+                            (*pretvar)->dblVal = (DOUBLE)OBOR_ANIMATION_MODEL(ent, id)->size.x;
+                            break;
+                        case obor_forward__PROP_SIZE_Y:
+                            ScriptVariant_ChangeType(*pretvar, VT_DECIMAL);
+                            (*pretvar)->dblVal = (DOUBLE)OBOR_ANIMATION_MODEL(ent, id)->size.y;
+                            break;
+                        case obor_forward__PROP_SIZE_Z:
+                            ScriptVariant_ChangeType(*pretvar, VT_DECIMAL);
+                            (*pretvar)->dblVal = (DOUBLE)OBOR_ANIMATION_MODEL(ent, id)->size.z;
+                            break;
+                    }
+                }
+                break;
+            case obor_forward__ANI_PROP_SOUNDTOPLAY:
+                okf = 0;
+
+                // usage getanimationproperty({ent}, {animation id}, 'delay', {frame_index}) -> frame is optional
+                if (paramCount == 4)
+                {
+                    if(OBOR_ANIMATION_ARG(3)->vt != VT_INTEGER)
+                    {
+                        printf("You must provide an animation ID and all properties: getanimationproperty({ent}, {animation id}, 'soundtoplay', {frame_index})\n");
+                        result = E_FAIL;
+                        break;
+                    } else
+                    {
+                        okf = (int)OBOR_ANIMATION_ARG(3)->lVal;
+                    }
+                }
+
+                // without a optional frame_index it returns the 1st useful frame if it exists
+                anim = OBOR_ANIMATION_MODEL(ent, id);
+                if( OBOR_ANIMATION_FRAME(anim, soundtoplay, okf) ) {
+                    (*pretvar)->lVal = (LONG)OBOR_ANIMATION_FRAME(anim, soundtoplay, okf);
+                } else (*pretvar)->lVal = (LONG)-1;
+
+                break;
+            case obor_forward__ANI_PROP_SPAWNFRAME:
+                // Verify incoming parameter.
+                if(OBOR_ANIMATION_ARG(3)->vt != VT_INTEGER)
+                {
+                    printf("You must provide an animation ID and all properties: getanimationproperty({ent}, {animation id}, 'spawnframe', {sub-property})\n");
+                    result = E_FAIL;
+                }
+                else
+                {
+                    switch(OBOR_ANIMATION_ARG(3)->lVal)
+                    {
+                        case obor_forward__PROP_SPAWNFRAME_FRAME:
+                            (*pretvar)->lVal = OBOR_ANIMATION_LONG(OBOR_ANIMATION_FIXED(OBOR_ANIMATION_MODEL(ent, id), spawnframe, 0));
+                            break;
+                        case obor_forward__PROP_SPAWNFRAME_X:
+                            ScriptVariant_ChangeType(*pretvar, VT_DECIMAL);
+                            (*pretvar)->dblVal = (DOUBLE)OBOR_ANIMATION_FIXED(OBOR_ANIMATION_MODEL(ent, id), spawnframe, 1);
+                            break;
+                        case obor_forward__PROP_SPAWNFRAME_Y:
+                            ScriptVariant_ChangeType(*pretvar, VT_DECIMAL);
+                            (*pretvar)->dblVal = (DOUBLE)OBOR_ANIMATION_FIXED(OBOR_ANIMATION_MODEL(ent, id), spawnframe, 2);
+                            break;
+                        case obor_forward__PROP_SPAWNFRAME_Z:
+                            ScriptVariant_ChangeType(*pretvar, VT_DECIMAL);
+                            (*pretvar)->dblVal = (DOUBLE)OBOR_ANIMATION_FIXED(OBOR_ANIMATION_MODEL(ent, id), spawnframe, 3);
+                            break;
+                        case obor_forward__PROP_SPAWNFRAME_RELATIVE:
+                            (*pretvar)->lVal = OBOR_ANIMATION_LONG(OBOR_ANIMATION_FIXED(OBOR_ANIMATION_MODEL(ent, id), spawnframe, 4));
+                            break;
+                    }
+                }
+                break;
+            case obor_forward__ANI_PROP_SPRITE:
+                okf = 0;
+
+                if (paramCount == 4)
+                {
+                    if(OBOR_ANIMATION_ARG(3)->vt != VT_INTEGER)
+                    {
+                        printf("You must provide an animation ID and all properties: getanimationproperty({ent}, {animation id}, 'sprite', {frame_index})\n");
+                        result = E_FAIL;
+                        break;
+                    } else
+                    {
+                        okf = (int)OBOR_ANIMATION_ARG(3)->lVal;
+                    }
+                }
+
+                // without a optional frame_index it returns the 1st useful frame if it exists
+                anim = OBOR_ANIMATION_MODEL(ent, id);
+
+                ScriptVariant_ChangeType(*pretvar, VT_PTR);
+                if( OBOR_ANIMATION_FRAME(anim, sprite, okf) ) {
+                    //(*pretvar)->lVal = (LONG)anim->sprite[okf];
+                    int ii = OBOR_ANIMATION_FRAME(anim, sprite, okf);
+                    spr = OBOR_ANIMATION_OBJECT(OBOR_ANIMATION_SPRITE(ii).node)->sprite;
+                    OBOR_ANIMATION_PIXELS(spr)->centerx = OBOR_ANIMATION_SPRITE(ii).centerx;
+                    OBOR_ANIMATION_PIXELS(spr)->centery = OBOR_ANIMATION_SPRITE(ii).centery;
+                    (*pretvar)->ptrVal = (VOID *)(spr);
+                } else (*pretvar)->ptrVal = (VOID *)(NULL);
+
+                break;
+            case obor_forward__ANI_PROP_SPRITEA:
+                // Verify incoming parameter.
+                if(OBOR_ANIMATION_ARG(3)->vt != VT_INTEGER)
+                {
+                    printf("You must provide an animation ID and all properties: getanimationproperty({ent}, {animation id}, 'spritea', {sub-property})\n");
+                    result = E_FAIL;
+                }
+                else
+                {
+                    int ii = 0;
+                    okf = 0;
+                    // usage getanimationproperty({ent}, {animation id}, 'delay', {frame_index}) -> frame is optional
+                    if (paramCount == 5)
+                    {
+                        if(OBOR_ANIMATION_ARG(4)->vt != VT_INTEGER)
+                        {
+                            printf("You must provide an animation ID and all properties: getanimationproperty({ent}, {animation id}, 'spritea', {sub-property}, {frame_index})\n");
+                            result = E_FAIL;
+                            break;
+                        } else
+                        {
+                            okf = (int)OBOR_ANIMATION_ARG(4)->lVal;
+                        }
+                    }
+
+                    // without a optional frame_index it returns the 1st useful frame if it exists
+                    anim = OBOR_ANIMATION_MODEL(ent, id);
+                    ii = OBOR_ANIMATION_FRAME(anim, sprite, okf);
+                    if (!ii)
+                    {
+                        printf("No sprite data.\n");
+                        result = E_FAIL;
+                        break;
+                    }
+
+                    switch(OBOR_ANIMATION_ARG(3)->lVal)
+                    {
+                        case obor_forward__PROP_SPRITEA_CENTERX:
+                            (*pretvar)->lVal = (LONG)OBOR_ANIMATION_SPRITE(ii).centerx;
+                            break;
+                        case obor_forward__PROP_SPRITEA_CENTERY:
+                            (*pretvar)->lVal = (LONG)OBOR_ANIMATION_SPRITE(ii).centery;
+                            break;
+                        case obor_forward__PROP_SPRITEA_FILE:
+                            ScriptVariant_ChangeType(*pretvar, VT_STR);
+                            StrCache_Copy((*pretvar)->strVal, OBOR_ANIMATION_TEXT(OBOR_ANIMATION_OBJECT(OBOR_ANIMATION_SPRITE(ii).node)->filename));
+                            break;
+                        case obor_forward__PROP_SPRITEA_OFFSETX:
+                            (*pretvar)->lVal = (LONG)OBOR_ANIMATION_PIXELS(OBOR_ANIMATION_OBJECT(OBOR_ANIMATION_SPRITE(ii).node)->sprite)->offsetx;
+                            break;
+                        case obor_forward__PROP_SPRITEA_OFFSETY:
+                            (*pretvar)->lVal = (LONG)OBOR_ANIMATION_PIXELS(OBOR_ANIMATION_OBJECT(OBOR_ANIMATION_SPRITE(ii).node)->sprite)->offsety;
+                            break;
+                        case obor_forward__PROP_SPRITEA_SPRITE:
+                        {
+                            ScriptVariant_ChangeType(*pretvar, VT_PTR);
+                            spr = OBOR_ANIMATION_OBJECT(OBOR_ANIMATION_SPRITE(ii).node)->sprite;
+                            OBOR_ANIMATION_PIXELS(spr)->centerx = OBOR_ANIMATION_SPRITE(ii).centery;
+                            OBOR_ANIMATION_PIXELS(spr)->centery = OBOR_ANIMATION_SPRITE(ii).centery;
+                            (*pretvar)->ptrVal = (VOID *)(spr);
+                            break;
+                        }
+                    }
+                }
+                break;
+            case obor_forward__ANI_PROP_SUBENTITY:
+                (*pretvar)->lVal = (LONG)OBOR_ANIMATION_MODEL(ent, id)->subentity;
+                break;
+            case obor_forward__ANI_PROP_SUMMONFRAME:
+                // Verify incoming parameter.
+                if(OBOR_ANIMATION_ARG(3)->vt != VT_INTEGER)
+                {
+                    printf("You must provide an animation ID and all properties: getanimationproperty({ent}, {animation id}, 'summonframe', {sub-property})\n");
+                    result = E_FAIL;
+                }
+                else
+                {
+                    switch(OBOR_ANIMATION_ARG(3)->lVal)
+                    {
+                        case obor_forward__PROP_SUMMONFRAME_FRAME:
+                            (*pretvar)->lVal = OBOR_ANIMATION_LONG(OBOR_ANIMATION_FIXED(OBOR_ANIMATION_MODEL(ent, id), summonframe, 0));
+                            break;
+                        case obor_forward__PROP_SUMMONFRAME_X:
+                            ScriptVariant_ChangeType(*pretvar, VT_DECIMAL);
+                            (*pretvar)->dblVal = (DOUBLE)OBOR_ANIMATION_FIXED(OBOR_ANIMATION_MODEL(ent, id), summonframe, 1);
+                            break;
+                        case obor_forward__PROP_SUMMONFRAME_Y:
+                            ScriptVariant_ChangeType(*pretvar, VT_DECIMAL);
+                            (*pretvar)->dblVal = (DOUBLE)OBOR_ANIMATION_FIXED(OBOR_ANIMATION_MODEL(ent, id), summonframe, 2);
+                            break;
+                        case obor_forward__PROP_SUMMONFRAME_Z:
+                            ScriptVariant_ChangeType(*pretvar, VT_DECIMAL);
+                            (*pretvar)->dblVal = (DOUBLE)OBOR_ANIMATION_FIXED(OBOR_ANIMATION_MODEL(ent, id), summonframe, 3);
+                            break;
+                        case obor_forward__PROP_SUMMONFRAME_RELATIVE:
+                            (*pretvar)->lVal = OBOR_ANIMATION_LONG(OBOR_ANIMATION_FIXED(OBOR_ANIMATION_MODEL(ent, id), summonframe, 4));
+                            break;
+                    }
+                }
+                break;
+            case obor_forward__ANI_PROP_SYNC:
+                (*pretvar)->lVal = (LONG)OBOR_ANIMATION_MODEL(ent, id)->sync;
+                break;
+            case obor_forward__ANI_PROP_UNSUMMONFRAME:
+                (*pretvar)->lVal = (LONG)OBOR_ANIMATION_MODEL(ent, id)->unsummonframe;
+                break;
+            case obor_forward__ANI_PROP_VULNERABLE:
+                okf = -1;
+
+                // usage getanimationproperty({ent}, {animation id}, 'hitsound', {frame_index}) -> frame is optional
+                if (paramCount > 3)
+                {
+                    if(OBOR_ANIMATION_ARG(3)->vt != VT_INTEGER)
+                    {
+                        printf("You must provide an animation ID and all properties: getanimationproperty({ent}, {animation id}, 'vulnerable', {frame_index})\n");
+                        result = E_FAIL;
+                        break;
+                    } else
+                    {
+                        okf = (int)OBOR_ANIMATION_ARG(3)->lVal;
+                    }
+                }
+
+                // without a optional frame_index it returns the 1st useful frame if it exists
+                anim = OBOR_ANIMATION_MODEL(ent, id);
+                // or sizeof(pointer) / sizeof(structure)
+                if (okf < 0)
+                    for (aid = 0; aid < anim->numframes; aid++)
+                    {
+                        tmp_int = OBOR_ANIMATION_FRAME(anim, vulnerable, aid);
+                        if (tmp_int >= 0) break;
+                    }
+                else tmp_int = OBOR_ANIMATION_FRAME(anim, vulnerable, okf);
+
+                if (tmp_int >= 0) (*pretvar)->lVal = (LONG)tmp_int;
+                else (*pretvar)->lVal = (LONG)-1;
+
+                break;
+            case obor_forward__ANI_PROP_WEAPONFRAME:
+                // Verify incoming parameter.
+                if(OBOR_ANIMATION_ARG(3)->vt != VT_INTEGER)
+                {
+                    printf("You must provide an animation ID and all properties: getanimationproperty({ent}, {animation id}, 'weaponframe', {sub-property})\n");
+                    result = E_FAIL;
+                }
+                else
+                {
+                    switch(OBOR_ANIMATION_ARG(3)->lVal)
+                    {
+                        case obor_forward__PROP_WEAPONFRAME_FRAME:
+                            (*pretvar)->lVal = (LONG)OBOR_ANIMATION_FIXED(OBOR_ANIMATION_MODEL(ent, id), weaponframe, 0);
+                            break;
+                        case obor_forward__PROP_WEAPONFRAME_WEAPON:
+                            (*pretvar)->lVal = (LONG)OBOR_ANIMATION_FIXED(OBOR_ANIMATION_MODEL(ent, id), weaponframe, 1);
+                            break;
+                    }
+                }
+                break;
+            default:
+                *pretvar = NULL;
+                printf("Error: unsupported property in getanimationproperty\n");
+                result = E_FAIL;
+                break;
+        }
+    }
+
+    return result;
+}
+
+/* Literal lowering and runtime mapping keep native numeric selectors in the
+ * caller's variants. The private implementation sees translated integer copies. */
+static HRESULT obor_forward_animation_dispatch(ScriptVariant **varlist,
+                                               ScriptVariant **pretvar,
+                                               int paramCount, int writing)
+{
+    ScriptVariant *local[16], **translated = local;
+    ScriptVariant primary, attack_property;
+    HRESULT result;
+    if(!pretvar || !*pretvar || paramCount < 3 || !varlist) return E_FAIL;
+    if(!varlist[1] || !varlist[2]) return E_FAIL;
+    ScriptVariant_Clear(*pretvar);
+    obor_forward_mapstrings_animationproperty(varlist, paramCount);
+    if(paramCount > (int)(sizeof(local) / sizeof(*local)))
+    {
+        if((size_t)paramCount > SIZE_MAX / sizeof(*translated)) return E_FAIL;
+        translated = malloc((size_t)paramCount * sizeof(*translated));
+        if(!translated) return E_FAIL;
+    }
+    memcpy(translated, varlist, (size_t)paramCount * sizeof(*translated));
+    if(varlist[2]->vt == VT_INTEGER)
+    {
+        primary = *varlist[2];
+        primary.lVal = obor_forward_primary_selector(primary.lVal);
+        translated[2] = &primary;
+        if(primary.lVal == obor_forward__ANI_PROP_ATTACK && paramCount > 3 &&
+           varlist[3] && varlist[3]->vt == VT_INTEGER)
+        {
+            attack_property = *varlist[3];
+            attack_property.lVal = obor_forward_attack_selector(attack_property.lVal);
+            translated[3] = &attack_property;
+        }
+    }
+    result = writing ? obor_forward_changeanimationproperty_impl(translated, pretvar, paramCount) :
+                       obor_forward_getanimationproperty_impl(translated, pretvar, paramCount);
+    if(translated != local) free(translated);
+    return result;
+}
+
+HRESULT openbor_changeanimationproperty(ScriptVariant **varlist, ScriptVariant **pretvar, int paramCount)
+{
+    return obor_forward_animation_dispatch(varlist, pretvar, paramCount, 1);
+}
+
+static HRESULT obor_forward_getanimationproperty(ScriptVariant **varlist, ScriptVariant **pretvar, int paramCount)
+{
+    return obor_forward_animation_dispatch(varlist, pretvar, paramCount, 0);
+}
+
+
 int mapstrings_animationproperty(ScriptVariant **varlist, int paramCount)
 {
+    if(obor_profile_build >= 4170) return obor_forward_mapstrings_animationproperty(varlist, paramCount);
     char *propname;
     const char *aps;
     int prop, ap; //int prop, i, ep, t;
@@ -4093,8 +10694,21 @@ int mapstrings_animationproperty(ScriptVariant **varlist, int paramCount)
         "mponly",
     };
 
-    if(paramCount < 2 || !varlist || !varlist[1]) return 1;
-    MAPSTRINGS(varlist[1], list_animation_prop, _ANI_PROP_the_end,
+    /* Build4169 inserts the projectile name into the legacy table. */
+    const char *obor_legacy_names[sizeof(list_animation_prop) / sizeof(*list_animation_prop) + 1];
+    int obor_legacy_count = 0;
+    for(unsigned index = 0; index < sizeof(list_animation_prop) / sizeof(*list_animation_prop); ++index)
+    {
+        if(obor_profile_build >= 4169 && !strcmp(list_animation_prop[index], "size"))
+            obor_legacy_names[obor_legacy_count++] = "projectile";
+        obor_legacy_names[obor_legacy_count++] = list_animation_prop[index];
+    }
+
+    if(obor_profile_build < 4169) obor_legacy_count = _ANI_PROP_the_end;
+
+    int obor_property_arg = obor_profile_build >= 4169 ? 2 : 1;
+    if(paramCount <= obor_property_arg || !varlist || !varlist[1] || !varlist[obor_property_arg]) return 1;
+    MAPSTRINGS(varlist[obor_property_arg], obor_legacy_names, obor_legacy_count,
                "Property name '%s' is not supported by function getanimationproperty.\n");
 
     if(paramCount < 3 || !varlist[2] || varlist[1]->vt != VT_INTEGER)
@@ -4103,26 +10717,82 @@ int mapstrings_animationproperty(ScriptVariant **varlist, int paramCount)
     }
     else
     {
-        ap = varlist[1]->lVal;
-        aps = (ap < _ANI_PROP_the_end && ap >= 0) ? list_animation_prop[ap] : "";
-        switch(ap)
+        ap = varlist[obor_property_arg]->lVal;
+        aps = (ap < obor_legacy_count && ap >= 0) ? obor_legacy_names[ap] : "";
+        /* Legacy source enum and name table differ before4169. */
+        if(ap == (obor_profile_build >= 4169 ? 12 : _ANI_PROP_ENERGYCOST))
         {
-            // map subproperties of Energycost
-            case _ANI_PROP_ENERGYCOST:
-            {
-                MAPSTRINGS(varlist[2], proplist_energycost, _ep_energycost_the_end,
-                           _is_not_a_known_subproperty_of_, aps);
-                break;
-            }
+            if(paramCount <= obor_property_arg + 1 || !varlist[obor_property_arg + 1]) return 1;
+            MAPSTRINGS(varlist[obor_property_arg + 1], proplist_energycost, _ep_energycost_the_end,
+                       _is_not_a_known_subproperty_of_, aps);
         }
     }
     return result;
 }
 
+/* Native entity namespaces share the physical fields, retaining each build's
+ * ordered public names and the six temporary attack-coordinate properties. */
+enum obor_forward_entityproperty_enum
+{
+    obor_forward_ep_attack_x = _ep_the_end,
+    obor_forward_ep_attack_y,
+    obor_forward_ep_attack_width,
+    obor_forward_ep_attack_height,
+    obor_forward_ep_attack_z_in,
+    obor_forward_ep_attack_z_out,
+    obor_forward_ep_animation_handle
+};
+static const char *const obor_forward_entity_attack_names[] =
+{
+    "attack.coords.location.x", "attack.coords.location.y",
+    "attack.coords.size.x", "attack.coords.size.y",
+    "attack.coords.size.z.in", "attack.coords.size.z.out"
+};
+
+static int obor_forward_entityproperty_list(const char **names, int *native)
+{
+    int count = 0;
+    for(int i = 0; i < _ep_the_end; ++i)
+    {
+        if(i == _ep_anim && obor_profile_build >= 4202) continue;
+        if(i == _ep_attack)
+        {
+            if(obor_profile_build < 4198)
+                for(int j = 0; j < 6; ++j)
+                {
+                    names[count] = obor_forward_entity_attack_names[j];
+                    native[count++] = obor_forward_ep_attack_x + j;
+                }
+            continue;
+        }
+        if(i == _ep_animation && obor_profile_build == 4202)
+        {
+            names[count] = "animation.handle";
+            native[count++] = obor_forward_ep_animation_handle;
+            continue;
+        }
+        names[count] = i == _ep_anim && obor_profile_build >= 4198 ? "anim.handle" : eplist[i];
+        native[count++] = i;
+        if(i == _ep_animation && obor_profile_build >= 4203)
+        {
+            names[count] = "animation.handle";
+            native[count++] = obor_forward_ep_animation_handle;
+        }
+    }
+    return count;
+}
+
 static int obor_entityproperty_native(int property)
 {
     int count = _ep_the_end;
-    if(obor_profile_build >= 4057) return property;
+    if(obor_profile_build >= 4167)
+    {
+        const char *names[_ep_the_end + 6];
+        int native[_ep_the_end + 6];
+        count = obor_forward_entityproperty_list(names, native);
+        return property >= 0 && property < count ? native[property] : -1;
+    }
+    if(obor_profile_build >= 4057) return property >= 0 && property < count ? property : -1;
     --count; /* anim */
     if(obor_profile_build < 4055) --count; /* y */
     if(property < 0 || property >= count) return -1;
@@ -4341,7 +11011,15 @@ int mapstrings_entityproperty(ScriptVariant **varlist, int paramCount)
     }
 
     // map entity properties
-    if(obor_profile_build < 4057 && varlist[1]->vt == VT_STR)
+    if(obor_profile_build >= 4167)
+    {
+        const char *names[_ep_the_end + 6];
+        int native[_ep_the_end + 6];
+        int count = obor_forward_entityproperty_list(names, native);
+        MAPSTRINGS(varlist[1], names, count,
+                   "Property name '%s' is not supported by function getentityproperty.\n");
+    }
+    else if(obor_profile_build < 4057 && varlist[1]->vt == VT_STR)
     {
         const char *early_eplist[_ep_the_end];
         int count = 0;
@@ -4540,6 +11218,7 @@ int mapstrings_entityproperty(ScriptVariant **varlist, int paramCount)
 
 HRESULT openbor_getanimationproperty(ScriptVariant **varlist, ScriptVariant **pretvar, int paramCount)
 {
+    if(obor_profile_build >= 4170) return obor_forward_getanimationproperty(varlist, pretvar, paramCount);
     /*
     Animation specific properties.
     Damon V. Caskey
@@ -4553,6 +11232,13 @@ HRESULT openbor_getanimationproperty(ScriptVariant **varlist, ScriptVariant **pr
     int id                          = 0;    //Animation ID.
     e_animation_properties property = 0;    //Property.
     //int subproperty                 = 0;    //Sub property.
+
+    if(obor_profile_build >= 4169)
+    {
+        if(!pretvar || !*pretvar || !varlist) return E_FAIL;
+        ScriptVariant_Clear(*pretvar);
+        mapstrings_animationproperty(varlist, paramCount);
+    }
 
     // Verify incoming parameters.
     if(!pretvar || !*pretvar) return E_FAIL;
@@ -4569,11 +11255,21 @@ HRESULT openbor_getanimationproperty(ScriptVariant **varlist, ScriptVariant **pr
         ent         = (entity *)varlist[0]->ptrVal;
         id          = varlist[1]->lVal;
         property    = varlist[2]->lVal;
+        if(obor_profile_build >= 4169)
+        {
+            if(property >= 7 && property < 11) property = _ANI_PROP_the_end;
+            else if(property >= 11 && property <= 20) property = (e_animation_properties)(property - 4);
+            else if(property >= 21 && property < 24) property = (e_animation_properties)(property - 3);
+            else if(property == 24) property = _ANI_PROP_PROJECTILE;
+            else if(property >= 25) property = (e_animation_properties)(property - 4);
+        }
 
         // Most values returned will be integers. Set here for less repetition.
         ScriptVariant_ChangeType(*pretvar, VT_INTEGER);
 
-        const s_anim *animation = id == 0 ? obor_script_current_animation(ent) : NULL;
+        const s_anim *animation = obor_profile_build >= 4169 && property == _ANI_PROP_NUMFRAMES ?
+            obor_script_model_animation(ent, id) :
+            (id == 0 ? obor_script_current_animation(ent) : NULL);
         if(!animation)
         {
             switch(property)
@@ -4614,6 +11310,7 @@ HRESULT openbor_getanimationproperty(ScriptVariant **varlist, ScriptVariant **pr
                 (*pretvar)->lVal = (LONG)animation->attackone;
                 break;
             case _ANI_PROP_BOUNCE:
+                if(!(animation->bounce > -2147483649.0 && animation->bounce < 2147483648.0)) return E_FAIL;
                 (*pretvar)->lVal = (LONG)animation->bounce;
                 break;
             case _ANI_PROP_CANCEL:
@@ -4886,6 +11583,7 @@ HRESULT openbor_getanimationproperty(ScriptVariant **varlist, ScriptVariant **pr
                 }
                 break;
             default:
+                if(obor_profile_build >= 4169) *pretvar = NULL;
                 printf("Error: unsupported property in getanimationproperty\n");
                 result = E_FAIL;
                 break;
@@ -4973,6 +11671,24 @@ HRESULT openbor_getentityproperty(ScriptVariant **varlist , ScriptVariant **pret
     }
 
     propind = obor_entityproperty_native(arg->lVal);
+
+    if(obor_profile_build >= 4161 && propind == _ep_spritea)
+    {
+        const entity *owner = obor_script_animation_owner(ent);
+        s_anim *animation;
+        LONG animation_id, frame;
+        if(!owner) { *pretvar = NULL; return E_FAIL; }
+        if(paramCount < 5 || !varlist[2] || !varlist[3] || !varlist[4]) return S_OK;
+        animation_id = obor_animation_native((int)varlist[3]->lVal, obor_profile_build);
+        frame = varlist[4]->lVal;
+        animation = obor_script_model_animation(owner, animation_id);
+        if(!animation || frame < 0 || frame >= animation->obor_frame_capacity ||
+           !animation->sprite || (size_t)frame >=
+           obor_allocation_size(animation->sprite) / sizeof(*animation->sprite)) return S_OK;
+        i = animation->sprite[frame];
+        if(!sprite_map || i < 0 || i >= sprite_map_max_items || (uint64_t)i >= sprites_loaded ||
+           (size_t)i >= obor_allocation_size(sprite_map) / sizeof(*sprite_map)) return S_OK;
+    }
 
     switch(propind)
     {
@@ -5081,6 +11797,7 @@ HRESULT openbor_getentityproperty(ScriptVariant **varlist , ScriptVariant **pret
             (*pretvar)->lVal = (LONG)ent->walkmode;
             break;
         case _ep_aiflag_walking:
+            if(obor_profile_build >= 4168) (*pretvar)->lVal = (LONG)ent->walking;
             break;
         default:
             ScriptVariant_Clear(*pretvar);
@@ -5112,8 +11829,30 @@ HRESULT openbor_getentityproperty(ScriptVariant **varlist , ScriptVariant **pret
         (*pretvar)->lVal = (LONG)ent->animating;
         break;
     }
+    case obor_forward_ep_animation_handle:
+    {
+        const entity *owner = obor_script_animation_owner(ent);
+        if(!owner) return E_FAIL;
+        if(paramCount > 2)
+        {
+            if(!varlist[2]) return E_FAIL;
+            if(FAILED(ScriptVariant_IntegerValue(varlist[2], &ltemp)))
+                ltemp = (LONG)owner->animnum;
+        }
+        else ltemp = (LONG)owner->animnum;
+        /* The native query returns a borrowed table value, including NULL.
+         * It does not consume the returned animation object's bytes. */
+        if(!owner || !owner->modeldata.animation || ltemp < 0 ||
+           ltemp >= owner->modeldata.animation_capacity ||
+           (size_t)ltemp >= obor_allocation_size(owner->modeldata.animation) /
+                            sizeof(*owner->modeldata.animation)) return E_FAIL;
+        ScriptVariant_ChangeType(*pretvar, VT_PTR);
+        (*pretvar)->ptrVal = (VOID *)owner->modeldata.animation[ltemp];
+        break;
+    }
     case _ep_animation:
     {
+        if(obor_profile_build >= 4202) { *pretvar = NULL; return E_FAIL; }
         ScriptVariant_ChangeType(*pretvar, VT_PTR);
         (*pretvar)->ptrVal = (VOID *)ent->animation;
         break;
@@ -5173,6 +11912,31 @@ HRESULT openbor_getentityproperty(ScriptVariant **varlist , ScriptVariant **pret
     {
         ScriptVariant_ChangeType(*pretvar, VT_DECIMAL);
         (*pretvar)->dblVal = obor_profile_build < 3970 ? 0.0 : (DOUBLE)ent->modeldata.antigravity;
+        break;
+    }
+    case obor_forward_ep_attack_x:
+    case obor_forward_ep_attack_y:
+    case obor_forward_ep_attack_width:
+    case obor_forward_ep_attack_height:
+    case obor_forward_ep_attack_z_in:
+    case obor_forward_ep_attack_z_out:
+    {
+        int field = propind - obor_forward_ep_attack_x;
+        s_anim *animation;
+        if(paramCount < 4) break;
+        if(!varlist[2] || !varlist[3]) return E_FAIL;
+        if(varlist[2]->vt != VT_INTEGER || varlist[3]->vt != VT_INTEGER)
+        {
+            printf("\n Error, getentityproperty({ent}, '%s', {animation}, {frame}, {index}): {Animation} or {frame} parameter is missing or invalid. \n",
+                   obor_forward_entity_attack_names[field]);
+            return E_FAIL;
+        }
+        animation = obor_script_model_animation(ent,
+            obor_animation_native((int)varlist[2]->lVal, obor_profile_build));
+        if(!animation || !animation->numframes) break;
+        attack = OBOR_ANIMATION_FRAME(animation, attacks, varlist[3]->lVal);
+        ScriptVariant_ChangeType(*pretvar, VT_INTEGER);
+        (*pretvar)->lVal = (LONG)OBOR_ANIMATION_OBJECT(attack)->attack_coords[field];
         break;
     }
     case _ep_attack:
@@ -6781,7 +13545,8 @@ HRESULT openbor_getentityproperty(ScriptVariant **varlist , ScriptVariant **pret
     case _ep_spritea:
     {
         if(paramCount < 5 || !varlist[2] || !varlist[3] || !varlist[4] ||
-           varlist[2]->vt != VT_INTEGER || varlist[3]->vt != VT_INTEGER || varlist[4]->vt != VT_INTEGER ||
+           (obor_profile_build < 4161 &&
+            (varlist[2]->vt != VT_INTEGER || varlist[3]->vt != VT_INTEGER || varlist[4]->vt != VT_INTEGER)) ||
            varlist[3]->lVal < 0 || (uint64_t)varlist[3]->lVal > INT_MAX ||
            varlist[4]->lVal < 0 || (uint64_t)varlist[4]->lVal > INT_MAX ||
            !ent->modeldata.animation) break;
@@ -6802,7 +13567,9 @@ HRESULT openbor_getentityproperty(ScriptVariant **varlist , ScriptVariant **pret
         Request from animation or frame that doesn't exist = shutdown.
         Let's be more user friendly then that; return empty so modder can evaluate
         and take action accordingly.*/
-        if(!validanim(ent, animation_id) || (arg1->lVal >= ent->modeldata.animation[animation_id]->numframes))
+        if(!validanim(ent, animation_id) || (obor_profile_build >= 4161 ?
+           arg1->lVal > ent->modeldata.animation[animation_id]->numframes :
+           arg1->lVal >= ent->modeldata.animation[animation_id]->numframes))
         {
             break;
         }
@@ -6840,6 +13607,16 @@ HRESULT openbor_getentityproperty(ScriptVariant **varlist , ScriptVariant **pret
             spr->centerx = sprite_map[i].centery;
             spr->centery = sprite_map[i].centery;
             (*pretvar)->ptrVal = (VOID *)(spr);
+            break;
+        }
+        case _ep_spritea_offsetx:
+        case _ep_spritea_offsety:
+        {
+            if(obor_profile_build < 4180) { *pretvar = NULL; return E_FAIL; }
+            s_sprite_list *node = OBOR_ANIMATION_OBJECT(sprite_map[i].node);
+            s_sprite *pixels = OBOR_ANIMATION_PIXELS(node->sprite);
+            ScriptVariant_ChangeType(*pretvar, VT_INTEGER);
+            (*pretvar)->lVal = ltemp == _ep_spritea_offsetx ? pixels->offsetx : pixels->offsety;
             break;
         }
         default:
@@ -7324,6 +14101,7 @@ HRESULT openbor_changeentityproperty(ScriptVariant **varlist , ScriptVariant **p
                 ent->walkmode = (int)ltemp;
                 break;
             case _ep_aiflag_walking:
+                if(obor_profile_build >= 4168) ent->walking = (int)ltemp;
                 break;
             default:
                 printf("Unknown AI flag.\n");
@@ -8989,63 +15767,108 @@ enum playerproperty_enum
     _pp_spawnmp,
     _pp_weapon,
     _pp_weapnum,
+    _pp_combokey,
+    _pp_combostep,
+    _pp_hmapl,
+    _pp_hmapu,
+    _pp_inputtime,
+    _pp_joining,
+    _pp_mapcount,
+    _pp_releasekeys,
     _pp_the_end,
 };
 
+static const char *const obor_playerproperty_names[] =
+{
+    "colourmap",
+    "credits",
+    "ent",
+    "entity",
+    "hasplayed",
+    "keys",
+    "lives",
+    "name",
+    "newkeys",
+    "playkeys",
+    "score",
+    "spawnhealth",
+    "spawnmp",
+    "weapon",
+    "weapnum",
+    "combokey",
+    "combostep",
+    "hmapl",
+    "hmapu",
+    "inputtime",
+    "joining",
+    "mapcount",
+    "releasekeys",
+};
+
+static const int *obor_playerproperty_order(int *count)
+{
+    static const int early[] = {_pp_colourmap, _pp_credits, _pp_ent, _pp_entity, _pp_hasplayed, _pp_keys, _pp_lives, _pp_name, _pp_playkeys, _pp_score, _pp_spawnhealth, _pp_spawnmp, _pp_weapon, _pp_weapnum};
+    static const int original[] = {_pp_colourmap, _pp_credits, _pp_ent, _pp_entity, _pp_hasplayed, _pp_keys, _pp_lives, _pp_name, _pp_newkeys, _pp_playkeys, _pp_score, _pp_spawnhealth, _pp_spawnmp, _pp_weapon, _pp_weapnum};
+    static const int sorted[] = {_pp_colourmap, _pp_credits, _pp_ent, _pp_entity, _pp_hasplayed, _pp_keys, _pp_lives, _pp_name, _pp_newkeys, _pp_playkeys, _pp_score, _pp_spawnhealth, _pp_spawnmp, _pp_weapnum, _pp_weapon};
+    static const int release[] = {_pp_colourmap, _pp_credits, _pp_ent, _pp_entity, _pp_hasplayed, _pp_keys, _pp_lives, _pp_name, _pp_newkeys, _pp_playkeys, _pp_releasekeys, _pp_score, _pp_spawnhealth, _pp_spawnmp, _pp_weapnum, _pp_weapon};
+    static const int current[] = {_pp_colourmap, _pp_combokey, _pp_combostep, _pp_credits, _pp_ent, _pp_entity, _pp_hasplayed, _pp_hmapl, _pp_hmapu, _pp_inputtime, _pp_joining, _pp_keys, _pp_lives, _pp_mapcount, _pp_name, _pp_newkeys, _pp_playkeys, _pp_releasekeys, _pp_score, _pp_spawnhealth, _pp_spawnmp, _pp_weapnum, _pp_weapon};
+    const int *order;
+    if(obor_profile_build < 3988) {order = early; *count = sizeof(early) / sizeof(early[0]);}
+    else if(obor_profile_build < 4171) {order = original; *count = sizeof(original) / sizeof(original[0]);}
+    else if(obor_profile_build < 4193) {order = sorted; *count = sizeof(sorted) / sizeof(sorted[0]);}
+    else if(obor_profile_build < 4205) {order = release; *count = sizeof(release) / sizeof(release[0]);}
+    else {order = current; *count = sizeof(current) / sizeof(current[0]);}
+    return order;
+}
+
 static int obor_playerproperty_native(int property)
 {
-    if(obor_profile_build >= 3988) return property;
-    if(property < 0 || property >= _pp_the_end - 1) return -1;
-    return property >= _pp_newkeys ? property + 1 : property;
+    int count;
+    const int *order = obor_playerproperty_order(&count);
+    return property >= 0 && property < count ? order[property] : -1;
+}
+
+static int obor_playerproperty_consumes_value(int property, entity *ent)
+{
+    switch(property)
+    {
+    case _pp_weapon: return ent != NULL;
+    case _pp_colourmap:
+    case _pp_credits:
+    case _pp_ent:
+    case _pp_entity:
+    case _pp_hasplayed:
+    case _pp_keys:
+    case _pp_lives:
+    case _pp_name:
+    case _pp_newkeys:
+    case _pp_playkeys:
+    case _pp_score:
+    case _pp_spawnhealth:
+    case _pp_spawnmp:
+    case _pp_weapnum:
+        return 1;
+    case _pp_joining:
+    case _pp_releasekeys:
+    case _pp_combokey:
+    case _pp_combostep:
+    case _pp_inputtime:
+        return obor_profile_build >= 4205;
+    default: return 0;
+    }
 }
 
 int mapstrings_playerproperty(ScriptVariant **varlist, int paramCount)
 {
     char *propname;
-    int prop;
-
-    static const char *proplist[] =
-    {
-        "colourmap",
-        "credits",
-        "ent",
-        "entity",
-        "hasplayed",
-        "keys",
-        "lives",
-        "name",
-        "newkeys",
-        "playkeys",
-        "score",
-        "spawnhealth",
-        "spawnmp",
-        "weapon",
-        "weapnum",
-    };
-
-    if(paramCount < 2)
-    {
-        return 1;
-    }
-
-    // property name
-    if(obor_profile_build < 3988 && varlist[1]->vt == VT_STR)
-    {
-        const char *early_proplist[_pp_the_end - 1];
-        int i, count = 0;
-        for(i = 0; i < _pp_the_end; ++i)
-        {
-            if(i != _pp_newkeys) early_proplist[count++] = proplist[i];
-        }
-        MAPSTRINGS(varlist[1], early_proplist, count,
-                   "Player property name '%s' is not supported yet.\n");
-    }
-    else
-    {
-        MAPSTRINGS(varlist[1], proplist, _pp_the_end,
-                   "Player property name '%s' is not supported yet.\n");
-    }
-
+    int prop, count, i;
+    const int *order;
+    const char *proplist[_pp_the_end];
+    if(paramCount < 2) return 1;
+    order = obor_playerproperty_order(&count);
+    for(i = 0; i < count; ++i) proplist[i] = obor_playerproperty_names[order[i]];
+    MAPSTRINGS(varlist[1], proplist, count,
+               "Player property name '%s' is not supported yet.\n");
     return 1;
 }
 
@@ -9209,6 +16032,130 @@ HRESULT openbor_getplayerproperty(ScriptVariant **varlist , ScriptVariant **pret
         (*pretvar)->lVal = (LONG)player[index].weapnum;
         break;
     }
+    case _pp_combokey:
+    {
+        ScriptVariant *frm = NULL;
+        frm = paramCount > 2 ? varlist[2] : NULL;
+        if(!frm || frm->vt != VT_INTEGER || frm->lVal < 0 ||
+           (unsigned)frm->lVal >= sizeof(player[index].combokey) / sizeof(player[index].combokey[0]))
+        {
+            printf("Need a frame number for this property.\n");
+            *pretvar = NULL;
+            return E_FAIL;
+        }
+        ScriptVariant_ChangeType(*pretvar, VT_INTEGER);
+        (*pretvar)->lVal = (LONG)player[index].combokey[frm->lVal];
+        break;
+    }
+    case _pp_combostep:
+    {
+        ScriptVariant_ChangeType(*pretvar, VT_INTEGER);
+        (*pretvar)->lVal = (LONG)player[index].combostep;
+        break;
+    }
+    case _pp_hmapl:
+    {
+        int cacheindex;
+
+        ScriptVariant_ChangeType(*pretvar, VT_INTEGER);
+        (*pretvar)->lVal = 0;
+        if(!memchr(player[index].name, 0, sizeof(player[index].name))) break;
+
+        if ( stricmp(player[index].name,"") != 0 ) {
+            cacheindex = get_cached_model_index(player[index].name);
+            if ( cacheindex < 0 || cacheindex >= models_cached ||
+                 !model_cache || !model_cache[cacheindex].model )
+            {
+               (*pretvar)->lVal = (LONG)0;
+               break;
+            }
+        } else
+        {
+           (*pretvar)->lVal = (LONG)0;
+           break;
+        }
+
+        (*pretvar)->lVal = (LONG)model_cache[cacheindex].model->maps.hide_start;
+        break;
+    }
+    case _pp_hmapu:
+    {
+        int cacheindex;
+
+        ScriptVariant_ChangeType(*pretvar, VT_INTEGER);
+        (*pretvar)->lVal = 0;
+        if(!memchr(player[index].name, 0, sizeof(player[index].name))) break;
+
+        if ( stricmp(player[index].name,"") != 0 ) {
+            cacheindex = get_cached_model_index(player[index].name);
+            if ( cacheindex < 0 || cacheindex >= models_cached ||
+                 !model_cache || !model_cache[cacheindex].model )
+            {
+               (*pretvar)->lVal = (LONG)0;
+               break;
+            }
+        } else
+        {
+           (*pretvar)->lVal = (LONG)0;
+           break;
+        }
+
+        (*pretvar)->lVal = (LONG)model_cache[cacheindex].model->maps.hide_end;
+        break;
+    }
+    case _pp_inputtime:
+    {
+        ScriptVariant *frm = NULL;
+        frm = paramCount > 2 ? varlist[2] : NULL;
+        if(!frm || frm->vt != VT_INTEGER || frm->lVal < 0 ||
+           (unsigned)frm->lVal >= sizeof(player[index].inputtime) / sizeof(player[index].inputtime[0]))
+        {
+            printf("Need a frame number for this property.\n");
+            *pretvar = NULL;
+            return E_FAIL;
+        }
+        ScriptVariant_ChangeType(*pretvar, VT_INTEGER);
+        (*pretvar)->lVal = (LONG)player[index].inputtime[frm->lVal];
+        break;
+    }
+    case _pp_joining:
+    {
+        ScriptVariant_ChangeType(*pretvar, VT_INTEGER);
+        (*pretvar)->lVal = (LONG)player[index].joining;
+        break;
+    }
+    case _pp_mapcount:
+    {
+        int cacheindex;
+
+        ScriptVariant_ChangeType(*pretvar, VT_INTEGER);
+        (*pretvar)->lVal = 0;
+        if(!memchr(player[index].name, 0, sizeof(player[index].name))) break;
+
+        if ( stricmp(player[index].name,"") != 0 ) {
+            cacheindex = get_cached_model_index(player[index].name);
+            if ( cacheindex < 0 || cacheindex >= models_cached ||
+                 !model_cache || !model_cache[cacheindex].model )
+            {
+               (*pretvar)->lVal = (LONG)0;
+               break;
+            }
+        } else
+        {
+           (*pretvar)->lVal = (LONG)0;
+           break;
+        }
+
+        if(model_cache[cacheindex].model->maps_loaded == INT32_MAX) break;
+        (*pretvar)->lVal = (LONG)(model_cache[cacheindex].model->maps_loaded + 1);
+        break;
+    }
+    case _pp_releasekeys:
+    {
+        ScriptVariant_ChangeType(*pretvar, VT_INTEGER);
+        (*pretvar)->lVal = (LONG)player[index].releasekeys;
+        break;
+    }
     //this property is not known
     //default:{
     //  .....
@@ -9273,7 +16220,7 @@ HRESULT openbor_changeplayerproperty(ScriptVariant **varlist , ScriptVariant **p
     prop = obor_playerproperty_native(varlist[1]->lVal);
 
     arg = varlist[2];
-    if(!arg)
+    if(!arg && (obor_profile_build < 4161 || obor_playerproperty_consumes_value(prop, ent)))
     {
         *pretvar = NULL;
         return E_FAIL;
@@ -9483,7 +16430,87 @@ HRESULT openbor_changeplayerproperty(ScriptVariant **varlist , ScriptVariant **p
         }
         break;
     }
+    case _pp_joining:
+    {
+        if(SUCCEEDED(ScriptVariant_IntegerValue(arg,&ltemp)))
+        {
+            player[index].joining = (int)ltemp;
+        }
+        else
+        {
+            goto cpperror;
+        }
+        break;
+    }
+    case _pp_releasekeys:
+    {
+        if(obor_profile_build < 4205) goto cppunknown;
+        if(SUCCEEDED(ScriptVariant_IntegerValue(arg,&ltemp)))
+        {
+            player[index].releasekeys = (int)ltemp;
+        }
+        else
+        {
+            goto cpperror;
+        }
+        break;
+    }
+    case _pp_combokey:
+    {
+        if(SUCCEEDED(ScriptVariant_IntegerValue(arg,&ltemp)))
+        {
+            ScriptVariant *value = NULL;
+            value = paramCount > 3 ? varlist[3] : NULL;
+            if(!value || value->vt != VT_INTEGER || ltemp < 0 ||
+               (unsigned)ltemp >= sizeof(player[index].combokey) / sizeof(player[index].combokey[0]))
+            {
+                printf("Need a value and frame number for this property.\n");
+                *pretvar = NULL;
+                return E_FAIL;
+            }
+            player[index].combokey[ltemp] = (int)value->lVal;
+        }
+        else
+        {
+            goto cpperror;
+        }
+        break;
+    }
+    case _pp_combostep:
+    {
+        if(SUCCEEDED(ScriptVariant_IntegerValue(arg,&ltemp)))
+        {
+            player[index].combostep = (int)ltemp;
+        }
+        else
+        {
+            goto cpperror;
+        }
+        break;
+    }
+    case _pp_inputtime:
+    {
+        if(SUCCEEDED(ScriptVariant_IntegerValue(arg,&ltemp)))
+        {
+            ScriptVariant *value = NULL;
+            value = paramCount > 3 ? varlist[3] : NULL;
+            if(!value || value->vt != VT_INTEGER || ltemp < 0 ||
+               (unsigned)ltemp >= sizeof(player[index].inputtime) / sizeof(player[index].inputtime[0]))
+            {
+                printf("Need a value and frame number for this property.\n");
+                *pretvar = NULL;
+                return E_FAIL;
+            }
+            player[index].inputtime[ltemp] = (int)value->lVal;
+        }
+        else
+        {
+            goto cpperror;
+        }
+        break;
+    }
     default:
+cppunknown:
         printf("Invalid property name for function changeplayerproperty.\n");
         return E_FAIL;
     }
@@ -9522,8 +16549,9 @@ cpperror:
 //checkhole(x,z), return 1 if there's hole here
 HRESULT openbor_checkhole(ScriptVariant **varlist , ScriptVariant **pretvar, int paramCount)
 {
+    if(!pretvar || !*pretvar) return E_FAIL;
     ScriptVariant *arg = NULL;
-    DOUBLE x, z;
+    DOUBLE x, z, a;
 
     if(paramCount < 2)
     {
@@ -9534,25 +16562,40 @@ HRESULT openbor_checkhole(ScriptVariant **varlist , ScriptVariant **pretvar, int
     ScriptVariant_ChangeType(*pretvar, VT_INTEGER);
     (*pretvar)->lVal = (LONG)0;
 
+    if(!varlist) return S_OK;
     arg = varlist[0];
+    if(!arg) return S_OK;
     if(FAILED(ScriptVariant_DecimalValue(arg, &x)))
     {
         return S_OK;
     }
 
     arg = varlist[1];
+    if(!arg) return S_OK;
     if(FAILED(ScriptVariant_DecimalValue(arg, &z)))
     {
         return S_OK;
     }
 
-    (*pretvar)->lVal = (LONG)(checkhole((float)x, (float)z) && checkwall((float)x, (float)z) < 0);
+    if(obor_profile_build >= 4211 && paramCount >= 3)
+    {
+        arg = varlist[2];
+        if(!arg) return S_OK;
+        if(FAILED(ScriptVariant_DecimalValue(arg, &a)))
+        {
+            return S_OK;
+        }
+
+        (*pretvar)->lVal = (LONG)(checkhole_in((float)x, (float)z, (float)a) && checkwall((float)x, (float)z) < 0);
+    }
+    else (*pretvar)->lVal = (LONG)(checkhole((float)x, (float)z) && checkwall((float)x, (float)z) < 0);
+
     return S_OK;
 }
-
 //checkwall(x,z), return wall height, or 0
 HRESULT openbor_checkwall(ScriptVariant **varlist , ScriptVariant **pretvar, int paramCount)
 {
+    if(!pretvar || !*pretvar) return E_FAIL;
     ScriptVariant *arg = NULL;
     DOUBLE x, z;
     int wall;
@@ -9566,13 +16609,16 @@ HRESULT openbor_checkwall(ScriptVariant **varlist , ScriptVariant **pretvar, int
     ScriptVariant_ChangeType(*pretvar, VT_DECIMAL);
     (*pretvar)->dblVal = (DOUBLE)0;
 
+    if(!varlist) return S_OK;
     arg = varlist[0];
+    if(!arg) return S_OK;
     if(FAILED(ScriptVariant_DecimalValue(arg, &x)))
     {
         return S_OK;
     }
 
     arg = varlist[1];
+    if(!arg) return S_OK;
     if(FAILED(ScriptVariant_DecimalValue(arg, &z)))
     {
         return S_OK;
@@ -9588,6 +16634,7 @@ HRESULT openbor_checkwall(ScriptVariant **varlist , ScriptVariant **pretvar, int
 //checkplatformbelow(x,z,a), return the highest platfrom entity below
 HRESULT openbor_checkplatformbelow(ScriptVariant **varlist , ScriptVariant **pretvar, int paramCount)
 {
+    if(!pretvar || !*pretvar) return E_FAIL;
     ScriptVariant *arg = NULL;
     DOUBLE x, z, a;
 
@@ -9597,22 +16644,34 @@ HRESULT openbor_checkplatformbelow(ScriptVariant **varlist , ScriptVariant **pre
         return E_FAIL;
     }
 
-    ScriptVariant_ChangeType(*pretvar, VT_DECIMAL);
-    (*pretvar)->dblVal = (DOUBLE)0;
+    if(obor_profile_build >= 4179)
+    {
+        ScriptVariant_ChangeType(*pretvar, VT_PTR);
+        (*pretvar)->ptrVal = NULL;
+    }
+    else
+    {
+        ScriptVariant_ChangeType(*pretvar, VT_DECIMAL);
+        (*pretvar)->dblVal = (DOUBLE)0;
+    }
 
+    if(!varlist) return S_OK;
     arg = varlist[0];
+    if(!arg) return S_OK;
     if(FAILED(ScriptVariant_DecimalValue(arg, &x)))
     {
         return S_OK;
     }
 
     arg = varlist[1];
+    if(!arg) return S_OK;
     if(FAILED(ScriptVariant_DecimalValue(arg, &z)))
     {
         return S_OK;
     }
 
     arg = varlist[2];
+    if(!arg) return S_OK;
     if(FAILED(ScriptVariant_DecimalValue(arg, &a)))
     {
         return S_OK;
@@ -9623,6 +16682,184 @@ HRESULT openbor_checkplatformbelow(ScriptVariant **varlist , ScriptVariant **pre
     return S_OK;
 }
 
+HRESULT openbor_checkplatformabove(ScriptVariant **varlist , ScriptVariant **pretvar, int paramCount)
+{
+    if(!pretvar || !*pretvar) return E_FAIL;
+    ScriptVariant *arg = NULL;
+    DOUBLE x, z, a;
+
+    if(paramCount < 3)
+    {
+        *pretvar = NULL;
+        return E_FAIL;
+    }
+
+    //ScriptVariant_ChangeType(*pretvar, VT_DECIMAL);
+    //(*pretvar)->dblVal = (DOUBLE)0;
+    ScriptVariant_ChangeType(*pretvar, VT_PTR);
+    (*pretvar)->ptrVal = (VOID *)NULL;
+
+    if(!varlist) return S_OK;
+    arg = varlist[0];
+    if(!arg) return S_OK;
+    if(FAILED(ScriptVariant_DecimalValue(arg, &x)))
+    {
+        return S_OK;
+    }
+
+    arg = varlist[1];
+    if(!arg) return S_OK;
+    if(FAILED(ScriptVariant_DecimalValue(arg, &z)))
+    {
+        return S_OK;
+    }
+
+    arg = varlist[2];
+    if(!arg) return S_OK;
+    if(FAILED(ScriptVariant_DecimalValue(arg, &a)))
+    {
+        return S_OK;
+    }
+
+    ScriptVariant_ChangeType(*pretvar, VT_PTR);
+    (*pretvar)->ptrVal = (VOID *)check_platform_above((float)x, (float)z, (float)a, NULL);
+    return S_OK;
+}
+HRESULT openbor_checkplatformbetween(ScriptVariant **varlist , ScriptVariant **pretvar, int paramCount)
+{
+    if(!pretvar || !*pretvar) return E_FAIL;
+    ScriptVariant *arg = NULL;
+    DOUBLE x, z, amin, amax;
+
+    if(paramCount < 4)
+    {
+        *pretvar = NULL;
+        return E_FAIL;
+    }
+
+    //ScriptVariant_ChangeType(*pretvar, VT_DECIMAL);
+    //(*pretvar)->dblVal = (DOUBLE)0;
+    ScriptVariant_ChangeType(*pretvar, VT_PTR);
+    (*pretvar)->ptrVal = (VOID *)NULL;
+
+    if(!varlist) return S_OK;
+    arg = varlist[0];
+    if(!arg) return S_OK;
+    if(FAILED(ScriptVariant_DecimalValue(arg, &x)))
+    {
+        return S_OK;
+    }
+
+    arg = varlist[1];
+    if(!arg) return S_OK;
+    if(FAILED(ScriptVariant_DecimalValue(arg, &z)))
+    {
+        return S_OK;
+    }
+
+    arg = varlist[2];
+    if(!arg) return S_OK;
+    if(FAILED(ScriptVariant_DecimalValue(arg, &amin)))
+    {
+        return S_OK;
+    }
+
+    arg = varlist[3];
+    if(!arg) return S_OK;
+    if(FAILED(ScriptVariant_DecimalValue(arg, &amax)))
+    {
+        return S_OK;
+    }
+
+    ScriptVariant_ChangeType(*pretvar, VT_PTR);
+    (*pretvar)->ptrVal = (VOID *)check_platform_between((float)x, (float)z, (float)amin, (float)amax, NULL);
+    return S_OK;
+}
+HRESULT openbor_checkholeindex(ScriptVariant **varlist , ScriptVariant **pretvar, int paramCount)
+{
+    if(!pretvar || !*pretvar) return E_FAIL;
+    ScriptVariant *arg = NULL;
+    DOUBLE x, z, a;
+
+    if(paramCount < 2)
+    {
+        *pretvar = NULL;
+        return E_FAIL;
+    }
+
+    ScriptVariant_ChangeType(*pretvar, VT_INTEGER);
+    (*pretvar)->lVal = (LONG)-1;
+
+    if(!varlist) return S_OK;
+    arg = varlist[0];
+    if(!arg) return S_OK;
+    if(FAILED(ScriptVariant_DecimalValue(arg, &x)))
+    {
+        return S_OK;
+    }
+
+    arg = varlist[1];
+    if(!arg) return S_OK;
+    if(FAILED(ScriptVariant_DecimalValue(arg, &z)))
+    {
+        return S_OK;
+    }
+
+    if ( checkwall((float)x, (float)z) < 0 )
+    {
+        if(obor_profile_build >= 4211 && paramCount >= 3)
+        {
+            arg = varlist[2];
+            if(!arg) return S_OK;
+            if(FAILED(ScriptVariant_DecimalValue(arg, &a)))
+            {
+                return S_OK;
+            }
+
+            (*pretvar)->lVal = (LONG)checkholeindex_in((float)x, (float)z, (float)a);
+        }
+        else (*pretvar)->lVal = (LONG)checkhole_index((float)x, (float)z);
+    }
+
+    return S_OK;
+}
+HRESULT openbor_checkwallindex(ScriptVariant **varlist , ScriptVariant **pretvar, int paramCount)
+{
+    if(!pretvar || !*pretvar) return E_FAIL;
+    ScriptVariant *arg = NULL;
+    DOUBLE x, z;
+    int wall;
+
+    if(paramCount < 2)
+    {
+        *pretvar = NULL;
+        return E_FAIL;
+    }
+
+    ScriptVariant_ChangeType(*pretvar, VT_INTEGER);
+    (*pretvar)->lVal = (LONG)-1;
+
+    if(!varlist) return S_OK;
+    arg = varlist[0];
+    if(!arg) return S_OK;
+    if(FAILED(ScriptVariant_DecimalValue(arg, &x)))
+    {
+        return S_OK;
+    }
+
+    arg = varlist[1];
+    if(!arg) return S_OK;
+    if(FAILED(ScriptVariant_DecimalValue(arg, &z)))
+    {
+        return S_OK;
+    }
+
+    if((wall = checkwall_below((float)x, (float)z, 100000)) >= 0)
+    {
+        (*pretvar)->lVal = (LONG)wall;
+    }
+    return S_OK;
+}
 HRESULT openbor_openfilestream(ScriptVariant **varlist , ScriptVariant **pretvar, int paramCount)
 {
     char *filename = NULL;
@@ -9780,13 +17017,21 @@ HRESULT openbor_getfilestreamline(ScriptVariant **varlist , ScriptVariant **pret
     return S_OK;
 }
 
+static s_filestream *obor_profile_stream(LONG index)
+{
+    if(index < 0 || index >= numfilestreams || !filestreams || !filestreams[index].buf)
+        return NULL;
+    return filestreams + index;
+}
+
 HRESULT openbor_getfilestreamargument(ScriptVariant **varlist , ScriptVariant **pretvar, int paramCount)
 {
     ScriptVariant *arg = NULL;
     LONG filestreamindex, argument;
     char *argtype = NULL;
 
-    if(paramCount < 3)
+    if(!pretvar || !*pretvar) return E_FAIL;
+    if(paramCount < 3 || !varlist || !varlist[0] || !varlist[1] || !varlist[2])
     {
         *pretvar = NULL;
         return E_FAIL;
@@ -9803,6 +17048,9 @@ HRESULT openbor_getfilestreamargument(ScriptVariant **varlist , ScriptVariant **
     {
         return S_OK;
     }
+    if((filestreamindex < 0 || filestreamindex >= numfilestreams || !filestreams || !filestreams[filestreamindex].buf) || filestreams[filestreamindex].pos < 0 ||
+       (size_t)filestreams[filestreamindex].pos > filestreams[filestreamindex].size)
+    { *pretvar = NULL; return E_FAIL; }
     ScriptVariant_Clear(*pretvar);
 
     if(varlist[2]->vt != VT_STR)
@@ -9810,7 +17058,8 @@ HRESULT openbor_getfilestreamargument(ScriptVariant **varlist , ScriptVariant **
         printf("You must give a string value specifying what kind of value you want the argument converted to.\n");
         return E_FAIL;
     }
-    argtype = (char *)StrCache_Get(varlist[2]->strVal);
+    argtype = (char *)StrCache_GetIfPresent(varlist[2]->strVal);
+    if(!argtype) return E_FAIL;
 
     if(stricmp(argtype, "string") == 0)
     {
@@ -9826,6 +17075,11 @@ HRESULT openbor_getfilestreamargument(ScriptVariant **varlist , ScriptVariant **
     {
         ScriptVariant_ChangeType(*pretvar, VT_DECIMAL);
         (*pretvar)->dblVal = (DOUBLE)atof(findarg(filestreams[filestreamindex].buf + filestreams[filestreamindex].pos, argument));
+    }
+    else if(obor_profile_build >= 4177 && stricmp(argtype, "byte") == 0)
+    {
+        ScriptVariant_ChangeType(*pretvar, VT_INTEGER);
+        (*pretvar)->lVal = (LONG)readByte(filestreams[filestreamindex].buf + filestreams[filestreamindex].pos);
     }
     else
     {
@@ -9919,71 +17173,67 @@ HRESULT openbor_setfilestreamposition(ScriptVariant **varlist , ScriptVariant **
     return S_OK;
 }
 
-HRESULT openbor_filestreamappend(ScriptVariant **varlist , ScriptVariant **pretvar, int paramCount)
+HRESULT openbor_filestreamappend(ScriptVariant **varlist, ScriptVariant **pretvar, int paramCount)
 {
-    LONG filestreamindex;
-    ScriptVariant *arg = NULL;
-    LONG appendtype = -1;
-    size_t len1, len2;
-    char *temp;
-    static char append[2048];
-
+    LONG index, appendtype = -1;
+    s_filestream *stream;
+    size_t length, old_size;
+    char *grown;
+    const char *text;
+    char converted[512];
+    if(!pretvar) return E_FAIL;
     *pretvar = NULL;
-    if(paramCount < 2)
+    if(paramCount < 2 || !varlist || !varlist[0] || !varlist[1] ||
+       FAILED(ScriptVariant_IntegerValue(varlist[0], &index)) ||
+       index < 0 || index >= numfilestreams || !filestreams || !filestreams[index].buf) return E_FAIL;
+    stream = filestreams + index;
+    if(paramCount >= 3 && (!varlist[2] ||
+       FAILED(ScriptVariant_IntegerValue(varlist[2], &appendtype)))) return E_FAIL;
+    old_size = stream->size;
+    if(obor_profile_build >= 4177 && paramCount >= 4)
     {
-        goto append_error;
+        const char *kind;
+        if(!varlist[3] || varlist[3]->vt != VT_STR ||
+           !(kind = StrCache_GetIfPresent(varlist[3]->strVal)) ||
+           stricmp(kind, "byte") != 0 || old_size > SIZE_MAX - 3) return E_FAIL;
+        /* Native nonempty writes start at size-1; the count advances by2.
+         * The extra initialized sentinel safely bounds later reads. */
+        grown = realloc(stream->buf, old_size + 3);
+        if(!grown) return E_FAIL;
+        memset(grown + old_size, 0, 3);
+        grown[old_size ? old_size - 1 : 0] = (unsigned char)varlist[1]->lVal;
+        grown[old_size ? old_size : 1] = 0;
+        stream->buf = grown;
+        stream->size = old_size + 2;
+        return S_OK;
     }
-
-    arg = varlist[0];
-    if(FAILED(ScriptVariant_IntegerValue(arg, &filestreamindex)))
+    if(varlist[1]->vt == VT_STR)
     {
-        goto append_error;
-    }
-
-    if(paramCount >= 3)
-    {
-        arg = varlist[2];
-        if(FAILED(ScriptVariant_IntegerValue(arg, &appendtype)))
-        {
-            goto append_error;
-        }
-    }
-
-    arg = varlist[1];
-    ScriptVariant_ToString(arg, append);
-
-    len1 = strlen(append);
-    len2 = filestreams[filestreamindex].size;
-
-    filestreams[filestreamindex].buf = realloc(filestreams[filestreamindex].buf, sizeof(*temp) * (len1 + len2 + 4));
-
-    if(appendtype == 0)
-    {
-        append[len1] = ' ';
-        append[++len1] = '\0';
-        strcpy(filestreams[filestreamindex].buf + len2, "\r\n");
-        len2 += 2;
-        strcpy(filestreams[filestreamindex].buf + len2, append);
-    }
-    else if(appendtype == 1)
-    {
-        append[len1] = ' ';
-        append[++len1] = '\0';
-        strcpy(filestreams[filestreamindex].buf + len2, append);
+        text = StrCache_GetIfPresent(varlist[1]->strVal);
+        if(!text) return E_FAIL;
     }
     else
     {
-        strcpy(filestreams[filestreamindex].buf + len2, append);
+        /* Includes the largest native finite decimal conversion. */
+        ScriptVariant_ToString(varlist[1], converted);
+        text = converted;
     }
-    filestreams[filestreamindex].size = len1 + len2;
-
+    length = strlen(text);
+    if(old_size > SIZE_MAX - 4 || length > SIZE_MAX - old_size - 4) return E_FAIL;
+    grown = realloc(stream->buf, old_size + length + 4);
+    if(!grown) return E_FAIL;
+    stream->buf = grown;
+    if(appendtype == 0)
+    {
+        memcpy(grown + old_size, "\r\n", 2);
+        old_size += 2;
+    }
+    memcpy(grown + old_size, text, length);
+    if(appendtype == 0 || appendtype == 1) grown[old_size + length++] = ' ';
+    grown[old_size + length] = 0;
+    stream->size = old_size + length;
     return S_OK;
-
-append_error:
-    return E_FAIL;
-
 }
-
 HRESULT openbor_createfilestream(ScriptVariant **varlist , ScriptVariant **pretvar, int paramCount)
 {
     int fsindex;
@@ -10019,13 +17269,15 @@ HRESULT openbor_savefilestream(ScriptVariant **varlist , ScriptVariant **pretvar
     int i;
     LONG filestreamindex;
     ScriptVariant *arg = NULL;
+    char *bytearg = NULL, *patharg = NULL;
     FILE *handle = NULL;
     char path[256] = {""};
     char tmpname[256] = {""};
 
+    if(!pretvar) return E_FAIL;
     *pretvar = NULL;
 
-    if(paramCount < 1)
+    if(paramCount < 2 || !varlist || !varlist[0] || !varlist[1])
     {
         return E_FAIL;
     }
@@ -10044,14 +17296,41 @@ HRESULT openbor_savefilestream(ScriptVariant **varlist , ScriptVariant **pretvar
         return E_FAIL;
     }
 
-    // Get the saves directory
-    getBasePath(path, "Saves", 0);
-    getPakName(tmpname, sizeof(tmpname), -1);
-    if(!obor_pak_path_append(path, sizeof(path), tmpname)) return E_FAIL;
+    if((filestreamindex < 0 || filestreamindex >= numfilestreams || !filestreams || !filestreams[filestreamindex].buf)) return E_FAIL;
+    if(obor_profile_build >= 4177 && paramCount > 3)
+    {
+        if(!varlist[3] || varlist[3]->vt != VT_STR)
+        {
+            printf("The pathname parameter must be a string.\n");
+            return E_FAIL;
+        }
+        patharg = StrCache_GetIfPresent(varlist[3]->strVal);
+        if(!patharg) return E_FAIL;
+    }
+    if(obor_profile_build >= 4177 && paramCount > 4)
+    {
+        if(!varlist[4] || !(bytearg = StrCache_GetIfPresent(varlist[4]->strVal))) return E_FAIL;
+        if(stricmp(bytearg, "byte") != 0)
+        {
+            printf("%s parameter does not exist.\n", bytearg);
+            return E_FAIL;
+        }
+    }
 
-    // Add user's filename to path and write the filestream to it
-    if(!obor_pak_path_append(path, sizeof(path), "/")) return E_FAIL;
-    if(!obor_pak_path_append(path, sizeof(path), (char *)StrCache_Get(arg->strVal))) return E_FAIL;
+    // Get the saves directory
+    if(!patharg)
+    {
+        getBasePath(path, "Saves", 0);
+        getPakName(tmpname, sizeof(tmpname), -1);
+        if(!obor_pak_path_append(path, sizeof(path), tmpname)) return E_FAIL;
+        if(!obor_pak_path_append(path, sizeof(path), "/")) return E_FAIL;
+    }
+    else
+    {
+        if(!obor_pak_path_append(path, sizeof(path), "./")) return E_FAIL;
+        if(!obor_pak_path_append(path, sizeof(path), patharg)) return E_FAIL;
+    }
+    if(!obor_pak_path_append(path, sizeof(path), (char *)StrCache_GetIfPresent(arg->strVal))) return E_FAIL;
 
     for(i = strlen(path) - 1; i >= 0; i--)
     {
@@ -10077,7 +17356,7 @@ HRESULT openbor_savefilestream(ScriptVariant **varlist , ScriptVariant **pretvar
     fwrite(filestreams[filestreamindex].buf, 1, strlen(filestreams[filestreamindex].buf), handle);
 
     // add blank line so it can be read successfully
-    fwrite("\r\n", 1, 2, handle);
+    if(!bytearg) fwrite("\r\n", 1, 2, handle);
     fclose(handle);
 
     return S_OK;
@@ -10114,7 +17393,7 @@ int mapstrings_attackproperty(ScriptVariant **varlist, int paramCount)
 {
     char *propname;
     int prop;
-    if(paramCount < 2)
+    if(paramCount < 2 || !varlist || !varlist[0])
     {
         return 1;
     }
@@ -10132,9 +17411,10 @@ HRESULT openbor_changeattackproperty(ScriptVariant **varlist , ScriptVariant **p
     int prop;
     ScriptVariant *arg = NULL;
 
+    if(!pretvar) return E_FAIL;
     *pretvar = NULL;
 
-    if(paramCount < 2)
+    if(paramCount < 2 || !varlist || !varlist[0] || !varlist[1])
     {
         return E_FAIL;
     }
@@ -10188,7 +17468,7 @@ HRESULT openbor_changeattackproperty(ScriptVariant **varlist , ScriptVariant **p
         attack.dropv.y = (float)dbltemp;
         if(paramCount > 2)
         {
-            if(SUCCEEDED(ScriptVariant_DecimalValue(varlist[2], &dbltemp)))
+            if(varlist[2] && SUCCEEDED(ScriptVariant_DecimalValue(varlist[2], &dbltemp)))
             {
                 attack.dropv.x = (float)dbltemp;
             }
@@ -10199,7 +17479,7 @@ HRESULT openbor_changeattackproperty(ScriptVariant **varlist , ScriptVariant **p
         }
         if(paramCount > 3)
         {
-            if(SUCCEEDED(ScriptVariant_DecimalValue(varlist[3], &dbltemp)))
+            if(varlist[3] && SUCCEEDED(ScriptVariant_DecimalValue(varlist[3], &dbltemp)))
             {
                 attack.dropv.z = (float)dbltemp;
             }
@@ -10620,6 +17900,8 @@ enum setspawnentry_enum
     _sse_multiple,
     _sse_name,
     _sse_nolife,
+    _sse_parent,
+    _sse_type,
     _sse_weapon,
     _sse_the_end,
 };
@@ -10654,11 +17936,50 @@ int mapstrings_setspawnentry(ScriptVariant **varlist, int paramCount)
         "multiple",
         "name",
         "nolife",
+        "parent",
+        "type",
         "weapon",
     };
 
-    MAPSTRINGS(varlist[0], proplist, _sse_the_end,
-               "Property name '%s' is not supported by setspawnentry.\n");
+    static const char *legacy_proplist[] =
+    {
+        "2phealth",
+        "2pitem",
+        "3phealth",
+        "3pitem",
+        "4phealth",
+        "4pitem",
+        "aggression",
+        "alias",
+        "alpha",
+        "boss",
+        "coords",
+        "credit",
+        "dying",
+        "flip",
+        "health",
+        "item",
+        "itemalias",
+        "itemhealth",
+        "itemmap",
+        "map",
+        "mp",
+        "multiple",
+        "name",
+        "nolife",
+        "weapon",
+    };
+
+    if(obor_profile_build < 4186)
+    {
+        MAPSTRINGS(varlist[0], legacy_proplist, _sse_the_end - 2,
+                   "Property name '%s' is not supported by setspawnentry.\n");
+    }
+    else
+    {
+        MAPSTRINGS(varlist[0], proplist, _sse_the_end,
+                   "Property name '%s' is not supported by setspawnentry.\n");
+    }
 
     return 1;
 }
@@ -10693,6 +18014,9 @@ HRESULT openbor_setspawnentry(ScriptVariant **varlist, ScriptVariant **pretvar, 
     }
 
     prop = varlist[0]->lVal;
+    if(obor_profile_build < 4186 && prop >= _sse_parent)
+        prop = prop == _sse_parent ? _sse_weapon : -1;
+
 
     arg = varlist[1];
 
@@ -10980,6 +18304,18 @@ HRESULT openbor_setspawnentry(ScriptVariant **varlist, ScriptVariant **pretvar, 
             (*pretvar)->lVal = (LONG)0;
         }
         break;
+    case _sse_parent:
+        if(obor_profile_build < 4189 ? arg->vt != VT_PTR : arg->vt == VT_PTR)
+            spawnentry.parent = (entity *)arg->ptrVal;
+        else
+            (*pretvar)->ptrVal = (VOID *)NULL;
+        break;
+    case _sse_type:
+        if(SUCCEEDED(ScriptVariant_IntegerValue(arg, &ltemp)))
+            spawnentry.entitytype = (int)ltemp;
+        else
+            (*pretvar)->lVal = (LONG)0;
+        break;
     case _sse_weapon:
         if(arg->vt != VT_STR)
         {
@@ -11235,6 +18571,34 @@ int mapstrings_transconst(ScriptVariant **varlist, int paramCount)
         constname = (char *)StrCache_Get(varlist[0]->strVal);
 
         IICMPCONST(COMPATIBLEVERSION)
+        else if(obor_profile_build >= 4191 && stricmp("DIRECTION_LEFT", constname) == 0)
+        {
+            v.lVal = obor_animation_constant_value("DIRECTION_LEFT", (LONG)DIRECTION_LEFT);
+        }
+        else if(obor_profile_build >= 4191 && stricmp("DIRECTION_RIGHT", constname) == 0)
+        {
+            v.lVal = obor_animation_constant_value("DIRECTION_RIGHT", (LONG)DIRECTION_RIGHT);
+        }
+        else if(obor_profile_build >= 4191 && stricmp("DIRECTION_ADJUST_LEFT", constname) == 0)
+        {
+            v.lVal = obor_animation_constant_value("DIRECTION_ADJUST_LEFT", (LONG)DIRECTION_ADJUST_LEFT);
+        }
+        else if(obor_profile_build >= 4191 && stricmp("DIRECTION_ADJUST_NONE", constname) == 0)
+        {
+            v.lVal = obor_animation_constant_value("DIRECTION_ADJUST_NONE", (LONG)DIRECTION_ADJUST_NONE);
+        }
+        else if(obor_profile_build >= 4191 && stricmp("DIRECTION_ADJUST_OPPOSITE", constname) == 0)
+        {
+            v.lVal = obor_animation_constant_value("DIRECTION_ADJUST_OPPOSITE", (LONG)DIRECTION_ADJUST_OPPOSITE);
+        }
+        else if(obor_profile_build >= 4191 && stricmp("DIRECTION_ADJUST_RIGHT", constname) == 0)
+        {
+            v.lVal = obor_animation_constant_value("DIRECTION_ADJUST_RIGHT", (LONG)DIRECTION_ADJUST_RIGHT);
+        }
+        else if(obor_profile_build >= 4191 && stricmp("DIRECTION_ADJUST_SAME", constname) == 0)
+        {
+            v.lVal = obor_animation_constant_value("DIRECTION_ADJUST_SAME", (LONG)DIRECTION_ADJUST_SAME);
+        }
         ICMPCONST(VT_EMPTY)
         ICMPCONST(VT_STR)
         ICMPCONST(VT_INTEGER)
@@ -13279,6 +20643,7 @@ enum levelproperty_enum
     _lp_scrollspeed,
     _lp_type,
     _lp_wall,
+    _lp_vbgspeed,
     _lp_the_end,
 };
 
@@ -13305,10 +20670,58 @@ enum terrain_enum
     _lp_terrain_the_end,
 };
 
+static int obor_levelproperty_native(int property)
+{
+    int count = obor_profile_build >= 4210 ? _lp_the_end : _lp_the_end - 1;
+    if(property < 0 || property >= count) return -1;
+    if(obor_profile_build >= 4210)
+    {
+        if(property == _lp_wall) return _lp_vbgspeed;
+        if(property == _lp_vbgspeed) return _lp_wall;
+    }
+    return property;
+}
+
+static int obor_levelproperty_speed_result(ScriptVariant *result, float value, VARTYPE type)
+{
+    if(!result || !((DOUBLE)value > -2147483649.0 && (DOUBLE)value < 2147483648.0)) return 0;
+    ScriptVariant_ChangeType(result, type);
+    /* The original writes the integer union member even with a decimal tag.
+     * Preserve the other initialized union bytes and the native truncation. */
+    result->lVal = (LONG)(DOUBLE)value;
+    return 1;
+}
+
+static HRESULT obor_levelproperty_speed_value(ScriptVariant *value, DOUBLE *number)
+{
+    LONG integer;
+    if(obor_profile_build >= 4210) return ScriptVariant_DecimalValue(value, number);
+    if(FAILED(ScriptVariant_IntegerValue(value, &integer))) return E_FAIL;
+    *number = (DOUBLE)integer;
+    return S_OK;
+}
+
 int mapstrings_levelproperty(ScriptVariant **varlist, int paramCount)
 {
     char *propname = NULL;
     int prop;
+
+    static const char *legacy_proplist[] =
+    {
+        "basemap",
+        "bgspeed",
+        "cameraxoffset",
+        "camerazoffset",
+        "gravity",
+        "hole",
+        "maxfallspeed",
+        "maxtossspeed",
+        "quake",
+        "rocking",
+        "scrollspeed",
+        "type",
+        "wall",
+    };
 
     static const char *proplist[] =
     {
@@ -13324,6 +20737,7 @@ int mapstrings_levelproperty(ScriptVariant **varlist, int paramCount)
         "rocking",
         "scrollspeed",
         "type",
+        "vbgspeed",
         "wall",
     };
 
@@ -13356,7 +20770,8 @@ int mapstrings_levelproperty(ScriptVariant **varlist, int paramCount)
     {
         return 1;
     }
-    MAPSTRINGS(varlist[0], proplist, _lp_the_end,
+    MAPSTRINGS(varlist[0], (obor_profile_build >= 4210 ? proplist : legacy_proplist),
+               (obor_profile_build >= 4210 ? _lp_the_end : _lp_the_end - 1),
                "Level property '%s' is not supported.\n");
 
     if(paramCount >= 3 && varlist[0]->vt == VT_INTEGER && varlist[0]->lVal == _lp_basemap)
@@ -13367,7 +20782,7 @@ int mapstrings_levelproperty(ScriptVariant **varlist, int paramCount)
 
     if(paramCount >= 3 && varlist[0]->vt == VT_INTEGER &&
        ((obor_profile_build >= 3997 && varlist[0]->lVal == _lp_hole) ||
-        (obor_profile_build >= 3995 && varlist[0]->lVal == _lp_wall)))
+        (obor_profile_build >= 3995 && obor_levelproperty_native(varlist[0]->lVal) == _lp_wall)))
     {
         MAPSTRINGS(varlist[2], terrainlist, _lp_terrain_the_end,
                    _is_not_supported_by_, obor_profile_build < 3997 ? "wall" : "wall/hole");
@@ -13410,12 +20825,17 @@ HRESULT openbor_getlevelproperty(ScriptVariant **varlist , ScriptVariant **pretv
     LONG ltemp;
     mapstrings_levelproperty(varlist, paramCount);
 
-    switch(varlist[0]->lVal)
+    switch(obor_levelproperty_native(varlist[0]->lVal))
     {
     case _lp_bgspeed:
     {
-        ScriptVariant_ChangeType(*pretvar, VT_INTEGER);
-        (*pretvar)->lVal = (LONG)level->bgspeed;
+        if(!obor_levelproperty_speed_result(*pretvar, level->bgspeed,
+               obor_profile_build >= 4210 ? VT_DECIMAL : VT_INTEGER)) goto getlevelproperty_error;
+        break;
+    }
+    case _lp_vbgspeed:
+    {
+        if(!obor_levelproperty_speed_result(*pretvar, level->vbgspeed, VT_DECIMAL)) goto getlevelproperty_error;
         break;
     }
     case _lp_cameraxoffset:
@@ -13659,7 +21079,7 @@ HRESULT openbor_changelevelproperty(ScriptVariant **varlist , ScriptVariant **pr
 
     arg = varlist[1];
 
-    switch(varlist[0]->lVal)
+    switch(obor_levelproperty_native(varlist[0]->lVal))
     {
     case _lp_rocking:
         if(SUCCEEDED(ScriptVariant_IntegerValue(arg, &ltemp)))
@@ -13672,9 +21092,19 @@ HRESULT openbor_changelevelproperty(ScriptVariant **varlist , ScriptVariant **pr
         }
         break;
     case _lp_bgspeed:
-        if(SUCCEEDED(ScriptVariant_IntegerValue(arg, &ltemp)))
+        if(SUCCEEDED(obor_levelproperty_speed_value(arg, &dbltemp)))
         {
-            level->bgspeed = (float)ltemp;
+            level->bgspeed = (float)dbltemp;
+        }
+        else
+        {
+            goto clperror;
+        }
+        break;
+    case _lp_vbgspeed:
+        if(SUCCEEDED(ScriptVariant_DecimalValue(arg, &dbltemp)))
+        {
+            level->vbgspeed = (float)dbltemp;
         }
         else
         {
@@ -13682,9 +21112,9 @@ HRESULT openbor_changelevelproperty(ScriptVariant **varlist , ScriptVariant **pr
         }
         break;
     case _lp_scrollspeed:
-        if(SUCCEEDED(ScriptVariant_IntegerValue(arg, &ltemp)))
+        if(SUCCEEDED(obor_levelproperty_speed_value(arg, &dbltemp)))
         {
-            level->scrollspeed = (float)ltemp;
+            level->scrollspeed = (float)dbltemp;
         }
         else
         {
@@ -14148,8 +21578,9 @@ HRESULT openbor_bindentity(ScriptVariant **varlist , ScriptVariant **pretvar, in
     void adjust_bind(entity * e);
     LONG x = 0, z = 0, a = 0, dir = 0, anim = 0;
 
+    if(!pretvar) return E_FAIL;
     *pretvar = NULL;
-    if(paramCount < 2)
+    if(paramCount < 2 || !varlist || !varlist[0] || !varlist[1])
     {
         return E_FAIL;
     }
@@ -14164,6 +21595,8 @@ HRESULT openbor_bindentity(ScriptVariant **varlist , ScriptVariant **pretvar, in
     if(!other)
     {
         ent->binding.ent = NULL;
+        if(obor_profile_build >= 4181)
+            ent->binding.offset_flag.x = ent->binding.offset_flag.z = ent->binding.offset_flag.y = 0;
         return S_OK;
     }
 
@@ -14175,6 +21608,7 @@ HRESULT openbor_bindentity(ScriptVariant **varlist , ScriptVariant **pretvar, in
     }
     // x
     arg = varlist[2];
+    if(!arg) return E_FAIL;
     if(arg->vt != VT_EMPTY)
     {
         if(FAILED(ScriptVariant_IntegerValue(arg, &x)))
@@ -14183,13 +21617,16 @@ HRESULT openbor_bindentity(ScriptVariant **varlist , ScriptVariant **pretvar, in
         }
 
         ent->binding.offset.x = (int)x;
+        if(obor_profile_build >= 4181) ent->binding.offset_flag.x = 1;
     }
+    else if(obor_profile_build >= 4181) ent->binding.offset_flag.x = 0;
     if(paramCount < 4)
     {
         goto BIND;
     }
     // z
     arg = varlist[3];
+    if(!arg) return E_FAIL;
     if(arg->vt != VT_EMPTY)
     {
         if(FAILED(ScriptVariant_IntegerValue(arg, &z)))
@@ -14197,13 +21634,16 @@ HRESULT openbor_bindentity(ScriptVariant **varlist , ScriptVariant **pretvar, in
             return E_FAIL;
         }
         ent->binding.offset.z = (int)z;
+        if(obor_profile_build >= 4181) ent->binding.offset_flag.z = 1;
     }
+    else if(obor_profile_build >= 4181) ent->binding.offset_flag.z = 0;
     if(paramCount < 5)
     {
         goto BIND;
     }
     // a
     arg = varlist[4];
+    if(!arg) return E_FAIL;
     if(arg->vt != VT_EMPTY)
     {
         if(FAILED(ScriptVariant_IntegerValue(arg, &a)))
@@ -14211,13 +21651,16 @@ HRESULT openbor_bindentity(ScriptVariant **varlist , ScriptVariant **pretvar, in
             return E_FAIL;
         }
         ent->binding.offset.y = (int)a;
+        if(obor_profile_build >= 4181) ent->binding.offset_flag.y = 1;
     }
+    else if(obor_profile_build >= 4181) ent->binding.offset_flag.y = 0;
     if(paramCount < 6)
     {
         goto BIND;
     }
     // direction
     arg = varlist[5];
+    if(!arg) return E_FAIL;
     if(arg->vt != VT_EMPTY)
     {
         if(FAILED(ScriptVariant_IntegerValue(arg, &dir)))
@@ -14232,6 +21675,7 @@ HRESULT openbor_bindentity(ScriptVariant **varlist , ScriptVariant **pretvar, in
     }
     // animation
     arg = varlist[6];
+    if(!arg) return E_FAIL;
     if(arg->vt != VT_EMPTY)
     {
         if(FAILED(ScriptVariant_IntegerValue(arg, &anim)))
@@ -14285,11 +21729,19 @@ array_error:
 HRESULT openbor_size(ScriptVariant **varlist , ScriptVariant **pretvar, int paramCount)
 {
     Varlist *array;
-    if(paramCount < 1 || varlist[0]->vt != VT_PTR || !(array = (Varlist *)varlist[0]->ptrVal) || array->magic != varlist_magic)
+    if(!pretvar || !*pretvar) return E_FAIL;
+    if(paramCount < 1 || !varlist || !varlist[0] || varlist[0]->vt != VT_PTR || !(array = (Varlist *)varlist[0]->ptrVal) || array->magic != varlist_magic)
     {
         goto size_error;
     }
-    ScriptVariant_Copy(*pretvar, array->vars);
+    if(!array->vars || !array->list) goto size_error;
+    if(obor_profile_build >= 4175 && array->list->size != 0)
+    {
+        ScriptVariant_ChangeType(*pretvar, VT_INTEGER);
+        (*pretvar)->lVal = (LONG)array->list->size;
+    }
+    else
+        ScriptVariant_Copy(*pretvar, array->vars);
 
     return S_OK;
 size_error:
@@ -14370,6 +21822,68 @@ set_error:
     printf("Function requires 1 array handle, 1 int value and 1 value: set(array, int index, value)\n");
     return E_FAIL;
 }
+
+HRESULT openbor_delete(ScriptVariant **varlist , ScriptVariant **pretvar, int paramCount)
+{
+    Varlist *array;
+    LONG index;
+
+    if(!pretvar) return E_FAIL;
+    *pretvar = NULL;
+    if(paramCount < 2 || !varlist || !varlist[0] || !varlist[1] || varlist[0]->vt != VT_PTR || !(array = (Varlist *)varlist[0]->ptrVal) || array->magic != varlist_magic)
+    {
+        goto set_error;
+    }
+
+    if(varlist[1]->vt == VT_STR)
+    {
+        if ( !Varlist_DeleteByName(array, StrCache_GetIfPresent(varlist[1]->strVal)) ) goto set_error;
+    }
+    else if(SUCCEEDED(ScriptVariant_IntegerValue(varlist[1], &index)))
+    {
+        if ( !Varlist_DeleteByIndex(array, (int)index) ) goto set_error;
+    }
+    else
+    {
+        goto set_error;
+    }
+
+    return S_OK;
+
+set_error:
+    printf("Function requires 1 array handle and 1 int value (index): delete(array, index)\n");
+    return E_FAIL;
+}
+
+
+HRESULT openbor_add(ScriptVariant **varlist , ScriptVariant **pretvar, int paramCount)
+{
+    Varlist *array;
+    LONG index;
+
+    if(!pretvar) return E_FAIL;
+    *pretvar = NULL;
+    if(paramCount < 3 || !varlist || !varlist[0] || !varlist[1] || !varlist[2] || varlist[0]->vt != VT_PTR || !(array = (Varlist *)varlist[0]->ptrVal) || array->magic != varlist_magic)
+    {
+        goto set_error;
+    }
+
+    if( SUCCEEDED(ScriptVariant_IntegerValue(varlist[1], &index)) )
+    {
+        if ( !Varlist_AddByIndex(array, (int)index, varlist[2]) ) goto set_error;
+    }
+    else
+    {
+        goto set_error;
+    }
+
+    return S_OK;
+
+set_error:
+    printf("Function requires 1 array handle and 1 int value (index): add(array, index)\n");
+    return E_FAIL;
+}
+
 
 //reset(array)
 HRESULT openbor_reset(ScriptVariant **varlist , ScriptVariant **pretvar, int paramCount)
@@ -14889,7 +22403,7 @@ HRESULT openbor_changedrawmethod(ScriptVariant **varlist , ScriptVariant **pretv
         {
             return E_FAIL;
         }
-        pmethod->rotate = (int)temp;
+        (void)obor_drawmethod_store_rotation(pmethod, (int)temp);
         break;
     case _dm_scalex:
         if(FAILED(ScriptVariant_IntegerValue(varlist[2], &temp)))
@@ -15111,7 +22625,11 @@ HRESULT openbor_getdrawmethod(ScriptVariant **varlist , ScriptVariant **pretvar,
             (*pretvar)->lVal = pmethod->remap;
             break;
         case _dm_rotate:
-            (*pretvar)->lVal = pmethod->rotate;
+            {
+                int rotation;
+                if(!obor_drawmethod_rotation_integer(pmethod, &rotation)) return E_FAIL;
+                (*pretvar)->lVal = rotation;
+            }
             break;
         case _dm_scalex:
             (*pretvar)->lVal = pmethod->scalex;
@@ -15240,7 +22758,7 @@ HRESULT openbor_setdrawmethod(ScriptVariant **varlist , ScriptVariant **pretvar,
     pmethod->alpha = (int)value[6];
     pmethod->remap = (int)value[7];
     pmethod->fillcolor = (int)value[8];
-    pmethod->rotate = ((int)value[9]) % 360;
+    (void)obor_drawmethod_store_rotation(pmethod, ((int)value[9]) % 360);
     pmethod->fliprotate = (int)value[10];
     pmethod->transbg = (int)value[11];
     if(paramCount >= 14)
@@ -15250,9 +22768,9 @@ HRESULT openbor_setdrawmethod(ScriptVariant **varlist , ScriptVariant **pretvar,
     pmethod->centerx = (int)value[12];
     pmethod->centery = (int)value[13];
 
-    if(pmethod->rotate < 0)
+    if(obor_drawmethod_rotation(pmethod) < 0)
     {
-        pmethod->rotate += 360;
+        (void)obor_drawmethod_store_rotation(pmethod, obor_drawmethod_rotation(pmethod) + 360);
     }
     return S_OK;
 
@@ -15404,7 +22922,7 @@ HRESULT openbor_setidle(ScriptVariant **varlist , ScriptVariant **pretvar, int p
     e->falling = 0;
     e->inpain = 0;
     e->blocking = 0;
-    e->nograb = 0;
+    e->nograb = obor_profile_build >= 4170 ? e->nograb_default : 0;
     e->destx = e->position.x;
     e->destz = e->position.z;
 
@@ -15552,8 +23070,17 @@ loadsprite_error:
 // Call options menu, blocked
 HRESULT openbor_options(ScriptVariant **varlist , ScriptVariant **pretvar, int paramCount)
 {
-    void options();
-    options();
+    if(!pretvar) return E_FAIL;
+    if(obor_profile_build >= 4174 && is_cheat_actived()) cheatoptions();
+    else options();
+    *pretvar = NULL;
+    return S_OK;
+}
+
+HRESULT openbor_hallfame(ScriptVariant **varlist, ScriptVariant **pretvar, int paramCount)
+{
+    if(!pretvar) return E_FAIL;
+    hallfame(0);
     *pretvar = NULL;
     return S_OK;
 }

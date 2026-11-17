@@ -1,0 +1,169 @@
+/* SPDX-License-Identifier: BSD-3-Clause
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me>
+ * Native geometry/wrappers; observed targeted registration and reverse names.
+ */
+#include <stdint.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include "openbor.h"
+#undef printf
+#undef assert
+#ifdef NDEBUG
+#error Terrain query assertions must remain enabled
+#endif
+uint32_t obor_profile_build;
+static unsigned active_case;
+#define assert(c) do{if(!(c)){fprintf(stderr,"TERRAIN_QUERIES revision=%u case=%u line=%d: %s\n",obor_profile_build,active_case,__LINE__,#c);abort();}}while(0)
+HRESULT Interpreter_Call(Interpreter *p){(void)p;abort();}
+HRESULT Interpreter_EvalInstruction(Interpreter *p){(void)p;abort();}
+static char strings[32][64];static int used[32];
+int StrCache_Pop(void){for(int i=0;i<32;++i)if(!used[i]){used[i]=1;strings[i][0]=0;return i;}abort();}
+void StrCache_Collect(int i){assert(i>=0 && i<32 && used[i]);used[i]=0;}
+CHAR *StrCache_Get(int i){assert(i>=0 && i<32 && used[i]);return strings[i];}
+CHAR *StrCache_GetIfPresent(int i){return i>=0 && i<32 && used[i]?strings[i]:NULL;}
+void StrCache_Copy(int i,CHAR *s){assert(i>=0 && i<32 && used[i] && strlen(s)<64);strcpy(strings[i],s);}
+@VARIANTS@
+static s_level level_record;s_level *level=&level_record;
+static __typeof__(*level_record.holes) holes[4],walls[1];
+static entity platforms[3],*entity_slots[3];entity **ent_list=entity_slots;
+int ent_max=3,holez;
+static s_anim animations[3];static float boxes[3][1][8];
+@BACKENDS@
+@WRAPPERS@
+List theFunctionList;
+static struct{const char *name;void *function;} entries[512];static int entry_count;
+void List_Reset(List *list){assert(list==&theFunctionList);entry_count=0;}
+void List_InsertAfter(List *list,void *value,const char *name){assert(list==&theFunctionList && entry_count<512);entries[entry_count++]=(__typeof__(*entries)){name,value};}
+@STUBS@
+@REGISTRY@
+typedef HRESULT (*query)(ScriptVariant**,ScriptVariant**,int);
+static query native[]={@FUNCTIONS@};
+static const char *names[]={@NAMES@};
+static const int arity[]={2,2,2,2,3,3,4};
+static const struct{unsigned revision;int platform_api,index_api,height,inclusive,platform_pointer;void *binding[7];} contexts[]={@CONTEXTS@};
+static unsigned context;
+static int available(int q){return (q==1 || q==3)?contexts[context].index_api:q>=5?contexts[context].platform_api:1;}
+static void setup(void){
+ memset(&level_record,0,sizeof(level_record));memset(holes,0,sizeof(holes));memset(walls,0,sizeof(walls));
+ memset(platforms,0,sizeof(platforms));memset(animations,0,sizeof(animations));memset(boxes,0,sizeof(boxes));
+ level=&level_record;level->holes=holes;level->walls=walls;level->numholes=4;level->numwalls=1;holez=-91;
+ for(int i=0;i<4;++i){holes[i].z=10;holes[i].depth=20;holes[i].upperleft=holes[i].lowerleft=-10;holes[i].upperright=holes[i].lowerright=10;holes[i].height=i==0?-5:i==1?10:20;}
+ walls[0]=holes[0];walls[0].height=7;
+ for(int i=0;i<3;++i){
+  platforms[i].exists=1;platforms[i].position.y=i*10;platforms[i].animation=&animations[i];entity_slots[i]=&platforms[i];
+  animations[i].numframes=animations[i].obor_frame_capacity=1;animations[i].platform=boxes[i];
+  boxes[i][0][1]=10;boxes[i][0][2]=boxes[i][0][3]=-10;boxes[i][0][4]=boxes[i][0][5]=10;boxes[i][0][6]=20;boxes[i][0][7]=5;
+ }
+}
+static void geometry(void){
+ const float grid[]={-11,-10,-9,0,9,10,11};
+ for(unsigned x=0;x<7;++x)for(unsigned z=0;z<7;++z){
+  ++active_case;setup();int strict=grid[x]>-10 && grid[x]<10 && grid[z]>-10 && grid[z]<10;
+  int closed=grid[x]>=-10 && grid[x]<=10 && grid[z]>=-10 && grid[z]<=10;
+  int old_platform=grid[x]>-10 && grid[x]<10 && grid[z]>-10 && grid[z]<=10;
+  assert(testhole(0,grid[x],grid[z])==strict);
+  assert(testwall(0,grid[x],grid[z])==(contexts[context].inclusive?closed:strict));
+  assert(testplatform(&platforms[0],grid[x],grid[z],NULL)==(contexts[context].inclusive?closed:old_platform));
+ }
+ setup();walls[0].upperleft=-5;walls[0].upperright=5;boxes[0][0][2]=-5;boxes[0][0][4]=5;
+ assert(testwall(0,-7.5f,0)==contexts[context].inclusive && testwall(0,7.5f,0)==contexts[context].inclusive);
+ assert(testplatform(&platforms[0],-7.5f,0,NULL)==contexts[context].inclusive);
+ assert(testplatform(&platforms[0],7.5f,0,NULL)==contexts[context].inclusive);
+ setup();assert(!testplatform(&platforms[0],0,0,&platforms[0]));
+ assert(check_platform_below(0,0,15,NULL)==&platforms[1]);
+ assert(check_platform_above(0,0,12,NULL)==&platforms[2]);
+ assert(check_platform_between(0,0,12,20,NULL)==&platforms[1]);
+ assert(check_platform_between(0,0,15,20,NULL)==&platforms[2]);
+ platforms[2].position.y=10;
+ assert(check_platform_below(0,0,15,NULL)==&platforms[1] && check_platform_above(0,0,10,NULL)==&platforms[1]);
+ platforms[2].position.y=20;
+ assert(check_platform_below(0,0,100,&platforms[2])==&platforms[1]);
+ if(contexts[context].index_api){holez=-91;assert(checkhole_index(0,0)==0 && holez==-91);assert(checkhole_index(100,0)==-1);}
+ if(contexts[context].height){
+  const float altitude[]={-7,12,22,22.5f};
+  for(unsigned i=0;i<4;++i){assert(checkhole_in(0,0,altitude[i])==(i<3));assert(checkholeindex_in(0,0,altitude[i])==(i<3?3:-1));}
+  assert(checkhole_between(0,0,10,20)==3 && !checkhole_between(0,0,20,10));
+  level->numholes=1;assert(!checkhole_in(0,0,-7) && checkholeindex_in(0,0,-7)==-1);assert(checkhole_between(0,0,-6,-4)==1);
+ }
+ level=NULL;assert(!checkhole(0,0) && checkwall(0,0)==-1 && checkwall_below(0,0,100)==-1);
+ assert(!check_platform_below(0,0,10,NULL) && !check_platform_above(0,0,10,NULL) && !check_platform_between(0,0,0,10,NULL));
+ if(contexts[context].height)assert(checkhole_in(0,0,0)==-1 && checkholeindex_in(0,0,0)==-1);
+}
+static void arguments(ScriptVariant *v,ScriptVariant **args){
+ for(int i=0;i<4;++i){memset(&v[i],0,sizeof(v[i]));v[i].vt=VT_INTEGER;v[i].lVal=i<2?0:i==2?12:20;args[i]=&v[i];}
+}
+static void release(ScriptVariant *v){for(int i=0;i<4;++i)ScriptVariant_Clear(&v[i]);}
+static void default_result(int q,ScriptVariant *result){
+ if(q>=5 || (q==4 && contexts[context].platform_pointer))assert(result->vt==VT_PTR && !result->ptrVal);
+ else if(q==2 || q==4)assert(result->vt==VT_DECIMAL && result->dblVal==0);
+ else assert(result->vt==VT_INTEGER && result->lVal==((q==1 || q==3)?-1:0));
+}
+static void good_result(int q,ScriptVariant *result){
+ if(q>=4)assert(result->vt==VT_PTR && result->ptrVal==&platforms[q==4?0:q==5?2:1]);
+ else if(q==2)assert(result->vt==VT_DECIMAL && result->dblVal==7);
+ else assert(result->vt==VT_INTEGER && result->lVal==(q==1?-1:0));
+}
+static void wrappers(void){
+ for(int q=0;q<7;++q){
+  if(!available(q))continue;
+  ++active_case;setup();ScriptVariant v[4],*args[4],result={.vt=VT_INTEGER},*out=&result;arguments(v,args);result.lVal=777;
+  assert(native[q](args,&out,4)==S_OK && out==&result);good_result(q,&result);
+  assert(holez==(q==0 && !contexts[context].height?0:-91));release(v);ScriptVariant_Clear(&result);
+  for(int slot=0;slot<arity[q];++slot)for(int kind=0;kind<4;++kind){
+   ++active_case;setup();arguments(v,args);result=(ScriptVariant){.vt=VT_INTEGER};result.lVal=777;out=&result;
+   if(kind==0)v[slot].vt=VT_EMPTY;
+   else if(kind==1){ScriptVariant_ChangeType(&v[slot],VT_STR);StrCache_Copy(v[slot].strVal,"bad");}
+   else if(kind==2){v[slot].vt=VT_PTR;v[slot].ptrVal=&platforms[0];}
+   else args[slot]=NULL; /* Separate stable missing-slot refusal. */
+   assert(native[q](args,&out,arity[q])==S_OK && out==&result);default_result(q,&result);
+   release(v);ScriptVariant_Clear(&result);
+  }
+  for(int n=0;n<arity[q];++n){
+   ++active_case;arguments(v,args);result=(ScriptVariant){.vt=VT_INTEGER};result.lVal=777;out=&result;
+   assert(native[q](args,&out,n)==E_FAIL && !out && result.vt==VT_INTEGER && result.lVal==777);release(v);
+  }
+  /* Stable output/list refusals are separate from defined original inputs. */
+  result=(ScriptVariant){.vt=VT_INTEGER};out=&result;assert(native[q](NULL,&out,arity[q])==S_OK);default_result(q,&result);ScriptVariant_Clear(&result);
+  out=NULL;assert(native[q](NULL,&out,arity[q])==E_FAIL && native[q](NULL,NULL,arity[q])==E_FAIL);
+ }
+ for(int q=0;q<7;++q){
+  if(!available(q))continue;
+  setup();ScriptVariant v[4],*args[4],*out;arguments(v,args);out=&v[0];
+  assert(native[q](args,&out,4)==S_OK && out==&v[0]);
+  if(q>=5 || (q==4 && contexts[context].platform_pointer))assert(v[0].vt==VT_PTR && !v[0].ptrVal);
+  else good_result(q,&v[0]);
+  release(v);
+ }
+ setup();level->numwalls=0;
+ for(int q=0;q<=1;++q){
+  if(!available(q))continue;
+  ScriptVariant v[4],*args[4],result={0},*out=&result;arguments(v,args);args[2]=NULL;holez=-91;
+  assert(native[q](args,&out,3)==S_OK);
+  assert(result.vt==VT_INTEGER && result.lVal==(contexts[context].height?(q?-1:0):(q?0:1)));
+  assert(holez==(q==0 && !contexts[context].height?0:-91));release(v);ScriptVariant_Clear(&result);
+ }
+ setup();level=NULL;
+ {ScriptVariant v[4],*args[4],result={0},*out=&result;arguments(v,args);assert(native[0](args,&out,3)==S_OK && result.vt==VT_INTEGER && result.lVal==contexts[context].height);release(v);ScriptVariant_Clear(&result);}
+}
+static void registry(void){
+ Script_LoadSystemFunctions();int previous=-1;
+ for(int q=0;q<7;++q){
+  int found=-1;for(int i=0;i<entry_count;++i)if(!strcmp(entries[i].name,names[q])){assert(found<0);found=i;}
+  assert((found>=0)==(contexts[context].binding[q]!=NULL));
+  assert(!strcmp(Script_GetFunctionName((void*)native[q]),available(q)?names[q]:"<unknown function>"));
+  if(found<0)continue;
+  assert(found>previous && entries[found].function==contexts[context].binding[q]);previous=found;
+  int actual=-1;for(int i=0;i<7;++i)if((void*)native[i]==contexts[context].binding[q])actual=i;assert(actual>=0);
+  setup();ScriptVariant v[4],*args[4],result={0},*out=&result;arguments(v,args);
+  assert(((query)entries[found].function)(args,&out,4)==S_OK);good_result(actual,&result);release(v);ScriptVariant_Clear(&result);
+ }
+}
+int main(void){
+ for(context=0;context<sizeof(contexts)/sizeof(*contexts);++context){
+  obor_profile_build=contexts[context].revision;active_case=0;geometry();wrappers();registry();
+  for(int i=0;i<32;++i)assert(!used[i]);
+  printf("{\"revision\":%u,\"status\":\"PASS\"}\n",obor_profile_build);
+ }
+ return 0;
+}

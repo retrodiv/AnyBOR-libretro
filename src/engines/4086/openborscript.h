@@ -1,11 +1,16 @@
-/* AnyBOR modification record: 2026-11-08.
+/* AnyBOR modification record: 2026-11-17.
  * Port maintained by retrodiv <retrodiv@proton.me>.
  * Copyright (c) 2026 retrodiv <retrodiv@proton.me> (original contributions).
  * These contributions are licensed under BSD-3-Clause; see LICENSE at the root.
  * Upstream code retains its original license and notices.
  * Declare owned script-variable name storage. Declare the shared engine-
  * credit-screen selector and script seed callback without exposing them to
- * earlier native namespaces.
+ * earlier native namespaces. Declare the profile-selected mathematical
+ * interfaces. Declare the source-defined array edit interfaces. Declare the
+ * native animation property setter and hall-of-fame script interfaces.
+ * Reserve internal selectors for native cheat-state and level-count system
+ * variables. Declare native platform and terrain-index script query
+ * interfaces.
  * Existing changes recorded here; this is not their implementation date.
  * See MODIFICATIONS.md and docs/modifications/4086.md
  * at the source repository root. Original notices follow below.
@@ -116,6 +121,12 @@ HRESULT system_typeof(ScriptVariant **varlist , ScriptVariant **pretvar, int par
 HRESULT math_sin(ScriptVariant **varlist , ScriptVariant **pretvar, int paramCount);
 HRESULT math_cos(ScriptVariant **varlist , ScriptVariant **pretvar, int paramCount);
 HRESULT math_sqrt(ScriptVariant **varlist , ScriptVariant **pretvar, int paramCount);
+HRESULT math_ssin(ScriptVariant **varlist , ScriptVariant **pretvar, int paramCount);
+HRESULT math_scos(ScriptVariant **varlist , ScriptVariant **pretvar, int paramCount);
+HRESULT math_pow(ScriptVariant **varlist , ScriptVariant **pretvar, int paramCount);
+HRESULT math_asin(ScriptVariant **varlist , ScriptVariant **pretvar, int paramCount);
+HRESULT math_acos(ScriptVariant **varlist , ScriptVariant **pretvar, int paramCount);
+HRESULT math_atan(ScriptVariant **varlist , ScriptVariant **pretvar, int paramCount);
 HRESULT openbor_systemvariant(ScriptVariant **varlist , ScriptVariant **pretvar, int paramCount);
 HRESULT openbor_changesystemvariant(ScriptVariant **varlist , ScriptVariant **pretvar, int paramCount);
 HRESULT openbor_drawstring(ScriptVariant **varlist , ScriptVariant **pretvar, int paramCount);
@@ -132,6 +143,7 @@ HRESULT openbor_drawdottoscreen(ScriptVariant **varlist , ScriptVariant **pretva
 HRESULT openbor_drawscreen(ScriptVariant **varlist , ScriptVariant **pretvar, int paramCount);
 HRESULT openbor_changeplayerproperty(ScriptVariant **varlist , ScriptVariant **pretvar, int paramCount);
 HRESULT openbor_changeentityproperty(ScriptVariant **varlist , ScriptVariant **pretvar, int paramCount);
+HRESULT openbor_changeanimationproperty(ScriptVariant **varlist, ScriptVariant **pretvar, int paramCount);
 HRESULT openbor_getanimationproperty(ScriptVariant **varlist , ScriptVariant **pretvar, int paramCount);
 HRESULT openbor_getplayerproperty(ScriptVariant **varlist , ScriptVariant **pretvar, int paramCount);
 HRESULT openbor_getentityproperty(ScriptVariant **varlist , ScriptVariant **pretvar, int paramCount);
@@ -172,6 +184,10 @@ HRESULT openbor_changelevelproperty(ScriptVariant **varlist , ScriptVariant **pr
 HRESULT openbor_checkhole(ScriptVariant **varlist , ScriptVariant **pretvar, int paramCount);
 HRESULT openbor_checkwall(ScriptVariant **varlist , ScriptVariant **pretvar, int paramCount);
 HRESULT openbor_checkplatformbelow(ScriptVariant **varlist , ScriptVariant **pretvar, int paramCount);
+HRESULT openbor_checkplatformabove(ScriptVariant **varlist , ScriptVariant **pretvar, int paramCount);
+HRESULT openbor_checkplatformbetween(ScriptVariant **varlist , ScriptVariant **pretvar, int paramCount);
+HRESULT openbor_checkholeindex(ScriptVariant **varlist , ScriptVariant **pretvar, int paramCount);
+HRESULT openbor_checkwallindex(ScriptVariant **varlist , ScriptVariant **pretvar, int paramCount);
 
 HRESULT openbor_openfilestream(ScriptVariant **varlist , ScriptVariant **pretvar, int paramCount);
 HRESULT openbor_getfilestreamline(ScriptVariant **varlist , ScriptVariant **pretvar, int paramCount);
@@ -204,6 +220,8 @@ HRESULT openbor_array(ScriptVariant **varlist , ScriptVariant **pretvar, int par
 HRESULT openbor_size(ScriptVariant **varlist , ScriptVariant **pretvar, int paramCount);
 HRESULT openbor_get(ScriptVariant **varlist , ScriptVariant **pretvar, int paramCount);
 HRESULT openbor_set(ScriptVariant **varlist , ScriptVariant **pretvar, int paramCount);
+HRESULT openbor_delete(ScriptVariant **varlist , ScriptVariant **pretvar, int paramCount);
+HRESULT openbor_add(ScriptVariant **varlist , ScriptVariant **pretvar, int paramCount);
 HRESULT openbor_reset(ScriptVariant **varlist , ScriptVariant **pretvar, int paramCount);
 HRESULT openbor_next(ScriptVariant **varlist , ScriptVariant **pretvar, int paramCount);
 HRESULT openbor_key(ScriptVariant **varlist , ScriptVariant **pretvar, int paramCount);
@@ -220,6 +238,7 @@ HRESULT openbor_getentity(ScriptVariant **varlist , ScriptVariant **pretvar, int
 HRESULT openbor_loadmodel(ScriptVariant **varlist , ScriptVariant **pretvar, int paramCount);
 HRESULT openbor_loadsprite(ScriptVariant **varlist , ScriptVariant **pretvar, int paramCount);
 HRESULT openbor_options(ScriptVariant **varlist , ScriptVariant **pretvar, int paramCount);
+HRESULT openbor_hallfame(ScriptVariant **varlist, ScriptVariant **pretvar, int paramCount);
 HRESULT openbor_playgif(ScriptVariant **varlist , ScriptVariant **pretvar, int paramCount);
 HRESULT openbor_openanigif(ScriptVariant **varlist , ScriptVariant **pretvar, int paramCount);
 HRESULT openbor_decodeanigif(ScriptVariant **varlist , ScriptVariant **pretvar, int paramCount);
@@ -375,6 +394,10 @@ enum systemvariant_enum
     _sv_waiting,
     _sv_xpos,
     _sv_ypos,
+    _sv_cheats,
+    _sv_numholes,
+    _sv_numlayers,
+    _sv_numwalls,
     _sv_the_end,
 };
 

@@ -11,6 +11,10 @@
 #include <stdarg.h>
 #include "openbor.h"
 #undef printf
+/* Native allocator output is checked separately; ordinary successful
+ * allocations retain their real pointers in this consumer contract. */
+void *checkAlloc(void *ptr, size_t bytes, const char *func, const char *file, int line)
+{ (void)func; (void)file; (void)line; if(bytes && !ptr) abort(); return ptr; }
 #undef assert
 #ifdef NDEBUG
 #error Duration assertions must remain enabled
@@ -54,6 +58,18 @@ void writeToLogFile(const char *format,...) {(void)format;abort();}
 #define printf record_printf
 @HELPERS@
 @MACROS@
+/* The later sprite/owner path is outside this fixture's original range.
+ * These typed providers stop if that path is accidentally entered. */
+static s_sprite_map *sprite_map;
+static int sprite_map_max_items;
+static unsigned int sprites_loaded;
+size_t obor_allocation_size(const void *value) { (void)value; abort(); }
+const entity *obor_script_animation_owner(const entity *actor)
+{ (void)actor; abort(); }
+s_anim *obor_script_model_animation(const entity *actor, int id)
+{ (void)actor; (void)id; abort(); }
+
+
 @DECLARATIONS@
 @GETTER@
 @ATTACK_MAPPER@

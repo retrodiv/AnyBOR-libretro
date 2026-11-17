@@ -10,6 +10,10 @@
 #include "openbor.h"
 #include "ImportCache.h"
 #undef printf
+/* Native allocator output is checked separately; ordinary successful
+ * allocations retain their real pointers in this consumer contract. */
+void *checkAlloc(void *ptr, size_t bytes, const char *func, const char *file, int line)
+{ (void)func; (void)file; (void)line; if(bytes && !ptr) abort(); return ptr; }
 #undef assert
 #include <assert.h>
 #ifdef NDEBUG

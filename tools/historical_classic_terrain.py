@@ -20,7 +20,9 @@ def terrain_program(root, data):
     callbacks = []
     # The shared extractor accepts a named selector. Restore the exact native
     # expression after using the temporary name solely to split its cases.
-    parsed = source.replace('switch(varlist[0]->lVal)', 'switch(terrain_selector)')
+    selector = ('obor_levelproperty_native(varlist[0]->lVal)'
+                if 'static int obor_levelproperty_native(' in source else 'varlist[0]->lVal')
+    parsed = source.replace('switch('+selector+')', 'switch(terrain_selector)')
     for name in ('openbor_getlevelproperty', 'openbor_changelevelproperty'):
         body, cases = switch_cases(parsed, name, 'terrain_selector', outermost=True)
         prefix = body[:body.index('switch(terrain_selector)')]
@@ -30,7 +32,7 @@ def terrain_program(root, data):
         selected += 'default:'+cases['default']['body']
         suffix = body[body.rfind('    return S_OK;'):]
         callbacks.append((prefix+'switch(terrain_selector){'+selected+'}\n'+suffix)
-                         .replace('switch(terrain_selector)', 'switch(varlist[0]->lVal)'))
+                         .replace('switch(terrain_selector)', 'switch('+selector+')'))
     lines = source.splitlines(keepends=True)
     first = next(i for i, line in enumerate(lines) if line.startswith('#define MAPSTRINGS('))
     last = first

@@ -1,0 +1,1026 @@
+/* SPDX-License-Identifier: BSD-3-Clause
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me> */
+#include <stdio.h>
+#include <stdlib.h>
+#include <stdint.h>
+#include <string.h>
+#include <strings.h>
+#include <stdarg.h>
+#include <limits.h>
+#include <math.h>
+#include <float.h>
+@HEADER@
+#undef printf
+#undef assert
+
+/* These consumer contracts observe successful delegated allocations.
+ * Native wrapper outputs are covered by the separate compatibility suite. */
+void *checkAlloc(void *pointer,size_t size,const char *function,const char *file,int line)
+{
+    (void)function; (void)file; (void)line;
+    if(size && !pointer) abort();
+    return pointer;
+}
+uint32_t obor_profile_build;
+static unsigned active_case;
+#define CHECK(c) do{if(!(c)){fprintf(stderr,"ANIMATION_PROPERTIES revision=%u case=%u line=%d: %s\n",obor_profile_build,active_case,__LINE__,#c);abort();}}while(0)
+#define assert(c) CHECK(c)
+HRESULT Interpreter_Call(Interpreter *v){(void)v;abort();}
+HRESULT Interpreter_EvalInstruction(Interpreter *v){(void)v;abort();}
+void borExit(int value){(void)value;abort();}
+@LIST@
+#undef assert
+#define assert(c) CHECK(c)
+#ifndef stricmp
+#define stricmp strcasecmp
+#endif
+static const char *texts[16];static unsigned refs[16];
+@CACHE_TYPE@
+static Varstr cache_entries[16];Varstr *strcache=cache_entries;int strcache_size=16;
+static char cache_output[16][128];
+static char diagnostic[2048];
+CHAR *StrCache_Get(int key){assert(key>=0 && key<16);return (CHAR*)texts[key];}
+void StrCache_Collect(int key){assert(key>=0 && key<16 && refs[key]);--refs[key];}
+int StrCache_Pop(void){
+ for(int key=0;key<16;++key)if(!refs[key]){
+  refs[key]=1;texts[key]=cache_output[key];cache_output[key][0]=0;
+  cache_entries[key].str=(CHAR*)cache_output[key];cache_entries[key].len=127;return key;
+ }
+ abort();
+}
+void StrCache_Copy(int key,CHAR *text){
+ assert(key>=0 && key<16 && refs[key] && texts[key]==cache_output[key] && text && strlen(text)<128);
+ memmove(cache_output[key],text,strlen(text)+1);
+}
+static int message(const char *format,...){
+ size_t size=strlen(diagnostic);va_list args;va_start(args,format);
+ int n=vsnprintf(diagnostic+size,sizeof(diagnostic)-size,format,args);va_end(args);
+ assert(n>=0 && (size_t)n<sizeof(diagnostic)-size);return n;
+}
+@VARIANTS@
+@NAMESPACES@
+@SEARCH@
+s_attack emptyattack;
+s_sprite_map *sprite_map;
+const s_drawmethod plainmethod={0};
+s_drawmethod drawmethod;
+static entity actor;static s_anim target,legacy;static s_anim *table[2];
+static s_attack hit,second_hit,*attacks[3];
+static int delays[3],sounds[3],shadows[3],vulnerables[3],sprites[3];
+static int boxes[3][6],offsets[3][2],shadow_xy[3][2];
+static unsigned idles[3];static float platforms[3][8];
+static s_axis_i movement[3],*movements[3];
+static s_drawmethod drawing[3],*drawings[3];
+static float fixed_spawn[5],fixed_summon[5];static int fixed_weapon[2];
+static s_sprite_map sprite_entries[3];static s_sprite_list sprite_node;
+static s_sprite sprite_pixels,replacement_pixels;
+static char sprite_filename[16],unterminated_filename[4];
+int sprite_map_max_items;unsigned int sprites_loaded;
+static const void *short_owner;static size_t short_bytes;
+static ScriptVariant values[16],result,*out,*args[16];
+entity **ent_list;int ent_list_size;
+static entity *pool[1];static s_anim_list registered[2];
+@ACTOR_SCOPE@
+/* Allocation extent is the only delegated owner service; registry lookup,
+ * callback scopes and model-animation membership execute their real bodies. */
+size_t obor_allocation_size(const void *value){
+ if(short_owner && value==short_owner)return short_bytes;
+ if(value==table)return sizeof(table);
+ if(value==pool)return sizeof(pool);
+ if(value==&target)return sizeof(target);
+ if(value==&legacy)return sizeof(legacy);
+ if(value==&hit || value==&second_hit)return sizeof(hit);
+ if(value==attacks)return sizeof(attacks);
+#define EXTENT(object) if(value==(object))return sizeof(object)
+ EXTENT(delays);EXTENT(sounds);EXTENT(shadows);EXTENT(vulnerables);EXTENT(sprites);
+ EXTENT(boxes);EXTENT(offsets);EXTENT(shadow_xy);EXTENT(idles);EXTENT(platforms);
+ EXTENT(movements);EXTENT(drawings);
+ EXTENT(fixed_spawn);EXTENT(fixed_summon);EXTENT(fixed_weapon);EXTENT(sprite_entries);
+ EXTENT(sprite_filename);EXTENT(unterminated_filename);
+#undef EXTENT
+ if(value==&sprite_node)return sizeof(sprite_node);
+ if(value==&sprite_pixels || value==&replacement_pixels)return sizeof(sprite_pixels);
+ for(unsigned i=0;i<16;++i)if(value && value==texts[i])return (size_t)cache_entries[i].len+1;
+ for(unsigned i=0;i<3;++i){
+  if(value==movement+i)return sizeof(movement[i]);
+  if(value==drawing+i)return sizeof(drawing[i]);
+ }
+ return 0;
+}
+@OWNERS@
+#define printf message
+#define _is_not_a_known_subproperty_of_ "'%s' is not a known subproperty of '%s'.\n"
+#define _is_not_supported_by_ "'%s' is not supported by '%s'.\n"
+@MACRO@
+@FRAME_FUNCTIONS@
+@GUARDS@
+@DRAW_NAMESPACE@
+@DRAW_APIS@
+@APIS@
+@STUBS@
+List theFunctionList;
+@METHODS@
+#undef printf
+typedef HRESULT (*API)(ScriptVariant **,ScriptVariant **,int);
+static const struct{unsigned revision;int rich,binding,attack,type,exact,spritea,rotation_float,partial,draw_full,classic_revised,classic_clears;int indices[13];const char *argument_error,*attack_error,*dropv_trace;} contexts[]={@CONTEXTS@};
+#pragma pack(push,4)
+@ROTATION_LAYOUT@
+#pragma pack(pop)
+_Static_assert(sizeof(s_drawmethod)==sizeof(obor_rotation_legacy_layout),"unchanged rotation layout size");
+_Static_assert(offsetof(s_drawmethod,rotate)==offsetof(obor_rotation_legacy_layout,rotate),"unchanged rotation slot");
+_Static_assert(offsetof(s_drawmethod,obor_rotate)==offsetof(s_drawmethod,rotate),"shared rotation slot");
+_Static_assert(offsetof(s_drawmethod,scalex)==offsetof(obor_rotation_legacy_layout,scalex),"unchanged following field");
+_Static_assert(offsetof(s_drawmethod,water)==offsetof(obor_rotation_legacy_layout,water),"unchanged nested field");
+_Static_assert(FLT_RADIX==2 && FLT_MANT_DIG==24,"source float rotation shape");
+static const struct{double input,integer,floating,integer_mirror,floating_mirror,integer_normalized,floating_normalized,legacy,parser_integer,parser_floating;} rotation_values[]={@ROTATION_VALUES@};
+/* Evaluate the exact consumed predicates from the two native dispatchers.
+ * Pixel rendering and complete caller execution are separate controls. */
+static int screen_rotation_route(s_drawmethod *drawmethod){return !!(@SCREEN_ROTATION_ROUTE@);}
+static int sprite_rotation_route(s_drawmethod *drawmethod){return !!(@SPRITE_ROTATION_ROUTE@);}
+static const struct{const char *name;double input,field;VARTYPE type;double get;} properties[]={@PROPERTIES@};
+static const char *owner_cases[]={@OWNER_CASES@};
+static const char *missing_roots[]={@MISSING_ROOTS@};
+static const unsigned extra_counts[]={@EXTRA_COUNTS@};
+static const struct{unsigned first;const char *property,*leaf;VARTYPE type;int search,zero_refusal,zero_get;const char *get_error,*set_error;double written;int absent_get,absent_set;} frame_properties[]={@FRAME_CASES@};
+static void set_field(unsigned field,double value){switch(field){@SET_FIELD@ default:abort();}}
+static double get_field(unsigned field){switch(field){@GET_FIELD@ default:abort();}}
+static void set_frame_field(unsigned field,double value){switch(field){@SET_FRAME_FIELD@ default:abort();}}
+static double get_frame_field(unsigned field){switch(field){@GET_FRAME_FIELD@ default:abort();}}
+static const void *frame_owner(unsigned field){switch(field){@FRAME_OWNERS@ default:abort();}}
+static void set_frame_owner(unsigned field,void *value){switch(field){@SET_FRAME_OWNER@ default:abort();}}
+static size_t frame_stride(unsigned field){switch(field){@FRAME_STRIDES@ default:abort();}}
+static const struct{const char *property,*leaf;VARTYPE type;double written;} fixed_properties[]={@FIXED_CASES@};
+static const char *sprite_owner_cases[]={@SPRITE_OWNERS@};
+static void set_fixed_field(unsigned field,double value){switch(field){@SET_FIXED_FIELD@ default:abort();}}
+static double get_fixed_field(unsigned field){switch(field){@GET_FIXED_FIELD@ default:abort();}}
+static const void *fixed_owner(unsigned field){switch(field){@FIXED_OWNERS@ default:abort();}}
+static void set_fixed_owner(unsigned field,void *value){switch(field){@SET_FIXED_OWNER@ default:abort();}}
+static size_t fixed_short(unsigned field){switch(field){@FIXED_SHORT@ default:abort();}}
+static void text_value(ScriptVariant *v,unsigned key,const char *text){
+ ScriptVariant_Clear(v);assert(key<16 && !refs[key]);texts[key]=text;refs[key]=1;v->vt=VT_STR;v->strVal=(int)key;
+ cache_entries[key].str=(CHAR*)text;cache_entries[key].len=(int)strlen(text);
+}
+static void fresh(void){
+ ScriptVariant_Clear(&result);for(unsigned i=0;i<16;++i){ScriptVariant_Clear(values+i);args[i]=values+i;}
+ /* A controlled zero result payload also covers targets whose pointer is
+  * narrower than the decimal union member. Native Clear remains unchanged. */
+ memset(&result,0,sizeof(result));
+ for(unsigned key=0;key<16;++key)assert(!refs[key]);
+ memset(texts,0,sizeof(texts));memset(cache_entries,0,sizeof(cache_entries));
+ diagnostic[0]=0;
+ short_owner=NULL;short_bytes=0;
+ memset(&actor,0,sizeof(actor));memset(&target,0,sizeof(target));memset(&legacy,0,sizeof(legacy));
+ memset(&drawmethod,0,sizeof(drawmethod));
+ memset(&hit,0,sizeof(hit));memset(&second_hit,0,sizeof(second_hit));memset(attacks,0,sizeof(attacks));
+ table[0]=NULL;table[1]=&target;target.numframes=3;target.obor_frame_capacity=3;legacy.animhits=11;
+ actor.animation=&legacy;actor.modeldata.animation=table;actor.modeldata.animation_capacity=2;
+ pool[0]=&actor;ent_list=pool;ent_list_size=1;obor_animation_actors=NULL;
+ registered[0].anim=&target;registered[0].next=registered+1;
+ registered[1].anim=&legacy;registered[1].next=NULL;anim_list=registered;
+ values[0].vt=VT_PTR;values[0].ptrVal=&actor;values[1].vt=VT_INTEGER;values[1].lVal=1;out=&result;
+}
+static void property_arg(unsigned row,unsigned field,int named){
+ if(named)text_value(values+2,3,properties[field].name);
+ else {values[2].vt=VT_INTEGER;values[2].lVal=contexts[row].indices[field];}
+}
+static void result_value(VARTYPE type,double number){
+ assert(out==&result && result.vt==type);
+ assert(type==VT_INTEGER?(double)result.lVal==number:result.dblVal==number);
+}
+static void scalar_cases(unsigned row,API change){
+ for(unsigned field=0;field<sizeof(properties)/sizeof(*properties);++field)
+  for(int named=0;named<2;++named)for(int lowered=0;lowered<2;++lowered){
+   active_case=field*4+(unsigned)(named*2+lowered);fresh();set_field(field,properties[field].input);
+   property_arg(row,field,named);text_value(&result,7,"old-result");
+   if(lowered)mapstrings_animationproperty(args,3);
+   assert(openbor_getanimationproperty(args,&out,3)==S_OK);result_value(properties[field].type,properties[field].get);
+   assert(!diagnostic[0] && !refs[7] && values[2].vt==VT_INTEGER && values[2].lVal==contexts[row].indices[field]);
+   if(contexts[row].binding==2){
+    fresh();set_field(field,13);property_arg(row,field,named);text_value(&result,7,"old-result");
+    values[3].vt=VT_DECIMAL;values[3].dblVal=properties[field].input;
+    if(lowered)mapstrings_animationproperty(args,4);
+    assert(change(args,&out,4)==S_OK);result_value(properties[field].type,0);
+    assert(get_field(field)==properties[field].field && !diagnostic[0] && !refs[7]);
+    assert(values[2].vt==VT_INTEGER && values[2].lVal==contexts[row].indices[field]);
+   }else{
+    fresh();set_field(field,properties[field].input);property_arg(row,field,named);
+    double unchanged=get_field(field);
+    values[3].vt=VT_DECIMAL;values[3].dblVal=-123.75;
+    if(lowered)mapstrings_animationproperty(args,4);
+    assert(change(args,&out,4)==S_OK);result_value(properties[field].type,properties[field].get);
+    assert(get_field(field)==unchanged && !diagnostic[0]);
+   }
+  }
+}
+static void alias_cases(unsigned row,API change){
+ /* A caller selector remains in its native namespace after repeated lowering. */
+ fresh();target.subentity=17;values[2].vt=VT_INTEGER;values[2].lVal=contexts[row].indices[10];args[3]=values+2;
+ mapstrings_animationproperty(args,4);mapstrings_animationproperty(args,4);
+ assert(change(args,&out,4)==S_OK);
+ if(contexts[row].binding==2){assert(target.subentity==contexts[row].indices[10]);result_value(VT_INTEGER,0);}
+ else {assert(target.subentity==17);result_value(VT_INTEGER,17);}
+ assert(values[2].lVal==contexts[row].indices[10] && !diagnostic[0]);
+ if(contexts[row].binding==2){
+  fresh();target.attacks=attacks;attacks[0]=&hit;
+  values[2].vt=VT_INTEGER;values[2].lVal=contexts[row].attack;
+  values[3].vt=VT_INTEGER;values[3].lVal=contexts[row].type;
+  values[4].vt=VT_INTEGER;values[4].lVal=0;args[5]=values+3;
+  mapstrings_animationproperty(args,6);mapstrings_animationproperty(args,6);
+  assert(change(args,&out,6)==S_OK);result_value(VT_INTEGER,0);
+  assert(hit.attack_type==contexts[row].type && values[3].lVal==contexts[row].type && !diagnostic[0]);
+ }
+}
+static void fastattack_cases(unsigned row){
+ const int times[]={0,GAME_SPEED/20,42};
+ for(unsigned t=0;t<sizeof(times)/sizeof(*times);++t)for(int explicit_frame=0;explicit_frame<2;++explicit_frame){
+  fresh();target.attacks=attacks;attacks[1]=&hit;hit.pain_time=times[t];
+  text_value(values+2,3,"attack");text_value(values+3,4,"fastattack");values[4].vt=VT_INTEGER;values[4].lVal=1;
+  assert(openbor_getanimationproperty(args,&out,explicit_frame?5:4)==S_OK);
+  result_value(VT_INTEGER,contexts[row].exact?times[t]==GAME_SPEED/20:!!times[t]);assert(hit.pain_time==times[t] && !diagnostic[0]);
+ }
+}
+static void three_arguments(API change){
+ const char *names[]={"animhits","__unknown"};
+ const char *base="You must provide an animation ID and property: changeanimationproperty({ent}, {animation id}, {property}, {frame}, {value})\n";
+ for(unsigned i=0;i<2;++i){
+  fresh();target.animhits=13;text_value(values+2,3,names[i]);text_value(&result,7,"old-result");
+  assert(change(args,&out,3)==E_FAIL && out==&result && result.vt==VT_EMPTY && !result.ptrVal && !refs[7]);
+  char expected[1024];snprintf(expected,sizeof(expected),i?"Property name '__unknown' is not supported by function getanimationproperty.\n%s":"%s",base);
+  assert(!strcmp(diagnostic,expected) && target.animhits==13);
+  if(i)assert(values[2].vt==VT_STR && !strcmp(StrCache_Get(values[2].strVal),names[i]));
+  else assert(values[2].vt==VT_INTEGER && values[2].lVal==0);
+ }
+}
+static void owner_controls(unsigned row,API change){
+ for(unsigned c=0;c<sizeof(owner_cases)/sizeof(*owner_cases);++c){
+  fresh();target.animhits=23;text_value(values+2,3,"animhits");const char *name=owner_cases[c];int success=0;
+  entity other=actor,outer=actor;s_anim detached={0};
+  struct obor_animation_actor_scope first={&other,NULL},second={&outer,&first};
+  if(!strcmp(name,"without_current")){actor.animation=NULL;success=1;}
+  else if(!strcmp(name,"foreign_current")){actor.animation=(s_anim*)(uintptr_t)1;success=1;}
+  else if(!strcmp(name,"empty_variant_valid_pointer")){values[0].vt=VT_EMPTY;success=1;}
+  else if(!strcmp(name,"unknown_actor"))values[0].ptrVal=(void*)(uintptr_t)1;
+  else if(!strcmp(name,"foreign_actor"))values[0].ptrVal=&other;
+  else if(!strcmp(name,"null_model_table"))actor.modeldata.animation=NULL;
+  else if(!strcmp(name,"foreign_table"))actor.modeldata.animation=(s_anim**)(uintptr_t)1;
+  else if(!strcmp(name,"oversized_declared_table")){actor.modeldata.animation_capacity=99;values[1].lVal=2;}
+  else if(!strcmp(name,"null_model_animation"))table[1]=NULL;
+  else if(!strcmp(name,"unregistered_animation"))table[1]=&detached;
+  else if(!strcmp(name,"borrowed")){obor_animation_actors=&first;other.animation=NULL;values[0].ptrVal=&other;success=1;}
+  else if(!strcmp(name,"nested_borrowed")){obor_animation_actors=&second;values[0].ptrVal=&other;success=1;}
+  else abort();
+  assert(openbor_getanimationproperty(args,&out,3)==(success?S_OK:E_FAIL));
+  if(success)result_value(VT_INTEGER,23);else assert(result.vt==VT_INTEGER);
+  assert(!diagnostic[0] && target.animhits==23);
+  if(contexts[row].binding==2){
+   out=&result;values[3].vt=VT_INTEGER;values[3].lVal=27;
+   assert(change(args,&out,4)==(success?S_OK:E_FAIL));
+   if(success){result_value(VT_INTEGER,0);assert(target.animhits==27);}
+   else assert(result.vt==VT_INTEGER && target.animhits==23);
+   assert(!diagnostic[0]);
+  }
+  obor_animation_actors=NULL;
+ }
+ fresh();
+}
+static void consumed_arguments(unsigned row){
+ for(unsigned c=0;c<sizeof(extra_counts)/sizeof(*extra_counts);++c){
+  unsigned count=extra_counts[c];assert(count>=3 && count<=32);
+  fresh();target.animhits=23;text_value(values+2,3,"animhits");
+  ScriptVariant *expanded[32]={0};for(unsigned arg=0;arg<3;++arg)expanded[arg]=args[arg];
+  assert(openbor_getanimationproperty(expanded,&out,(int)count)==S_OK);result_value(VT_INTEGER,23);assert(!diagnostic[0]);
+ }
+ /* A rejected animation ID does not consume an actor slot. */
+ fresh();args[0]=NULL;text_value(values+1,2,"invalid-id");text_value(values+2,3,"animhits");text_value(&result,7,"old-result");
+ assert(openbor_getanimationproperty(args,&out,3)==E_FAIL && result.vt==VT_EMPTY && !refs[7]);
+ assert(!strcmp(diagnostic,contexts[row].argument_error) && values[2].vt==VT_INTEGER && values[2].lVal==0);
+ for(unsigned c=0;c<sizeof(missing_roots)/sizeof(*missing_roots);++c){
+  fresh();text_value(values+2,3,missing_roots[c]);
+  assert(openbor_getanimationproperty(args,&out,3)==E_FAIL);
+ }
+ fresh();text_value(values+2,3,"attack");text_value(values+3,4,"force");args[4]=NULL;
+ assert(openbor_getanimationproperty(args,&out,5)==E_FAIL && result.vt==VT_INTEGER);
+ fresh();text_value(values+2,3,"attack");values[3].vt=VT_DECIMAL;values[3].dblVal=1;
+ assert(openbor_getanimationproperty(args,&out,4)==E_FAIL && !strcmp(diagnostic,contexts[row].attack_error));
+}
+static void frame_setup(void){
+ fresh();memset(delays,0,sizeof(delays));memset(sounds,0,sizeof(sounds));
+ memset(shadows,0,sizeof(shadows));memset(vulnerables,0,sizeof(vulnerables));
+ memset(sprites,0,sizeof(sprites));memset(boxes,0,sizeof(boxes));
+ memset(offsets,0,sizeof(offsets));memset(shadow_xy,0,sizeof(shadow_xy));
+ memset(idles,0,sizeof(idles));memset(platforms,0,sizeof(platforms));
+ memset(movement,0,sizeof(movement));memset(drawing,0,sizeof(drawing));
+ for(unsigned i=0;i<3;++i){movements[i]=movement+i;drawings[i]=drawing+i;}
+ target.delay=delays;target.soundtoplay=sounds;target.shadow=shadows;
+ target.vulnerable=vulnerables;target.sprite=sprites;target.bbox_coords=boxes;
+ target.offset=offsets;target.shadow_coords=shadow_xy;target.idle=idles;
+ target.platform=platforms;target.move=movements;target.drawmethods=drawings;
+ target.attacks=attacks;attacks[1]=&hit;
+ /* Explicit native reads can address allocated rows beyond this count. */
+ target.numframes=1;
+}
+static int frame_args(unsigned field,int frame,int write){
+ text_value(values+2,3,frame_properties[field].property);
+ unsigned position=3;
+ if(frame_properties[field].leaf[0])text_value(values+position++,4,frame_properties[field].leaf);
+ values[position].vt=VT_INTEGER;values[position++].lVal=frame;
+ if(write){values[position].vt=VT_DECIMAL;values[position++].dblVal=9.75;}
+ return (int)position;
+}
+static void frame_cases(unsigned row,API change){
+ for(unsigned field=0;field<sizeof(frame_properties)/sizeof(*frame_properties);++field){
+  if(obor_profile_build<frame_properties[field].first)continue;
+  active_case=1000+field;
+  for(int write=0;write<=(contexts[row].binding==2);++write){
+   API api=write?change:openbor_getanimationproperty;
+   for(int lowered=0;lowered<2;++lowered){
+    frame_setup();set_frame_field(field,7);int count=frame_args(field,1,write);
+    if(lowered){mapstrings_animationproperty(args,count);mapstrings_animationproperty(args,count);}
+    assert(api(args,&out,count)==S_OK && !diagnostic[0]);
+    if(write){result_value(VT_INTEGER,0);assert(get_frame_field(field)==frame_properties[field].written);}
+    else {result_value(frame_properties[field].type,7);assert(get_frame_field(field)==7);}
+   }
+   const int limits[]={-1,3,INT_MAX};
+   for(unsigned bound=0;bound<sizeof(limits)/sizeof(*limits);++bound){
+    if(!write && limits[bound]<0 && frame_properties[field].search)continue;
+    frame_setup();set_frame_field(field,7);int count=frame_args(field,limits[bound],write);
+    assert(api(args,&out,count)==E_FAIL && out==&result && !diagnostic[0]);assert(get_frame_field(field)==7);
+   }
+   /* Actual table bytes independently constrain oversized declared capacity. */
+   frame_setup();set_frame_field(field,7);int count=frame_args(field,3,write);target.obor_frame_capacity=99;
+   assert(api(args,&out,count)==E_FAIL && !diagnostic[0] && get_frame_field(field)==7);
+   frame_setup();set_frame_field(field,7);count=frame_args(field,1,write);
+   short_owner=frame_owner(field);short_bytes=frame_stride(field);
+   assert(api(args,&out,count)==E_FAIL && !diagnostic[0] && get_frame_field(field)==7);
+   frame_setup();set_frame_field(field,7);count=frame_args(field,1,write);
+   set_frame_owner(field,(void*)(uintptr_t)1);
+   assert(api(args,&out,count)==E_FAIL && !diagnostic[0] && get_frame_field(field)==7);
+   frame_setup();set_frame_field(field,7);count=frame_args(field,1,write);
+   values[count-(write?2:1)].vt=VT_DECIMAL;values[count-(write?2:1)].dblVal=1;
+   assert(api(args,&out,count)==E_FAIL && !strcmp(diagnostic,write?frame_properties[field].set_error:frame_properties[field].get_error) && get_frame_field(field)==7);
+   frame_setup();set_frame_field(field,7);count=frame_args(field,1,write);set_frame_owner(field,NULL);
+   int absent=write?frame_properties[field].absent_set:frame_properties[field].absent_get;
+   assert(api(args,&out,count)==(absent==INT_MIN?E_FAIL:S_OK) && !diagnostic[0]);
+   if(absent!=INT_MIN)result_value(VT_INTEGER,absent);
+   assert(get_frame_field(field)==7);
+   if(frame_properties[field].zero_refusal){
+    frame_setup();set_frame_field(field,0);count=frame_args(field,1,write);
+    assert(api(args,&out,count)==S_OK && !diagnostic[0]);result_value(VT_INTEGER,write?-1:frame_properties[field].zero_get);assert(get_frame_field(field)==0);
+   }
+  }
+ }
+}
+static void sparse_children(unsigned row,API change){
+ const char *roots[]={"attack","move","drawmethods"};
+ const char *leaves[]={"force","x","alpha"};
+ for(unsigned family=0;family<3;++family)for(int state=0;state<3;++state)
+  for(int write=0;write<=(contexts[row].binding==2);++write){
+   frame_setup();text_value(values+2,3,roots[family]);text_value(values+3,4,leaves[family]);
+   values[4].vt=VT_INTEGER;values[4].lVal=1;values[5].vt=VT_INTEGER;values[5].lVal=9;
+   void *value=state?(void*)(uintptr_t)1:NULL;
+   if(family==0){attacks[1]=value;if(state==2){attacks[1]=&hit;short_owner=&hit;short_bytes=sizeof(hit)-1;}}
+   if(family==1){movements[1]=value;if(state==2){movements[1]=movement+1;short_owner=movement+1;short_bytes=sizeof(movement[1])-1;}}
+   if(family==2){drawings[1]=value;if(state==2){drawings[1]=drawing+1;short_owner=drawing+1;short_bytes=sizeof(drawing[1])-1;}}
+   int fallback=state==0 && family!=1;
+   assert((write?change:openbor_getanimationproperty)(args,&out,write?6:5)==(fallback?S_OK:E_FAIL) && !diagnostic[0]);
+   if(fallback)result_value(VT_INTEGER,family==0?(write?-1:0):-1);
+  }
+ /* Negative selectors search only logical rows, including the empty-loop
+  * vulnerable result initialized by the native getter. */
+ frame_setup();target.numframes=0;target.vulnerable=NULL;text_value(values+2,3,"vulnerable");
+ assert(openbor_getanimationproperty(args,&out,3)==S_OK);result_value(VT_INTEGER,0);
+ frame_setup();vulnerables[0]=-1;vulnerables[1]=7;target.numframes=3;
+ text_value(values+2,3,"vulnerable");values[3].vt=VT_INTEGER;values[3].lVal=-9;
+ assert(openbor_getanimationproperty(args,&out,4)==S_OK);result_value(VT_INTEGER,7);
+ if(contexts[row].binding==2){
+  frame_setup();attacks[0]=&hit;hit.attack_force=17;
+  text_value(values+2,3,"attack");text_value(values+3,4,"reset");
+  values[4].vt=VT_INTEGER;values[4].lVal=99;values[5].vt=VT_INTEGER;values[5].lVal=1;
+  assert(change(args,&out,6)==S_OK && !diagnostic[0] && !hit.attack_force);result_value(VT_INTEGER,0);
+  for(int state=0;state<4;++state){
+   frame_setup();drawing[1].alpha=17;
+   if(state==1)drawings[1]=NULL;
+   if(state==2)drawings[1]=(void*)(uintptr_t)1;
+   if(state==3){short_owner=drawing+1;short_bytes=sizeof(drawing[1])-1;}
+   text_value(values+2,3,"drawmethods");text_value(values+3,4,"reset");
+   values[4].vt=VT_INTEGER;values[4].lVal=1;values[5].vt=VT_INTEGER;values[5].lVal=1;
+   assert(change(args,&out,6)==(state>=2?E_FAIL:S_OK) && !diagnostic[0]);
+   assert(drawing[1].alpha==(state?17:0));
+   if(state<2)result_value(VT_INTEGER,state?-1:0);
+  }
+ }
+}
+static void fixed_setup(void){
+ fresh();memset(fixed_spawn,0,sizeof(fixed_spawn));memset(fixed_summon,0,sizeof(fixed_summon));memset(fixed_weapon,0,sizeof(fixed_weapon));
+ target.spawnframe=fixed_spawn;target.summonframe=fixed_summon;target.weaponframe=fixed_weapon;
+ target.numframes=0;
+}
+static int fixed_args(unsigned field,int write){
+ text_value(values+2,3,fixed_properties[field].property);text_value(values+3,4,fixed_properties[field].leaf);
+ if(write){values[4].vt=VT_DECIMAL;values[4].dblVal=9.75;}
+ return write?5:4;
+}
+static void fixed_cases(unsigned row,API change){
+ for(unsigned field=0;field<sizeof(fixed_properties)/sizeof(*fixed_properties);++field){
+  active_case=2000+field;
+  for(int write=0;write<=(contexts[row].binding==2);++write){
+   API api=write?change:openbor_getanimationproperty;
+   for(int lowered=0;lowered<2;++lowered){
+    fixed_setup();set_fixed_field(field,7.5);int count=fixed_args(field,write);
+    if(lowered){mapstrings_animationproperty(args,count);mapstrings_animationproperty(args,count);}
+    assert(api(args,&out,count)==S_OK && !diagnostic[0]);
+    if(write){result_value(VT_INTEGER,0);assert(get_fixed_field(field)==fixed_properties[field].written);}
+    else result_value(fixed_properties[field].type,fixed_properties[field].type==VT_INTEGER?7:7.5);
+   }
+   for(int bad=0;bad<3;++bad){
+    fixed_setup();set_fixed_field(field,7.5);int count=fixed_args(field,write);
+    if(bad==0)set_fixed_owner(field,NULL);
+    if(bad==1)set_fixed_owner(field,(void*)(uintptr_t)1);
+    if(bad==2){short_owner=fixed_owner(field);short_bytes=fixed_short(field);}
+    double before=get_fixed_field(field);
+    assert(api(args,&out,count)==E_FAIL && !diagnostic[0] && get_fixed_field(field)==before);
+   }
+   /* An unselected native arm does not consume the fixed-table pointer. */
+   fixed_setup();int count=fixed_args(field,write);ScriptVariant_Clear(values+3);values[3].vt=VT_INTEGER;values[3].lVal=99;
+   set_fixed_owner(field,NULL);assert(api(args,&out,count)==S_OK && !diagnostic[0]);result_value(VT_INTEGER,0);
+  }
+ }
+}
+static void sprite_setup(void){
+ frame_setup();memset(sprite_entries,0,sizeof(sprite_entries));memset(&sprite_node,0,sizeof(sprite_node));
+ memset(&sprite_pixels,0,sizeof(sprite_pixels));memset(&replacement_pixels,0,sizeof(replacement_pixels));
+ strcpy(sprite_filename,"old.bin");memset(unterminated_filename,'x',sizeof(unterminated_filename));
+ sprite_map=sprite_entries;sprite_map_max_items=3;sprites_loaded=3;sprites[1]=1;
+ sprite_entries[1].node=&sprite_node;sprite_entries[1].centerx=21;sprite_entries[1].centery=22;
+ sprite_entries[2].node=&sprite_node;sprite_entries[2].centerx=41;sprite_entries[2].centery=42;
+ sprite_node.filename=sprite_filename;sprite_node.sprite=&sprite_pixels;
+ sprite_pixels.centerx=7;sprite_pixels.centery=8;sprite_pixels.offsetx=11;sprite_pixels.offsety=12;
+}
+static int sprite_args(const char *leaf,int write){
+ text_value(values+2,3,leaf?"spritea":"sprite");unsigned position=3;
+ if(leaf)text_value(values+position++,4,leaf);
+ values[position].vt=VT_INTEGER;values[position++].lVal=1;
+ if(write){values[position].vt=VT_PTR;values[position++].ptrVal=&replacement_pixels;}
+ return (int)position;
+}
+static void sprite_cases(unsigned row,API change){
+ active_case=3000;
+ sprite_setup();int count=sprite_args(NULL,0);
+ assert(openbor_getanimationproperty(args,&out,count)==S_OK && result.vt==VT_PTR && result.ptrVal==&sprite_pixels);
+ assert(sprite_pixels.centerx==21 && sprite_pixels.centery==22 && !diagnostic[0]);
+ /* The same owned sprite can be shared by distinct map entries. */
+ sprites[1]=2;assert(openbor_getanimationproperty(args,&out,count)==S_OK && result.ptrVal==&sprite_pixels);
+ assert(sprite_pixels.centerx==41 && sprite_pixels.centery==42);
+ sprite_setup();count=sprite_args(NULL,0);short_owner=&sprite_pixels;short_bytes=offsetof(s_sprite,data);
+ assert(openbor_getanimationproperty(args,&out,count)==S_OK && result.ptrVal==&sprite_pixels);
+ sprite_setup();count=sprite_args(NULL,0);sprites[1]=0;
+ assert(openbor_getanimationproperty(args,&out,count)==S_OK && result.vt==VT_PTR && !result.ptrVal && !diagnostic[0]);
+ for(unsigned c=0;c<sizeof(sprite_owner_cases)/sizeof(*sprite_owner_cases);++c){
+  const char *name=sprite_owner_cases[c];
+  for(int write=0;write<=(contexts[row].binding==2);++write){
+   sprite_setup();count=sprite_args(NULL,write);
+   if(!strcmp(name,"null_map"))sprite_map=NULL;
+   else if(!strcmp(name,"foreign_map"))sprite_map=(void*)(uintptr_t)1;
+   else if(!strcmp(name,"declared_map_limit"))sprite_map_max_items=1;
+   else if(!strcmp(name,"loaded_map_limit"))sprites_loaded=1;
+   else if(!strcmp(name,"actual_map_limit")){short_owner=sprite_entries;short_bytes=sizeof(sprite_entries[0]);}
+   else if(!strcmp(name,"negative_index"))sprites[1]=-1;
+   else if(!strcmp(name,"large_index"))sprites[1]=INT_MAX;
+   else if(!strcmp(name,"null_node"))sprite_entries[1].node=NULL;
+   else if(!strcmp(name,"foreign_node"))sprite_entries[1].node=(void*)(uintptr_t)1;
+   else if(!strcmp(name,"short_node")){short_owner=&sprite_node;short_bytes=sizeof(sprite_node)-1;}
+   else if(!strcmp(name,"null_sprite"))sprite_node.sprite=NULL;
+   else if(!strcmp(name,"foreign_sprite"))sprite_node.sprite=(void*)(uintptr_t)1;
+   else if(!strcmp(name,"short_sprite")){short_owner=&sprite_pixels;short_bytes=offsetof(s_sprite,data)-1;}
+   else abort();
+   int ignored=write && (!strcmp(name,"null_sprite") || !strcmp(name,"foreign_sprite") || !strcmp(name,"short_sprite"));
+   assert((write?change:openbor_getanimationproperty)(args,&out,count)==(ignored?S_OK:E_FAIL) && !diagnostic[0]);
+   assert(sprite_pixels.centerx==7 && sprite_pixels.centery==8);
+   if(ignored)assert(sprite_node.sprite==&replacement_pixels);
+  }
+ }
+ if(contexts[row].binding==2)for(int variant=0;variant<=contexts[row].spritea;++variant){
+  for(int state=0;state<3;++state){
+   sprite_setup();count=sprite_args(variant?"sprite":NULL,1);values[count-1].vt=state?VT_EMPTY:VT_PTR;
+   values[count-1].ptrVal=state==1?NULL:(void*)(uintptr_t)1;
+   assert(change(args,&out,count)==S_OK && sprite_node.sprite==values[count-1].ptrVal && !diagnostic[0]);
+  }
+  sprite_setup();count=sprite_args(variant?"sprite":NULL,1);values[count-1].vt=VT_INTEGER;values[count-1].lVal=9;
+  assert(change(args,&out,count)==E_FAIL && sprite_node.sprite==&sprite_pixels && !diagnostic[0]);
+  sprite_setup();count=sprite_args(variant?"sprite":NULL,1);sprites[1]=0;
+  assert(change(args,&out,count)==E_FAIL && sprite_node.sprite==&sprite_pixels && !strcmp(diagnostic,"No sprite data.\n"));
+ }
+ if(!contexts[row].spritea)return;
+ const char *centers[]={"centerx","centery"};
+ for(unsigned axis=0;axis<2;++axis){
+  sprite_setup();count=sprite_args(centers[axis],0);sprite_entries[1].node=NULL;
+  assert(openbor_getanimationproperty(args,&out,count)==S_OK && !diagnostic[0]);result_value(VT_INTEGER,axis?22:21);
+  if(contexts[row].binding==2){values[count].vt=VT_INTEGER;values[count].lVal=9;
+   assert(change(args,&out,count+1)==S_OK && !diagnostic[0]);assert((axis?sprite_entries[1].centery:sprite_entries[1].centerx)==9);}
+ }
+ sprite_setup();count=sprite_args("sprite",0);
+ assert(openbor_getanimationproperty(args,&out,count)==S_OK && result.vt==VT_PTR && result.ptrVal==&sprite_pixels);
+ assert(sprite_pixels.centerx==22 && sprite_pixels.centery==22);
+ const char *offset_names[]={"offsetx","offsety"};
+ for(unsigned axis=0;axis<2;++axis){
+  sprite_setup();count=sprite_args(offset_names[axis],0);
+  assert(openbor_getanimationproperty(args,&out,count)==S_OK && !diagnostic[0]);result_value(VT_INTEGER,axis?12:11);
+  if(contexts[row].binding==2){values[count].vt=VT_INTEGER;values[count].lVal=9;
+   assert(change(args,&out,count+1)==S_OK && !diagnostic[0]);assert((axis?sprite_pixels.offsety:sprite_pixels.offsetx)==9);}
+ }
+ for(int state=0;state<4;++state){
+  sprite_setup();count=sprite_args("file",0);
+  if(state==1)sprite_node.filename=NULL;
+  if(state==2)sprite_node.filename=(void*)(uintptr_t)1;
+  if(state==3)sprite_node.filename=unterminated_filename;
+  assert(openbor_getanimationproperty(args,&out,count)==(state?E_FAIL:S_OK) && result.vt==VT_STR && !diagnostic[0]);
+  if(!state)assert(!strcmp(StrCache_Get(result.strVal),"old.bin"));
+ }
+ /* Unknown leaves consume a frame index but no map or child record. */
+ sprite_setup();count=sprite_args("centerx",0);ScriptVariant_Clear(values+3);values[3].vt=VT_INTEGER;values[3].lVal=99;sprite_map=NULL;
+ assert(openbor_getanimationproperty(args,&out,count)==S_OK && !diagnostic[0]);result_value(VT_INTEGER,0);
+ if(contexts[row].binding==2){values[count].vt=VT_INTEGER;values[count].lVal=9;
+  assert(change(args,&out,count+1)==S_OK && !diagnostic[0]);result_value(VT_INTEGER,0);
+  sprite_setup();count=sprite_args("file",1);text_value(values+count-1,6,"new.bin");
+  assert(change(args,&out,count)==E_FAIL && !diagnostic[0] && !strcmp(sprite_filename,"old.bin"));
+ }
+ if(contexts[row].binding==2)for(int type=0;type<2;++type)for(int state=0;state<9;++state){
+  sprite_setup();count=sprite_args("file",1);values[count-1].vt=type?VT_EMPTY:VT_PTR;values[count-1].ptrVal=NULL;values[count-1].strVal=14;
+  const char *source=state==1?"filename-too-long-for-native-buffer.bin":"new.bin";
+  texts[14]=source;cache_entries[14].str=(CHAR*)source;cache_entries[14].len=(int)strlen(source);
+  if(state==2)values[count-1].strVal=-1;
+  if(state==3)values[count-1].strVal=16;
+  if(state==4){short_owner=sprite_filename;short_bytes=3;}
+  if(state==5)memset(sprite_filename,'x',sizeof(sprite_filename));
+  if(state==6)sprite_node.filename=NULL;
+  if(state==7)sprite_node.filename=(void*)(uintptr_t)1;
+  if(state==8)values[count-1].strVal=15;
+  int success=state==0 || state==5;
+  assert(change(args,&out,count)==(success?S_OK:E_FAIL) && !diagnostic[0]);
+  assert(!strcmp(sprite_filename,success?"new.bin":"old.bin"));
+ }
+}
+static void native_rotation_mirror(s_drawmethod *drawmethod){@NATIVE_ROTATION_MIRROR@}
+static void native_rotation_shadow(s_drawmethod *destination,s_drawmethod *drawmethod){
+ s_drawmethod shadowmethod={0};@NATIVE_ROTATION_COPY@ *destination=shadowmethod;
+}
+static unsigned rotation_parser_errors;
+#undef GET_INT_ARG
+#define GET_INT_ARG(n) (parser_slot=(n),++parser_reads,parser_input)
+#undef shutdown
+#define shutdown(...) (++rotation_parser_errors)
+static void *native_parser_rotation(s_drawmethod *result,int parser_input,int variant){
+ s_drawmethod drawmethod={0};int parser_slot=-1,parser_reads=0;
+ if(variant){@PARSER_ROTATION_SECOND@}else{@PARSER_ROTATION_FIRST@}
+ assert(parser_reads==1 && parser_slot==(variant?2:9));
+ @PARSER_ROTATION_NORMALIZE@
+ *result=drawmethod;return result;
+}
+#undef shutdown
+#undef GET_INT_ARG
+static void rotation_cases(unsigned row,API change){
+ int modern=contexts[row].rotation_float;
+ for(unsigned c=0;c<sizeof(rotation_values)/sizeof(*rotation_values);++c){
+  active_case=4000+c;const __typeof__(*rotation_values) *v=rotation_values+c;
+  double expected=modern?v->floating:v->integer;
+  s_drawmethod method={0},copy={0};int integer=77;
+  assert(obor_drawmethod_store_rotation(&method,v->input));
+  assert(obor_drawmethod_rotation(&method)==expected);
+  if(v->input==0 && signbit(v->input))assert(!!signbit(obor_drawmethod_rotation(&method))==modern);
+  assert(screen_rotation_route(&method)==(expected!=0) && sprite_rotation_route(&method)==(expected!=0));
+  assert(obor_drawmethod_rotation_integer(&method,&integer) && integer==(int)expected);
+  native_rotation_shadow(&copy,&method);
+  assert(!memcmp((char*)&method+offsetof(s_drawmethod,rotate),(char*)&copy+offsetof(s_drawmethod,rotate),sizeof(method.rotate)));
+  method.fliprotate=1;native_rotation_mirror(&method);
+  assert(obor_drawmethod_rotation(&method)==(modern?v->floating_mirror:v->integer_mirror));
+  assert(obor_drawmethod_normalize_rotation(&copy));
+  assert(obor_drawmethod_rotation(&copy)==(modern?v->floating_normalized:v->integer_normalized));
+  for(int variant=0;variant<2;++variant){
+   s_drawmethod parsed={0};rotation_parser_errors=0;
+   assert(native_parser_rotation(&parsed,(int)v->integer,variant)==&parsed && !rotation_parser_errors);
+   assert(obor_drawmethod_rotation(&parsed)==(modern?v->parser_floating:v->parser_integer));
+  }
+  for(int global=0;global<2;++global){
+   fresh();if(global){values[0].vt=VT_EMPTY;values[0].ptrVal=NULL;}
+   s_drawmethod *chosen=global?&drawmethod:&actor.drawmethod;
+   text_value(values+1,1,"rotate");values[2].vt=VT_DECIMAL;values[2].dblVal=v->input;
+   assert(openbor_changedrawmethod(args,&out,3)==S_OK && !out && !diagnostic[0]);
+   assert(obor_drawmethod_rotation(chosen)==(modern?(double)(float)v->integer:v->integer));
+   fresh();if(global){values[0].vt=VT_EMPTY;values[0].ptrVal=NULL;}
+   chosen=global?&drawmethod:&actor.drawmethod;
+   for(unsigned arg=1;arg<=10;++arg){values[arg].vt=VT_INTEGER;values[arg].lVal=0;}
+   values[10].vt=VT_DECIMAL;values[10].dblVal=v->input;
+   assert(openbor_setdrawmethod(args,&out,11)==S_OK && !out && !diagnostic[0]);
+   assert(obor_drawmethod_rotation(chosen)==v->legacy);
+  }
+  if(contexts[row].rich || (contexts[row].partial && contexts[row].draw_full)){
+   frame_setup();text_value(values+2,3,"drawmethods");text_value(values+3,4,"rotate");
+   values[4].vt=VT_INTEGER;values[4].lVal=1;values[5].vt=VT_DECIMAL;values[5].dblVal=v->input;
+   if(contexts[row].binding==2){
+    assert(change(args,&out,6)==S_OK && !diagnostic[0]);result_value(VT_INTEGER,0);
+    assert(obor_drawmethod_rotation(drawing+1)==expected);
+   }else assert(obor_drawmethod_store_rotation(drawing+1,v->input));
+   assert(openbor_getanimationproperty(args,&out,5)==S_OK && !diagnostic[0]);result_value(VT_INTEGER,(int)expected);
+  }
+ }
+ for(int variant=0;variant<2;++variant){
+  s_drawmethod parsed={0};rotation_parser_errors=0;
+  assert((native_parser_rotation(&parsed,INT_MAX,variant)!=NULL)==!modern);
+  assert(rotation_parser_errors==(unsigned)modern);
+  rotation_parser_errors=0;assert(native_parser_rotation(&parsed,INT_MIN,variant)==&parsed && !rotation_parser_errors);
+ }
+ const double unsafe[]={NAN,INFINITY,-INFINITY,2147483648.0,-2147483904.0};
+ for(unsigned c=0;c<sizeof(unsafe)/sizeof(*unsafe);++c){
+  s_drawmethod method={0};int integer=77;
+  assert(obor_drawmethod_store_rotation(&method,13));
+  if(modern){
+   assert(obor_drawmethod_store_rotation(&method,unsafe[c]));
+   assert(!obor_drawmethod_rotation_integer(&method,&integer) && integer==77);
+   if(contexts[row].rich){
+    frame_setup();text_value(values+2,3,"drawmethods");text_value(values+3,4,"rotate");
+    values[4].vt=VT_INTEGER;values[4].lVal=1;assert(obor_drawmethod_store_rotation(drawing+1,unsafe[c]));
+    values[5].vt=VT_DECIMAL;values[5].dblVal=unsafe[c];
+    if(contexts[row].binding==2)assert(change(args,&out,6)==S_OK && !diagnostic[0]);
+    assert(openbor_getanimationproperty(args,&out,5)==E_FAIL && !diagnostic[0]);
+   }
+  }else{
+   assert(!obor_drawmethod_store_rotation(&method,unsafe[c]) && obor_drawmethod_rotation(&method)==13);
+   if(contexts[row].rich && contexts[row].binding==2){
+    frame_setup();text_value(values+2,3,"drawmethods");text_value(values+3,4,"rotate");
+    values[4].vt=VT_INTEGER;values[4].lVal=1;values[5].vt=VT_DECIMAL;values[5].dblVal=unsafe[c];
+    assert(obor_drawmethod_store_rotation(drawing+1,13));
+    assert(change(args,&out,6)==E_FAIL && !diagnostic[0] && obor_drawmethod_rotation(drawing+1)==13);
+   }
+  }
+ }
+ fresh();
+}
+static const struct{unsigned first,start,count;int unsigned_input,float_integer;VARTYPE type;} numeric_fields[]={@NUMERIC_FIELDS@};
+static const struct{double input,stored,get;int get_refused;} numeric_values[]={@NUMERIC_VALUES@};
+static const struct{double input,speed;int expected,refused;} wave_values[]={@WAVE_VALUES@};
+static int numeric_args(unsigned field){switch(field){@NUMERIC_ARGS@ default:abort();}}
+static void numeric_set(unsigned field,double value){switch(field){@NUMERIC_SET@ default:abort();}}
+static double numeric_get(unsigned field){switch(field){@NUMERIC_GET@ default:abort();}}
+static void numeric_cases(unsigned row,API change){
+ for(unsigned field=0;field<sizeof(numeric_fields)/sizeof(*numeric_fields);++field){
+  if(obor_profile_build<numeric_fields[field].first)continue;
+  active_case=5000+field;
+  for(unsigned index=0;index<numeric_fields[field].count;++index)for(int lowered=0;lowered<2;++lowered){
+   unsigned selected=numeric_fields[field].start+index;
+   frame_setup();target.spawnframe=fixed_spawn;target.summonframe=fixed_summon;
+   numeric_set(field,13);int count=numeric_args(field);
+   values[count].vt=VT_DECIMAL;values[count].dblVal=numeric_values[selected].input;
+   if(lowered)mapstrings_animationproperty(args,count+1);
+   if(contexts[row].binding==2){
+    assert(change(args,&out,count+1)==S_OK && !diagnostic[0]);result_value(VT_INTEGER,0);
+    assert(numeric_get(field)==numeric_values[selected].stored);
+   }else numeric_set(field,numeric_values[selected].stored);
+   /* Integer results from a float slot may be undefined after its native
+    * binary32 rounding, even though the preceding setter was defined. */
+   if(numeric_values[selected].get_refused){
+    assert(openbor_getanimationproperty(args,&out,count)==E_FAIL && !diagnostic[0]);
+   }else{
+    assert(openbor_getanimationproperty(args,&out,count)==S_OK && !diagnostic[0]);
+    result_value(numeric_fields[field].type,numeric_values[selected].get);
+   }
+  }
+  if(numeric_fields[field].float_integer){
+   const double bad_get[]={NAN,INFINITY,-INFINITY,2147483648.0,-2147483904.0};
+   for(unsigned index=0;index<sizeof(bad_get)/sizeof(*bad_get);++index){
+    frame_setup();target.spawnframe=fixed_spawn;target.summonframe=fixed_summon;
+    numeric_set(field,bad_get[index]);int count=numeric_args(field);
+    assert(openbor_getanimationproperty(args,&out,count)==E_FAIL && !diagnostic[0]);
+   }
+  }
+  if(contexts[row].binding==2){
+   const double signed_bad[]={-2147483649.0,2147483648.0,4294967295.0,NAN,INFINITY,-INFINITY};
+   const double unsigned_bad[]={-1.0,-2147483648.0,4294967296.0,NAN,INFINITY,-INFINITY};
+   for(unsigned index=0;index<6;++index){
+    frame_setup();target.spawnframe=fixed_spawn;target.summonframe=fixed_summon;
+    numeric_set(field,13);int count=numeric_args(field);
+    values[count].vt=VT_DECIMAL;values[count].dblVal=numeric_fields[field].unsigned_input?unsigned_bad[index]:signed_bad[index];
+    assert(change(args,&out,count+1)==E_FAIL && !diagnostic[0] && numeric_get(field)==13);
+   }
+  }
+ }
+ if(contexts[row].binding==2){
+  for(unsigned index=0;index<sizeof(wave_values)/sizeof(*wave_values);++index){
+   active_case=5100+index;frame_setup();drawing[1].water.wavespeed=wave_values[index].speed;
+   drawing[1].water.wavetime=13;text_value(values+2,2,"drawmethods");text_value(values+3,3,"wavetime");
+   values[4].vt=VT_INTEGER;values[4].lVal=1;values[5].vt=VT_DECIMAL;values[5].dblVal=wave_values[index].input;
+   assert(change(args,&out,6)==(wave_values[index].refused?E_FAIL:S_OK) && !diagnostic[0]);
+   assert(drawing[1].water.wavetime==(wave_values[index].refused?13:wave_values[index].expected));
+  }
+  const double frame_counts[]={-2147483648.75,-3.75,-.75,0,1.75,3.75};
+  const int expected_counts[]={INT_MIN,-3,0,0,1,3};
+  for(unsigned index=0;index<sizeof(frame_counts)/sizeof(*frame_counts);++index){
+   active_case=5200+index;frame_setup();text_value(values+2,2,"numframes");values[3].vt=VT_DECIMAL;values[3].dblVal=frame_counts[index];
+   assert(change(args,&out,4)==S_OK && !diagnostic[0] && target.numframes==expected_counts[index] && target.obor_frame_capacity==3);
+  }
+  const double bad_counts[]={-2147483649.0,2147483648.0,NAN,INFINITY,-INFINITY};
+  for(unsigned index=0;index<sizeof(bad_counts)/sizeof(*bad_counts);++index){
+   active_case=5210+index;frame_setup();text_value(values+2,2,"numframes");values[3].vt=VT_DECIMAL;values[3].dblVal=bad_counts[index];
+   assert(change(args,&out,4)==E_FAIL && !diagnostic[0] && target.numframes==1 && target.obor_frame_capacity==3);
+  }
+  active_case=5220;frame_setup();text_value(values+2,2,"numframes");text_value(values+3,3,"not-a-number");
+  /* Both original conversions fail with an uninitialized value. Preserve the
+   * bounded count integration's refusal; this is a stability control. */
+  assert(change(args,&out,4)==E_FAIL && !diagnostic[0] && target.numframes==1 && target.obor_frame_capacity==3);
+  /* Refusal belongs to the consumed conversion, preserving native ignored
+   * values, sparse-table returns and raw union reads. */
+  frame_setup();text_value(values+2,2,"size");values[3].vt=VT_INTEGER;values[3].lVal=999;
+  values[4].vt=VT_DECIMAL;values[4].dblVal=NAN;
+  assert(change(args,&out,5)==S_OK && !diagnostic[0]);result_value(VT_INTEGER,0);
+  frame_setup();target.attacks=NULL;text_value(values+2,2,"attack");text_value(values+3,3,"blast");
+  values[4].vt=VT_INTEGER;values[4].lVal=1;values[5].vt=VT_DECIMAL;values[5].dblVal=NAN;
+  assert(change(args,&out,6)==S_OK && !diagnostic[0]);result_value(VT_INTEGER,-1);
+  frame_setup();text_value(values+2,2,"drawmethods");text_value(values+3,3,"clip");
+  values[4].vt=VT_INTEGER;values[4].lVal=1;
+  for(unsigned i=5;i<9;++i){values[i].vt=VT_DECIMAL;values[i].dblVal=NAN;}
+  LONG raw[4];for(unsigned i=0;i<4;++i)raw[i]=values[i+5].lVal;
+  assert(change(args,&out,9)==S_OK && !diagnostic[0]);
+  assert(drawing[1].clipx==raw[0] && drawing[1].clipy==raw[1] && drawing[1].clipw==raw[2] && drawing[1].cliph==raw[3]);
+  fresh();text_value(values+2,2,"chargetime");values[3].vt=VT_DECIMAL;values[3].dblVal=NAN;
+  assert(change(args,&out,4)==S_OK && !diagnostic[0] && isnan(target.chargetime));
+  assert(openbor_getanimationproperty(args,&out,3)==S_OK && !diagnostic[0] && result.vt==VT_DECIMAL && isnan(result.dblVal));
+ }
+ fresh();
+}
+static const struct{VARTYPE type;double input,stored,alias_get;unsigned first;int attack,integer_input,draw,dropv;const char *get_error,*set_error;} record_fields[]={@RECORD_FIELDS@};
+static int record_args(unsigned field){switch(field){@RECORD_ARGS@ default:abort();}}
+static void record_set(unsigned field,double value){switch(field){@RECORD_SET@ default:abort();}}
+static double record_get(unsigned field){switch(field){@RECORD_GET@ default:abort();}}
+struct record_state{s_anim anim;s_attack attack;s_drawmethod draw[3];s_axis_i move[3];};
+static void record_capture(struct record_state *state){
+ memset(state,0,sizeof(*state));memcpy(&state->anim,&target,sizeof(target));
+ memcpy(&state->attack,&hit,sizeof(hit));memcpy(state->draw,drawing,sizeof(drawing));
+ memcpy(state->move,movement,sizeof(movement));
+}
+static void record_equal(const struct record_state *expected){
+ struct record_state actual;record_capture(&actual);assert(!memcmp(expected,&actual,sizeof(actual)));
+}
+static void expected_diagnostic(unsigned row,unsigned traces,const char *suffix){
+ char expected[2048]={0};
+ for(unsigned i=0;i<traces;++i){assert(strlen(expected)+strlen(contexts[row].dropv_trace)<sizeof(expected));strcat(expected,contexts[row].dropv_trace);}
+ assert(strlen(expected)+strlen(suffix)<sizeof(expected));strcat(expected,suffix);assert(!strcmp(diagnostic,expected));
+}
+static void record_cases(unsigned row,API change){
+ for(unsigned field=0;field<sizeof(record_fields)/sizeof(*record_fields);++field){
+  if(obor_profile_build<record_fields[field].first)continue;
+  active_case=6000+field;
+  for(int lowered=0;lowered<2;++lowered)for(int decimal=0;decimal<2;++decimal){
+   struct record_state before,expected;
+   frame_setup();record_set(field,17);int count=record_args(field);record_capture(&before);
+   text_value(&result,15,"old-result");
+   if(lowered){mapstrings_animationproperty(args,count);mapstrings_animationproperty(args,count);}
+   assert(openbor_getanimationproperty(args,&out,count)==S_OK && !refs[15]);
+   expected_diagnostic(row,record_fields[field].dropv?(lowered?3:1):0,"");
+   result_value(record_fields[field].type,17);record_equal(&before);
+   values[count].vt=decimal?VT_DECIMAL:VT_INTEGER;
+   if(decimal)values[count].dblVal=record_fields[field].input;else values[count].lVal=23;
+   if(contexts[row].binding==2){
+    double value=decimal?record_fields[field].stored:23;
+    record_set(field,value);record_capture(&expected);record_set(field,17);
+    assert(change(args,&out,count+1)==S_OK && !diagnostic[0]);result_value(VT_INTEGER,0);
+    assert(record_get(field)==value);record_equal(&expected);
+    assert(openbor_getanimationproperty(args,&out,count)==S_OK && !diagnostic[0]);
+    result_value(record_fields[field].type,value);record_equal(&expected);
+   }else if(contexts[row].binding==1){
+    assert(change(args,&out,count+1)==S_OK && !diagnostic[0]);
+    result_value(record_fields[field].type,record_fields[field].alias_get);record_equal(&before);
+   }
+  }
+  if(contexts[row].binding==2 && record_fields[field].integer_input){
+   const double bad[]={-2147483649.0,2147483648.0,4294967295.0,NAN,INFINITY,-INFINITY};
+   for(unsigned index=0;index<sizeof(bad)/sizeof(*bad);++index){
+    struct record_state before;frame_setup();record_set(field,17);int count=record_args(field);record_capture(&before);
+    values[count].vt=VT_DECIMAL;values[count].dblVal=bad[index];
+    assert(change(args,&out,count+1)==E_FAIL && !diagnostic[0]);record_equal(&before);
+   }
+   if(record_fields[field].type==VT_DECIMAL){
+    const double edges[]={-2147483648.75,2147483647.75};const int stored[]={INT_MIN,INT_MAX};
+    for(unsigned index=0;index<2;++index){
+     frame_setup();int count=record_args(field);values[count].vt=VT_DECIMAL;values[count].dblVal=edges[index];
+     assert(change(args,&out,count+1)==S_OK && !diagnostic[0] && record_get(field)==stored[index]);
+     assert(openbor_getanimationproperty(args,&out,count)==S_OK && !diagnostic[0]);result_value(VT_DECIMAL,stored[index]);
+    }
+   }
+  }
+  for(int write=0;write<=(contexts[row].binding==2);++write){
+   struct record_state before;frame_setup();record_set(field,17);int count=record_args(field);record_capture(&before);
+   ScriptVariant_Clear(values+3);values[3].vt=VT_DECIMAL;values[3].dblVal=1.25;
+   values[count].vt=VT_DECIMAL;values[count].dblVal=9.75;
+   assert((write?change:openbor_getanimationproperty)(args,&out,count+write)==E_FAIL);
+   const char *error=write?record_fields[field].set_error:
+    (record_fields[field].attack?contexts[row].attack_error:record_fields[field].get_error);
+   assert(!strcmp(diagnostic,error));record_equal(&before);
+   frame_setup();record_set(field,17);count=record_args(field);record_capture(&before);args[3]=NULL;
+   values[count].vt=VT_DECIMAL;values[count].dblVal=9.75;
+   assert((write?change:openbor_getanimationproperty)(args,&out,count+write)==E_FAIL && !diagnostic[0]);
+   record_equal(&before);
+   frame_setup();record_set(field,17);drawing[1].flag=37;count=record_args(field);record_capture(&before);
+   ScriptVariant_Clear(values+3);values[3].vt=VT_INTEGER;values[3].lVal=999;
+   values[count].vt=VT_DECIMAL;values[count].dblVal=NAN;
+   assert((write?change:openbor_getanimationproperty)(args,&out,count+write)==S_OK && !diagnostic[0]);
+   result_value(VT_INTEGER,!write && record_fields[field].draw && contexts[row].draw_full?37:0);record_equal(&before);
+  }
+ }
+ fresh();
+}
+static void record_special_cases(unsigned row,API change){
+ if(contexts[row].binding==2){
+  /* Raw table references are returned without consuming the referenced bytes. */
+  const VARTYPE accepted[]={VT_PTR,VT_EMPTY};
+  for(unsigned index=0;index<2;++index){
+   active_case=6200+index;frame_setup();drawing[1].alpha=17;
+   text_value(values+2,2,"drawmethods");text_value(values+3,3,"table");
+   values[4].vt=VT_INTEGER;values[4].lVal=1;values[5].vt=accepted[index];values[5].ptrVal=(void*)(uintptr_t)123;
+   struct record_state expected;drawing[1].table=(unsigned char*)(uintptr_t)123;record_capture(&expected);drawing[1].table=NULL;
+   assert(change(args,&out,6)==S_OK && !diagnostic[0]);result_value(VT_INTEGER,0);record_equal(&expected);
+   assert(openbor_getanimationproperty(args,&out,5)==S_OK && !diagnostic[0] && result.vt==VT_PTR && result.ptrVal==(void*)(uintptr_t)123);
+   record_equal(&expected);
+  }
+  frame_setup();text_value(values+2,2,"drawmethods");text_value(values+3,3,"table");
+  values[4].vt=VT_INTEGER;values[4].lVal=1;values[5].vt=VT_INTEGER;values[5].lVal=123;
+  struct record_state before;record_capture(&before);
+  assert(change(args,&out,6)==E_FAIL && !diagnostic[0]);record_equal(&before);
+  /* Missing raw clip arguments retain the prefix written before the refusal. */
+  for(unsigned missing=5;missing<9;++missing){
+   active_case=6210+missing;frame_setup();drawing[1].clipx=11;drawing[1].clipy=12;drawing[1].clipw=13;drawing[1].cliph=14;
+   text_value(values+2,2,"drawmethods");text_value(values+3,3,"clip");values[4].vt=VT_INTEGER;values[4].lVal=1;
+   for(unsigned i=5;i<9;++i){values[i].vt=VT_INTEGER;values[i].lVal=26+(LONG)i;}
+   args[missing]=NULL;assert(change(args,&out,9)==E_FAIL && !diagnostic[0]);
+   assert(drawing[1].clipx==(missing>5?31:11) && drawing[1].clipy==(missing>6?32:12));
+   assert(drawing[1].clipw==(missing>7?33:13) && drawing[1].cliph==14);
+  }
+  frame_setup();text_value(values+2,2,"drawmethods");text_value(values+3,3,"clip");
+  values[4].vt=VT_INTEGER;values[4].lVal=1;record_capture(&before);
+  assert(change(args,&out,8)==E_FAIL && !diagnostic[0]);record_equal(&before);
+  /* Fastattack has a getter arm but no setter arm; the unused frame stays ignored. */
+  frame_setup();hit.pain_time=17;text_value(values+2,2,"attack");text_value(values+3,3,"fastattack");
+  args[4]=NULL;values[5].vt=VT_DECIMAL;values[5].dblVal=NAN;record_capture(&before);
+  assert(change(args,&out,6)==S_OK && !diagnostic[0]);result_value(VT_INTEGER,0);record_equal(&before);
+  active_case=6220;frame_setup();attacks[0]=&hit;hit.attack_force=99;
+  memset(&emptyattack,0,sizeof(emptyattack));emptyattack.attack_force=11;emptyattack.dropv.x=5.75;emptyattack.staydown.rise=31;
+  text_value(values+2,2,"attack");text_value(values+3,3,"reset");values[4].vt=VT_INTEGER;values[4].lVal=99;
+  values[5].vt=VT_DECIMAL;values[5].dblVal=NAN;
+  assert(change(args,&out,6)==S_OK && !diagnostic[0] && !memcmp(&hit,&emptyattack,sizeof(hit)));result_value(VT_INTEGER,0);
+  memset(&emptyattack,0,sizeof(emptyattack));
+ }
+ const char *fallbacks[]={"clip","reset"};
+ for(unsigned index=0;index<2;++index){
+  active_case=6230+index;frame_setup();drawing[0].flag=13;drawing[1].flag=17;
+  text_value(values+2,2,"drawmethods");text_value(values+3,3,fallbacks[index]);values[4].vt=VT_INTEGER;values[4].lVal=1;
+  struct record_state before;record_capture(&before);
+  assert(openbor_getanimationproperty(args,&out,5)==S_OK && !diagnostic[0]);result_value(VT_INTEGER,contexts[row].draw_full?17:0);record_equal(&before);
+  /* Only exactly five arguments select the given frame in this native getter. */
+  assert(openbor_getanimationproperty(args,&out,6)==S_OK && !diagnostic[0]);result_value(VT_INTEGER,contexts[row].draw_full?13:0);record_equal(&before);
+ }
+ frame_setup();text_value(values+2,2,"attack");text_value(values+3,3,"reset");args[4]=NULL;
+ assert(openbor_getanimationproperty(args,&out,5)==S_OK && !diagnostic[0]);result_value(VT_INTEGER,0);
+ for(int write=0;write<=(contexts[row].binding==2);++write){
+  active_case=6240+write;frame_setup();values[2].vt=VT_INTEGER;values[2].lVal=999;
+  struct record_state before;record_capture(&before);
+  assert((write?change:openbor_getanimationproperty)(args,&out,write?4:3)==E_FAIL && out==NULL);
+  assert(!strcmp(diagnostic,write?"Error: unsupported property in changeanimationproperty\n":"Error: unsupported property in getanimationproperty\n"));record_equal(&before);
+ }
+ fresh();
+}
+static const struct{int property,revised,leaf;VARTYPE type;} classic_fields[]={@CLASSIC_FIELDS@};
+static const struct{int property,revised;const char *error;} classic_unimplemented[]={@CLASSIC_UNIMPLEMENTED@};
+static void classic_set(unsigned field,double value){switch(field){@CLASSIC_SET@ default:abort();}}
+static void classic_cases(unsigned row){
+ if(obor_profile_build>@CLASSIC_LAST@)return;
+ assert(List_FindByName(&theFunctionList,"getanimationproperty"));
+ API get=(API)List_Retrieve(&theFunctionList);assert(get==openbor_getanimationproperty);
+ for(unsigned field=0;field<sizeof(classic_fields)/sizeof(*classic_fields);++field){
+  active_case=6300+field;fresh();classic_set(field,17);values[1].lVal=0;
+  values[2].vt=VT_INTEGER;values[2].lVal=(contexts[row].classic_revised?classic_fields[field].revised:classic_fields[field].property);
+  values[3].vt=VT_INTEGER;values[3].lVal=classic_fields[field].leaf;
+  int count=classic_fields[field].leaf<0?3:4;
+  text_value(&result,15,"old-result");s_anim before;memcpy(&before,&legacy,sizeof(legacy));
+  int model_count=contexts[row].classic_revised && classic_fields[field].property==16;
+  if(model_count)table[0]=&target;
+  assert(get(args,&out,count)==S_OK && !diagnostic[0] && !refs[15]);
+  result_value(classic_fields[field].type,model_count?27:17);assert(!memcmp(&before,&legacy,sizeof(legacy)));
+  actor.animation=NULL;
+  assert(get(args,&out,count)==(model_count?S_OK:E_FAIL) && !diagnostic[0]);
+  if(model_count){
+   result_value(VT_INTEGER,27);values[1].lVal=1;
+   assert(get(args,&out,count)==S_OK && !diagnostic[0]);result_value(VT_INTEGER,27);
+  }
+ }
+ for(unsigned index=0;index<sizeof(classic_unimplemented)/sizeof(*classic_unimplemented);++index){
+  active_case=6330+index;fresh();values[1].lVal=0;
+  values[2].vt=VT_INTEGER;values[2].lVal=(contexts[row].classic_revised?classic_unimplemented[index].revised:classic_unimplemented[index].property);values[3].vt=VT_INTEGER;
+  assert(get(args,&out,4)==E_FAIL && out==&result && result.vt==VT_INTEGER);
+  assert(!strcmp(diagnostic,classic_unimplemented[index].error));
+ }
+ /* The earlier getter leaves an existing result intact on entry failure. */
+ active_case=6350;fresh();text_value(values+1,1,"invalid-id");text_value(values+2,2,"animhits");text_value(&result,15,"old-result");
+ assert(get(args,&out,3)==E_FAIL && out==&result);
+ assert(result.vt==(contexts[row].classic_clears?VT_EMPTY:VT_STR) && !!refs[15]==!contexts[row].classic_clears);
+ assert(values[2].vt==(contexts[row].classic_clears?VT_INTEGER:VT_STR));
+ assert(!strcmp(diagnostic,"You must provide an animation ID and property: getanimationproperty({ent}, {animation id}, {property})\n"));
+ /* An unknown energy leaf consumes no animation field and retains the payload. */
+ fresh();actor.animation=NULL;values[1].lVal=0;values[2].vt=VT_INTEGER;values[2].lVal=contexts[row].classic_revised?12:8;
+ values[3].vt=VT_INTEGER;values[3].lVal=999;result.vt=VT_INTEGER;result.lVal=73;
+ assert(get(args,&out,4)==S_OK && !diagnostic[0]);result_value(VT_INTEGER,contexts[row].classic_clears?0:73);
+ if(contexts[row].classic_revised){
+  for(int property=7;property<11;++property){
+   active_case=6351+(unsigned)property;fresh();values[1].lVal=0;values[2].vt=VT_INTEGER;values[2].lVal=property;
+   assert(get(args,&out,3)==E_FAIL && out==NULL && !strcmp(diagnostic,"Error: unsupported property in getanimationproperty\n"));
+  }
+ }
+ fresh();values[1].lVal=0;values[2].vt=VT_INTEGER;values[2].lVal=999;result.vt=VT_INTEGER;result.lVal=73;
+ assert(get(args,&out,3)==E_FAIL && out==(contexts[row].classic_clears?NULL:&result));
+ assert(!strcmp(diagnostic,"Error: unsupported property in getanimationproperty\n"));
+ assert(result.vt==VT_INTEGER && result.lVal==(contexts[row].classic_clears?0:73));
+ const float bad[]={NAN,INFINITY,-INFINITY,2147483648.0f,-2147483904.0f};
+ for(unsigned index=0;index<sizeof(bad)/sizeof(*bad);++index){
+  active_case=6360+index;fresh();legacy.bounce=bad[index];values[1].lVal=0;values[2].vt=VT_INTEGER;values[2].lVal=3;
+  assert(get(args,&out,3)==E_FAIL && !diagnostic[0]);
+ }
+ fresh();
+}
+static void attack_search_controls(void){
+ active_case=6400;frame_setup();target.numframes=2;attacks[0]=&hit;attacks[1]=&second_hit;
+ second_hit.pain_time=GAME_SPEED/20;
+ text_value(values+2,2,"attack");text_value(values+3,3,"fastattack");values[4].vt=VT_INTEGER;values[4].lVal=0;
+ assert(openbor_getanimationproperty(args,&out,4)==S_OK && !diagnostic[0]);result_value(VT_INTEGER,1);
+ assert(openbor_getanimationproperty(args,&out,5)==S_OK && !diagnostic[0]);result_value(VT_INTEGER,1);
+ args[4]=NULL;
+ assert(openbor_getanimationproperty(args,&out,5)==S_OK && !diagnostic[0]);result_value(VT_INTEGER,1);
+ fresh();
+}
+static void unconsumed_model_cases(unsigned row,API change){
+ const char *roots[]={"counterrange","dropframe","energycost","followup","jumpframe","landframe","loop","projectile","quakeframe","range","size","spawnframe","summonframe","weaponframe","attack"};
+ for(unsigned root=0;root<sizeof(roots)/sizeof(*roots);++root)
+  for(int write=0;write<=(contexts[row].binding==2);++write){
+   active_case=6500+root;frame_setup();values[0].ptrVal=NULL;values[1].lVal=INT_MAX;
+   text_value(values+2,2,roots[root]);values[3].vt=VT_INTEGER;values[3].lVal=999;
+   values[4].vt=VT_DECIMAL;values[4].dblVal=NAN;
+   struct record_state before;record_capture(&before);
+   assert((write?change:openbor_getanimationproperty)(args,&out,write?5:4)==S_OK && !diagnostic[0]);
+   result_value(VT_INTEGER,0);record_equal(&before);
+  }
+ for(int write=0;write<=(contexts[row].binding==2);++write){
+  active_case=6520+write;frame_setup();values[0].ptrVal=(void*)(uintptr_t)1;values[1].lVal=INT_MAX;
+  values[2].vt=VT_INTEGER;values[2].lVal=999;values[3].vt=VT_DECIMAL;values[3].dblVal=NAN;
+  assert((write?change:openbor_getanimationproperty)(args,&out,write?4:3)==E_FAIL && out==NULL);
+  assert(!strcmp(diagnostic,write?"Error: unsupported property in changeanimationproperty\n":"Error: unsupported property in getanimationproperty\n"));
+  frame_setup();values[0].ptrVal=NULL;values[1].lVal=INT_MAX;
+  text_value(values+2,2,"counterrange");values[3].vt=VT_DECIMAL;values[3].dblVal=1.25;
+  values[4].vt=VT_DECIMAL;values[4].dblVal=NAN;
+  assert((write?change:openbor_getanimationproperty)(args,&out,write?5:4)==E_FAIL);
+  assert(!strcmp(diagnostic,write?"You must provide an animation ID and all properties: changeanimationproperty({ent}, {animation id}, 'counterrange', {sub-property}, {frame_index}, {value})\n":"You must provide an animation ID and all properties: getanimationproperty({ent}, {animation id}, 'counterrange', {sub-property})\n"));
+ }
+ fresh();
+}
+static void partial_cases(unsigned row){
+ assert(List_FindByName(&theFunctionList,"getanimationproperty"));API get=(API)List_Retrieve(&theFunctionList);
+ assert(get==openbor_getanimationproperty && !List_FindByName(&theFunctionList,"changeanimationproperty"));
+ scalar_cases(row,get);owner_controls(row,get);frame_cases(row,get);fixed_cases(row,get);sprite_cases(row,get);
+ record_cases(row,get);record_special_cases(row,get);numeric_cases(row,get);attack_search_controls();unconsumed_model_cases(row,get);
+ active_case=6415;frame_setup();hit.dropv.x=17.25;text_value(values+2,2,"attack");text_value(values+3,3,"dropv");
+ text_value(values+4,4,"velocity.x");values[5].vt=VT_INTEGER;values[5].lVal=1;
+ assert(get(args,&out,6)==S_OK && values[4].vt==VT_INTEGER);result_value(VT_DECIMAL,17.25);expected_diagnostic(row,1,"");
+ frame_setup();text_value(values+2,2,"attack");text_value(values+3,3,"dropv");
+ values[4].vt=VT_DECIMAL;values[4].dblVal=1.25;values[5].vt=VT_INTEGER;values[5].lVal=1;
+ assert(get(args,&out,6)==E_FAIL);
+ expected_diagnostic(row,1,"You must provide an animation ID and all properties: getanimationproperty({ent}, {animation id}, 'attack', 'dropv', {subproperty}, {frame_index})\n");
+ frame_setup();text_value(values+2,2,"attack");text_value(values+3,3,"dropv");
+ values[4].vt=VT_INTEGER;values[4].lVal=0;values[5].vt=VT_DECIMAL;values[5].dblVal=1;
+ assert(get(args,&out,6)==E_FAIL);
+ expected_diagnostic(row,1,"You must provide an animation ID and all properties: getanimationproperty({ent}, {animation id}, 'dropv', {subproperty}, {frame_index})\n");
+ if(!contexts[row].draw_full){
+  active_case=6410;frame_setup();values[0].ptrVal=NULL;values[1].lVal=INT_MAX;text_value(values+2,2,"offset");
+  assert(get(args,&out,3)==S_OK && !diagnostic[0]);result_value(VT_INTEGER,55);
+  values[3].vt=VT_INTEGER;values[3].lVal=999;args[4]=NULL;
+  assert(get(args,&out,5)==S_OK && !diagnostic[0]);result_value(VT_INTEGER,55);
+ }
+ fresh();
+}
+int main(void){
+ assert(sizeof(properties)/sizeof(*properties)==13);
+ for(unsigned row=0;row<sizeof(contexts)/sizeof(*contexts);++row){
+  obor_profile_build=contexts[row].revision;active_case=0;List_Init(&theFunctionList);Script_LoadSystemFunctions();
+  if(contexts[row].rich){
+   assert(List_FindByName(&theFunctionList,"changeanimationproperty"));API change=(API)List_Retrieve(&theFunctionList);
+   assert(change==(contexts[row].binding==1?openbor_getanimationproperty:openbor_changeanimationproperty));
+   scalar_cases(row,change);alias_cases(row,change);fastattack_cases(row);owner_controls(row,change);consumed_arguments(row);
+   frame_cases(row,change);sparse_children(row,change);
+   fixed_cases(row,change);sprite_cases(row,change);numeric_cases(row,change);record_cases(row,change);record_special_cases(row,change);
+   attack_search_controls();unconsumed_model_cases(row,change);if(contexts[row].binding==2)three_arguments(change);
+  }else if(contexts[row].partial){partial_cases(row);}
+  else{
+   fresh();values[1].lVal=0;values[2].vt=VT_INTEGER;values[2].lVal=0;
+   assert(openbor_getanimationproperty(args,&out,3)==S_OK);result_value(VT_INTEGER,11);
+   classic_cases(row);
+  }
+  rotation_cases(row,openbor_changeanimationproperty);
+  List_Clear(&theFunctionList);fresh();
+  printf("{\"revision\":%u,\"status\":\"PASS\"}\n",obor_profile_build);
+ }
+ return 0;
+}

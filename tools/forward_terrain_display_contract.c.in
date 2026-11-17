@@ -1,0 +1,96 @@
+/* SPDX-License-Identifier: BSD-3-Clause
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me>
+ * Complete native entity display and geometry; queue/method observations.
+ */
+#include <stdint.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include "openbor.h"
+#undef printf
+#undef assert
+#undef time
+#define time probe_clock
+#ifdef NDEBUG
+#error Terrain display assertions must remain enabled
+#endif
+uint32_t obor_profile_build;
+static unsigned active_case;
+static const char *case_name;
+#define assert(c) do{if(!(c)){fprintf(stderr,"TERRAIN_DISPLAY revision=%u case=%s line=%d: %s\n",obor_profile_build,case_name,__LINE__,#c);abort();}}while(0)
+HRESULT Interpreter_Call(Interpreter *p){(void)p;abort();}
+HRESULT Interpreter_EvalInstruction(Interpreter *p){(void)p;abort();}
+static uint32_t probe_clock;
+int PLAYER_MIN_Z=160,PLAYER_MAX_Z=232;
+static int current_palette,gfx_x_offset,gfx_y_offset;
+static float advancex,advancey;
+static entity actor,platform,linked,owner,*smartbomber,*textbox;
+entity *self=&actor;
+static entity *entity_slots[2]={&actor,&platform};entity **ent_list=entity_slots;
+int ent_max=2,ent_list_size=MAX_ENTS,ent_stack_size;
+static entity *stack_slots[2];entity **ent_stack=stack_slots;
+unsigned int sprites_loaded=16;
+static s_axis_i_2d light={64,128};
+static int shadowcolor=1,shadowalpha=1,shadowsprites[6]={11};
+static unsigned char pal[MAX_PAL_SIZE];
+static s_level world;s_level *level=&world;
+static __typeof__(*world.holes) holes[1],walls[1];int holez;
+static s_anim animations[2];static s_scripts scripts[2];
+static int sprites[2][1]={{5},{16}};static float platform_rows[1][8];
+static unsigned queued_count;static int queued[8][12];
+void spriteq_add_sprite(int x,int y,int z,int sprite,s_drawmethod *method,int sortid){
+ assert(queued_count<8);int *row=queued[queued_count++];
+ row[0]=x;row[1]=y;row[2]=z;row[3]=sprite;row[4]=sortid;
+ for(int i=5;i<12;++i)row[i]=-99;
+ if(method){row[5]=method->alpha;row[6]=method->scalex;row[7]=method->scaley;row[8]=method->centery;row[9]=method->shiftx;row[10]=method->flipx;row[11]=method->flipy;}
+}
+int Script_IsInitialized(Script *script){assert(!script);return 0;}
+void execute_ondraw_script(entity *e){(void)e;abort();}
+static void drawenemystatus(entity *e){(void)e;abort();}
+s_drawmethod *getDrawMethod(s_anim *a,int frame){(void)a;(void)frame;abort();}
+unsigned char *model_get_colourmap(s_model *model,unsigned index){(void)model;(void)index;abort();}
+@PLAIN@
+@FUNCTIONS@
+struct display_case{const char *name;int platform,link,owner,layer,platform_layer,shadow,hole;float altitude;int mirror,arrow,direction;};
+static const struct display_case cases[]={@CASES@};
+static const struct{unsigned revision,contract;} contexts[]={@CONTEXTS@};
+static const struct{unsigned count;int holez,rows[8][12];} expected[][sizeof(cases)/sizeof(*cases)]={@EXPECTED@};
+static void setup(const struct display_case *c){
+ memset(&actor,0,sizeof(actor));memset(&platform,0,sizeof(platform));memset(&linked,0,sizeof(linked));memset(&owner,0,sizeof(owner));
+ memset(&world,0,sizeof(world));memset(holes,0,sizeof(holes));memset(walls,0,sizeof(walls));memset(animations,0,sizeof(animations));memset(scripts,0,sizeof(scripts));memset(platform_rows,0,sizeof(platform_rows));
+ memset(queued,0,sizeof(queued));queued_count=0;ent_stack_size=0;self=&actor;holez=-91;
+ actor.exists=1;actor.animation=&animations[0];actor.scripts=&scripts[0];actor.sortid=10;actor.direction=c->direction;
+ actor.position.x=100.75f;actor.position.z=200.5f;actor.position.y=c->altitude;
+ actor.modeldata.gfxshadow=c->shadow==2;actor.modeldata.shadow=c->shadow==1;actor.modeldata.setlayer=c->layer;
+ actor.arrowon=c->arrow;actor.invincible=1;actor.modeldata.parrow[0][0]=7;actor.modeldata.parrow[0][1]=2;actor.modeldata.parrow[0][2]=3;
+ platform.exists=c->platform;platform.animation=&animations[1];platform.scripts=&scripts[1];platform.sortid=90;
+ platform.position.x=100;platform.position.y=3;platform.position.z=201.25f;platform.modeldata.setlayer=c->platform_layer;
+ for(int i=0;i<2;++i){animations[i].numframes=animations[i].obor_frame_capacity=1;animations[i].sprite=sprites[i];}
+ animations[1].platform=platform_rows;platform_rows[0][1]=10;platform_rows[0][2]=platform_rows[0][3]=-10;platform_rows[0][4]=platform_rows[0][5]=10;platform_rows[0][6]=20;platform_rows[0][7]=2;
+ linked.sortid=70;owner.sortid=40;
+ if(c->link){actor.link=&linked;if(c->link==3){linked.grabbing=&actor;linked.modeldata.grabback=1;}else{actor.grabbing=&linked;actor.modeldata.grabback=c->link==1;}}
+ if(c->owner)actor.owner=&owner;
+ level=&world;world.mirror=c->mirror;world.holes=holes;world.walls=walls;
+ if(c->hole){
+  world.numholes=1;holes[0].upperleft=holes[0].lowerleft=-0.5f;holes[0].upperright=holes[0].lowerright=0.5f;holes[0].depth=2;
+  holes[0].x=c->hole==2?98.1875f:100.75f;holes[0].z=c->hole==2?196.5f:201.5f;holes[0].height=8.125f;
+  if(c->hole>=4){holes[0].x=0;holes[0].z=1000;holes[0].depth=2000;holes[0].upperleft=holes[0].lowerleft=-1000;holes[0].upperright=holes[0].lowerright=1000;holes[0].height=c->hole==5?20:0;}
+ }
+}
+int main(void){
+ _Static_assert(MAX_ENTS==150,"source-reviewed mirror capacity");
+ for(unsigned p=0;p<sizeof(contexts)/sizeof(*contexts);++p){
+  obor_profile_build=contexts[p].revision;
+  for(active_case=0;active_case<sizeof(cases)/sizeof(*cases);++active_case){
+   const struct display_case *c=&cases[active_case];case_name=c->name;setup(c);display_ents();
+   unsigned contract=contexts[p].contract;assert(queued_count==expected[contract][active_case].count);
+   for(unsigned row=0;row<queued_count;++row)for(unsigned column=0;column<12;++column){
+    if(queued[row][column]!=expected[contract][active_case].rows[row][column])fprintf(stderr,"row=%u column=%u actual=%d expected=%d\n",row,column,queued[row][column],expected[contract][active_case].rows[row][column]);
+    assert(queued[row][column]==expected[contract][active_case].rows[row][column]);
+   }
+   assert(holez==expected[contract][active_case].holez && !ent_stack_size && self==&actor);
+  }
+  printf("{\"revision\":%u,\"cases\":%u,\"status\":\"PASS\"}\n",obor_profile_build,active_case);
+ }
+ return 0;
+}

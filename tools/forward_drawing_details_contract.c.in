@@ -1,0 +1,160 @@
+/* SPDX-License-Identifier: BSD-3-Clause
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me>
+ * Native queue storage/entry points and icon caller; raster writes observed.
+ */
+#include <stdint.h>
+#include <stddef.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <stdarg.h>
+#include "openbor.h"
+#include "transform.h"
+#undef printf
+#undef assert
+#ifdef NDEBUG
+#error Native drawing assertions must remain enabled
+#endif
+uint32_t obor_profile_build;
+int PLAYER_MAX_Z=240;
+HRESULT Interpreter_Call(Interpreter *p){(void)p;abort();}
+HRESULT Interpreter_EvalInstruction(Interpreter *p){(void)p;abort();}
+static unsigned active_case;
+#define assert(c) do{if(!(c)){fprintf(stderr,"DRAWING revision=%u case=%u line=%d: %s\n",obor_profile_build,active_case,__LINE__,#c);abort();}}while(0)
+static const struct{unsigned revision;int limit,usemap,water_log;}contexts[]={@CONTEXTS@};
+@STORAGE@
+static s_sprite image;
+static s_screen canvas;
+static s_sprite_list node;
+static s_sprite_map map[8];
+s_sprite_map *sprite_map=map;
+static unsigned loads;
+s_sprite *loadsprite2(char *name,int *w,int *h)
+{assert(name && !strcmp(name,"observed") && !w && !h);++loads;return &image;}
+@QUEUE@
+static unsigned fonts,bars;
+void font_printf(int x,int y,int font,int layer,char *format,...)
+{assert(x==11 && y==13 && !font && !layer && !strcmp(format,"%s"));++fonts;}
+void bar(int x,int y,int value,int maximum,s_barstatus *status)
+{assert(x==17 && y==19 && value==31 && maximum==100 && status);++bars;}
+#pragma GCC diagnostic push
+#pragma GCC diagnostic warning "-Wmissing-field-initializers"
+@PLAIN@
+#pragma GCC diagnostic pop
+@ICON@
+static void append(unsigned kind,unsigned n,s_drawmethod *method)
+{
+ switch(kind){
+ case 0:spriteq_add_frame((int)n,7,9,&image,method,11);break;
+ case 1:spriteq_add_sprite((int)n,7,9,2,method,11);break;
+ case 2:spriteq_add_screen((int)n,7,9,&canvas,method,11);break;
+ case 3:spriteq_add_dot((int)n,7,9,23,method);break;
+ case 4:spriteq_add_line((int)n,7,29,31,9,23,method);break;
+ case 5:spriteq_add_box((int)n,7,29,31,9,23,method);break;
+ default:abort();}
+}
+static void queue_cases(unsigned p)
+{
+ int limit=contexts[p].limit;assert(sizeof(queue)/sizeof(*queue)>=600 && sizeof(order)/sizeof(*order)>=600);
+ memset(&node,0,sizeof(node));memset(map,0,sizeof(map));node.sprite=&image;node.filename="observed";
+ map[2].node=&node;map[2].centerx=37;map[2].centery=41;
+ for(unsigned route=0;route<7;++route)for(int copied=0;copied<2;++copied)
+ {
+  spriteq_unlock();spriteq_clear();memset(queue,0x5a,sizeof(queue));memset(order,0,sizeof(order));
+  s_drawmethod method=plainmethod;method.alpha=3;method.flipx=1;method.centerx=43;
+  for(unsigned n=0;n<602;++n)
+  {
+   unsigned kind=route==6?n%6:route;
+   int before=spritequeue_len;append(kind,n,copied?&method:NULL);
+   assert(spritequeue_len==(n<(unsigned)limit?(int)n+1:limit));
+   if(before==spritequeue_len)continue;
+   qstruct *q=queue+n;assert(order[n]==q && q->x==(int)n && q->y==7 && q->z==9);
+   assert(q->type==(kind<2?SQT_SPRITE:kind==2?SQT_SCREEN:kind==3?SQT_DOT:kind==4?SQT_LINE:SQT_BOX));
+   assert(q->sortid==(kind<3?11:0));
+   if(copied)assert(!memcmp(&q->drawmethod,&method,sizeof(method)));else assert(!q->drawmethod.flag);
+   if(kind<2){assert(q->frame==&image && q->params[0]==(kind==1));if(kind==1)assert(q->params[1]==37 && q->params[2]==41);}
+   else if(kind==2)assert(q->frame==&canvas);
+   else{assert(!q->frame && q->params[0]==23);if(kind>3)assert(q->params[1]==29 && q->params[2]==31);}
+  }
+  unsigned char unchanged[sizeof(queue)];memcpy(unchanged,queue,sizeof(queue));
+  append(0,999,&method);assert(spritequeue_len==limit && !memcmp(unchanged,queue,sizeof(queue)));
+  if(limit<600){const unsigned char *tail=(const unsigned char*)(queue+limit);for(size_t i=0;i<(600u-(unsigned)limit)*sizeof(*queue);++i)assert(tail[i]==0x5a);}
+  spriteq_clear();assert(!spritequeue_len);for(unsigned n=0;n<3;++n)append(n,n,&method);
+  spriteq_lock();for(unsigned n=3;n<602;++n)append(n%6,n,&method);assert(spritequeue_len==limit);
+  spriteq_clear();assert(spritequeue_len==3);for(int n=0;n<3;++n)assert(order[n]==queue+n);
+  spriteq_unlock();spriteq_clear();assert(!spritequeue_len);++active_case;
+ }
+ /* Loading remains before capacity admission; missing frames still stay out. */
+ loads=0;node.sprite=NULL;for(int n=0;n<limit;++n)append(0,(unsigned)n,NULL);
+ spriteq_add_sprite(1,2,3,2,NULL,0);assert(loads==1 && spritequeue_len==limit);
+ spriteq_unlock();spriteq_clear();spriteq_add_frame(0,0,0,NULL,NULL,0);spriteq_add_screen(0,0,0,NULL,NULL,0);assert(!spritequeue_len);
+}
+static void icon_cases(unsigned p)
+{
+ static entity actor;unsigned char palette[256];
+ const int coords[]={-1001,-1000,-999,0,27};
+ for(int state=0;state<4;++state)for(int usemap=-1;usemap<=1;++usemap)
+ for(int pal=0;pal<2;++pal)for(int valid=0;valid<2;++valid)
+ for(unsigned x=0;x<5;++x)for(unsigned y=0;y<5;++y)
+ {
+  memset(&actor,0,sizeof(actor));actor.health=state==0?0:42;actor.inpain=state==1;actor.getting=state==2;
+  actor.modeldata.namex=11;actor.modeldata.namey=13;actor.modeldata.health=100;
+  actor.modeldata.hpx=17;actor.modeldata.hpy=19;actor.oldhealth=31;
+  actor.modeldata.icon.position.x=coords[x];actor.modeldata.icon.position.y=coords[y];actor.modeldata.icon.usemap=usemap;
+  actor.modeldata.icon.die=valid?1:-1;actor.modeldata.icon.pain=valid?2:-1;
+  actor.modeldata.icon.get=valid?3:-1;actor.modeldata.icon.def=valid?4:-1;
+  actor.colourmap=pal?palette:NULL;for(int n=0;n<8;++n){map[n].node=&node;map[n].centerx=100+n;map[n].centery=200+n;}
+  spriteq_clear();fonts=bars=0;drawenemystatus(&actor);assert(fonts==1 && bars==1);
+  int drawn=valid && coords[x]>-1000 && coords[y]>-1000;assert(spritequeue_len==drawn);
+  if(drawn){assert(queue[0].x==coords[x] && queue[0].y==coords[y] && queue[0].z==HUD_Z);
+   assert(queue[0].params[1]==101+state && queue[0].params[2]==201+state);
+   s_drawmethod expected=plainmethod;expected.table=contexts[p].usemap&&!usemap?NULL:actor.colourmap;
+   assert(!memcmp(&queue[0].drawmethod,&expected,sizeof(expected)));}
+  ++active_case;
+ }
+ actor.modeldata.namex=-1000;actor.modeldata.health=0;actor.modeldata.icon.position.x=-1000;
+ fonts=bars=0;spriteq_clear();drawenemystatus(&actor);assert(!fonts && !bars && !spritequeue_len);
+}
+/* The actual water body runs; these typed services observe raster requests. */
+int pixelformat=PIXEL_8;
+static int trans_sw,trans_sh,trans_dw,trans_dh,transbg;
+static unsigned water_logs,raster_pixels,seeks;
+void init_gfx_global_draw_stuff(s_screen *d,gfx_entry *s,s_drawmethod *m)
+{(void)m;trans_sw=s->screen->width;trans_sh=s->screen->height;trans_dw=d->width;trans_dh=d->height;}
+static void seek(int x,int y){(void)x;(void)y;++seeks;}
+#define dest_seek(x,y) seek(x,y)
+#define src_seek(x,y) seek(x,y)
+#define dest_inc() ((void)0)
+#define src_inc() ((void)0)
+#define write_pixel() (++raster_pixels)
+#define copy_pixel_block(n) (raster_pixels+=(unsigned)(n))
+static int water_message(const char *format,...)
+{assert(!strcmp(format,"drawing water ... \n"));++water_logs;return 0;}
+#define printf water_message
+@WATER@
+#undef printf
+static void water_cases(unsigned p)
+{
+ s_screen source,dest;gfx_entry entry;memset(&source,0,sizeof(source));memset(&dest,0,sizeof(dest));
+ source.magic=screen_magic;dest.magic=screen_magic;entry.screen=&source;
+ for(int empty=0;empty<2;++empty)for(int x=-4;x<=9;++x)for(int y=-3;y<=7;++y)
+ {
+  source.width=empty?0:4;source.height=3;dest.width=8;dest.height=6;
+  s_drawmethod method=plainmethod;method.water.amplitude=0;method.water.wavelength=32;method.water.wavetime=0;
+  water_logs=raster_pixels=seeks=0;gfx_draw_water(&dest,&entry,x,y,0,0,&method);
+  int draw=!empty && x+4>0 && x<8 && y+3>0 && y<6;
+  assert(water_logs==(unsigned)(draw&&contexts[p].water_log));
+  int left=x<0?0:x,right=x+4>8?8:x+4,top=y<0?0:y,bottom=y+3>6?6:y+3;
+  assert(raster_pixels==(unsigned)(draw?(right-left)*(bottom-top):0));
+  assert(draw?seeks>0:!seeks);++active_case;
+ }
+}
+int main(void)
+{
+ for(unsigned p=0;p<sizeof(contexts)/sizeof(*contexts);++p){
+  obor_profile_build=contexts[p].revision;active_case=0;
+  queue_cases(p);icon_cases(p);water_cases(p);
+  printf("{\"revision\":%u,\"status\":\"PASS\"}\n",obor_profile_build);
+ }
+ return 0;
+}

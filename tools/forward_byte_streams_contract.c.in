@@ -1,0 +1,154 @@
+/* SPDX-License-Identifier: BSD-3-Clause
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me> */
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <strings.h>
+#include <stdint.h>
+#include <stdarg.h>
+@HEADER@
+#include "anybor_pak_name.h"
+#undef printf
+/* This consumer uses real successful allocations; native allocation
+ * output is verified by its separate compatibility contract. */
+void *checkAlloc(void *ptr,size_t bytes,const char *func,const char *file,int line)
+{(void)func;(void)file;(void)line;if(bytes && !ptr)abort();return ptr;}
+#undef assert
+uint32_t obor_profile_build;
+static unsigned active_case;
+#define assert(c) do{if(!(c)){fprintf(stderr,"BYTE_STREAM revision=%u case=%u line=%d: %s\n",obor_profile_build,active_case,__LINE__,#c);abort();}}while(0)
+HRESULT Interpreter_Call(Interpreter *value){(void)value;abort();}
+HRESULT Interpreter_EvalInstruction(Interpreter *value){(void)value;abort();}
+#ifndef stricmp
+#define stricmp strcasecmp
+#endif
+static char strings[256][8192];
+static unsigned refs[256];
+CHAR *StrCache_Get(int key){assert(key>=0 && key<256);return strings[key];}
+CHAR *StrCache_GetIfPresent(int key){return key>=0 && key<256?strings[key]:NULL;}
+void StrCache_Collect(int key){assert(key>=200 && key<256 && refs[key]);--refs[key];}
+int StrCache_Pop(void){for(int key=200;key<256;++key)if(!refs[key]){refs[key]=1;strings[key][0]=0;return key;}abort();}
+void StrCache_Copy(int key,CHAR *text){assert(key>=200 && key<256 && refs[key] && strlen(text)<sizeof(strings[key]));strcpy(strings[key],text);}
+@VARIANTS@
+@CORE@
+static s_filestream slots[2];
+s_filestream *filestreams=slots;
+int numfilestreams=2;
+static char diagnostic[1024],opened[256],written[16384],directory[256];
+static size_t written_size;
+static int open_count,close_count,open_failure,fail_reallocation,io_token;
+static int message(const char *format,...){va_list args;va_start(args,format);int n=vsnprintf(diagnostic,sizeof(diagnostic),format,args);va_end(args);return n;}
+void getBasePath(char *out,char *name,int type){assert(!strcmp(name,"Saves") && !type);strcpy(out,"Saves/");}
+void getPakName(char *out,size_t capacity,int type){assert(capacity>=8 && type==-1);strcpy(out,"testpak");}
+int dirExists(char *name,int create){assert(create && strlen(name)<sizeof(directory));strcpy(directory,name);return 1;}
+static FILE *stream_open(const char *path,const char *mode){assert(!strcmp(mode,"wb") && strlen(path)<sizeof(opened));strcpy(opened,path);++open_count;return open_failure?NULL:(FILE*)&io_token;}
+static size_t stream_write(const void *bytes,size_t width,size_t count,FILE *handle){assert(handle==(FILE*)&io_token && width==1 && written_size+count<sizeof(written));memcpy(written+written_size,bytes,count);written_size+=count;written[written_size]=0;return count;}
+static int stream_close(FILE *handle){assert(handle==(FILE*)&io_token);++close_count;return 0;}
+static void *stream_realloc(void *value,size_t bytes){if(fail_reallocation)return NULL;return realloc(value,bytes);}
+#define printf message
+#define fopen stream_open
+#define fwrite stream_write
+#define fclose stream_close
+#undef realloc
+#define realloc stream_realloc
+@APIS@
+#undef realloc
+#undef fclose
+#undef fwrite
+#undef fopen
+#undef printf
+static const struct{unsigned revision;int bytes;} contexts[]={@CONTEXTS@};
+static const struct{
+ int size,count,value_type,mode,kind,kind_type,steps,initial[32],values[3];
+ struct{int success,size,bytes[64];} expected[2];
+} appends[]={@APPENDS@};
+static const struct{
+ int count,path_type,flag_type,flag;const char *path;
+ struct{int success;const char *path,*data,*message;} expected[2];
+} saves[]={@SAVES@};
+static void release(void){free(slots[0].buf);memset(slots,0,sizeof(slots));for(int i=200;i<256;++i)assert(!refs[i]);}
+static void set_stream(const unsigned char *bytes,size_t count,size_t size){
+ release();slots[0].buf=calloc(size+count+128,1);assert(slots[0].buf);
+ if(count)memcpy(slots[0].buf,bytes,count);
+ slots[0].size=size;
+ slots[0].pos=0;diagnostic[0]=opened[0]=written[0]=directory[0]=0;
+ written_size=0;open_count=close_count=open_failure=fail_reallocation=0;
+}
+static void append_cases(int native){
+ for(active_case=0;active_case<sizeof(appends)/sizeof(*appends);++active_case){
+  unsigned char initial[32];for(int i=0;i<32;++i)initial[i]=(unsigned char)appends[active_case].initial[i];
+  set_stream(initial,(size_t)appends[active_case].size,(size_t)appends[active_case].size);slots[0].pos=17;
+  ScriptVariant values[4],result={0},*out=&result,*args[]={values,values+1,values+2,values+3};memset(values,0,sizeof(values));
+  values[0].vt=VT_INTEGER;values[0].lVal=0;values[1].vt=appends[active_case].value_type==1?VT_STR:appends[active_case].value_type==2?VT_EMPTY:VT_INTEGER;
+  values[2].vt=VT_INTEGER;values[2].lVal=appends[active_case].mode;
+  values[3].vt=appends[active_case].kind_type?VT_INTEGER:VT_STR;values[3].strVal=appends[active_case].kind;
+  for(int step=0;step<appends[active_case].steps;++step){
+   values[1].lVal=appends[active_case].values[step];out=&result;
+   HRESULT status=openbor_filestreamappend(args,&out,appends[active_case].count);
+   assert(SUCCEEDED(status)==appends[active_case].expected[native].success && !out);
+  }
+  assert(slots[0].size==(size_t)appends[active_case].expected[native].size && slots[0].pos==17);
+  for(int i=0;i<appends[active_case].expected[native].size && i<64;++i)
+   if(appends[active_case].expected[native].bytes[i]>=0)assert((unsigned char)slots[0].buf[i]==appends[active_case].expected[native].bytes[i]);
+  release();
+ }
+}
+static void read_cases(int native){
+ unsigned char bytes[]={0,9,0,10};ScriptVariant values[3],result={0},*out=&result,*args[]={values,values+1,values+2};
+ memset(values,0,sizeof(values));values[0].vt=values[1].vt=VT_INTEGER;values[2].vt=VT_STR;values[2].strVal=20;
+ for(unsigned byte=0;byte<256;++byte)for(int argument=-1;argument<=3;argument+=2){
+  active_case=byte;bytes[2]=(unsigned char)byte;set_stream(bytes,sizeof(bytes),sizeof(bytes));slots[0].pos=2;
+  values[1].lVal=argument;out=&result;result.vt=VT_INTEGER;result.lVal=777;
+  HRESULT status=openbor_getfilestreamargument(args,&out,3);
+  assert(SUCCEEDED(status)==native && out==&result && result.vt==(native?VT_INTEGER:VT_EMPTY));
+  if(native)assert(result.lVal==(LONG)byte);else assert(!strcmp(diagnostic,"Invalid type for argument converted to (getfilestreamargument).\n"));
+  ScriptVariant_Clear(&result);release();
+ }
+ const unsigned char line[]="123 4.5 ABC\n";set_stream(line,sizeof(line),sizeof(line)-1);
+ values[1].lVal=0;values[2].strVal=23;out=&result;
+ assert(openbor_getfilestreamargument(args,&out,3)==S_OK && result.vt==VT_INTEGER && result.lVal==123);
+ values[1].lVal=1;values[2].strVal=24;assert(openbor_getfilestreamargument(args,&out,3)==S_OK && result.vt==VT_DECIMAL && result.dblVal==4.5);
+ values[1].lVal=2;values[2].strVal=25;assert(openbor_getfilestreamargument(args,&out,3)==S_OK && result.vt==VT_STR && !strcmp(StrCache_Get(result.strVal),"ABC"));
+ ScriptVariant_Clear(&result);release();
+}
+static void save_cases(int native){
+ const unsigned char data[]={'A',0,'B'};
+ for(active_case=0;active_case<sizeof(saves)/sizeof(*saves);++active_case){
+  set_stream(data,sizeof(data),sizeof(data));slots[0].pos=2;
+  ScriptVariant values[5],result={0},*out=&result,*args[]={values,values+1,values+2,values+3,values+4};memset(values,0,sizeof(values));
+  values[0].vt=VT_INTEGER;values[0].lVal=0;values[1].vt=VT_STR;values[1].strVal=26;
+  values[2].vt=VT_INTEGER;values[2].lVal=999;
+  values[3].vt=saves[active_case].path_type?VT_INTEGER:VT_STR;values[3].strVal=27;strcpy(strings[27],saves[active_case].path);
+  values[4].vt=saves[active_case].flag_type?VT_INTEGER:VT_STR;values[4].strVal=saves[active_case].flag;
+  HRESULT status=openbor_savefilestream(args,&out,saves[active_case].count);
+  assert(SUCCEEDED(status)==saves[active_case].expected[native].success && !out);
+  assert(!strcmp(opened,saves[active_case].expected[native].path) && !strcmp(written,saves[active_case].expected[native].data) && !strcmp(diagnostic,saves[active_case].expected[native].message));
+  assert(open_count==saves[active_case].expected[native].success && close_count==open_count && slots[0].pos==2);
+  release();
+ }
+}
+static void stability(void){
+ const unsigned char data[]="abc";set_stream(data,sizeof(data),3);
+ ScriptVariant values[5],result={0},*out=&result,*args[]={values,values+1,values+2,values+3,values+4};memset(values,0,sizeof(values));
+ values[0].vt=VT_INTEGER;values[1].vt=VT_STR;values[1].strVal=28;
+ assert(openbor_filestreamappend(args,&out,2)==S_OK && !out && slots[0].size==3003 && !memcmp(slots[0].buf,"abc",3) && !strcmp(slots[0].buf+3,strings[28]));
+ char *old=slots[0].buf;size_t size=slots[0].size;fail_reallocation=1;out=&result;
+ assert(openbor_filestreamappend(args,&out,2)==E_FAIL && !out && slots[0].buf==old && slots[0].size==size);fail_reallocation=0;
+ slots[0].size=SIZE_MAX;out=&result;assert(openbor_filestreamappend(args,&out,2)==E_FAIL && !out && slots[0].buf==old);slots[0].size=size;
+ values[1].strVal=26;out=&result;assert(openbor_savefilestream(args,&out,1)==E_FAIL && !out && !open_count);
+ values[0].lVal=2;out=&result;assert(openbor_savefilestream(args,&out,2)==E_FAIL && !out && !open_count);
+ values[0].lVal=0;open_failure=1;out=&result;assert(openbor_savefilestream(args,&out,2)==E_FAIL && !out && open_count==1 && !close_count);
+ out=&result;assert(openbor_filestreamappend(NULL,&out,2)==E_FAIL && !out);
+ values[2].vt=VT_STR;values[2].strVal=20;values[1].vt=VT_INTEGER;slots[0].pos=-1;out=&result;
+ assert(openbor_getfilestreamargument(args,&out,3)==E_FAIL && !out);
+ release();
+}
+int main(void){
+ strcpy(strings[17],"Z");strcpy(strings[20],"ByTe");strcpy(strings[21],"wrong");strcpy(strings[23],"int");strcpy(strings[24],"float");strcpy(strings[25],"string");strcpy(strings[26],"out.bin");memset(strings[28],'x',3000);strings[28][3000]=0;
+ for(unsigned row=0;row<sizeof(contexts)/sizeof(*contexts);++row){
+  obor_profile_build=contexts[row].revision;active_case=0;
+  append_cases(contexts[row].bytes);read_cases(contexts[row].bytes);save_cases(contexts[row].bytes);stability();
+  printf("{\"revision\":%u,\"status\":\"PASS\"}\n",obor_profile_build);
+ }
+ return 0;
+}

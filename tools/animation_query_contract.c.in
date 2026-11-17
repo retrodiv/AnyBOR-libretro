@@ -38,6 +38,13 @@ int Varlist_SetByName(Varlist *vars, char *name, ScriptVariant *value)
 }
 static int quiet(const char *format, ...) { (void)format; return 0; }
 @CURRENT@
+/* Later query services remain outside this classic-current contract. */
+s_anim *obor_script_model_animation(const entity *actor,int index)
+{(void)actor;(void)index;abort();}
+int mapstrings_animationproperty(ScriptVariant **args,int count)
+{(void)args;(void)count;abort();}
+static HRESULT obor_forward_getanimationproperty(ScriptVariant **args,ScriptVariant **result,int count)
+{(void)args;(void)result;(void)count;abort();}
 #define printf quiet
 @GETTER@
 #undef printf

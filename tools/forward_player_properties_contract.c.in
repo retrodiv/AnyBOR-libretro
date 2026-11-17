@@ -1,0 +1,204 @@
+/* SPDX-License-Identifier: BSD-3-Clause
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me>
+ * Complete native player accessors; recorded model-cache and weapon services.
+ */
+@PROVIDERS@
+@VARIANTS@
+@SEARCH@
+#define printf record_printf
+@MAP_MACRO@
+@METHODS@
+@CONSTANTS@
+#undef printf
+static const struct {unsigned revision;int count;const char *names[23];int settable[23];int constants;} contexts[]={@CONTEXTS@};
+static const char *constant_names[]={@CONSTANT_NAMES@};
+static const int constant_values[]={@CONSTANT_VALUES@};
+static s_model model;
+static s_modelcache cache[2];
+static void text_value(ScriptVariant *v,const char *s)
+{ScriptVariant_ChangeType(v,VT_STR);StrCache_Copy(v->strVal,(char *)s);}
+static int slot(unsigned p,const char *name)
+{for(int i=0;i<contexts[p].count;++i)if(!strcmp(name,contexts[p].names[i]))return i;return -1;}
+static void reset_player(void)
+{
+ memset(player,0,sizeof(player));memset(&model,0,sizeof(model));memset(cache,0,sizeof(cache));
+ player[0].ent=&actor;strcpy(player[0].name,"Player");
+ player[0].colourmap=11;player[0].credits=12;player[0].hasplayed=13;player[0].keys=14;
+ player[0].lives=15;player[0].newkeys=16;player[0].playkeys=17;player[0].score=18;
+ player[0].spawnhealth=19;player[0].spawnmp=20;player[0].weapnum=21;
+ player[0].releasekeys=0xffffffffu;player[0].joining=-23;player[0].combostep=24;
+ for(unsigned i=0;i<27;++i){player[0].combokey[i]=200+i;player[0].inputtime[i]=100+i;}
+ credits=22;noshare=0;model.maps.hide_start=-31;model.maps.hide_end=32;model.maps_loaded=4;
+ model_cache=cache;models_cached=2;cache[1].model=&model;cache_result=1;cache_calls=0;
+ weapon_calls=0;diagnostic[0]=0;
+}
+static void expected_get(const char *n,ScriptVariant *r)
+{
+ if(!strcmp(n,"weapon")){assert(r->vt==VT_EMPTY);return;}
+ if(!strcmp(n,"ent")||!strcmp(n,"entity")){assert(r->vt==VT_PTR && r->ptrVal==&actor);return;}
+ if(!strcmp(n,"name")){assert(r->vt==VT_STR && !strcmp(StrCache_Get(r->strVal),"Player"));return;}
+ int v=0;
+#define VALUE(nm,val) if(!strcmp(n,#nm)) v=(val); else
+ VALUE(colourmap,11) VALUE(credits,22) VALUE(hasplayed,13) VALUE(keys,14)
+ VALUE(lives,15) VALUE(newkeys,16) VALUE(playkeys,17) VALUE(score,18)
+ VALUE(spawnhealth,19) VALUE(spawnmp,20) VALUE(weapnum,21) VALUE(releasekeys,-1)
+ VALUE(joining,-23) VALUE(combostep,24) VALUE(combokey,203) VALUE(inputtime,103)
+ VALUE(hmapl,-31) VALUE(hmapu,32) VALUE(mapcount,5) {abort();}
+#undef VALUE
+ assert(r->vt==VT_INTEGER && r->lVal==v);
+}
+static void expected_change(const char *n)
+{
+ if(!strcmp(n,"ent")||!strcmp(n,"entity")){assert(player[0].ent==&other);return;}
+ if(!strcmp(n,"name")){assert(!strcmp(player[0].name,"Renamed"));return;}
+ if(!strcmp(n,"weapon")){assert(weapon_calls==1 && weapon_number==42 && weapon_flag==0);return;}
+ if(!strcmp(n,"credits")){assert(credits==42 && player[0].credits==12);return;}
+ if(!strcmp(n,"combokey")){assert(player[0].combokey[3]==42 && player[0].combokey[2]==202);return;}
+ if(!strcmp(n,"inputtime")){assert(player[0].inputtime[3]==42 && player[0].inputtime[2]==102);return;}
+#define CHANGED(nm) if(!strcmp(n,#nm)){assert(player[0].nm==42);return;}
+ CHANGED(colourmap) CHANGED(hasplayed) CHANGED(keys) CHANGED(lives) CHANGED(newkeys)
+ CHANGED(playkeys) CHANGED(score) CHANGED(spawnhealth) CHANGED(spawnmp) CHANGED(weapnum)
+ CHANGED(releasekeys) CHANGED(joining) CHANGED(combostep)
+#undef CHANGED
+ abort();
+}
+static void native_tables(unsigned p)
+{
+ for(int i=0;i<contexts[p].count;++i)for(int named=0;named<3;++named)
+ {
+  reset_player();active_name=contexts[p].names[i];++active_case;
+  ScriptVariant index={.vt=VT_INTEGER,.lVal=0},prop={.vt=VT_INTEGER,.lVal=i};
+  ScriptVariant frame={.vt=VT_INTEGER,.lVal=3},value={.vt=VT_INTEGER,.lVal=42},result={.vt=VT_EMPTY};
+  ScriptVariant *args[]={&index,&prop,&frame,&value},*out=&result;
+  if(named){char upper[64];strcpy(upper,active_name);if(named==2)for(char *c=upper;*c;++c)if(*c>='a'&&*c<='z')*c-=32;text_value(&prop,upper);}
+  assert(mapstrings_playerproperty(args,4)==1 && prop.vt==VT_INTEGER && prop.lVal==i);
+  assert(mapstrings_playerproperty(args,4)==1 && prop.lVal==i);
+  assert(openbor_getplayerproperty(args,&out,4)==S_OK && out==&result);expected_get(active_name,out);
+  ScriptVariant_Clear(&result);
+  /* Reuse the cached logical ordinal in the setter. */
+  reset_player();int array=!strcmp(active_name,"combokey")||!strcmp(active_name,"inputtime");
+  if(!array){frame.lVal=42;if(!strcmp(active_name,"name"))text_value(&frame,"Renamed");
+   else if(!strcmp(active_name,"ent")||!strcmp(active_name,"entity")){frame.vt=VT_PTR;frame.ptrVal=&other;}}
+  s_player before=player[0];out=&result;
+  HRESULT hr=openbor_changeplayerproperty(args,&out,array?4:3);assert(out==NULL);
+  if(contexts[p].settable[i]){assert(hr==S_OK);expected_change(active_name);}
+  else {assert(hr==E_FAIL && !memcmp(&before,&player[0],sizeof(before)));assert(!strcmp(diagnostic,"Invalid property name for function changeplayerproperty.\n"));}
+  ScriptVariant_Clear(&frame);ScriptVariant_Clear(&prop);ScriptVariant_Clear(&result);
+ }
+}
+static void array_cases(unsigned p)
+{
+ const char *names[]={"combokey","inputtime"};
+ for(unsigned k=0;k<2;++k)
+ {
+  int propid=slot(p,names[k]);if(propid<0)continue;active_name=names[k];
+  for(int frameid=0;frameid<27;++frameid)
+  {
+   reset_player();ScriptVariant index={.vt=VT_INTEGER,.lVal=0},prop={.vt=VT_INTEGER,.lVal=propid};
+   ScriptVariant frame={.vt=VT_INTEGER,.lVal=frameid},value={.vt=VT_INTEGER,.lVal=-1},r={.vt=VT_EMPTY};
+   ScriptVariant *a[]={&index,&prop,&frame,&value},*out=&r;
+   assert(openbor_getplayerproperty(a,&out,3)==S_OK && r.vt==VT_INTEGER && r.lVal==(k?100:200)+frameid);
+   out=&r;assert(openbor_changeplayerproperty(a,&out,4)==S_OK && out==NULL);
+   out=&r;assert(openbor_getplayerproperty(a,&out,3)==S_OK && r.lVal==-1);
+   /* Setter converts the frame; getter requires an integer frame. */
+   frame.vt=VT_DECIMAL;frame.dblVal=frameid+0.75;value.lVal=42;out=&r;
+   assert(openbor_changeplayerproperty(a,&out,4)==S_OK);out=&r;
+   assert(openbor_getplayerproperty(a,&out,3)==E_FAIL && out==NULL);
+   assert(!strcmp(diagnostic,"Need a frame number for this property.\n"));
+   ScriptVariant_Clear(&r);
+  }
+  for(int scenario=0;scenario<9;++scenario)
+  {
+   reset_player();ScriptVariant index={.vt=VT_INTEGER,.lVal=0},prop={.vt=VT_INTEGER,.lVal=propid};
+   ScriptVariant frame={.vt=VT_INTEGER,.lVal=3},value={.vt=VT_INTEGER,.lVal=42},r={.vt=VT_EMPTY};
+   ScriptVariant *a[]={&index,&prop,&frame,&value},*out=&r;int count=4;
+   if(scenario==0)frame.lVal=-1;
+   if(scenario==1)frame.lVal=27;
+   if(scenario==2)frame.lVal=INT32_MAX;
+   if(scenario==3)a[2]=NULL;
+   if(scenario==4)count=2;
+   if(scenario==5)value.vt=VT_DECIMAL;
+   if(scenario==6)a[3]=NULL;
+   if(scenario==7)count=3;
+   if(scenario==8)frame.vt=VT_EMPTY;
+   s_player before=player[0];
+   HRESULT hr=openbor_getplayerproperty(a,&out,count);
+   if(scenario<5 || scenario==8){assert(hr==E_FAIL && out==NULL);assert(!strcmp(diagnostic,"Need a frame number for this property.\n"));}
+   else assert(hr==S_OK);
+   diagnostic[0]=0;out=&r;hr=openbor_changeplayerproperty(a,&out,count);
+   assert(hr==E_FAIL && out==NULL && !memcmp(&before,&player[0],sizeof(before)));
+   ScriptVariant_Clear(&r);
+  }
+ }
+}
+static void map_cases(unsigned p)
+{
+ const char *names[]={"hmapl","hmapu","mapcount"};
+ for(unsigned k=0;k<3;++k)if(slot(p,names[k])>=0)for(int scenario=0;scenario<9;++scenario)
+ {
+  reset_player();ScriptVariant index={.vt=VT_INTEGER,.lVal=0},prop={.vt=VT_INTEGER,.lVal=slot(p,names[k])},r={.vt=VT_EMPTY};
+  ScriptVariant *a[]={&index,&prop},*out=&r;
+  if(scenario==0)player[0].name[0]=0;
+  if(scenario==1)cache_result=-1;
+  if(scenario==2)cache_result=2;
+  if(scenario==3)model_cache=NULL;
+  if(scenario==4)cache[1].model=NULL;
+  if(scenario==5)memset(player[0].name,'X',sizeof(player[0].name));
+  if(scenario==6)model.maps_loaded=-3;
+  if(scenario==7)model.maps_loaded=INT32_MAX;
+  assert(openbor_getplayerproperty(a,&out,2)==S_OK && out==&r && r.vt==VT_INTEGER);
+  int expected=scenario<6?0:k==0?-31:k==1?32:scenario==6?-2:scenario==7?0:5;
+  assert(r.lVal==expected && cache_calls==((scenario==0||scenario==5)?0:1));ScriptVariant_Clear(&r);
+ }
+}
+static void admission_and_aliases(unsigned p)
+{
+ reset_player();ScriptVariant index={.vt=VT_INTEGER,.lVal=1},prop={.vt=VT_INTEGER,.lVal=slot(p,"keys")},v={.vt=VT_INTEGER,.lVal=42},r={.vt=VT_EMPTY};
+ ScriptVariant *a[]={&index,&prop,&v},*out=&index;
+ /* Getter clears its output before consuming index/property/frame aliases. */
+ assert(openbor_getplayerproperty(a,&out,3)==S_OK && index.vt==VT_INTEGER && index.lVal==14);
+ index.lVal=0;out=&prop;assert(openbor_getplayerproperty(a,&out,3)==E_FAIL && out==NULL && prop.vt==VT_EMPTY);
+ prop.vt=VT_INTEGER;prop.lVal=slot(p,"keys");out=&v;
+ assert(openbor_changeplayerproperty(a,&out,3)==S_OK && out==NULL && v.lVal==42 && player[0].keys==42);
+ int array=slot(p,"combokey");if(array>=0){prop.lVal=array;out=&v;assert(openbor_getplayerproperty(a,&out,3)==E_FAIL && out==NULL && v.vt==VT_EMPTY);}
+ reset_player();prop.vt=VT_INTEGER;prop.lVal=contexts[p].count+2;out=&r;
+ assert(openbor_getplayerproperty(a,&out,2)==S_OK && r.vt==VT_EMPTY);
+ if(obor_profile_build>=4161)
+ {
+  a[2]=NULL;out=&r;assert(openbor_changeplayerproperty(a,&out,3)==E_FAIL && !strcmp(diagnostic,"Invalid property name for function changeplayerproperty.\n"));
+  prop.lVal=slot(p,"weapon");player[0].ent=NULL;out=&r;assert(openbor_changeplayerproperty(a,&out,3)==S_OK && out==NULL);
+  int readonly=slot(p,"releasekeys");if(readonly>=0 && !contexts[p].settable[readonly]){prop.lVal=readonly;out=&r;assert(openbor_changeplayerproperty(a,&out,3)==E_FAIL);}
+ }
+ for(int i=0;i<8;++i)
+ {
+  static const char *new_names[]={"combokey","combostep","hmapl","hmapu","inputtime","joining","mapcount","releasekeys"};
+  if(slot(p,new_names[i])>=0)continue;
+  diagnostic[0]=0;text_value(&prop,new_names[i]);assert(mapstrings_playerproperty(a,2)==0 && prop.vt==VT_STR);
+  char expected[128];snprintf(expected,sizeof(expected),"Player property name '%s' is not supported yet.\n",new_names[i]);assert(!strcmp(diagnostic,expected));ScriptVariant_Clear(&prop);
+ }
+ ScriptVariant_Clear(&r);ScriptVariant_Clear(&v);ScriptVariant_Clear(&prop);
+}
+static void constant_cases(unsigned p)
+{
+ ScriptVariant v={.vt=VT_EMPTY};ScriptVariant *a[]={&v};
+ assert(mapstrings_transconst(a,0)==1);
+ for(unsigned k=0;k<sizeof(constant_names)/sizeof(*constant_names);++k)for(int lower=0;lower<2;++lower)
+ {
+  char name[80];strcpy(name,constant_names[k]);if(lower)for(char *s=name;*s;++s)if(*s>='A'&&*s<='Z')*s+=32;
+  diagnostic[0]=0;text_value(&v,name);int found=mapstrings_transconst(a,1);
+  if(contexts[p].constants){assert(found==1 && v.vt==VT_INTEGER && v.lVal==constant_values[k] && !diagnostic[0]);assert(mapstrings_transconst(a,1)==1 && v.lVal==constant_values[k]);}
+  else {assert(found==0 && v.vt==VT_STR && !strcmp(StrCache_Get(v.strVal),name));char expected[160];snprintf(expected,sizeof(expected),"Can't find openbor constant '%s' \n",name);assert(!strcmp(diagnostic,expected));}
+  ScriptVariant_Clear(&v);
+ }
+}
+int main(void)
+{
+ for(unsigned p=0;p<sizeof(contexts)/sizeof(*contexts);++p)
+ {
+  obor_profile_build=contexts[p].revision;active_case=0;active_name="admission";
+  native_tables(p);array_cases(p);map_cases(p);admission_and_aliases(p);constant_cases(p);
+  for(int i=0;i<32;++i)assert(!used[i]);
+  printf("{\"revision\":%u,\"status\":\"PASS\"}\n",obor_profile_build);
+ }
+ return 0;
+}

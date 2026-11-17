@@ -1,0 +1,138 @@
+/* SPDX-License-Identifier: BSD-3-Clause
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me>
+ * Complete native roster/status/preview/credits with observed external services.
+ */
+#include <stdint.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <strings.h>
+#include <stdarg.h>
+#include "openbor.h"
+#undef printf
+#undef assert
+#ifdef NDEBUG
+#error Selection assertions must remain enabled
+#endif
+uint32_t obor_profile_build;
+static unsigned active_case;
+#define assert(c) do{if(!(c)){fprintf(stderr,"SELECTION revision=%u case=%u line=%d: %s\n",obor_profile_build,active_case,__LINE__,#c);abort();}}while(0)
+HRESULT Interpreter_Call(Interpreter *p){(void)p;abort();}
+HRESULT Interpreter_EvalInstruction(Interpreter *p){(void)p;abort();}
+void borExit(int n){(void)n;abort();}
+s_player player[MAX_PLAYERS];
+s_set_entry sets[1],*levelsets=sets;
+s_savedata savedata;
+s_level room,*level=&room;
+s_videomodes videomodes;
+static s_model models[4];
+static char model_names[4][MAX_NAME_LEN+1];
+static s_modelcache cache[4];
+static entity actors[4];
+unsigned models_cached=4;
+int current_set,allow_secret_chars,bonus,colourselect;
+entity *smartbomber,*textbox;
+int nojoin,PLAYER_LIVES=3,nodropen,noshare,credits=5,creditscheat,CONTINUES=5;
+int timeleft,oldtime,timetoshow,showtimeover,showgo,gosound,go_time,SAMPLE_GO=-1;
+int psmenu[4][4],spdirection[4];
+int bothnewkeys,fade;
+u32 time;
+char skipselect[4][MAX_NAME_LEN];
+static int active_slot,map_calls,map_value,join_calls;
+static unsigned draw_count,credit_epoch;
+static const char *names[]={"one","two","three","four","ONE",""};
+static const struct selection_case{int kind,slot,active,nosame,current,action,colourselect,guard_only;
+ int names[4],colours[4],maps[4];}cases[]={@CASES@};
+/* name index, colour, remaining keys, joining flag, global credits, map calls. */
+static const int expected[][sizeof(cases)/sizeof(*cases)][6]={@EXPECTED@};
+static const struct{unsigned revision;int contract,credits;}contexts[]={@CONTEXTS@};
+static const struct{int font,row,column;const char *text;}credit_rows[][40]={@CREDIT_ROWS@};
+static const unsigned credit_counts[]={@CREDIT_COUNTS@};
+void shutdown(int n,char *format,...){(void)n;(void)format;abort();}
+s_model *findmodel(char *name)
+{for(int i=0;i<4;++i)if(!strcasecmp(name,models[i].name))return models+i;return NULL;}
+void spawnplayer(int i){player[i].ent=actors+i;}
+void execute_join_script(int i){assert(player[i].ent);++join_calls;}
+void drop_all_enemies(void){}
+void execute_timetick_script(int dt,int go){(void)dt;(void)go;}
+int sound_play_sample(int sample,unsigned priority,int left,int right,unsigned speed)
+{(void)sample;(void)priority;(void)left;(void)right;(void)speed;return 0;}
+entity *spawn(float x,float z,float a,int direction,char *name,int index,s_model *model)
+{assert(x==psmenu[active_slot][0] && z==psmenu[active_slot][1] && !a && direction==spdirection[active_slot] && !name && index==-1 && model);actors[active_slot].model=model;return actors+active_slot;}
+void ent_set_colourmap(entity *ent,unsigned which)
+{assert(ent==actors+active_slot);++map_calls;map_value=(int)which;}
+int fontmonowidth(int font){(void)font;return 8;}
+int font_string_width(int font,char *format,...){(void)font;return (int)strlen(format)*8;}
+void font_printf(int x,int y,int font,int layer,char *format,...)
+{
+ assert(draw_count<credit_counts[credit_epoch]);
+ const __typeof__(*credit_rows[0])*row=credit_rows[credit_epoch]+draw_count++;
+ int column=row->column<0?(videomodes.hRes-(int)strlen(format)*8)/2:
+  row->column==0?videomodes.hRes/2-128:videomodes.hRes/2+32;
+ assert(!strcmp(format,row->text) && font==row->font && !layer && x==column);
+ assert(y==videomodes.vShift/2+3+(videomodes.vRes-videomodes.vShift)/(obor_profile_build>=4177?24:23)*row->row);
+}
+void fade_out(int type,int speed){assert(!type && !speed);}
+void unload_level(void){}
+void update(int game,int args){assert(game==2 && !args);bothnewkeys=FLAG_ESC;}
+#if defined(__GNUC__) && !defined(__clang__)
+#pragma GCC diagnostic warning "-Wstringop-truncation"
+#pragma GCC diagnostic warning "-Wdiscarded-qualifiers"
+#elif defined(__clang__)
+#pragma clang diagnostic warning "-Wincompatible-pointer-types-discards-qualifiers"
+#endif
+@FUNCTIONS@
+static void reset(const __typeof__(*cases)*c)
+{
+ memset(player,0,sizeof(player));memset(models,0,sizeof(models));memset(cache,0,sizeof(cache));
+ memset(actors,0,sizeof(actors));memset(sets,0,sizeof(sets));memset(&room,0,sizeof(room));
+ memset(skipselect,0,sizeof(skipselect));
+ model_cache=cache;sets[0].maxplayers=c->active;sets[0].nosame=c->nosame;
+ for(int i=0;i<4;++i){models[i].name=model_names[i];strcpy(models[i].name,names[i]);models[i].type=TYPE_PLAYER;models[i].maps_loaded=c->maps[i];cache[i].model=models+i;cache[i].selectable=1;strcpy(player[i].name,names[c->names[i]]);player[i].colourmap=c->colours[i];player[i].ent=actors+i;}
+ active_slot=c->slot;player[active_slot].ent=NULL;player[active_slot].joining=c->kind!=3;
+ colourselect=c->colourselect;credits=5;creditscheat=nojoin=0;noshare=0;smartbomber=textbox=NULL;
+ oldtime=timeleft=1000;time=0;room.settime=20;map_calls=map_value=join_calls=0;
+}
+static void missing_palette_model(void)
+{
+ /* Missing current names can navigate from NULL when no old palette is read.
+  * Only the legacy path that consumes that absent model must refuse safely. */
+ for(int flags=0;flags<4;++flags)for(int enabled=0;enabled<2;++enabled)for(int backwards=0;backwards<2;++backwards)
+ {
+  struct selection_case c=cases[0];c.slot=2;c.nosame=flags;c.colourselect=enabled;
+  for(int i=0;i<4;++i)c.names[i]=5;
+  reset(&c);strcpy(player[2].name,"missing");player[2].joining=1;
+  player[2].playkeys=backwards?FLAG_MOVELEFT:FLAG_MOVERIGHT;
+  s_player before=player[2];updatestatus();
+  if(obor_profile_build<4178 && enabled && (flags&2))
+   assert(!memcmp(&before,player+2,sizeof(before)));
+  else
+   assert(!strcmp(player[2].name,names[backwards?3:0]) && !player[2].colourmap && !player[2].playkeys && player[2].joining);
+  assert(credits==5 && !join_calls && !map_calls);
+ }
+}
+int main(void)
+{
+ for(unsigned p=0;p<sizeof(contexts)/sizeof(*contexts);++p)
+ {
+  obor_profile_build=contexts[p].revision;
+  active_case=1000;missing_palette_model();
+  for(active_case=0;active_case<sizeof(cases)/sizeof(*cases);++active_case)
+  {
+   const __typeof__(*cases)*c=cases+active_case;
+   if(c->guard_only && obor_profile_build<4179)continue;
+   reset(c);int selected=-1;
+   if(c->kind==0){s_model *current=c->current<0?NULL:models+c->current;selected=(int)(((c->action<0?prevplayermodeln:nextplayermodeln)(current,c->slot))-models);}
+   else if(c->kind==4){assert(spawnexample(c->slot)==actors+c->slot);selected=(int)(actors[c->slot].model-models);assert(map_value==player[c->slot].colourmap);}
+   else{const int keys[]={0,FLAG_MOVELEFT,FLAG_MOVERIGHT,FLAG_MOVEUP,FLAG_MOVEDOWN,FLAG_START};player[c->slot].playkeys=keys[c->action];updatestatus();s_model *model=findmodel(player[c->slot].name);assert(model);selected=(int)(model-models);}
+   const int *want=expected[contexts[p].contract][active_case];
+   if(selected!=want[0] || player[c->slot].colourmap!=want[1] || (int)player[c->slot].playkeys!=want[2] || player[c->slot].joining!=want[3] || credits!=want[4] || map_calls!=want[5])fprintf(stderr,"actual={%d,%d,%u,%d,%d,%d} expected={%d,%d,%d,%d,%d,%d}\n",selected,player[c->slot].colourmap,player[c->slot].playkeys,player[c->slot].joining,credits,map_calls,want[0],want[1],want[2],want[3],want[4],want[5]);
+   assert(selected==want[0] && player[c->slot].colourmap==want[1] && (int)player[c->slot].playkeys==want[2] && player[c->slot].joining==want[3] && credits==want[4] && map_calls==want[5]);
+  }
+  active_case=sizeof(cases)/sizeof(*cases);credit_epoch=contexts[p].credits;
+  for(int v=0;v<3;++v){videomodes.hRes=320+v*160;videomodes.vRes=240+v*37;videomodes.vShift=v*5;savedata.logo=1;draw_count=0;display_credits();assert(draw_count==credit_counts[credit_epoch] && fade==75);}
+  savedata.logo=0;draw_count=0;display_credits();assert(!draw_count);
+  printf("{\"revision\":%u,\"status\":\"PASS\"}\n",obor_profile_build);
+ }
+ return 0;
+}

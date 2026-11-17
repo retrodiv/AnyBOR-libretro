@@ -5,7 +5,10 @@
  * Upstream code retains its original license and notices.
  * Remove a guard whose only statement assigned the counter to itself. Bound
  * screen blend selectors and use transparent copy when an indexed table is
- * unavailable.
+ * unavailable. Preserve native integer or floating rotation storage by
+ * profile, with unchanged slot size and typed script, parser, mirror, copy
+ * and raster access. Bound integer rotation results and initial
+ * trigonometric table indices.
  * Existing changes recorded here; this is not their implementation date.
  * See MODIFICATIONS.md and docs/modifications/4086.md
  * at the source repository root. Original notices follow below.
@@ -514,7 +517,7 @@ static void _putscreen(s_screen *dest, s_screen *src, int x, int y, s_drawmethod
         }
         return ;
     }
-    else if(drawmethod->rotate)
+    else if(obor_drawmethod_rotation(drawmethod))
     {
         gfx.screen = src;
         gfx_draw_rotate(dest, &gfx, x, y, 0, 0, drawmethod);

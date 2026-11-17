@@ -3,8 +3,8 @@
  * Copyright (c) 2026 retrodiv <retrodiv@proton.me> (original contributions).
  * These contributions are licensed under BSD-3-Clause; see LICENSE at the root.
  * Upstream code retains its original license and notices.
- * Import the native 4153 media component, retaining its upstream authorship
- * and license notices.
+ * Select native media behavior by profile, retaining upstream authorship and
+ * license notices.
  * Existing changes recorded here; this is not their implementation date.
  * See MODIFICATIONS.md and docs/modifications/4086.md
  * at the source repository root. Original notices follow below.

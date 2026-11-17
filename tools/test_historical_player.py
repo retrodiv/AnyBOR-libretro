@@ -75,6 +75,32 @@ def function(source, name):
     raise AssertionError('Unfinished native function ' + name)
 
 
+def optional_trailing_parameter(source, name, legacy_count, declaration):
+    """Keep a probe service compatible with one explicit native ABI extension."""
+    if (type(legacy_count) is not int or not 1 <= legacy_count <= 64 or
+            not isinstance(declaration, str) or
+            not re.fullmatch(r'[A-Za-z_]\w*(?:\s+[A-Za-z_]\w*)+', declaration)):
+        raise ValueError('Explicit bounded parameter count and scalar declaration required')
+    body = function(source, name)
+    signature = re.search(r'\b' + re.escape(name) + r'\(([^()]*)\)\s*\{', body)
+    if signature is None:
+        raise ValueError('Simple complete native callback signature required')
+    parameters = [' '.join(value.split()) for value in signature[1].split(',')]
+    if parameters == ['void']:
+        parameters = []
+    if any(not value or not re.fullmatch(r'[A-Za-z_\s*][A-Za-z_\s*\d]*', value)
+           for value in parameters):
+        raise ValueError('Explicit native parameters required')
+    expected = ' '.join(declaration.split())
+    if len(parameters) == legacy_count:
+        if parameters[-1] == expected:
+            raise ValueError('Ambiguous native legacy parameter count')
+        return ''
+    if len(parameters) == legacy_count + 1 and parameters[-1] == expected:
+        return ', ' + expected
+    raise ValueError('Unreviewed native callback ABI change')
+
+
 def rename_identifiers(source, replacements):
     """Namespace source-probe symbols without changing comments or literals."""
     if not isinstance(replacements, dict) or any(

@@ -1,0 +1,347 @@
+/* SPDX-License-Identifier: BSD-3-Clause
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me>
+ * Native storage, parser case, constructors, cleanup, save/load and game caller.
+ */
+#include <stdint.h>
+#include <stddef.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <strings.h>
+#include <stdarg.h>
+#include <limits.h>
+#include "openbor.h"
+#include "commands.h"
+#include "anybor_pak_name.h"
+#undef printf
+#undef assert
+
+/* These consumer contracts observe successful delegated allocations.
+ * Native wrapper outputs are covered by the separate compatibility suite. */
+void *checkAlloc(void *pointer,size_t size,const char *function,const char *file,int line)
+{
+    (void)function; (void)file; (void)line;
+    if(size && !pointer) abort();
+    return pointer;
+}
+#ifdef NDEBUG
+#error Level-order assertions must remain enabled
+#endif
+uint32_t obor_profile_build;
+static unsigned active_case;
+#define assert(c) do{if(!(c)){fprintf(stderr,"LEVEL_ORDER revision=%u case=%u line=%d: %s\n",obor_profile_build,active_case,__LINE__,#c);abort();}}while(0)
+HRESULT Interpreter_Call(Interpreter *p){(void)p;abort();}
+HRESULT Interpreter_EvalInstruction(Interpreter *p){(void)p;abort();}
+void borExit(int n){(void)n;abort();}
+s_savedata savedata;
+s_savelevel *savelevel;
+s_set_entry *levelsets;
+s_player player[MAX_PLAYERS];
+int num_difficulties,current_set,current_level,current_stage;
+int allow_secret_chars,musicoverlap,fade,CONTINUES,PLAYER_LIVES,magic_type,sameplayer;
+int useSave,useSet,nosave,credits,bonus,nofadeout,noshare,loadgameMenu,bothnewkeys,saveslot;
+int PLAYER_MIN_Z=11,PLAYER_MAX_Z=31,BGHEIGHT=11,z_coords[3];
+int SAMPLE_BEEP,SAMPLE_BEEP2;
+char branch_name[MAX_NAME_LEN+1],skipselect[MAX_PLAYERS][MAX_NAME_LEN];
+static char allowselect_args[MAX_ARG_LEN+1];
+static void *owned[128];
+static unsigned allocation_count,shutdown_calls;
+static int fail_allocation;
+static char failure[256];
+static void *record_malloc(size_t bytes)
+{
+ assert(bytes<=8u*1024u*1024u);++allocation_count;
+ if(fail_allocation)return NULL;
+ void *p=malloc(bytes);assert(p);
+ for(unsigned i=0;i<128;++i)if(!owned[i]){owned[i]=p;return p;}
+ abort();
+}
+static void *record_realloc(void *p,size_t bytes)
+{
+ assert(bytes<=8u*1024u*1024u);++allocation_count;
+ if(fail_allocation)return NULL;
+ unsigned index=128;for(unsigned i=0;i<128;++i)if(owned[i]==p && p){index=i;break;}
+ void *q=realloc(p,bytes);assert(q);
+ if(index<128){owned[index]=q;return q;}
+ for(unsigned i=0;i<128;++i)if(!owned[i]){owned[i]=q;return q;}
+ abort();
+}
+static void record_free(void *p)
+{for(unsigned i=0;i<128;++i)if(p && owned[i]==p){owned[i]=NULL;break;}free(p);}
+void shutdown(int status,char *format,...)
+{assert(status==1);++shutdown_calls;va_list ap;va_start(ap,format);vsnprintf(failure,sizeof(failure),format,ap);va_end(ap);}
+static char *copy_name(const char *name)
+{size_t n=strlen(name)+1;char *p=record_malloc(n);if(p)memcpy(p,name,n);return p;}
+static s_model models[3];
+static s_modelcache caches[3];
+unsigned models_cached=3;
+static unsigned model_lookups;
+s_model *findmodel(char *name)
+{++model_lookups;for(unsigned i=0;i<3;++i)if(!strcmp(name,models[i].name))return models+i;return NULL;}
+int get_cached_model_index(char *name)
+{for(unsigned i=0;i<3;++i)if(!strcmp(name,models[i].name))return (int)i;return -1;}
+#pragma pack(push,4)
+@ORIGINALS@
+#pragma pack(pop)
+static const size_t native_sizes[]={@SIZES@};
+static const struct{unsigned revision;int credits,local,stored,layout;} contexts[]={@CONTEXTS@};
+/* Retain the original record-width copies and their visible truncation warning. */
+#if defined(__GNUC__) && !defined(__clang__)
+#pragma GCC diagnostic push
+#pragma GCC diagnostic warning "-Wstringop-truncation"
+#endif
+#undef malloc
+#undef realloc
+#define malloc record_malloc
+#define realloc record_realloc
+#define free record_free
+@METHODS@
+static s_level_entry *parse_skip(char *text,s_set_entry *set)
+{
+ ArgList arglist;char argbuf[MAX_ARG_LEN+1]={0};char *arg;int i;
+ s_level_entry *le=NULL;const char *errormessage=NULL;
+ ParseArgs(&arglist,text,argbuf);
+ switch(CMD_LEVELORDER_SKIPSELECT){case CMD_LEVELORDER_SKIPSELECT:
+#define CHKDEF if(!set){errormessage="set required";goto lCleanup;}
+ @SKIP@
+#undef CHKDEF
+ }
+ return le;
+lCleanup:assert(errormessage);return NULL;
+}
+#undef malloc
+#undef realloc
+#undef free
+static FILE *file;
+static unsigned file_opens,file_closes;
+static int open_failed,record_io_events;
+static char events[64];
+static unsigned event_count;
+static struct{char kind;int noselect;char names[4][MAX_NAME_LEN];int credits[4];} observations[32];
+static void event(char kind)
+{
+ size_t n=strlen(events);assert(n+1<sizeof(events));events[n]=kind;events[n+1]=0;
+ if(kind=='I'||kind=='Q'||kind=='L'||kind=='R')
+ {
+  assert(event_count<32);observations[event_count].kind=kind;observations[event_count].noselect=levelsets[0].noselect;
+  for(int i=0;i<4;++i){strcpy(observations[event_count].names[i],skipselect[i]);observations[event_count].credits[i]=player[i].credits;}
+  ++event_count;
+ }
+}
+void getBasePath(char *path,char *kind,int mode)
+{assert(!strcmp(kind,"Saves") && mode==0);strcpy(path,"saves/");}
+void getPakName(char *name,size_t size,int type)
+{assert(type==0 && size>9);strcpy(name,"case.sav");}
+static FILE *file_open(const char *path,const char *mode)
+{
+ assert(!strcmp(path,"saves/case.sav"));++file_opens;
+ if(open_failed)return NULL;
+ assert(file);rewind(file);if(record_io_events && mode[0]=='w')event('G');return file;
+}
+static int file_close(FILE *stream)
+{assert(stream==file);++file_closes;return fflush(stream);}
+#define fopen file_open
+#define fclose file_close
+@FILES@
+#undef fopen
+#undef fclose
+int loadScriptFile(void){event('R');return 1;}
+static int selection_result=1;
+int selectplayer(int *ports,char *filename)
+{(void)ports;event(filename?'Q':'I');return selection_result;}
+void playscene(char *filename){assert(filename);event('S');}
+int playlevel(char *filename){assert(filename);event('L');return 1;}
+void gameover(void){event('O');}
+void hallfame(int add){assert(add==1);event('T');}
+void showcomplete(int stage){(void)stage;event('C');}
+void fade_out(int type,int speed){assert(!type && !speed);event('F');}
+void sound_close_music(void){event('M');}
+@GAME@
+#if defined(__GNUC__) && !defined(__clang__)
+#pragma GCC diagnostic pop
+#endif
+static char credits_text[128];
+static int menu_text(int selected,int column,int line,const char *format,...)
+{
+ (void)selected;char text[256];va_list ap;va_start(ap,format);vsnprintf(text,sizeof(text),format,ap);va_end(ap);
+ if(column==6 && line==2){assert(strlen(text)<sizeof(credits_text));strcpy(credits_text,text);}
+ return 0;
+}
+static void menu_title(int a,int b,int c,const char *s){(void)a;(void)b;(void)c;(void)s;}
+void update(int a,int b){assert(!a && !b);bothnewkeys=FLAG_ESC;}
+int sound_play_sample(int sample,unsigned priority,int left,int right,unsigned speed)
+{(void)sample;(void)priority;(void)left;(void)right;(void)speed;return 0;}
+#undef _menutext
+#undef _menutextm
+#define _menutext menu_text
+#define _menutextm menu_title
+#define Tr(s) (s)
+@MENU@
+#undef Tr
+#undef _menutext
+#undef _menutextm
+static void setup(void)
+{
+ if(levelsets)unload_levelorder();
+ free(savelevel);savelevel=NULL;
+ if(file)fclose(file);
+ file=tmpfile();assert(file);
+ for(unsigned i=0;i<128;++i)assert(!owned[i]);
+ levelsets=calloc(1,sizeof(*levelsets));savelevel=calloc(1,sizeof(*savelevel));assert(levelsets && savelevel);
+ num_difficulties=1;levelsets[0].name=copy_name("Set");levelsets[0].maxplayers=4;levelsets[0].noshowhof=1;
+ memset(player,0,sizeof(player));memset(skipselect,0,sizeof(skipselect));memset(allowselect_args,0,sizeof(allowselect_args));
+ memset(branch_name,0,sizeof(branch_name));memset(models,0,sizeof(models));memset(caches,0,sizeof(caches));
+ const char *names[]={"Alpha","Beta","Gamma"};for(int i=0;i<3;++i){models[i].name=(char *)names[i];models[i].type=TYPE_PLAYER;caches[i].model=models+i;caches[i].selectable=1;}
+ model_cache=caches;models_cached=3;current_set=current_level=0;current_stage=1;credits=14;bonus=0;
+ events[0]=0;event_count=0;memset(observations,0,sizeof(observations));selection_result=1;nofadeout=1;
+ shutdown_calls=allocation_count=0;failure[0]=0;fail_allocation=open_failed=record_io_events=0;model_lookups=0;
+ file_opens=file_closes=0;
+}
+static void check_names(unsigned i,const char *a,const char *b,int noselect)
+{assert(i<event_count && observations[i].noselect==noselect);assert(!strcmp(observations[i].names[0],a) && !strcmp(observations[i].names[1],b));for(int j=2;j<4;++j)assert(!observations[i].names[j][0]);}
+static void construction(unsigned p)
+{
+ setup();++active_case;strcpy(branch_name,"branch");
+ s_level_entry *a=parse_skip("skipselect Alpha Beta",levelsets);s_level_entry *pick=add_select("Pick",levelsets);
+ assert(pick && pick->type==LE_TYPE_SELECT_SCREEN && !pick->noselect);
+ s_level_entry *b=parse_skip("skipselect Gamma",levelsets);(void)a;(void)b;
+ if(contexts[p].local)
+ {
+  assert(levelsets->numlevels==3 && !levelsets->skipselect[0]);
+  assert(levelsets->levelorder[0].type==LE_TYPE_SKIP_SELECT && !strcmp(levelsets->levelorder[0].skipselect[0],"Alpha") && !strcmp(levelsets->levelorder[0].skipselect[1],"Beta"));
+  assert(levelsets->levelorder[2].type==LE_TYPE_SKIP_SELECT && !strcmp(levelsets->levelorder[2].skipselect[0],"Gamma") && !levelsets->levelorder[2].skipselect[1]);
+  for(int i=0;i<3;++i)assert(!strcmp(levelsets->levelorder[i].branchname,"branch"));
+ }
+ else {assert(levelsets->numlevels==1 && !strcmp(levelsets->skipselect[0],"Gamma") && !strcmp(levelsets->skipselect[1],"Beta"));}
+ parse_skip("skipselect",levelsets);
+ if(contexts[p].local)assert(levelsets->numlevels==4 && levelsets->levelorder[3].noselect==1 && levelsets->noselect==0);
+ else assert(levelsets->noselect==1 && !strcmp(levelsets->skipselect[0],"Gamma") && !strcmp(levelsets->skipselect[1],"Beta"));
+ unload_levelorder();assert(!levelsets && num_difficulties==0);for(unsigned i=0;i<128;++i)assert(!owned[i]);
+ setup();parse_skip("skipselect Alpha Beta Gamma Alpha",levelsets);
+ const char *all[]={"Alpha","Beta","Gamma","Alpha"};
+ for(int i=0;i<4;++i)assert(!strcmp(contexts[p].local?levelsets->levelorder[0].skipselect[i]:levelsets->skipselect[i],all[i]));
+ unload_levelorder();for(unsigned i=0;i<128;++i)assert(!owned[i]);
+ if(contexts[p].local)
+ {
+  setup();ArgList args;char buf[MAX_ARG_LEN+1]={0};ParseArgs(&args,"skipselect Alpha",buf);
+  fail_allocation=1;assert(!add_skipselect(args,levelsets) && levelsets->numlevels==0 && !levelsets->levelorder && shutdown_calls==1);fail_allocation=0;
+  levelsets->numlevels=INT_MAX;assert(!add_skipselect(args,levelsets) && shutdown_calls==2);levelsets->numlevels=0;
+ }
+}
+static void wire(unsigned p)
+{
+ setup();++active_case;size_t size=native_sizes[contexts[p].layout];assert(obor_saved_level_record_size()==size);
+ assert(size==(contexts[p].stored?sizeof(s_savelevel):offsetof(s_savelevel,allowSelectArgs)));
+ free(savelevel);num_difficulties=3;savelevel=calloc(3,sizeof(*savelevel));assert(savelevel);
+ unsigned char *expected=malloc(3*size);assert(expected);
+ for(int i=0;i<3;++i){memset(savelevel+i,0x30+i,sizeof(*savelevel));savelevel[i].compatibleversion=CV_SAVED_GAME;savelevel[i].times_completed=5+i;memcpy(expected+i*size,savelevel+i,size);}
+ assert(saveGameFile()==1 && file_closes==1);assert(ftell(file)==(long)(3*size));rewind(file);
+ unsigned char *actual=malloc(3*size);assert(actual && fread(actual,1,3*size,file)==3*size && !memcmp(expected,actual,3*size));
+ const size_t lengths[]={0,1,sizeof(unsigned),size-1,size,size+1,2*size-1,2*size,3*size-1,3*size};
+ for(unsigned n=0;n<sizeof(lengths)/sizeof(*lengths);++n)
+ {
+  FILE *partial=tmpfile();assert(partial);assert(fwrite(expected,1,lengths[n],partial)==lengths[n]);rewind(partial);
+  memset(savelevel,0xa5,3*sizeof(*savelevel));assert(obor_profile_read_saved_game(partial)==lengths[n]/size);
+  for(int i=0;i<3;++i)
+  {
+   unsigned char wanted[sizeof(s_savelevel)];memset(wanted,0xa5,sizeof(wanted));size_t got=lengths[n]>(size_t)i*size?lengths[n]-(size_t)i*size:0;if(got>size)got=size;
+   memcpy(wanted,expected+i*size,got);assert(!memcmp(savelevel+i,wanted,sizeof(wanted)));
+  }
+  fclose(partial);
+ }
+ memset(savelevel,0,3*sizeof(*savelevel));rewind(file);assert(loadGameFile()==1 && bonus==18);
+ /* Native fread element-count versus byte-size comparison is retained. */
+ expected[0]=0;FILE *bad=tmpfile();assert(bad && fwrite(expected,1,3*size,bad)==3*size);fclose(file);file=bad;bonus=77;
+ assert(loadGameFile()==1 && savelevel[0].compatibleversion!=CV_SAVED_GAME && bonus==18);
+ open_failed=1;assert(saveGameFile()==0 && loadGameFile()==0);open_failed=0;
+ free(expected);free(actual);
+ num_difficulties=1; /* The harness allocated one level set; save rows are independent. */
+}
+static void progression(unsigned p,int reject)
+{
+ setup();++active_case;parse_skip("skipselect Alpha Beta",levelsets);add_level("A",levelsets);
+ parse_skip("skipselect Gamma",levelsets);add_select("Pick",levelsets);add_level("B",levelsets);
+ for(int i=0;i<4;++i)player[i].lives=3+i;
+ record_io_events=1;selection_result=reject?0:1;int ports[4]={1,1,1,1};playgame(ports,0,2);
+ if(contexts[p].local)
+ {
+  assert(!strcmp(events,reject?"ILIQM":"ILIQLGM"));
+  check_names(0,"Alpha","Beta",0);check_names(1,"Alpha","Beta",0);check_names(2,"Gamma","",0);check_names(3,"Gamma","",0);
+  if(!reject)check_names(4,"Gamma","",0);
+ }
+ else
+ {
+  assert(!strcmp(events,reject?"LQM":"LQLGM"));check_names(0,"Gamma","Beta",0);check_names(1,"Gamma","Beta",0);if(!reject)check_names(2,"Gamma","Beta",0);
+ }
+ assert(!shutdown_calls);
+ setup();parse_skip("skipselect",levelsets);add_select("Pick",levelsets);add_level("A",levelsets);record_io_events=1;
+ playgame(ports,0,2);assert(!strcmp(events,contexts[p].local?"IQLGM":"QLGM"));
+ if(contexts[p].local){check_names(0,"","",1);check_names(1,"","",0);check_names(2,"","",0);}
+ else {check_names(0,"","",1);check_names(1,"","",1);}
+}
+static void initial_selection(unsigned p)
+{
+ setup();++active_case;levelsets->noselect=1;parse_skip("skipselect Alpha Beta",levelsets);add_level("A",levelsets);
+ strcpy(skipselect[0],"stale");strcpy(skipselect[1],"stale");selection_result=0;
+ int ports[4]={1,1,1,1};playgame(ports,0,0);
+ assert(!strcmp(events,"IM") && event_count==1);check_names(0,"Alpha","Beta",contexts[p].local?0:1);
+}
+static void wire_threshold(unsigned p)
+{
+ static int checked[8];int layout=contexts[p].layout;if(checked[layout])return;checked[layout]=1;
+ setup();++active_case;size_t count=native_sizes[layout];
+ free(savelevel);num_difficulties=(int)count;savelevel=calloc(count,sizeof(*savelevel));assert(savelevel);
+ for(size_t i=0;i<count;++i){savelevel[i].compatibleversion=CV_SAVED_GAME;savelevel[i].times_completed=2;}
+ savelevel[0].compatibleversion=0;assert(saveGameFile()==1);bonus=77;
+ assert(loadGameFile()==0 && bonus==77);
+ for(size_t i=0;i<count;++i)assert(savelevel[i].compatibleversion==0 && savelevel[i].times_completed==0);
+ num_difficulties=1; /* The harness owns one level set and count saved-game rows. */
+}
+static void consumed_names(unsigned p)
+{
+ setup();++active_case;char name[MAX_NAME_LEN+1],line[MAX_ARG_LEN+1];
+ memset(name,'A',MAX_NAME_LEN);name[MAX_NAME_LEN]=0;
+ snprintf(line,sizeof(line),"skipselect %s",name);parse_skip(line,levelsets);add_level("A",levelsets);
+ int ports[4]={1,1,1,1};record_io_events=1;playgame(ports,0,2);
+ assert(shutdown_calls==1 && !strcmp(failure,"Skipselect name exceeds its destination.\n") && !strcmp(events,"M"));
+ setup();name[MAX_NAME_LEN-1]=0;snprintf(line,sizeof(line),"skipselect %s",name);parse_skip(line,levelsets);add_level("A",levelsets);
+ record_io_events=1;playgame(ports,0,2);assert(!shutdown_calls && !strcmp(events,contexts[p].local?"ILGM":"LGM"));
+ assert(event_count>0 && !strcmp(observations[0].names[0],name));
+}
+static void save_and_resume(unsigned p)
+{
+ setup();++active_case;add_level("A",levelsets);levelsets->saveflag=2;load_playable_list("allowselect Alpha Beta");
+ assert(caches[0].selectable==1 && caches[1].selectable==1 && caches[2].selectable==0 && model_lookups==2);
+ for(int i=0;i<4;++i){player[i].lives=3+i;player[i].credits=11+i;player[i].score=21+i;snprintf(player[i].name,sizeof(player[i].name),"P%d",i);}
+ savelevelinfo();assert(savelevel[0].pCredits[0]==11 && savelevel[0].pCredits[3]==14 && savelevel[0].flag==2);
+ unsigned char wanted[MAX_ARG_LEN+1]={0};memcpy(wanted,"allowselect\0Alpha\0Beta",22);
+ if(contexts[p].stored)assert(!memcmp(savelevel[0].allowSelectArgs,wanted,sizeof(wanted)));
+ for(unsigned i=0;i<3;++i)caches[i].selectable=1;
+ model_lookups=0;record_io_events=1;strcpy(skipselect[0],"prior");strcpy(skipselect[1],"prior");
+ int ports[4]={1,1,1,1};playgame(ports,0,1);assert(!strcmp(events,"RLGM") && event_count==2);
+ check_names(0,contexts[p].local?"prior":"",contexts[p].local?"prior":"",0);check_names(1,"","",0);
+ for(int i=0;i<4;++i)assert(observations[1].credits[i]==(contexts[p].credits?11+i:0));
+ assert(!model_lookups);for(unsigned i=0;i<3;++i)assert(caches[i].selectable==!contexts[p].stored);
+ savelevelinfo();if(contexts[p].stored){memset(wanted,0,sizeof(wanted));memcpy(wanted,"allowselect",11);assert(!memcmp(savelevel[0].allowSelectArgs,wanted,sizeof(wanted)));}
+}
+static void saved_menu(unsigned p)
+{
+ for(int sharing=0;sharing<2;++sharing)
+ {
+  setup();++active_case;savelevel[0].flag=2;savelevel[0].level=1;savelevel[0].stage=2;savelevel[0].credits=14;
+  strcpy(savelevel[0].dName,"Set");for(int i=0;i<4;++i){savelevel[0].pCredits[i]=i+1;savelevel[0].pLives[i]=3+i;}
+  assert(saveGameFile()==1);noshare=sharing;credits_text[0]=0;
+  assert(load_saved_game()==-1 && !loadgameMenu && !bothnewkeys);
+  assert(!strcmp(credits_text,sharing && contexts[p].credits?"1/2/3/4":"14"));
+ }
+}
+int main(void)
+{
+ for(unsigned p=0;p<sizeof(contexts)/sizeof(*contexts);++p)
+ {
+  obor_profile_build=contexts[p].revision;active_case=0;construction(p);wire(p);wire_threshold(p);consumed_names(p);initial_selection(p);progression(p,0);progression(p,1);save_and_resume(p);saved_menu(p);
+  unload_levelorder();for(unsigned i=0;i<128;++i)assert(!owned[i]);free(savelevel);savelevel=NULL;fclose(file);file=NULL;
+  printf("{\"revision\":%u,\"status\":\"PASS\"}\n",obor_profile_build);
+ }
+ return 0;
+}

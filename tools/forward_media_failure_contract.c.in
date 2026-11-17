@@ -1,0 +1,117 @@
+/* SPDX-License-Identifier: BSD-3-Clause
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me>
+ * Actual invariant consumers and stop helpers with typed backend observers.
+ */
+#include <stdint.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <stdarg.h>
+#include <setjmp.h>
+#include "openbor.h"
+#include "halloc/halloc.h"
+#include "vorbis.h"
+#include "samplecvt.h"
+#undef printf
+#undef assert
+uint32_t obor_profile_build;
+HRESULT Interpreter_Call(Interpreter *p){(void)p;abort();}
+HRESULT Interpreter_EvalInstruction(Interpreter *p){(void)p;abort();}
+#define CHECK(c) do{if(!(c)){fprintf(stderr,"MEDIA revision=%u case=%u line=%d: %s\n",obor_profile_build,active_case,__LINE__,#c);abort();}}while(0)
+static const struct{unsigned revision;int logged;}contexts[]={@CONTEXTS@};
+static const int assertion_lines[]={@POSITIONS@};
+static jmp_buf stopped;
+static unsigned active_case;
+static int exit_status,flushes,alloc_calls,alloc_outcome,pcm_calls,pack_calls,read_calls,available;
+static char log_text[2048],stderr_text[1024];
+void writeToLogFile(const char *format,...)
+{va_list args;size_t used=strlen(log_text);va_start(args,format);int n=vsnprintf(log_text+used,sizeof(log_text)-used,format,args);va_end(args);CHECK(n>=0 && used+(size_t)n<sizeof(log_text));}
+static int capture_stderr(FILE *file,const char *format,...)
+{CHECK(file==stderr);va_list args;va_start(args,format);int n=vsnprintf(stderr_text,sizeof(stderr_text),format,args);va_end(args);CHECK(n>=0 && (size_t)n<sizeof(stderr_text));return n;}
+static int capture_flush(FILE *file){CHECK(file==stderr);++flushes;return 0;}
+void borExit(int status){exit_status=status;longjmp(stopped,1);}
+#define fprintf capture_stderr
+#define fflush capture_flush
+@HELPERS@
+#undef fprintf
+#undef fflush
+static int token;
+static struct{void *pointer;size_t size;}blocks[8];
+static int live_blocks;
+static void *moving_allocator(void *pointer,size_t size)
+{
+ int slot=-1;
+ for(int i=0;i<8;++i)if(pointer?blocks[i].pointer==pointer:!blocks[i].pointer){slot=i;break;}
+ CHECK(slot>=0);
+ if(!size){CHECK(pointer);free(pointer);blocks[slot].pointer=NULL;blocks[slot].size=0;--live_blocks;return NULL;}
+ void *next=malloc(size);CHECK(next);
+ if(pointer){memcpy(next,pointer,size<blocks[slot].size?size:blocks[slot].size);free(pointer);}
+ else ++live_blocks;
+ blocks[slot].pointer=next;blocks[slot].size=size;return next;
+}
+static void *allocator_service(void *ptr,size_t length)
+{++alloc_calls;CHECK((!ptr && length==1)||(ptr==&token && !length));if(!ptr)return alloc_outcome<0?NULL:&token;return alloc_outcome?NULL:&token;}
+static vorbis_context audio;
+static float samples_data[8],*sample_channels[]={samples_data,samples_data};
+int vorbis_synthesis_pcmout(vorbis_dsp_state *dsp,float ***pcm)
+{CHECK(dsp==&audio.v);++pcm_calls;*pcm=sample_channels;return available;}
+int vorbis_synthesis_read(vorbis_dsp_state *dsp,int count)
+{CHECK(dsp==&audio.v && count==2);++read_calls;return 0;}
+void pack_samples(float **pcm,short *buffer,int count,int channels)
+{CHECK(pcm==sample_channels && (void*)buffer==(void*)samples_data && count==2 && channels==2);++pack_calls;}
+@TYPES@
+@FUNCTIONS@
+static void reset(void)
+{log_text[0]=stderr_text[0]=0;exit_status=flushes=alloc_calls=pcm_calls=pack_calls=read_calls=0;}
+static void failure_message(unsigned p,unsigned family)
+{
+ const char *expressions[]={"! allocator","type.type == TYPE_UINT","avail_samples >= samples","p->magic == HH_MAGIC"};
+ const char *functions[]={"halloc_set_allocator","ne_get_uint","vorbis_getpcm","halloc"};
+ const char *files[]={"halloc-profile.c","nestegg-profile.c","vorbis-profile.c","halloc-profile.c"};char expected[2048];
+ CHECK(exit_status==1);
+ if(contexts[p].logged){
+  snprintf(expected,sizeof(expected),"\n\n********** An Error Occurred **********\n*            Shutting Down            *\n\nAssertion `%s' failed in function '%s' at %s:%i.\nThis is an OpenBOR bug.  Please report this at www.chronocrash.com.\n\n",expressions[family],functions[family],files[family],assertion_lines[family]);
+  CHECK(!strcmp(expected,log_text) && !stderr_text[0] && !flushes);
+ }else{
+  snprintf(expected,sizeof(expected),"%s:%i: %s: Assertion `%s' failed.\n",files[family],assertion_lines[family],functions[family],expressions[family]);
+  CHECK(!strcmp(expected,stderr_text) && !log_text[0] && flushes==1);
+ }
+}
+int main(void)
+{
+ for(volatile unsigned p=0;p<sizeof(contexts)/sizeof(*contexts);++p){
+  obor_profile_build=contexts[p].revision;active_case=0;
+  for(alloc_outcome=-1;alloc_outcome<=1;++alloc_outcome){
+   reset();allocator=NULL;CHECK(halloc_set_allocator(allocator_service)==alloc_outcome);
+   CHECK(alloc_calls==(alloc_outcome<0?1:2) && allocator==(alloc_outcome==1?allocator_service:NULL) && !exit_status && !log_text[0] && !stderr_text[0]);++active_case;
+  }
+  reset();allocator=allocator_service;int jump=setjmp(stopped);if(!jump)halloc_set_allocator(allocator_service);
+  CHECK(jump==1 && !alloc_calls);failure_message(p,0);++active_case;
+  /* Execute the complete allocator with real bounded storage and headers. */
+  reset();allocator=NULL;CHECK(!live_blocks && halloc_set_allocator(moving_allocator)==1);CHECK(!halloc(NULL,0));
+  void *parent=h_calloc(2,8),*child=h_strdup("abc");CHECK(parent && child && !strcmp(child,"abc"));
+  for(int n=0;n<16;++n)CHECK(!((unsigned char*)parent)[n]);
+  CHECK(structof(parent,hblock_t,data)->magic==HH_MAGIC);hattach(child,parent);
+  void *grandchild=h_strdup("abc");hattach(grandchild,child);
+  child=h_realloc(child,24);CHECK(child && !strcmp(child,"abc") && _relate(structof(grandchild,hblock_t,data),structof(parent,hblock_t,data)));
+  parent=h_realloc(parent,32);CHECK(parent && !strcmp(child,"abc") && !strcmp(grandchild,"abc"));h_free(parent);CHECK(!live_blocks);
+  reset();void *block=h_malloc(8);CHECK(block);hblock_t *header=structof(block,hblock_t,data);header->magic=0;
+  jump=setjmp(stopped);if(!jump)h_free(block);CHECK(jump==1);failure_message(p,3);
+  header->magic=HH_MAGIC;h_free(block);CHECK(!live_blocks);++active_case;
+  for(volatile int read=0;read<2;++read)for(volatile int valid=0;valid<2;++valid){
+   reset();struct ebml_type value;memset(&value,0,sizeof(value));value.type=valid?TYPE_UINT:TYPE_STRING;value.read=read;value.v.u=41;
+   uint64_t result=77;int status=99;int jump=setjmp(stopped);if(!jump)status=ne_get_uint(value,&result);
+   if(read&&!valid){CHECK(jump==1 && result==77);failure_message(p,1);}
+   else{CHECK(!jump && !exit_status && !log_text[0] && !stderr_text[0]);CHECK(read?(status==0 && result==41):(status==-1 && result==77));}++active_case;
+  }
+  for(volatile int zero=0;zero<2;++zero)for(available=0;available<=2;++available){
+   reset();memset(&audio,0,sizeof(audio));audio.channels=2;
+   int jump=setjmp(stopped);if(!jump)vorbis_getpcm(&audio,samples_data,zero?0:2);
+   int refusal=!zero && available<2;
+   CHECK(jump==refusal && pcm_calls==!zero && pack_calls==(!zero&&!refusal) && read_calls==pack_calls);
+   if(refusal)failure_message(p,2);else CHECK(!exit_status && !log_text[0] && !stderr_text[0]);++active_case;
+  }
+  printf("{\"revision\":%u,\"media\":\"PASS\"}\n",obor_profile_build);
+ }
+ return 0;
+}

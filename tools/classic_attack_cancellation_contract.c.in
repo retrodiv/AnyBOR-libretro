@@ -41,7 +41,7 @@ static void unexpected(void) {abort();}
 int checkhit(entity *ent,entity *other,int counter)
 {assert(ent==&actors[0] && counter==0);event(10*target_id(other)+1);lasthit.confirm=1;return 1;}
 void execute_ondoattack_script(entity *ent,entity *other,int force,int drop,int type,
-    int noblock,int guardcost,int jugglecost,int pauseadd,int which,int id)
+    int noblock,int guardcost,int jugglecost,int pauseadd,int which,int id@TAG_PARAMETER@)
 {
     int target=target_id(self);
     assert(id==17 && type==expected_type && force==12 && drop==0 && noblock==0 &&
@@ -54,7 +54,7 @@ void execute_ondoattack_script(entity *ent,entity *other,int force,int drop,int 
 static int damage(entity *other,s_attack *value)
 {assert(other==&actors[0] && value==&attack);event(10*target_id(self)+4);return 1;}
 void execute_didhit_script(entity *ent,entity *other,int force,int drop,int type,
-    int noblock,int guardcost,int jugglecost,int pauseadd,int blocked)
+    int noblock,int guardcost,int jugglecost,int pauseadd,int blocked@TAG_PARAMETER@)
 {
     assert(ent==&actors[0] && other==self && type==expected_type && force==12 &&
         drop==0 && noblock==0 && guardcost==0 && jugglecost==0 && pauseadd==0 && blocked==0);
@@ -74,7 +74,7 @@ entity *spawn(float x,float z,float y,int direction,char *name,int index,s_model
 void execute_onspawn_script(entity *ent) {(void)ent;unexpected();}
 void didfind_item(entity *ent) {(void)ent;unexpected();}
 void execute_didblock_script(entity *ent,entity *other,int force,int drop,int type,
-    int noblock,int guardcost,int jugglecost,int pauseadd)
+    int noblock,int guardcost,int jugglecost,int pauseadd@TAG_PARAMETER@)
 {(void)ent;(void)other;(void)force;(void)drop;(void)type;(void)noblock;(void)guardcost;(void)jugglecost;(void)pauseadd;unexpected();}
 static int fixture_grab(entity *ent,entity *other) {(void)ent;(void)other;unexpected();return 0;}
 #define cangrab fixture_grab

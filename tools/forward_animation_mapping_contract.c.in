@@ -1,0 +1,126 @@
+/* SPDX-License-Identifier: BSD-3-Clause
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me> */
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <strings.h>
+#include <stdarg.h>
+@HEADER@
+#undef printf
+/* This consumer uses real successful allocations; native allocation
+ * output is verified by its separate compatibility contract. */
+void *checkAlloc(void *ptr,size_t bytes,const char *func,const char *file,int line)
+{(void)func;(void)file;(void)line;if(bytes && !ptr)abort();return ptr;}
+#undef assert
+uint32_t obor_profile_build;
+static unsigned active_case;
+#define CHECK(c) do{if(!(c)){fprintf(stderr,"ANIMATION_MAPPING revision=%u case=%u line=%d: %s\n",obor_profile_build,active_case,__LINE__,#c);abort();}}while(0)
+#define assert(c) CHECK(c)
+HRESULT Interpreter_Call(Interpreter *value){(void)value;abort();}
+HRESULT Interpreter_EvalInstruction(Interpreter *value){(void)value;abort();}
+void borExit(int value){(void)value;abort();}
+@LIST@
+#undef assert
+#define assert(c) CHECK(c)
+#ifndef stricmp
+#define stricmp strcasecmp
+#endif
+static unsigned refs[8];
+static const char *strings[8];
+static char diagnostic[1024];
+CHAR *StrCache_Get(int key){assert(key>=0 && key<8 && refs[key] && strings[key]);return (CHAR*)strings[key];}
+void StrCache_Collect(int key){assert(key>=0 && key<8 && refs[key]);--refs[key];}
+int StrCache_Pop(void){abort();}
+static int message(const char *format,...){
+ size_t length=strlen(diagnostic);va_list args;va_start(args,format);
+ int n=vsnprintf(diagnostic+length,sizeof(diagnostic)-length,format,args);va_end(args);
+ assert(n>=0 && (size_t)n<sizeof(diagnostic)-length);return n;
+}
+@VARIANTS@
+@NAMESPACES@
+@SEARCH@
+#define printf message
+#define _is_not_a_known_subproperty_of_ "'%s' is not a known subproperty of '%s'.\n"
+@MACRO@
+@APIS@
+/* Registry controls compare identity; these callbacks must never execute. */
+HRESULT openbor_getanimationproperty(ScriptVariant **a,ScriptVariant **b,int c){(void)a;(void)b;(void)c;abort();}
+HRESULT openbor_changeanimationproperty(ScriptVariant **a,ScriptVariant **b,int c){(void)a;(void)b;(void)c;abort();}
+@STUBS@
+List theFunctionList;
+@METHODS@
+#undef printf
+static const struct{unsigned revision,layout;int binding,setter;const char *get_reverse;} contexts[]={@CONTEXTS@};
+static const struct{unsigned first,end;} spans[]={@SPANS@};
+typedef struct{VARTYPE vt;LONG number;const char *text;unsigned key;} Value;
+static const struct{int count,result;const char *message;Value args[6],expected[6];} cases[]={@CASES@};
+static void registry(unsigned row){
+ List_Init(&theFunctionList);Script_LoadSystemFunctions();
+ assert(List_FindByName(&theFunctionList,"getanimationproperty"));
+ assert(List_Retrieve(&theFunctionList)==(void*)openbor_getanimationproperty);
+ assert(!strcmp(Script_GetFunctionName((void*)openbor_getanimationproperty),contexts[row].get_reverse));
+ assert(Script_GetStringMapFunction((void*)openbor_getanimationproperty)==(void*)mapstrings_animationproperty);
+ assert(!!List_FindByName(&theFunctionList,"changeanimationproperty")==!!contexts[row].binding);
+ if(contexts[row].binding)assert(List_Retrieve(&theFunctionList)==(contexts[row].binding==1?
+      (void*)openbor_getanimationproperty:(void*)openbor_changeanimationproperty));
+ assert(!strcmp(Script_GetFunctionName((void*)openbor_changeanimationproperty),
+                contexts[row].setter?"changeanimationproperty":"<unknown function>"));
+ assert(Script_GetStringMapFunction((void*)openbor_changeanimationproperty)==
+                (contexts[row].setter?(void*)mapstrings_animationproperty:NULL));
+ List_Clear(&theFunctionList);
+}
+static void mapping_cases(unsigned layout){
+ for(active_case=spans[layout].first;active_case<spans[layout].end;++active_case){
+  const typeof(*cases) *test=cases+active_case;
+  ScriptVariant values[6],*args[6];memset(values,0,sizeof(values));diagnostic[0]=0;
+  for(unsigned key=0;key<8;++key)assert(!refs[key]);
+  for(int arg=0;arg<test->count;++arg){
+   const Value *v=test->args+arg;args[arg]=values+arg;values[arg].vt=v->vt;
+   if(v->vt==VT_STR){assert(!refs[v->key]);refs[v->key]=1;strings[v->key]=v->text;values[arg].strVal=(int)v->key;}
+   else if(v->vt==VT_INTEGER)values[arg].lVal=v->number;
+   else values[arg].ptrVal=NULL;
+  }
+  int result=mapstrings_animationproperty(args,test->count);
+  if(strcmp(diagnostic,test->message))fprintf(stderr,"diagnostic actual=<%s> expected=<%s>\n",diagnostic,test->message);
+  assert(result==test->result && !strcmp(diagnostic,test->message));
+  for(int arg=0;arg<test->count;++arg){
+   const Value *v=test->expected+arg;assert(values[arg].vt==v->vt);
+   if(v->vt==VT_INTEGER)assert(values[arg].lVal==v->number);
+   else if(v->vt==VT_STR)assert(!strcmp(StrCache_Get(values[arg].strVal),v->text));
+   else assert(!values[arg].ptrVal);
+   ScriptVariant_Clear(values+arg);
+  }
+  for(unsigned key=0;key<8;++key)assert(!refs[key]);
+ }
+}
+static void refused_inputs(unsigned row){
+ ScriptVariant values[5],*args[5];memset(values,0,sizeof(values));diagnostic[0]=0;
+ for(unsigned i=0;i<5;++i){args[i]=values+i;values[i].vt=VT_INTEGER;}
+ assert(mapstrings_animationproperty(NULL,0)==1);
+ assert(mapstrings_animationproperty(NULL,3)==1);
+ args[1]=NULL;assert(mapstrings_animationproperty(args,3)==1);args[1]=values+1;
+ args[2]=NULL;assert(mapstrings_animationproperty(args,3)==1);args[2]=values+2;
+ if(obor_profile_build<4169){
+  values[1].lVal=_ANI_PROP_ENERGYCOST;args[2]=NULL;
+  assert(mapstrings_animationproperty(args,3)==1);
+ }else if(obor_profile_build==4169){
+  values[2].lVal=12;args[3]=NULL;
+  assert(mapstrings_animationproperty(args,4)==1);
+ }else{
+  values[2].lVal=obor_forward__ANI_PROP_ATTACK;args[3]=NULL;
+  assert(mapstrings_animationproperty(args,4)==1);args[3]=values+3;
+  values[3].lVal=obor_forward__PROP_ATTACK_DROPV;args[4]=NULL;
+  assert(mapstrings_animationproperty(args,5)==1);
+  /* An unused missing leaf remains unconsumed, as in the native mapper. */
+  values[3].lVal=obor_forward__PROP_ATTACK_FORCE;
+  assert(mapstrings_animationproperty(args,5)==0);
+ }
+ (void)row;
+}
+int main(void){
+ for(unsigned row=0;row<sizeof(contexts)/sizeof(*contexts);++row){
+  obor_profile_build=contexts[row].revision;active_case=0;registry(row);mapping_cases(contexts[row].layout);refused_inputs(row);
+  printf("{\"revision\":%u,\"status\":\"PASS\"}\n",obor_profile_build);
+ }
+ return 0;
+}

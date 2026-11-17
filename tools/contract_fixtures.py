@@ -81,9 +81,19 @@ def load_contract_fixture(path):
     return value
 
 
-def contract_profiles(path, profiles):
+def contract_profiles(path, profiles, *, source_range=None):
     """Public boundaries or the complete inventory in a private fixture run."""
     fixture = path if isinstance(path, dict) else load_contract_fixture(path)
+    if source_range is not None:
+        if (not isinstance(source_range, (tuple, list)) or len(source_range) != 2 or
+                any(type(value) is not int for value in source_range) or
+                not 0 < source_range[0] <= source_range[1] or
+                not isinstance(fixture.get('engine'), str)):
+            raise ValueError('Explicit source range and physical family required')
+        # Retain every registered profile inside the declared range, including
+        # gaps in the source rows, so coverage assertions still detect omissions.
+        profiles = [row for row in profiles if row['engine'] != fixture['engine'] or
+                    source_range[0] <= int(row.get('revision', row['build'])) <= source_range[1]]
     boundary = fixture.get('_contract_boundaries') if isinstance(fixture, dict) else None
     if boundary is None:
         return list(profiles)

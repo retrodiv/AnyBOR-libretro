@@ -15,6 +15,23 @@ correspond to source revision `fc92d78dbf8110c8af10702233ba4f022d6bdc50`.
 Profile adaptations retain source copyright notices and the applicable BSD terms.
 The imported flash and music interfaces retain their [7735 source license](LICENSES/OpenBOR-profile-7735-BSD-3-Clause.txt); source-import records preserve their own original hashes.
 
+Profiles v3.0 4161-dev, v3.0 4183-dev and v3.0 4213 identify their original
+source revisions in `src/pin.json`:
+
+| Profile | Source revision |
+|---|---|
+| v3.0 4161-dev | [`baab46acb6545655d104f5a717364766890089f2`](https://github.com/DCurrent/openbor/tree/baab46acb6545655d104f5a717364766890089f2/engine) |
+| v3.0 4183-dev | [`f1a221a00eda2ed45b779dc6df165a5e93db0773`](https://github.com/DCurrent/openbor/tree/f1a221a00eda2ed45b779dc6df165a5e93db0773/engine) |
+| v3.0 4213 | [`7d343fe28e53b9eb3066693392cc0a1353afdde0`](https://github.com/DCurrent/openbor/tree/7d343fe28e53b9eb3066693392cc0a1353afdde0/engine) |
+
+The 4183 and 4213 source aliases and profile limits are described in
+[historical profiles](docs/HISTORICAL_PROFILES.md#forward-profiles-through-4213).
+Imported mathematical helpers and allocation declarations carry
+their own 4183 source hashes in `ANYBOR-SOURCE.json`. The retained
+[early profile license](LICENSES/OpenBOR-profile-4153-BSD-3-Clause.txt) contains
+the same copyright notice, BSD conditions and disclaimer as that revision's root grant.
+Original per-file notices remain authoritative for adapted source and fixtures.
+
 The early Android random provider uses an independently written, engine-owned
 state machine for the platform's additive random sequence. Its factual
 algorithm and sequence controls are checked against Android's

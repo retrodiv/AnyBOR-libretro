@@ -1,4 +1,4 @@
-/* AnyBOR modification record: 2026-11-08.
+/* AnyBOR modification record: 2026-11-17.
  * Port maintained by retrodiv <retrodiv@proton.me>.
  * Copyright (c) 2026 retrodiv <retrodiv@proton.me> (original contributions).
  * These contributions are licensed under BSD-3-Clause; see LICENSE at the root.
@@ -9,6 +9,20 @@
  * and movement-table presence, spawn-coordinate storage and animation ID
  * conversions. Declare the vault action used by early profiles. Track each
  * model's allocated animation-table capacity and reject lookups outside it.
+ * Reserve live software-filter storage independently of the selected native
+ * settings file layout. Reserve live walking, grab-default and binding-axis
+ * state. Declare the native byte reader used by stream arguments. Reserve
+ * live neutral attack flags and original per-frame sprite offsets. Store
+ * native saved-selection bytes and owned level-local selection entries
+ * alongside legacy per-set fields. Declare the native song-title debug-
+ * position record. Store native vertical background speed alongside
+ * horizontal speed. Record owned frame capacity and declare the bounded
+ * frame-count interface. Declare validated model-animation access. Reserve
+ * native spawn type and parent storage. Reserve native attack metadata and
+ * profile-selected platform-block and hole script slots. Declare the native
+ * cheat-state query. Declare the shared attack-tag callback and fall
+ * interfaces. Declare native terrain-query and platform, wall-index and hole
+ * callback interfaces.
  * Existing changes recorded here; this is not their implementation date.
  * See MODIFICATIONS.md and docs/modifications/4086.md
  * at the source repository root. Original notices follow below.
@@ -136,6 +150,13 @@ movement restirctions are here!
 #define		CONTACT_DIST_V		12
 #define		GRAB_DIST			36					// Grabbing ents will be placed this far apart.
 #define		GRAB_STALL			(GAME_SPEED * 8 / 10)
+
+typedef struct
+{
+    int x;
+    int y;
+    int font_index;
+} s_debug_xy_msg;
 
 typedef enum
 {
@@ -857,7 +878,8 @@ typedef enum
 {
     LE_TYPE_NORMAL,
     LE_TYPE_CUT_SCENE,
-    LE_TYPE_SELECT_SCREEN
+    LE_TYPE_SELECT_SCREEN,
+    LE_TYPE_SKIP_SELECT
 } e_le_type;
 
 typedef enum
@@ -1259,6 +1281,8 @@ typedef struct
     int usetv; // Initilize TV at bootup
 #endif
 
+    /* Shared storage; its placement is independent of the native file layout. */
+    int swfilter;
 } s_savedata;
 
 
@@ -1281,6 +1305,7 @@ typedef struct
     int pSpawnmp[MAX_PLAYERS];                  // magic points left
     int pWeapnum[MAX_PLAYERS];                  // weapon
     int pColourmap[MAX_PLAYERS];                // colour map
+    char allowSelectArgs[MAX_ARG_LEN + 1]; // Native tokenized selection bytes.
 } s_savelevel;
 
 typedef struct
@@ -1372,6 +1397,8 @@ typedef struct
     float grab_distance; // suck target near by
     int pause_add; // Flag to determine if an attack adds a pause before updating the animation
     u32 pain_time; // pain invincible time
+    int tag; // Source-defined neutral attack flag for script access.
+    int obor_attack_index; // Native broken-down attack metadata index.
 } s_attack;
 
 typedef struct
@@ -1493,6 +1520,7 @@ typedef struct
     int model_index;
     int index;                      //unique id
     int numframes;
+    int obor_frame_capacity;        // Owned frame extent independent of script-visible count.
     s_loop loop;                    // Animation looping. 2011_03_31, DC: Moved to struct.
     s_axis_i size;                  // Demensions (height, width).
     s_projectile projectile;        // Subentity spawn for knives, stars, bombs, hadoken, etc.
@@ -1529,6 +1557,7 @@ typedef struct
     s_onframe dropframe;            // if tossv < 0, this frame will be set
     int animhits;                   // Does the attack need to hit before cancel is allowed?
     int sync;                       // sychronize frame to previous animation if they matches
+    int (*offset)[2]; // Native per-frame original sprite offsets.
     unsigned obor_classic_seta_active; // Historical per-animation base-table presence.
     unsigned obor_classic_move_active; // Historical horizontal/depth table presence.
 } s_anim;
@@ -1594,8 +1623,10 @@ typedef struct
     Script         *onkill_script;                  //execute when removed from play.
     Script         *onpain_script;                  //Execute when put in pain animation.
     Script         *onfall_script;                  //execute when falling.
+    Script         *inhole_script;                  //execute when touching a hole.
     Script         *onblocks_script;                //execute when blocked by screen.
     Script         *onblockw_script;                //execute when blocked by wall.
+    Script         *onblockp_script;                //execute when blocked by a platform.
     Script         *onblocko_script;                //execute when blocked by obstacle.
     Script         *onblockz_script;                //execute when blocked by Z.
     Script         *onblocka_script;                //execute when "hit head".
@@ -1936,6 +1967,7 @@ typedef struct
     e_direction_adjust direction;   //Direction force
     struct entity *ent;             //Entity to bind.
     s_axis_i offset;                //x,y,z offset.
+    s_axis_i offset_flag;           //Native per-axis binding admission.
 } s_bind;
 
 typedef struct
@@ -2014,6 +2046,7 @@ typedef struct entity
     unsigned per2; // Used to store at what health value the entity flashes more rapidly
     e_direction direction;
     int nograb; // Some enemies cannot be grabbed (bikes) - now used with cantgrab as well
+    int nograb_default; //Native restoration value after rise/idle.
     int movestep;
     s_axis_f position; //x,y,z location.
     s_axis_f velocity; //x,y,z movement speed.
@@ -2069,6 +2102,7 @@ typedef struct entity
     int dead;
     int jumping; // Stuff useful for AI
     int idling;
+    int walking;
     int drop;
     int attacking;
     int getting;
@@ -2210,6 +2244,8 @@ typedef struct
     unsigned credit;
     int aggression; // For enemy A.I.
     int spawntype; // Pass 1 when a level spawn.
+    int entitytype;
+    entity *parent;
     char *weapon; // spawn with a weapon, since it should be in the model list, so the model must be loaded, just reference its name
     s_model *weaponmodel;
     Script spawnscript;
@@ -2224,6 +2260,8 @@ typedef struct
     int gonext; // 0. dont complete this level and display score,
     // 1. complete level and display score,
     // 2. complete game, show hall of fame
+    char *skipselect[MAX_PLAYERS]; // Owned level-local selection names.
+    int noselect;
 } s_level_entry;
 
 typedef struct
@@ -2349,6 +2387,7 @@ typedef struct
     int width;
     int rocking;
     float bgspeed; // Used to make autoscrolling backgrounds
+    float vbgspeed; // Native vertical background speed.
     float scrollspeed; // UT: restore this command  2011/7/8
     int bgdir; // Used to set which direction the backgrounds scroll for autoscrolling backgrounds
     int mirror;
@@ -2452,30 +2491,33 @@ typedef struct ArgList
 #define GET_FRAME_ARG(z) (stricmp(GET_ARG(z), "this")==0?newanim->numframes:GET_INT_ARG(z))
 
 int     buffer_pakfile(char *filename, char **pbuffer, size_t *psize);
+int is_cheat_actived(void);
 int     getsyspropertybyindex(ScriptVariant *var, int index);
 int     changesyspropertybyindex(int index, ScriptVariant *value);
 int     load_script(Script *script, char *path);
 void    init_scripts();
 void    load_scripts();
 void    execute_animation_script    (entity *ent);
-void    execute_takedamage_script   (entity *ent, entity *other, int force, int drop, int type, int noblock, int guardcost, int jugglecost, int pauseadd);
-void    execute_ondeath_script      (entity *ent, entity *other, int force, int drop, int type, int noblock, int guardcost, int jugglecost, int pauseadd);
+void    execute_takedamage_script   (entity *ent, entity *other, int force, int drop, int type, int noblock, int guardcost, int jugglecost, int pauseadd, int tag);
+void    execute_ondeath_script      (entity *ent, entity *other, int force, int drop, int type, int noblock, int guardcost, int jugglecost, int pauseadd, int tag);
 void    execute_onkill_script       (entity *ent);
 void    execute_onpain_script       (entity *ent, int iType, int iReset);
-void    execute_onfall_script       (entity *ent, entity *other, int force, int drop, int type, int noblock, int guardcost, int jugglecost, int pauseadd);
+void    execute_onfall_script       (entity *ent, entity *other, int force, int drop, int type, int noblock, int guardcost, int jugglecost, int pauseadd, int tag);
 void    execute_onblocks_script     (entity *ent);
-void    execute_onblockw_script     (entity *ent, int plane, float height);
+void    execute_onblockw_script     (entity *ent, int plane, float height, int index);
+void    execute_onblockp_script     (entity *ent, int plane, entity *platform);
+void    execute_inhole_script       (entity *ent, int plane, float height, int index);
 void    execute_onblocko_script     (entity *ent, entity *other);
 void    execute_onblockz_script     (entity *ent);
 void    execute_onblocka_script     (entity *ent, entity *other);
 void    execute_onmovex_script      (entity *ent);
 void    execute_onmovez_script      (entity *ent);
 void    execute_onmovea_script      (entity *ent);
-void    execute_didblock_script     (entity *ent, entity *other, int force, int drop, int type, int noblock, int guardcost, int jugglecost, int pauseadd);
-void    execute_ondoattack_script   (entity *ent, entity *other, int force, int drop, int type, int noblock, int guardcost, int jugglecost, int pauseadd, int iWhich, int iAtkID);
+void    execute_didblock_script     (entity *ent, entity *other, int force, int drop, int type, int noblock, int guardcost, int jugglecost, int pauseadd, int tag);
+void    execute_ondoattack_script   (entity *ent, entity *other, int force, int drop, int type, int noblock, int guardcost, int jugglecost, int pauseadd, int iWhich, int iAtkID, int tag);
 void    execute_updateentity_script (entity *ent);
 void    execute_think_script        (entity *ent);
-void    execute_didhit_script       (entity *ent, entity *other, int force, int drop, int type, int noblock, int guardcost, int jugglecost, int pauseadd, int blocked);
+void    execute_didhit_script       (entity *ent, entity *other, int force, int drop, int type, int noblock, int guardcost, int jugglecost, int pauseadd, int blocked, int tag);
 void    execute_onspawn_script      (entity *ent);
 void    clearsettings(void);
 void    savesettings(void);
@@ -2495,6 +2537,7 @@ int music(char *filename, int loop, long offset);
 #if DC
 void check_music_opened(void);
 #endif
+int readByte(char *command);
 char *findarg(char *command, int which);
 float diff(float a, float b);
 int inair(entity *e);
@@ -2525,6 +2568,8 @@ s_model *prevplayermodel(s_model *current);
 void free_anim(s_anim *anim);
 void free_models();
 s_anim *alloc_anim();
+int obor_animation_set_numframes(s_anim *anim, int count);
+
 int addframe(s_anim *a, int spriteindex, int framecount, int delay, unsigned idle,
              int *bbox, s_attack *attack, s_axis_i *move,
              float *platform, int frameshadow,
@@ -2586,7 +2631,9 @@ void ent_default_init(entity *e);
 void ent_spawn_ent(entity *ent);
 void ent_summon_ent(entity *ent);
 void ent_set_anim(entity *ent, int aninum, int resetable);
+const entity *obor_script_animation_owner(const entity *actor);
 const s_anim *obor_script_current_animation(const entity *actor);
+s_anim *obor_script_model_animation(const entity *actor, int id);
 void ent_set_colourmap(entity *ent, unsigned int which);
 void ent_set_model(entity *ent, char *modelname, int syncAnim);
 entity *spawn(float x, float z, float a, int direction, char *name, int index, s_model *model);
@@ -2596,6 +2643,10 @@ void kill(entity *victim);
 void kill_all();
 int checkhit(entity *attacker, entity *target, int counter);
 int checkhole(float x, float z);
+int checkhole_between(float x, float z, float a1, float a2);
+int checkhole_in(float x, float z, float a);
+int checkholeindex_in(float x, float z, float a);
+int checkhole_index(float x, float z);
 int testplatform(entity *, float, float, entity *);
 int testhole(int, float, float);
 int testwall(int, float, float);
@@ -2605,6 +2656,8 @@ int checkwall_below(float x, float z, float a);
 int checkwall(float x, float z);
 int testmove(entity *, float, float, float, float);
 entity *check_platform_below(float x, float z, float a, entity *exclude);
+entity *check_platform_above(float x, float z, float a, entity *exclude);
+entity *check_platform_between(float x, float z, float amin, float amax, entity *exclude);
 entity *check_platform(float x, float z, entity *exclude);
 void do_attack(entity *e);
 void adjust_base(entity *e, entity **pla);
@@ -2617,7 +2670,7 @@ entity *findent(int types);
 int count_ents(int types);
 int set_idle(entity *ent);
 int set_death(entity *iDie, int type, int reset);
-int set_fall(entity *iFall, int type, int reset, entity *other, int force, int drop, int noblock, int guardcost, int jugglecost, int pauseadd);
+int set_fall(entity *iFall, int type, int reset, entity *other, int force, int drop, int noblock, int guardcost, int jugglecost, int pauseadd, int tag);
 int set_rise(entity *iRise, int type, int reset);
 int set_riseattack(entity *iRiseattack, int type, int reset);
 int set_blockpain(entity *iBlkpain, int type, int reset);

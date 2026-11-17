@@ -1,0 +1,178 @@
+/* SPDX-License-Identifier: BSD-3-Clause
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me> */
+#include <stdint.h>
+#include <limits.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <stdarg.h>
+@HEADER@
+#undef printf
+/* This consumer uses real successful allocations; native allocation
+ * output is verified by its separate compatibility contract. */
+void *checkAlloc(void *ptr,size_t bytes,const char *func,const char *file,int line)
+{(void)func;(void)file;(void)line;if(bytes && !ptr)abort();return ptr;}
+#undef assert
+uint32_t obor_profile_build;
+static unsigned active_case;
+#define CHECK(c) do{if(!(c)){fprintf(stderr,"CONTAINERS revision=%u case=%u line=%d: %s\n",obor_profile_build,active_case,__LINE__,#c);abort();}}while(0)
+#define assert(c) CHECK(c)
+HRESULT Interpreter_Call(Interpreter *p){(void)p;abort();}
+HRESULT Interpreter_EvalInstruction(Interpreter *p){(void)p;abort();}
+void borExit(int value){(void)value;abort();}
+@LIST@
+#undef assert
+#define assert(c) CHECK(c)
+static int refs[256];
+static char strings[256][32],diagnostic[1024];
+CHAR *StrCache_Get(int key){assert(key>=0 && key<256 && refs[key]>0);return strings[key];}
+CHAR *StrCache_GetIfPresent(int key){return key>=0 && key<256 && refs[key]>0?strings[key]:NULL;}
+void StrCache_Collect(int key){assert(key>=0 && key<256 && refs[key]>0);--refs[key];}
+void StrCache_Grab(int key){assert(key>=0 && key<256 && refs[key]>0);++refs[key];}
+int StrCache_Pop(void){abort();}
+static int message(const char *format,...){
+ va_list args;va_start(args,format);int n=vsnprintf(diagnostic,sizeof(diagnostic),format,args);va_end(args);return n;
+}
+@VARIANTS@
+@INITIALIZE@
+static Varlist array;
+static size_t allocation_bytes;
+static int relocate,fail_reallocation;
+static void *edit_realloc(void *value,size_t bytes){
+ assert(value==array.vars && bytes>=sizeof(*array.vars) && bytes<=16*sizeof(*array.vars));
+ if(fail_reallocation)return NULL;
+ if(!relocate){assert(bytes<=allocation_bytes);return value;}
+ void *next=malloc(bytes);assert(next);memcpy(next,value,bytes<allocation_bytes?bytes:allocation_bytes);
+ free(value);allocation_bytes=bytes;return next;
+}
+#undef realloc
+#define realloc edit_realloc
+@EDITS@
+#undef realloc
+#define printf message
+@APIS@
+@STUBS@
+List theFunctionList;
+@METHODS@
+#undef printf
+static const struct {unsigned revision;int edits;} contexts[]={@CONTEXTS@};
+static const struct {
+ int operation,size,index,alias,empty,success,result_size,initial[8],expected[2][8][2];
+} cases[]={@CASES@};
+static void string_value(ScriptVariant *value,int key){
+ assert(key>=0 && key<256);ScriptVariant_Clear(value);value->vt=VT_STR;value->strVal=key;++refs[key];
+}
+static void reset(int size,int move){
+ for(unsigned i=0;i<256;++i)assert(!refs[i]);
+ memset(&array,0,sizeof(array));Varlist_Init(&array,size);
+ if(!move){
+  ScriptVariant *larger=calloc(16,sizeof(*larger));assert(larger);
+  memcpy(larger,array.vars,((size_t)size+1)*sizeof(*larger));free(array.vars);array.vars=larger;
+ }
+ allocation_bytes=(move?(size_t)size+1:16)*sizeof(*array.vars);relocate=move;fail_reallocation=0;diagnostic[0]=0;
+}
+static void finish(void){Varlist_Clear(&array);for(unsigned i=0;i<256;++i)assert(!refs[i]);}
+static void count_refs(ScriptVariant *external){
+ int expected[256]={0};
+ for(int i=1;i<=array.vars->lVal;++i)if(array.vars[i].vt==VT_STR)++expected[array.vars[i].strVal];
+ for(Node *n=array.list->first;n;n=n->next){ScriptVariant *v=n->value;if(v->vt==VT_STR)++expected[v->strVal];}
+ if(external && external->vt==VT_STR)++expected[external->strVal];
+ for(unsigned i=0;i<256;++i)assert(refs[i]==expected[i]);
+}
+static void registry(int available){
+ List_Init(&theFunctionList);Script_LoadSystemFunctions();
+ assert(List_FindByName(&theFunctionList,"size") && List_Retrieve(&theFunctionList)==(void*)openbor_size);
+ assert(!strcmp(Script_GetFunctionName((void*)openbor_size),"size"));
+ assert(!!List_FindByName(&theFunctionList,"delete")==available);
+ if(available)assert(List_Retrieve(&theFunctionList)==(void*)openbor_delete);
+ assert(!!List_FindByName(&theFunctionList,"add")==available);
+ if(available)assert(List_Retrieve(&theFunctionList)==(void*)openbor_add);
+ assert(!strcmp(Script_GetFunctionName((void*)openbor_delete),available?"delete":"<unknown function>"));
+ assert(!strcmp(Script_GetFunctionName((void*)openbor_add),available?"add":"<unknown function>"));
+ assert(List_FindByName(&theFunctionList,"set") && List_GotoNext(&theFunctionList));
+ if(available){assert(!strcmp(List_GetName(&theFunctionList),"delete"));assert(List_GotoNext(&theFunctionList));assert(!strcmp(List_GetName(&theFunctionList),"add"));assert(List_GotoNext(&theFunctionList));}
+ assert(!strcmp(List_GetName(&theFunctionList),"reset"));List_Clear(&theFunctionList);
+}
+static void indexed(void){
+ for(active_case=0;active_case<sizeof(cases)/sizeof(*cases);++active_case)
+  for(int string=0;string<2;++string)for(int move=0;move<2;++move){
+   reset(cases[active_case].size,move);ScriptVariant external={0};
+   for(int i=0;i<cases[active_case].size;++i){
+    if(string)string_value(array.vars+1+i,cases[active_case].initial[i]);
+    else {array.vars[i+1].vt=VT_INTEGER;array.vars[i+1].lVal=cases[active_case].initial[i];}
+   }
+   if(!cases[active_case].empty){if(string)string_value(&external,99);else {external.vt=VT_INTEGER;external.lVal=99;}}
+   ScriptVariant *input=cases[active_case].alias==-2?&external:array.vars+1+cases[active_case].alias;
+   int success=cases[active_case].operation?Varlist_DeleteByIndex(&array,cases[active_case].index):Varlist_AddByIndex(&array,cases[active_case].index,input);
+   assert(success==cases[active_case].success && array.vars->lVal==cases[active_case].result_size);
+   for(int i=0;i<cases[active_case].result_size;++i){
+    const int *want=cases[active_case].expected[string][i];ScriptVariant *v=array.vars+1+i;
+    assert(v->vt==(want[0]==0?VT_INTEGER:want[0]==1?VT_STR:VT_EMPTY));
+    if(v->vt!=VT_EMPTY)assert((v->vt==VT_STR?v->strVal:v->lVal)==want[1]);
+   }
+   count_refs(&external);ScriptVariant_Clear(&external);finish();
+  }
+}
+static LONG size_value(void){
+ ScriptVariant arg={0},value={0},*out=&value,*args[]={&arg};arg.vt=VT_PTR;arg.ptrVal=&array;
+ string_value(&value,99);assert(openbor_size(args,&out,1)==S_OK && out==&value && value.vt==VT_INTEGER);
+ LONG result=value.lVal;ScriptVariant_Clear(&value);return result;
+}
+static void named(int available){
+ const int orders[3][3]={{0,1,2},{1,0,2},{2,1,0}};const char *names[]={"ab","ba","cc"};
+ for(unsigned order=0;order<3;++order){
+  reset(5,1);for(int i=0;i<5;++i){array.vars[i+1].vt=VT_INTEGER;array.vars[i+1].lVal=i;}
+  for(int i=0;i<3;++i){ScriptVariant v={0};string_value(&v,10+i);assert(Varlist_SetByName(&array,(char*)names[i],&v));ScriptVariant_Clear(&v);}
+  assert(size_value()==(available?3:5));
+  if(available){
+   int live[3]={1,1,1};
+   for(int step=0;step<3;++step){
+    int key=orders[order][step];ScriptVariant copy={0};ScriptVariant_Copy(&copy,Varlist_GetByName(&array,(char*)names[key]));
+    List_CreateIndices(array.list);
+    ScriptVariant args_value[2],result={0},*out=&result,*args[]={args_value,args_value+1};memset(args_value,0,sizeof(args_value));
+    args_value[0].vt=VT_PTR;args_value[0].ptrVal=&array;string_value(args_value+1,120+key);
+    assert(openbor_delete(args,&out,2)==S_OK && !out);ScriptVariant_Clear(args_value+1);live[key]=0;
+    assert(copy.vt==VT_STR && refs[copy.strVal]==1);ScriptVariant_Clear(&copy);
+    assert(!Varlist_GetByName(&array,(char*)names[key]));
+    for(int i=0;i<3;++i){ScriptVariant *value=Varlist_GetByName(&array,(char*)names[i]);assert(!!value==live[i]);if(value)assert(value->vt==VT_STR && value->strVal==10+i);}
+    assert(size_value()==(step==2?5:2-step));count_refs(NULL);
+   }
+   assert(!array.list->first && !array.list->last && !array.list->current);
+  }
+  finish();
+ }
+}
+static void api_errors(void){
+ reset(1,1);array.vars[1].vt=VT_INTEGER;array.vars[1].lVal=7;
+ ScriptVariant handle={0},index={0},value={0},result={0},*out=&result,*args[]={&handle,&index,&value};
+ handle.vt=VT_PTR;handle.ptrVal=&array;index.vt=VT_DECIMAL;index.dblVal=0.75;value.vt=VT_INTEGER;value.lVal=42;
+ assert(openbor_add(args,&out,3)==S_OK && !out && array.vars->lVal==2 && array.vars[1].lVal==42 && array.vars[2].lVal==7);
+ out=&result;assert(openbor_delete(args,&out,2)==S_OK && !out && array.vars->lVal==1 && array.vars[1].lVal==7);
+ ScriptVariant *short_args[]={&handle,&index};
+ for(int count=0;count<3;++count){out=&result;diagnostic[0]=0;assert(openbor_add(short_args,&out,count)==E_FAIL && !out && !strcmp(diagnostic,@ADD_ERROR@));}
+ index.vt=VT_INTEGER;index.lVal=1;out=&result;assert(openbor_delete(args,&out,2)==E_FAIL && !out && !strcmp(diagnostic,@DELETE_ERROR@));
+ index.lVal=-1;out=&result;assert(openbor_add(args,&out,3)==E_FAIL && !out && !strcmp(diagnostic,@ADD_ERROR@));
+ index.vt=VT_STR;index.strVal=255;out=&result;assert(openbor_delete(args,&out,2)==E_FAIL && !out && !strcmp(diagnostic,@DELETE_ERROR@));
+ handle.ptrVal=NULL;out=&result;assert(openbor_size(args,&out,1)==E_FAIL && !out && !strcmp(diagnostic,@SIZE_ERROR@));
+ out=&result;assert(openbor_add(NULL,&out,3)==E_FAIL && !out);out=&result;assert(openbor_delete(NULL,&out,2)==E_FAIL && !out);
+ /* Failed growth/shrink and invalid native storage are stability controls;
+    source-profile allocation diagnostics are a separate contract. */
+ fail_reallocation=1;value.lVal=99;
+ assert(!Varlist_AddByIndex(&array,0,&value) && array.vars->lVal==1 && array.vars[1].lVal==7);
+ assert(Varlist_DeleteByIndex(&array,0) && array.vars->lVal==0);fail_reallocation=0;
+ array.vars->lVal=INT_MAX;assert(!Varlist_AddByIndex(&array,0,&value));array.vars->lVal=0;
+ assert(!Varlist_AddByIndex(NULL,0,&value) && !Varlist_DeleteByIndex(NULL,0) && !Varlist_DeleteByName(NULL,"ab"));
+ finish();
+}
+int main(void){
+ for(int i=0;i<256;++i)snprintf(strings[i],sizeof(strings[i]),"value_%d",i);
+ strcpy(strings[120],"ab");strcpy(strings[121],"ba");strcpy(strings[122],"cc");
+ for(unsigned row=0;row<sizeof(contexts)/sizeof(*contexts);++row){
+  obor_profile_build=contexts[row].revision;active_case=0;registry(contexts[row].edits);
+  if(contexts[row].edits)indexed();
+  named(contexts[row].edits);
+  if(contexts[row].edits)api_errors();
+  printf("{\"revision\":%u,\"status\":\"PASS\"}\n",obor_profile_build);
+ }
+ return 0;
+}

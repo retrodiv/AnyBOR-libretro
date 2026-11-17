@@ -6,7 +6,7 @@ Copyright (c) 2026 retrodiv <retrodiv@proton.me>
 from pathlib import Path
 import re
 
-from test_historical_player import function, rename_identifiers
+from test_historical_player import function, rename_identifiers, optional_trailing_parameter
 
 
 def dot_program(root, data):
@@ -30,7 +30,8 @@ def dot_program(root, data):
             raise ValueError('Every periodic-damage case needs a source result')
         contexts.append('{%du,{%s}}' % (row['revision'], ','.join('{%s}' %
             ','.join(str(result[key]) for key in data['result_fields']) for result in results)))
-    values = dict(GLOBALS='\n'.join(globals_),
+    values = dict(TAG_PARAMETER=optional_trailing_parameter(source, 'execute_takedamage_script', 9, 'int tag'),
+        GLOBALS='\n'.join(globals_),
         HELPERS='\n'.join(function(source, name) for name in
             ('obor_profile_dot_hits_hp', 'obor_profile_dot_hits_mp')),
         TICK=rename_identifiers(tick, {'time': 'fixture_clock'}),

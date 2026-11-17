@@ -1,0 +1,177 @@
+/* SPDX-License-Identifier: BSD-3-Clause
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me>
+ * Native namespace/setter and smartspawn; model/spawn/callback services observed.
+ */
+@PROVIDERS@
+@VARIANTS@
+@SEARCH@
+static s_spawn_entry spawnentry;
+static s_level world;
+s_level *level=&world;
+float advancex=7,advancey=11;
+static s_model weapon_model;
+static entity weapon_actor;
+static int found,spawn_calls,spawn_fail,players=1,callbacks;
+static e_entity_type expected_type;
+static entity *expected_parent;
+static s_spawn_entry *active_props;
+static char trace[32];
+static void event(char c){size_t n=strlen(trace);assert(n+1<sizeof(trace));trace[n]=c;trace[n+1]=0;}
+s_model *findmodel(char *name){assert(!strcmp(name,"Weapon"));++found;return &weapon_model;}
+int count_ents(int types){assert(types==TYPE_PLAYER);return players;}
+int music(char *name,int loop,long offset){assert(name && loop==1 && offset==23);event('M');return 1;}
+void ent_set_colourmap(entity *ent,unsigned int which){assert(ent==&actor && which==3);event('C');}
+entity *spawn(float x,float z,float a,int direction,char *name,int index,s_model *model)
+{
+ ++spawn_calls;event('S');
+ if(spawn_calls==1){
+  assert(active_props && x==active_props->position.x+((world.scrolldir&(SCROLL_INWARD|SCROLL_OUTWARD))?0:advancex));
+  assert(z==active_props->position.z+((world.scrolldir&(SCROLL_INWARD|SCROLL_OUTWARD))?advancey:0));
+  assert(a==active_props->position.y && direction==active_props->flip && name==active_props->name && index==active_props->index && model==active_props->model);
+  if(spawn_fail==1)return NULL;
+  memset(&actor,0,sizeof(actor));actor.modeldata.type=TYPE_ENEMY;actor.parent=&other;actor.position.x=17;return &actor;
+ }
+ assert(spawn_calls==2 && x==actor.position.x && z==100000 && !a && !direction && name==active_props->weapon);
+ assert(index==active_props->weaponindex && model==active_props->weaponmodel);
+ weapon_actor.modeldata.weapnum=29;return spawn_fail==2?NULL:&weapon_actor;
+}
+void execute_onspawn_script(entity *ent)
+{
+ assert(ent==&actor && !callbacks && actor.modeldata.type==expected_type && actor.parent==expected_parent);
+ ++callbacks;event('O');actor.modeldata.type=123;actor.parent=&weapon_actor;
+}
+void execute_spawn_script(s_spawn_entry *props,entity *ent)
+{assert(props==active_props && ent==&actor && callbacks==1 && ent->modeldata.type==123 && ent->parent==&weapon_actor);++callbacks;event('L');}
+#define printf record_printf
+@MAP_MACRO@
+@METHODS@
+#undef printf
+#if defined(__GNUC__) && !defined(__clang__)
+#pragma GCC diagnostic push
+#pragma GCC diagnostic warning "-Wstringop-truncation"
+#endif
+@SMARTSPAWN@
+#if defined(__GNUC__) && !defined(__clang__)
+#pragma GCC diagnostic pop
+#endif
+static const struct{unsigned revision;int added,parent_pointer,count;const char *names[32];}contexts[]={@CONTEXTS@};
+static void text_value(ScriptVariant *value,const char *text)
+{ScriptVariant_ChangeType(value,VT_STR);StrCache_Copy(value->strVal,(char *)text);}
+static void namespace_cases(unsigned p)
+{
+ for(int i=0;i<contexts[p].count;++i){
+  ScriptVariant property={.vt=VT_EMPTY};ScriptVariant *args[]={&property};
+  text_value(&property,contexts[p].names[i]);diagnostic[0]=0;
+  assert(mapstrings_setspawnentry(args,1)==1 && property.vt==VT_INTEGER && property.lVal==i && !diagnostic[0]);
+  assert(mapstrings_setspawnentry(args,1)==1 && property.lVal==i);++active_case;
+ }
+ const char *unknown[]={"unknown","parent-child","parent","type"};
+ for(unsigned n=0;n<4;++n){
+  if(contexts[p].added && n>=2)continue;
+  ScriptVariant property={.vt=VT_EMPTY};ScriptVariant *args[]={&property};text_value(&property,unknown[n]);diagnostic[0]=0;
+  assert(mapstrings_setspawnentry(args,1)==0 && property.vt==VT_STR);
+  char expected[160];snprintf(expected,sizeof(expected),"Property name '%s' is not supported by setspawnentry.\n",unknown[n]);assert(!strcmp(expected,diagnostic));
+  ScriptVariant_Clear(&property);++active_case;
+ }
+}
+static HRESULT invoke(unsigned p,const char *name,int named,ScriptVariant *arg,ScriptVariant *result,ScriptVariant **returned)
+{
+ ScriptVariant property={.vt=VT_EMPTY};
+ if(named)text_value(&property,name);else{property.vt=VT_INTEGER;property.lVal=-1;for(int n=0;n<contexts[p].count;++n)if(!strcmp(name,contexts[p].names[n]))property.lVal=n;}
+ ScriptVariant *args[]={&property,arg};*returned=result;diagnostic[0]=0;
+ HRESULT code=openbor_setspawnentry(args,returned,2);ScriptVariant_Clear(&property);return code;
+}
+static void setter_cases(unsigned p)
+{
+ const VARTYPE types[]={VT_EMPTY,VT_INTEGER,VT_DECIMAL,VT_PTR,VT_STR};
+ for(int named=0;named<2;++named)for(unsigned t=0;t<5;++t)for(int null=0;null<2;++null)
+ {
+  memset(&spawnentry,0x5a,sizeof(spawnentry));spawnentry.parent=&other;spawnentry.entitytype=77;
+  s_spawn_entry before=spawnentry;ScriptVariant arg={.vt=types[t]},result={.vt=VT_EMPTY},*returned=&result;
+  arg.ptrVal=null?NULL:&actor;
+  HRESULT code=invoke(p,"parent",named,&arg,&result,&returned);
+  if(!contexts[p].added)assert(code==E_FAIL && !returned);
+  else{
+   int accepted=contexts[p].parent_pointer?types[t]==VT_PTR:types[t]!=VT_PTR;
+   if(accepted)before.parent=(entity*)arg.ptrVal;
+   assert(code==S_OK && returned==&result && result.vt==VT_INTEGER && result.lVal==accepted);
+  }
+  assert(!memcmp(&spawnentry,&before,sizeof(before)));++active_case;
+ }
+ for(int named=0;named<2;++named)for(unsigned t=0;t<5;++t){
+  memset(&spawnentry,0,sizeof(spawnentry));spawnentry.entitytype=77;s_spawn_entry before=spawnentry;
+  ScriptVariant arg={.vt=types[t]},result={.vt=VT_EMPTY},*returned=&result;
+  if(types[t]==VT_DECIMAL)arg.dblVal=-3.75;else arg.lVal=-3;
+  HRESULT code=invoke(p,"type",named,&arg,&result,&returned);int integer=types[t]==VT_INTEGER||types[t]==VT_DECIMAL;
+  if(!contexts[p].added)assert(code==E_FAIL && !returned);
+  else{if(integer)before.entitytype=-3;assert(code==S_OK && returned==&result && result.vt==VT_INTEGER && result.lVal==integer);}
+  assert(!memcmp(&spawnentry,&before,sizeof(before)));++active_case;
+ }
+ /* The displaced weapon ID and unchanged preceding selector retain their own namespace. */
+ for(int named=0;named<2;++named){
+  memset(&spawnentry,0,sizeof(spawnentry));ScriptVariant arg={.vt=VT_EMPTY},result={.vt=VT_EMPTY},*returned;
+  text_value(&arg,"Weapon");found=0;assert(invoke(p,"weapon",named,&arg,&result,&returned)==S_OK && found==1 && spawnentry.weaponmodel==&weapon_model && result.lVal==1);ScriptVariant_Clear(&arg);
+  arg.vt=VT_INTEGER;arg.lVal=31;assert(invoke(p,"nolife",named,&arg,&result,&returned)==S_OK && spawnentry.nolife==31);++active_case;
+ }
+ /* Invalid raw IDs are not translated into either new field. */
+ for(int id=-1;id<contexts[p].count+3;id+=contexts[p].count+1){
+  ScriptVariant property={.vt=VT_INTEGER,.lVal=id},arg={.vt=VT_PTR,.ptrVal=&actor},result={.vt=VT_EMPTY},*returned=&result;
+  ScriptVariant *args[]={&property,&arg};memset(&spawnentry,0,sizeof(spawnentry));s_spawn_entry before=spawnentry;
+  assert(openbor_setspawnentry(args,&returned,2)==E_FAIL && !returned && !memcmp(&spawnentry,&before,sizeof(before)));++active_case;
+ }
+ ScriptVariant result={.vt=VT_EMPTY},*returned=&result;assert(openbor_setspawnentry(NULL,&returned,0)==E_FAIL && !returned);
+ returned=&result;assert(openbor_setspawnentry(NULL,&returned,1)==E_FAIL && !returned);
+ if(contexts[p].added){
+  ScriptVariant property={.vt=VT_EMPTY},arg={.vt=contexts[p].parent_pointer?VT_PTR:VT_INTEGER,.ptrVal=&actor};
+  ScriptVariant *args[]={&property,&arg,NULL};text_value(&property,"parent");returned=&result;
+  assert(openbor_setspawnentry(args,&returned,3)==S_OK && returned==&result && result.lVal==1 && spawnentry.parent==&actor);
+  ScriptVariant_Clear(&property);
+ }
+}
+static void reset_spawn(void)
+{
+ memset(&world,0,sizeof(world));level=&world;memset(&spawnentry,0,sizeof(spawnentry));
+ active_props=&spawnentry;trace[0]=0;spawn_calls=spawn_fail=callbacks=weapon_calls=0;players=1;
+ spawnentry.position.x=2;spawnentry.position.y=3;spawnentry.position.z=5;
+ spawnentry.flip=1;spawnentry.index=7;spawnentry.name="Actor";
+}
+static void spawn_cases(unsigned p)
+{
+ const int kinds[]={0,TYPE_PLAYER,-1,TYPE_NPC};
+ for(int inward=0;inward<2;++inward)for(unsigned kind=0;kind<4;++kind)
+ for(int parent=0;parent<2;++parent)for(int weapon=0;weapon<3;++weapon)
+ {
+  reset_spawn();world.scrolldir=inward?SCROLL_INWARD:SCROLL_RIGHT;
+  spawnentry.entitytype=kinds[kind];spawnentry.parent=parent?(entity*)(uintptr_t)0x1234:NULL;
+  expected_type=contexts[p].added&&kinds[kind]?kinds[kind]:TYPE_ENEMY;
+  expected_parent=contexts[p].added&&parent?spawnentry.parent:&other;
+  if(weapon){spawnentry.weapon="Weapon";spawnentry.weaponmodel=&weapon_model;spawnentry.weaponindex=19;if(weapon==2)spawn_fail=2;}
+  assert(smartspawn(&spawnentry)==&actor && callbacks==2 && actor.modeldata.type==123 && actor.parent==&weapon_actor);
+  assert(!strcmp(trace,weapon?"SSOL":"SOL") && spawn_calls==(weapon?2:1) && weapon_calls==(weapon==1));
+  if(weapon==1)assert(weapon_number==29 && !weapon_flag && actor.weapent==&weapon_actor);
+  ++active_case;
+ }
+ reset_spawn();assert(!smartspawn(NULL) && !trace[0]);level=NULL;assert(!smartspawn(&spawnentry) && !trace[0]);level=&world;
+ spawnentry.spawnplayer_count=1;spawnentry.boss=1;world.bosses=3;assert(!smartspawn(&spawnentry) && world.bosses==2 && !trace[0]);
+ reset_spawn();spawn_fail=1;assert(!smartspawn(&spawnentry) && !strcmp(trace,"S") && !callbacks);
+ /* Link the actual setter to the actual script spawn entry and native callbacks. */
+ if(contexts[p].added){
+  reset_spawn();ScriptVariant parent={.vt=contexts[p].parent_pointer?VT_PTR:VT_INTEGER,.ptrVal=&actor},type={.vt=VT_INTEGER,.lVal=TYPE_PLAYER},result={.vt=VT_EMPTY},*returned;
+  assert(invoke(p,"parent",1,&parent,&result,&returned)==S_OK && result.lVal==1);
+  assert(invoke(p,"type",1,&type,&result,&returned)==S_OK && result.lVal==1);
+  expected_parent=&actor;expected_type=TYPE_PLAYER;
+  assert(openbor_spawn(NULL,&returned,0)==S_OK && returned==&result && result.vt==VT_PTR && result.ptrVal==&actor && !strcmp(trace,"SOL"));
+ }
+ reset_spawn();spawn_fail=1;spawnentry.boss=1;world.bosses=4;
+ ScriptVariant failed={.vt=VT_INTEGER,.lVal=17},*returned=&failed;
+ assert(openbor_spawn(NULL,&returned,0)==S_OK && returned==&failed && failed.vt==VT_EMPTY && world.bosses==5 && !strcmp(trace,"S"));
+}
+int main(void)
+{
+ for(unsigned p=0;p<sizeof(contexts)/sizeof(*contexts);++p){
+  obor_profile_build=contexts[p].revision;active_case=0;
+  namespace_cases(p);setter_cases(p);spawn_cases(p);
+  printf("{\"revision\":%u,\"status\":\"PASS\"}\n",obor_profile_build);
+ }
+ return 0;
+}

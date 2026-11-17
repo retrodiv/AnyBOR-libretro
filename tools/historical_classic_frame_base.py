@@ -28,6 +28,13 @@ def frame_base_program(root, data):
     directive = loading[first:loading.index('case CMD_MODEL_MOVE:', first)]
     # Expectations are source-reviewed fixture data, independent of the native
     # predicates and storage code being exercised.
+    allocations = ''
+    if 'obor_animation_reserve_frames' in source:
+        error = re.search(r'(?m)^static const char \*E_OUT_OF_MEMORY = [^;]+;', source)
+        if error is None:
+            raise ValueError('Native frame allocation diagnostic required')
+        allocations = error[0] + '\n' + '\n'.join(function(source, name) for name in
+            ('obor_animation_alloc_table', 'obor_animation_reserve_frames'))
     cases = []
     for case in data['cases']:
         def oracle(kind):
@@ -40,7 +47,8 @@ def frame_base_program(root, data):
                             for value in case['commands'])
         cases.append('{%d,{%s},%s,%s}' % (len(case['commands']), commands,
                                         oracle('legacy'), oracle('modern')))
-    values = dict(ASSERTIONS=assertion_refusals(), FUNCTIONS='\n'.join(function(source, name) for name in
+    values = dict(ASSERTIONS=assertion_refusals(), ALLOCATIONS=allocations,
+        FUNCTIONS='\n'.join(function(source, name) for name in
         ('setDrawMethod', 'getDrawMethod', 'alloc_frames', 'addframe', 'free_frames',
          'diff', 'inair', 'obor_classic_vault_animation', 'adjust_base')),
         NUMBERS='\n'.join(function(source, name) for name in ('isNumeric', 'getValidInt')),

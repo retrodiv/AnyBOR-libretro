@@ -17,9 +17,13 @@ def system_program(root, data):
     variant = (engine / 'source/scriptlib/ScriptVariant.c').read_text()
     first = source.index('static const char *svlist[]')
     declaration = source[first:source.index('// ===== openborvariant', first)]
-    methods = '\n'.join(function(source, name) for name in
+    support = ('obor_profile_systemvariant_order',) if re.search(
+        r'\bobor_profile_systemvariant_order\s*\([^;{}]*\)\s*\{', source) else ()
+    methods = '\n'.join(function(source, name) for name in support +
         ('obor_systemvariant_available', 'obor_systemvariant_native', 'mapstrings_systemvariant',
          'openbor_systemvariant', 'openbor_changesystemvariant'))
+    if support:
+        methods = function((engine / 'source/utils.c').read_text(), 'searchList') + '\n' + methods
     selected = ('_sv_lasthita', '_sv_lasthity', '_sv_lasthitc', '_sv_lasthitt', '_sv_lasthitx', '_sv_lasthitz')
     callbacks = []
     for name in ('getsyspropertybyindex', 'changesyspropertybyindex'):

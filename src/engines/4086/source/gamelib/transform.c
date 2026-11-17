@@ -1,3 +1,18 @@
+/* AnyBOR modification record: 2026-10-19.
+ * Port maintained by retrodiv <retrodiv@proton.me>.
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me> (original contributions).
+ * These contributions are licensed under BSD-3-Clause; see LICENSE at the root.
+ * Upstream code retains its original license and notices.
+ * Drop comma expressions that read the variables they were meant to declare.
+ * Select native water-drawing log emission by profile. Preserve native
+ * integer or floating rotation storage by profile, with unchanged slot size
+ * and typed script, parser, mirror, copy and raster access. Bound integer
+ * rotation results and initial trigonometric table indices.
+ * Existing changes recorded here; this is not their implementation date.
+ * See MODIFICATIONS.md and docs/modifications/4086.md
+ * at the source repository root. Original notices follow below.
+ */
+
 /*
  * OpenBOR - http://www.LavaLit.com
  * -----------------------------------------------------------------------
@@ -790,7 +805,9 @@ void gfx_draw_rotate(s_screen *dest, gfx_entry *src, int x, int y, int centerx, 
     float xboundf[4], yboundf[4];
     zoomx = drawmethod->scalex / 256.0;
     zoomy = drawmethod->scaley / 256.0;
-    angle = drawmethod->rotate;
+    angle = (float)obor_drawmethod_rotation(drawmethod);
+    /* The first lookup precedes native normalization; bound its truncated index. */
+    if(!(angle > -1.0f && angle < 360.0f)) return;
     sina = sin_table[(int)angle];
     cosa = cos_table[(int)angle];
 
@@ -890,7 +907,9 @@ void gfx_draw_rotate(s_screen *dest, gfx_entry *src, int x, int y, int centerx, 
     float xboundf[4], yboundf[4];
     zoomx = drawmethod->scalex / 256.0;
     zoomy = drawmethod->scaley / 256.0;
-    angle = drawmethod->rotate;
+    angle = (float)obor_drawmethod_rotation(drawmethod);
+    /* The first lookup precedes native normalization; bound its truncated index. */
+    if(!(angle > -1.0f && angle < 360.0f)) return;
     sina = sin_table[(int)angle];
     cosa = cos_table[(int)angle];
 
@@ -1490,7 +1509,7 @@ void gfx_draw_water(s_screen *dest, gfx_entry *src, int x, int y, int centerx, i
     wavelength = 256 / drawmethod->water.wavelength;
     s += sy * wavelength;
 
-    printf("drawing water ... \n");
+    if(obor_profile_build < 4195) printf("drawing water ... \n");
 
     // Copy data
     do

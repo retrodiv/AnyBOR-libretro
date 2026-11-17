@@ -17,13 +17,15 @@
       "upstream_sha256": null
     },
     "openbor.c": {
-      "distributed_sha256": "f94583e84f04e01f392c36441d0d6e8893d12cb4dd0aac4d662f1921df900f8a",
+      "distributed_sha256": "5f2da5f07dddb846fa38bde218ea4e41c30c8e60bc68b5f1993d9fb17af75358",
       "modified": true,
-      "summary": "Apply the port's engine corrections and select the PC video configuration on macOS. Select native early system-selector values, credit rendering and active flags, true-color background and layer-mask admission, scene video commands, menu flags and controller-assignment key flush; bound diagnostic formatting and content paths and release owned layer masks. Preserve scrolling, startup palette and loading geometry, selection order, player spawn precision, walk/backwalk facing, blocking resources and defaults, counter damage, attack types and cancellation, periodic damage, rush, follow and ground-hit predicates, projectile costs and weapon loss. Retain frame-base and movement-table presence and cleanup, script animation identities and native limits, vault actions and caller priority, slow-motion arithmetic and main-loop seed timing. Keep damage-over-time updates within the native effect arrays while retaining valid-slot tick and expiration calculations. Derive output names from the content basename with explicit destination capacities, and reject overflowing output path joins. Leave multiplayer slots without a selected model available to join even if game scripts preassign lives to them. Let a missing basename-only PAK self-check read the active frontend content after it has been validated and prepared. Allocate each model's animation pointer table through the highest animation index that model uses, and bound cache, copy and cleanup paths to that capacity. Ignore optional defense and offense entries outside the configured attack-type range with a log warning before accessing their tables. Yield after each newly completed model during explicit model-list or level preparation, and defer states until that preparation has cleaned up its intermediate parsers and handles. Resize repeated weapon lists and detach borrowed lists before replacing their entries. Return a defined null result for absent colourmap models or tables while retaining valid palette fallback. Keep selected palette-conversion reads bounded and reject missing maps or flags, while preserving unselected slots and native allocation failure callbacks. Check destination animation capacity when retaining an animation across model changes, preserving the native fallback and timing. Access script-container pointer slots with byte copies, preserving record layout, pointer values and native copy/cleanup order. Pointer-slot allocation and release accept byte storage without imposing pointer alignment on a packed field. Release each sprite owner once and complete cleanup independently of alias counts. Preserve native sprite-map capacity policies, check allocation extents and retain existing storage and capacity when growth is unavailable. Validate sprite-node allocations and release partial resources without changing existing owners. Check cached sprite availability before reading metadata and ignore cache requests for absent nodes. Capture explicit shutdown failure text before cleanup and bound legacy diagnostic formatting.",
+      "summary": "Apply the port's engine corrections and select the PC video configuration on macOS. Select native early system-selector values, credit rendering and active flags, true-color background and layer-mask admission, scene video commands, menu flags and controller-assignment key flush; bound diagnostic formatting and content paths and release owned layer masks. Preserve scrolling, startup palette and loading geometry, selection order, player spawn precision, walk/backwalk facing, blocking resources and defaults, counter damage, attack types and cancellation, periodic damage, rush, follow and ground-hit predicates, projectile costs and weapon loss. Retain frame-base and movement-table presence and cleanup, script animation identities and native limits, vault actions and caller priority, slow-motion arithmetic and main-loop seed timing. Keep damage-over-time updates within the native effect arrays while retaining valid-slot tick and expiration calculations. Derive output names from the content basename with explicit destination capacities, and reject overflowing output path joins. Leave multiplayer slots without a selected model available to join even if game scripts preassign lives to them. Let a missing basename-only PAK self-check read the active frontend content after it has been validated and prepared. Allocate each model's animation pointer table through the highest animation index that model uses, and bound cache, copy and cleanup paths to that capacity. Ignore optional defense and offense entries outside the configured attack-type range with a log warning before accessing their tables. Yield after each newly completed model during explicit model-list or level preparation, and defer states until that preparation has cleaned up its intermediate parsers and handles. Resize repeated weapon lists and detach borrowed lists before replacing their entries. Return a defined null result for absent colourmap models or tables while retaining valid palette fallback. Keep selected palette-conversion reads bounded and reject missing maps or flags, while preserving unselected slots and native allocation failure callbacks. Check destination animation capacity when retaining an animation across model changes, preserving the native fallback and timing. Access script-container pointer slots with byte copies, preserving record layout, pointer values and native copy/cleanup order. Pointer-slot allocation and release accept byte storage without imposing pointer alignment on a packed field. Release each sprite owner once and complete cleanup independently of alias counts. Preserve native sprite-map capacity policies, check allocation extents and retain existing storage and capacity when growth is unavailable. Validate sprite-node allocations and release partial resources without changing existing owners. Check cached sprite availability before reading metadata and ignore cache requests for absent nodes. Capture explicit shutdown failure text before cleanup and bound legacy diagnostic formatting. Preserve native settings file layouts at the shared-filter and auxiliary-pair boundaries, partial reads, and profile-specific built-in/custom video-mode initialization. Preserve native walking transitions, saved grab defaults and per-axis binding movement by profile. Preserve the native unsigned byte reader. Preserve native saved-player credits, level-local selection ownership and transitions, and tokenized saved-selection replay by profile. Keep each profile's saved-game row size and partial-read semantics independent of shared live storage. Preserve native character-repeat flags, join and preview palette collision scans, loop-stop epochs and engine-credit rows by profile. Refuse legacy selection palette reads through an absent current model while retaining NULL-current navigation when no palette is consumed. Preserve native pause sample loading, fallback and entry order, and song-title debug placement, expiration and unload resets by profile. Preserve native vertical background command admission, travel accumulation and upward/diagonal layer geometry by profile. Check background coordinate conversions and local translations before integer use, skipping layers whose positions are undefined. Track owned animation frame extents independently of visible counts, preserve existing rows during checked growth and release every owned row after count edits. Preserve native per-frame offset presence and values with owned storage and checked allocation failures. Validate animation actors through active pool or callback scopes and check model-table allocation extents and registered animation owners. Select native enemy-icon palette use by profile. Preserve native spawn type and parent assignment before spawn callbacks by profile. Preserve native integer or floating rotation storage by profile, with unchanged slot size and typed script, parser, mirror, copy and raster access. Bound integer rotation results and initial trigonometric table indices. Preserve native broken-down running, bounding-box and attack command effects, script loader labels and active script-slot allocation order by profile. Reject undefined floating-to-integer run flag conversions without changing the record. Preserve native cheat-state and level-count system queries, refusing absent level storage safely. Preserve native attack-tag callback locals, caller forwarding, cleanup and unconfirmed-contact entity context by profile. Preserve source-defined wall/platform edge inclusion, hole-height loading, altitude searches, base adjustment and movement checks by profile. Preserve platform, wall-index and hole callback locals, cleanup and corresponding movement events. Initialize the complete platform variant before retaining its native decimal-tagged pointer representation. Preserve native platform-relative entity sort order, shadow geometry and depth, and height-aware shadow hole tests by profile.",
       "topics": [
         "active-content-pak-aliases",
+        "animation-frame-ownership",
         "animation-memory-layout",
         "animation-query-inputs",
+        "background-coordinate-inputs",
         "colourtable-selector-bounds",
         "command-table-ownership",
         "compiler-warning-cleanup",
@@ -62,10 +64,11 @@
       "upstream_sha256": "fa319b01a0cd47dea0921e31eaa3532f614716c72ae3a780c5e2675bdcb0703a"
     },
     "openbor.h": {
-      "distributed_sha256": "54cb0aa561207e32b90c7e4bc4aefa9d40d31655c653104675c08f0ab1743b6c",
+      "distributed_sha256": "69f2fc4a795f398bf3082febca349aed3fd8f2cf4a705f2db6e0413ffed9e60e",
       "modified": true,
-      "summary": "Allocate collision pointer slots through the highest author-facing index used by each collection. Declare the native media decoder interface, profile movement deadlines, default shutdown text, historical frame-base and movement-table presence, spawn-coordinate storage and animation ID conversions. Declare the vault action used by early profiles. Track each model's allocated animation-table capacity and reject lookups outside it.",
+      "summary": "Allocate collision pointer slots through the highest author-facing index used by each collection. Declare the native media decoder interface, profile movement deadlines, default shutdown text, historical frame-base and movement-table presence, spawn-coordinate storage and animation ID conversions. Declare the vault action used by early profiles. Track each model's allocated animation-table capacity and reject lookups outside it. Reserve live software-filter storage independently of the selected native settings file layout. Reserve live walking, grab-default and binding-axis state. Declare the native byte reader used by stream arguments. Reserve live neutral attack flags and original per-frame sprite offsets. Store native saved-selection bytes and owned level-local selection entries alongside legacy per-set fields. Declare the native song-title debug-position record. Store native vertical background speed alongside horizontal speed. Record owned frame capacity and declare the bounded frame-count interface. Declare validated model-animation access. Reserve native spawn type and parent storage. Reserve native attack metadata and profile-selected platform-block and hole script slots. Declare the native cheat-state query. Declare the shared attack-tag callback and fall interfaces. Declare native terrain-query and platform, wall-index and hole callback interfaces.",
       "topics": [
+        "animation-frame-ownership",
         "animation-memory-layout",
         "animation-query-inputs",
         "compiler-warning-cleanup",
@@ -76,10 +79,11 @@
       "upstream_sha256": "3d54f4d40f76c0e51fc30617c5dedd968ab57168a063cd349dc104ae5fc8756b"
     },
     "openborscript.c": {
-      "distributed_sha256": "97649aee7f6d8c4c04f38b920548e24fd90b5cf52cef47cc78ebd02e6cde566f",
+      "distributed_sha256": "110b6459e786ca15b5c645b4a1851e6abef35a1b3098310f0fd6120677db0924",
       "modified": true,
-      "summary": "Keep the dormant constant-lowering diagnostic compatible with the single-value instruction layout. Preserve source-defined system, player, drawing, entity and text namespaces, numeric/cached selectors, axis warnings, terrain fields, removed constants and native animation argument/result identities. Retain native antigravity, drop-velocity and height results, shutdown arguments, duration conversions, rush and ground-hit values, block-resource representation, attack staydown return types and script API availability; bound cache and diagnostic access. Preserve spawn-callback locals, grab-script output/validation epochs, takeaction table bounds and seed-script conversion/advance behavior. Derive output names from the content basename with explicit destination capacities, and reject overflowing output path joins. Compact compiler-only instruction records after resolving value ownership, preserving branch and export anchors, all mutable values and exactly-once pool cleanup. Retain shared interpreters through the last script reference while preserving independent variables, replacement and native callbacks. Track diagnostic comments independently so interpreter replacement can retain them. Resolve text-property names within the actual table bounds while preserving native numeric selectors. Reuse each text object's owned buffer when replacing its contents. Reject missing colourtable indices and keep selector arithmetic and table reads defined. Use the declared staydown name-table length for lookup. Transfer loaded stream buffers through aligned local outputs while preserving native record layout and results. Close owned input files after stream loading and on buffer allocation failure.",
+      "summary": "Keep the dormant constant-lowering diagnostic compatible with the single-value instruction layout. Preserve source-defined system, player, drawing, entity and text namespaces, numeric/cached selectors, axis warnings, terrain fields, removed constants and native animation argument/result identities. Retain native antigravity, drop-velocity and height results, shutdown arguments, duration conversions, rush and ground-hit values, block-resource representation, attack staydown return types and script API availability; bound cache and diagnostic access. Preserve spawn-callback locals, grab-script output/validation epochs, takeaction table bounds and seed-script conversion/advance behavior. Derive output names from the content basename with explicit destination capacities, and reject overflowing output path joins. Compact compiler-only instruction records after resolving value ownership, preserving branch and export anchors, all mutable values and exactly-once pool cleanup. Retain shared interpreters through the last script reference while preserving independent variables, replacement and native callbacks. Track diagnostic comments independently so interpreter replacement can retain them. Resolve text-property names within the actual table bounds while preserving native numeric selectors. Reuse each text object's owned buffer when replacing its contents. Reject missing colourtable indices and keep selector arithmetic and table reads defined. Use the declared staydown name-table length for lookup. Transfer loaded stream buffers through aligned local outputs while preserving native record layout and results. Close owned input files after stream loading and on buffer allocation failure. Preserve native mathematical API availability, angle units and inverse-trigonometric branches, with bounded argument access. Select native walking flag access and grab restoration; retain absent versus empty binding axes and partial failure state with bounded arguments. Preserve native indexed array edits, named deletion and size selection; keep aliased values valid across growth and shifting and release deleted list owners safely. Select native byte reads, stream append offsets and counts, save paths and final-newline behavior; bound conversions, allocations, paths and cursor access. Preserve the native attack-property setter availability, reverse names and compiler mapping by profile, with bounded arguments. Restore native animation property reads and writes with profile-selected selectors and registry bindings. Select native player reverse names and custom-menu option routing and hall-of-fame registration by profile. Preserve native player-property ordinals, input arrays, map queries and direction constant admission by profile. Preserve native level-property names, ordinals, speed conversions and integer-member results under decimal tags; refuse undefined integer conversions. Retain native visible frame-count edits with checked integer conversion and physical table growth. Check animation arguments when consumed, retaining ignored trailing slots and source-defined diagnostic order. Bound native per-frame accesses by owned table capacity and validate referenced attack, movement and drawing records before use. Preserve sparse fallbacks, logical-count searches and native reset targets. Bound fixed animation records and sprite-map, node, header and filename access while retaining native pointer assignments, centre updates and accepted filename-value types. Preserve native spawn-property names, numeric order, type conversion and raw parent-value admission by profile. Preserve native integer or floating rotation storage by profile, with unchanged slot size and typed script, parser, mirror, copy and raster access. Bound integer rotation results and initial trigonometric table indices. Preserve native system-variable names, numeric order, source-defined name-search results and cached selectors by profile. Preserve native terrain-query availability, aliases, defaults, consumed arguments and altitude selection, with bounded missing-argument refusal.",
       "topics": [
+        "animation-frame-ownership",
         "animation-query-inputs",
         "attack-query-input-bounds",
         "collision-selector-inputs",
@@ -111,9 +115,9 @@
       "upstream_sha256": "4be42b223e003565531d785e6182127d75307e4e0625028b7e03e2ab124ffa45"
     },
     "openborscript.h": {
-      "distributed_sha256": "e3b1e6d84a6c390c5e2588b1eec0a34cf1ca132ba6a117de2ce44dce080a1a02",
+      "distributed_sha256": "4c8edfcbc3ae73ac4c497717824ee51feab433dd8accfec19f3bff18dda21a7b",
       "modified": true,
-      "summary": "Declare owned script-variable name storage. Declare the shared engine-credit-screen selector and script seed callback without exposing them to earlier native namespaces.",
+      "summary": "Declare owned script-variable name storage. Declare the shared engine-credit-screen selector and script seed callback without exposing them to earlier native namespaces. Declare the profile-selected mathematical interfaces. Declare the source-defined array edit interfaces. Declare the native animation property setter and hall-of-fame script interfaces. Reserve internal selectors for native cheat-state and level-count system variables. Declare native platform and terrain-index script query interfaces.",
       "topics": [
         "logical-profile-compatibility",
         "record-dates-and-file-notices",
@@ -174,9 +178,9 @@
       "upstream_sha256": "54377e86b27c03f1b41abc4cad9bb0466a3ab870cd2f9bec70392715709e32f7"
     },
     "source/gamelib/commands.c": {
-      "distributed_sha256": "96c6d2b6f483ef822741b88985085bab5dacb7c0df775b7767eb451618250346",
+      "distributed_sha256": "fd43eca1df355ff94b4a366b93d29fde92f868e80a3f9fe250b582dd9e7e6e4b",
       "modified": true,
-      "summary": "Convert the command-list lookup result to its command enumeration explicitly instead of through a plain pointer cast. Admit the native level alpha-mask command only for profiles whose original build registered it.",
+      "summary": "Convert the command-list lookup result to its command enumeration explicitly instead of through a plain pointer cast. Admit the native level alpha-mask command only for profiles whose original build registered it. Select native broken-down model command and platform-block/hole script admission by profile, including registered commands without a parser implementation. Select native vertical background command admission by profile.",
       "topics": [
         "compiler-warning-cleanup",
         "logical-profile-compatibility",
@@ -185,9 +189,9 @@
       "upstream_sha256": "06a482b84de6b363ad4af0f779293a2150b3ea9fa00af81795823264cfba5b95"
     },
     "source/gamelib/commands.h": {
-      "distributed_sha256": "1353630c3b5552854d789d556db02aee13cd21ce879e460ba922df2ec5d33347",
+      "distributed_sha256": "046473a998a4b181dff765b363fe8420156e325116ba91d79ccd831a340c26d3",
       "modified": true,
-      "summary": "Declare the shared level alpha-mask command without changing the model command namespace.",
+      "summary": "Declare the shared level alpha-mask command without changing the model command namespace. Declare internal selectors for native broken-down model commands and platform-block/hole script loading. Reserve the internal vertical background command without changing earlier selectors.",
       "topics": [
         "logical-profile-compatibility",
         "record-dates-and-file-notices"
@@ -345,11 +349,12 @@
       "upstream_sha256": "b20e9138294dae11463e2615490105fcb5d03ac2d24c441b7fefb9c7bb55c12f"
     },
     "source/gamelib/screen.c": {
-      "distributed_sha256": "b112201cb6f4eb6fc266b1e30851631d8e01c305ef8a5a7067725d94cf2a6df0",
+      "distributed_sha256": "e17a0f10a8ee7cc9c1cbf17366fab576155ea16584575cd005356d9ffffbd910",
       "modified": true,
-      "summary": "Remove a guard whose only statement assigned the counter to itself. Bound screen blend selectors and use transparent copy when an indexed table is unavailable.",
+      "summary": "Remove a guard whose only statement assigned the counter to itself. Bound screen blend selectors and use transparent copy when an indexed table is unavailable. Preserve native integer or floating rotation storage by profile, with unchanged slot size and typed script, parser, mirror, copy and raster access. Bound integer rotation results and initial trigonometric table indices.",
       "topics": [
         "image-loader-safety",
+        "logical-profile-compatibility",
         "record-dates-and-file-notices",
         "screen-blend-bounds",
         "zoom-scaling-safety"
@@ -398,11 +403,12 @@
       "upstream_sha256": "6436fa848a7f92fd7191409e6d2800eb33db4513c30ee64ac0262e48c7784666"
     },
     "source/gamelib/sprite.c": {
-      "distributed_sha256": "c2f253bf691672f048a1c256e325eec94fbb7fcb15d904389573bd7aa07efded",
+      "distributed_sha256": "6777b91b0e4fbb31cb9e7f8505f8656e71e1df4ec2c098d522ab332fbcf0bb50",
       "modified": true,
-      "summary": "Declare initialized encoded sprite-body ranges and source crops for exact reconstruction proof, retaining headers, palettes and mutable changes.",
+      "summary": "Declare initialized encoded sprite-body ranges and source crops for exact reconstruction proof, retaining headers, palettes and mutable changes. Preserve native integer or floating rotation storage by profile, with unchanged slot size and typed script, parser, mirror, copy and raster access. Bound integer rotation results and initial trigonometric table indices.",
       "topics": [
         "encoded-sprite-safety",
+        "logical-profile-compatibility",
         "reconstructible-resources"
       ],
       "upstream_sha256": "9fe3a2aff92d2b4a992458a1d642b4a2b99a138c578bc20055f5155733062df4"
@@ -414,10 +420,11 @@
       "upstream_sha256": "76f0ac09c93503067c22e44e3745794f77e9e7f9c9187ffa451acc272734f9a2"
     },
     "source/gamelib/spriteq.c": {
-      "distributed_sha256": "89124fc1725864056a23d041f0708d066195d4eee95dd2b219b65e9f8757478f",
+      "distributed_sha256": "f9646226409fc4e7fe9a142d3f2b8ad45abf550861f6097882c851a607f2648a",
       "modified": true,
-      "summary": "Keep unavailable sprite images out of the drawing queue while retaining native requests, ordering and copied draw methods.",
+      "summary": "Keep unavailable sprite images out of the drawing queue while retaining native requests, ordering and copied draw methods. Retain native per-profile queue admission limits within fixed backing storage.",
       "topics": [
+        "logical-profile-compatibility",
         "record-dates-and-file-notices",
         "unavailable-sprite-images"
       ],
@@ -474,9 +481,13 @@
       "upstream_sha256": "4624981f1b2a45faad0a9781e4ced590e3d5041007e0a0acba8c9d463c2657a0"
     },
     "source/gamelib/transform.c": {
-      "distributed_sha256": "9a9d994fe14a181ced3783f185f3f219689afed8461a0150b8a5d79e671b51a4",
-      "modified": false,
-      "topics": [],
+      "distributed_sha256": "704fb1e494d4be54a6dab0de58525d0c0a9fb35554e505efbeabbdb85f6506cb",
+      "modified": true,
+      "summary": "Drop comma expressions that read the variables they were meant to declare. Select native water-drawing log emission by profile. Preserve native integer or floating rotation storage by profile, with unchanged slot size and typed script, parser, mirror, copy and raster access. Bound integer rotation results and initial trigonometric table indices.",
+      "topics": [
+        "logical-profile-compatibility",
+        "record-dates-and-file-notices"
+      ],
       "upstream_sha256": "9a9d994fe14a181ced3783f185f3f219689afed8461a0150b8a5d79e671b51a4"
     },
     "source/gamelib/transform.h": {
@@ -502,11 +513,12 @@
       "upstream_sha256": "3d2fe81752debfdc1ade29f9484b637652754b39473847ca8ff3dca2511a9236"
     },
     "source/gamelib/types.h": {
-      "distributed_sha256": "489f3b1d0a3643af977271106ffbd532e4ccbd1deb182660b3c10f66fc8c2337",
+      "distributed_sha256": "0e4d22c91890283218235eb12c6593cd7898eebe5aff8c9950365b6f9549c068",
       "modified": true,
-      "summary": "Match drawing-method typedef alignment to packed owning records without changing fields, offsets or sizes.",
+      "summary": "Match drawing-method typedef alignment to packed owning records without changing fields, offsets or sizes. Preserve native integer or floating rotation storage by profile, with unchanged slot size and typed script, parser, mirror, copy and raster access. Bound integer rotation results and initial trigonometric table indices.",
       "topics": [
         "drawing-record-alignment",
+        "logical-profile-compatibility",
         "record-dates-and-file-notices"
       ],
       "upstream_sha256": "a509fbe72046045ecedcc961fbcf05f7e1aaea6455b46cb887f8b45f86415f65"
@@ -524,14 +536,47 @@
       "upstream_sha256": "87581300442e16eae0ee96864cedb0f4f429be87ad2dcb68a4fd287486b3fb79"
     },
     "source/globals.h": {
-      "distributed_sha256": "5cef0eefe63e3a03a786e2f18a55e1c9074af14d510221d32599da245ef898b4",
+      "distributed_sha256": "dfe4026d7b645adda6abed39bac64d7655a2f9c1dcf0c7c4341cc8e8537dcbd6",
       "modified": true,
-      "summary": "Include the libretro platform interface.",
+      "summary": "Include the libretro platform interface. Include native allocation wrappers with per-profile failure admission.",
       "topics": [
+        "logical-profile-compatibility",
         "platform-integration",
         "record-dates-and-file-notices"
       ],
       "upstream_sha256": "3d00a02c63502e556c7f2dd3066af4456bb4d7e1449fce07388cf6e51306c573"
+    },
+    "source/omath.c": {
+      "distributed_sha256": "b4040c3cf07ac14b2b65f9d90cae5ce08302b34963ccf002bfc10488d8df6eca",
+      "modified": true,
+      "source_import": {
+        "build": "4183",
+        "commit": "f1a221a00eda2ed45b779dc6df165a5e93db0773",
+        "repository": "https://github.com/DCurrent/openbor",
+        "sha256": "25cfefc818295b89970d71179d4471c71ec58b0902dd18733ef71084c7c926e7"
+      },
+      "summary": "Restore the original inverse-trigonometric helpers and their declarations without replacing their source-defined numerical branches. Existing inverse-square-root and angle lookup definitions remain in the original utility unit.",
+      "topics": [
+        "logical-profile-compatibility",
+        "record-dates-and-file-notices"
+      ],
+      "upstream_sha256": null
+    },
+    "source/omath.h": {
+      "distributed_sha256": "2a821a08f6a3f9c1ac33912585e638019b87144d20d99601683aa145798d4b65",
+      "modified": true,
+      "source_import": {
+        "build": "4183",
+        "commit": "f1a221a00eda2ed45b779dc6df165a5e93db0773",
+        "repository": "https://github.com/DCurrent/openbor",
+        "sha256": "db8c0cdffc38a0d134127289babf1ecd5cb378abce2a907daac08160b2899f10"
+      },
+      "summary": "Restore the original inverse-trigonometric helpers and their declarations without replacing their source-defined numerical branches. Existing inverse-square-root and angle lookup definitions remain in the original utility unit.",
+      "topics": [
+        "logical-profile-compatibility",
+        "record-dates-and-file-notices"
+      ],
+      "upstream_sha256": null
     },
     "source/pnglib/pngdec.c": {
       "distributed_sha256": "66ac89bfb193d50a97dfb4dfee3d66ded3106a50e534c4c96036bb9fc1166ea7",
@@ -650,6 +695,22 @@
         "record-dates-and-file-notices"
       ],
       "upstream_sha256": "e8002fb31b92354c5cc2a98d919ba122b86a3a878a2592ccb6debc6d4fd8f599"
+    },
+    "source/safealloc.h": {
+      "distributed_sha256": "1ba3c0ec4daf4b29486dc9564a5aa3ad689eaef04768e874b3425a7fae0ef944",
+      "modified": true,
+      "source_import": {
+        "build": "4183",
+        "commit": "f1a221a00eda2ed45b779dc6df165a5e93db0773",
+        "repository": "https://github.com/DCurrent/openbor",
+        "sha256": "1e3b444f22bd02b8b41561affec9ec6be338c6c149be706bfea390a3171718ca"
+      },
+      "summary": "Select native allocation admission and preserve call-site metadata by profile. Bound copied string extents.",
+      "topics": [
+        "logical-profile-compatibility",
+        "record-dates-and-file-notices"
+      ],
+      "upstream_sha256": null
     },
     "source/scriptlib/FirstFollow.h": {
       "distributed_sha256": "a07de58fe3114e86282e178250f054c28fb6f7eea52657d917809b6895c02696",
@@ -880,11 +941,12 @@
       "upstream_sha256": "d9bf8cdb39ccbdc026f120a82f8dd12cc9d30a65e410617da7462b3317ffa8ca"
     },
     "source/utils.c": {
-      "distributed_sha256": "282e14098fb41986085159a5d35f6bb8c8f9ba4940d615f8b5319358f7f9dca9",
+      "distributed_sha256": "8ee1af45a15c96d9241ca2a2aa245db345c15e87a9ef8b59169ac5f35eca017e",
       "modified": true,
-      "summary": "Enable libretro platform and PNG helper declarations, the POSIX directory and mkdir forms macOS also uses, and the standard allocation declarations instead of the glibc-only <malloc.h>. Derive output names from the content basename with explicit destination capacities, and reject overflowing output path joins. Bound adjacent string-table reads while preserving the original search order and duplicate preference.",
+      "summary": "Enable libretro platform and PNG helper declarations, the POSIX directory and mkdir forms macOS also uses, and the standard allocation declarations instead of the glibc-only <malloc.h>. Derive output names from the content basename with explicit destination capacities, and reject overflowing output path joins. Bound adjacent string-table reads while preserving the original search order and duplicate preference. Select native first-character or binary name searching by profile, preserving duplicate preference and defined uppercase/unsorted-table results with bounded inputs. Preserve native nonzero allocation failure diagnostics and controlled exit by profile.",
       "topics": [
         "darwin-platform-support",
+        "logical-profile-compatibility",
         "lowercase-byte-domain",
         "platform-integration",
         "record-dates-and-file-notices",
@@ -894,10 +956,11 @@
       "upstream_sha256": "f759b74f3086be9094d2f182c448c3c3dfa93771205b55e676ed0d3c67773f31"
     },
     "source/utils.h": {
-      "distributed_sha256": "d66322b2a4bc6ead6c6e9a3fe1bb60ec09573d61805ed1e81b60db322b3d9f65",
+      "distributed_sha256": "51736d519c023cf918433db387092831646c608dfcd64c05721a8cb2824b1116",
       "modified": true,
-      "summary": "Declare the capacity of content-derived filename destinations. Derive output names from the content basename with explicit destination capacities, and reject overflowing output path joins.",
+      "summary": "Declare the capacity of content-derived filename destinations. Derive output names from the content basename with explicit destination capacities, and reject overflowing output path joins. Declare the native checked-allocation helper.",
       "topics": [
+        "logical-profile-compatibility",
         "record-dates-and-file-notices",
         "session-relative-filesystem"
       ],
@@ -913,7 +976,7 @@
       "upstream_sha256": null
     },
     "source/webmlib/halloc/align.h": {
-      "distributed_sha256": "615f54895122c4f2f0a8cbf4186c3d39220347de566666a22b354cec488b1396",
+      "distributed_sha256": "54f487d3233609509a1c93b355c5cd78aad91ee96f26ee8412395d668f8a29d6",
       "modified": true,
       "source_import": {
         "build": "4153",
@@ -921,7 +984,7 @@
         "repository": "https://github.com/DCurrent/openbor",
         "sha256": "7fad5abc6f50320e8dd19cc56c924e927e160af0100bede126ec0cbfa8cd111c"
       },
-      "summary": "Import the native 4153 media component, retaining its upstream authorship and license notices.",
+      "summary": "Select native media behavior by profile, retaining upstream authorship and license notices.",
       "topics": [
         "logical-profile-compatibility",
         "record-dates-and-file-notices"
@@ -929,7 +992,7 @@
       "upstream_sha256": null
     },
     "source/webmlib/halloc/halloc.c": {
-      "distributed_sha256": "e75ee35bbf40a14158b7a3e6a5094b0bf5b2a49034745b90f4df905df576793c",
+      "distributed_sha256": "79b57e5b28c3031bd0dc506ffbe6630eda21be068e15a7a8327675612bfe49ab",
       "modified": true,
       "source_import": {
         "build": "4153",
@@ -937,15 +1000,16 @@
         "repository": "https://github.com/DCurrent/openbor",
         "sha256": "b4be0ed36b72f969076aed9a3415159bb0a87a5b9091a4e0f75f613410b4b0db"
       },
-      "summary": "Import the native 4153 media component, retaining its upstream authorship and license notices.",
+      "summary": "Select native media behavior by profile, retaining upstream authorship and license notices. Select the native multimedia assertion diagnostic route by profile while retaining active safety checks and controlled engine termination. Rebuild detached sibling links after moving reallocations.",
       "topics": [
+        "hierarchical-allocation-links",
         "logical-profile-compatibility",
         "record-dates-and-file-notices"
       ],
       "upstream_sha256": null
     },
     "source/webmlib/halloc/halloc.h": {
-      "distributed_sha256": "e084828570ea9c1cfb4026a026103728791146735d5fdf3133daaaf8156ef629",
+      "distributed_sha256": "89ddb11589603abddb8d4ac4a4d7c763ebc9db0b8806dba12370ece68c5d7c15",
       "modified": true,
       "source_import": {
         "build": "4153",
@@ -953,7 +1017,7 @@
         "repository": "https://github.com/DCurrent/openbor",
         "sha256": "fd4dde7cde0fc609a0c1598d58b2ba387158d9ed29fbe1f4e86b43301e4c257b"
       },
-      "summary": "Import the native 4153 media component, retaining its upstream authorship and license notices.",
+      "summary": "Select native media behavior by profile, retaining upstream authorship and license notices.",
       "topics": [
         "logical-profile-compatibility",
         "record-dates-and-file-notices"
@@ -961,7 +1025,7 @@
       "upstream_sha256": null
     },
     "source/webmlib/halloc/hlist.h": {
-      "distributed_sha256": "56b6a29e901f0340ae73d24d831c94ff0cd61d84c3a3d6fcecbcf4340e1fffea",
+      "distributed_sha256": "699301b62d260f85dd7849d280de8a5da1151136330eb5e83c491cb94d061ef8",
       "modified": true,
       "source_import": {
         "build": "4153",
@@ -969,7 +1033,7 @@
         "repository": "https://github.com/DCurrent/openbor",
         "sha256": "594971bf6cdc832ea51057417e89e11bb92c96ad830f84c021401b8454d28199"
       },
-      "summary": "Import the native 4153 media component, retaining its upstream authorship and license notices.",
+      "summary": "Select native media behavior by profile, retaining upstream authorship and license notices.",
       "topics": [
         "logical-profile-compatibility",
         "record-dates-and-file-notices"
@@ -977,7 +1041,7 @@
       "upstream_sha256": null
     },
     "source/webmlib/halloc/macros.h": {
-      "distributed_sha256": "af0959ff854e208e2ad9249e83657f493913e24900e9b07a115c08257ca49fd8",
+      "distributed_sha256": "c329777106e60332494096f289bbd25c7c9165e88dd0c07f3798a80cb94bc656",
       "modified": true,
       "source_import": {
         "build": "4153",
@@ -985,7 +1049,7 @@
         "repository": "https://github.com/DCurrent/openbor",
         "sha256": "c6eb0318f268aadf04aca4ba89482c7b0e83823206d994c46efa2431966399e2"
       },
-      "summary": "Import the native 4153 media component, retaining its upstream authorship and license notices.",
+      "summary": "Select native media behavior by profile, retaining upstream authorship and license notices.",
       "topics": [
         "logical-profile-compatibility",
         "record-dates-and-file-notices"
@@ -1001,14 +1065,14 @@
         "repository": "https://github.com/DCurrent/openbor",
         "sha256": "505ee8e018326f36bb4070f69c6eb3caa6079b8fb796cd53a8d1bb168337e5ae"
       },
-      "summary": "Import the native 4153 media component, retaining its upstream authorship and license notices.",
+      "summary": "Select native media behavior by profile, retaining upstream authorship and license notices.",
       "topics": [
         "logical-profile-compatibility"
       ],
       "upstream_sha256": null
     },
     "source/webmlib/nestegg/nestegg.c": {
-      "distributed_sha256": "caebd06fbe2a05252cc244f1defbdb37991e45b980f29efe45745e90a4c84cca",
+      "distributed_sha256": "9c477869e4eb68cee899203ff6eccf445fbb9e8d8b3f898589c4419e9e77eebe",
       "modified": true,
       "source_import": {
         "build": "4153",
@@ -1016,7 +1080,7 @@
         "repository": "https://github.com/DCurrent/openbor",
         "sha256": "25605aafaded10580da9c22ca13066e33851e1e5f86740e0c8915491ef5545b3"
       },
-      "summary": "Bound compressed blocks before allocation in the explicitly enabled reproducible-media diagnostic; preserve normal parser limits otherwise.",
+      "summary": "Bound compressed blocks before allocation in the explicitly enabled reproducible-media diagnostic; preserve normal parser limits otherwise. Select the native multimedia assertion diagnostic route by profile while retaining controlled engine termination.",
       "topics": [
         "logical-profile-compatibility",
         "record-dates-and-file-notices"
@@ -1024,7 +1088,7 @@
       "upstream_sha256": null
     },
     "source/webmlib/nestegg/nestegg.h": {
-      "distributed_sha256": "b889e114fff047beb593d2430ec7e4fd07fa386e78a391d7504c6a9e40b4eca3",
+      "distributed_sha256": "1eeed8fc2d38539e56fad9ea5f489cbf6d971f694eefae1f0897474c97fd2c84",
       "modified": true,
       "source_import": {
         "build": "4153",
@@ -1032,7 +1096,7 @@
         "repository": "https://github.com/DCurrent/openbor",
         "sha256": "a2de8d88affaafd3cfc4df36e1b267d531ff17e90d049b0e5e242f4a0afce659"
       },
-      "summary": "Import the native 4153 media component, retaining its upstream authorship and license notices.",
+      "summary": "Select native media behavior by profile, retaining upstream authorship and license notices.",
       "topics": [
         "logical-profile-compatibility",
         "record-dates-and-file-notices"
@@ -1040,7 +1104,7 @@
       "upstream_sha256": null
     },
     "source/webmlib/samplecvt.c": {
-      "distributed_sha256": "8c038112d13373c54b9a62f2d84837e85451d2ed3ebbccac11cc98aadba01abd",
+      "distributed_sha256": "bb7e694f30d3f744a5219917a60df213d773b85a935a04cd80757a3c16bdb227",
       "modified": true,
       "source_import": {
         "build": "4153",
@@ -1048,7 +1112,7 @@
         "repository": "https://github.com/DCurrent/openbor",
         "sha256": "029805ff548dd6f5342001e3946226bc9328b8d6d86e06e79195a360e6de7d21"
       },
-      "summary": "Import the native 4153 media component, retaining its upstream authorship and license notices.",
+      "summary": "Select native media behavior by profile, retaining upstream authorship and license notices.",
       "topics": [
         "logical-profile-compatibility",
         "record-dates-and-file-notices"
@@ -1056,7 +1120,7 @@
       "upstream_sha256": null
     },
     "source/webmlib/samplecvt.h": {
-      "distributed_sha256": "648029b4bba8af5e84c6576864565c849db937d8c8502fef1334bfad2f1a5d7d",
+      "distributed_sha256": "2526bb9db38e65f0dcd59bee2cada4c5f220378d0bfa00b3565ab70f4905399b",
       "modified": true,
       "source_import": {
         "build": "4153",
@@ -1064,7 +1128,7 @@
         "repository": "https://github.com/DCurrent/openbor",
         "sha256": "3fd1c478b5c9bce2a44c4a1cee1001ed95069568cfcd4b23b02f6ad0e3205835"
       },
-      "summary": "Import the native 4153 media component, retaining its upstream authorship and license notices.",
+      "summary": "Select native media behavior by profile, retaining upstream authorship and license notices.",
       "topics": [
         "logical-profile-compatibility",
         "record-dates-and-file-notices"
@@ -1088,7 +1152,7 @@
       "upstream_sha256": null
     },
     "source/webmlib/vidplay.h": {
-      "distributed_sha256": "f17ecd0df15a119ac9723bdffe9eed0785a8fd2040ea1466b63ed7d4a300ad97",
+      "distributed_sha256": "20be6394c97a002ebb753e55242f521b828f6add8951270e82783373c80ed332",
       "modified": true,
       "source_import": {
         "build": "4153",
@@ -1096,7 +1160,7 @@
         "repository": "https://github.com/DCurrent/openbor",
         "sha256": "6fb3eafe0e70e3e815562e80d149e7c0e38e4a93969255daf2d4ff136c0ec04a"
       },
-      "summary": "Import the native 4153 media component, retaining its upstream authorship and license notices.",
+      "summary": "Select native media behavior by profile, retaining upstream authorship and license notices.",
       "topics": [
         "logical-profile-compatibility",
         "record-dates-and-file-notices"
@@ -1104,7 +1168,7 @@
       "upstream_sha256": null
     },
     "source/webmlib/vorbis.c": {
-      "distributed_sha256": "d996fb2688c188cbec64cf68ad0660a6d21dcf69c5a99fc08f4a67412087e7ae",
+      "distributed_sha256": "1c8ca9e08aaf55cba306a00b13f016432c5574d05f2361dff0f882429d56409f",
       "modified": true,
       "source_import": {
         "build": "4153",
@@ -1112,7 +1176,7 @@
         "repository": "https://github.com/DCurrent/openbor",
         "sha256": "95f261a1b507864b71a42a1a23de0c76c06b10a249639ecaefd4bc3e328d948b"
       },
-      "summary": "Import the native 4153 media component, retaining its upstream authorship and license notices.",
+      "summary": "Select native media behavior by profile, retaining upstream authorship and license notices. Select the native multimedia assertion diagnostic route by profile while retaining controlled engine termination. Route audio preparation refusal to the selected engine stop.",
       "topics": [
         "logical-profile-compatibility",
         "record-dates-and-file-notices"
@@ -1120,7 +1184,7 @@
       "upstream_sha256": null
     },
     "source/webmlib/vorbis.h": {
-      "distributed_sha256": "061e19e36f5127b91d3d6799bfa92e322a82e90115d8741b36ce44c05e4ed687",
+      "distributed_sha256": "48e3accd5374452957e170c6664c03aee87e90f0fb822dab5aa6947fdf93ed40",
       "modified": true,
       "source_import": {
         "build": "4153",
@@ -1128,7 +1192,7 @@
         "repository": "https://github.com/DCurrent/openbor",
         "sha256": "61d18e307b5bde79b0d4241a46b81d9088cad5beb3a9a3654bb7cb925f119044"
       },
-      "summary": "Import the native 4153 media component, retaining its upstream authorship and license notices.",
+      "summary": "Select native media behavior by profile, retaining upstream authorship and license notices.",
       "topics": [
         "logical-profile-compatibility",
         "record-dates-and-file-notices"
@@ -1136,7 +1200,7 @@
       "upstream_sha256": null
     },
     "source/webmlib/vorbisfpu.h": {
-      "distributed_sha256": "bedf1638cd39dcc63c390047db8df41e7080d8a34da46ffab41e7c92fb184132",
+      "distributed_sha256": "baaa7bcd1266f014865dda9656169669efac810c227b492f29ff8ccfce376df5",
       "modified": true,
       "source_import": {
         "build": "4153",
@@ -1144,7 +1208,7 @@
         "repository": "https://github.com/DCurrent/openbor",
         "sha256": "242c769e8c854ec2e2d7080db27571a9641a2224294d2e736e23dd3bae0afd0a"
       },
-      "summary": "Import the native 4153 media component, retaining its upstream authorship and license notices.",
+      "summary": "Select native media behavior by profile, retaining upstream authorship and license notices.",
       "topics": [
         "logical-profile-compatibility",
         "record-dates-and-file-notices"
@@ -1152,7 +1216,7 @@
       "upstream_sha256": null
     },
     "source/webmlib/yuv.c": {
-      "distributed_sha256": "e022afa3a9af60af6372282ab54ee349e8789e79c3e847b654f6cf887e627d5a",
+      "distributed_sha256": "f6c859d7f957d90b8ecfbf83bbf58e3399861f8feed962c16da8e1a330785c08",
       "modified": true,
       "source_import": {
         "build": "4153",
@@ -1160,7 +1224,7 @@
         "repository": "https://github.com/DCurrent/openbor",
         "sha256": "8207e345c0a709ce7e84232bb28f1bc5aac3c9431a7b9ed4fb119c3580113cd5"
       },
-      "summary": "Import the native 4153 media component, retaining its upstream authorship and license notices.",
+      "summary": "Select native media behavior by profile, retaining upstream authorship and license notices.",
       "topics": [
         "logical-profile-compatibility",
         "record-dates-and-file-notices"
@@ -1168,7 +1232,7 @@
       "upstream_sha256": null
     },
     "source/webmlib/yuv.h": {
-      "distributed_sha256": "fda0857a3ccf607c1f232209a1f9478f1a9a94e037133b81dc5fce93facd26d6",
+      "distributed_sha256": "14402e901643f7bd7879307d96248955f0cb1f8779ba5381eef0e6076e8a9270",
       "modified": true,
       "source_import": {
         "build": "4153",
@@ -1176,7 +1240,7 @@
         "repository": "https://github.com/DCurrent/openbor",
         "sha256": "b57503634e9ecdad542335f2ba81a93cd5af4e4ffbd7f98093ad2abf6fa3e8a2"
       },
-      "summary": "Import the native 4153 media component, retaining its upstream authorship and license notices.",
+      "summary": "Select native media behavior by profile, retaining upstream authorship and license notices.",
       "topics": [
         "logical-profile-compatibility",
         "record-dates-and-file-notices"

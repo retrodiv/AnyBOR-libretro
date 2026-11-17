@@ -5,7 +5,8 @@
  * Upstream code retains its original license and notices.
  * Declare the capacity of content-derived filename destinations. Derive
  * output names from the content basename with explicit destination
- * capacities, and reject overflowing output path joins.
+ * capacities, and reject overflowing output path joins. Declare the native
+ * checked-allocation helper.
  * Existing changes recorded here; this is not their implementation date.
  * See MODIFICATIONS.md and docs/modifications/4086.md
  * at the source repository root. Original notices follow below.
@@ -58,6 +59,7 @@ void lc(char *buf, size_t size);
 size_t getNewLineStart(char *buf);
 void debugBuf(unsigned char *buf, size_t size, int columns);
 void debug_printf(char *, ...);
+void *checkAlloc(void *ptr, size_t size, const char *func, const char *file, int line);
 void exitIfFalse(int value, const char *assertion, const char *func, const char *file, int line);
 void abortIfFalse(int value, const char *assertion, const char *func, const char *file, int line);
 void getPakName(char *name, size_t capacity, int type);

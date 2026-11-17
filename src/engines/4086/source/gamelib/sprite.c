@@ -5,6 +5,10 @@
  * Upstream code retains its original license and notices.
  * Declare initialized encoded sprite-body ranges and source crops for exact
  * reconstruction proof, retaining headers, palettes and mutable changes.
+ * Preserve native integer or floating rotation storage by profile, with
+ * unchanged slot size and typed script, parser, mirror, copy and raster
+ * access. Bound integer rotation results and initial trigonometric table
+ * indices.
  * Existing changes recorded here; this is not their implementation date.
  * See MODIFICATIONS.md and docs/modifications/4086.md
  * at the source repository root. Original notices follow below.
@@ -596,7 +600,7 @@ void putsprite_ex(int x, int y, s_sprite *frame, s_screen *screen, s_drawmethod 
     }
 
     // no scale, no shift, no flip, no fill, so use common method
-    if(!drawmethod->water.watermode && drawmethod->scalex == 256 && drawmethod->scaley == 256 && !drawmethod->flipy && !drawmethod->shiftx && drawmethod->fillcolor == TRANSPARENT_IDX && !drawmethod->rotate)
+    if(!drawmethod->water.watermode && drawmethod->scalex == 256 && drawmethod->scaley == 256 && !drawmethod->flipy && !drawmethod->shiftx && drawmethod->fillcolor == TRANSPARENT_IDX && !obor_drawmethod_rotation(drawmethod))
     {
         if(drawmethod->flipx)
         {
@@ -632,7 +636,7 @@ void putsprite_ex(int x, int y, s_sprite *frame, s_screen *screen, s_drawmethod 
     {
         gfx_draw_water(screen, &gfx, x, y, frame->centerx, frame->centery, drawmethod);
     }
-    else if(drawmethod->rotate)
+    else if(obor_drawmethod_rotation(drawmethod))
     {
         gfx_draw_rotate(screen, &gfx, x, y, frame->centerx, frame->centery, drawmethod);
     }

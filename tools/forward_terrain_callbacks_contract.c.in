@@ -1,0 +1,229 @@
+/* SPDX-License-Identifier: BSD-3-Clause
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me>
+ * Complete native callbacks, testmove and common_trymove with native geometry.
+ */
+#include <stdint.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <limits.h>
+#include <stdarg.h>
+#include <ctype.h>
+#include "openbor.h"
+#include "commands.h"
+#undef printf
+#undef assert
+
+/* These consumer contracts observe successful delegated allocations.
+ * Native wrapper outputs are covered by the separate compatibility suite. */
+void *checkAlloc(void *pointer,size_t size,const char *function,const char *file,int line)
+{
+    (void)function; (void)file; (void)line;
+    if(size && !pointer) abort();
+    return pointer;
+}
+#undef rand
+#undef Script_Set_Local_Variant
+#ifdef NDEBUG
+#error Terrain callback assertions must remain enabled
+#endif
+uint32_t obor_profile_build;
+static unsigned active_case;
+#define assert(c) do{if(!(c)){fprintf(stderr,"TERRAIN_CALLBACK revision=%u case=%u line=%d: %s\n",obor_profile_build,active_case,__LINE__,#c);abort();}}while(0)
+HRESULT Interpreter_Call(Interpreter *p){(void)p;abort();}
+HRESULT Interpreter_EvalInstruction(Interpreter *p){(void)p;abort();}
+void StrCache_Collect(int i){(void)i;abort();}
+void StrCache_Grab(int i){(void)i;abort();}
+int StrCache_Pop(void){abort();}
+@VARIANTS@
+static const struct{unsigned revision;int platform,wall_index,hole,base_event;} contexts[]={@CONTEXTS@};
+static unsigned context;
+static entity actor,platform,sentinel;entity *self=&actor;
+static s_scripts container;static Script scripts[3];
+static int active_kind,enabled,installs,clears,executed,vm_result;
+static int expected_plane,expected_index;static float expected_height;static entity *expected_platform;
+static int callback_probe;static float expected_prebase;
+static ScriptVariant locals[4];
+static const char *keys[3][4]={{"self","plane","platform",NULL},{"self","plane","height","index"},{"self","plane","height","index"}};
+static int key_count(void){return active_kind==0?3:active_kind==1?3+contexts[context].wall_index:4;}
+static void observe_local(Script *s,const char *key,ScriptVariant *value){
+ assert(s==&scripts[active_kind]);int index=executed?clears++:installs++;
+ assert(index<key_count() && !strcmp(key,keys[active_kind][index]));
+ if(executed)assert(value->vt==VT_EMPTY);
+ else if(index==0)assert(value->vt==VT_PTR && value->ptrVal==&actor);
+ else if(index==1)assert(value->vt==VT_INTEGER && value->lVal==expected_plane);
+ else if(index==3)assert(value->vt==VT_INTEGER && value->lVal==expected_index);
+ else if(active_kind==0){
+  ScriptVariant expected={0};expected.ptrVal=expected_platform;
+  assert(value->vt==VT_DECIMAL && !memcmp(&value->dblVal,&expected.dblVal,sizeof(expected.dblVal)));
+ }
+ else assert(value->vt==VT_DECIMAL && value->dblVal==(DOUBLE)expected_height);
+ ScriptVariant_Copy(&locals[index],value);
+}
+#define Script_Set_Local_Variant observe_local
+int Script_IsInitialized(Script *s){assert(!s || s==&scripts[active_kind]);return s?enabled:0;}
+int Script_Execute(Script *s){
+ assert(s==&scripts[active_kind] && installs==key_count() && !clears && !executed);++executed;
+ if(callback_probe)assert(self==&actor && actor.base==expected_prebase && actor.link==&platform && platform.link==&actor);
+ for(int i=0;i<key_count();++i)assert(locals[i].vt!=VT_EMPTY);
+ locals[1].lVal=-37; /* VM edits and return values do not suppress native cleanup. */
+ return vm_result;
+}
+static s_level world;s_level *level=&world;
+static __typeof__(*world.holes) holes[4],walls[2];
+static entity *entities[1]={&platform};entity **ent_list=entities;
+int ent_max=1,holez,PLAYER_MIN_Z=-100,PLAYER_MAX_Z=100;float advancex;
+s_videomodes videomodes;
+static s_anim actor_animation,platform_animation;
+static s_axis_i movement;static s_axis_i *movement_rows[1]={&movement};static float platform_rows[1][8];
+static int moved[2];
+static int refused_random(void){abort();}
+#define rand refused_random
+entity *find_ent_here(entity *e,float x,float z,int types,int(*test)(entity*,entity*)){(void)e;(void)x;(void)z;(void)types;(void)test;abort();}
+int trygrab(entity *e){(void)e;abort();}
+void execute_onblockz_script(entity *e){(void)e;abort();}
+void execute_onblocks_script(entity *e){(void)e;abort();}
+void execute_onblocko_script(entity *e,entity *other){(void)e;(void)other;abort();}
+void execute_onmovex_script(entity *e){assert(e==&actor);++moved[0];}
+void execute_onmovez_script(entity *e){assert(e==&actor);++moved[1];}
+void check_gravity(entity *e){(void)e;abort();}
+@FUNCTIONS@
+static char diagnostic[1024];static int warning_count,holesprite,pack_success,sprite_tests,sprite_loads;
+int pixelformat=PIXEL_32;
+static int diagnostic_message(const char *format,...){
+ va_list args;va_start(args,format);int count=vsnprintf(diagnostic,sizeof(diagnostic),format,args);va_end(args);
+ assert(count>=0 && (size_t)count<sizeof(diagnostic));++warning_count;return count;
+}
+int openpackfile(const char *name,const char *pack){assert(!strcmp(name,"1.25") && !strcmp(pack,"unit.pak"));++sprite_tests;return pack_success?3:-1;}
+int closepackfile(int handle){assert(handle==(pack_success?3:-1));return pack_success?0:-1;}
+int loadsprite(char *name,int x,int y,int format){assert(!strcmp(name,pack_success?"1.25":"data/sprites/hole") && x==0 && y==0 && format==pixelformat);++sprite_loads;return 9;}
+#define printf diagnostic_message
+@PARSER@
+#undef printf
+static void load_hole(char *input){
+ ArgList arglist={0};char argbuf[MAX_ARG_LEN]={0};char *filename="unit-level",*command="hole",*value=NULL,*packfile="unit.pak";
+ assert(ParseArgs(&arglist,input,argbuf));
+ switch(CMD_LEVEL_HOLE){case CMD_LEVEL_HOLE:@LOAD_CASE@}
+}
+static void exit_barrier(int exit_hole){int panel_height=19;@EXIT_HOLE@}
+static const struct{const char *text;float value;int warning;} hole_values[]={@HOLE_VALUES@};
+static void setup(int kind,int initialized,int absent){
+ memset(&actor,0,sizeof(actor));memset(&platform,0,sizeof(platform));memset(&container,0,sizeof(container));
+ memset(&world,0,sizeof(world));memset(holes,0,sizeof(holes));memset(walls,0,sizeof(walls));
+ memset(&actor_animation,0,sizeof(actor_animation));memset(&platform_animation,0,sizeof(platform_animation));
+ memset(&movement,0,sizeof(movement));memset(platform_rows,0,sizeof(platform_rows));memset(moved,0,sizeof(moved));
+ actor.scripts=&container;actor.animation=&actor_animation;actor.modeldata.type=TYPE_ENEMY;actor.modeldata.size.y=8;actor.idling=1;
+ actor_animation.numframes=actor_animation.obor_frame_capacity=1;actor_animation.move=movement_rows;
+ platform.animation=&platform_animation;platform_animation.numframes=platform_animation.obor_frame_capacity=1;platform_animation.platform=platform_rows;
+ container.onblockp_script=absent?NULL:&scripts[0];container.onblockw_script=absent?NULL:&scripts[1];container.inhole_script=absent?NULL:&scripts[2];
+ active_kind=kind;enabled=initialized;installs=clears=executed=0;vm_result=-1;
+ expected_plane=2;expected_index=1;expected_height=10;expected_platform=&platform;
+ callback_probe=0;expected_prebase=7;
+ for(int i=0;i<4;++i){memset(&locals[i],0,sizeof(locals[i]));locals[i].vt=VT_INTEGER;locals[i].lVal=777;}
+ level=&world;world.holes=holes;world.walls=walls;holez=-91;self=&actor;
+}
+static void verify(int should_execute){
+ assert(executed==should_execute && installs==should_execute*key_count() && clears==installs);
+ for(int i=0;i<4;++i){
+  int cleared=should_execute && i<key_count();assert(locals[i].vt==(cleared?VT_EMPTY:VT_INTEGER));
+  if(!cleared)assert(locals[i].lVal==777);
+ }
+}
+static void direct(void){
+ const int values[]={INT_MIN,-1,0,2,INT_MAX};const float heights[]={-8.5f,0,3.25f};
+ for(int kind=0;kind<3;++kind)for(int mode=0;mode<3;++mode)for(unsigned n=0;n<5;++n)for(int vm=-1;vm<=1;++vm){
+  ++active_case;setup(kind,mode==0,mode==2);expected_plane=values[n];expected_index=values[4-n];expected_height=heights[n%3];expected_platform=n&1?&platform:NULL;vm_result=vm;
+  if(kind==0)execute_onblockp_script(&actor,expected_plane,expected_platform);
+  else if(kind==1)execute_onblockw_script(&actor,expected_plane,expected_height,expected_index);
+  else execute_inhole_script(&actor,expected_plane,expected_height,expected_index);
+  int available=kind==0?contexts[context].platform:kind==1?1:contexts[context].hole;
+  verify(mode==0 && available);
+ }
+}
+static void rectangle(__typeof__(*world.holes) *r,int axis,float height){
+ memset(r,0,sizeof(*r));r->height=height;r->upperleft=r->lowerleft=-1;r->upperright=r->lowerright=1;r->depth=2;
+ if(axis==0){r->x=2;r->z=1;}else{r->x=0;r->z=3;}
+}
+static void blocking(void){
+ for(int kind=0;kind<2;++kind)for(int axis=0;axis<2;++axis)for(int mixed=0;mixed<2;++mixed)for(int initialized=0;initialized<2;++initialized){
+  ++active_case;setup(kind,initialized,0);expected_plane=axis+1;
+  if(kind==0){
+   actor.modeldata.subject_to_platform=1;platform.exists=1;platform.position.x=axis?0:2;platform.position.z=axis?2:0;
+   platform_rows[0][1]=1;platform_rows[0][2]=platform_rows[0][3]=-1;platform_rows[0][4]=platform_rows[0][5]=1;platform_rows[0][6]=2;platform_rows[0][7]=10;
+  }else{actor.modeldata.subject_to_wall=1;world.numwalls=2;rectangle(&walls[0],axis,10);walls[0].x=100;rectangle(&walls[1],axis,10);}
+  float dx=axis?(mixed?3:0):2,dz=axis?2:(mixed?3:0);
+  assert(testmove(&actor,0,0,axis?0:2,axis?2:0)==0);verify(0);
+  int result=common_trymove(dx,dz);assert(result==(mixed?2:0));
+  assert(actor.position.x==(axis && mixed?3:0) && actor.position.z==(!axis && mixed?3:0));
+  assert(moved[axis?0:1]==mixed && !moved[axis]);
+  verify(initialized && (kind?1:contexts[context].platform));
+ }
+}
+static void hole_movement(void){
+ const float heights[]={-5,20,20};const float altitudes[]={0,22.5f,12};
+ for(int axis=0;axis<2;++axis)for(int n=0;n<3;++n){
+  ++active_case;setup(2,1,0);actor.modeldata.subject_to_hole=1;world.numholes=1;rectangle(&holes[0],axis,heights[n]);actor.position.y=actor.base=altitudes[n];
+  int blocked=!contexts[context].hole || n==2;float x=axis?0:2,z=axis?2:0;
+  assert(testmove(&actor,0,0,x,z)==(blocked?-2:1));verify(0);holez=-91;
+  assert(common_trymove(x,z)==(blocked?0:1));assert(actor.position.x==(blocked?0:x) && actor.position.z==(blocked?0:z));
+  assert(holez==(contexts[context].hole?-91:0));verify(0);
+ }
+ setup(0,1,0);assert(common_trymove(0,0)==0 && !moved[0] && !moved[1]);
+ assert(common_trymove(2,3)==1 && actor.position.x==2 && actor.position.z==3 && moved[0]==1 && moved[1]==1);verify(0);
+}
+static void load_records(void){
+ for(int mode=0;mode<3;++mode){
+  setup(2,1,0);world.holes=NULL;holesprite=mode? -1:9;pack_success=mode==2;sprite_tests=sprite_loads=0;
+  for(unsigned n=0;n<sizeof(hole_values)/sizeof(*hole_values);++n){
+   ++active_case;char input[256];snprintf(input,sizeof(input),"hole 1.25 2.5 -3 4.5 6.25 8.5 10.75 %s",hole_values[n].text);
+   diagnostic[0]=0;warning_count=0;load_hole(input);assert(world.numholes==(int)n+1);
+   __typeof__(*world.holes) expected={0};expected.x=1.25f;expected.z=2.5f;expected.upperleft=-3;expected.lowerleft=4.5f;expected.upperright=6.25f;expected.lowerright=8.5f;expected.depth=10.75f;
+   expected.height=contexts[context].hole?hole_values[n].value:0;
+   assert(!memcmp(&world.holes[n],&expected,sizeof(expected)));
+   assert(warning_count==(contexts[context].hole?hole_values[n].warning:0));
+   if(warning_count){char message[256];snprintf(message,sizeof(message),"WARNING: unit-level tries to load a nonnumeric value at hole, where a number is expected!\nerroneus string: %s\n",hole_values[n].text);assert(!strcmp(diagnostic,message));}
+   else assert(!diagnostic[0]);
+   assert(holesprite==9 && sprite_tests==(mode!=0) && sprite_loads==(mode!=0));
+  }
+  free(world.holes);world.holes=NULL;
+ }
+ for(int present=0;present<2;++present){
+  ++active_case;setup(2,1,0);world.holes=NULL;world.width=432;exit_barrier(present);assert(world.numholes==present);
+  if(present){__typeof__(*world.holes) expected={0};expected.x=432;expected.z=PLAYER_MAX_Z;expected.upperleft=-19;expected.lowerleft=0;expected.upperright=expected.lowerright=1000;expected.depth=19;assert(!memcmp(world.holes,&expected,sizeof(expected)));}
+  free(world.holes);world.holes=NULL;
+ }
+}
+static void falling_records(void){
+ const float altitudes[]={-1,0,12,22,22.5f};
+ for(unsigned a=0;a<5;++a)for(int set=0;set<2;++set){
+  ++active_case;setup(2,1,0);actor.modeldata.subject_to_hole=1;world.numholes=4;
+  for(int i=0;i<4;++i){rectangle(&holes[i],0,i==0?-5:i==1?10:20);holes[i].x=0;}
+  actor.position.y=altitudes[a];actor.base=7;movement.base=set?5:0;
+  actor.link=actor.grabbing=&platform;platform.link=platform.grabbing=&actor;
+  expected_plane=0;expected_height=20;expected_index=3;callback_probe=1;
+  entity *out=&sentinel;self=&sentinel;adjust_base(&actor,&out);
+  int hole=!contexts[context].hole || a<4;
+  assert(self==&sentinel && !out && actor.position.y==altitudes[a]);
+  assert(actor.base==(hole && !set?-1000:set?5:0));
+  assert(actor.link==(hole && !set?NULL:&platform) && platform.link==(hole && !set?NULL:&actor));
+  assert(holez==(contexts[context].hole?-91:0));verify(contexts[context].base_event && hole);
+ }
+ ++active_case;setup(2,1,0);world.numholes=1;rectangle(&holes[0],0,-5);holes[0].x=0;actor.modeldata.subject_to_hole=1;actor.position.y=-7;actor.base=-1000;actor.velocity.x=2;actor.velocity.z=3;
+ {entity *out=&sentinel;self=&sentinel;adjust_base(&actor,&out);assert(self==&sentinel && !out && actor.base==-1000 && actor.velocity.x==(contexts[context].hole?0:2) && actor.velocity.z==(contexts[context].hole?0:3));verify(0);}
+ for(int blocker=0;blocker<4;++blocker){
+  ++active_case;setup(2,1,0);world.numholes=1;rectangle(&holes[0],0,20);holes[0].x=0;actor.modeldata.subject_to_hole=1;actor.position.y=6;actor.base=7;
+  if(blocker==0)actor.modeldata.no_adjust_base=1;
+  else if(blocker==1){actor.modeldata.subject_to_wall=1;world.numwalls=1;rectangle(&walls[0],0,10);walls[0].x=0;}
+  else if(blocker==2){actor.modeldata.subject_to_platform=1;platform.exists=1;platform.update_mark=8;platform_rows[0][1]=1;platform_rows[0][2]=platform_rows[0][3]=-1;platform_rows[0][4]=platform_rows[0][5]=1;platform_rows[0][6]=2;platform_rows[0][7]=5;}
+  else level=NULL;
+  entity *out=&sentinel;self=&sentinel;adjust_base(&actor,&out);assert(self==&sentinel && out==(blocker==2?&platform:NULL));
+  assert(actor.base==(blocker==0?7:blocker==1?10:blocker==2?5:0) && actor.position.y==6 && holez==-91);verify(0);
+ }
+}
+int main(void){
+ for(context=0;context<sizeof(contexts)/sizeof(*contexts);++context){
+  obor_profile_build=contexts[context].revision;active_case=0;direct();blocking();hole_movement();load_records();falling_records();
+  printf("{\"revision\":%u,\"status\":\"PASS\"}\n",obor_profile_build);
+ }
+ return 0;
+}

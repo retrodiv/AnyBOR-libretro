@@ -6,7 +6,7 @@ Copyright (c) 2026 retrodiv <retrodiv@proton.me>
 from pathlib import Path
 import re
 
-from test_historical_player import function
+from test_historical_player import function, optional_trailing_parameter
 from test_early_jump_walkoff import continued_macro
 
 
@@ -41,7 +41,7 @@ def direction_program(root, data):
             matrix(row['binding_x']), matrix(row['binding_stored']),
             matrix(row['target_selected']), matrix(row['range_accepted']),
             matrix(row['arrow_velocity'], True)))
-    parts = dict(**arms,
+    parts = dict(**arms, TAG_PARAMETER=optional_trailing_parameter(core, 'set_fall', 10, 'int tag'),
         FUNCTIONS='\n'.join(function(core, name) for name in
             ('diff', 'adjust_bind', 'normal_find_target', 'ent_spawn_ent', 'ent_summon_ent', 'arrow_move')),
         MACROS='\n'.join(continued_macro(core, name) for name in

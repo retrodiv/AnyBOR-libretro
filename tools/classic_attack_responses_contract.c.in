@@ -32,7 +32,7 @@ void ent_set_colourmap(entity *ent,unsigned int map) {(void)ent;(void)map;abort(
 void execute_onpain_script(entity *ent,int type,int reset)
 {assert(ent==&actor && reset==1);callback_type=type;++callbacks;}
 void execute_onfall_script(entity *ent,entity *attacker,int force,int drop,int type,
-    int noblock,int guardcost,int jugglecost,int pauseadd)
+    int noblock,int guardcost,int jugglecost,int pauseadd@TAG_PARAMETER@)
 {
     assert(ent==&actor && attacker==&other && force==7 && drop==8 && noblock==9 &&
         guardcost==10 && jugglecost==11 && pauseadd==12);
@@ -64,7 +64,7 @@ static int transition(int family,int type)
     {
     case 0:return set_pain(&actor,type,1);
     case 1:return set_death(&actor,type,1);
-    case 2:return set_fall(&actor,type,1,&other,7,8,9,10,11,12);
+    case 2:return set_fall(&actor,type,1,&other,7,8,9,10,11,12@TAG_ARGUMENT@);
     case 3:return set_rise(&actor,type,1);
     case 4:return set_riseattack(&actor,type,1);
     case 5:return set_blockpain(&actor,type,1);

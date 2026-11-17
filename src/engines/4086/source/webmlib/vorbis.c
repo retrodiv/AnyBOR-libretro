@@ -3,8 +3,10 @@
  * Copyright (c) 2026 retrodiv <retrodiv@proton.me> (original contributions).
  * These contributions are licensed under BSD-3-Clause; see LICENSE at the root.
  * Upstream code retains its original license and notices.
- * Import the native 4153 media component, retaining its upstream authorship
- * and license notices.
+ * Select native media behavior by profile, retaining upstream authorship and
+ * license notices. Select the native multimedia assertion diagnostic route
+ * by profile while retaining controlled engine termination. Route audio
+ * preparation refusal to the selected engine stop.
  * Existing changes recorded here; this is not their implementation date.
  * See MODIFICATIONS.md and docs/modifications/4086.md
  * at the source repository root. Original notices follow below.
@@ -22,6 +24,16 @@
 #include <stdlib.h>
 #include <string.h>
 #include "globals.h"
+
+/* Keep safety checks active while retaining the native failure route. */
+#if defined(LIBRETRO) && !defined(PP_TEST)
+extern unsigned int obor_profile_build;
+#undef assert
+#define assert(x) (obor_profile_build >= 4161 ? \
+    exitIfFalse((x) ? 1 : 0, #x, __func__, __FILE__, __LINE__) : \
+    obor_port_assert((x) ? 1 : 0, #x, __func__, __FILE__, __LINE__))
+#endif
+
 #include "vorbis.h"
 #include "samplecvt.h"
 
@@ -42,7 +54,7 @@ void vorbis_destroy(vorbis_context *ctx)
 // call after reading header packets but before audio data
 void vorbis_prepare(vorbis_context *ctx)
 {
-    if (vorbis_synthesis_init(&ctx->v, &ctx->vi) != 0) exit(1);
+    if (vorbis_synthesis_init(&ctx->v, &ctx->vi) != 0) borExit(1);
     vorbis_block_init(&ctx->v, &ctx->vb);
 }
 

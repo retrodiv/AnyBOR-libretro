@@ -34,7 +34,7 @@ v3.0 3837, v3.0 3839, v3.0 3842, v3.0 3846, v3.0 3847-dev, v3.0 3849, v3.0 3854,
 v3.0 3968-dev, v3.0 3970-dev, v3.0 3978, v3.0 3984, v3.0 3993, v3.0 3994, v3.0
 4011, v3.0 4046, v3.0 4051, v3.0 4054, v3.0 4055, v3.0 4079, v3.0 4080, v3.0
 4082, v3.0 4085, v3.0 4086, v3.0 4088-dev, v3.0 4107, v3.0 4111, v3.0 4129, v3.0
-4153, v3.0 4432, v3.0 4453, v3.0 6330, v3.0 6330-lns-010g, v3.0 6391, v3.0 6391-mod, v3.0 6392-dev,
+4153, v3.0 4161-dev, v3.0 4183-dev, v3.0 4213, v3.0 4432, v3.0 4453, v3.0 6330, v3.0 6330-lns-010g, v3.0 6391, v3.0 6391-mod, v3.0 6392-dev,
 v3.0 6412-dev, v3.0 6510-dev, v3.0 7086-dev, v3.0 7123-dev, v4.0 7142-alpha,
 v4.0 7530, v4.0 7533, v4.0 7555, v4.0 7556, v4.0 7735 and v4.0 8023-dev.
 
@@ -55,10 +55,10 @@ Player spawn coordinates use the earlier vertical limit before 3800. Before
 same per-file script locals across entries. Later profiles retain the engine's
 combined per-entry script behavior. See [manual selection and historical
 limits](docs/HISTORICAL_PROFILES.md).
-Declared revisions from 4087 through 4153 use the first official automatic
-profile at or above the declaration, except that the exact unofficial Build
-4088 tag selects its development profile. That development profile is excluded
-from imprecise-tag and content-based replacement choices.
+Declared revisions from 4087 through 4213 use the first official automatic
+profile at or above the declaration, except that exact unofficial Build
+4088, 4161 and 4183 tags select their development profiles. These development
+profiles are excluded from imprecise-tag and content-based replacement choices.
 Automatic routing includes v3.0 4453 for declared builds 4433–4453 and
 v3.0 6330 for 4454–6330. Profile v3.0 6391 covers 6331–6412, except that an
 exact filename Build 6392 or Build 6412 tag selects the corresponding test

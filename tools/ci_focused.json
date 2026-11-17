@@ -182,6 +182,16 @@
       "ci": "shared"
     },
     {
+      "id": "test_forward_settings_records",
+      "memory_mib": 512,
+      "seconds": 120,
+      "command": [
+        "python3",
+        "tools/test_forward_settings_records.py"
+      ],
+      "ci": "shared"
+    },
+    {
       "id": "test_script_file_records",
       "memory_mib": 512,
       "seconds": 180,
@@ -1628,6 +1638,16 @@
       "command": [
         "python3",
         "tools/test_native_text_mapper.py"
+      ],
+      "ci": "shared"
+    },
+    {
+      "id": "test_native_name_search",
+      "memory_mib": 512,
+      "seconds": 120,
+      "command": [
+        "python3",
+        "tools/test_native_name_search.py"
       ],
       "ci": "shared"
     },
@@ -3818,6 +3838,256 @@
       "command": [
         "python3",
         "tools/test_nested_archives.py"
+      ],
+      "ci": "shared"
+    },
+    {
+      "id": "test_forward_script_math",
+      "memory_mib": 512,
+      "seconds": 120,
+      "command": [
+        "python3",
+        "tools/test_forward_script_math.py"
+      ],
+      "ci": "shared"
+    },
+    {
+      "id": "test_forward_entity_state",
+      "memory_mib": 512,
+      "seconds": 120,
+      "command": [
+        "python3",
+        "tools/test_forward_entity_state.py"
+      ],
+      "ci": "shared"
+    },
+    {
+      "id": "test_forward_script_containers",
+      "memory_mib": 512,
+      "seconds": 120,
+      "command": [
+        "python3",
+        "tools/test_forward_script_containers.py"
+      ],
+      "ci": "shared"
+    },
+    {
+      "id": "test_forward_byte_streams",
+      "memory_mib": 512,
+      "seconds": 120,
+      "command": [
+        "python3",
+        "tools/test_forward_byte_streams.py"
+      ],
+      "ci": "shared"
+    },
+    {
+      "id": "test_forward_attack_api",
+      "memory_mib": 512,
+      "seconds": 120,
+      "command": [
+        "python3",
+        "tools/test_forward_attack_api.py"
+      ],
+      "ci": "shared"
+    },
+    {
+      "id": "test_forward_animation_mapping",
+      "memory_mib": 512,
+      "seconds": 120,
+      "command": [
+        "python3",
+        "tools/test_forward_animation_mapping.py"
+      ],
+      "ci": "shared"
+    },
+    {
+      "id": "test_forward_animation_properties",
+      "memory_mib": 512,
+      "seconds": 120,
+      "command": [
+        "python3",
+        "tools/test_forward_animation_properties.py"
+      ],
+      "ci": "shared"
+    },
+    {
+      "id": "test_forward_entity_properties",
+      "memory_mib": 512,
+      "seconds": 120,
+      "command": [
+        "python3",
+        "tools/test_forward_entity_properties.py"
+      ],
+      "ci": "shared"
+    },
+    {
+      "id": "test_forward_animation_storage",
+      "memory_mib": 512,
+      "seconds": 120,
+      "command": [
+        "python3",
+        "tools/test_forward_animation_storage.py"
+      ],
+      "ci": "shared"
+    },
+    {
+      "id": "test_forward_model_parser",
+      "memory_mib": 512,
+      "seconds": 120,
+      "command": [
+        "python3",
+        "tools/test_forward_model_parser.py"
+      ],
+      "ci": "shared"
+    },
+    {
+      "id": "test_forward_system_variants",
+      "memory_mib": 512,
+      "seconds": 120,
+      "command": [
+        "python3",
+        "tools/test_forward_system_variants.py"
+      ],
+      "ci": "shared"
+    },
+    {
+      "id": "test_forward_attack_callbacks",
+      "memory_mib": 512,
+      "seconds": 120,
+      "command": [
+        "python3",
+        "tools/test_forward_attack_callbacks.py"
+      ],
+      "ci": "shared"
+    },
+    {
+      "id": "test_forward_terrain_queries",
+      "memory_mib": 512,
+      "seconds": 120,
+      "command": [
+        "python3",
+        "tools/test_forward_terrain_queries.py"
+      ],
+      "ci": "shared"
+    },
+    {
+      "id": "test_forward_terrain_callbacks",
+      "memory_mib": 512,
+      "seconds": 120,
+      "command": [
+        "python3",
+        "tools/test_forward_terrain_callbacks.py"
+      ],
+      "ci": "shared"
+    },
+    {
+      "id": "test_forward_terrain_display",
+      "memory_mib": 512,
+      "seconds": 120,
+      "command": [
+        "python3",
+        "tools/test_forward_terrain_display.py"
+      ],
+      "ci": "shared"
+    },
+    {
+      "id": "test_forward_player_properties",
+      "memory_mib": 512,
+      "seconds": 120,
+      "command": [
+        "python3",
+        "tools/test_forward_player_properties.py"
+      ],
+      "ci": "shared"
+    },
+    {
+      "id": "test_forward_level_properties",
+      "memory_mib": 512,
+      "seconds": 120,
+      "command": [
+        "python3",
+        "tools/test_forward_level_properties.py"
+      ],
+      "ci": "shared"
+    },
+    {
+      "id": "test_forward_registry_ui",
+      "memory_mib": 512,
+      "seconds": 120,
+      "command": [
+        "python3",
+        "tools/test_forward_registry_ui.py"
+      ],
+      "ci": "shared"
+    },
+    {
+      "id": "test_forward_level_order",
+      "memory_mib": 512,
+      "seconds": 120,
+      "command": [
+        "python3",
+        "tools/test_forward_level_order.py"
+      ],
+      "ci": "shared"
+    },
+    {
+      "id": "test_forward_selection",
+      "memory_mib": 512,
+      "seconds": 120,
+      "command": [
+        "python3",
+        "tools/test_forward_selection.py"
+      ],
+      "ci": "shared"
+    },
+    {
+      "id": "test_forward_pause_debug",
+      "memory_mib": 512,
+      "seconds": 120,
+      "command": [
+        "python3",
+        "tools/test_forward_pause_debug.py"
+      ],
+      "ci": "shared"
+    },
+    {
+      "id": "test_forward_background",
+      "memory_mib": 512,
+      "seconds": 120,
+      "command": [
+        "python3",
+        "tools/test_forward_background.py"
+      ],
+      "ci": "shared"
+    },
+    {
+      "id": "test_forward_drawing_details",
+      "memory_mib": 512,
+      "seconds": 120,
+      "command": [
+        "python3",
+        "tools/test_forward_drawing_details.py"
+      ],
+      "ci": "shared"
+    },
+    {
+      "id": "test_forward_spawn_properties",
+      "memory_mib": 512,
+      "seconds": 120,
+      "command": [
+        "python3",
+        "tools/test_forward_spawn_properties.py"
+      ],
+      "ci": "shared"
+    },
+    {
+      "id": "test_forward_failure_contracts",
+      "memory_mib": 512,
+      "seconds": 120,
+      "command": [
+        "python3",
+        "tools/test_forward_failure_contracts.py"
       ],
       "ci": "shared"
     }

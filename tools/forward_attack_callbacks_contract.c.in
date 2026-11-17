@@ -1,0 +1,173 @@
+/* SPDX-License-Identifier: BSD-3-Clause
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me>
+ * Complete native callbacks/fall and complete selected caller statements.
+ */
+#include <stdint.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <limits.h>
+#include <stddef.h>
+#include "openbor.h"
+#undef printf
+#undef assert
+#undef Script_Set_Local_Variant
+#ifdef NDEBUG
+#error Attack callback assertions must remain enabled
+#endif
+uint32_t obor_profile_build;
+static unsigned active_case;
+static int native_tag;
+#define assert(c) do{if(!(c)){fprintf(stderr,"ATTACK_CALLBACK revision=%u case=%u line=%d: %s\n",obor_profile_build,active_case,__LINE__,#c);abort();}}while(0)
+HRESULT Interpreter_Call(Interpreter *p){(void)p;abort();}
+HRESULT Interpreter_EvalInstruction(Interpreter *p){(void)p;abort();}
+static char cache[16][128];static int used[16];
+int StrCache_Pop(void){for(int i=0;i<16;++i)if(!used[i]){used[i]=1;cache[i][0]=0;return i;}abort();}
+void StrCache_Collect(int i){assert(i>=0 && i<16 && used[i]);used[i]=0;}
+CHAR *StrCache_Get(int i){assert(i>=0 && i<16 && used[i]);return cache[i];}
+CHAR *StrCache_GetIfPresent(int i){return i>=0 && i<16 && used[i]?cache[i]:NULL;}
+void StrCache_Copy(int i,CHAR *s){assert(i>=0 && i<16 && used[i] && strlen(s)<128);strcpy(cache[i],s);}
+@VARIANTS@
+static entity actors[3];
+entity *self;
+static entity *entities[1];entity **ent_list=entities;
+static s_scripts containers[3],global_container;
+s_scripts *global_model_scripts;
+static Script scripts[19];
+static int initialized[19],installs[19],clears[19],executed[19];
+static ScriptVariant locals[19][16];
+static const char *keys[6][12]={@KEYS@};
+static const int key_counts[]={@KEY_COUNTS@};
+static const char *all_keys[]={"self","attacker","other","damagetaker","damage","drop","attacktype","noblock","guardcost","jugglecost","pauseadd","which","attackid","blocked","tag"};
+static int expected_entity,expected_other,expected_kind,expected_values[9],expected_tag,input_tag;
+static int expected_scripts[2],expected_script_count,executions,vm_result,animation_calls,colour_calls;
+static int sid(Script *s){for(int i=0;i<19;++i)if(s==&scripts[i])return i;abort();}
+static int key_id(const char *key){for(unsigned i=0;i<sizeof(all_keys)/sizeof(*all_keys);++i)if(!strcmp(key,all_keys[i]))return (int)i;abort();}
+static int value_for(const char *name){
+ const char *names[]={"damage","drop","attacktype","noblock","guardcost","jugglecost","pauseadd","which","attackid"};
+ if(!strcmp(name,"blocked"))return expected_values[7];
+ if(!strcmp(name,"tag"))return expected_tag;
+ for(int i=0;i<9;++i)if(!strcmp(name,names[i]))return expected_values[i];
+ abort();
+}
+static const char *expected_key(int index){return index<key_counts[expected_kind]?keys[expected_kind][index]:"tag";}
+static void observe_local(Script *s,const char *key,ScriptVariant *v){
+ int id=sid(s),total=key_counts[expected_kind]+native_tag;
+ int clearing=executed[id]!=0;
+ assert(expected_script_count>0 && id==expected_scripts[clearing?executions-1:executions]);
+ int index=clearing?clears[id]++:installs[id]++;
+ assert(index<total && !strcmp(key,expected_key(index)));
+ if(clearing)assert(v->vt==VT_EMPTY);
+ else if(index<2){assert(v->vt==VT_PTR && v->ptrVal==&actors[index?expected_other:expected_entity]);}
+ else {assert(v->vt==VT_INTEGER && v->lVal==value_for(key));}
+ locals[id][key_id(key)]=*v;
+}
+#define Script_Set_Local_Variant observe_local
+int Script_IsInitialized(Script *s){return s?initialized[sid(s)]:0;}
+int Script_Execute(Script *s){
+ int id=sid(s),total=key_counts[expected_kind]+native_tag;
+ assert(executions<expected_script_count && id==expected_scripts[executions++]);
+ assert(installs[id]==total && !clears[id] && !executed[id]);executed[id]=1;
+ if(native_tag)locals[id][key_id("tag")].lVal=-319; /* Controlled VM edit; native cleanup must clear it. */
+ return vm_result;
+}
+@CALLBACKS@
+int max_attack_types=64;
+static int fall_ids[64];int *animfalls=fall_ids;
+static s_anim animation;static s_anim *animation_slots[1];
+void ent_set_anim(entity *e,int index,int reset){assert(e>=actors && e<actors+3 && index==0 && (reset==0 || reset==1));++animation_calls;e->animation=&animation;}
+void ent_set_colourmap(entity *e,unsigned map){assert(e>=actors && e<actors+3 && map==3);++colour_calls;}
+@FALL@
+static void reset(void){
+ memset(actors,0,sizeof(actors));memset(containers,0,sizeof(containers));memset(&global_container,0,sizeof(global_container));
+ memset(initialized,0,sizeof(initialized));memset(installs,0,sizeof(installs));memset(clears,0,sizeof(clears));memset(executed,0,sizeof(executed));memset(locals,0,sizeof(locals));
+ animation.numframes=1;animation_slots[0]=&animation;memset(fall_ids,0,sizeof(fall_ids));
+ for(int a=0;a<3;++a){
+  actors[a].scripts=&containers[a];actors[a].modeldata.animation=animation_slots;actors[a].modeldata.animation_capacity=1;actors[a].map=3;
+  containers[a].takedamage_script=&scripts[a*6];containers[a].onfall_script=&scripts[a*6+1];containers[a].ondeath_script=&scripts[a*6+2];
+  containers[a].didblock_script=&scripts[a*6+3];containers[a].ondoattack_script=&scripts[a*6+4];containers[a].didhit_script=&scripts[a*6+5];
+ }
+ for(int i=0;i<19;++i){locals[i][key_id("tag")].vt=VT_INTEGER;locals[i][key_id("tag")].lVal=777;}
+ global_container.didhit_script=&scripts[18];global_model_scripts=NULL;self=&actors[0];entities[0]=&actors[2];
+ expected_script_count=executions=animation_calls=colour_calls=0;expected_entity=0;expected_other=1;
+ for(int i=0;i<9;++i)expected_values[i]=11+i;
+}
+static void expect_one(int kind,int entity_index,int other_index,int enabled){
+ expected_kind=kind;expected_entity=entity_index;expected_other=other_index;
+ int id=entity_index*6+kind;initialized[id]=enabled;
+ expected_script_count=enabled;expected_scripts[0]=id;
+}
+static void verify(void){
+ assert(executions==expected_script_count);
+ for(int i=0;i<19;++i){
+  int active=0;for(int j=0;j<expected_script_count;++j)active|=i==expected_scripts[j];
+  assert(executed[i]==active && installs[i]==(active?key_counts[expected_kind]+native_tag:0) && clears[i]==installs[i]);
+  assert(locals[i][key_id("tag")].vt==(active && native_tag?VT_EMPTY:VT_INTEGER));
+  if(!active || !native_tag)assert(locals[i][key_id("tag")].lVal==777);
+ }
+ for(int i=0;i<16;++i)assert(!used[i]);
+}
+static void direct(int kind,int tag){
+ switch(kind){
+ case 0:execute_takedamage_script(&actors[0],&actors[1],11,12,13,14,15,16,17,tag);break;
+ case 1:execute_onfall_script(&actors[0],&actors[1],11,12,13,14,15,16,17,tag);break;
+ case 2:execute_ondeath_script(&actors[0],&actors[1],11,12,13,14,15,16,17,tag);break;
+ case 3:execute_didblock_script(&actors[0],&actors[1],11,12,13,14,15,16,17,tag);break;
+ case 4:execute_ondoattack_script(&actors[0],&actors[1],11,12,13,14,15,16,17,18,19,tag);break;
+ case 5:expected_values[7]=20;execute_didhit_script(&actors[0],&actors[1],11,12,13,14,15,16,17,20,tag);break;
+ default:abort();
+ }
+}
+static const struct{unsigned revision;int tag;} contexts[]={@CONTEXTS@};
+static const int tag_values[]={@TAG_VALUES@};
+static void direct_checks(void){
+ for(int kind=0;kind<6;++kind)for(int mode=0;mode<3;++mode)for(unsigned t=0;t<sizeof(tag_values)/sizeof(*tag_values);++t)for(vm_result=0;vm_result<2;++vm_result){
+  ++active_case;reset();expect_one(kind,0,1,mode==2);expected_tag=tag_values[t];
+  if(mode==0){Script *missing=NULL;memcpy((char*)&containers[0]+(size_t[]){offsetof(s_scripts,takedamage_script),offsetof(s_scripts,onfall_script),offsetof(s_scripts,ondeath_script),offsetof(s_scripts,didblock_script),offsetof(s_scripts,ondoattack_script),offsetof(s_scripts,didhit_script)}[kind],&missing,sizeof(missing));}
+  direct(kind,expected_tag);verify();
+ }
+ for(int global=0;global<4;++global)for(int local=0;local<3;++local){
+  ++active_case;reset();vm_result=1;expected_kind=5;expected_values[7]=20;expected_tag=-7;initialized[5]=local==2;
+  if(local==0)containers[0].didhit_script=NULL;
+  if(global){global_model_scripts=&global_container;if(global==1)global_container.didhit_script=NULL;initialized[18]=global==3;}
+  expected_script_count=0;if(global==3)expected_scripts[expected_script_count++]=18;if(local==2)expected_scripts[expected_script_count++]=5;
+  direct(5,expected_tag);verify();
+ }
+}
+static const struct{int kind,entity,other,values[9],attack_tag;} call_cases[]={@EXPECTED_CALLS@};
+static void caller(unsigned which){
+ entity *e=&actors[1],*other=&actors[1],*eOpp=&actors[2];
+ int force=31,type=33,iForce=44,iType=45,current_attack_id=39,i=0;
+ s_attack payload={0},*attack=&payload;
+ attack->attack_force=31;attack->attack_drop=32;attack->attack_type=33;attack->no_block=34;attack->guardcost=35;attack->jugglecost=36;attack->pause_add=37;attack->tag=input_tag;
+ actors[0].damagetype=49;actors[0].modeldata.subtype=29;actors[1].modeldata.subtype=23;actors[2].modeldata.subtype=27;
+ switch(which){@CALLS@ default:abort();}
+}
+static void caller_checks(void){
+ for(unsigned i=0;i<sizeof(call_cases)/sizeof(*call_cases);++i)for(int nonzero=0;nonzero<2;++nonzero){
+  ++active_case;reset();expect_one(call_cases[i].kind,call_cases[i].entity,call_cases[i].other,1);
+  memcpy(expected_values,call_cases[i].values,sizeof(expected_values));input_tag=nonzero?-731:0;expected_tag=call_cases[i].attack_tag?input_tag:0;
+  caller(i);verify();
+ }
+}
+static void fall_checks(void){
+ const int types[]={-1,0,55,INT_MAX};
+ for(unsigned t=0;t<4;++t)for(int available=0;available<2;++available)for(int frozen=0;frozen<2;++frozen){
+  ++active_case;reset();expect_one(1,0,1,available);expected_tag=-17;expected_values[2]=types[t]>=0 && types[t]<64?types[t]:0;
+  actors[0].frozen=frozen;actors[0].freezetime=77;actors[0].idling=actors[0].getting=actors[0].jumping=actors[0].charging=actors[0].attacking=actors[0].blocking=1;
+  if(!available)animation_slots[0]=NULL;
+  entity before=actors[0];
+  assert(set_fall(&actors[0],types[t],1,&actors[1],11,12,14,15,16,17,expected_tag)==available);verify();
+  assert(animation_calls==available && colour_calls==(available && frozen));
+  if(available){assert(actors[0].falling && actors[0].drop && actors[0].nograb && !actors[0].blocking && !actors[0].frozen);assert(actors[0].freezetime==(unsigned)(frozen?0:77));}
+  else assert(!memcmp(&before,&actors[0],sizeof(before)));
+ }
+}
+int main(void){
+ for(unsigned row=0;row<sizeof(contexts)/sizeof(*contexts);++row){
+  obor_profile_build=contexts[row].revision;native_tag=contexts[row].tag;active_case=0;
+  direct_checks();caller_checks();fall_checks();
+  printf("{\"revision\":%u,\"status\":\"PASS\"}\n",obor_profile_build);
+ }
+ return 0;
+}

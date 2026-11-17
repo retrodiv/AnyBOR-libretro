@@ -15,6 +15,22 @@ from contract_fixtures import load_contract_fixture, contract_profiles, contract
 
 
 class ContractFixtureTests(unittest.TestCase):
+    def test_declared_source_range_keeps_missing_middle_profiles_visible(self):
+        fixture = dict(engine='physical')
+        profiles = [dict(engine='physical', build=str(n)) for n in (1, 2, 3, 4)]
+        profiles.append(dict(engine='other', build='9'))
+        selected = contract_profiles(fixture, profiles, source_range=(1, 3))
+        self.assertEqual(selected, profiles[:3] + profiles[4:])
+        self.assertFalse({int(row['build']) for row in selected
+                          if row['engine'] == 'physical'} <= {1, 3})
+
+    def test_invalid_source_range_cannot_silently_drop_profiles(self):
+        for bounds in ((3, 1), (0, 3), (True, 3), (1,), '1-3'):
+            with self.subTest(bounds=bounds), self.assertRaises(ValueError):
+                contract_profiles(dict(engine='physical'), [], source_range=bounds)
+        with self.assertRaises(ValueError):
+            contract_profiles({}, [], source_range=(1, 3))
+
     def fixture(self):
         return dict(contexts=[dict(engine='physical', revision=2, expected='unchanged')],
                     _contract_boundaries=dict(schema=1, profiles=[['physical', 2]], ranges=[['physical', 1, 3]],

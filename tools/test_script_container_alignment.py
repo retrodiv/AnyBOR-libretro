@@ -9,6 +9,7 @@ from contract_fixtures import load_contract_fixture, contract_profiles
 import json
 import os
 from pathlib import Path
+import re
 import shlex
 import subprocess
 import sys
@@ -30,13 +31,24 @@ def program(engine,layout):
     source=(SOURCE/'src/engines'/engine/'openbor.c').read_bytes().decode('utf-8','surrogateescape')
     parts={name:function(source,name) for name in NAMES}
     helper=layout.get('offset_function')
-    support=function(source,helper) if helper else ''
+    helpers=layout.get('support_functions',[])
+    if not isinstance(helpers,list):
+        raise ValueError('Explicit native script-container dependencies required')
+    support_names=([helper] if helper else [])+helpers
+    if (any(not isinstance(n,str) or not re.fullmatch(r'[A-Za-z_]\w*',n) for n in support_names) or
+            len(set(support_names))!=len(support_names)):
+        raise ValueError('Distinct native script-container dependencies required')
+    support='\n'.join(function(source,name) for name in support_names)
     orders=[dict(revision=row['source_revision'],members=row['native_member_order'])
             for row in layout.get('storage_extensions',[])]
+    active=layout.get('active_member_orders')
+    if active is not None:orders=[]
     code=render_script_containers(parts,revision=int(engine),
-        pointer_container=layout['pointer_container'],members=layout['members'],
+        pointer_container=layout['pointer_container'],members=layout.get('physical_members',layout['members']),
         member_count_definition=layout['member_count_definition'],
-        offsets=[0,1],null_arguments=True,member_orders=orders,support=support)
+        offsets=[0,1],null_arguments=True,member_orders=orders,support=support,
+        active_member_orders=active,
+        default_active_members=layout['members'] if active is not None else None)
     marker='int main(void){'
     if code.count(marker)!=1:
         raise ValueError('One authored script container entry required')

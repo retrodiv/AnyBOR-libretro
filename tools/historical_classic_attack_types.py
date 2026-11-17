@@ -6,7 +6,7 @@ Copyright (c) 2026 retrodiv <retrodiv@proton.me>
 from pathlib import Path
 import re
 
-from test_historical_player import function
+from test_historical_player import function, optional_trailing_parameter
 
 
 def model_program(root, data):
@@ -42,6 +42,9 @@ def model_program(root, data):
 
 def response_program(root, data):
     source = (root / 'src/engines' / data['engine'] / 'openbor.c').read_text()
+    tag = optional_trailing_parameter(source, 'execute_onfall_script', 9, 'int tag')
+    if optional_trailing_parameter(source, 'set_fall', 10, 'int tag') != tag:
+        raise ValueError('Consistent native fall callback extension required')
     arrays = []
     for row in data['response_families']:
         match = re.search(r'(?m)^int\s+' + row['array'] + r'\[[^\]]+\]\s*=\s*\{[^}]*\}', source)
@@ -50,7 +53,8 @@ def response_program(root, data):
         arrays.extend((match[0] + ';', 'int *' + row['pointer'] + '=' + row['array'] + ';'))
     start = source.index('#define painflags(')
     painflags = source[start:source.index('int set_blockpain(', start)]
-    values = dict(ARRAYS='\n'.join(arrays), PAINFLAGS=painflags,
+    values = dict(TAG_PARAMETER=tag, TAG_ARGUMENT=', 0' if tag else '',
+        ARRAYS='\n'.join(arrays), PAINFLAGS=painflags,
         FUNCTIONS='\n'.join(function(source, row['function']) for row in data['response_families']),
         CONTEXTS=',\n'.join('{%du,{{%s}}}' % (row['revision'],
             '},{'.join(','.join(map(str, row['responses'][f['array']])) for f in data['response_families']))

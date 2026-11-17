@@ -1,0 +1,245 @@
+/* SPDX-License-Identifier: BSD-3-Clause
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me>
+ * Native list/lowering, parser arms, clock and layer requests; raster observed.
+ */
+#include <stdint.h>
+#include <stddef.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <strings.h>
+#include <ctype.h>
+#include <stdarg.h>
+#include <limits.h>
+#include <math.h>
+#include "openbor.h"
+#include "commands.h"
+#undef printf
+#undef assert
+
+/* These consumer contracts observe successful delegated allocations.
+ * Native wrapper outputs are covered by the separate compatibility suite. */
+void *checkAlloc(void *pointer,size_t size,const char *function,const char *file,int line)
+{
+    (void)function; (void)file; (void)line;
+    if(size && !pointer) abort();
+    return pointer;
+}
+uint32_t obor_profile_build;
+static unsigned active_case;
+#ifdef NDEBUG
+#error Background assertions must remain enabled
+#endif
+#define CHECK(c) do{if(!(c)){fprintf(stderr,"BACKGROUND revision=%u case=%u line=%d: %s\n",obor_profile_build,active_case,__LINE__,#c);abort();}}while(0)
+#define assert CHECK
+HRESULT Interpreter_Call(Interpreter *p){(void)p;abort();}
+HRESULT Interpreter_EvalInstruction(Interpreter *p){(void)p;abort();}
+void borExit(int n){(void)n;abort();}
+@LIST@
+#undef assert
+#define assert CHECK
+static char diagnostic[4096];
+static int message(const char *format,...)
+{size_t n=strlen(diagnostic);va_list ap;va_start(ap,format);int len=vsnprintf(diagnostic+n,sizeof(diagnostic)-n,format,ap);va_end(ap);assert(len>=0 && n+(size_t)len<sizeof(diagnostic));return len;}
+void shutdown(int n,char *format,...){(void)n;(void)format;abort();}
+static int include_calls;
+static int handle_txt_include(char *command,ArgList *args,char **filename,char *fnbuf,char **buf,ptrdiff_t *pos,size_t *size)
+{(void)args;(void)filename;(void)fnbuf;(void)buf;(void)pos;(void)size;assert(command && command[0]);++include_calls;return 0;}
+static s_level world;
+s_level *level=&world;
+s_videomodes videomodes;
+static s_layer layers[2];
+static s_screen screens[2];
+static s_sprite sprites[2];
+static entity frozen;
+entity *smartbomber,*textbox;
+int screenformat,pixelformat,pixelbytes[5]={1,1,2,3,4};
+int current_palette,viewportx,viewporty,viewportw,viewporth;
+int gfx_x_offset,gfx_y_offset,gfx_y_offset_adj,holesprite;
+int PLAYER_MIN_Z=160;
+float advancex,advancey,bgtravelled,vbgtravelled;
+u32 time;
+int neon_time,traveltime,texttime,timevar;
+unsigned char neontable[MAX_PAL_SIZE];
+static List *levelcmdlist;
+static unsigned queued;
+static int observed[2][10];
+static const struct{unsigned revision;int vertical;unsigned names;const char *labels[128];}contexts[]={@CONTEXTS@};
+static const struct{const char *text;float value;int warning;}values[]={@VALUES@};
+struct draw_case{int up,moving,vertical,offset,quake,custom,kind,water,enabled;};
+static const struct draw_case draw_cases[]={@DRAW_CASES@};
+static const int expected[][sizeof(draw_cases)/sizeof(*draw_cases)][2][10]={@EXPECTED@};
+static void queue(int x,int y,int z,int sort,int kind,int layer,s_drawmethod *m)
+{
+ assert(queued<2 && layer>=0 && layer<2 && m);int *r=observed[queued++];
+ r[0]=x;r[1]=y;r[2]=z;r[3]=sort;r[4]=kind;r[5]=m->xspan;r[6]=m->yspan;r[7]=m->xrepeat;r[8]=m->yrepeat;r[9]=m->water.wavetime;
+ assert(m->table==(layer?neontable:NULL));
+}
+void spriteq_add_screen(int x,int y,int z,s_screen *s,s_drawmethod *m,int sort)
+{assert(s==screens || s==screens+1);queue(x,y,z,sort,0,(int)(s-screens),m);}
+void spriteq_add_frame(int x,int y,int z,s_sprite *s,s_drawmethod *m,int sort)
+{assert(s==sprites || s==sprites+1);queue(x,y,z,sort,1,(int)(s-sprites),m);}
+void spriteq_add_sprite(int x,int y,int z,int id,s_drawmethod *m,int sort)
+{(void)x;(void)y;(void)z;(void)id;(void)m;(void)sort;abort();}
+#pragma GCC diagnostic push
+#pragma GCC diagnostic warning "-Wmissing-field-initializers"
+@PLAIN@
+#pragma GCC diagnostic pop
+#define printf message
+@NUMBERS@
+@FACTORY@
+static void dispatch(char *input)
+{
+ ArgList arglist;char argbuf[MAX_ARG_LEN+1]={0};char *buf=input,*filename="unit-level",*command;
+ char fnbuf[512];size_t size=strlen(input);ptrdiff_t pos=0;levelCommands cmd;
+ @PREFIX@
+ switch(cmd){@CASES@ default:@DEFAULT@}
+}
+#undef printf
+static void reset_load_clock(void){@RESET@}
+@UPDATE@
+@DRAW@
+static void parser_cases(unsigned p)
+{
+ levelcmdlist=createLevelCommandList();assert(levelcmdlist && List_GetSize(levelcmdlist)==(int)contexts[p].names);
+ unsigned at=0;for(Node *n=levelcmdlist->first;n;n=n->next){assert(at<contexts[p].names && !strcmp(n->name,contexts[p].labels[at++]));}assert(at==contexts[p].names);
+ const char *commands[]={"bgspeed","vbgspeed","scrollspeed","VBGSPEED"};
+ const char *flip[]={"","0","1","-1",".5"};
+ for(unsigned c=0;c<4;++c)for(unsigned v=0;v<sizeof(values)/sizeof(*values);++v)for(unsigned f=0;f<5;++f)
+ {
+  memset(&world,0,sizeof(world));world.bgspeed=17;world.vbgspeed=19;world.scrollspeed=23;world.gravity=-31;
+  s_level before=world;diagnostic[0]=0;include_calls=0;
+  char text[128];snprintf(text,sizeof(text),"%s %s %s",commands[c],values[v].text,flip[f]);
+  /* A missing first argument is a distinct command with no reverse flag. */
+  if(!values[v].text[0])snprintf(text,sizeof(text),"%s",commands[c]);
+  dispatch(text);int vertical=c==1||c==3;
+  if(vertical && !contexts[p].vertical)
+  {assert(!memcmp(&before,&world,sizeof(world)) && include_calls==1);assert(!strcmp(diagnostic,"Command 'vbgspeed' not understood in file 'unit-level'!\n"));}
+  else
+  {
+   float value=values[v].value;int warning=values[v].warning;
+   if(c!=2 && values[v].text[0]){if(f==2||f==3)value=-value;if(f==4)++warning;}
+   if(c==0)before.bgspeed=value;else if(c==2)before.scrollspeed=value;else before.vbgspeed=value;
+   assert(!memcmp(&before,&world,sizeof(world)) && !include_calls);
+   unsigned warnings=0;for(char *s=diagnostic;(s=strstr(s,"WARNING:"));s+=8)++warnings;
+   assert(warnings==(unsigned)warning);
+  }
+  ++active_case;
+ }
+ for(int upper=0;upper<2;++upper){char name[32];strcpy(name,upper?"SCROLLSPEED":"bgspeed");assert(getLevelCommand(levelcmdlist,name)==(upper?CMD_LEVEL_SCROLLSPEED:CMD_LEVEL_BGSPEED));}
+ freeCommandList(levelcmdlist);levelcmdlist=NULL;
+ bgtravelled=13;vbgtravelled=17;traveltime=19;texttime=23;reset_load_clock();
+ assert(!bgtravelled && vbgtravelled==(contexts[p].vertical?0:17) && !traveltime && !texttime);
+}
+static int near(float a,float b){float d=a-b;return d<0.00001f && d>-0.00001f;}
+static void clock_cases(unsigned p)
+{
+ const float speeds[]={-1.25f,0,1.25f},vertical[]={-0.5f,0,0.75f};
+ const int quakes[]={-6,0,8};
+ for(unsigned s=0;s<3;++s)for(unsigned v=0;v<3;++v)for(int rock=0;rock<4;++rock)
+ for(unsigned q=0;q<3;++q)for(int freeze=0;freeze<2;++freeze)
+ {
+  memset(&world,0,sizeof(world));world.bgspeed=speeds[s];world.vbgspeed=vertical[v];world.rocking=rock;
+  world.quake=quakes[q];world.quaketime=100;screenformat=PIXEL_32;pixelformat=PIXEL_x8;
+  bgtravelled=8;vbgtravelled=7;neon_time=1000;time=100;traveltime=94;texttime=7;
+  gfx_x_offset=3;gfx_y_offset_adj=9;smartbomber=NULL;textbox=freeze?&frozen:NULL;
+  update_scrolled_bg();
+  float horizontal=8+(freeze?0:s==0?-1:s==1?0:1);
+  if(!freeze && rock)horizontal+=s==0?-0.9f:0.9f;
+  float y=7;if(!freeze && contexts[p].vertical)y+=v==0?-0.4f:v==1?0:0.6f;
+  assert(near(bgtravelled,horizontal) && near(vbgtravelled,y));
+  assert(traveltime==100 && texttime==(freeze?13:7) && timevar==(freeze?87:93) && neon_time==1000);
+  int offset=rock?quakes[q]-4-(rock==1?4:rock==2?2:3):(quakes[q]>=0?quakes[q]-4:quakes[q]+4);
+  assert(gfx_y_offset==offset+9 && gfx_x_offset==3 && world.quake==quakes[q]/2 && world.quaketime==100+GAME_SPEED/25);
+  ++active_case;
+ }
+ smartbomber=textbox=NULL;
+}
+static void draw_case(unsigned p,unsigned k)
+{
+ const struct draw_case *c=draw_cases+k;memset(&world,0,sizeof(world));memset(layers,0,sizeof(layers));
+ memset(screens,0,sizeof(screens));memset(sprites,0,sizeof(sprites));memset(observed,0,sizeof(observed));queued=0;
+ world.layersref=layers;world.numlayersref=2;world.scrolldir=c->up?SCROLL_UP:SCROLL_DOWN;
+ memset(&videomodes,0,sizeof(videomodes));videomodes.hRes=32;videomodes.vRes=24;
+ viewportx=c->custom?5:0;viewporty=c->custom?3:0;viewportw=c->custom?19:0;viewporth=c->custom?17:0;
+ advancex=4;advancey=c->moving?12:0;bgtravelled=8;vbgtravelled=c->vertical;
+ gfx_x_offset=3;gfx_y_offset=5;timevar=11;screenformat=PIXEL_32;pixelformat=PIXEL_x8;current_palette=0;
+ for(int n=0;n<2;++n)
+ {
+  s_layer *l=layers+n;screens[n].magic=screen_magic;sprites[n].magic=sprite_magic;
+  l->enabled=(c->enabled>>n)&1;l->size.x=10;l->size.y=7;l->spacing.x=2;l->spacing.z=1;
+  l->offset.x=-5+7*n;l->offset.z=c->offset;l->ratio.x=n?0.75f:0.5f;l->ratio.z=n?0.5f:0.25f;
+  l->bgspeedratio=n?0.5f:0.25f;l->quake=c->quake;l->neon=n;l->z=30+n;
+  l->drawmethod=plainmethod;l->drawmethod.xrepeat=4;l->drawmethod.yrepeat=3;
+  l->drawmethod.water.wavespeed=1.5f;l->drawmethod.water.amplitude=(c->water&1)?2:0;l->drawmethod.water.watermode=(c->water&2)?3:0;
+  if(c->kind)l->gfx.sprite=sprites+n;else l->gfx.screen=screens+n;
+ }
+ draw_scrolled_bg();unsigned count=0;
+ for(unsigned n=0;n<2;++n)if((c->enabled>>n)&1)
+ {
+  assert(count<queued);for(unsigned field=0;field<10;++field)
+  {int want=expected[contexts[p].vertical][k][n][field];if(observed[count][field]!=want)fprintf(stderr,"layer=%u field=%u actual=%d expected=%d\n",n,field,observed[count][field],want);assert(observed[count][field]==want);}++count;
+ }
+ assert(count==queued);++active_case;
+}
+static void excessive_vertical_travel(unsigned p)
+{
+ if(!contexts[p].vertical)return;
+ /* Follow the admitted command through the actual clock into layer drawing. */
+ draw_case(p,0);world.numlayersref=1;layers[0].enabled=1;layers[0].ratio.z=0;
+ layers[0].bgspeedratio=1;layers[0].offset.z=0;world.bgspeed=0;
+ levelcmdlist=createLevelCommandList();diagnostic[0]=0;
+ char line[]="vbgspeed 1e30";dispatch(line);assert(!diagnostic[0] && world.vbgspeed>1e29f);
+ freeCommandList(levelcmdlist);levelcmdlist=NULL;
+ time=30;traveltime=0;neon_time=1000;world.rocking=0;smartbomber=textbox=NULL;
+ bgtravelled=vbgtravelled=0;update_scrolled_bg();assert(vbgtravelled>1e30f);
+ queued=0;draw_scrolled_bg();assert(!queued);++active_case;
+}
+static void coordinate_boundaries(void)
+{
+ int out=7;
+ assert(obor_background_coordinate(-1.75,&out) && out==-1);
+ assert(obor_background_coordinate((double)INT_MIN-0.5,&out) && out==INT_MIN);
+ assert(obor_background_coordinate((double)INT_MAX+0.5,&out) && out==INT_MAX);
+ out=7;assert(!obor_background_coordinate((double)INT_MIN-1.0,&out) && out==7);
+ assert(!obor_background_coordinate((double)INT_MAX+1.0,&out) && out==7);
+ assert(!obor_background_coordinate(INFINITY,&out) && !obor_background_coordinate(NAN,&out) && out==7);
+ out=INT_MIN;assert(obor_background_shift(&out,5) && out==INT_MIN+5);
+ out=INT_MAX;assert(!obor_background_shift(&out,1) && out==INT_MAX);
+ out=0;assert(!obor_background_shift(&out,INT64_MAX) && !obor_background_shift(&out,INT64_MIN) && !out);
+}
+static void invalid_layer_positions(unsigned p)
+{
+ const float bad[]={1e30f,-1e30f,INFINITY,NAN};
+ for(unsigned i=0;i<4;++i)
+ {
+  draw_case(p,0);world.numlayersref=1;layers[0].enabled=1;layers[0].ratio.x=0;
+  layers[0].offset.x=0;bgtravelled=0;advancex=bad[i];queued=0;
+  draw_scrolled_bg();assert(!queued);
+  layers[0].enabled=0;draw_scrolled_bg();assert(!queued);++active_case;
+ }
+ if(!contexts[p].vertical)
+ {
+  draw_case(p,0);vbgtravelled=INFINITY;queued=0;
+  draw_scrolled_bg();assert(queued==2);++active_case;
+ }
+ /* A defined later translation can rescue INT_MIN before native negation. */
+ draw_case(p,0);world.numlayersref=1;layers[0].enabled=1;layers[0].quake=1;
+ layers[0].offset.x=(float)INT_MIN;layers[0].ratio.x=0;advancex=bgtravelled=0;
+ gfx_x_offset=5;queued=0;draw_scrolled_bg();assert(queued==1 && observed[0][0]==-3);++active_case;
+ gfx_x_offset=-1;queued=0;draw_scrolled_bg();assert(!queued);++active_case;
+ layers[0].quake=0;viewportx=1;viewportw=19;queued=0;draw_scrolled_bg();assert(!queued);++active_case;
+}
+int main(void)
+{
+ coordinate_boundaries();
+ for(unsigned p=0;p<sizeof(contexts)/sizeof(*contexts);++p)
+ {
+  obor_profile_build=contexts[p].revision;active_case=0;parser_cases(p);clock_cases(p);
+  for(unsigned k=0;k<sizeof(draw_cases)/sizeof(*draw_cases);++k)draw_case(p,k);
+  excessive_vertical_travel(p);
+  invalid_layer_positions(p);
+  printf("{\"revision\":%u,\"status\":\"PASS\"}\n",obor_profile_build);
+ }
+ return 0;
+}

@@ -4,7 +4,8 @@
  * These contributions are licensed under BSD-3-Clause; see LICENSE at the root.
  * Upstream code retains its original license and notices.
  * Keep unavailable sprite images out of the drawing queue while retaining
- * native requests, ordering and copied draw methods.
+ * native requests, ordering and copied draw methods. Retain native per-
+ * profile queue admission limits within fixed backing storage.
  * Existing changes recorded here; this is not their implementation date.
  * See MODIFICATIONS.md and docs/modifications/4086.md
  * at the source repository root. Original notices follow below.
@@ -28,7 +29,9 @@
 #include "globals.h"
 // This should be enough for most games...
 // But bear in mind that text is also composed of sprites!
-#define			MAXQSPRITES		500
+#define MAXQSPRITES (obor_profile_build >= 4170 ? 600 : 500)
+#define MAXQSPRITES_CAPACITY 600
+extern unsigned int obor_profile_build;
 
 #define         SQT_SPRITE      0
 #define         SQT_DOT         1
@@ -53,8 +56,8 @@ typedef struct
     int     type;
 } qstruct;
 
-static qstruct queue[MAXQSPRITES];
-static qstruct *order[MAXQSPRITES];
+static qstruct queue[MAXQSPRITES_CAPACITY];
+static qstruct *order[MAXQSPRITES_CAPACITY];
 
 static int spritequeue_len = 0;
 static int spriteq_old_len = 0;

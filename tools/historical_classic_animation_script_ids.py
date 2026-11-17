@@ -6,6 +6,7 @@ Copyright (c) 2026 retrodiv <retrodiv@proton.me>
 from pathlib import Path
 import re
 
+from historical_classic_entities import entity_declarations
 from test_historical_player import function, rename_identifiers, switch_cases
 
 
@@ -15,8 +16,7 @@ def script_id_program(root, data):
     core = (engine / 'openbor.c').read_text()
     utils = (engine / 'source/utils.c').read_text()
     variants = (engine / 'source/scriptlib/ScriptVariant.c').read_text()
-    first = source.index('enum _axis_enum')
-    declarations = source[first:source.index('HRESULT openbor_getanimationproperty(', first)]
+    declarations = entity_declarations(source)
     get_names = ('animation', 'animnum', 'animationid', 'animvalid', 'attack',
                  'vulnerable', 'bbox', 'dropframe', 'energycost', 'landframe',
                  'range', 'spritea', 'nextanim')
@@ -45,6 +45,12 @@ def script_id_program(root, data):
     while lines[last].rstrip().endswith('\\'):
         last += 1
     macros = ''.join(line for line in lines if line.startswith('#define _is_not_')) + ''.join(lines[first:last+1])
+    for name in ('OBOR_ANIMATION_OBJECT', 'OBOR_ANIMATION_PIXELS'):
+        first = next(i for i, line in enumerate(lines) if line.startswith('#define ' + name + '('))
+        last = first
+        while lines[last].rstrip().endswith('\\'):
+            last += 1
+        macros += ''.join(lines[first:last + 1])
     rows = []
     extra = data['script_id_controls']['extra_dynamic_ids']
     maximum = max(row['storage_count'] for row in data['sources']) + extra

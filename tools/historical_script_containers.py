@@ -13,7 +13,8 @@ NAMES=('alloc_all_scripts','clear_all_scripts','free_all_scripts','copy_all_scri
 
 def render_script_containers(parts, *, revision, pointer_container, members,
                              offsets, null_arguments, member_count_definition='',
-                             member_orders=None, support=''):
+                             member_orders=None, support='', active_member_orders=None,
+                             default_active_members=None):
     if (not isinstance(parts,dict) or set(parts)!=set(NAMES) or
             any(not isinstance(v,str) or not v.strip() or len(v)>32768 for v in parts.values()) or
             type(revision) is not int or not 0<revision<=0xffffffff or
@@ -55,6 +56,36 @@ def render_script_containers(parts, *, revision, pointer_container, members,
         declared=','.join('offsetof(s_scripts,%s)'%v for v in row['members'])
         order_clauses.append('    if(obor_profile_build==%du){static const size_t native_offsets[]={%s};return native_offsets[i];}\n'%(row['revision'],declared))
     expected_order='static size_t expected_member_offset(unsigned i){\n'+''.join(order_clauses)+'    return member_offsets[i];\n}\n'
+    active_mode=active_member_orders is not None or default_active_members is not None
+    active_count=''
+    if active_mode:
+        if not pointer_container or member_orders:
+            raise ValueError('Active subsets require a pointer container and separate traversal orders')
+        active_member_orders=[] if active_member_orders is None else active_member_orders
+        default_active_members=members if default_active_members is None else default_active_members
+        if not isinstance(active_member_orders,list) or len(active_member_orders)>128:
+            raise ValueError('Bounded explicit active script orders required')
+        def valid_subset(value):
+            return (isinstance(value,list) and bool(value) and
+                    all(isinstance(n,str) for n in value) and
+                    len(set(value))==len(value) and set(value)<=set(members))
+        if not valid_subset(default_active_members):
+            raise ValueError('Nonempty independent default active members required')
+        seen=set();offset_clauses=[];count_clauses=[]
+        for row in active_member_orders:
+            if (not isinstance(row,dict) or set(row)!={'revision','members'} or
+                    type(row['revision']) is not int or not 0<row['revision']<=0xffffffff or
+                    row['revision'] in seen or not valid_subset(row['members'])):
+                raise ValueError('Unique explicit active source-member subsets required')
+            seen.add(row['revision'])
+            native=','.join('offsetof(s_scripts,%s)'%n for n in row['members'])
+            offset_clauses.append('    if(obor_profile_build==%du){static const size_t native_offsets[]={%s};return native_offsets[i];}\n'%(row['revision'],native))
+            count_clauses.append('    if(obor_profile_build==%du)return %du;\n'%(row['revision'],len(row['members'])))
+        default=','.join('offsetof(s_scripts,%s)'%n for n in default_active_members)
+        expected_order=('static size_t expected_member_offset(unsigned i){\n'+''.join(offset_clauses)+
+                        '    static const size_t native_offsets[]={'+default+'};return native_offsets[i];\n}\n')
+        active_count=('static unsigned expected_active_count(void){\n'+''.join(count_clauses)+
+                      '    return %du;\n}\n#define expected_member_count expected_active_count()'%len(default_active_members))
     code=r'''
 #include <assert.h>
 #include <stdint.h>
@@ -183,6 +214,8 @@ int main(void){
 }
 '''
     code=code.replace('scripts_membercount','expected_member_count')
+    if active_mode:
+        code=code.replace('static const size_t expected_member_count=sizeof(member_offsets)/sizeof(*member_offsets);',active_count)
     if pointer_container:
         allocate=('alloc_all_scripts(a);alloc_all_scripts(b);'
                   'unsigned before=allocated;alloc_all_scripts(a);assert(allocated==before);')

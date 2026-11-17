@@ -43,7 +43,7 @@ void update_frame(entity *ent,int frame_number) {(void)ent;(void)frame_number;un
 void common_fall(void) {unexpected();}
 unsigned int rand32(void) {unexpected();return 0;}
 void toss(entity *ent,float value) {(void)ent;(void)value;unexpected();}
-int set_fall(entity *ent,int type,int reset,entity *other,int force,int drop,int noblock,int guardcost,int jugglecost,int pauseadd)
+int set_fall(entity *ent,int type,int reset,entity *other,int force,int drop,int noblock,int guardcost,int jugglecost,int pauseadd@TAG_PARAMETER@)
 {(void)ent;(void)type;(void)reset;(void)other;(void)force;(void)drop;(void)noblock;(void)guardcost;(void)jugglecost;(void)pauseadd;unexpected();return 0;}
 int checkwall(float x,float z) {(void)x;(void)z;unexpected();return -1;}
 entity *homing_find_target(int type) {(void)type;return chase_target?&parent:NULL;}

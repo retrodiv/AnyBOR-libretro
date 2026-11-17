@@ -6,7 +6,7 @@ Copyright (c) 2026 retrodiv <retrodiv@proton.me>
 from pathlib import Path
 import re
 
-from test_historical_player import function, rename_identifiers
+from test_historical_player import function, rename_identifiers, optional_trailing_parameter
 
 
 def condition(source, marker):
@@ -25,8 +25,12 @@ def condition(source, marker):
 
 def program(root, data):
     source = (root / 'src/engines' / data['engine'] / 'openbor.c').read_text()
+    tag = optional_trailing_parameter(source, 'execute_onfall_script', 9, 'int tag')
+    if optional_trailing_parameter(source, 'set_fall', 10, 'int tag') != tag:
+        raise ValueError('Consistent native fall callback extension required')
     attack = function(source, 'do_attack')
-    values = dict(PASSIVE=condition(attack, 'if( !self->modeldata.nopassiveblock'),
+    values = dict(TAG_PARAMETER=tag, TAG_ARGUMENT=', 0' if tag else '',
+        PASSIVE=condition(attack, 'if( !self->modeldata.nopassiveblock'),
         MANUAL=condition(attack, 'else if((self->modeldata.nopassiveblock'),
         FUNCTIONS='\n'.join(function(source, name) for name in ('set_death', 'set_fall')),
         CONTEXTS=','.join('{%du,%d,%d}' % (r['revision'], r['player_block'],

@@ -5,6 +5,8 @@
  * Upstream code retains its original license and notices.
  * Bound compressed blocks before allocation in the explicitly enabled
  * reproducible-media diagnostic; preserve normal parser limits otherwise.
+ * Select the native multimedia assertion diagnostic route by profile while
+ * retaining controlled engine termination.
  * Existing changes recorded here; this is not their implementation date.
  * See MODIFICATIONS.md and docs/modifications/4086.md
  * at the source repository root. Original notices follow below.
@@ -23,6 +25,16 @@
 #include "halloc/halloc.h"
 #include "nestegg/nestegg.h"
 #include "globals.h"
+
+/* Keep safety checks active while retaining the native failure route. */
+#if defined(LIBRETRO) && !defined(PP_TEST)
+extern unsigned int obor_profile_build;
+#undef assert
+#define assert(x) (obor_profile_build >= 4161 ? \
+    exitIfFalse((x) ? 1 : 0, #x, __func__, __FILE__, __LINE__) : \
+    obor_port_assert((x) ? 1 : 0, #x, __func__, __FILE__, __LINE__))
+#endif
+
 #include "anybor_media_diag.h"
 
 /* EBML Elements */

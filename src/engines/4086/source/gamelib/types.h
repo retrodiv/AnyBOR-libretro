@@ -4,7 +4,10 @@
  * These contributions are licensed under BSD-3-Clause; see LICENSE at the root.
  * Upstream code retains its original license and notices.
  * Match drawing-method typedef alignment to packed owning records without
- * changing fields, offsets or sizes.
+ * changing fields, offsets or sizes. Preserve native integer or floating
+ * rotation storage by profile, with unchanged slot size and typed script,
+ * parser, mirror, copy and raster access. Bound integer rotation results and
+ * initial trigonometric table indices.
  * Existing changes recorded here; this is not their implementation date.
  * See MODIFICATIONS.md and docs/modifications/4086.md
  * at the source repository root. Original notices follow below.
@@ -243,7 +246,11 @@ typedef struct
     int flipy;
     int transbg;
     int fliprotate; // entity only, whether the flip is affected by the entity's facing(not the sprite's flip )
-    int rotate; // 360 degrees
+    union
+    {
+        int rotate;
+        float obor_rotate;
+    }; // Native integer or floating rotation, without changing its slot.
     int scalex;
     int scaley;
     int shiftx;
@@ -314,6 +321,56 @@ typedef struct
 #elif DOS || SDL
 #pragma pack(pop)
 #endif
+
+/* Native rotation storage changes independently of its four-byte slot. */
+extern u32 obor_profile_build;
+static inline double obor_drawmethod_rotation(const s_drawmethod *method)
+{
+    return obor_profile_build >= 4187 ? (double)method->obor_rotate : (double)method->rotate;
+}
+static inline int obor_drawmethod_store_rotation(s_drawmethod *method, double rotation)
+{
+    if(obor_profile_build >= 4187)
+    {
+        method->obor_rotate = (float)rotation;
+        return 1;
+    }
+    if(!(rotation > -2147483649.0 && rotation < 2147483648.0)) return 0;
+    method->rotate = (int)rotation;
+    return 1;
+}
+static inline int obor_drawmethod_rotation_integer(const s_drawmethod *method, int *rotation)
+{
+    if(obor_profile_build >= 4187)
+    {
+        double value = (double)method->obor_rotate;
+        if(!(value > -2147483649.0 && value < 2147483648.0)) return 0;
+        *rotation = (int)value;
+    }
+    else *rotation = method->rotate;
+    return 1;
+}
+static inline int obor_drawmethod_normalize_rotation(s_drawmethod *method)
+{
+    int rotation;
+    if(!obor_drawmethod_rotation_integer(method, &rotation)) return 0;
+    return obor_drawmethod_store_rotation(method, (rotation % 360 + 360) % 360);
+}
+static inline void obor_drawmethod_mirror_rotation(s_drawmethod *method)
+{
+    if(obor_profile_build >= 4187) method->obor_rotate = 360 - method->obor_rotate;
+    else
+    {
+        s64 rotation = 360 - (s64)method->rotate;
+        if(rotation > 2147483647) rotation -= (s64)4294967296LL;
+        method->rotate = (int)rotation;
+    }
+}
+static inline void obor_drawmethod_copy_rotation(s_drawmethod *destination, const s_drawmethod *source)
+{
+    if(obor_profile_build >= 4187) destination->obor_rotate = source->obor_rotate;
+    else destination->rotate = source->rotate;
+}
 
 #endif
 

@@ -1,0 +1,213 @@
+/* SPDX-License-Identifier: BSD-3-Clause
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me>
+ * Native command lists, conversion/parser cases and script-slot traversal.
+ * Script, sound, model-cache and inline-file services remain observed.
+ */
+#include <stdint.h>
+#include <stddef.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <strings.h>
+#include <ctype.h>
+#include <stdarg.h>
+#include <setjmp.h>
+#include <math.h>
+@HEADER@
+#undef printf
+#undef assert
+
+/* These consumer contracts observe successful delegated allocations.
+ * Native wrapper outputs are covered by the separate compatibility suite. */
+void *checkAlloc(void *pointer,size_t size,const char *function,const char *file,int line)
+{
+    (void)function; (void)file; (void)line;
+    if(size && !pointer) abort();
+    return pointer;
+}
+#undef malloc
+#undef free
+uint32_t obor_profile_build;
+static unsigned active_case;
+#define assert(c) do{if(!(c)){fprintf(stderr,"MODEL_PARSER revision=%u case=%u line=%d: %s\n",obor_profile_build,active_case,__LINE__,#c);abort();}}while(0)
+HRESULT Interpreter_Call(Interpreter *v){(void)v;abort();}
+HRESULT Interpreter_EvalInstruction(Interpreter *v){(void)v;abort();}
+void borExit(int status){(void)status;abort();}
+@LIST@
+#undef assert
+#define assert(c) do{if(!(c)){fprintf(stderr,"MODEL_PARSER revision=%u case=%u line=%d: %s\n",obor_profile_build,active_case,__LINE__,#c);abort();}}while(0)
+#ifndef stricmp
+#define stricmp strcasecmp
+#endif
+static char diagnostic[4096];
+static int message(const char *format,...){
+ va_list args;va_start(args,format);size_t used=strlen(diagnostic);
+ int count=vsnprintf(diagnostic+used,sizeof(diagnostic)-used,format,args);va_end(args);
+ assert(count>=0 && (size_t)count<sizeof(diagnostic)-used);return count;
+}
+static jmp_buf stopped;
+void shutdown(int status,char *format,...){
+ assert(status==1);va_list args;va_start(args,format);
+ vsnprintf(diagnostic,sizeof(diagnostic),format,args);va_end(args);longjmp(stopped,1);
+}
+static s_model model;static s_attack attack;static int bbox[6],abox[6];
+static s_scripts *parser_scripts;
+static List *modelcmdlist;
+static int service_success=1,model_calls,sound_calls,include_calls,init_calls,compile_calls,load_calls,append_calls;
+static char service_argument[128],script_label[128];static Script *script_target;
+int get_cached_model_index(char *name){++model_calls;snprintf(service_argument,sizeof(service_argument),"%s",name);return 7;}
+int sound_load_sample(char *name,char *pack,int log){assert(!strcmp(pack,"unit.pak") && log==1);++sound_calls;snprintf(service_argument,sizeof(service_argument),"%s",name);return 8;}
+void Script_Init(Script *script,char *name,char *file,int first){
+ assert(script && !strcmp(file,"unit-model") && first==0);++init_calls;script_target=script;
+ snprintf(script_label,sizeof(script_label),"%s",name);
+}
+int load_script(Script *script,char *path){assert(script==script_target);++load_calls;snprintf(service_argument,sizeof(service_argument),"%s",path);return service_success;}
+int Script_AppendText(Script *script,char *text,char *file){assert(script==script_target && !strcmp(text,"body") && !strcmp(file,"unit-model"));++append_calls;return service_success;}
+int Script_Compile(Script *script){assert(script==script_target);++compile_calls;return 1;}
+static size_t fetchInlineScript(char *buf,char **text,ptrdiff_t *pos,size_t *len){
+ assert(strstr(buf,"@script"));*text=malloc(5);assert(*text);memcpy(*text,"body",5);*pos=7;*len=4;return 7;
+}
+static int handle_txt_include(char *command,ArgList *args,char **file,char *name,char **buf,ptrdiff_t *pos,size_t *len){
+ (void)args;(void)name;(void)buf;(void)pos;(void)len;assert(command && !strcmp(*file,"unit-model"));++include_calls;return 0;
+}
+struct owned{void *p;int live;};static struct owned owned[256];static unsigned owned_count;
+static Script *allocated_scripts[128];static unsigned allocated_count,clear_count,copy_count,release_count;
+static Script *source_order[32],*destination_order[32];static int traversal;
+static void *remember(void *p){assert(p && owned_count<256);owned[owned_count++]=(struct owned){p,1};return p;}
+static void *observed_malloc(size_t n){return remember(malloc(n));}
+Script *alloc_script(void){Script *p=remember(calloc(1,sizeof(*p)));assert(allocated_count<128);allocated_scripts[allocated_count++]=p;return p;}
+static void observed_free(void *p){
+ if(!p)return;
+ for(unsigned i=0;i<owned_count;++i)if(owned[i].p==p){assert(owned[i].live);owned[i].live=0;++release_count;free(p);return;}
+ assert(!"unowned release");
+}
+void Script_Clear(Script *script,int method){assert(traversal && method==2 && clear_count<32 && script==source_order[clear_count]);++clear_count;}
+void Script_Copy(Script *to,Script *from,int method){assert(traversal && method==1 && copy_count<32 && to==destination_order[copy_count] && from==source_order[copy_count]);++copy_count;}
+@SLOT_SUPPORT@
+#define scripts_membercount (sizeof(s_scripts)/sizeof(Script*))
+#define malloc observed_malloc
+#define free observed_free
+@SCRIPT_CONTAINERS@
+#undef malloc
+#undef free
+#define printf message
+@NUMBERS@
+@COMMANDS@
+@SCRIPT_LOADER@
+static ptrdiff_t dispatch(char *input){
+ ArgList arglist={0};char argbuf[MAX_ARG_LEN]={0};char *buf=input,*filename="unit-model",*command=NULL,*value=NULL;
+ char fnbuf[512]={0};size_t size=strlen(input);ptrdiff_t pos=0;
+ s_model *newchar=&model;modelCommands cmd=0;char *packfile="unit.pak";
+ @PREFIX@
+ switch(cmd){@CASES@ default:@DEFAULT@}
+ }
+ return pos;
+}
+#undef printf
+static const struct{unsigned revision;int admitted[60];unsigned slots;size_t offsets[32];const char *blockp_label;} contexts[]={@CONTEXTS@};
+static const struct{const char *name;modelCommands symbol;const char *kind;} commands[]={@COMMAND_ROWS@};
+static const struct{const char *text;double integer,floating,float_integer;int warning;} numbers[]={@VALUES@};
+/* The loader prefix consumes this global, as the engine does. */
+static void reset_services(void){diagnostic[0]=0;model_calls=sound_calls=include_calls=init_calls=compile_calls=load_calls=append_calls=0;service_argument[0]=script_label[0]=0;script_target=NULL;service_success=1;}
+static void initialize(void){
+ memset(&model,0,sizeof(model));memset(&attack,0,sizeof(attack));
+ model.scripts=parser_scripts;model.runspeed=31.25f;model.runjumpdist=32.5f;model.runjumpheight=33.75f;
+ model.runhold=35;model.runupdown=36;model.flash=77;model.bflash=79;
+ attack.attack_force=91;attack.hitflash=93;attack.blockflash=95;attack.hitsound=97;attack.blocksound=99;
+ attack.tag=101;attack.obor_attack_index=103;
+ for(int i=0;i<6;++i){bbox[i]=111+i;abox[i]=211+i;}reset_services();
+}
+struct state{s_model model;s_attack attack;int bbox[6],abox[6];};
+static void capture(struct state *out){memcpy(&out->model,&model,sizeof(model));memcpy(&out->attack,&attack,sizeof(attack));memcpy(out->bbox,bbox,sizeof(bbox));memcpy(out->abox,abox,sizeof(abox));}
+static void equal_state(const struct state *expected){assert(!memcmp(&expected->model,&model,sizeof(model)) && !memcmp(&expected->attack,&attack,sizeof(attack)) && !memcmp(expected->bbox,bbox,sizeof(bbox)) && !memcmp(expected->abox,abox,sizeof(abox)));}
+static void set_expected(unsigned field,double number){switch(field){@FIELDS@ default:abort();}}
+static void unknown(const char *name){char expected[256];snprintf(expected,sizeof(expected),"Command '%s' not understood in file 'unit-model'!\n",name);assert(include_calls==1 && !strcmp(diagnostic,expected));}
+static ptrdiff_t run(const char *name,const char *value,int uppercase,int *failed){
+ char input[512];int count=snprintf(input,sizeof(input),"%s%s%s",name,value[0]?" ":"",value);assert(count>=0 && (size_t)count<sizeof(input));
+ if(uppercase)for(size_t i=0;i<strlen(name);++i)input[i]=(char)toupper((unsigned char)input[i]);
+ *failed=0;if(setjmp(stopped)){*failed=1;return 0;}return dispatch(input);
+}
+static void allocator_reset(void){for(unsigned i=0;i<owned_count;++i)assert(!owned[i].live);owned_count=allocated_count=clear_count=copy_count=release_count=0;memset(owned,0,sizeof(owned));traversal=0;}
+static void lifecycle(unsigned row){
+ for(unsigned offset=0;offset<2;++offset){
+  active_case=8000+offset;allocator_reset();unsigned n=contexts[row].slots;
+  union{void *aligned;unsigned char bytes[sizeof(void*)+1];} a={0},b={0};void *pa=a.bytes+offset,*pb=b.bytes+offset;
+  alloc_all_scripts(pa);alloc_all_scripts(pb);assert(allocated_count==2*n);
+  s_scripts *first=NULL,*second=NULL;memcpy(&first,pa,sizeof(first));memcpy(&second,pb,sizeof(second));assert(first && second);
+  for(unsigned i=0;i<n;++i){memcpy(source_order+i,(char*)first+contexts[row].offsets[i],sizeof(Script*));memcpy(destination_order+i,(char*)second+contexts[row].offsets[i],sizeof(Script*));assert(source_order[i]==allocated_scripts[i] && destination_order[i]==allocated_scripts[n+i]);}
+  traversal=1;copy_all_scripts(first,second,1);assert(copy_count==n);clear_all_scripts(first,2);assert(clear_count==n);
+  free_all_scripts(pa);assert(release_count==n+1);clear_count=0;
+  for(unsigned i=0;i<n;++i)source_order[i]=destination_order[i];
+  clear_all_scripts(second,2);assert(clear_count==n);
+  free_all_scripts(pb);assert(release_count==2*n+2);memcpy(&first,pa,sizeof(first));memcpy(&second,pb,sizeof(second));assert(!first && !second);
+  allocator_reset();
+ }
+}
+static void numeric_cases(unsigned row){
+ for(unsigned field=0;field<52;++field)for(unsigned value=0;value<sizeof(numbers)/sizeof(*numbers);++value)for(int upper=0;upper<2;++upper){
+  active_case=8100+field*20+value*2+(unsigned)upper;initialize();struct state original,expected;capture(&original);
+  double number=!strcmp(commands[field].kind,"float")?numbers[value].floating:!strcmp(commands[field].kind,"float-int")?numbers[value].float_integer:numbers[value].integer;
+  set_expected(field,number);capture(&expected);memcpy(&model,&original.model,sizeof(model));memcpy(&attack,&original.attack,sizeof(attack));memcpy(bbox,original.bbox,sizeof(bbox));memcpy(abox,original.abox,sizeof(abox));
+  int failed;assert(run(commands[field].name,numbers[value].text,upper,&failed)==0 && !failed);
+  if(contexts[row].admitted[field]){
+   equal_state(&expected);assert(!include_calls && !model_calls && !sound_calls && !init_calls);
+   if(numbers[value].warning){char warning[512];snprintf(warning,sizeof(warning),"WARNING: unit-model tries to load a nonnumeric value at %s, where a number is expected!\nerroneus string: %s\n",commands[field].name,numbers[value].text);assert(!strcmp(diagnostic,warning));}
+   else assert(!diagnostic[0]);
+  }else{equal_state(&original);unknown(commands[field].name);}
+ }
+ for(unsigned field=0;field<52;++field){
+  if(strcmp(commands[field].kind,"float-int") || !contexts[row].admitted[field])continue;
+  active_case=9200+field;initialize();struct state before;capture(&before);int failed;
+  assert(run(commands[field].name,"1e20",0,&failed)==0 && !failed && !diagnostic[0]);equal_state(&before);
+ }
+}
+static void service_cases(unsigned row){
+ for(unsigned field=52;field<60;++field){
+  if(!strcmp(commands[field].kind,"script"))continue;
+  const char *values[]={"none","NoNe","UnitPath","0","","bad"};
+  for(unsigned value=0;value<sizeof(values)/sizeof(*values);++value){
+   active_case=9300+field*10+value;initialize();struct state original,expected;capture(&original);
+   int model_service=!strcmp(commands[field].kind,"model-service"),sound_service=!strcmp(commands[field].kind,"sound-service");
+   int ignored=!model_service && !sound_service;
+   int none=!strcasecmp(values[value],"none");
+   if(!ignored)set_expected(field,none?-1:model_service?7:8);
+   capture(&expected);
+   memcpy(&model,&original.model,sizeof(model));memcpy(&attack,&original.attack,sizeof(attack));
+   int failed;assert(run(commands[field].name,values[value],0,&failed)==0 && !failed);
+   if(!contexts[row].admitted[field] || !strcmp(commands[field].kind,"unhandled")){equal_state(&original);unknown(commands[field].name);}
+   else{equal_state(&expected);assert(!diagnostic[0] && !include_calls);assert(model_calls==(model_service&&!none) && sound_calls==(sound_service&&!none));if(!ignored&&!none)assert(!strcmp(service_argument,values[value]));}
+  }
+ }
+}
+static void script_cases(unsigned row){
+ for(unsigned field=58;field<60;++field)for(int inline_mode=0;inline_mode<2;++inline_mode)for(int success=0;success<2;++success){
+  active_case=10000+field*4+(unsigned)(2*inline_mode+success);initialize();service_success=success;int failed;
+  ptrdiff_t consumed=run(commands[field].name,inline_mode?"@script":"unit-script",0,&failed);
+  if(!contexts[row].admitted[field]){assert(!failed && !consumed && !init_calls);unknown(commands[field].name);continue;}
+  Script *expected=field==58?parser_scripts->onblockp_script:parser_scripts->inhole_script;
+  const char *label=field==58?contexts[row].blockp_label:"inholescript";
+  assert(init_calls==1 && script_target==expected && !strcmp(script_label,label));
+  assert(load_calls==!inline_mode && append_calls==inline_mode && compile_calls==success);
+  if(success)assert(!failed && consumed==(inline_mode?7:0) && !diagnostic[0]);
+  else{char error[512];snprintf(error,sizeof(error),"Unable to load %s '%s' in file 'unit-model'.\n",label,inline_mode?"@script":"unit-script");assert(failed && !strcmp(diagnostic,error));}
+ }
+}
+static void legacy_controls(void){
+ int failed;initialize();assert(run("running","30 3.5 2.75 17 -19",0,&failed)==0 && !failed && !diagnostic[0]);
+ assert(model.runspeed==3 && model.runjumpheight==3.5 && model.runjumpdist==2.75 && model.runupdown==17 && model.runhold==-19);
+ initialize();assert(run("bbox","1 2 3 4 5 6",1,&failed)==0 && !failed && !diagnostic[0]);for(int i=0;i<6;++i)assert(bbox[i]==i+1);
+ initialize();assert(run("blockflash","none",0,&failed)==0 && !failed && !diagnostic[0] && attack.blockflash==-1 && model.bflash==79);
+ initialize();assert(run("blockfx","none",0,&failed)==0 && !failed && !diagnostic[0] && attack.blocksound==8 && sound_calls==1 && !strcmp(service_argument,"none"));
+}
+int main(void){
+ _Static_assert(sizeof(int)==4,"native signed integer extent");assert(sizeof(commands)/sizeof(*commands)==60);
+ for(unsigned row=0;row<sizeof(contexts)/sizeof(*contexts);++row){
+  obor_profile_build=contexts[row].revision;lifecycle(row);parser_scripts=NULL;alloc_all_scripts(&parser_scripts);
+  modelcmdlist=createModelCommandList();assert(modelcmdlist);
+  for(unsigned field=0;field<60;++field){char name[128];snprintf(name,sizeof(name),"%s",commands[field].name);assert(getModelCommand(modelcmdlist,name)==(contexts[row].admitted[field]?commands[field].symbol:0));}
+  numeric_cases(row);service_cases(row);script_cases(row);legacy_controls();
+  freeCommandList(modelcmdlist);modelcmdlist=NULL;free_all_scripts(&parser_scripts);assert(!parser_scripts);allocator_reset();
+  printf("{\"revision\":%u,\"status\":\"PASS\"}\n",obor_profile_build);
+ }
+ return 0;
+}

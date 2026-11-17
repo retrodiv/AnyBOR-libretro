@@ -7,6 +7,7 @@ import json
 from pathlib import Path
 import re
 
+from historical_classic_entities import entity_declarations
 from test_historical_player import function, rename_identifiers, switch_cases
 
 
@@ -16,8 +17,7 @@ def time_program(root, data):
     script = (engine / 'openborscript.c').read_text()
     variant = (engine / 'source/scriptlib/ScriptVariant.c').read_text()
     utils = (engine / 'source/utils.c').read_text()
-    first = script.index('enum _axis_enum')
-    declarations = script[first:script.index('HRESULT openbor_getanimationproperty(', first)]
+    declarations = entity_declarations(script)
     body, cases = switch_cases(script, 'openbor_getentityproperty', 'propind', outermost=True)
     getter = (body[:body.index('switch(propind)')] + 'switch(propind){case _ep_attack:' +
               cases['_ep_attack']['body'] + 'default:' + cases['default']['body'] +

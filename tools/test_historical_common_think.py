@@ -92,8 +92,10 @@ def ogg_configuration(template):
     return template
 
 
-def native_output(code, data, *, extra_includes=(), configure_ogg=False):
-    engine = ROOT / 'src/engines' / data['engine']
+def native_output(code, data, *, extra_includes=(), configure_ogg=False, libraries=(), engine_source=None):
+    engine = Path(engine_source) if engine_source is not None else ROOT / 'src/engines' / data['engine']
+    if not (engine/'openbor.h').is_file() or not (engine/'source/gamelib/types.h').is_file():
+        raise ValueError('Selected native engine headers are unavailable')
     includes = [ROOT / 'src/port/libretro', engine, engine / 'source'] + [p for p in
         sorted((engine / 'source').iterdir()) if p.is_dir()]
     for directory in extra_includes:
@@ -120,7 +122,8 @@ def native_output(code, data, *, extra_includes=(), configure_ogg=False):
             '-Wno-error=deprecated-declarations', '-Wno-error=sign-compare',
             '-DOBOR_ENGINE_BUILD=' + data['engine'],
             '-DLIBRETRO=1', '-fsanitize=address,undefined', '-fno-sanitize-recover=all', '-g',
-            *('-I' + str(p) for p in includes), str(source), '-o', str(binary)],
+            *('-I' + str(p) for p in includes), str(source), '-o', str(binary),
+            *('-l' + library for library in libraries)],
             check=True, timeout=60)
         raw = subprocess.check_output([str(binary)], text=True, timeout=30,
                                       env=sanitizer_environment())

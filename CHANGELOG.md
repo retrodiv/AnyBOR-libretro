@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.2.38
+
+- Add selectable profiles v3.0 4161-dev, v3.0 4183-dev and v3.0 4213 with
+  source-specific script, animation, entity, level, drawing and settings behavior.
+
 ## 0.2.37
 
 - Bound Linux runtime groups to ten profiles to retain headroom within the

@@ -1,0 +1,162 @@
+/* SPDX-License-Identifier: BSD-3-Clause
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me>
+ * Native loaders/music/formatter and selected caller/lifetime statements.
+ */
+#include <stdint.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <stdarg.h>
+#include "openbor.h"
+#undef printf
+#undef assert
+#ifdef NDEBUG
+#error Pause/debug assertions must remain enabled
+#endif
+uint32_t obor_profile_build;
+static unsigned active_case;
+#define assert(c) do{if(!(c)){fprintf(stderr,"PAUSE_DEBUG revision=%u case=%u line=%d: %s\n",obor_profile_build,active_case,__LINE__,#c);abort();}}while(0)
+HRESULT Interpreter_Call(Interpreter *p){(void)p;abort();}
+HRESULT Interpreter_EvalInstruction(Interpreter *p){(void)p;abort();}
+void borExit(int n){(void)n;abort();}
+s_savedata savedata;
+s_videomodes videomodes;
+s_player player[MAX_PLAYERS];
+static entity actor;
+static s_screen screen;
+s_screen *vscreen=&screen;
+s_debug_xy_msg debug_xy_msg;
+u32 debug_time,time;
+char debug_msg[2048],currentmusic[128];
+char packfile[OBOR_CONTENT_PATH_MAX]="content";
+int pause,nopause;
+int SAMPLE_GO,SAMPLE_BEAT,SAMPLE_BLOCK,SAMPLE_FALL,SAMPLE_GET,SAMPLE_GET2,SAMPLE_JUMP;
+int SAMPLE_INDIRECT,SAMPLE_PUNCH,SAMPLE_1UP,SAMPLE_TIMEOVER,SAMPLE_BEEP,SAMPLE_BEEP2,SAMPLE_PAUSE,SAMPLE_BIKE;
+static int *sample_slots[]={@SLOTS@};
+static const char *sample_paths[]={@PATHS@};
+static const struct{unsigned revision;int sample,position;}contexts[]={@CONTEXTS@};
+static unsigned phase,loaded,unloaded,missing_mask;
+static int native_sample,position_enabled;
+static char trace[32];
+static unsigned trace_at;
+static int played,open_calls,query_calls,font_calls,open_result,query_result,has_artist,has_title;
+static unsigned draw_calls;
+static int draw_x,draw_y,draw_font;
+static char draw_text[2048];
+static void event(char c){assert(trace_at+1<sizeof(trace));trace[trace_at++]=c;trace[trace_at]=0;}
+void sound_unload_all_samples(void){assert(!loaded && !unloaded);++unloaded;}
+int sound_load_sample(char *name,char *pak,int log)
+{
+ assert(phase==1 && unloaded==1 && pak==packfile && !log);
+ unsigned slot=loaded;if(!native_sample && slot>=13)++slot;
+ assert(slot<15 && !strcmp(name,sample_paths[slot]));++loaded;
+ return missing_mask&(1u<<slot)?-9:(int)(100+loaded);
+}
+int sound_open_music(char *name,char *pak,int volume,int loop,u32 offset)
+{assert(phase==3 && !strcmp(name,"song.ogg") && pak==packfile && volume==37 && loop==2 && offset==0xfffffffdu);++open_calls;return open_result;}
+int sound_query_music(char *artist,char *title)
+{++query_calls;strcpy(artist,has_artist?"Artist":"");strcpy(title,has_title?"Title":"");return query_result;}
+int fontmonowidth(int font){assert(!font);++font_calls;return 8;}
+void sound_pause_music(int on){assert(phase==2 && on==1);event('M');}
+void sound_pause_sample(int on){assert(phase==2 && on==1);event('P');}
+int sound_play_sample(int sample,unsigned priority,int left,int right,unsigned speed)
+{assert(phase==2 && !priority && left==63 && right==63 && speed==100);played=sample;event('B');return 0;}
+void pausemenu(void){event('E');}
+void screen_printf(s_screen *s,int x,int y,int font,char *format,...)
+{assert(s==vscreen);++draw_calls;draw_x=x;draw_y=y;draw_font=font;va_list ap;va_start(ap,format);vsnprintf(draw_text,sizeof(draw_text),format,ap);va_end(ap);}
+static int record_printf(char *format,...){assert(strstr(format,"Can't play music file"));return 0;}
+@DEBUG@
+@LOAD@
+#define printf record_printf
+@MUSIC@
+#undef printf
+static void enter_pause(int ingame){@ENTER@event('Z');}
+static void display_debug(void){@DISPLAY@}
+static void unload_debug(void){@UNLOAD@}
+static void sample_cases(void)
+{
+ phase=1;
+ for(int absent=-1;absent<16;++absent)
+ {
+  missing_mask=absent<0?0:absent==15?(1u<<12)|(1u<<13):1u<<absent;
+  loaded=unloaded=0;
+  for(unsigned i=0;i<15;++i)*sample_slots[i]=-77;
+  int result=load_special_sounds();assert(unloaded==1 && loaded==(native_sample?15u:14u));
+  int ok=1;unsigned order=0;
+  for(unsigned i=0;i<15;++i)
+  {
+   if(i==13 && !native_sample){assert(*sample_slots[i]==-1);continue;}
+   int expected=missing_mask&(1u<<i)?-9:(int)(101+order);++order;
+   if(i==13 && expected<0)expected=SAMPLE_BEEP2;
+   assert(*sample_slots[i]==expected);if(expected<0)ok=0;
+  }
+  assert(result==ok);
+  if(absent==-1 || absent==13)
+  {
+   /* Bind the actual loaded or fallback ID to the unchanged entry caller. */
+   int expected=native_sample?SAMPLE_PAUSE:SAMPLE_BEEP2;
+   phase=2;savedata.effectvol=63;memset(player,0,sizeof(player));pause=nopause=0;
+   player[0].ent=&actor;player[0].newkeys=FLAG_START;trace_at=0;trace[0]=0;played=-1;
+   enter_pause(1);assert(!strcmp(trace,"MPBE") && played==expected);phase=1;
+  }
+  ++active_case;
+ }
+}
+static void entry_cases(void)
+{
+ phase=2;SAMPLE_PAUSE=101;SAMPLE_BEEP2=202;savedata.effectvol=63;
+ for(int game=0;game<3;++game)for(int paused=0;paused<3;++paused)for(int disabled=0;disabled<2;++disabled)
+ for(int slot=-1;slot<4;++slot)for(int exists=0;exists<2;++exists)
+ {
+  memset(player,0,sizeof(player));pause=paused;nopause=disabled;
+  if(slot>=0){player[slot].ent=exists?&actor:NULL;player[slot].newkeys=FLAG_START;}
+  trace_at=0;trace[0]=0;played=-1;enter_pause(game);
+  int enter=game==1 && !paused && !disabled && slot>=0 && exists;
+  assert(!strcmp(trace,enter?"MPBE":"Z"));assert(played==(enter?(native_sample?101:202):-1));++active_case;
+ }
+}
+static void music_cases(void)
+{
+ phase=3;
+ for(int use=0;use<2;++use)for(int titles=0;titles<2;++titles)for(open_result=0;open_result<2;++open_result)
+ for(query_result=0;query_result<2;++query_result)for(has_artist=0;has_artist<2;++has_artist)for(has_title=0;has_title<2;++has_title)
+ {
+  savedata.usemusic=use;savedata.showtitles=titles;savedata.musicvol=37;
+  videomodes.hRes=400;videomodes.vRes=280;videomodes.vShift=9;
+  debug_xy_msg=(s_debug_xy_msg){13,17,5};debug_time=19;strcpy(debug_msg,"prior");strcpy(currentmusic,"before");
+  open_calls=query_calls=font_calls=0;int result=music((char*)"song.ogg",2,-3);
+  assert(result==(use?open_result:0) && open_calls==use && query_calls==(use&&titles) && font_calls==position_enabled);
+  assert(!strcmp(currentmusic,use?"song.ogg":"before"));
+  int queried=use&&titles&&query_result;
+  const char *expected=queried?(has_artist?(has_title?"Playing \"Title\" by Artist":"Playing unknown song by Artist"):(has_title?"Playing \"Title\" by unknown artist":"")):"prior";
+  assert(!strcmp(debug_msg,expected) && debug_time==(queried?0xffffffffu:19u));
+  assert(debug_xy_msg.x==(queried&&position_enabled?72:13) && debug_xy_msg.y==(queried&&position_enabled?271:17) && debug_xy_msg.font_index==(queried&&position_enabled?0:5));++active_case;
+ }
+}
+static void lifetime_cases(void)
+{
+ static const int xy[][2]={{0,20},{10,0},{-1,20},{10,-1},{10,20},{-5,-7},{INT32_MIN,INT32_MAX},{1,1}};
+ const u32 expiry[]={9,10,11,0xffffffffu};
+ for(unsigned i=0;i<sizeof(xy)/sizeof(*xy);++i)for(int font=-2;font<=2;++font)
+ for(unsigned e=0;e<4;++e)for(int text=0;text<2;++text)
+ {
+  time=10;debug_time=expiry[e];debug_xy_msg=(s_debug_xy_msg){xy[i][0],xy[i][1],font};strcpy(debug_msg,text?"on":"");draw_calls=0;
+  display_debug();u32 until=expiry[e]==0xffffffffu?10+GAME_SPEED*5:expiry[e];int live=10<until && text;
+  assert(debug_time==until && draw_calls==(unsigned)live);
+  if(live)
+  {int positioned=position_enabled && xy[i][0] && xy[i][1] && xy[i][0]!=-1 && xy[i][1]!=-1;assert(draw_x==(positioned?xy[i][0]:0) && draw_y==(positioned?xy[i][1]:230) && draw_font==(positioned?font:0) && !strcmp(draw_text,"on"));}
+  else assert(!debug_msg[0] && debug_xy_msg.x==(position_enabled?-1:xy[i][0]) && debug_xy_msg.y==(position_enabled?-1:xy[i][1]));
+  assert(debug_xy_msg.font_index==font);++active_case;
+ }
+ debug_time=88;debug_xy_msg=(s_debug_xy_msg){12,34,7};unload_debug();assert(!debug_time && debug_xy_msg.x==(position_enabled?-1:12) && debug_xy_msg.y==(position_enabled?-1:34) && debug_xy_msg.font_index==7);
+}
+int main(void)
+{
+ for(unsigned i=0;i<sizeof(contexts)/sizeof(*contexts);++i)
+ {
+  obor_profile_build=contexts[i].revision;native_sample=contexts[i].sample;position_enabled=contexts[i].position;active_case=0;
+  sample_cases();entry_cases();music_cases();lifetime_cases();
+  printf("{\"revision\":%u,\"status\":\"PASS\"}\n",obor_profile_build);
+ }
+ return 0;
+}

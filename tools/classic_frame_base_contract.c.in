@@ -7,8 +7,13 @@
 #include <stdlib.h>
 #include <string.h>
 #include <math.h>
+#include <limits.h>
 #include "openbor.h"
 #undef printf
+/* Native allocator output is checked separately; ordinary successful
+ * allocations retain their real pointers in this consumer contract. */
+void *checkAlloc(void *ptr, size_t bytes, const char *func, const char *file, int line)
+{ (void)func; (void)file; (void)line; if(bytes && !ptr) abort(); return ptr; }
 #undef assert
 #ifdef NDEBUG
 #error Frame-base assertions must remain enabled
@@ -42,6 +47,12 @@ static void tracked_free(void *p)
     abort();
 }
 int checkhole(float x,float z) {(void)x;(void)z;++hole_queries;return 1;}
+int checkhole_in(float x,float z,float altitude)
+{(void)x;(void)z;(void)altitude;assert(!"height query outside classic frame-base fixture scope");abort();}
+int checkholeindex_in(float x,float z,float altitude)
+{(void)x;(void)z;(void)altitude;assert(!"height index outside classic frame-base fixture scope");abort();}
+void execute_inhole_script(entity *e,int plane,float height,int index)
+{(void)e;(void)plane;(void)height;(void)index;assert(!"hole callback outside classic frame-base fixture scope");abort();}
 int checkwall(float x,float z) {(void)x;(void)z;return -1;}
 entity *check_platform_below(float x,float z,float y,entity *exclude)
 {(void)x;(void)z;(void)y;assert(exclude==&actor);return NULL;}
@@ -53,8 +64,11 @@ void ent_unlink(entity *e) {(void)e;abort();}
 int checkwall_below(float x,float z,float height)
 {(void)x;(void)z;assert(height==9999999);return geometry==1?0:-1;}
 static float check_basemap(int x,int z) {(void)x;(void)z;return -1000;}
+void shutdown(int status,char *message,...){(void)status;(void)message;abort();}
+#undef malloc
 #define malloc tracked_malloc
 #define free tracked_free
+@ALLOCATIONS@
 @FUNCTIONS@
 #undef malloc
 #undef free

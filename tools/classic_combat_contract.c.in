@@ -37,7 +37,7 @@ void ent_set_colourmap(entity *ent, unsigned int map)
     assert(ent == &actor && map == 3); event('M');
 }
 void execute_onfall_script(entity *ent, entity *attacker, int force, int drop,
-    int type, int noblock, int guardcost, int jugglecost, int pauseadd)
+    int type, int noblock, int guardcost, int jugglecost, int pauseadd@TAG_PARAMETER@)
 {
     assert(ent == &actor && attacker == &other && force == 7 && drop == 8);
     assert(type == 0 && noblock == 9 && guardcost == 10 && jugglecost == 11 && pauseadd == 12);
@@ -109,7 +109,7 @@ int main(void)
             int changed = available && kind != 2;
             expected_callback_time = changed && (frozen || contexts[p].clear_nonfrozen_time) ? 0 : 123;
             expected_callback_frozen = changed ? 0 : frozen;
-            int result = kind == 1 ? set_fall(&actor, type, 1, &other, 7, 8, 9, 10, 11, 12) :
+            int result = kind == 1 ? set_fall(&actor, type, 1, &other, 7, 8, 9, 10, 11, 12@TAG_ARGUMENT@) :
                                       set_death(&actor, type, 1);
             assert(result == available && self == &other);
             assert(actor.freezetime == (unsigned)expected_callback_time && actor.frozen == expected_callback_frozen);

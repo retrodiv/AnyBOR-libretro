@@ -1,0 +1,142 @@
+/* SPDX-License-Identifier: BSD-3-Clause
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me>
+ * Complete native level accessors and real Variant operations.
+ */
+@PROVIDERS@
+
+/* The complete terrain provider prefix supplies the allocator observer. */
+#include <math.h>
+@VARIANTS@
+@SEARCH@
+#define printf record_printf
+#undef realloc
+#define realloc record_realloc
+@MACROS@
+@DECLARATIONS@
+@METHODS@
+#undef realloc
+#undef printf
+static const struct {unsigned revision;int count;const char *names[14];VARTYPE speed_tag;} contexts[]={@CONTEXTS@};
+static int slot(unsigned p,const char *name)
+{for(int i=0;i<contexts[p].count;++i)if(!strcmp(name,contexts[p].names[i]))return i;return -1;}
+static void text_value(ScriptVariant *v,const char *s)
+{ScriptVariant_ChangeType(v,VT_STR);StrCache_Copy(v->strVal,(char *)s);}
+static void reset_scene(void)
+{
+ memset(level,0,sizeof(*level));level->bgspeed=2.75f;level->vbgspeed=-6.5f;
+ level->cameraxoffset=11;level->camerazoffset=-5;level->scrollspeed=1.25f;
+ level->gravity=-0.125f;level->maxfallspeed=3.5f;level->maxtossspeed=4.25f;
+ level->quake=7;level->type=8;level->rocking=6;allocations=0;diagnostic[0]=0;
+}
+static float field(const char *name)
+{
+#define FIELD(n) if(!strcmp(name,#n))return level->n;
+ FIELD(bgspeed) FIELD(vbgspeed) FIELD(cameraxoffset) FIELD(camerazoffset) FIELD(scrollspeed)
+ FIELD(gravity) FIELD(maxfallspeed) FIELD(maxtossspeed) FIELD(quake) FIELD(type) FIELD(rocking)
+#undef FIELD
+ abort();
+}
+static int scalar(const char *name)
+{return strcmp(name,"basemap") && strcmp(name,"hole") && strcmp(name,"wall");}
+static int speed(const char *name)
+{return !strcmp(name,"bgspeed") || !strcmp(name,"vbgspeed") || !strcmp(name,"scrollspeed");}
+static void expected_result(unsigned p,const char *name,ScriptVariant *r,uint64_t seed)
+{
+ if(!strcmp(name,"bgspeed")||!strcmp(name,"vbgspeed"))
+ {
+  unsigned char expected[8];memcpy(expected,&seed,8);LONG integer=(LONG)field(name);memcpy(expected,&integer,4);
+  assert(r->vt==(!strcmp(name,"bgspeed")?contexts[p].speed_tag:VT_DECIMAL));
+  assert(!memcmp(&r->dblVal,expected,8));
+  if(r->vt==VT_DECIMAL){double observed;memcpy(&observed,expected,8);assert(r->dblVal==observed);}
+  else assert(r->lVal==integer);
+  return;
+ }
+ int decimal=!strcmp(name,"scrollspeed")||!strcmp(name,"gravity")||!strcmp(name,"maxfallspeed")||!strcmp(name,"maxtossspeed");
+ assert(r->vt==(decimal?VT_DECIMAL:VT_INTEGER));
+ if(decimal)assert(r->dblVal==(DOUBLE)field(name));else assert(r->lVal==(LONG)field(name));
+}
+static void tables(unsigned p)
+{
+ for(int i=0;i<contexts[p].count;++i)for(int named=0;named<3;++named)
+ {
+  reset_scene();++active_case;ScriptVariant prop={.vt=VT_INTEGER,.lVal=i};
+  ScriptVariant value={.vt=VT_DECIMAL,.dblVal=-6.75},child={.vt=VT_INTEGER,.lVal=0},r={.vt=VT_EMPTY};
+  ScriptVariant *a[]={&prop,&value,&child},*out=&r;const char *name=contexts[p].names[i];
+  if(named){char upper[32];strcpy(upper,name);if(named==2)for(char *c=upper;*c;++c)if(*c>='a'&&*c<='z')*c-=32;text_value(&prop,upper);}
+  assert(mapstrings_levelproperty(a,3)==1 && prop.vt==VT_INTEGER && prop.lVal==i);
+  assert(mapstrings_levelproperty(a,3)==1 && prop.lVal==i);
+  if(scalar(name))
+  {
+   uint64_t seed=UINT64_C(0x3ff00000ffffffff);memcpy(&r.dblVal,&seed,8);r.vt=VT_DECIMAL;
+   HRESULT hr=openbor_getlevelproperty(a,&out,1);
+   if(!strcmp(name,"rocking")){assert(hr==E_FAIL && out==NULL);char expected[160];snprintf(expected,sizeof(expected),"Property is not supported by function getlevelproperty yet. %d\n",i);assert(!strcmp(diagnostic,expected));}
+   else {assert(hr==S_OK && out==&r);expected_result(p,name,&r,seed);}
+   diagnostic[0]=0;out=&r;assert(openbor_changelevelproperty(a,&out,2)==S_OK && out==NULL);
+   int decimal=!strcmp(name,"gravity")||!strcmp(name,"maxfallspeed")||!strcmp(name,"maxtossspeed")||
+       (speed(name)&&contexts[p].speed_tag==VT_DECIMAL);
+   assert(field(name)==(decimal?-6.75f:-6.0f) && allocations==0);
+   ScriptVariant_Clear(&r);
+   text_value(&value,"invalid");s_level before=*level;out=&r;
+   assert(openbor_changelevelproperty(a,&out,2)==E_FAIL && out==NULL && !memcmp(level,&before,sizeof(before)));
+   assert(!strcmp(diagnostic,"Function changelevelproperty(prop, value) received invalid value(s). \nDumping values: invalid, \n"));
+  }
+  ScriptVariant_Clear(&prop);ScriptVariant_Clear(&value);ScriptVariant_Clear(&r);
+ }
+}
+static void speed_cases(unsigned p)
+{
+ const char *names[]={"bgspeed","vbgspeed"};
+ const float values[]={2.75f,-6.5f,0,17.125f};
+ const uint64_t seeds[]={0,UINT64_C(0x3ff0000000000000),UINT64_C(0x40080000ffffffff)};
+ for(unsigned k=0;k<2;++k)if(slot(p,names[k])>=0)
+ {
+  for(unsigned i=0;i<4;++i)for(unsigned j=0;j<3;++j)
+  {
+   reset_scene();if(k)level->vbgspeed=values[i];else level->bgspeed=values[i];
+   ScriptVariant prop={.vt=VT_INTEGER,.lVal=slot(p,names[k])},r={.vt=VT_EMPTY},*out=&r;
+   ScriptVariant *a[]={&prop};memcpy(&r.dblVal,&seeds[j],8);
+   assert(openbor_getlevelproperty(a,&out,1)==S_OK && out==&r);expected_result(p,names[k],&r,seeds[j]);ScriptVariant_Clear(&r);
+  }
+  for(unsigned i=0;i<4;++i)
+  {
+   reset_scene();float invalid[]={NAN,INFINITY,-INFINITY,2147483648.0f};
+   if(k)level->vbgspeed=invalid[i];else level->bgspeed=invalid[i];
+   ScriptVariant prop={.vt=VT_INTEGER,.lVal=slot(p,names[k])},r={.vt=VT_INTEGER,.lVal=73},*out=&r;
+   ScriptVariant *a[]={&prop};assert(openbor_getlevelproperty(a,&out,1)==E_FAIL && out==NULL && r.vt==VT_INTEGER && r.lVal==73);
+  }
+ }
+ reset_scene();ScriptVariant prop={.vt=VT_EMPTY},value={.vt=VT_DECIMAL,.dblVal=-6.75},*out=&value;
+ uint64_t seed=UINT64_C(0x3ff0000000000000);memcpy(&prop.dblVal,&seed,8);text_value(&prop,"bgspeed");ScriptVariant *a[]={&prop,&value};
+ out=&prop;assert(openbor_getlevelproperty(a,&out,1)==S_OK && out==&prop);expected_result(p,"bgspeed",&prop,seed);
+ prop.vt=VT_INTEGER;prop.lVal=slot(p,"bgspeed");out=&value;
+ assert(openbor_changelevelproperty(a,&out,2)==S_OK && out==NULL && value.vt==VT_DECIMAL && value.dblVal==-6.75);
+ assert(level->bgspeed==(contexts[p].speed_tag==VT_DECIMAL?-6.75f:-6.0f));ScriptVariant_Clear(&prop);ScriptVariant_Clear(&value);
+}
+static void terrain_refusal(unsigned p)
+{
+ for(int kind=0;kind<2;++kind)for(int named=0;named<2;++named)
+ {
+  reset_scene();s_terrain terrain={0};terrain.height=9.5f;
+  level->holes=level->walls=&terrain;level->numholes=level->numwalls=1;const char *name=kind?"wall":"hole";
+  ScriptVariant prop={.vt=VT_INTEGER,.lVal=slot(p,name)},index={.vt=VT_INTEGER,.lVal=0};
+  ScriptVariant child={.vt=VT_INTEGER,.lVal=1},value={.vt=VT_DECIMAL,.dblVal=15.75},r={.vt=VT_EMPTY};
+  ScriptVariant *a[]={&prop,&index,&child,&value},*out=&r;
+  if(named){text_value(&prop,name);text_value(&child,"height");}
+  assert(mapstrings_levelproperty(a,4)==1 && prop.vt==VT_INTEGER && prop.lVal==slot(p,name) && child.vt==VT_INTEGER && child.lVal==1);
+  assert(openbor_getlevelproperty(a,&out,3)==E_FAIL && out==NULL && terrain.height==9.5f && allocations==0);
+  char expected[256];snprintf(expected,sizeof(expected),"You must provide a string value for %s subproperty.\n",name);assert(!strcmp(diagnostic,expected));
+  diagnostic[0]=0;out=&r;assert(openbor_changelevelproperty(a,&out,4)==E_FAIL && out==NULL && terrain.height==9.5f && allocations==0);
+  snprintf(expected,sizeof(expected),"You must provide a string value for %s subproperty.\nFunction changelevelproperty(prop, value) received invalid value(s). \nDumping values: 0, 1, 15.750000, \n",name);assert(!strcmp(diagnostic,expected));
+  ScriptVariant_Clear(&prop);ScriptVariant_Clear(&child);ScriptVariant_Clear(&r);
+ }
+}
+int main(void)
+{
+ for(unsigned p=0;p<sizeof(contexts)/sizeof(*contexts);++p)
+ {
+  obor_profile_build=contexts[p].revision;active_case=0;tables(p);speed_cases(p);terrain_refusal(p);
+  for(int i=0;i<32;++i)assert(!used[i]);
+  printf("{\"revision\":%u,\"status\":\"PASS\"}\n",obor_profile_build);
+ }
+ return 0;
+}

@@ -10,13 +10,21 @@ import re
 from test_historical_player import function, rename_identifiers, switch_cases
 
 
+def entity_declarations(source):
+    """Retain entity declarations and its real mapper without animation bodies."""
+    first = source.index('enum _axis_enum')
+    animation = source.index('typedef enum obor_forward_animationprop_enum', first)
+    helpers = source.index('enum obor_forward_entityproperty_enum', animation)
+    end = source.index('HRESULT openbor_getanimationproperty(', helpers)
+    return source[first:animation] + source[helpers:end]
+
+
 def namespace_program(root, data):
     engine = root / 'src/engines' / data['engine']
     source = (engine / 'openborscript.c').read_text()
     variant = (engine / 'source/scriptlib/ScriptVariant.c').read_text()
     utils = (engine / 'source/utils.c').read_text()
-    first = source.index('enum _axis_enum')
-    declarations = source[first:source.index('HRESULT openbor_getanimationproperty(', first)]
+    declarations = entity_declarations(source)
     dispatcher = function(source, 'Script_GetStringMapFunction')
     references = set(re.findall(r'\(void\s*\*\)\s*(\w+)', dispatcher))
     methods = {}
@@ -83,8 +91,7 @@ def dropv_program(root, data):
     source = (engine / 'openborscript.c').read_text()
     variant = (engine / 'source/scriptlib/ScriptVariant.c').read_text()
     utils = (engine / 'source/utils.c').read_text()
-    first = source.index('enum _axis_enum')
-    declarations = source[first:source.index('HRESULT openbor_getanimationproperty(', first)]
+    declarations = entity_declarations(source)
     body, cases = switch_cases(source, 'openbor_getentityproperty', 'propind', outermost=True)
     getter = (body[:body.index('switch(propind)')] + 'switch(propind){case _ep_attack:' +
               cases['_ep_attack']['body'] + 'default:' + cases['default']['body'] +
@@ -147,8 +154,7 @@ def animation_height_program(root, data):
     core = (engine / 'openbor.c').read_text()
     variant = (engine / 'source/scriptlib/ScriptVariant.c').read_text()
     utils = (engine / 'source/utils.c').read_text()
-    first = source.index('enum _axis_enum')
-    declarations = source[first:source.index('HRESULT openbor_getanimationproperty(', first)]
+    declarations = entity_declarations(source)
     body, cases = switch_cases(source, 'openbor_getentityproperty', 'propind', outermost=True)
     getter = (body[:body.index('switch(propind)')] + 'switch(propind){case _ep_animheight:' +
               cases['_ep_animheight']['body'] + 'default:' + cases['default']['body'] +
@@ -183,8 +189,7 @@ def staydown_program(root, data):
     source = (engine / 'openborscript.c').read_text()
     variant = (engine / 'source/scriptlib/ScriptVariant.c').read_text()
     utils = (engine / 'source/utils.c').read_text()
-    first = source.index('enum _axis_enum')
-    declarations = source[first:source.index('HRESULT openbor_getanimationproperty(', first)]
+    declarations = entity_declarations(source)
     body, cases = switch_cases(source, 'openbor_getentityproperty', 'propind', outermost=True)
     getter = (body[:body.index('switch(propind)')] + 'switch(propind){case _ep_attack:' +
               cases['_ep_attack']['body'] + 'default:' + cases['default']['body'] +

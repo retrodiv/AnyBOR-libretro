@@ -22,6 +22,8 @@ HRESULT Interpreter_Call(Interpreter *p) { (void)p; abort(); }
 HRESULT Interpreter_EvalInstruction(Interpreter *p) { (void)p; abort(); }
 s_player player[MAX_PLAYERS];
 int credits, noshare;
+int models_cached;
+int get_cached_model_index(char *name) { (void)name; abort(); }
 static entity actor, other;
 static char strings[32][128], diagnostic[512];
 static int used[32], weapon_calls, weapon_number, weapon_flag;

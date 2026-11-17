@@ -15,6 +15,17 @@
 #error Dropv assertions must remain enabled
 #endif
 uint32_t obor_profile_build;
+/* The later sprite/owner path is outside this fixture's original range.
+ * These typed providers stop if that path is accidentally entered. */
+static s_sprite_map *sprite_map;
+static int sprite_map_max_items;
+static unsigned int sprites_loaded;
+size_t obor_allocation_size(const void *value) { (void)value; abort(); }
+const entity *obor_script_animation_owner(const entity *actor)
+{ (void)actor; abort(); }
+s_anim *obor_script_model_animation(const entity *actor, int id)
+{ (void)actor; (void)id; abort(); }
+
 static unsigned active_case;
 #define assert(c) do {if(!(c)){fprintf(stderr,"Dropv revision=%u case=%u line=%d\n",obor_profile_build,active_case,__LINE__);abort();}}while(0)
 HRESULT Interpreter_Call(Interpreter *p) { (void)p; abort(); }

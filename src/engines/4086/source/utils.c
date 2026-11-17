@@ -1,4 +1,4 @@
-/* AnyBOR modification record: 2026-10-21.
+/* AnyBOR modification record: 2026-11-16.
  * Port maintained by retrodiv <retrodiv@proton.me>.
  * Copyright (c) 2026 retrodiv <retrodiv@proton.me> (original contributions).
  * These contributions are licensed under BSD-3-Clause; see LICENSE at the root.
@@ -8,7 +8,11 @@
  * instead of the glibc-only <malloc.h>. Derive output names from the content
  * basename with explicit destination capacities, and reject overflowing
  * output path joins. Bound adjacent string-table reads while preserving the
- * original search order and duplicate preference.
+ * original search order and duplicate preference. Select native first-
+ * character or binary name searching by profile, preserving duplicate
+ * preference and defined uppercase/unsorted-table results with bounded
+ * inputs. Preserve native nonzero allocation failure diagnostics and
+ * controlled exit by profile.
  * Existing changes recorded here; this is not their implementation date.
  * See MODIFICATIONS.md and docs/modifications/4086.md
  * at the source repository root. Original notices follow below.
@@ -323,6 +327,21 @@ void debug_printf(char *format, ...)
     debug_time = 0xFFFFFFFF;
 }
 
+extern unsigned int obor_profile_build;
+
+void *checkAlloc(void *ptr, size_t size, const char *func, const char *file, int line)
+{
+    if (obor_profile_build >= 4163 && size > 0 && ptr == NULL)
+    {
+        writeToLogFile("\n\n********** An Error Occurred **********"
+                       "\n*            Shutting Down            *\n\n");
+        writeToLogFile("Out of memory!\n");
+        writeToLogFile("Allocation of size %i failed in function '%s' at %s:%i.\n", (int)size, func, file, line);
+        exit(2);
+    }
+    return ptr;
+}
+
 // replacement for assert that writes the error to the log file
 void exitIfFalse(int value, const char *assertion, const char *func, const char *file, int line)
 {
@@ -453,6 +472,23 @@ int searchList(const char *list[], const char *value, int length)
     b = length / 2;
     c = length - 1;
     v = value[0];
+
+    if(obor_profile_build >= 4171)
+    {
+        int low = 0, high = length - 1, mid;
+        while(low <= high)
+        {
+            /* Retain native midpoint preference without signed addition overflow. */
+            mid = low + (high - low) / 2;
+            if(stricmp(list[mid], value) < 0)
+                low = mid + 1;
+            else if(stricmp(list[mid], value) == 0)
+                return mid;
+            else if(stricmp(list[mid], value) > 0)
+                high = mid - 1;
+        }
+        return -1;
+    }
 
     // We must convert uppercase values to lowercase,
     // since this is how every command is written in

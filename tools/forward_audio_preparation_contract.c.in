@@ -1,0 +1,32 @@
+/* SPDX-License-Identifier: BSD-3-Clause
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me>
+ */
+@PREFIX@
+#include <setjmp.h>
+#undef printf
+#undef assert
+uint32_t obor_profile_build;
+static jmp_buf stopped;
+static vorbis_context audio;
+static int result,init_calls,block_calls,exit_status;
+#define CHECK(c) do{if(!(c)){fprintf(stderr,"Preparation check at line %d\n",__LINE__);abort();}}while(0)
+void borExit(int status){exit_status=status;longjmp(stopped,1);}
+int vorbis_synthesis_init(vorbis_dsp_state *state,vorbis_info *info)
+{CHECK(state==&audio.v && info==&audio.vi);++init_calls;return result;}
+int vorbis_block_init(vorbis_dsp_state *state,vorbis_block *block)
+{CHECK(state==&audio.v && block==&audio.vb);++block_calls;return 0;}
+@PREPARE@
+int main(void)
+{
+ static const unsigned profiles[]={@PROFILES@};
+ for(volatile unsigned p=0;p<sizeof(profiles)/sizeof(*profiles);++p){
+  obor_profile_build=profiles[p];
+  for(result=-1;result<=1;++result){
+   memset(&audio,0,sizeof(audio));init_calls=block_calls=exit_status=0;
+   int jump=setjmp(stopped);if(!jump)vorbis_prepare(&audio);
+   CHECK(init_calls==1 && jump==!!result && block_calls==!result && exit_status==(result?1:0));
+  }
+  printf("{\"revision\":%u,\"preparation\":\"PASS\"}\n",obor_profile_build);
+ }
+ return 0;
+}

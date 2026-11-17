@@ -33,7 +33,7 @@ static int damage(entity *other,s_attack *attack)
 }
 void kill(entity *ent) {assert(ent==&actor);++kills;ent->health=-9;}
 void execute_takedamage_script(entity *ent,entity *other,int force,int drop,int type,
-    int noblock,int guardcost,int jugglecost,int pauseadd)
+    int noblock,int guardcost,int jugglecost,int pauseadd@TAG_PARAMETER@)
 {
     assert(ent==&actor && other==&owner && force==payload_force && drop==0 && type==2 &&
         noblock==0 && guardcost==0 && jugglecost==0 && pauseadd==0);++script_calls;

@@ -1,0 +1,158 @@
+/* SPDX-License-Identifier: BSD-3-Clause
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me> */
+#include <stdio.h>
+#include <stdint.h>
+#include <stdlib.h>
+#include <string.h>
+#include <limits.h>
+#include <setjmp.h>
+@HEADER@
+#undef malloc
+#undef free
+#undef printf
+#undef shutdown
+#undef OBOR_DRAW_ASSERT
+uint32_t obor_profile_build;
+HRESULT Interpreter_Call(Interpreter *value){(void)value;abort();}
+HRESULT Interpreter_EvalInstruction(Interpreter *value){(void)value;abort();}
+static unsigned active_case;
+#define CHECK(c) do{if(!(c)){fprintf(stderr,"ANIMATION_STORAGE revision=%u case=%u line=%d: %s\n",obor_profile_build,active_case,__LINE__,#c);abort();}}while(0)
+static void *owners[128];static size_t owner_bytes[128];
+static unsigned live,attempts,fail_at,stops;
+static jmp_buf stop_point;
+static void *tracked_malloc(size_t bytes){
+ ++attempts;if((fail_at && attempts==fail_at) || bytes>(1u<<20))return NULL;
+ CHECK(bytes);void *p=malloc(bytes);CHECK(p);
+ for(unsigned slot=0;slot<128;++slot)if(!owners[slot]){owners[slot]=p;owner_bytes[slot]=bytes;++live;return p;}
+ CHECK(!"bounded owner ledger full");return NULL;
+}
+static void tracked_free(void *p){
+ if(!p)return;
+ for(unsigned slot=0;slot<128;++slot)if(owners[slot]==p){owners[slot]=NULL;--live;free(p);return;}
+ CHECK(!"release must name a live owned allocation");
+}
+static size_t allocation_bytes(const void *p){
+ for(unsigned slot=0;slot<128;++slot)if(owners[slot]==p)return owner_bytes[slot];
+ CHECK(!"unknown frame table");return 0;
+}
+static void observed_shutdown(int status,const char *message,...){
+ CHECK(status==1 && message && *message);++stops;longjmp(stop_point,1);
+}
+#define malloc tracked_malloc
+#define free tracked_free
+#define shutdown observed_shutdown
+#define OBOR_DRAW_ASSERT(c) CHECK(c)
+@MEMORY_ERROR@
+@FUNCTIONS@
+#undef malloc
+#undef free
+#undef shutdown
+enum{INITIAL=@INITIAL@,GROWN=@GROWN@};
+static const struct{unsigned revision;int offset;} contexts[]={@CONTEXTS@};
+static const unsigned safety_controls[]={@SAFETY_CONTROLS@};
+static s_anim anim,before;
+static void reset(void){
+ CHECK(!live);memset(&anim,0,sizeof(anim));memset(&before,0,sizeof(before));attempts=fail_at=stops=0;
+}
+static int append(s_anim *a,unsigned frame){
+ int bbox[6]={1,2,6,9,0,0},shadow[2]={3,4};float platform[8]={0,1,2,3,4,5,6,7};
+ s_attack attack={0};s_axis_i move={0};s_drawmethod method={0};
+ attack.attack_coords[0]=1;attack.attack_coords[1]=2;attack.attack_coords[2]=6;attack.attack_coords[3]=9;
+ attack.attack_force=40+(int)frame;move.base=5+(int)frame;move.x=6;move.z=7;method.flag=1;method.alpha=2+(int)frame;
+ return addframe(a,10+(int)frame,frame? -INITIAL:INITIAL,7+(int)frame,1+frame,bbox,&attack,&move,
+                 platform,2+(int)frame,shadow,3+(int)frame,&method);
+}
+static void loaded(int offsets){
+ for(unsigned frame=0;frame<INITIAL;++frame){
+  CHECK(append(&anim,frame)==(int)frame+1);
+  if(offsets){const int value[2]={frame==1?7:0,frame==1?-3:0};CHECK(obor_animation_store_offset(&anim,(int)frame,value));}
+ }
+ CHECK(anim.numframes==INITIAL && anim.obor_frame_capacity==INITIAL);
+}
+static unsigned tables(const s_anim *a){return @COUNT_TABLES@;}
+static void extents(const s_anim *a){@CHECK_EXTENTS@}
+static void empty(const s_anim *a){@CHECK_EMPTY@ CHECK(!a->obor_frame_capacity);}
+static void payload(int offsets){
+ CHECK(anim.obor_frame_capacity>=INITIAL);extents(&anim);
+ for(unsigned frame=0;frame<INITIAL;++frame){
+  CHECK(anim.sprite[frame]==10+(int)frame && anim.delay[frame]==(7+(int)frame)*GAME_SPEED/100);
+  CHECK(anim.vulnerable[frame]==1 && anim.idle[frame]==1+frame);
+  CHECK(anim.bbox_coords[frame][0]==1 && anim.bbox_coords[frame][3]==9);
+  CHECK(anim.attacks[frame] && anim.attacks[frame]->attack_force==40+(int)frame);
+  CHECK(anim.move[frame] && anim.move[frame]->base==5+(int)frame && anim.move[frame]->x==6 && anim.move[frame]->z==7);
+  CHECK(anim.drawmethods[frame] && anim.drawmethods[frame]->alpha==2+(int)frame);
+  CHECK(anim.shadow[frame]==2+(int)frame && anim.shadow_coords[frame][0]==3 && anim.shadow_coords[frame][1]==4);
+  CHECK(anim.platform[frame][7]==7 && anim.soundtoplay[frame]==3+(int)frame);
+ }
+ CHECK(anim.obor_classic_seta_active==(unsigned)(obor_profile_build<4064));
+ CHECK(anim.obor_classic_move_active==(unsigned)(obor_profile_build<4064));
+ if(offsets){CHECK(anim.offset && !anim.offset[0][0] && anim.offset[1][0]==7 && anim.offset[1][1]==-3 && !anim.offset[2][0]);}
+ else CHECK(!anim.offset);
+}
+static void growth(int offsets){
+ reset();loaded(1);payload(offsets);unsigned owned=live,number=tables(&anim);
+ s_axis_i *moves[INITIAL];s_attack *hits[INITIAL];s_drawmethod *methods[INITIAL];
+ for(unsigned frame=0;frame<INITIAL;++frame){moves[frame]=anim.move[frame];hits[frame]=anim.attacks[frame];methods[frame]=anim.drawmethods[frame];}
+ CHECK(obor_animation_set_numframes(&anim,1) && anim.numframes==1 && anim.obor_frame_capacity==INITIAL);payload(offsets);
+ CHECK(obor_animation_set_numframes(&anim,INITIAL));memcpy(&before,&anim,sizeof(anim));
+ for(unsigned failure=1;failure<=number;++failure){
+  active_case=failure;attempts=0;fail_at=failure;
+  CHECK(!obor_animation_set_numframes(&anim,GROWN));CHECK(attempts==failure && live==owned && !memcmp(&anim,&before,sizeof(anim)));payload(offsets);
+ }
+ fail_at=attempts=0;CHECK(obor_animation_set_numframes(&anim,GROWN));
+ CHECK(attempts==number && live==owned && anim.obor_frame_capacity==GROWN && anim.numframes==GROWN);payload(offsets);
+ for(unsigned frame=0;frame<INITIAL;++frame){
+  CHECK(anim.move[frame]==moves[frame] && anim.attacks[frame]==hits[frame] && anim.drawmethods[frame]==methods[frame]);
+ }
+ for(unsigned frame=INITIAL;frame<GROWN;++frame){
+  CHECK(!anim.sprite[frame] && !anim.delay[frame] && !anim.vulnerable[frame] && !anim.move[frame] && !anim.attacks[frame] && !anim.drawmethods[frame]);
+  CHECK(anim.shadow[frame]==-1 && anim.soundtoplay[frame]==-1 && !anim.platform[frame][7] && !anim.idle[frame]);
+  if(offsets)CHECK(!anim.offset[frame][0] && !anim.offset[frame][1]);
+ }
+ CHECK(obor_animation_set_numframes(&anim,0) && obor_animation_set_numframes(&anim,INITIAL));payload(offsets);
+ CHECK(obor_animation_set_numframes(&anim,INT_MIN) && anim.numframes==INT_MIN);
+ free_frames(&anim);CHECK(!live && anim.numframes==INT_MIN);empty(&anim);free_frames(&anim);CHECK(!live);
+ /* Absent optional tables remain absent when only the visible count changes. */
+ reset();CHECK(obor_animation_set_numframes(&anim,GROWN) && !live && anim.numframes==GROWN);CHECK(tables(&anim)==0);free_frames(&anim);CHECK(!live);
+}
+static void failures(void){
+ for(volatile unsigned failure=1;failure<=3;++failure){
+  reset();fail_at=failure;
+  if(!setjmp(stop_point)){alloc_frames(&anim,INITIAL);CHECK(!"allocation refusal must stop");}
+  CHECK(stops==1 && !live && !anim.obor_frame_capacity);free_frames(&anim);
+ }
+ reset();CHECK(append(&anim,0)==1);unsigned allocations=attempts;free_frames(&anim);CHECK(!live);
+ for(volatile unsigned failure=1;failure<=allocations;++failure){
+  reset();fail_at=failure;
+  if(!setjmp(stop_point)){append(&anim,0);CHECK(!"partial frame allocation refusal must stop");}
+  CHECK(stops==1);free_frames(&anim);CHECK(!live);empty(&anim);
+ }
+ reset();loaded(0);memcpy(&before,&anim,sizeof(anim));unsigned owned=live;
+ CHECK(!obor_animation_set_numframes(&anim,INT_MAX) && live==owned && !memcmp(&anim,&before,sizeof(anim)));
+ free_frames(&anim);CHECK(!live);
+}
+static void offset_cases(int offsets){
+ reset();loaded(0);const int changed[2]={7,-3},zero[2]={0,0};unsigned owned=live;
+ CHECK(obor_animation_store_offset(&anim,1,zero) && !anim.offset);
+ fail_at=1;attempts=0;
+ CHECK(obor_animation_store_offset(&anim,1,changed)==!offsets);CHECK(!anim.offset && live==owned);
+ fail_at=0;CHECK(obor_animation_store_offset(&anim,1,changed));
+ if(offsets){
+  CHECK(anim.offset[1][0]==7 && anim.offset[1][1]==-3 && !anim.offset[0][0]);
+  CHECK(obor_animation_store_offset(&anim,1,zero) && anim.offset[1][0]==7);
+  CHECK(!obor_animation_store_offset(&anim,-1,changed) && !obor_animation_store_offset(&anim,INITIAL,changed));
+ }else CHECK(!anim.offset);
+ free_frames(&anim);CHECK(!live);
+}
+int main(void){
+ for(unsigned row=0;row<sizeof(contexts)/sizeof(*contexts);++row){
+  obor_profile_build=contexts[row].revision;active_case=0;
+  growth(contexts[row].offset);failures();offset_cases(contexts[row].offset);
+  printf("{\"revision\":%u,\"status\":\"PASS\"}\n",obor_profile_build);
+ }
+ for(unsigned row=0;row<sizeof(safety_controls)/sizeof(*safety_controls);++row){
+  obor_profile_build=safety_controls[row];growth(0);failures();offset_cases(0);
+  printf("{\"safety_control\":%u,\"status\":\"PASS\"}\n",obor_profile_build);
+ }
+ return 0;
+}

@@ -6,11 +6,15 @@ Copyright (c) 2026 retrodiv <retrodiv@proton.me>
 from pathlib import Path
 import re
 
-from test_historical_player import function, rename_identifiers
+from test_historical_player import function, rename_identifiers, optional_trailing_parameter
 
 
 def cancellation_program(root, data):
     source = (root / 'src/engines' / data['engine'] / 'openbor.c').read_text()
+    tag = optional_trailing_parameter(source, 'execute_ondoattack_script', 11, 'int tag')
+    if any(optional_trailing_parameter(source, name, count, 'int tag') != tag
+           for name, count in [('execute_didhit_script', 10), ('execute_didblock_script', 9)]):
+        raise ValueError('Consistent native attack callback extension required')
     caller = function(source, 'do_attack')
     if caller.count('execute_ondoattack_script(') != 2:
         raise ValueError('Complete attacker/defender callback sequence required')
@@ -42,7 +46,7 @@ def cancellation_program(root, data):
             raise ValueError('Each native contact case needs an independent result')
         rows.append('{%du,%d,{%s}}' % (row['revision'], row['normal_type'], ','.join(expected)))
     text = Path(__file__).with_name('classic_attack_cancellation_contract.c.in').read_text()
-    values = dict(CALLER=clocked,
+    values = dict(CALLER=clocked, TAG_PARAMETER=tag,
                   CASES=',\n'.join(cases), CONTEXTS=',\n'.join(rows), CASE_COUNT=str(len(cases)))
     for key, value in values.items():
         text = text.replace('@' + key + '@', value)

@@ -23,7 +23,8 @@ def check_contract(self, fixture_name='profile-classic-preprocessor.json'):
     revisions = [row['revision'] for row in data['sources']]
     self.assertEqual(len(revisions), len(set(revisions)))
     self.assertEqual(set(revisions), contract_revisions(data, data['expected_revisions']))
-    registered = contract_profiles(data, json.loads((ROOT / 'src/pin.json').read_text())['profiles'])
+    registered = contract_profiles(data, json.loads((ROOT / 'src/pin.json').read_text())['profiles'],
+        source_range=(min(data['expected_revisions']), max(data['expected_revisions'])))
     self.assertTrue({int(row.get('revision', row['build'])) for row in registered
                      if row['engine'] == data['engine']} <= set(revisions))
     checks = []

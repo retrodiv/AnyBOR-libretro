@@ -2203,20 +2203,6 @@ Source: src/engines/3842/source/globals.h
  * at the source repository root. Original notices follow below.
  */
 
-Source: src/engines/4086/openborscript.h
-/* AnyBOR modification record: 2026-11-08.
- * Port maintained by retrodiv <retrodiv@proton.me>.
- * Copyright (c) 2026 retrodiv <retrodiv@proton.me> (original contributions).
- * These contributions are licensed under BSD-3-Clause; see LICENSE at the root.
- * Upstream code retains its original license and notices.
- * Declare owned script-variable name storage. Declare the shared engine-
- * credit-screen selector and script seed callback without exposing them to
- * earlier native namespaces.
- * Existing changes recorded here; this is not their implementation date.
- * See MODIFICATIONS.md and docs/modifications/4086.md
- * at the source repository root. Original notices follow below.
- */
-
 Source: src/engines/7533/source/pnglib/savepng.c
 /* AnyBOR modification record: 2026-09-29.
  * Port maintained by retrodiv <retrodiv@proton.me>.
@@ -2377,6 +2363,22 @@ Source: src/engines/3842/source/gamelib/spritex8p16.c, src/engines/3842/source/g
  * preserving indexed sprite pixels.
  * Existing changes recorded here; this is not their implementation date.
  * See MODIFICATIONS.md and docs/modifications/3842.md
+ * at the source repository root. Original notices follow below.
+ */
+
+Source: src/engines/4086/source/gamelib/transform.c
+/* AnyBOR modification record: 2026-10-19.
+ * Port maintained by retrodiv <retrodiv@proton.me>.
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me> (original contributions).
+ * These contributions are licensed under BSD-3-Clause; see LICENSE at the root.
+ * Upstream code retains its original license and notices.
+ * Drop comma expressions that read the variables they were meant to declare.
+ * Select native water-drawing log emission by profile. Preserve native
+ * integer or floating rotation storage by profile, with unchanged slot size
+ * and typed script, parser, mirror, copy and raster access. Bound integer
+ * rotation results and initial trigonometric table indices.
+ * Existing changes recorded here; this is not their implementation date.
+ * See MODIFICATIONS.md and docs/modifications/4086.md
  * at the source repository root. Original notices follow below.
  */
 
@@ -2575,6 +2577,25 @@ Source: src/engines/7142/source/openborscript/config.h
  * Declare the modern logical profiles' unload_model script entry point.
  * Existing changes recorded here; this is not their implementation date.
  * See MODIFICATIONS.md and docs/modifications/7142.md
+ * at the source repository root. Original notices follow below.
+ */
+
+Source: src/engines/4086/openborscript.h
+/* AnyBOR modification record: 2026-11-17.
+ * Port maintained by retrodiv <retrodiv@proton.me>.
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me> (original contributions).
+ * These contributions are licensed under BSD-3-Clause; see LICENSE at the root.
+ * Upstream code retains its original license and notices.
+ * Declare owned script-variable name storage. Declare the shared engine-
+ * credit-screen selector and script seed callback without exposing them to
+ * earlier native namespaces. Declare the profile-selected mathematical
+ * interfaces. Declare the source-defined array edit interfaces. Declare the
+ * native animation property setter and hall-of-fame script interfaces.
+ * Reserve internal selectors for native cheat-state and level-count system
+ * variables. Declare native platform and terrain-index script query
+ * interfaces.
+ * Existing changes recorded here; this is not their implementation date.
+ * See MODIFICATIONS.md and docs/modifications/4086.md
  * at the source repository root. Original notices follow below.
  */
 
@@ -2906,6 +2927,21 @@ Source: src/engines/8023/source/gamelib/threads.h
  * at the source repository root. Original notices follow below.
  */
 
+Source: src/engines/4086/source/omath.c, src/engines/4086/source/omath.h
+/* AnyBOR modification record: 2026-11-16.
+ * Port maintained by retrodiv <retrodiv@proton.me>.
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me> (original contributions).
+ * These contributions are licensed under BSD-3-Clause; see LICENSE at the root.
+ * Upstream code retains its original license and notices.
+ * Restore the original inverse-trigonometric helpers and their declarations
+ * without replacing their source-defined numerical branches. Existing
+ * inverse-square-root and angle lookup definitions remain in the original
+ * utility unit.
+ * Existing changes recorded here; this is not their implementation date.
+ * See MODIFICATIONS.md and docs/modifications/4086.md
+ * at the source repository root. Original notices follow below.
+ */
+
 Source: src/engines/4086/source/scriptlib/Lexer.c
 /* AnyBOR modification record: 2026-11-15.
  * Port maintained by retrodiv <retrodiv@proton.me>.
@@ -2969,6 +3005,100 @@ Source: src/deps/libvpx/vp9/encoder/vp9_encoder.c
  *  tree. An additional intellectual property rights grant can be found
  *  in the file PATENTS.  All contributing project authors may
  *  be found in the AUTHORS file in the root of the source tree.
+ */
+
+Source: src/engines/4086/openbor.c
+/* AnyBOR modification record: 2026-11-17.
+ * Port maintained by retrodiv <retrodiv@proton.me>.
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me> (original contributions).
+ * These contributions are licensed under BSD-3-Clause; see LICENSE at the root.
+ * Upstream code retains its original license and notices.
+ * Apply the port's engine corrections and select the PC video configuration
+ * on macOS. Select native early system-selector values, credit rendering and
+ * active flags, true-color background and layer-mask admission, scene video
+ * commands, menu flags and controller-assignment key flush; bound diagnostic
+ * formatting and content paths and release owned layer masks. Preserve
+ * scrolling, startup palette and loading geometry, selection order, player
+ * spawn precision, walk/backwalk facing, blocking resources and defaults,
+ * counter damage, attack types and cancellation, periodic damage, rush,
+ * follow and ground-hit predicates, projectile costs and weapon loss. Retain
+ * frame-base and movement-table presence and cleanup, script animation
+ * identities and native limits, vault actions and caller priority, slow-
+ * motion arithmetic and main-loop seed timing. Keep damage-over-time updates
+ * within the native effect arrays while retaining valid-slot tick and
+ * expiration calculations. Derive output names from the content basename
+ * with explicit destination capacities, and reject overflowing output path
+ * joins. Leave multiplayer slots without a selected model available to join
+ * even if game scripts preassign lives to them. Let a missing basename-only
+ * PAK self-check read the active frontend content after it has been
+ * validated and prepared. Allocate each model's animation pointer table
+ * through the highest animation index that model uses, and bound cache, copy
+ * and cleanup paths to that capacity. Ignore optional defense and offense
+ * entries outside the configured attack-type range with a log warning before
+ * accessing their tables. Yield after each newly completed model during
+ * explicit model-list or level preparation, and defer states until that
+ * preparation has cleaned up its intermediate parsers and handles. Resize
+ * repeated weapon lists and detach borrowed lists before replacing their
+ * entries. Return a defined null result for absent colourmap models or
+ * tables while retaining valid palette fallback. Keep selected palette-
+ * conversion reads bounded and reject missing maps or flags, while
+ * preserving unselected slots and native allocation failure callbacks. Check
+ * destination animation capacity when retaining an animation across model
+ * changes, preserving the native fallback and timing. Access script-
+ * container pointer slots with byte copies, preserving record layout,
+ * pointer values and native copy/cleanup order. Pointer-slot allocation and
+ * release accept byte storage without imposing pointer alignment on a packed
+ * field. Release each sprite owner once and complete cleanup independently
+ * of alias counts. Preserve native sprite-map capacity policies, check
+ * allocation extents and retain existing storage and capacity when growth is
+ * unavailable. Validate sprite-node allocations and release partial
+ * resources without changing existing owners. Check cached sprite
+ * availability before reading metadata and ignore cache requests for absent
+ * nodes. Capture explicit shutdown failure text before cleanup and bound
+ * legacy diagnostic formatting. Preserve native settings file layouts at the
+ * shared-filter and auxiliary-pair boundaries, partial reads, and profile-
+ * specific built-in/custom video-mode initialization. Preserve native
+ * walking transitions, saved grab defaults and per-axis binding movement by
+ * profile. Preserve the native unsigned byte reader. Preserve native saved-
+ * player credits, level-local selection ownership and transitions, and
+ * tokenized saved-selection replay by profile. Keep each profile's saved-
+ * game row size and partial-read semantics independent of shared live
+ * storage. Preserve native character-repeat flags, join and preview palette
+ * collision scans, loop-stop epochs and engine-credit rows by profile.
+ * Refuse legacy selection palette reads through an absent current model
+ * while retaining NULL-current navigation when no palette is consumed.
+ * Preserve native pause sample loading, fallback and entry order, and song-
+ * title debug placement, expiration and unload resets by profile. Preserve
+ * native vertical background command admission, travel accumulation and
+ * upward/diagonal layer geometry by profile. Check background coordinate
+ * conversions and local translations before integer use, skipping layers
+ * whose positions are undefined. Track owned animation frame extents
+ * independently of visible counts, preserve existing rows during checked
+ * growth and release every owned row after count edits. Preserve native per-
+ * frame offset presence and values with owned storage and checked allocation
+ * failures. Validate animation actors through active pool or callback scopes
+ * and check model-table allocation extents and registered animation owners.
+ * Select native enemy-icon palette use by profile. Preserve native spawn
+ * type and parent assignment before spawn callbacks by profile. Preserve
+ * native integer or floating rotation storage by profile, with unchanged
+ * slot size and typed script, parser, mirror, copy and raster access. Bound
+ * integer rotation results and initial trigonometric table indices. Preserve
+ * native broken-down running, bounding-box and attack command effects,
+ * script loader labels and active script-slot allocation order by profile.
+ * Reject undefined floating-to-integer run flag conversions without changing
+ * the record. Preserve native cheat-state and level-count system queries,
+ * refusing absent level storage safely. Preserve native attack-tag callback
+ * locals, caller forwarding, cleanup and unconfirmed-contact entity context
+ * by profile. Preserve source-defined wall/platform edge inclusion, hole-
+ * height loading, altitude searches, base adjustment and movement checks by
+ * profile. Preserve platform, wall-index and hole callback locals, cleanup
+ * and corresponding movement events. Initialize the complete platform
+ * variant before retaining its native decimal-tagged pointer representation.
+ * Preserve native platform-relative entity sort order, shadow geometry and
+ * depth, and height-aware shadow hole tests by profile.
+ * Existing changes recorded here; this is not their implementation date.
+ * See MODIFICATIONS.md and docs/modifications/4086.md
+ * at the source repository root. Original notices follow below.
  */
 
 Source: src/engines/7142/source/gamelib/spritex8p16.c, src/engines/7142/source/gamelib/spritex8p32.c
@@ -3395,7 +3525,7 @@ Source: src/engines/7533/source/ramlib/ram.c
  * at the source repository root. Original notices follow below.
  */
 
-Source: src/engines/4086/source/webmlib/samplecvt.c, src/engines/4086/source/webmlib/samplecvt.h, src/engines/4086/source/webmlib/vidplay.c, src/engines/4086/source/webmlib/vidplay.h, src/engines/4086/source/webmlib/vorbis.c, src/engines/4086/source/webmlib/vorbis.h, src/engines/4086/source/webmlib/yuv.c, src/engines/4086/source/webmlib/yuv.h, src/engines/4432/source/webmlib/samplecvt.c, src/engines/4432/source/webmlib/samplecvt.h, src/engines/4432/source/webmlib/vidplay.c, src/engines/4432/source/webmlib/vidplay.h, src/engines/4432/source/webmlib/vorbis.c, src/engines/4432/source/webmlib/vorbis.h, src/engines/4432/source/webmlib/yuv.c, src/engines/4432/source/webmlib/yuv.h, src/engines/6391/source/webmlib/samplecvt.c, src/engines/6391/source/webmlib/samplecvt.h, src/engines/6391/source/webmlib/vidplay.c, src/engines/6391/source/webmlib/vidplay.h, src/engines/6391/source/webmlib/vorbis.c, src/engines/6391/source/webmlib/vorbis.h, src/engines/6391/source/webmlib/yuv.c, src/engines/6391/source/webmlib/yuv.h, src/engines/7142/source/webmlib/samplecvt.c, src/engines/7142/source/webmlib/samplecvt.h, src/engines/7142/source/webmlib/vidplay.c, src/engines/7142/source/webmlib/vidplay.h, src/engines/7142/source/webmlib/vorbis.c, src/engines/7142/source/webmlib/vorbis.h, src/engines/7142/source/webmlib/yuv.c, src/engines/7142/source/webmlib/yuv.h, src/engines/4086/source/gamelib/threads.h, src/engines/4086/source/webmlib/samplecvt.c, src/engines/4086/source/webmlib/samplecvt.h, src/engines/4086/source/webmlib/vidplay.c, src/engines/4086/source/webmlib/vidplay.h, src/engines/4086/source/webmlib/vorbis.c, src/engines/4086/source/webmlib/vorbis.h, src/engines/4086/source/webmlib/yuv.c, src/engines/4086/source/webmlib/yuv.h, src/engines/4432/source/gamelib/threads.h, src/engines/4432/source/safealloc.h, src/engines/4432/source/savedata.h, src/engines/4432/source/webmlib/samplecvt.c, src/engines/4432/source/webmlib/samplecvt.h, src/engines/4432/source/webmlib/vidplay.c, src/engines/4432/source/webmlib/vidplay.h, src/engines/4432/source/webmlib/vorbis.c, src/engines/4432/source/webmlib/vorbis.h, src/engines/4432/source/webmlib/yuv.c, src/engines/4432/source/webmlib/yuv.h, src/engines/6391/source/gamelib/threads.h, src/engines/6391/source/safealloc.h, src/engines/6391/source/savedata.h, src/engines/6391/source/webmlib/samplecvt.c, src/engines/6391/source/webmlib/samplecvt.h, src/engines/6391/source/webmlib/vidplay.c, src/engines/6391/source/webmlib/vidplay.h, src/engines/6391/source/webmlib/vorbis.c, src/engines/6391/source/webmlib/vorbis.h, src/engines/6391/source/webmlib/yuv.c, src/engines/6391/source/webmlib/yuv.h, src/engines/7142/source/gamelib/threads.h, src/engines/7142/source/safealloc.h, src/engines/7142/source/savedata.h, src/engines/7142/source/webmlib/samplecvt.c, src/engines/7142/source/webmlib/samplecvt.h, src/engines/7142/source/webmlib/vidplay.c, src/engines/7142/source/webmlib/vidplay.h, src/engines/7142/source/webmlib/vorbis.c, src/engines/7142/source/webmlib/vorbis.h, src/engines/7142/source/webmlib/yuv.c, src/engines/7142/source/webmlib/yuv.h
+Source: src/engines/4086/source/webmlib/samplecvt.c, src/engines/4086/source/webmlib/samplecvt.h, src/engines/4086/source/webmlib/vidplay.c, src/engines/4086/source/webmlib/vidplay.h, src/engines/4086/source/webmlib/vorbis.c, src/engines/4086/source/webmlib/vorbis.h, src/engines/4086/source/webmlib/yuv.c, src/engines/4086/source/webmlib/yuv.h, src/engines/4432/source/webmlib/samplecvt.c, src/engines/4432/source/webmlib/samplecvt.h, src/engines/4432/source/webmlib/vidplay.c, src/engines/4432/source/webmlib/vidplay.h, src/engines/4432/source/webmlib/vorbis.c, src/engines/4432/source/webmlib/vorbis.h, src/engines/4432/source/webmlib/yuv.c, src/engines/4432/source/webmlib/yuv.h, src/engines/6391/source/webmlib/samplecvt.c, src/engines/6391/source/webmlib/samplecvt.h, src/engines/6391/source/webmlib/vidplay.c, src/engines/6391/source/webmlib/vidplay.h, src/engines/6391/source/webmlib/vorbis.c, src/engines/6391/source/webmlib/vorbis.h, src/engines/6391/source/webmlib/yuv.c, src/engines/6391/source/webmlib/yuv.h, src/engines/7142/source/webmlib/samplecvt.c, src/engines/7142/source/webmlib/samplecvt.h, src/engines/7142/source/webmlib/vidplay.c, src/engines/7142/source/webmlib/vidplay.h, src/engines/7142/source/webmlib/vorbis.c, src/engines/7142/source/webmlib/vorbis.h, src/engines/7142/source/webmlib/yuv.c, src/engines/7142/source/webmlib/yuv.h, src/engines/4086/source/gamelib/threads.h, src/engines/4086/source/safealloc.h, src/engines/4086/source/webmlib/samplecvt.c, src/engines/4086/source/webmlib/samplecvt.h, src/engines/4086/source/webmlib/vidplay.c, src/engines/4086/source/webmlib/vidplay.h, src/engines/4086/source/webmlib/vorbis.c, src/engines/4086/source/webmlib/vorbis.h, src/engines/4086/source/webmlib/yuv.c, src/engines/4086/source/webmlib/yuv.h, src/engines/4432/source/gamelib/threads.h, src/engines/4432/source/safealloc.h, src/engines/4432/source/savedata.h, src/engines/4432/source/webmlib/samplecvt.c, src/engines/4432/source/webmlib/samplecvt.h, src/engines/4432/source/webmlib/vidplay.c, src/engines/4432/source/webmlib/vidplay.h, src/engines/4432/source/webmlib/vorbis.c, src/engines/4432/source/webmlib/vorbis.h, src/engines/4432/source/webmlib/yuv.c, src/engines/4432/source/webmlib/yuv.h, src/engines/6391/source/gamelib/threads.h, src/engines/6391/source/safealloc.h, src/engines/6391/source/savedata.h, src/engines/6391/source/webmlib/samplecvt.c, src/engines/6391/source/webmlib/samplecvt.h, src/engines/6391/source/webmlib/vidplay.c, src/engines/6391/source/webmlib/vidplay.h, src/engines/6391/source/webmlib/vorbis.c, src/engines/6391/source/webmlib/vorbis.h, src/engines/6391/source/webmlib/yuv.c, src/engines/6391/source/webmlib/yuv.h, src/engines/7142/source/gamelib/threads.h, src/engines/7142/source/safealloc.h, src/engines/7142/source/savedata.h, src/engines/7142/source/webmlib/samplecvt.c, src/engines/7142/source/webmlib/samplecvt.h, src/engines/7142/source/webmlib/vidplay.c, src/engines/7142/source/webmlib/vidplay.h, src/engines/7142/source/webmlib/vorbis.c, src/engines/7142/source/webmlib/vorbis.h, src/engines/7142/source/webmlib/yuv.c, src/engines/7142/source/webmlib/yuv.h
 /*
  * OpenBOR - http://www.chronocrash.com
  * -----------------------------------------------------------------------
@@ -4138,19 +4268,6 @@ Source: src/engines/3842/source/gamelib/types.h
  * at the source repository root. Original notices follow below.
  */
 
-Source: src/engines/4086/source/gamelib/sprite.c
-/* AnyBOR modification record: 2026-10-08.
- * Port maintained by retrodiv <retrodiv@proton.me>.
- * Copyright (c) 2026 retrodiv <retrodiv@proton.me> (original contributions).
- * These contributions are licensed under BSD-3-Clause; see LICENSE at the root.
- * Upstream code retains its original license and notices.
- * Declare initialized encoded sprite-body ranges and source crops for exact
- * reconstruction proof, retaining headers, palettes and mutable changes.
- * Existing changes recorded here; this is not their implementation date.
- * See MODIFICATIONS.md and docs/modifications/4086.md
- * at the source repository root. Original notices follow below.
- */
-
 Source: src/deps/libvpx/vp8/common/mips/mmi/copymem_mmi.c, src/deps/libvpx/vp8/common/mips/mmi/dequantize_mmi.c, src/deps/libvpx/vp8/common/mips/mmi/idct_blk_mmi.c, src/deps/libvpx/vp8/common/mips/mmi/idctllm_mmi.c, src/deps/libvpx/vp8/common/mips/mmi/loopfilter_filters_mmi.c, src/deps/libvpx/vp8/common/mips/mmi/sixtap_filter_mmi.c, src/deps/libvpx/vp8/encoder/ethreading.h, src/deps/libvpx/vp8/encoder/mips/mmi/dct_mmi.c, src/deps/libvpx/vp8/encoder/mips/mmi/vp8_quantize_mmi.c, src/deps/libvpx/vp8/encoder/picklpf.h, src/deps/libvpx/vp8/encoder/temporal_filter.h, src/deps/libvpx/vp9/encoder/arm/neon/vp9_denoiser_neon.c, src/deps/libvpx/vp9/encoder/arm/neon/vp9_frame_scale_neon.c, src/deps/libvpx/vp9/encoder/vp9_frame_scale.c, src/deps/libvpx/vp9/encoder/vp9_job_queue.h, src/deps/libvpx/vp9/encoder/vp9_multi_thread.c, src/deps/libvpx/vp9/encoder/vp9_multi_thread.h, src/deps/libvpx/vp9/encoder/x86/temporal_filter_sse4.c, src/deps/libvpx/vp9/encoder/x86/vp9_quantize_avx2.c, src/deps/libvpx/vpx_dsp/arm/avg_pred_neon.c, src/deps/libvpx/vpx_dsp/arm/fdct16x16_neon.c, src/deps/libvpx/vpx_dsp/arm/fdct16x16_neon.h, src/deps/libvpx/vpx_dsp/arm/fdct32x32_neon.c, src/deps/libvpx/vpx_dsp/arm/fdct4x4_neon.c, src/deps/libvpx/vpx_dsp/arm/fdct_partial_neon.c, src/deps/libvpx/vpx_dsp/arm/highbd_idct16x16_add_neon.c, src/deps/libvpx/vpx_dsp/arm/highbd_idct32x32_1024_add_neon.c, src/deps/libvpx/vpx_dsp/arm/highbd_idct32x32_135_add_neon.c, src/deps/libvpx/vpx_dsp/arm/highbd_idct32x32_34_add_neon.c, src/deps/libvpx/vpx_dsp/arm/highbd_idct32x32_add_neon.c, src/deps/libvpx/vpx_dsp/arm/mem_neon.h, src/deps/libvpx/vpx_dsp/arm/quantize_neon.c, src/deps/libvpx/vpx_dsp/arm/sum_neon.h, src/deps/libvpx/vpx_dsp/arm/vpx_scaled_convolve8_neon.c, src/deps/libvpx/vpx_dsp/mips/sad_mmi.c, src/deps/libvpx/vpx_dsp/mips/subtract_mmi.c, src/deps/libvpx/vpx_dsp/mips/sum_squares_msa.c, src/deps/libvpx/vpx_dsp/mips/variance_mmi.c, src/deps/libvpx/vpx_dsp/ppc/bitdepth_conversion_vsx.h, src/deps/libvpx/vpx_dsp/ppc/hadamard_vsx.c, src/deps/libvpx/vpx_dsp/ppc/intrapred_vsx.c, src/deps/libvpx/vpx_dsp/ppc/sad_vsx.c, src/deps/libvpx/vpx_dsp/ppc/transpose_vsx.h, src/deps/libvpx/vpx_dsp/ppc/types_vsx.h, src/deps/libvpx/vpx_dsp/ppc/variance_vsx.c, src/deps/libvpx/vpx_dsp/ppc/vpx_convolve_vsx.c, src/deps/libvpx/vpx_dsp/skin_detection.c, src/deps/libvpx/vpx_dsp/skin_detection.h, src/deps/libvpx/vpx_dsp/x86/avg_intrin_avx2.c, src/deps/libvpx/vpx_dsp/x86/avg_pred_sse2.c, src/deps/libvpx/vpx_dsp/x86/bitdepth_conversion_avx2.h, src/deps/libvpx/vpx_dsp/x86/bitdepth_conversion_sse2.h, src/deps/libvpx/vpx_dsp/x86/convolve_avx2.h, src/deps/libvpx/vpx_dsp/x86/convolve_ssse3.h, src/deps/libvpx/vpx_dsp/x86/highbd_convolve_avx2.c, src/deps/libvpx/vpx_dsp/x86/highbd_idct16x16_add_sse4.c, src/deps/libvpx/vpx_dsp/x86/highbd_idct32x32_add_sse4.c, src/deps/libvpx/vpx_dsp/x86/highbd_idct4x4_add_sse4.c, src/deps/libvpx/vpx_dsp/x86/highbd_idct8x8_add_sse4.c, src/deps/libvpx/vpx_dsp/x86/highbd_intrapred_intrin_sse2.c, src/deps/libvpx/vpx_dsp/x86/highbd_intrapred_intrin_ssse3.c, src/deps/libvpx/vpx_dsp/x86/highbd_inv_txfm_sse4.h, src/deps/libvpx/vpx_dsp/x86/inv_txfm_ssse3.c, src/deps/libvpx/vpx_dsp/x86/inv_txfm_ssse3.h, src/deps/libvpx/vpx_dsp/x86/mem_sse2.h, src/deps/libvpx/vpx_dsp/x86/quantize_avx.c, src/deps/libvpx/vpx_dsp/x86/quantize_sse2.h, src/deps/libvpx/vpx_dsp/x86/quantize_ssse3.c, src/deps/libvpx/vpx_dsp/x86/quantize_ssse3.h, src/deps/libvpx/vpx_dsp/x86/sad4d_avx512.c, src/deps/libvpx/vpx_ports/asmdefs_mmi.h, src/deps/libvpx/vpx_ports/ppc.h, src/deps/libvpx/vpx_ports/ppc_cpudetect.c, src/deps/libvpx/vpx_util/vpx_atomics.h
 /*
  *  Copyright (c) 2017 The WebM project authors. All Rights Reserved.
@@ -4332,19 +4449,6 @@ Source: src/engines/3741/source/scriptlib/Interpreter.c
  * and release it once runtime instructions are ready.
  * Existing changes recorded here; this is not their implementation date.
  * See MODIFICATIONS.md and docs/modifications/3741.md
- * at the source repository root. Original notices follow below.
- */
-
-Source: src/engines/4086/source/gamelib/spriteq.c
-/* AnyBOR modification record: 2026-10-24.
- * Port maintained by retrodiv <retrodiv@proton.me>.
- * Copyright (c) 2026 retrodiv <retrodiv@proton.me> (original contributions).
- * These contributions are licensed under BSD-3-Clause; see LICENSE at the root.
- * Upstream code retains its original license and notices.
- * Keep unavailable sprite images out of the drawing queue while retaining
- * native requests, ordering and copied draw methods.
- * Existing changes recorded here; this is not their implementation date.
- * See MODIFICATIONS.md and docs/modifications/4086.md
  * at the source repository root. Original notices follow below.
  */
 
@@ -4560,6 +4664,74 @@ Source: src/engines/7533/source/gamelib/transform.c, src/engines/7533/source/gam
  * Copyright (c)  OpenBOR Team
  */
 
+Source: src/engines/4086/openborscript.c
+/* AnyBOR modification record: 2026-11-17.
+ * Port maintained by retrodiv <retrodiv@proton.me>.
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me> (original contributions).
+ * These contributions are licensed under BSD-3-Clause; see LICENSE at the root.
+ * Upstream code retains its original license and notices.
+ * Keep the dormant constant-lowering diagnostic compatible with the single-
+ * value instruction layout. Preserve source-defined system, player, drawing,
+ * entity and text namespaces, numeric/cached selectors, axis warnings,
+ * terrain fields, removed constants and native animation argument/result
+ * identities. Retain native antigravity, drop-velocity and height results,
+ * shutdown arguments, duration conversions, rush and ground-hit values,
+ * block-resource representation, attack staydown return types and script API
+ * availability; bound cache and diagnostic access. Preserve spawn-callback
+ * locals, grab-script output/validation epochs, takeaction table bounds and
+ * seed-script conversion/advance behavior. Derive output names from the
+ * content basename with explicit destination capacities, and reject
+ * overflowing output path joins. Compact compiler-only instruction records
+ * after resolving value ownership, preserving branch and export anchors, all
+ * mutable values and exactly-once pool cleanup. Retain shared interpreters
+ * through the last script reference while preserving independent variables,
+ * replacement and native callbacks. Track diagnostic comments independently
+ * so interpreter replacement can retain them. Resolve text-property names
+ * within the actual table bounds while preserving native numeric selectors.
+ * Reuse each text object's owned buffer when replacing its contents. Reject
+ * missing colourtable indices and keep selector arithmetic and table reads
+ * defined. Use the declared staydown name-table length for lookup. Transfer
+ * loaded stream buffers through aligned local outputs while preserving
+ * native record layout and results. Close owned input files after stream
+ * loading and on buffer allocation failure. Preserve native mathematical API
+ * availability, angle units and inverse-trigonometric branches, with bounded
+ * argument access. Select native walking flag access and grab restoration;
+ * retain absent versus empty binding axes and partial failure state with
+ * bounded arguments. Preserve native indexed array edits, named deletion and
+ * size selection; keep aliased values valid across growth and shifting and
+ * release deleted list owners safely. Select native byte reads, stream
+ * append offsets and counts, save paths and final-newline behavior; bound
+ * conversions, allocations, paths and cursor access. Preserve the native
+ * attack-property setter availability, reverse names and compiler mapping by
+ * profile, with bounded arguments. Restore native animation property reads
+ * and writes with profile-selected selectors and registry bindings. Select
+ * native player reverse names and custom-menu option routing and hall-of-
+ * fame registration by profile. Preserve native player-property ordinals,
+ * input arrays, map queries and direction constant admission by profile.
+ * Preserve native level-property names, ordinals, speed conversions and
+ * integer-member results under decimal tags; refuse undefined integer
+ * conversions. Retain native visible frame-count edits with checked integer
+ * conversion and physical table growth. Check animation arguments when
+ * consumed, retaining ignored trailing slots and source-defined diagnostic
+ * order. Bound native per-frame accesses by owned table capacity and
+ * validate referenced attack, movement and drawing records before use.
+ * Preserve sparse fallbacks, logical-count searches and native reset
+ * targets. Bound fixed animation records and sprite-map, node, header and
+ * filename access while retaining native pointer assignments, centre updates
+ * and accepted filename-value types. Preserve native spawn-property names,
+ * numeric order, type conversion and raw parent-value admission by profile.
+ * Preserve native integer or floating rotation storage by profile, with
+ * unchanged slot size and typed script, parser, mirror, copy and raster
+ * access. Bound integer rotation results and initial trigonometric table
+ * indices. Preserve native system-variable names, numeric order, source-
+ * defined name-search results and cached selectors by profile. Preserve
+ * native terrain-query availability, aliases, defaults, consumed arguments
+ * and altitude selection, with bounded missing-argument refusal.
+ * Existing changes recorded here; this is not their implementation date.
+ * See MODIFICATIONS.md and docs/modifications/4086.md
+ * at the source repository root. Original notices follow below.
+ */
+
 Source: src/engines/3400/source/gamelib/transform.c
 /* AnyBOR modification record: 2026-10-30.
  * Port maintained by retrodiv <retrodiv@proton.me>.
@@ -4652,6 +4824,37 @@ Source: src/deps/libarchive/libarchive_fe/line_reader.c
  * THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ */
+
+Source: src/engines/4086/openbor.h
+/* AnyBOR modification record: 2026-11-17.
+ * Port maintained by retrodiv <retrodiv@proton.me>.
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me> (original contributions).
+ * These contributions are licensed under BSD-3-Clause; see LICENSE at the root.
+ * Upstream code retains its original license and notices.
+ * Allocate collision pointer slots through the highest author-facing index
+ * used by each collection. Declare the native media decoder interface,
+ * profile movement deadlines, default shutdown text, historical frame-base
+ * and movement-table presence, spawn-coordinate storage and animation ID
+ * conversions. Declare the vault action used by early profiles. Track each
+ * model's allocated animation-table capacity and reject lookups outside it.
+ * Reserve live software-filter storage independently of the selected native
+ * settings file layout. Reserve live walking, grab-default and binding-axis
+ * state. Declare the native byte reader used by stream arguments. Reserve
+ * live neutral attack flags and original per-frame sprite offsets. Store
+ * native saved-selection bytes and owned level-local selection entries
+ * alongside legacy per-set fields. Declare the native song-title debug-
+ * position record. Store native vertical background speed alongside
+ * horizontal speed. Record owned frame capacity and declare the bounded
+ * frame-count interface. Declare validated model-animation access. Reserve
+ * native spawn type and parent storage. Reserve native attack metadata and
+ * profile-selected platform-block and hole script slots. Declare the native
+ * cheat-state query. Declare the shared attack-tag callback and fall
+ * interfaces. Declare native terrain-query and platform, wall-index and hole
+ * callback interfaces.
+ * Existing changes recorded here; this is not their implementation date.
+ * See MODIFICATIONS.md and docs/modifications/4086.md
+ * at the source repository root. Original notices follow below.
  */
 
 Source: src/engines/4086/source/gamelib/font.c
@@ -5578,19 +5781,6 @@ Source: src/engines/8023/source/gamelib/anigif.c
  * at the source repository root. Original notices follow below.
  */
 
-Source: src/engines/4086/source/webmlib/nestegg/nestegg.c, src/engines/4086/source/webmlib/nestegg/nestegg.c
-/* AnyBOR modification record: 2026-10-19.
- * Port maintained by retrodiv <retrodiv@proton.me>.
- * Copyright (c) 2026 retrodiv <retrodiv@proton.me> (original contributions).
- * These contributions are licensed under BSD-3-Clause; see LICENSE at the root.
- * Upstream code retains its original license and notices.
- * Bound compressed blocks before allocation in the explicitly enabled
- * reproducible-media diagnostic; preserve normal parser limits otherwise.
- * Existing changes recorded here; this is not their implementation date.
- * See MODIFICATIONS.md and docs/modifications/4086.md
- * at the source repository root. Original notices follow below.
- */
-
 Source: src/engines/4432/source/gamelib/loadimg.c
 /* AnyBOR modification record: 2026-10-24.
  * Port maintained by retrodiv <retrodiv@proton.me>.
@@ -5608,7 +5798,7 @@ Source: src/engines/4432/source/gamelib/loadimg.c
  * at the source repository root. Original notices follow below.
  */
 
-Source: src/engines/4086/openborscript.c, src/engines/4086/source/adpcmlib/adpcm.h, src/engines/4086/source/gamelib/anigif.c, src/engines/4086/source/gamelib/anigif.h, src/engines/4086/source/gamelib/bitmap.c, src/engines/4086/source/gamelib/bitmap.h, src/engines/4086/source/gamelib/borendian.h, src/engines/4086/source/gamelib/draw.c, src/engines/4086/source/gamelib/draw.h, src/engines/4086/source/gamelib/draw16.c, src/engines/4086/source/gamelib/draw32.c, src/engines/4086/source/gamelib/font.c, src/engines/4086/source/gamelib/font.h, src/engines/4086/source/gamelib/loadimg.c, src/engines/4086/source/gamelib/loadimg.h, src/engines/4086/source/gamelib/packfile.c, src/engines/4086/source/gamelib/packfile.h, src/engines/4086/source/gamelib/palette.c, src/engines/4086/source/gamelib/palette.h, src/engines/4086/source/gamelib/pixelformat.c, src/engines/4086/source/gamelib/screen.c, src/engines/4086/source/gamelib/screen.h, src/engines/4086/source/gamelib/screen16.c, src/engines/4086/source/gamelib/screen32.c, src/engines/4086/source/gamelib/soundmix.c, src/engines/4086/source/gamelib/soundmix.h, src/engines/4086/source/gamelib/sprite.c, src/engines/4086/source/gamelib/sprite.h, src/engines/4086/source/gamelib/spriteq.c, src/engines/4086/source/gamelib/spriteq.h, src/engines/4086/source/gamelib/spritex8p16.c, src/engines/4086/source/gamelib/spritex8p32.c, src/engines/4086/source/gamelib/timer.h, src/engines/4086/source/gamelib/types.h, src/engines/4086/source/gfxlib/gfxtypes.h, src/engines/4086/source/preprocessorlib/pp_lexer.c, src/engines/4086/source/preprocessorlib/pp_lexer.h, src/engines/4086/source/ramlib/ram.c, src/engines/4086/source/ramlib/ram.h, src/engines/4086/source/randlib/rand32.c, src/engines/4086/source/randlib/rand32.h, src/engines/4086/source/scriptlib/Interpreter.h, src/engines/4086/source/scriptlib/Lexer.c, src/engines/4086/source/scriptlib/Lexer.h, src/engines/4086/source/scriptlib/ParserSet.c, src/engines/4086/source/scriptlib/ParserSet.h, src/engines/4086/source/scriptlib/ScriptVariant.c, src/engines/4086/source/scriptlib/ScriptVariant.h, src/engines/4086/source/scriptlib/Stack.c, src/engines/4086/source/scriptlib/Stack.h, src/engines/4086/source/scriptlib/StackedSymbolTable.c, src/engines/4086/source/scriptlib/StackedSymbolTable.h, src/engines/4086/source/scriptlib/SymbolTable.c, src/engines/4086/source/scriptlib/SymbolTable.h, src/engines/4086/source/scriptlib/depends.h, src/engines/4086/source/stringptr.c, src/engines/4086/source/stringptr.h, src/engines/4086/source/stristr.c, src/engines/4086/source/stristr.h, src/engines/4432/openborscript.c, src/engines/4432/source/adpcmlib/adpcm.h, src/engines/4432/source/gamelib/anigif.c, src/engines/4432/source/gamelib/anigif.h, src/engines/4432/source/gamelib/bitmap.c, src/engines/4432/source/gamelib/bitmap.h, src/engines/4432/source/gamelib/borendian.h, src/engines/4432/source/gamelib/draw.c, src/engines/4432/source/gamelib/draw.h, src/engines/4432/source/gamelib/draw16.c, src/engines/4432/source/gamelib/draw32.c, src/engines/4432/source/gamelib/font.c, src/engines/4432/source/gamelib/font.h, src/engines/4432/source/gamelib/loadimg.c, src/engines/4432/source/gamelib/loadimg.h, src/engines/4432/source/gamelib/packfile.c, src/engines/4432/source/gamelib/packfile.h, src/engines/4432/source/gamelib/palette.c, src/engines/4432/source/gamelib/palette.h, src/engines/4432/source/gamelib/pixelformat.c, src/engines/4432/source/gamelib/screen.c, src/engines/4432/source/gamelib/screen.h, src/engines/4432/source/gamelib/screen16.c, src/engines/4432/source/gamelib/screen32.c, src/engines/4432/source/gamelib/soundmix.c, src/engines/4432/source/gamelib/soundmix.h, src/engines/4432/source/gamelib/sprite.c, src/engines/4432/source/gamelib/sprite.h, src/engines/4432/source/gamelib/spriteq.c, src/engines/4432/source/gamelib/spriteq.h, src/engines/4432/source/gamelib/spritex8p16.c, src/engines/4432/source/gamelib/spritex8p32.c, src/engines/4432/source/gamelib/timer.h, src/engines/4432/source/gamelib/types.h, src/engines/4432/source/gamelib/vga.h, src/engines/4432/source/gfxlib/gfxtypes.h, src/engines/4432/source/omath.c, src/engines/4432/source/omath.h, src/engines/4432/source/preprocessorlib/pp_lexer.c, src/engines/4432/source/preprocessorlib/pp_lexer.h, src/engines/4432/source/ramlib/ram.c, src/engines/4432/source/ramlib/ram.h, src/engines/4432/source/randlib/rand32.c, src/engines/4432/source/randlib/rand32.h, src/engines/4432/source/scriptlib/Interpreter.h, src/engines/4432/source/scriptlib/Lexer.c, src/engines/4432/source/scriptlib/Lexer.h, src/engines/4432/source/scriptlib/ParserSet.c, src/engines/4432/source/scriptlib/ParserSet.h, src/engines/4432/source/scriptlib/ScriptVariant.c, src/engines/4432/source/scriptlib/ScriptVariant.h, src/engines/4432/source/scriptlib/Stack.c, src/engines/4432/source/scriptlib/Stack.h, src/engines/4432/source/scriptlib/StackedSymbolTable.c, src/engines/4432/source/scriptlib/StackedSymbolTable.h, src/engines/4432/source/scriptlib/SymbolTable.c, src/engines/4432/source/scriptlib/SymbolTable.h, src/engines/4432/source/scriptlib/depends.h, src/engines/4432/source/stringptr.c, src/engines/4432/source/stringptr.h, src/engines/4432/source/stristr.c, src/engines/4432/source/stristr.h, src/engines/6391/source/adpcmlib/adpcm.h, src/engines/6391/source/gamelib/anigif.c, src/engines/6391/source/gamelib/anigif.h, src/engines/6391/source/gamelib/bitmap.c, src/engines/6391/source/gamelib/bitmap.h, src/engines/6391/source/gamelib/borendian.h, src/engines/6391/source/gamelib/draw.c, src/engines/6391/source/gamelib/draw.h, src/engines/6391/source/gamelib/draw16.c, src/engines/6391/source/gamelib/draw32.c, src/engines/6391/source/gamelib/font.c, src/engines/6391/source/gamelib/font.h, src/engines/6391/source/gamelib/loadimg.c, src/engines/6391/source/gamelib/loadimg.h, src/engines/6391/source/gamelib/packfile.c, src/engines/6391/source/gamelib/packfile.h, src/engines/6391/source/gamelib/palette.c, src/engines/6391/source/gamelib/palette.h, src/engines/6391/source/gamelib/pixelformat.c, src/engines/6391/source/gamelib/screen.c, src/engines/6391/source/gamelib/screen.h, src/engines/6391/source/gamelib/screen16.c, src/engines/6391/source/gamelib/screen32.c, src/engines/6391/source/gamelib/soundmix.c, src/engines/6391/source/gamelib/soundmix.h, src/engines/6391/source/gamelib/sprite.c, src/engines/6391/source/gamelib/sprite.h, src/engines/6391/source/gamelib/spriteq.c, src/engines/6391/source/gamelib/spriteq.h, src/engines/6391/source/gamelib/spritex8p16.c, src/engines/6391/source/gamelib/spritex8p32.c, src/engines/6391/source/gamelib/timer.h, src/engines/6391/source/gamelib/types.h, src/engines/6391/source/gamelib/vga.h, src/engines/6391/source/gfxlib/gfxtypes.h, src/engines/6391/source/omath.c, src/engines/6391/source/omath.h, src/engines/6391/source/preprocessorlib/pp_lexer.c, src/engines/6391/source/preprocessorlib/pp_lexer.h, src/engines/6391/source/ramlib/ram.c, src/engines/6391/source/ramlib/ram.h, src/engines/6391/source/randlib/rand32.c, src/engines/6391/source/randlib/rand32.h, src/engines/6391/source/scriptlib/Interpreter.h, src/engines/6391/source/scriptlib/Lexer.c, src/engines/6391/source/scriptlib/Lexer.h, src/engines/6391/source/scriptlib/ParserSet.c, src/engines/6391/source/scriptlib/ParserSet.h, src/engines/6391/source/scriptlib/ScriptVariant.c, src/engines/6391/source/scriptlib/ScriptVariant.h, src/engines/6391/source/scriptlib/Stack.c, src/engines/6391/source/scriptlib/Stack.h, src/engines/6391/source/scriptlib/StackedSymbolTable.c, src/engines/6391/source/scriptlib/StackedSymbolTable.h, src/engines/6391/source/scriptlib/SymbolTable.c, src/engines/6391/source/scriptlib/SymbolTable.h, src/engines/6391/source/scriptlib/depends.h, src/engines/6391/source/stringptr.c, src/engines/6391/source/stringptr.h, src/engines/6391/source/stristr.c, src/engines/6391/source/stristr.h, src/engines/7142/source/adpcmlib/adpcm.h, src/engines/7142/source/gamelib/anigif.c, src/engines/7142/source/gamelib/anigif.h, src/engines/7142/source/gamelib/bitmap.c, src/engines/7142/source/gamelib/bitmap.h, src/engines/7142/source/gamelib/borendian.h, src/engines/7142/source/gamelib/draw.c, src/engines/7142/source/gamelib/draw.h, src/engines/7142/source/gamelib/draw16.c, src/engines/7142/source/gamelib/draw32.c, src/engines/7142/source/gamelib/font.c, src/engines/7142/source/gamelib/font.h, src/engines/7142/source/gamelib/loadimg.c, src/engines/7142/source/gamelib/loadimg.h, src/engines/7142/source/gamelib/packfile.c, src/engines/7142/source/gamelib/packfile.h, src/engines/7142/source/gamelib/palette.c, src/engines/7142/source/gamelib/palette.h, src/engines/7142/source/gamelib/pixelformat.c, src/engines/7142/source/gamelib/screen.c, src/engines/7142/source/gamelib/screen.h, src/engines/7142/source/gamelib/screen16.c, src/engines/7142/source/gamelib/screen32.c, src/engines/7142/source/gamelib/soundmix.c, src/engines/7142/source/gamelib/soundmix.h, src/engines/7142/source/gamelib/sprite.c, src/engines/7142/source/gamelib/sprite.h, src/engines/7142/source/gamelib/spriteq.c, src/engines/7142/source/gamelib/spriteq.h, src/engines/7142/source/gamelib/spritex8p16.c, src/engines/7142/source/gamelib/spritex8p32.c, src/engines/7142/source/gamelib/timer.h, src/engines/7142/source/gamelib/types.h, src/engines/7142/source/gamelib/vga.h, src/engines/7142/source/gfxlib/gfxtypes.h, src/engines/7142/source/omath.c, src/engines/7142/source/omath.h, src/engines/7142/source/preprocessorlib/pp_lexer.c, src/engines/7142/source/preprocessorlib/pp_lexer.h, src/engines/7142/source/ramlib/ram.c, src/engines/7142/source/ramlib/ram.h, src/engines/7142/source/randlib/rand32.c, src/engines/7142/source/randlib/rand32.h, src/engines/7142/source/scriptlib/Interpreter.h, src/engines/7142/source/scriptlib/Lexer.c, src/engines/7142/source/scriptlib/Lexer.h, src/engines/7142/source/scriptlib/ParserSet.c, src/engines/7142/source/scriptlib/ParserSet.h, src/engines/7142/source/scriptlib/ScriptVariant.c, src/engines/7142/source/scriptlib/ScriptVariant.h, src/engines/7142/source/scriptlib/Stack.c, src/engines/7142/source/scriptlib/Stack.h, src/engines/7142/source/scriptlib/StackedSymbolTable.c, src/engines/7142/source/scriptlib/StackedSymbolTable.h, src/engines/7142/source/scriptlib/SymbolTable.c, src/engines/7142/source/scriptlib/SymbolTable.h, src/engines/7142/source/scriptlib/depends.h, src/engines/7142/source/stringptr.c, src/engines/7142/source/stringptr.h, src/engines/7142/source/stristr.c, src/engines/7142/source/stristr.h
+Source: src/engines/4086/openborscript.c, src/engines/4086/source/adpcmlib/adpcm.h, src/engines/4086/source/gamelib/anigif.c, src/engines/4086/source/gamelib/anigif.h, src/engines/4086/source/gamelib/bitmap.c, src/engines/4086/source/gamelib/bitmap.h, src/engines/4086/source/gamelib/borendian.h, src/engines/4086/source/gamelib/draw.c, src/engines/4086/source/gamelib/draw.h, src/engines/4086/source/gamelib/draw16.c, src/engines/4086/source/gamelib/draw32.c, src/engines/4086/source/gamelib/font.c, src/engines/4086/source/gamelib/font.h, src/engines/4086/source/gamelib/loadimg.c, src/engines/4086/source/gamelib/loadimg.h, src/engines/4086/source/gamelib/packfile.c, src/engines/4086/source/gamelib/packfile.h, src/engines/4086/source/gamelib/palette.c, src/engines/4086/source/gamelib/palette.h, src/engines/4086/source/gamelib/pixelformat.c, src/engines/4086/source/gamelib/screen.c, src/engines/4086/source/gamelib/screen.h, src/engines/4086/source/gamelib/screen16.c, src/engines/4086/source/gamelib/screen32.c, src/engines/4086/source/gamelib/soundmix.c, src/engines/4086/source/gamelib/soundmix.h, src/engines/4086/source/gamelib/sprite.c, src/engines/4086/source/gamelib/sprite.h, src/engines/4086/source/gamelib/spriteq.c, src/engines/4086/source/gamelib/spriteq.h, src/engines/4086/source/gamelib/spritex8p16.c, src/engines/4086/source/gamelib/spritex8p32.c, src/engines/4086/source/gamelib/timer.h, src/engines/4086/source/gamelib/types.h, src/engines/4086/source/gfxlib/gfxtypes.h, src/engines/4086/source/omath.c, src/engines/4086/source/omath.h, src/engines/4086/source/preprocessorlib/pp_lexer.c, src/engines/4086/source/preprocessorlib/pp_lexer.h, src/engines/4086/source/ramlib/ram.c, src/engines/4086/source/ramlib/ram.h, src/engines/4086/source/randlib/rand32.c, src/engines/4086/source/randlib/rand32.h, src/engines/4086/source/scriptlib/Interpreter.h, src/engines/4086/source/scriptlib/Lexer.c, src/engines/4086/source/scriptlib/Lexer.h, src/engines/4086/source/scriptlib/ParserSet.c, src/engines/4086/source/scriptlib/ParserSet.h, src/engines/4086/source/scriptlib/ScriptVariant.c, src/engines/4086/source/scriptlib/ScriptVariant.h, src/engines/4086/source/scriptlib/Stack.c, src/engines/4086/source/scriptlib/Stack.h, src/engines/4086/source/scriptlib/StackedSymbolTable.c, src/engines/4086/source/scriptlib/StackedSymbolTable.h, src/engines/4086/source/scriptlib/SymbolTable.c, src/engines/4086/source/scriptlib/SymbolTable.h, src/engines/4086/source/scriptlib/depends.h, src/engines/4086/source/stringptr.c, src/engines/4086/source/stringptr.h, src/engines/4086/source/stristr.c, src/engines/4086/source/stristr.h, src/engines/4432/openborscript.c, src/engines/4432/source/adpcmlib/adpcm.h, src/engines/4432/source/gamelib/anigif.c, src/engines/4432/source/gamelib/anigif.h, src/engines/4432/source/gamelib/bitmap.c, src/engines/4432/source/gamelib/bitmap.h, src/engines/4432/source/gamelib/borendian.h, src/engines/4432/source/gamelib/draw.c, src/engines/4432/source/gamelib/draw.h, src/engines/4432/source/gamelib/draw16.c, src/engines/4432/source/gamelib/draw32.c, src/engines/4432/source/gamelib/font.c, src/engines/4432/source/gamelib/font.h, src/engines/4432/source/gamelib/loadimg.c, src/engines/4432/source/gamelib/loadimg.h, src/engines/4432/source/gamelib/packfile.c, src/engines/4432/source/gamelib/packfile.h, src/engines/4432/source/gamelib/palette.c, src/engines/4432/source/gamelib/palette.h, src/engines/4432/source/gamelib/pixelformat.c, src/engines/4432/source/gamelib/screen.c, src/engines/4432/source/gamelib/screen.h, src/engines/4432/source/gamelib/screen16.c, src/engines/4432/source/gamelib/screen32.c, src/engines/4432/source/gamelib/soundmix.c, src/engines/4432/source/gamelib/soundmix.h, src/engines/4432/source/gamelib/sprite.c, src/engines/4432/source/gamelib/sprite.h, src/engines/4432/source/gamelib/spriteq.c, src/engines/4432/source/gamelib/spriteq.h, src/engines/4432/source/gamelib/spritex8p16.c, src/engines/4432/source/gamelib/spritex8p32.c, src/engines/4432/source/gamelib/timer.h, src/engines/4432/source/gamelib/types.h, src/engines/4432/source/gamelib/vga.h, src/engines/4432/source/gfxlib/gfxtypes.h, src/engines/4432/source/omath.c, src/engines/4432/source/omath.h, src/engines/4432/source/preprocessorlib/pp_lexer.c, src/engines/4432/source/preprocessorlib/pp_lexer.h, src/engines/4432/source/ramlib/ram.c, src/engines/4432/source/ramlib/ram.h, src/engines/4432/source/randlib/rand32.c, src/engines/4432/source/randlib/rand32.h, src/engines/4432/source/scriptlib/Interpreter.h, src/engines/4432/source/scriptlib/Lexer.c, src/engines/4432/source/scriptlib/Lexer.h, src/engines/4432/source/scriptlib/ParserSet.c, src/engines/4432/source/scriptlib/ParserSet.h, src/engines/4432/source/scriptlib/ScriptVariant.c, src/engines/4432/source/scriptlib/ScriptVariant.h, src/engines/4432/source/scriptlib/Stack.c, src/engines/4432/source/scriptlib/Stack.h, src/engines/4432/source/scriptlib/StackedSymbolTable.c, src/engines/4432/source/scriptlib/StackedSymbolTable.h, src/engines/4432/source/scriptlib/SymbolTable.c, src/engines/4432/source/scriptlib/SymbolTable.h, src/engines/4432/source/scriptlib/depends.h, src/engines/4432/source/stringptr.c, src/engines/4432/source/stringptr.h, src/engines/4432/source/stristr.c, src/engines/4432/source/stristr.h, src/engines/6391/source/adpcmlib/adpcm.h, src/engines/6391/source/gamelib/anigif.c, src/engines/6391/source/gamelib/anigif.h, src/engines/6391/source/gamelib/bitmap.c, src/engines/6391/source/gamelib/bitmap.h, src/engines/6391/source/gamelib/borendian.h, src/engines/6391/source/gamelib/draw.c, src/engines/6391/source/gamelib/draw.h, src/engines/6391/source/gamelib/draw16.c, src/engines/6391/source/gamelib/draw32.c, src/engines/6391/source/gamelib/font.c, src/engines/6391/source/gamelib/font.h, src/engines/6391/source/gamelib/loadimg.c, src/engines/6391/source/gamelib/loadimg.h, src/engines/6391/source/gamelib/packfile.c, src/engines/6391/source/gamelib/packfile.h, src/engines/6391/source/gamelib/palette.c, src/engines/6391/source/gamelib/palette.h, src/engines/6391/source/gamelib/pixelformat.c, src/engines/6391/source/gamelib/screen.c, src/engines/6391/source/gamelib/screen.h, src/engines/6391/source/gamelib/screen16.c, src/engines/6391/source/gamelib/screen32.c, src/engines/6391/source/gamelib/soundmix.c, src/engines/6391/source/gamelib/soundmix.h, src/engines/6391/source/gamelib/sprite.c, src/engines/6391/source/gamelib/sprite.h, src/engines/6391/source/gamelib/spriteq.c, src/engines/6391/source/gamelib/spriteq.h, src/engines/6391/source/gamelib/spritex8p16.c, src/engines/6391/source/gamelib/spritex8p32.c, src/engines/6391/source/gamelib/timer.h, src/engines/6391/source/gamelib/types.h, src/engines/6391/source/gamelib/vga.h, src/engines/6391/source/gfxlib/gfxtypes.h, src/engines/6391/source/omath.c, src/engines/6391/source/omath.h, src/engines/6391/source/preprocessorlib/pp_lexer.c, src/engines/6391/source/preprocessorlib/pp_lexer.h, src/engines/6391/source/ramlib/ram.c, src/engines/6391/source/ramlib/ram.h, src/engines/6391/source/randlib/rand32.c, src/engines/6391/source/randlib/rand32.h, src/engines/6391/source/scriptlib/Interpreter.h, src/engines/6391/source/scriptlib/Lexer.c, src/engines/6391/source/scriptlib/Lexer.h, src/engines/6391/source/scriptlib/ParserSet.c, src/engines/6391/source/scriptlib/ParserSet.h, src/engines/6391/source/scriptlib/ScriptVariant.c, src/engines/6391/source/scriptlib/ScriptVariant.h, src/engines/6391/source/scriptlib/Stack.c, src/engines/6391/source/scriptlib/Stack.h, src/engines/6391/source/scriptlib/StackedSymbolTable.c, src/engines/6391/source/scriptlib/StackedSymbolTable.h, src/engines/6391/source/scriptlib/SymbolTable.c, src/engines/6391/source/scriptlib/SymbolTable.h, src/engines/6391/source/scriptlib/depends.h, src/engines/6391/source/stringptr.c, src/engines/6391/source/stringptr.h, src/engines/6391/source/stristr.c, src/engines/6391/source/stristr.h, src/engines/7142/source/adpcmlib/adpcm.h, src/engines/7142/source/gamelib/anigif.c, src/engines/7142/source/gamelib/anigif.h, src/engines/7142/source/gamelib/bitmap.c, src/engines/7142/source/gamelib/bitmap.h, src/engines/7142/source/gamelib/borendian.h, src/engines/7142/source/gamelib/draw.c, src/engines/7142/source/gamelib/draw.h, src/engines/7142/source/gamelib/draw16.c, src/engines/7142/source/gamelib/draw32.c, src/engines/7142/source/gamelib/font.c, src/engines/7142/source/gamelib/font.h, src/engines/7142/source/gamelib/loadimg.c, src/engines/7142/source/gamelib/loadimg.h, src/engines/7142/source/gamelib/packfile.c, src/engines/7142/source/gamelib/packfile.h, src/engines/7142/source/gamelib/palette.c, src/engines/7142/source/gamelib/palette.h, src/engines/7142/source/gamelib/pixelformat.c, src/engines/7142/source/gamelib/screen.c, src/engines/7142/source/gamelib/screen.h, src/engines/7142/source/gamelib/screen16.c, src/engines/7142/source/gamelib/screen32.c, src/engines/7142/source/gamelib/soundmix.c, src/engines/7142/source/gamelib/soundmix.h, src/engines/7142/source/gamelib/sprite.c, src/engines/7142/source/gamelib/sprite.h, src/engines/7142/source/gamelib/spriteq.c, src/engines/7142/source/gamelib/spriteq.h, src/engines/7142/source/gamelib/spritex8p16.c, src/engines/7142/source/gamelib/spritex8p32.c, src/engines/7142/source/gamelib/timer.h, src/engines/7142/source/gamelib/types.h, src/engines/7142/source/gamelib/vga.h, src/engines/7142/source/gfxlib/gfxtypes.h, src/engines/7142/source/omath.c, src/engines/7142/source/omath.h, src/engines/7142/source/preprocessorlib/pp_lexer.c, src/engines/7142/source/preprocessorlib/pp_lexer.h, src/engines/7142/source/ramlib/ram.c, src/engines/7142/source/ramlib/ram.h, src/engines/7142/source/randlib/rand32.c, src/engines/7142/source/randlib/rand32.h, src/engines/7142/source/scriptlib/Interpreter.h, src/engines/7142/source/scriptlib/Lexer.c, src/engines/7142/source/scriptlib/Lexer.h, src/engines/7142/source/scriptlib/ParserSet.c, src/engines/7142/source/scriptlib/ParserSet.h, src/engines/7142/source/scriptlib/ScriptVariant.c, src/engines/7142/source/scriptlib/ScriptVariant.h, src/engines/7142/source/scriptlib/Stack.c, src/engines/7142/source/scriptlib/Stack.h, src/engines/7142/source/scriptlib/StackedSymbolTable.c, src/engines/7142/source/scriptlib/StackedSymbolTable.h, src/engines/7142/source/scriptlib/SymbolTable.c, src/engines/7142/source/scriptlib/SymbolTable.h, src/engines/7142/source/scriptlib/depends.h, src/engines/7142/source/stringptr.c, src/engines/7142/source/stringptr.h, src/engines/7142/source/stristr.c, src/engines/7142/source/stristr.h
 /*
  * OpenBOR - http://www.chronocrash.com
  * -----------------------------------------------------------------------
@@ -5850,6 +6040,19 @@ Source: src/engines/4086/source/gamelib/anigif.c
  * at the source repository root. Original notices follow below.
  */
 
+Source: src/engines/4086/source/webmlib/halloc/align.h, src/engines/4086/source/webmlib/halloc/halloc.h, src/engines/4086/source/webmlib/halloc/hlist.h, src/engines/4086/source/webmlib/halloc/macros.h, src/engines/4086/source/webmlib/nestegg/nestegg.h, src/engines/4086/source/webmlib/samplecvt.c, src/engines/4086/source/webmlib/samplecvt.h, src/engines/4086/source/webmlib/vidplay.h, src/engines/4086/source/webmlib/vorbis.h, src/engines/4086/source/webmlib/vorbisfpu.h, src/engines/4086/source/webmlib/yuv.c, src/engines/4086/source/webmlib/yuv.h, src/engines/4086/source/webmlib/halloc/align.h, src/engines/4086/source/webmlib/halloc/halloc.h, src/engines/4086/source/webmlib/halloc/hlist.h, src/engines/4086/source/webmlib/halloc/macros.h, src/engines/4086/source/webmlib/nestegg/nestegg.h, src/engines/4086/source/webmlib/samplecvt.c, src/engines/4086/source/webmlib/samplecvt.h, src/engines/4086/source/webmlib/vidplay.h, src/engines/4086/source/webmlib/vorbis.h, src/engines/4086/source/webmlib/vorbisfpu.h, src/engines/4086/source/webmlib/yuv.c, src/engines/4086/source/webmlib/yuv.h
+/* AnyBOR modification record: 2026-10-19.
+ * Port maintained by retrodiv <retrodiv@proton.me>.
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me> (original contributions).
+ * These contributions are licensed under BSD-3-Clause; see LICENSE at the root.
+ * Upstream code retains its original license and notices.
+ * Select native media behavior by profile, retaining upstream authorship and
+ * license notices.
+ * Existing changes recorded here; this is not their implementation date.
+ * See MODIFICATIONS.md and docs/modifications/4086.md
+ * at the source repository root. Original notices follow below.
+ */
+
 Source: src/engines/6391/source/gamelib/borendian.h
 /* AnyBOR modification record: 2026-10-05.
  * Port maintained by retrodiv <retrodiv@proton.me>.
@@ -5984,23 +6187,6 @@ Source: src/engines/6391/source/openborscript/scriptcommon.h
  * length.
  * Existing changes recorded here; this is not their implementation date.
  * See MODIFICATIONS.md and docs/modifications/6391.md
- * at the source repository root. Original notices follow below.
- */
-
-Source: src/engines/4086/source/utils.c
-/* AnyBOR modification record: 2026-10-21.
- * Port maintained by retrodiv <retrodiv@proton.me>.
- * Copyright (c) 2026 retrodiv <retrodiv@proton.me> (original contributions).
- * These contributions are licensed under BSD-3-Clause; see LICENSE at the root.
- * Upstream code retains its original license and notices.
- * Enable libretro platform and PNG helper declarations, the POSIX directory
- * and mkdir forms macOS also uses, and the standard allocation declarations
- * instead of the glibc-only <malloc.h>. Derive output names from the content
- * basename with explicit destination capacities, and reject overflowing
- * output path joins. Bound adjacent string-table reads while preserving the
- * original search order and duplicate preference.
- * Existing changes recorded here; this is not their implementation date.
- * See MODIFICATIONS.md and docs/modifications/4086.md
  * at the source repository root. Original notices follow below.
  */
 
@@ -6605,23 +6791,6 @@ Source: src/engines/8023/source/gamelib/spritex8p16.c, src/engines/8023/source/g
  * at the source repository root. Original notices follow below.
  */
 
-Source: src/engines/4086/openbor.h
-/* AnyBOR modification record: 2026-11-08.
- * Port maintained by retrodiv <retrodiv@proton.me>.
- * Copyright (c) 2026 retrodiv <retrodiv@proton.me> (original contributions).
- * These contributions are licensed under BSD-3-Clause; see LICENSE at the root.
- * Upstream code retains its original license and notices.
- * Allocate collision pointer slots through the highest author-facing index
- * used by each collection. Declare the native media decoder interface,
- * profile movement deadlines, default shutdown text, historical frame-base
- * and movement-table presence, spawn-coordinate storage and animation ID
- * conversions. Declare the vault action used by early profiles. Track each
- * model's allocated animation-table capacity and reject lookups outside it.
- * Existing changes recorded here; this is not their implementation date.
- * See MODIFICATIONS.md and docs/modifications/4086.md
- * at the source repository root. Original notices follow below.
- */
-
 Source: src/engines/3741/openbor.h
 /* AnyBOR modification record: 2026-10-23.
  * Port maintained by retrodiv <retrodiv@proton.me>.
@@ -7094,6 +7263,23 @@ Source: src/engines/4086/source/webmlib/halloc/align.h, src/engines/4086/source/
  *	http://swapped.cc/halloc
  */
 
+Source: src/engines/4086/source/gamelib/sprite.c
+/* AnyBOR modification record: 2026-10-08.
+ * Port maintained by retrodiv <retrodiv@proton.me>.
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me> (original contributions).
+ * These contributions are licensed under BSD-3-Clause; see LICENSE at the root.
+ * Upstream code retains its original license and notices.
+ * Declare initialized encoded sprite-body ranges and source crops for exact
+ * reconstruction proof, retaining headers, palettes and mutable changes.
+ * Preserve native integer or floating rotation storage by profile, with
+ * unchanged slot size and typed script, parser, mirror, copy and raster
+ * access. Bound integer rotation results and initial trigonometric table
+ * indices.
+ * Existing changes recorded here; this is not their implementation date.
+ * See MODIFICATIONS.md and docs/modifications/4086.md
+ * at the source repository root. Original notices follow below.
+ */
+
 Source: src/engines/4086/source/scriptlib/ScriptVariant.h
 /* AnyBOR modification record: 2026-10-19.
  * Port maintained by retrodiv <retrodiv@proton.me>.
@@ -7124,60 +7310,6 @@ Source: src/deps/libvorbis/lib/psytune.c
            without encoding
 
  ********************************************************************/
-
-Source: src/engines/4086/openbor.c
-/* AnyBOR modification record: 2026-11-15.
- * Port maintained by retrodiv <retrodiv@proton.me>.
- * Copyright (c) 2026 retrodiv <retrodiv@proton.me> (original contributions).
- * These contributions are licensed under BSD-3-Clause; see LICENSE at the root.
- * Upstream code retains its original license and notices.
- * Apply the port's engine corrections and select the PC video configuration
- * on macOS. Select native early system-selector values, credit rendering and
- * active flags, true-color background and layer-mask admission, scene video
- * commands, menu flags and controller-assignment key flush; bound diagnostic
- * formatting and content paths and release owned layer masks. Preserve
- * scrolling, startup palette and loading geometry, selection order, player
- * spawn precision, walk/backwalk facing, blocking resources and defaults,
- * counter damage, attack types and cancellation, periodic damage, rush,
- * follow and ground-hit predicates, projectile costs and weapon loss. Retain
- * frame-base and movement-table presence and cleanup, script animation
- * identities and native limits, vault actions and caller priority, slow-
- * motion arithmetic and main-loop seed timing. Keep damage-over-time updates
- * within the native effect arrays while retaining valid-slot tick and
- * expiration calculations. Derive output names from the content basename
- * with explicit destination capacities, and reject overflowing output path
- * joins. Leave multiplayer slots without a selected model available to join
- * even if game scripts preassign lives to them. Let a missing basename-only
- * PAK self-check read the active frontend content after it has been
- * validated and prepared. Allocate each model's animation pointer table
- * through the highest animation index that model uses, and bound cache, copy
- * and cleanup paths to that capacity. Ignore optional defense and offense
- * entries outside the configured attack-type range with a log warning before
- * accessing their tables. Yield after each newly completed model during
- * explicit model-list or level preparation, and defer states until that
- * preparation has cleaned up its intermediate parsers and handles. Resize
- * repeated weapon lists and detach borrowed lists before replacing their
- * entries. Return a defined null result for absent colourmap models or
- * tables while retaining valid palette fallback. Keep selected palette-
- * conversion reads bounded and reject missing maps or flags, while
- * preserving unselected slots and native allocation failure callbacks. Check
- * destination animation capacity when retaining an animation across model
- * changes, preserving the native fallback and timing. Access script-
- * container pointer slots with byte copies, preserving record layout,
- * pointer values and native copy/cleanup order. Pointer-slot allocation and
- * release accept byte storage without imposing pointer alignment on a packed
- * field. Release each sprite owner once and complete cleanup independently
- * of alias counts. Preserve native sprite-map capacity policies, check
- * allocation extents and retain existing storage and capacity when growth is
- * unavailable. Validate sprite-node allocations and release partial
- * resources without changing existing owners. Check cached sprite
- * availability before reading metadata and ignore cache requests for absent
- * nodes. Capture explicit shutdown failure text before cleanup and bound
- * legacy diagnostic formatting.
- * Existing changes recorded here; this is not their implementation date.
- * See MODIFICATIONS.md and docs/modifications/4086.md
- * at the source repository root. Original notices follow below.
- */
 
 Source: src/engines/3400/source/scriptlib/List.h
 /* AnyBOR modification record: 2026-09-12.
@@ -8132,6 +8264,21 @@ Source: src/engines/4086/source/ramlib/ram.c
  * at the source repository root. Original notices follow below.
  */
 
+Source: src/engines/4086/source/utils.h
+/* AnyBOR modification record: 2026-10-12.
+ * Port maintained by retrodiv <retrodiv@proton.me>.
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me> (original contributions).
+ * These contributions are licensed under BSD-3-Clause; see LICENSE at the root.
+ * Upstream code retains its original license and notices.
+ * Declare the capacity of content-derived filename destinations. Derive
+ * output names from the content basename with explicit destination
+ * capacities, and reject overflowing output path joins. Declare the native
+ * checked-allocation helper.
+ * Existing changes recorded here; this is not their implementation date.
+ * See MODIFICATIONS.md and docs/modifications/4086.md
+ * at the source repository root. Original notices follow below.
+ */
+
 Source: src/deps/libvpx/vp9/encoder/arm/neon/vp9_highbd_temporal_filter_sve2.c, src/deps/libvpx/vp9/encoder/arm/neon/vp9_temporal_filter_neon_dotprod.c, src/deps/libvpx/vp9/encoder/arm/neon/vp9_temporal_filter_neon_i8mm.c, src/deps/libvpx/vpx_dsp/x86/sad_avx512.c
 /*
  *  Copyright (c) 2025 The WebM project authors. All Rights Reserved.
@@ -8462,19 +8609,6 @@ Source: src/engines/3741/source/scriptlib/depends.h
  * at the source repository root. Original notices follow below.
  */
 
-Source: src/engines/4086/source/gamelib/types.h
-/* AnyBOR modification record: 2026-10-23.
- * Port maintained by retrodiv <retrodiv@proton.me>.
- * Copyright (c) 2026 retrodiv <retrodiv@proton.me> (original contributions).
- * These contributions are licensed under BSD-3-Clause; see LICENSE at the root.
- * Upstream code retains its original license and notices.
- * Match drawing-method typedef alignment to packed owning records without
- * changing fields, offsets or sizes.
- * Existing changes recorded here; this is not their implementation date.
- * See MODIFICATIONS.md and docs/modifications/4086.md
- * at the source repository root. Original notices follow below.
- */
-
 Source: src/deps/libpng/pngwtran.c
 /* pngwtran.c - transforms the data in a row for PNG writers
  *
@@ -8565,6 +8699,19 @@ Source: src/engines/3842/source/gamelib/transform.h
  * them inline and the definitions live in transform.c.
  * Existing changes recorded here; this is not their implementation date.
  * See MODIFICATIONS.md and docs/modifications/3842.md
+ * at the source repository root. Original notices follow below.
+ */
+
+Source: src/engines/4086/source/safealloc.h
+/* AnyBOR modification record: 2026-10-19.
+ * Port maintained by retrodiv <retrodiv@proton.me>.
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me> (original contributions).
+ * These contributions are licensed under BSD-3-Clause; see LICENSE at the root.
+ * Upstream code retains its original license and notices.
+ * Select native allocation admission and preserve call-site metadata by
+ * profile. Bound copied string extents.
+ * Existing changes recorded here; this is not their implementation date.
+ * See MODIFICATIONS.md and docs/modifications/4086.md
  * at the source repository root. Original notices follow below.
  */
 
@@ -8901,6 +9048,21 @@ Source: src/deps/libarchive/libarchive/archive_disk_acl_darwin.c, src/deps/libar
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
+Source: src/engines/4086/source/gamelib/commands.h
+/* AnyBOR modification record: 2026-11-17.
+ * Port maintained by retrodiv <retrodiv@proton.me>.
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me> (original contributions).
+ * These contributions are licensed under BSD-3-Clause; see LICENSE at the root.
+ * Upstream code retains its original license and notices.
+ * Declare the shared level alpha-mask command without changing the model
+ * command namespace. Declare internal selectors for native broken-down model
+ * commands and platform-block/hole script loading. Reserve the internal
+ * vertical background command without changing earlier selectors.
+ * Existing changes recorded here; this is not their implementation date.
+ * See MODIFICATIONS.md and docs/modifications/4086.md
+ * at the source repository root. Original notices follow below.
+ */
+
 Source: src/engines/3842/source/scriptlib/ImportCache.h
 /* AnyBOR modification record: 2026-09-12.
  * Port maintained by retrodiv <retrodiv@proton.me>.
@@ -8966,20 +9128,6 @@ Source: src/engines/3400/source/scriptlib/Interpreter.h
  * at the source repository root. Original notices follow below.
  */
 
-Source: src/engines/4086/source/utils.h
-/* AnyBOR modification record: 2026-10-12.
- * Port maintained by retrodiv <retrodiv@proton.me>.
- * Copyright (c) 2026 retrodiv <retrodiv@proton.me> (original contributions).
- * These contributions are licensed under BSD-3-Clause; see LICENSE at the root.
- * Upstream code retains its original license and notices.
- * Declare the capacity of content-derived filename destinations. Derive
- * output names from the content basename with explicit destination
- * capacities, and reject overflowing output path joins.
- * Existing changes recorded here; this is not their implementation date.
- * See MODIFICATIONS.md and docs/modifications/4086.md
- * at the source repository root. Original notices follow below.
- */
-
 Source: src/deps/libvorbis/lib/synthesis.c
 /********************************************************************
  *                                                                  *
@@ -9030,19 +9178,6 @@ Source: src/deps/zlib/gzwrite.c
  * For conditions of distribution and use, see copyright notice in zlib.h
  */
 
-Source: src/engines/4086/source/gamelib/commands.h
-/* AnyBOR modification record: 2026-10-19.
- * Port maintained by retrodiv <retrodiv@proton.me>.
- * Copyright (c) 2026 retrodiv <retrodiv@proton.me> (original contributions).
- * These contributions are licensed under BSD-3-Clause; see LICENSE at the root.
- * Upstream code retains its original license and notices.
- * Declare the shared level alpha-mask command without changing the model
- * command namespace.
- * Existing changes recorded here; this is not their implementation date.
- * See MODIFICATIONS.md and docs/modifications/4086.md
- * at the source repository root. Original notices follow below.
- */
-
 Source: src/engines/6391/source/openborscript/commands.h
 /* AnyBOR modification record: 2026-11-15.
  * Port maintained by retrodiv <retrodiv@proton.me>.
@@ -9057,19 +9192,6 @@ Source: src/engines/6391/source/openborscript/commands.h
  * at the source repository root. Original notices follow below.
  */
 
-Source: src/engines/4086/source/webmlib/halloc/align.h, src/engines/4086/source/webmlib/halloc/halloc.c, src/engines/4086/source/webmlib/halloc/halloc.h, src/engines/4086/source/webmlib/halloc/hlist.h, src/engines/4086/source/webmlib/halloc/macros.h, src/engines/4086/source/webmlib/nestegg/nestegg.h, src/engines/4086/source/webmlib/samplecvt.c, src/engines/4086/source/webmlib/samplecvt.h, src/engines/4086/source/webmlib/vidplay.h, src/engines/4086/source/webmlib/vorbis.c, src/engines/4086/source/webmlib/vorbis.h, src/engines/4086/source/webmlib/vorbisfpu.h, src/engines/4086/source/webmlib/yuv.c, src/engines/4086/source/webmlib/yuv.h, src/engines/4086/source/webmlib/halloc/align.h, src/engines/4086/source/webmlib/halloc/halloc.c, src/engines/4086/source/webmlib/halloc/halloc.h, src/engines/4086/source/webmlib/halloc/hlist.h, src/engines/4086/source/webmlib/halloc/macros.h, src/engines/4086/source/webmlib/nestegg/nestegg.h, src/engines/4086/source/webmlib/samplecvt.c, src/engines/4086/source/webmlib/samplecvt.h, src/engines/4086/source/webmlib/vidplay.h, src/engines/4086/source/webmlib/vorbis.c, src/engines/4086/source/webmlib/vorbis.h, src/engines/4086/source/webmlib/vorbisfpu.h, src/engines/4086/source/webmlib/yuv.c, src/engines/4086/source/webmlib/yuv.h
-/* AnyBOR modification record: 2026-10-19.
- * Port maintained by retrodiv <retrodiv@proton.me>.
- * Copyright (c) 2026 retrodiv <retrodiv@proton.me> (original contributions).
- * These contributions are licensed under BSD-3-Clause; see LICENSE at the root.
- * Upstream code retains its original license and notices.
- * Import the native 4153 media component, retaining its upstream authorship
- * and license notices.
- * Existing changes recorded here; this is not their implementation date.
- * See MODIFICATIONS.md and docs/modifications/4086.md
- * at the source repository root. Original notices follow below.
- */
-
 Source: src/engines/4432/source/scriptlib/Instruction.h
 /* AnyBOR modification record: 2026-09-30.
  * Port maintained by retrodiv <retrodiv@proton.me>.
@@ -9081,6 +9203,21 @@ Source: src/engines/4432/source/scriptlib/Instruction.h
  * replacements.
  * Existing changes recorded here; this is not their implementation date.
  * See MODIFICATIONS.md and docs/modifications/4432.md
+ * at the source repository root. Original notices follow below.
+ */
+
+Source: src/engines/4086/source/webmlib/vorbis.c, src/engines/4086/source/webmlib/vorbis.c
+/* AnyBOR modification record: 2026-10-19.
+ * Port maintained by retrodiv <retrodiv@proton.me>.
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me> (original contributions).
+ * These contributions are licensed under BSD-3-Clause; see LICENSE at the root.
+ * Upstream code retains its original license and notices.
+ * Select native media behavior by profile, retaining upstream authorship and
+ * license notices. Select the native multimedia assertion diagnostic route
+ * by profile while retaining controlled engine termination. Route audio
+ * preparation refusal to the selected engine stop.
+ * Existing changes recorded here; this is not their implementation date.
+ * See MODIFICATIONS.md and docs/modifications/4086.md
  * at the source repository root. Original notices follow below.
  */
 
@@ -9140,6 +9277,19 @@ Source: src/engines/3400/source/gamelib/spritef.c
  * profile, retaining encoded output and bounded source traversal.
  * Existing changes recorded here; this is not their implementation date.
  * See MODIFICATIONS.md and docs/modifications/3400.md
+ * at the source repository root. Original notices follow below.
+ */
+
+Source: src/engines/4086/source/globals.h
+/* AnyBOR modification record: 2026-10-19.
+ * Port maintained by retrodiv <retrodiv@proton.me>.
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me> (original contributions).
+ * These contributions are licensed under BSD-3-Clause; see LICENSE at the root.
+ * Upstream code retains its original license and notices.
+ * Include the libretro platform interface. Include native allocation
+ * wrappers with per-profile failure admission.
+ * Existing changes recorded here; this is not their implementation date.
+ * See MODIFICATIONS.md and docs/modifications/4086.md
  * at the source repository root. Original notices follow below.
  */
 
@@ -10732,6 +10882,27 @@ Source: src/deps/libogg/src/bitwise.c
 
  ********************************************************************/
 
+Source: src/engines/4086/source/utils.c
+/* AnyBOR modification record: 2026-11-16.
+ * Port maintained by retrodiv <retrodiv@proton.me>.
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me> (original contributions).
+ * These contributions are licensed under BSD-3-Clause; see LICENSE at the root.
+ * Upstream code retains its original license and notices.
+ * Enable libretro platform and PNG helper declarations, the POSIX directory
+ * and mkdir forms macOS also uses, and the standard allocation declarations
+ * instead of the glibc-only <malloc.h>. Derive output names from the content
+ * basename with explicit destination capacities, and reject overflowing
+ * output path joins. Bound adjacent string-table reads while preserving the
+ * original search order and duplicate preference. Select native first-
+ * character or binary name searching by profile, preserving duplicate
+ * preference and defined uppercase/unsorted-table results with bounded
+ * inputs. Preserve native nonzero allocation failure diagnostics and
+ * controlled exit by profile.
+ * Existing changes recorded here; this is not their implementation date.
+ * See MODIFICATIONS.md and docs/modifications/4086.md
+ * at the source repository root. Original notices follow below.
+ */
+
 Source: src/engines/4086/source/gamelib/spritex8p16.c, src/engines/4086/source/gamelib/spritex8p32.c
 /* AnyBOR modification record: 2026-10-21.
  * Port maintained by retrodiv <retrodiv@proton.me>.
@@ -11764,6 +11935,23 @@ Source: src/engines/3842/source/gamelib/filecache.c
  * at the source repository root. Original notices follow below.
  */
 
+Source: src/engines/4086/source/gamelib/screen.c
+/* AnyBOR modification record: 2026-10-19.
+ * Port maintained by retrodiv <retrodiv@proton.me>.
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me> (original contributions).
+ * These contributions are licensed under BSD-3-Clause; see LICENSE at the root.
+ * Upstream code retains its original license and notices.
+ * Remove a guard whose only statement assigned the counter to itself. Bound
+ * screen blend selectors and use transparent copy when an indexed table is
+ * unavailable. Preserve native integer or floating rotation storage by
+ * profile, with unchanged slot size and typed script, parser, mirror, copy
+ * and raster access. Bound integer rotation results and initial
+ * trigonometric table indices.
+ * Existing changes recorded here; this is not their implementation date.
+ * See MODIFICATIONS.md and docs/modifications/4086.md
+ * at the source repository root. Original notices follow below.
+ */
+
 Source: src/deps/libpng/example.c
 /* example.c - an example of using libpng
  *
@@ -11825,41 +12013,6 @@ AND FITNESS FOR A PARTICULAR PURPOSE.  THE SOFTWARE PROVIDED HEREUNDER IS
 ON AN "AS IS" BASIS, AND THE UNIVERSITY OF CALIFORNIA HAS NO OBLIGATIONS TO
 PROVIDE MAINTENANCE, SUPPORT, UPDATES, ENHANCEMENTS, OR MODIFICATIONS.
 */
-
-Source: src/engines/4086/openborscript.c
-/* AnyBOR modification record: 2026-11-08.
- * Port maintained by retrodiv <retrodiv@proton.me>.
- * Copyright (c) 2026 retrodiv <retrodiv@proton.me> (original contributions).
- * These contributions are licensed under BSD-3-Clause; see LICENSE at the root.
- * Upstream code retains its original license and notices.
- * Keep the dormant constant-lowering diagnostic compatible with the single-
- * value instruction layout. Preserve source-defined system, player, drawing,
- * entity and text namespaces, numeric/cached selectors, axis warnings,
- * terrain fields, removed constants and native animation argument/result
- * identities. Retain native antigravity, drop-velocity and height results,
- * shutdown arguments, duration conversions, rush and ground-hit values,
- * block-resource representation, attack staydown return types and script API
- * availability; bound cache and diagnostic access. Preserve spawn-callback
- * locals, grab-script output/validation epochs, takeaction table bounds and
- * seed-script conversion/advance behavior. Derive output names from the
- * content basename with explicit destination capacities, and reject
- * overflowing output path joins. Compact compiler-only instruction records
- * after resolving value ownership, preserving branch and export anchors, all
- * mutable values and exactly-once pool cleanup. Retain shared interpreters
- * through the last script reference while preserving independent variables,
- * replacement and native callbacks. Track diagnostic comments independently
- * so interpreter replacement can retain them. Resolve text-property names
- * within the actual table bounds while preserving native numeric selectors.
- * Reuse each text object's owned buffer when replacing its contents. Reject
- * missing colourtable indices and keep selector arithmetic and table reads
- * defined. Use the declared staydown name-table length for lookup. Transfer
- * loaded stream buffers through aligned local outputs while preserving
- * native record layout and results. Close owned input files after stream
- * loading and on buffer allocation failure.
- * Existing changes recorded here; this is not their implementation date.
- * See MODIFICATIONS.md and docs/modifications/4086.md
- * at the source repository root. Original notices follow below.
- */
 
 Source: src/deps/libvorbis/lib/modes/psych_16.h, src/deps/libvorbis/lib/modes/setup_16.h
 /********************************************************************
@@ -12118,6 +12271,21 @@ Source: src/deps/libarchive/libarchive/archive_read_support_filter_program.c, sr
  * THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ */
+
+Source: src/engines/4086/source/webmlib/nestegg/nestegg.c, src/engines/4086/source/webmlib/nestegg/nestegg.c
+/* AnyBOR modification record: 2026-10-19.
+ * Port maintained by retrodiv <retrodiv@proton.me>.
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me> (original contributions).
+ * These contributions are licensed under BSD-3-Clause; see LICENSE at the root.
+ * Upstream code retains its original license and notices.
+ * Bound compressed blocks before allocation in the explicitly enabled
+ * reproducible-media diagnostic; preserve normal parser limits otherwise.
+ * Select the native multimedia assertion diagnostic route by profile while
+ * retaining controlled engine termination.
+ * Existing changes recorded here; this is not their implementation date.
+ * See MODIFICATIONS.md and docs/modifications/4086.md
+ * at the source repository root. Original notices follow below.
  */
 
 Source: src/deps/libvorbis/lib/misc.h
@@ -12450,18 +12618,6 @@ Source: src/engines/8023/source/scriptlib/Interpreter.h
  * interpreters do not retain it.
  * Existing changes recorded here; this is not their implementation date.
  * See MODIFICATIONS.md and docs/modifications/8023.md
- * at the source repository root. Original notices follow below.
- */
-
-Source: src/engines/4086/source/globals.h
-/* AnyBOR modification record: 2026-10-19.
- * Port maintained by retrodiv <retrodiv@proton.me>.
- * Copyright (c) 2026 retrodiv <retrodiv@proton.me> (original contributions).
- * These contributions are licensed under BSD-3-Clause; see LICENSE at the root.
- * Upstream code retains its original license and notices.
- * Include the libretro platform interface.
- * Existing changes recorded here; this is not their implementation date.
- * See MODIFICATIONS.md and docs/modifications/4086.md
  * at the source repository root. Original notices follow below.
  */
 
@@ -12951,6 +13107,21 @@ Source: src/deps/libvorbis/lib/modes/floor_all.h
  function: key floor settings
 
  ********************************************************************/
+
+Source: src/engines/4086/source/webmlib/halloc/halloc.c, src/engines/4086/source/webmlib/halloc/halloc.c
+/* AnyBOR modification record: 2026-10-19.
+ * Port maintained by retrodiv <retrodiv@proton.me>.
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me> (original contributions).
+ * These contributions are licensed under BSD-3-Clause; see LICENSE at the root.
+ * Upstream code retains its original license and notices.
+ * Select native media behavior by profile, retaining upstream authorship and
+ * license notices. Select the native multimedia assertion diagnostic route
+ * by profile while retaining active safety checks and controlled engine
+ * termination. Rebuild detached sibling links after moving reallocations.
+ * Existing changes recorded here; this is not their implementation date.
+ * See MODIFICATIONS.md and docs/modifications/4086.md
+ * at the source repository root. Original notices follow below.
+ */
 
 Source: src/engines/4086/source/gamelib/bitmap.c
 /* AnyBOR modification record: 2026-10-08.
@@ -14176,20 +14347,6 @@ Source: src/engines/3842/source/scriptlib/ImportCache.c
  * at the source repository root. Original notices follow below.
  */
 
-Source: src/engines/4086/source/gamelib/screen.c
-/* AnyBOR modification record: 2026-10-19.
- * Port maintained by retrodiv <retrodiv@proton.me>.
- * Copyright (c) 2026 retrodiv <retrodiv@proton.me> (original contributions).
- * These contributions are licensed under BSD-3-Clause; see LICENSE at the root.
- * Upstream code retains its original license and notices.
- * Remove a guard whose only statement assigned the counter to itself. Bound
- * screen blend selectors and use transparent copy when an indexed table is
- * unavailable.
- * Existing changes recorded here; this is not their implementation date.
- * See MODIFICATIONS.md and docs/modifications/4086.md
- * at the source repository root. Original notices follow below.
- */
-
 Source: src/deps/libvorbis/lib/codec_internal.h
 /********************************************************************
  *                                                                  *
@@ -14328,20 +14485,6 @@ Source: src/engines/8023/source/preprocessorlib/pp_parser.c
  * nesting to 128 levels.
  * Existing changes recorded here; this is not their implementation date.
  * See MODIFICATIONS.md and docs/modifications/8023.md
- * at the source repository root. Original notices follow below.
- */
-
-Source: src/engines/4086/source/gamelib/commands.c
-/* AnyBOR modification record: 2026-10-19.
- * Port maintained by retrodiv <retrodiv@proton.me>.
- * Copyright (c) 2026 retrodiv <retrodiv@proton.me> (original contributions).
- * These contributions are licensed under BSD-3-Clause; see LICENSE at the root.
- * Upstream code retains its original license and notices.
- * Convert the command-list lookup result to its command enumeration
- * explicitly instead of through a plain pointer cast. Admit the native level
- * alpha-mask command only for profiles whose original build registered it.
- * Existing changes recorded here; this is not their implementation date.
- * See MODIFICATIONS.md and docs/modifications/4086.md
  * at the source repository root. Original notices follow below.
  */
 
@@ -15262,6 +15405,40 @@ Source: src/deps/libpng/scripts/sym.c
  * and license in png.h
  */
 
+Source: src/engines/4086/source/gamelib/types.h
+/* AnyBOR modification record: 2026-10-23.
+ * Port maintained by retrodiv <retrodiv@proton.me>.
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me> (original contributions).
+ * These contributions are licensed under BSD-3-Clause; see LICENSE at the root.
+ * Upstream code retains its original license and notices.
+ * Match drawing-method typedef alignment to packed owning records without
+ * changing fields, offsets or sizes. Preserve native integer or floating
+ * rotation storage by profile, with unchanged slot size and typed script,
+ * parser, mirror, copy and raster access. Bound integer rotation results and
+ * initial trigonometric table indices.
+ * Existing changes recorded here; this is not their implementation date.
+ * See MODIFICATIONS.md and docs/modifications/4086.md
+ * at the source repository root. Original notices follow below.
+ */
+
+Source: src/engines/4086/source/gamelib/commands.c
+/* AnyBOR modification record: 2026-11-17.
+ * Port maintained by retrodiv <retrodiv@proton.me>.
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me> (original contributions).
+ * These contributions are licensed under BSD-3-Clause; see LICENSE at the root.
+ * Upstream code retains its original license and notices.
+ * Convert the command-list lookup result to its command enumeration
+ * explicitly instead of through a plain pointer cast. Admit the native level
+ * alpha-mask command only for profiles whose original build registered it.
+ * Select native broken-down model command and platform-block/hole script
+ * admission by profile, including registered commands without a parser
+ * implementation. Select native vertical background command admission by
+ * profile.
+ * Existing changes recorded here; this is not their implementation date.
+ * See MODIFICATIONS.md and docs/modifications/4086.md
+ * at the source repository root. Original notices follow below.
+ */
+
 Source: src/deps/libvpx/vpx_util/loongson_intrinsics.h
 /*
  * Copyright (c) 2021 Loongson Technology Corporation Limited
@@ -15615,6 +15792,20 @@ Source: src/engines/3842/source/scriptlib/Interpreter.c
  * release it once runtime instructions are ready.
  * Existing changes recorded here; this is not their implementation date.
  * See MODIFICATIONS.md and docs/modifications/3842.md
+ * at the source repository root. Original notices follow below.
+ */
+
+Source: src/engines/4086/source/gamelib/spriteq.c
+/* AnyBOR modification record: 2026-10-24.
+ * Port maintained by retrodiv <retrodiv@proton.me>.
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me> (original contributions).
+ * These contributions are licensed under BSD-3-Clause; see LICENSE at the root.
+ * Upstream code retains its original license and notices.
+ * Keep unavailable sprite images out of the drawing queue while retaining
+ * native requests, ordering and copied draw methods. Retain native per-
+ * profile queue admission limits within fixed backing storage.
+ * Existing changes recorded here; this is not their implementation date.
+ * See MODIFICATIONS.md and docs/modifications/4086.md
  * at the source repository root. Original notices follow below.
  */
 

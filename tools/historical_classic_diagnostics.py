@@ -7,6 +7,7 @@ import json
 from pathlib import Path
 import re
 
+from historical_classic_entities import entity_declarations
 from test_historical_player import function, switch_cases
 
 
@@ -15,8 +16,7 @@ def diagnostics_program(root, data):
     source = (engine / 'openborscript.c').read_text()
     variant = (engine / 'source/scriptlib/ScriptVariant.c').read_text()
     utils = (engine / 'source/utils.c').read_text()
-    first = source.index('enum _axis_enum')
-    declarations = source[first:source.index('HRESULT openbor_getanimationproperty(', first)]
+    declarations = entity_declarations(source)
     entries = []
     for name, labels in (
             ('openbor_getentityproperty', ['dot', 'edelay', 'energycost', 'icon', 'knockdowncount', 'staydown']),

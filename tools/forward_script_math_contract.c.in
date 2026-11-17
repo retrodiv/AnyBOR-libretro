@@ -1,0 +1,75 @@
+/* SPDX-License-Identifier: BSD-3-Clause
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me> */
+#include <assert.h>
+#include <stdint.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <math.h>
+#include "source/scriptlib/ScriptVariant.h"
+#undef printf
+#undef assert
+uint32_t obor_profile_build;
+#define assert(c) do {if(!(c)){fprintf(stderr,"MATH revision=%u line=%d\n",obor_profile_build,__LINE__);abort();}}while(0)
+static unsigned collected;
+void StrCache_Collect(int index) {assert(index==17);++collected;}
+int StrCache_Pop(void) {abort();}
+@VARIANTS@
+@MATH_UNIT@
+@NUMERIC@
+@STUBS@
+static HRESULT (*const callbacks[])(ScriptVariant**,ScriptVariant**,int)={@CALLBACKS@};
+static const char *const names[]={@NAMES@};
+static int theFunctionList;
+static unsigned registered,registry_order[9];
+static void List_Reset(int *list) {assert(list==&theFunctionList);registered=0;}
+static void List_InsertAfter(int *list,void *callback,const char *name) {
+ assert(list==&theFunctionList && callback);
+ for(unsigned i=0;i<9;++i)if(!strcmp(name,names[i])) {
+  assert(callback==(void*)callbacks[i] && registered<9);registry_order[registered++]=i;
+ }
+}
+@METHODS@
+static const struct {unsigned revision;int available,degrees;} contexts[]={@CONTEXTS@};
+static const struct {unsigned callback;double a,b;int integer;} cases[]={@CASES@};
+int main(void) {
+ for(unsigned context=0;context<sizeof(contexts)/sizeof(*contexts);++context) {
+  obor_profile_build=contexts[context].revision;
+  Script_LoadSystemFunctions();
+  assert(registered==(contexts[context].available?9u:3u));
+  for(unsigned i=0;i<registered;++i)
+   assert(registry_order[i]==(contexts[context].available?i:2*i));
+  for(unsigned i=0;i<9;++i) {
+   int available=i==0 || i==2 || i==4 || contexts[context].available;
+   assert(!strcmp(Script_GetFunctionName((void*)callbacks[i]),
+                  available?names[i]:"<unknown function>"));
+   if(!available || i==0 || i==2 || i==4)continue;
+   /* Undefined native arity/null accesses are refused by the port. */
+   ScriptVariant value={0},*out=&value,input={0};ScriptVariant *args[]={&input,&input};
+   for(int count=0;count<(i==5?2:1);++count) {
+    out=&value;assert(callbacks[i](args,&out,count)==E_FAIL && !out);
+   }
+   out=&value;assert(callbacks[i](NULL,&out,2)==E_FAIL && !out);
+   for(int bad=0;bad<(i==5?2:1);++bad) {
+    ScriptVariant a={0},b={0};a.vt=b.vt=VT_INTEGER;
+    ScriptVariant *invalid[]={&a,&b};invalid[bad]->vt=VT_EMPTY;
+    out=&value;assert(callbacks[i](invalid,&out,2)==E_FAIL && !out);
+   }
+  }
+  for(unsigned index=0;index<sizeof(cases)/sizeof(*cases);++index) {
+   unsigned cb=cases[index].callback;
+   if(cb!=0 && cb!=2 && cb!=4 && !contexts[context].available)continue;
+   ScriptVariant a={0},b={0},value={0},*out=&value;
+   a.vt=b.vt=cases[index].integer?VT_INTEGER:VT_DECIMAL;
+   if(cases[index].integer) {a.lVal=(LONG)cases[index].a;b.lVal=(LONG)cases[index].b;}
+   else {a.dblVal=cases[index].a;b.dblVal=cases[index].b;}
+   ScriptVariant *args[]={&a,&b};
+   value.vt=VT_STR;value.strVal=17;collected=0;
+   assert(callbacks[cb](args,&out,cb==5?2:1)==S_OK && out==&value);
+   assert(value.vt==VT_DECIMAL && collected==1);
+   printf("{\"revision\":%u,\"case\":%u,\"value\":\"%a\"}\n",obor_profile_build,index,value.dblVal);
+   ScriptVariant_Clear(&value);assert(value.vt==VT_EMPTY && !value.ptrVal);
+  }
+ }
+ return 0;
+}
