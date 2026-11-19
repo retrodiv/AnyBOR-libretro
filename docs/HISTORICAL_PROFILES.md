@@ -41,7 +41,9 @@ v3.0 4383, v3.0 4385, v3.0 4387, v3.0 4389, v3.0 4390, v3.0 4393, v3.0 4394, v3.
 v3.0 4401, v3.0 4403, v3.0 4404-dev, v3.0 4406, v3.0 4411, v3.0 4412, v3.0 4413, v3.0 4414,
 v3.0 4417, v3.0 4419, v3.0 4420, v3.0 4421-dev, v3.0 4423, v3.0 4424, v3.0 4426, v3.0 4429,
 v3.0 4430, v3.0 4431,
-v3.0 4432, v3.0 4453, v3.0 4454-dev, v3.0 4456, v3.0 4510-dev, v3.0 6330, v3.0 6330-lns-010g, v3.0 6391, v3.0 6391-mod, v3.0 6392-dev,
+v3.0 4432, v3.0 4453, v3.0 4454-dev, v3.0 4456, v3.0 4510-dev, v3.0 4574, v3.0 4580, v3.0 4583, v3.0 4596,
+v3.0 4624, v3.0 4626, v3.0 4642, v3.0 4665, v3.0 4682, v3.0 4701, v3.0 4742, v3.0 4750,
+v3.0 6330, v3.0 6330-lns-010g, v3.0 6391, v3.0 6391-mod, v3.0 6392-dev,
 v3.0 6412-dev, v3.0 6510-dev, v3.0 7086-dev, v3.0 7123-dev, v4.0 7142-alpha,
 v4.0 7530, v4.0 7533, v4.0 7555, v4.0 7556, v4.0 7735 and v4.0 8023-dev.
 
@@ -840,6 +842,18 @@ Profiles are compatibility selections. Several profiles use one physical source 
 | v3.0 4454-dev | `4432` |
 | v3.0 4456 | `4432` |
 | v3.0 4510-dev | `4432` |
+| v3.0 4574 | `4432` |
+| v3.0 4580 | `4432` |
+| v3.0 4583 | `4432` |
+| v3.0 4596 | `4432` |
+| v3.0 4624 | `4432` |
+| v3.0 4626 | `4432` |
+| v3.0 4642 | `4432` |
+| v3.0 4665 | `4432` |
+| v3.0 4682 | `4432` |
+| v3.0 4701 | `4432` |
+| v3.0 4742 | `4432` |
+| v3.0 4750 | `4432` |
 | v3.0 6330 | `6391` |
 | v3.0 6330-lns-010g | `6391` |
 | v3.0 6391 | `6391` |
@@ -970,6 +984,14 @@ exposes native set, level and layer queries, level collection and script
 assignments and `SCROLL_BACK`. The profile reproduces the original level
 spawn positions, slowdown and damage rules. An exact build tag or manual
 option selects the profile.
+
+Profiles 4574 through 4750 use engine 4432 with the source behavior of each
+selected build. The pinned source revisions are [4574](https://github.com/DCurrent/openbor/commit/6a80b70cf785fe9f7f3ad090ccac26ef2d2828fd), [4580](https://github.com/DCurrent/openbor/commit/a0177b62d6265379447f273e7d095908706289bc), [4583](https://github.com/DCurrent/openbor/commit/00ee6580f47f88f506029f347166c8559e75eb6c), [4596](https://github.com/DCurrent/openbor/commit/ea819ac435e9af594fbf2eb55b4f230360a05321), [4624](https://github.com/DCurrent/openbor/commit/402918976e1d093f3dc095bc8f3391b72780f676), [4626](https://github.com/DCurrent/openbor/commit/de6a42b8aa647a684ff73e5434d53d7cc870b98b), [4642](https://github.com/DCurrent/openbor/commit/1ddd723af88e4edb60691d8944d73a70b30c6cf9), [4665](https://github.com/DCurrent/openbor/commit/216bfb556e0905270d6c33dfa063723c4477cf0d), [4682](https://github.com/DCurrent/openbor/commit/c3aec096c78006b4cb25d2ade8f929b5c8453097), [4701](https://github.com/DCurrent/openbor/commit/3f7c41c05c83cd7671969eec01e9561a8ebf8f37), [4742](https://github.com/DCurrent/openbor/commit/dbd6dc588ac9070e82058f129a99078753091165), [4750](https://github.com/DCurrent/openbor/commit/d02e1b4c8645bf30e5333909ba5f8fd2b3618ea2).
+
+The typed landing-force query returns the configured damage amount. Builds
+4642 through 4701 converted the address of the two-component landing record
+to an integer. AnyBOR uses the first component for those profiles, matching
+the meaning of the scalar query and the reading used by 4742 and 4750.
 
 Engine 6391 uses upstream commit
 [`494708eb34e71d1afda237873907701c4ec3a569`](https://github.com/DCurrent/openbor/commit/494708eb34e71d1afda237873907701c4ec3a569).

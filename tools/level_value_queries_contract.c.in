@@ -1,0 +1,115 @@
+/* SPDX-License-Identifier: BSD-3-Clause
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me>
+ */
+#include <stdint.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include "openbor.h"
+#undef assert
+#undef printf
+#include <assert.h>
+
+uint32_t obor_profile_build;
+static s_level stage;
+static s_set_entry episode;
+s_level *level;
+s_set_entry *levelsets = &episode;
+int num_difficulties = 1;
+static int diagnostics;
+
+void *checkAlloc(void *ptr, size_t size, const char *func, const char *file, int line)
+{
+    assert(!size || ptr);
+    return ptr;
+}
+
+static void diagnostic(const char *format, ...)
+{
+    assert(strstr(format, "must provide a valid handle and property"));
+    ++diagnostics;
+}
+
+@CACHE@
+@SELECTORS@
+#define printf diagnostic
+@GETTERS@
+#undef printf
+
+typedef HRESULT (*getter)(ScriptVariant **, ScriptVariant **, int);
+
+static void check_value(getter reader, ScriptVariant handle, int selector, const char *text, LONG number)
+{
+    ScriptVariant property = {.vt = VT_INTEGER, .lVal = selector};
+    ScriptVariant value, saved, *out = &value, *args[] = {&handle, &property};
+    ScriptVariant_Init(&value);
+    ScriptVariant_Init(&saved);
+    ScriptVariant_ChangeType(&value, VT_STR);
+    StrCache_Copy(value.strVal, "retained");
+    ScriptVariant_Copy(&saved, &value);
+    assert(reader(args, &out, 2) == S_OK && out == &value);
+    if(text)
+    {
+        assert(value.vt == VT_STR && !strcmp(StrCache_Get(value.strVal), text));
+    }
+    else
+    {
+        assert(value.vt == VT_INTEGER && value.lVal == number);
+    }
+    assert(saved.vt == VT_STR && !strcmp(StrCache_Get(saved.strVal), "retained"));
+    ScriptVariant_Clear(&value);
+    ScriptVariant_Clear(&saved);
+}
+
+static void check_absent_level(int selector)
+{
+    ScriptVariant handle = {.vt = VT_EMPTY}, property = {.vt = VT_INTEGER, .lVal = selector};
+    ScriptVariant value, *out = &value, *args[] = {&handle, &property};
+    ScriptVariant_Init(&value);
+    diagnostics = 0;
+    assert(openbor_get_level_property(args, &out, 2) == E_FAIL);
+    assert(!out && value.vt == VT_EMPTY && diagnostics == 1);
+}
+
+int main(void)
+{
+    static const struct {
+        unsigned revision;
+        int set_name, level_name, boss_music, scripts[5], spawn_players;
+    } contexts[] = {@CONTEXTS@};
+    static s_axis_f spawn;
+    char track[128];
+    memset(track, 'm', sizeof(track) - 1);
+    track[sizeof(track) - 1] = 0;
+    ScriptVariant implicit = {.vt = VT_EMPTY};
+    ScriptVariant set_pointer = {.vt = VT_PTR, .ptrVal = &episode};
+    ScriptVariant stage_pointer = {.vt = VT_PTR, .ptrVal = &stage};
+    for(size_t i = 0; i < sizeof(contexts) / sizeof(*contexts); ++i)
+    {
+        const __typeof__(*contexts) *row = &contexts[i];
+        obor_profile_build = row->revision;
+        level = &stage;
+        episode.name = "Own set";
+        stage.name = "Own level";
+        check_value(openbor_get_set_property, set_pointer, row->set_name, episode.name, 0);
+        check_value(openbor_get_level_property, implicit, row->level_name, stage.name, 0);
+        stage.bossmusic[0] = 0;
+        check_value(openbor_get_level_property, stage_pointer, row->boss_music, "", 0);
+        strcpy(stage.bossmusic, track);
+        check_value(openbor_get_level_property, stage_pointer, row->boss_music, track, 0);
+        stage.scrolldir = 13;
+        for(size_t slot = 0; slot < sizeof(row->scripts) / sizeof(*row->scripts); ++slot)
+            check_value(openbor_get_level_property, stage_pointer, row->scripts[slot], NULL, 13);
+        stage.nospecial = 17;
+        stage.obor_spawn_view = NULL;
+        check_value(openbor_get_level_property, stage_pointer, row->spawn_players, NULL, 17);
+        stage.obor_spawn_view = &spawn;
+        check_value(openbor_get_level_property, stage_pointer, row->spawn_players, NULL, 17);
+        level = NULL;
+        check_absent_level(row->level_name);
+        assert(strcache_top == strcache_size - 1);
+        StrCache_Clear();
+        printf("%u\n", obor_profile_build);
+    }
+    return 0;
+}

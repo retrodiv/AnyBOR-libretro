@@ -17,39 +17,43 @@
  * colourtable indices and keep selector arithmetic and table reads defined.
  * Transfer loaded stream buffers through aligned local outputs while
  * preserving native record layout and results. Close owned input files after
- * stream loading and on buffer allocation failure. Register the native typed
- * drawing getter from 4455 and preserve older system-variable ordinals when
- * admitting the game timer from 4456. Admit setopenborvariant from 4467 with
- * the existing setter and canonical reverse name, and preserve older
- * ordinals when exposing sets_count from 4477. Expose the native set handle
- * lookup from 4478 with its original empty result for an index outside the
- * loaded sets. Preserve native set property names, ordinals, result types,
- * fallthrough results and writable collection aliases by profile. Expose
- * native layer handles and the profile's scroll, boss slowdown and damage
- * control constants. Expose native typed level property names, numeric
- * selectors, handle rules and result values by profile. Register the native
- * typed level setter and preserve its scalar assignments and result handling
- * by profile. Preserve level collection and spawn view assignment by
- * profile, including the early background selector. Preserve typed level
- * script assignment and shared local variables while keeping executing
- * interpreters live. Preserve the platform aliases and animation and array
- * script names by profile. Reject a missing fourth platform coordinate and
- * handle an empty cursor as no movement. Preserve named action admission and
- * numeric action slots around the simple animation insertion. Retain the
- * original entity property names, ordinal values and lookup order across
- * historical script profiles. Resolve those ordinals before native property
- * dispatch. Preserve the native entity property reads, writes and argument
- * handling around the historical weapon, remap, block and boomerang changes.
- * Preserve historical script wall-height argument selection before querying
- * the terrain. Preserve script reads and writes of attack and body collision
- * coordinates by profile while retaining native conversions. Retain the
- * profile's frame record or collection reference and the identity behavior
- * of native instance queries. Preserve each profile's complete system-
- * variable names and cached numeric identifiers. Retain native basemap
- * script-name availability, the registered height alias and private helper
- * result epochs. Preserve native cell selection and initial map size by
- * profile, checking owned map storage before writes. Route the optional
- * basemap generation argument by profile.
+ * stream loading and on buffer allocation failure. Bound string suffix
+ * selection to the live source text. Enable the native empty-value result
+ * and computed damage query from 4682. Expose the native game-over entry
+ * point and preserve numeric level-property ordinals from 4642. Select the
+ * mapped legacy terrain getter and setter behavior from 4682 and bound
+ * basemap cell reads. Register the native typed drawing getter from 4455 and
+ * preserve older system-variable ordinals when admitting the game timer from
+ * 4456. Admit setopenborvariant from 4467 with the existing setter and
+ * canonical reverse name, and preserve older ordinals when exposing
+ * sets_count from 4477. Expose the native set handle lookup from 4478 with
+ * its original empty result for an index outside the loaded sets. Preserve
+ * native set property names, ordinals, result types, fallthrough results and
+ * writable collection aliases by profile. Expose native layer handles and
+ * the profile's scroll, boss slowdown and damage control constants. Expose
+ * native typed level property names, numeric selectors, handle rules and
+ * result values by profile. Register the native typed level setter and
+ * preserve its scalar assignments and result handling by profile. Preserve
+ * level collection and spawn view assignment by profile, including the early
+ * background selector. Preserve typed level script assignment and shared
+ * local variables while keeping executing interpreters live. Preserve the
+ * platform aliases and animation and array script names by profile. Reject a
+ * missing fourth platform coordinate and handle an empty cursor as no
+ * movement. Preserve named action admission and numeric action slots around
+ * the simple animation insertion. Retain the original entity property names,
+ * ordinal values and lookup order across historical script profiles. Resolve
+ * those ordinals before native property dispatch. Preserve the native entity
+ * property reads, writes and argument handling around the historical weapon,
+ * remap, block and boomerang changes. Preserve historical script wall-height
+ * argument selection before querying the terrain. Preserve script reads and
+ * writes of attack and body collision coordinates by profile while retaining
+ * native conversions. Retain the profile's frame record or collection
+ * reference and the identity behavior of native instance queries. Preserve
+ * each profile's complete system-variable names and cached numeric
+ * identifiers. Retain native basemap script-name availability, the
+ * registered height alias and private helper result epochs. Preserve native
+ * cell selection and initial map size by profile, checking owned map storage
+ * before writes. Route the optional basemap generation argument by profile.
  * Existing changes recorded here; this is not their implementation date.
  * See MODIFICATIONS.md and docs/modifications/4432.md
  * at the source repository root. Original notices follow below.
@@ -822,6 +826,11 @@ int Script_AppendText(Script *pscript, char *text, char *path)
 }
 
 //return name of function from pointer to function
+static int obor_has_computed_damage(void)
+{
+    return obor_profile_build >= 4682 && obor_profile_build <= 4750;
+}
+
 const char *Script_GetFunctionName(void *functionRef)
 {
     if (functionRef == ((void *)system_isempty))
@@ -1137,6 +1146,10 @@ const char *Script_GetFunctionName(void *functionRef)
     else if (functionRef == ((void *)openbor_damageentity))
     {
         return "damageentity";
+    }
+    else if (obor_has_computed_damage() && functionRef == ((void *)openbor_getcomputeddamage))
+    {
+        return "getcomputeddamage";
     }
     else if (functionRef == ((void *)openbor_killentity))
     {
@@ -1556,6 +1569,11 @@ const char *Script_GetFunctionName(void *functionRef)
     {
         return "finishlevel";
     }
+    else if (obor_profile_build >= 4642 && obor_profile_build <= 4750 &&
+             functionRef == ((void *)openbor_gameover))
+    {
+        return "gameover";
+    }
     else if ((obor_profile_build < 4283 || obor_profile_build >= 4293) &&
              functionRef == ((void *)openbor_gotomainmenu))
     {
@@ -1954,6 +1972,11 @@ void Script_LoadSystemFunctions()
                      (void *)openbor_changepalette, "changepalette");
     List_InsertAfter(&theFunctionList,
                      (void *)openbor_damageentity, "damageentity");
+    if(obor_has_computed_damage())
+    {
+        List_InsertAfter(&theFunctionList,
+                         (void *)openbor_getcomputeddamage, "getcomputeddamage");
+    }
     List_InsertAfter(&theFunctionList,
                      (void *)openbor_killentity, "killentity");
     List_InsertAfter(&theFunctionList,
@@ -2183,6 +2206,11 @@ void Script_LoadSystemFunctions()
                      (void *)openbor_loadgamefile, "loadgamefile");
     List_InsertAfter(&theFunctionList,
                      (void *)openbor_finishlevel, "finishlevel");
+    if(obor_profile_build >= 4642 && obor_profile_build <= 4750)
+    {
+        List_InsertAfter(&theFunctionList,
+                         (void *)openbor_gameover, "gameover");
+    }
     if(obor_profile_build < 4283 || obor_profile_build >= 4293)
     {
         List_InsertAfter(&theFunctionList,
@@ -2207,14 +2235,14 @@ void Script_LoadSystemFunctions()
 //isempty(var);
 HRESULT system_isempty(ScriptVariant **varlist , ScriptVariant **pretvar, int paramCount)
 {
-    *pretvar = NULL;
-    if(paramCount != 1)
+    if(obor_profile_build < 4682 || obor_profile_build > 4750 || paramCount != 1)
     {
+        *pretvar = NULL;
         return E_FAIL;
     }
 
     ScriptVariant_ChangeType(*pretvar, VT_INTEGER);
-    (*pretvar)->lVal = (LONG)((varlist[0])->vt == VT_EMPTY );
+    (*pretvar)->lVal = varlist[0]->vt == VT_EMPTY;
 
     return S_OK;
 }
@@ -3733,7 +3761,8 @@ HRESULT openbor_strright(ScriptVariant **varlist , ScriptVariant **pretvar, int 
 {
     char *tempstr = NULL;
 
-    if(paramCount < 2)
+    if(!pretvar) return E_FAIL;
+    if(paramCount < 2 || !varlist || !varlist[0] || !varlist[1] || !*pretvar)
     {
         goto sr_error;
     }
@@ -3744,12 +3773,19 @@ HRESULT openbor_strright(ScriptVariant **varlist , ScriptVariant **pretvar, int 
         goto sr_error;
     }
 
-    tempstr = (char *)StrCache_Get(varlist[0]->strVal);
+    tempstr = StrCache_GetIfPresent(varlist[0]->strVal);
+    if(!tempstr) goto sr_error;
 
-    if (tempstr && tempstr[0])
+    if(tempstr[0])
     {
+        const LONG offset = varlist[1]->lVal;
+        if(offset < 0 || (size_t)offset > strlen(tempstr)) goto sr_error;
+
+        ScriptVariant saved = {.vt = VT_EMPTY};
+        ScriptVariant_Copy(&saved, varlist[0]);
         ScriptVariant_ChangeType(*pretvar, VT_STR);
-        StrCache_Copy((*pretvar)->strVal, &tempstr[varlist[1]->lVal]);
+        StrCache_Copy((*pretvar)->strVal, tempstr + offset);
+        ScriptVariant_Clear(&saved);
     }
     else
     {
@@ -3962,6 +3998,7 @@ enum entityproperty_enum
     _ep_destx,
     _ep_destz,
     _ep_detect,
+    _ep_die_on_landing,
     _ep_direction,
     _ep_dot,
     _ep_dropframe,
@@ -4158,6 +4195,7 @@ static const char *eplist[] =
     "destx",
     "destz",
     "detect",
+    "die_on_landing",
     "direction",
     "dot",
     "dropframe",
@@ -4791,6 +4829,7 @@ static const struct { int selector; unsigned introduced; } obor_entity_property_
 {
     {_ep_boomerang, 4405},
     {_ep_custom_target, 4414},
+    {_ep_die_on_landing, 4665},
     {_ep_facing, 4306},
     {_ep_jumpmovex, 4303},
     {_ep_jumpmovez, 4303},
@@ -4817,7 +4856,7 @@ static LONG obor_profile_subtype_value(int subtype)
 
 static int obor_entity_property_uses_history(void)
 {
-    return obor_profile_build >= 4283 && obor_profile_build < 4414;
+    return obor_profile_build >= 4283 && obor_profile_build < 4665;
 }
 
 static int obor_resolve_entity_property(LONG ordinal)
@@ -7426,7 +7465,20 @@ HRESULT openbor_getentityproperty(ScriptVariant **varlist , ScriptVariant **pret
     case _ep_damage_on_landing:
     {
         ScriptVariant_ChangeType(*pretvar, VT_INTEGER);
-        (*pretvar)->lVal = (LONG)ent->damage_on_landing;
+        if(obor_profile_build >= 4642 && obor_profile_build <= 4750 && paramCount >= 3)
+        {
+            if(FAILED(ScriptVariant_IntegerValue(varlist[2], &ltemp2)) || ltemp2 < 0 || ltemp2 > 1)
+            {
+                printf("You must specify the index (0 or 1).\n");
+                *pretvar = NULL;
+                return E_FAIL;
+            }
+            (*pretvar)->lVal = ltemp2 == 0 ? ent->damage_on_landing : ent->damage_on_landing_type;
+        }
+        else
+        {
+            (*pretvar)->lVal = (LONG)ent->damage_on_landing;
+        }
         break;
     }
     case _ep_dead:
@@ -7525,6 +7577,12 @@ HRESULT openbor_getentityproperty(ScriptVariant **varlist , ScriptVariant **pret
     {
         ScriptVariant_ChangeType(*pretvar, VT_INTEGER);
         (*pretvar)->lVal = (LONG)ent->modeldata.stealth.detect;
+        break;
+    }
+    case _ep_die_on_landing:
+    {
+        ScriptVariant_ChangeType(*pretvar, VT_INTEGER);
+        (*pretvar)->lVal = (LONG)ent->die_on_landing;
         break;
     }
     case _ep_direction:
@@ -9552,6 +9610,18 @@ HRESULT openbor_changeentityproperty(ScriptVariant **varlist , ScriptVariant **p
         if(SUCCEEDED(ScriptVariant_IntegerValue(varlist[2], &ltemp)))
         {
             ent->damage_on_landing = (int)ltemp;
+        }
+        if(obor_profile_build >= 4642 && obor_profile_build <= 4750 && paramCount >= 4 &&
+           SUCCEEDED(ScriptVariant_IntegerValue(varlist[3], &ltemp2)))
+        {
+            if(ltemp2 == 0)
+            {
+                ent->damage_on_landing = 0;
+            }
+            else if(ltemp2 == 1)
+            {
+                ent->damage_on_landing_type = 1;
+            }
         }
         break;
     }
@@ -13077,6 +13147,91 @@ de_error:
     return E_FAIL;
 }
 
+static entity *obor_computed_damage_actor(const ScriptVariant *argument)
+{
+    extern entity **ent_list;
+    extern int ent_list_size;
+
+    if(argument->vt != VT_PTR || !argument->ptrVal || !ent_list || ent_list_size <= 0 ||
+       (size_t)ent_list_size > obor_allocation_size(ent_list) / sizeof(*ent_list))
+    {
+        return NULL;
+    }
+    for(int i = 0; i < ent_list_size; ++i)
+    {
+        if(ent_list[i] == argument->ptrVal)
+        {
+            return ent_list[i];
+        }
+    }
+    return NULL;
+}
+
+// getcomputeddamage(defender, attacker, force, drop, type)
+HRESULT openbor_getcomputeddamage(ScriptVariant **varlist, ScriptVariant **pretvar, int paramCount)
+{
+    entity *defender, *previous;
+    entity *attacker = NULL;
+    LONG force, drop, type = ATK_NORMAL;
+    s_collision_attack attack = emptyattack;
+
+    if(!obor_has_computed_damage())
+    {
+        goto computed_damage_error;
+    }
+    if(paramCount < 3)
+    {
+        printf("Function requires at least 3 parameters.\n");
+        goto computed_damage_error;
+    }
+    ScriptVariant_ChangeType(*pretvar, VT_INTEGER);
+    (*pretvar)->lVal = 0;
+    defender = obor_computed_damage_actor(varlist[0]);
+    if(!defender)
+    {
+        printf("Invalid entity parameter.\n");
+        goto computed_damage_error;
+    }
+    if(FAILED(ScriptVariant_IntegerValue(varlist[2], &force)))
+    {
+        printf("Wrong force value.\n");
+        goto computed_damage_error;
+    }
+    if(paramCount >= 4 && FAILED(ScriptVariant_IntegerValue(varlist[3], &drop)))
+    {
+        printf("Wrong drop value.\n");
+        goto computed_damage_error;
+    }
+    if(paramCount >= 5 && FAILED(ScriptVariant_IntegerValue(varlist[4], &type)))
+    {
+        printf("Wrong type value.\n");
+        goto computed_damage_error;
+    }
+    if(type >= 0 && type < max_attack_types)
+    {
+        attacker = obor_computed_damage_actor(varlist[1]);
+        if(!attacker ||
+           (size_t)type >= obor_allocation_size(attacker->offense_factors) / sizeof(*attacker->offense_factors) ||
+           (size_t)type >= obor_allocation_size(defender->defense) / sizeof(*defender->defense))
+        {
+            printf("Invalid entity parameter.\n");
+            goto computed_damage_error;
+        }
+    }
+
+    attack.attack_force = force;
+    attack.attack_type = type;
+    previous = self;
+    self = defender;
+    (*pretvar)->lVal = obor_force_damage(attacker, &attack);
+    self = previous;
+    return S_OK;
+
+computed_damage_error:
+    *pretvar = NULL;
+    return E_FAIL;
+}
+
 //killentity(entity)
 HRESULT openbor_killentity(ScriptVariant **varlist , ScriptVariant **pretvar, int paramCount)
 {
@@ -14061,6 +14216,7 @@ enum
     LEVEL_PROP_WALL_COLLECTION,
     LEVEL_PROP_WALL_COUNT,
     LEVEL_PROP_WEAPON,
+    LEVEL_PROP_GAMEOVER,
     OBOR_LEVEL_PROP_COUNT
 };
 
@@ -14111,6 +14267,12 @@ static int obor_level_property_native(int index)
     };
 
     if(index < 0 || index >= OBOR_LEVEL_PROP_COUNT) return -1;
+    if(obor_profile_build >= 4642 && obor_profile_build <= 4750)
+    {
+        if(index == LEVEL_PROP_DAMAGE_FROM_ENEMY) return LEVEL_PROP_GAMEOVER;
+        return index > LEVEL_PROP_DAMAGE_FROM_ENEMY ? index - 1 : index;
+    }
+    if(index == LEVEL_PROP_GAMEOVER) return -1;
     if(obor_profile_build < 4490)
     {
         if(obor_profile_build < 4474) return -1;
@@ -14138,7 +14300,7 @@ static int obor_level_property_native(int index)
 
 static int obor_lookup_level_property(const char *name, LONG *value)
 {
-    static const char *const names[] = {
+    static const char *const names[OBOR_LEVEL_PROP_COUNT] = {
         [LEVEL_PROP_AUTO_SCROLL_DIRECTION] = "LEVEL_PROP_AUTO_SCROLL_DIRECTION",
         [LEVEL_PROP_AUTO_SCROLL_X] = "LEVEL_PROP_AUTO_SCROLL_X",
         [LEVEL_PROP_AUTO_SCROLL_Y] = "LEVEL_PROP_AUTO_SCROLL_Y",
@@ -17030,6 +17192,9 @@ HRESULT openbor_get_level_property(ScriptVariant **varlist, ScriptVariant **pret
     case LEVEL_PROP_COMPLETE_FORCE:
         LEVEL_INTEGER(handle->forcefinishlevel);
         break;
+    case LEVEL_PROP_GAMEOVER:
+        LEVEL_INTEGER(handle->force_gameover);
+        break;
     case LEVEL_PROP_DAMAGE_FROM_ENEMY:
         LEVEL_INTEGER(handle->nohurt);
         break;
@@ -17371,6 +17536,9 @@ HRESULT openbor_set_level_property(ScriptVariant **varlist, ScriptVariant **pret
     case LEVEL_PROP_COMPLETE_FORCE:
         SET_LEVEL_INTEGER(forcefinishlevel);
         break;
+    case LEVEL_PROP_GAMEOVER:
+        SET_LEVEL_INTEGER(force_gameover);
+        break;
     case LEVEL_PROP_DAMAGE_FROM_ENEMY:
         SET_LEVEL_INTEGER(nohurt);
         break;
@@ -17506,6 +17674,20 @@ error:
     return E_FAIL;
 }
 
+static int obor_terrain_query_selector(const ScriptVariant *selector, const char *collection)
+{
+    const int mapped = obor_profile_build >= 4682 && obor_profile_build <= 4750;
+    if(mapped && selector->vt == VT_INTEGER)
+    {
+        return 1;
+    }
+    if(mapped || selector->vt != VT_STR)
+    {
+        printf("You must provide a string value for %s subproperty.\n", collection);
+    }
+    return 0;
+}
+
 HRESULT openbor_getlevelproperty(ScriptVariant **varlist , ScriptVariant **pretvar, int paramCount)
 {
     LONG ltemp;
@@ -17581,9 +17763,10 @@ HRESULT openbor_getlevelproperty(ScriptVariant **varlist , ScriptVariant **pretv
                 && ltemp >= 0 && ltemp < level->numholes)
         {
 
-            if(varlist[2]->vt != VT_STR)
-                printf("You must provide a string value for hole subproperty.\n");
+            if(!obor_terrain_query_selector(varlist[2], "hole"))
+            {
                 goto getlevelproperty_error;
+            }
 
             ScriptVariant_ChangeType(*pretvar, VT_DECIMAL);
 
@@ -17656,9 +17839,10 @@ HRESULT openbor_getlevelproperty(ScriptVariant **varlist , ScriptVariant **pretv
                 && ltemp >= 0 && ltemp < level->numwalls)
         {
 
-            if(varlist[2]->vt != VT_STR)
-                printf("You must provide a string value for wall subproperty.\n");
+            if(!obor_terrain_query_selector(varlist[2], "wall"))
+            {
                 goto getlevelproperty_error;
+            }
 
             ScriptVariant_ChangeType(*pretvar, VT_DECIMAL);
 
@@ -17725,14 +17909,16 @@ HRESULT openbor_getlevelproperty(ScriptVariant **varlist , ScriptVariant **pretv
         break;
     }
     case _lp_basemap:
-        if(SUCCEEDED(ScriptVariant_IntegerValue(varlist[1], &ltemp)) && ltemp >= 0 && ltemp < level->numbasemaps)
+        if(paramCount >= 2 && SUCCEEDED(ScriptVariant_IntegerValue(varlist[1], &ltemp)) &&
+           ltemp >= 0 && ltemp < level->numbasemaps)
         {
             if(paramCount >= 3)
             {
 
-                if(varlist[2]->vt != VT_STR)
-                    printf("You must provide a string value for basemap subproperty.\n");
+                if(!obor_terrain_query_selector(varlist[2], "basemap"))
+                {
                     goto getlevelproperty_error;
+                }
 
                 ScriptVariant_ChangeType(*pretvar, VT_DECIMAL);
 
@@ -17760,7 +17946,17 @@ HRESULT openbor_getlevelproperty(ScriptVariant **varlist , ScriptVariant **pretv
                         {
                             (*pretvar)->dblVal = (DOUBLE)0;
                         }
-                        else (*pretvar)->dblVal = (DOUBLE)level->basemaps[ltemp].map[(LONG)(dbltemp2 + dbltemp3 * level->basemaps[ltemp].size.x)];
+                        else
+                        {
+                            const s_basemap *basemap = &level->basemaps[ltemp];
+                            const double cell = dbltemp2 + dbltemp3 * basemap->size.x;
+                            if(cell >= (double)INT_MAX + 1.0 ||
+                               (size_t)cell >= obor_allocation_size(basemap->map) / sizeof(*basemap->map))
+                            {
+                                goto getlevelproperty_error;
+                            }
+                            (*pretvar)->dblVal = (DOUBLE)basemap->map[(size_t)cell];
+                        }
                     }
                     else
                     {
@@ -18059,18 +18255,20 @@ HRESULT openbor_changelevelproperty(ScriptVariant **varlist , ScriptVariant **pr
         break;
     case _lp_hole:
     {
-        if( SUCCEEDED(ScriptVariant_IntegerValue(varlist[1], &ltemp)) && ltemp >= 0
-           && ( SUCCEEDED(ScriptVariant_DecimalValue(varlist[3], &dbltemp)) || SUCCEEDED(ScriptVariant_IntegerValue(varlist[3], &ltemp1)) ) )
+        if(paramCount >= 4 && SUCCEEDED(ScriptVariant_IntegerValue(varlist[1], &ltemp)) && ltemp >= 0
+           && SUCCEEDED(ScriptVariant_DecimalValue(varlist[3], &dbltemp)))
         {
-            if(varlist[2]->vt != VT_STR)
-                printf("You must provide a string value for hole subproperty.\n");
+            if(!obor_terrain_query_selector(varlist[2], "hole"))
+            {
                 goto clperror;
+            }
 
             if(ltemp >= level->numholes)
             {
+                if(ltemp == INT_MAX) goto clperror;
                 if(level->obor_arrays)
                 {
-                    if(ltemp == INT_MAX || !obor_level_grow_array(level, OBOR_LEVEL_ARRAY_HOLE, ltemp + 1))
+                    if(!obor_level_grow_array(level, OBOR_LEVEL_ARRAY_HOLE, ltemp + 1))
                         goto clperror;
                 }
                 else
@@ -18124,6 +18322,10 @@ HRESULT openbor_changelevelproperty(ScriptVariant **varlist , ScriptVariant **pr
                 }
                 case _lp_terrain_type:
                 {
+                    if(FAILED(ScriptVariant_IntegerValue(varlist[3], &ltemp1)))
+                    {
+                        goto clperror;
+                    }
                     level->holes[ltemp].type = ltemp1;
                     break;
                 }
@@ -18143,18 +18345,20 @@ HRESULT openbor_changelevelproperty(ScriptVariant **varlist , ScriptVariant **pr
     }
     case _lp_wall:
     {
-        if( SUCCEEDED(ScriptVariant_IntegerValue(varlist[1], &ltemp)) && ltemp >= 0
-           && ( SUCCEEDED(ScriptVariant_DecimalValue(varlist[3], &dbltemp)) || SUCCEEDED(ScriptVariant_IntegerValue(varlist[3], &ltemp1)) ) )
+        if(paramCount >= 4 && SUCCEEDED(ScriptVariant_IntegerValue(varlist[1], &ltemp)) && ltemp >= 0
+           && SUCCEEDED(ScriptVariant_DecimalValue(varlist[3], &dbltemp)))
         {
-            if(varlist[2]->vt != VT_STR)
-                printf("You must provide a string value for wall subproperty.\n");
+            if(!obor_terrain_query_selector(varlist[2], "wall"))
+            {
                 goto clperror;
+            }
 
             if(ltemp >= level->numwalls)
             {
+                if(ltemp == INT_MAX) goto clperror;
                 if(level->obor_arrays)
                 {
-                    if(ltemp == INT_MAX || !obor_level_grow_array(level, OBOR_LEVEL_ARRAY_WALL, ltemp + 1))
+                    if(!obor_level_grow_array(level, OBOR_LEVEL_ARRAY_WALL, ltemp + 1))
                         goto clperror;
                 }
                 else
@@ -18208,6 +18412,10 @@ HRESULT openbor_changelevelproperty(ScriptVariant **varlist , ScriptVariant **pr
                 }
                 case _lp_terrain_type:
                 {
+                    if(FAILED(ScriptVariant_IntegerValue(varlist[3], &ltemp1)))
+                    {
+                        goto clperror;
+                    }
                     level->walls[ltemp].type = ltemp1;
                     break;
                 }
@@ -20873,6 +21081,18 @@ HRESULT openbor_finishlevel(ScriptVariant **varlist , ScriptVariant **pretvar, i
 {
     *pretvar = NULL;
     level->forcefinishlevel = 1;
+    return S_OK;
+}
+
+//gameover()
+HRESULT openbor_gameover(ScriptVariant **varlist, ScriptVariant **pretvar, int paramCount)
+{
+    *pretvar = NULL;
+    if(!level || obor_profile_build < 4642 || obor_profile_build > 4750)
+    {
+        return E_FAIL;
+    }
+    level->force_gameover = 1;
     return S_OK;
 }
 

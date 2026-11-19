@@ -76,22 +76,27 @@ static void check_decisions(unsigned row)
     random_used = random_limit = 0;
 
     for(int setting = -1; setting <= 1; ++setting)
+    for(int plane = 1; plane <= 2; ++plane)
     {
         static __typeof__(*world.walls) wall;
-        setup(0, 2);
+        const int z_axis = plane == 2;
+        setup(z_axis, 2);
         actor.modeldata.subject_to_hole = 0;
         actor.modeldata.subject_to_wall = setting;
         actor.modeldata.hitwalltype = -1;
         actor.falling = 1;
         world.walls = &wall;
         wall.height = actor.position.y + 10;
-        wall_probe_active = 1;
+        wall.depth = 7.3f;
+        wall.type = 6;
+        wall_probe_active = plane;
         wall_queries = wall_callbacks = 0;
         const int blocked = setting > 0 || (setting < 0 && negative_wall);
         ++active_case;
-        CHECK(common_trymove(2, 0) == !blocked);
+        CHECK(common_trymove(z_axis ? 0 : 2, z_axis ? 2 : 0) == !blocked);
         CHECK(wall_queries == blocked && wall_callbacks == blocked);
-        CHECK(actor.position.x == (blocked ? 0 : 2) && moved[0] == !blocked);
+        CHECK((z_axis ? actor.position.z : actor.position.x) == (blocked ? 0 : 2));
+        CHECK(moved[z_axis] == !blocked && moved[!z_axis] == 0);
         wall_probe_active = 0;
     }
 }

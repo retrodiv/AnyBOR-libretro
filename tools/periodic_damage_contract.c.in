@@ -1,0 +1,97 @@
+/* SPDX-License-Identifier: BSD-3-Clause
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me>
+ */
+#include <stdint.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include "openbor.h"
+#undef printf
+
+uint32_t obor_profile_build;
+u32 time;
+entity *self;
+s_axis_f default_model_dropv = {.x = -1.25f, .y = 2.5f, .z = 3.75f};
+const s_collision_attack emptyattack = {0};
+static entity actor, owner, other_actor;
+static int callback_switch, script_calls, hit_calls, kill_calls, force_arg, type_arg;
+
+static int finish_damage(entity *other, s_collision_attack *attack)
+{
+    if(self != &actor || other != &owner || attack->obor_landing_hit ||
+       attack->dropv.x != default_model_dropv.x || attack->dropv.y != default_model_dropv.y ||
+       attack->dropv.z != default_model_dropv.z)
+        abort();
+    ++hit_calls;
+    force_arg = attack->attack_force;
+    type_arg = attack->attack_type == ATK_BURN;
+    actor.health = 0;
+    return 1;
+}
+
+void kill(entity *victim)
+{
+    if(victim != &actor) abort();
+    ++kill_calls;
+    victim->health = 0;
+}
+
+void execute_takedamage_script(entity *ent, entity *other, int force, int drop, int type,
+    int noblock, int guardcost, int jugglecost, int pauseadd, int tag)
+{
+    if(ent != &actor || other != &owner || drop || noblock || guardcost || jugglecost || pauseadd || tag)
+        abort();
+    ++script_calls;
+    force_arg = force;
+    type_arg = type == ATK_BURN;
+    if(callback_switch) self = &other_actor;
+}
+
+@FUNCTION@
+
+int main(void)
+{
+    static float offense[MAX_ATKS];
+    static s_defense defense[MAX_ATKS];
+    static const unsigned profiles[] = {@REVISIONS@};
+    static const struct {
+        int mode, health, mp, force, expiry, next, rate, redirect, handler, zero_factors, last_slot;
+    } cases[] = {@CASES@};
+    for(size_t p = 0; p < sizeof(profiles) / sizeof(*profiles); ++p)
+    {
+        obor_profile_build = profiles[p];
+        for(size_t i = 0; i < sizeof(cases) / sizeof(*cases); ++i)
+        {
+            memset(&actor, 0, sizeof(actor));
+            memset(&other_actor, 0, sizeof(other_actor));
+            self = &actor;
+            time = 20;
+            const int slot = cases[i].last_slot ? MAX_DOTS - 1 : 0;
+            script_calls = hit_calls = kill_calls = force_arg = type_arg = 0;
+            callback_switch = cases[i].redirect;
+            actor.health = cases[i].health;
+            actor.mp = cases[i].mp;
+            other_actor.mp = 30;
+            actor.takedamage = cases[i].handler ? finish_damage : NULL;
+            actor.defense = defense;
+            owner.offense_factors = offense;
+            offense[ATK_BURN] = cases[i].zero_factors ? 0 : 1.5f;
+            defense[ATK_BURN].factor = cases[i].zero_factors ? 0 : 0.5f;
+            actor.dot[slot] = cases[i].mode;
+            actor.dot_atk[slot] = ATK_BURN;
+            actor.dot_cnt[slot] = cases[i].next;
+            actor.dot_rate[slot] = cases[i].rate;
+            actor.dot_time[slot] = cases[i].expiry;
+            actor.dot_force[slot] = cases[i].force;
+            actor.dot_owner[slot] = &owner;
+            common_dot();
+            if(actor.dot_owner[slot] != &owner) abort();
+            printf("[%u,%zu,%d,%d,%d,%u,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d]\n",
+                profiles[p], i, actor.health, actor.mp, other_actor.mp,
+                actor.dot_time[slot], actor.dot_cnt[slot], actor.dot[slot], actor.dot_rate[slot],
+                actor.dot_force[slot], actor.dot_atk[slot] == ATK_BURN,
+                script_calls, hit_calls, kill_calls, force_arg, type_arg);
+        }
+    }
+    return 0;
+}

@@ -1,0 +1,235 @@
+/* SPDX-License-Identifier: BSD-3-Clause
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me>
+ */
+#include <stdint.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <limits.h>
+#include "openbor.h"
+#include "ScriptVariant.h"
+#undef printf
+#undef control_rumble
+#define control_rumble(port, force) abort()
+
+uint32_t obor_profile_build;
+u32 time;
+int autoland;
+int max_attack_types = MAX_ATKS;
+entity *self;
+s_lasthit lasthit;
+static entity actor, opponent;
+static s_collision_attack overlap_attack;
+static char events[96], property_name[] = "die_on_landing";
+static size_t event_count;
+static int collision, cancel_hit, rewrite_type, hit_recipient;
+
+static void event(char id)
+{
+    if(event_count + 1 >= sizeof(events)) abort();
+    events[event_count++] = id;
+    events[event_count] = '\0';
+}
+
+void StrCache_Collect(int index) { (void)index; }
+int StrCache_Pop(void) { abort(); }
+CHAR *StrCache_Get(int index) { (void)index; return property_name; }
+
+@VARIANTS@
+@SEARCH@
+static void ignore_diagnostic(const char *message, ...) { (void)message; }
+#define printf ignore_diagnostic
+@NAMESPACE@
+#undef printf
+@DEFAULT@
+
+static int read_landing_death(entity *ent, int selector)
+{
+    ScriptVariant result = {.vt = VT_EMPTY}, *out = &result, **pretvar = &out;
+    switch(selector)
+    {
+        case _ep_die_on_landing:
+        @GET_DIE@
+        default: return -1;
+    }
+    return result.vt == VT_INTEGER ? result.lVal : -1;
+}
+
+static int read_last_type(void)
+{
+    ScriptVariant result = {.vt = VT_EMPTY}, *var = &result;
+    switch(0)
+    {
+        case 0:
+        @GET_LAST_TYPE@
+        break;
+    }
+    return result.vt == VT_INTEGER ? result.lVal : -1;
+}
+
+static int write_last_type(LONG type)
+{
+    ScriptVariant argument = {.vt = VT_INTEGER, .lVal = type}, *value = &argument;
+    LONG ltemp;
+    switch(0)
+    {
+        case 0:
+        @SET_LAST_TYPE@
+        break;
+    }
+    return 1;
+}
+
+float diff(float a, float b) { return a > b ? a - b : b - a; }
+void checkdamagedrop(s_collision_attack *attack) { (void)attack; event('P'); }
+void checkdamageeffects(s_collision_attack *attack) { (void)attack; event('E'); }
+void checkmpadd(void) { event('M'); }
+void checkhitscore(entity *other, s_collision_attack *attack) { (void)other; (void)attack; event('S'); }
+void dropweapon(int flag) { if(flag != 1) abort(); event('W'); }
+int check_backpain(entity *attacker, entity *defender)
+{ (void)attacker; (void)defender; event('B'); return 0; }
+void checkdamageflip(entity *other, s_collision_attack *attack) { (void)other; (void)attack; event('V'); }
+
+int checkhit(entity *other, entity *target)
+{
+    if(!other || target != &actor) abort();
+    event('C');
+    if(collision)
+    {
+        lasthit.confirm = 1;
+        lasthit.attack = &overlap_attack;
+        lasthit.landing_type_valid = 0;
+    }
+    return collision;
+}
+
+int checkgrab(entity *other, s_collision_attack *attack)
+{ if(!other || !attack) abort(); event('G'); return 1; }
+void set_opponent(entity *ent, entity *other) { ent->opponent = other; event('O'); }
+void checkdeath(void) { event('Q'); if(actor.health <= 0) actor.dead = 1; }
+void kill(entity *victim) { victim->dead = 1; event('K'); }
+void ent_unlink(entity *ent) { if(ent != &actor) abort(); event('U'); }
+void player_die(void) { abort(); }
+void common_fall(void) {}
+void common_pain(void) {}
+void common_grabattack(void) {}
+void toss(entity *ent, float height) { (void)ent; (void)height; event('J'); }
+int set_death(entity *ent, int type, int reset)
+{ (void)ent; (void)type; (void)reset; event('Z'); return 1; }
+int set_pain(entity *ent, int type, int reset)
+{ (void)ent; (void)type; (void)reset; event('L'); return 1; }
+int set_fall(entity *ent, int type, int reset, entity *other, int force, int drop,
+             int noblock, int guardcost, int jugglecost, int pauseadd, int tag)
+{ event('F'); return 1; }
+
+void execute_ondoattack_script(entity *ent, entity *other, int force, int drop, int type,
+    int noblock, int guardcost, int jugglecost, int pauseadd, int route, int atk_id, int tag)
+{
+    event(route ? 'A' : 'D');
+    if(route) return;
+    hit_recipient = other == &opponent ? 2 : other == &actor ? 1 : 0;
+    if(ent != &actor || hit_recipient == 0 || type != ATK_LAND) abort();
+    if(obor_profile_build >= 4682)
+    {
+        if(!lasthit.confirm || !lasthit.attack || read_last_type() != ATK_LAND ||
+           lasthit.position.x != actor.position.x || lasthit.position.y != actor.position.y ||
+           lasthit.position.z != actor.position.z)
+            abort();
+        if(rewrite_type && !write_last_type(ATK_BURN)) abort();
+    }
+    if(cancel_hit) lasthit.confirm = 0;
+}
+
+void execute_takedamage_script(entity *ent, entity *other, int force, int drop, int type,
+    int noblock, int guardcost, int jugglecost, int pauseadd, int tag) { event('T'); }
+void execute_ondeath_script(entity *ent, entity *other, int force, int drop, int type,
+    int noblock, int guardcost, int jugglecost, int pauseadd, int tag) { event('N'); }
+void execute_didhit_script(entity *ent, entity *other, int force, int drop, int type,
+    int noblock, int guardcost, int jugglecost, int pauseadd, int blocked, int tag) { event('H'); }
+
+@METHODS@
+
+static void invoke_landing(void)
+{
+    @GRAVITY_CALL@
+}
+
+int main(void)
+{
+    static s_anim animation;
+    static float offense[MAX_ATKS];
+    static s_defense defense[MAX_ATKS];
+    static const struct { unsigned revision; int death_ordinal, direction_ordinal; } builds[] = {@REVISIONS@};
+    static const struct {
+        int health, force, moving, overlap, valid_opponent, handler, cancel, pending, steps, rewrite;
+    } cases[] = {@CASES@};
+    for(size_t i = 0; i < MAX_ATKS; ++i) offense[i] = defense[i].factor = 1;
+    self = &actor;
+    overlap_attack = emptyattack;
+    overlap_attack.attack_type = ATK_NORMAL;
+    for(size_t p = 0; p < sizeof(builds) / sizeof(*builds); ++p)
+    {
+        obor_profile_build = builds[p].revision;
+        ScriptVariant selector = {.vt = VT_STR, .strVal = 0};
+        if(obor_resolve_entity_property(builds[p].direction_ordinal) != _ep_direction)
+            abort();
+        if(obor_map_entity_property_name(&selector) != (builds[p].death_ordinal >= 0))
+            abort();
+        if(builds[p].death_ordinal >= 0 && selector.lVal != builds[p].death_ordinal)
+            abort();
+        for(size_t n = 0; n < sizeof(cases) / sizeof(*cases); ++n)
+        {
+            const typeof(cases[0]) *input = &cases[n];
+            memset(&actor,0,sizeof(actor));
+            memset(&opponent,0,sizeof(opponent));
+            memset(&lasthit,0,sizeof(lasthit));
+            actor.health = input->health;
+            actor.modeldata.health = 100;
+            actor.modeldata.weaploss[0] = WEAPLOSS_TYPE_ANY;
+            actor.position.x = 21;
+            actor.position.y = 3;
+            actor.position.z = 18;
+            actor.velocity.x = input->moving;
+            actor.animation = &animation;
+            actor.opponent = &opponent;
+            actor.takedamage = input->handler ? common_takedamage : NULL;
+            opponent.exists = 1;
+            opponent.health = input->valid_opponent ? 40 : 0;
+            opponent.dead = !input->valid_opponent;
+            actor.offense_factors = opponent.offense_factors = offense;
+            actor.defense = defense;
+            actor.damage_on_landing = input->force;
+            actor.damage_on_landing_type = 29;
+            actor.die_on_landing = input->pending;
+            collision = input->overlap;
+            cancel_hit = input->cancel;
+            rewrite_type = input->rewrite;
+            event_count = 0;
+            events[0] = '\0';
+            hit_recipient = 0;
+            if(input->steps)
+            {
+                invoke_landing();
+            }
+            else
+            {
+                s_collision_attack attack = emptyattack;
+                attack.attack_type = ATK_LAND;
+                common_takedamage(&opponent, &attack);
+            }
+            if(input->steps > 1)
+            {
+                event('/');
+                actor.velocity.x = 0;
+                invoke_landing();
+            }
+            int kind = read_last_type();
+            printf("[%u,%zu,\"%s\",%d,%d,%d,%d,%d,%d,%d,%d,%d]\n",
+                builds[p].revision,n,events,actor.health,actor.damage_on_landing,
+                actor.damage_on_landing_type,actor.die_on_landing,actor.dead,hit_recipient,
+                kind == ATK_BURN,lasthit.landing_type_valid,
+                read_landing_death(&actor,obor_resolve_entity_property(builds[p].death_ordinal)));
+        }
+    }
+    return 0;
+}

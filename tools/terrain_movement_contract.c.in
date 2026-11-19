@@ -42,10 +42,10 @@ void execute_onblockz_script(entity *e){(void)e;abort();}
 void execute_onblocks_script(entity *e){(void)e;abort();}
 void execute_onblocko_script(entity *e,entity *other){(void)e;(void)other;abort();}
 void execute_onblockp_script(entity *e,int plane,entity *other){(void)e;(void)plane;(void)other;abort();}
-void execute_onblockw_script(entity *e,int plane,float height,int index)
+void execute_onblockw_script(entity *e,int plane,float height,int index,float depth,int type)
 {
-    CHECK(wall_probe_active && e==&actor && plane==1 && index==0);
-    CHECK(height==(float)world.walls[0].height);
+    CHECK(wall_probe_active && e==&actor && plane==wall_probe_active && index==0);
+    CHECK(height==world.walls[0].height && depth==world.walls[0].depth && type==world.walls[0].type);
     ++wall_callbacks;
 }
 void execute_onmovex_script(entity *e){CHECK(e==&actor);moved[0]++;}

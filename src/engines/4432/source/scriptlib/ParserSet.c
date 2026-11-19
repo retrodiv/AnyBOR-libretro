@@ -57,6 +57,17 @@ static void obor_parserset_legacy_tables(void)
             obor_legacy_follow[output++] = follow[index];
 }
 
+static MY_TOKEN_TYPE obor_statement_list_first[] = {
+    TOKEN_CONST, TOKEN_SIGNED, TOKEN_UNSIGNED, TOKEN_VOID,
+    TOKEN_CHAR, TOKEN_SHORT, TOKEN_INT, TOKEN_LONG,
+    TOKEN_FLOAT, TOKEN_DOUBLE, TOKEN_LCURLY, TOKEN_IF,
+    TOKEN_SWITCH, TOKEN_WHILE, TOKEN_DO, TOKEN_FOR,
+    TOKEN_BREAK, TOKEN_CONTINUE, TOKEN_RETURN, TOKEN_INC_OP,
+    TOKEN_DEC_OP, TOKEN_ADD, TOKEN_SUB, TOKEN_BOOLEAN_NOT,
+    TOKEN_IDENTIFIER, TOKEN_HEXCONSTANT, TOKEN_INTCONSTANT, TOKEN_FLOATCONSTANT,
+    TOKEN_STRING_LITERAL, TOKEN_LPAREN, END_OF_TOKENS,
+};
+
 void ParserSet_Buildup(ParserSet *pset)
 {
     MY_TOKEN_TYPE *ptr = NULL;
@@ -89,6 +100,8 @@ void ParserSet_Buildup(ParserSet *pset)
         }
     }
     while(i < NUMPRODUCTIONS);
+    if(obor_profile_build >= 4574)
+        pset->FirstSet[stmt_list] = obor_statement_list_first;
 }
 
 

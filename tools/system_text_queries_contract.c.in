@@ -1,0 +1,160 @@
+/* SPDX-License-Identifier: BSD-3-Clause
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me>
+ */
+#include <setjmp.h>
+#include <stdint.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include "openbor.h"
+#include "anybor_pak_name.h"
+#undef assert
+#undef printf
+#include <assert.h>
+
+uint32_t obor_profile_build;
+char packfile[OBOR_CONTENT_PATH_MAX];
+char *currentScene;
+char branch_name[MAX_NAME_LEN + 1];
+s_level *level;
+s_set_entry *levelsets;
+int current_set, current_level;
+
+static jmp_buf exit_target;
+static int refused;
+
+void writeToLogFile(const char *format, ...)
+{
+    assert(!strcmp(format, "Content filename does not fit its output buffer.\n"));
+    ++refused;
+}
+
+void borExit(int reset)
+{
+    assert(reset == 1);
+    longjmp(exit_target, 1);
+}
+
+void *checkAlloc(void *ptr, size_t size, const char *func, const char *file, int line)
+{
+    assert(!size || ptr);
+    return ptr;
+}
+
+@CACHE@
+@QUERIES@
+
+static void text_query(int selector, const char *expected)
+{
+    ScriptVariant value, saved;
+    ScriptVariant_Init(&value);
+    ScriptVariant_Init(&saved);
+    ScriptVariant_ChangeType(&value, VT_STR);
+    StrCache_Copy(value.strVal, "previous value");
+    ScriptVariant_Copy(&saved, &value);
+    assert(getsyspropertybyindex(&value, selector));
+    if(expected)
+    {
+        assert(value.vt == VT_STR && !strcmp(StrCache_Get(value.strVal), expected));
+    }
+    else
+    {
+        assert(value.vt == VT_EMPTY);
+    }
+    assert(saved.vt == VT_STR && !strcmp(StrCache_Get(saved.strVal), "previous value"));
+    ScriptVariant_Clear(&value);
+    ScriptVariant_Clear(&saved);
+}
+
+static void check_scene_and_branches(int pak_capacity)
+{
+    static s_set_entry stage;
+    static s_level world;
+    static __typeof__(*stage.levelorder) entry;
+    currentScene = NULL;
+    text_query(_sv_current_scene, NULL);
+    currentScene = "";
+    text_query(_sv_current_scene, "");
+    currentScene = "data/scenes/intro.txt";
+    text_query(_sv_current_scene, "data/scenes/intro.txt");
+    if(pak_capacity > MAX_STR_VAR_LEN + 1)
+    {
+        char long_scene[128];
+        memset(long_scene, 's', sizeof(long_scene) - 1);
+        long_scene[sizeof(long_scene) - 1] = 0;
+        currentScene = long_scene;
+        text_query(_sv_current_scene, long_scene);
+    }
+    currentScene = NULL;
+
+    branch_name[0] = 0;
+    text_query(_sv_branchname, "");
+    strcpy(branch_name, "next_branch");
+    text_query(_sv_branchname, "next_branch");
+    level = &world;
+    levelsets = NULL;
+    text_query(_sv_current_branch, NULL);
+    levelsets = &stage;
+    stage.levelorder = NULL;
+    text_query(_sv_current_branch, NULL);
+    stage.levelorder = &entry;
+    entry.branchname = NULL;
+    text_query(_sv_current_branch, NULL);
+    entry.branchname = "";
+    text_query(_sv_current_branch, "");
+    entry.branchname = "active_branch";
+    text_query(_sv_current_branch, "active_branch");
+    level = NULL;
+    text_query(_sv_current_branch, NULL);
+    levelsets = NULL;
+}
+
+static void check_pak_labels(int capacity)
+{
+    static const struct { const char *path, *label; } names[] = {
+        {"game.pak", "game"},
+        {"mods/episode/with space.pak", "with space"},
+        {"mods\\episode\\second.pak", "second"},
+        {"/root.pak", "/root"},
+        {".pak", ""},
+        {"abc", "abc"},
+    };
+    for(size_t i = 0; i < sizeof(names) / sizeof(*names); ++i)
+    {
+        strcpy(packfile, names[i].path);
+        text_query(_sv_pakname, names[i].label);
+    }
+    char expected[256];
+    memset(expected, 'p', capacity - 1);
+    expected[capacity - 1] = 0;
+    strcpy(packfile, expected);
+    strcat(packfile, ".pak");
+    text_query(_sv_pakname, expected);
+
+    ScriptVariant value;
+    ScriptVariant_Init(&value);
+    memset(packfile, 'p', capacity);
+    strcpy(packfile + capacity, ".pak");
+    refused = 0;
+    if(!setjmp(exit_target))
+    {
+        getsyspropertybyindex(&value, _sv_pakname);
+        abort();
+    }
+    assert(refused == 1);
+}
+
+int main(void)
+{
+    static const struct { unsigned revision; int capacity; } rows[] = {@PROFILES@};
+    for(size_t i = 0; i < sizeof(rows) / sizeof(*rows); ++i)
+    {
+        obor_profile_build = rows[i].revision;
+        check_scene_and_branches(rows[i].capacity);
+        check_pak_labels(rows[i].capacity);
+        assert(strcache_top == strcache_size - 1);
+        StrCache_Clear();
+        printf("%u\n", obor_profile_build);
+    }
+    return 0;
+}

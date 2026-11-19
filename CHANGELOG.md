@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.2.41
+
+- Added selectable OpenBOR profiles v3.0 4574, v3.0 4580, v3.0 4583, v3.0 4596, v3.0 4624, v3.0 4626, v3.0 4642, v3.0 4665, v3.0 4682, v3.0 4701, v3.0 4742 and v3.0 4750.
+- Reproduce profile-specific drawing, terrain, projectile, combat, settings and script behavior through build 4750.
+
 ## 0.2.40
 
 - Added selectable OpenBOR profiles v3.0 4454-dev, v3.0 4456 and v3.0 4510-dev.

@@ -18,12 +18,46 @@ s_set_entry *levelsets = &set;
 int current_set, num_difficulties = 1;
 s_videomodes videomodes;
 s_savedata savedata;
+u32 time = 1;
 static int healthcheat, level_completed, tospeedup;
 static s_slow_motion slowmotion;
 static int arguments[4];
+static unsigned lifescore;
+static s_player player[MAX_PLAYERS];
+static Script score_script[MAX_PLAYERS];
+static int score_calls, score_value, bonus_sounds;
 
 HRESULT Interpreter_Call(Interpreter *p) { (void)p; abort(); }
 HRESULT Interpreter_EvalInstruction(Interpreter *p) { (void)p; abort(); }
+void common_drop(void) {}
+void ent_set_anim(entity *ent, int animation, int reset) { abort(); }
+
+int sound_play_sample(int sample, unsigned priority, int left, int right, unsigned speed)
+{ ++bonus_sounds; return 0; }
+
+static void set_score_argument(Script *script, const char *name, ScriptVariant *value)
+{
+    assert(script == score_script && strcmp(name, "score") == 0);
+    if(value->vt == VT_INTEGER) score_value = value->lVal;
+    else assert(value->vt == VT_EMPTY);
+}
+
+#undef SAMPLE_1UP
+#define SAMPLE_1UP 1
+#undef Script_Set_Local_Variant
+#define Script_Set_Local_Variant(script, name, var) set_score_argument(script, name, var)
+#define Script_IsInitialized(script) ((script) == score_script)
+#define Script_Execute(script) ((void)(script), ++score_calls)
+#define ScriptVariant_Init(var) ((var)->vt = VT_EMPTY)
+#define ScriptVariant_ChangeType(var, type) ((var)->vt = (type))
+#define ScriptVariant_Clear(var) ((var)->vt = VT_EMPTY)
+@SCORE@
+#undef Script_Set_Local_Variant
+#undef Script_IsInitialized
+#undef Script_Execute
+#undef ScriptVariant_Init
+#undef ScriptVariant_ChangeType
+#undef ScriptVariant_Clear
 
 @SPAWN_COUNT@
 @EXCLUDES@
@@ -81,7 +115,12 @@ static int slow_frame(void)
     return 0;
 }
 
-static void check_spawn(int native_extent)
+static void initial_drop(entity *e)
+{
+    @ENTRY@
+}
+
+static void check_spawn(int native_extent, int height_policy, int configured_entry)
 {
     const int commands[] = {CMD_LEVEL_SPAWN1, CMD_LEVEL_SPAWN2, CMD_LEVEL_SPAWN3, CMD_LEVEL_SPAWN4};
     assert(sizeof(commands) / sizeof(*commands) == MAX_PLAYERS);
@@ -96,25 +135,53 @@ static void check_spawn(int native_extent)
         assert(level->player_spawn_count == expected);
         for(int player = 0; player < MAX_PLAYERS; ++player)
         {
-            float y = player >= expected ? 0 : native_extent ? heights[i] + 60 : 300;
+            float y = player >= expected ? 0 : height_policy ? heights[i] + 60 : 300;
             assert(level->spawn[player].x == 0 && level->spawn[player].z == 0 && level->spawn[player].y == y);
             arguments[1] = -17;
             arguments[2] = 23;
             arguments[3] = -41;
             command(commands[player]);
-            y = player >= expected ? 0 : native_extent ? -41 : 300;
+            y = player >= expected ? 0 : height_policy == 2 ? heights[i] + 60 : height_policy ? -41 : 300;
             assert(level->spawn[player].x == (player < expected ? -17 : 0));
             assert(level->spawn[player].z == (player < expected ? 23 : 0));
             assert(level->spawn[player].y == y);
             arguments[3] = 321;
             command(commands[player]);
             assert(level->spawn[player].y == (player < expected ? 321 : 0));
+            entity entrant = {0};
+            entrant.playerindex = player;
+            entrant.position.y = -50;
+            initial_drop(&entrant);
+            const int should_drop = !configured_entry || player < expected;
+            assert((entrant.takeaction == common_drop) == should_drop);
+            assert(entrant.position.y == (should_drop ? level->spawn[player].y : -50));
         }
     }
     levelsets = NULL;
     defaults();
     assert(level->player_spawn_count == MAX_PLAYERS);
     levelsets = &set;
+}
+
+static void check_score(void)
+{
+    static const struct { unsigned interval, start; int add; unsigned score, lives; } cases[] = {
+        {0, 12, 75, 87, 0},
+        {100, 0, 100, 100, 0},
+        {100, 99, 2, 101, 1},
+        {100, 90, 260, 350, 3},
+        {4294967295u, 998999999, 1000000, 999999999, 0},
+    };
+    for(size_t i = 0; i < sizeof(cases) / sizeof(*cases); ++i)
+    {
+        lifescore = cases[i].interval;
+        player[0].score = cases[i].start;
+        player[0].lives = 3;
+        score_calls = score_value = bonus_sounds = 0;
+        addscore(0, cases[i].add);
+        assert(player[0].score == cases[i].score && player[0].lives == 3 + cases[i].lives);
+        assert(score_calls == 1 && score_value == cases[i].add && bonus_sounds == (int)cases[i].lives);
+    }
 }
 
 static void check_flags(int native_flags)
@@ -167,12 +234,16 @@ static void check_flags(int native_flags)
 
 int main(void)
 {
-    static const struct { uint32_t revision; int spawn_extent, flags; } rows[] = {@CONTEXTS@};
+    static const struct {
+        uint32_t revision;
+        int spawn_extent, flags, height_policy, configured_entry;
+    } rows[] = {@CONTEXTS@};
     for(unsigned i = 0; i < sizeof(rows) / sizeof(*rows); ++i)
     {
         obor_profile_build = rows[i].revision;
-        check_spawn(rows[i].spawn_extent);
-        check_flags(rows[i].flags);
+        check_spawn(rows[i].spawn_extent, rows[i].height_policy, rows[i].configured_entry);
+        if(rows[i].flags >= 0) check_flags(rows[i].flags);
+        check_score();
         printf("{\"revision\":%u,\"status\":\"PASS\"}\n", obor_profile_build);
     }
     return 0;

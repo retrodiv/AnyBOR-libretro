@@ -1,0 +1,97 @@
+/* SPDX-License-Identifier: BSD-3-Clause
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me>
+ */
+#include <stdint.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include "openbor.h"
+#undef assert
+#undef printf
+#include <assert.h>
+
+uint32_t obor_profile_build;
+
+void *checkAlloc(void *ptr, size_t size, const char *func, const char *file, int line)
+{
+    assert(!size || ptr);
+    return ptr;
+}
+
+@CACHE@
+@OPERATIONS@
+
+static void check_suffix_limits(void)
+{
+    ScriptVariant text = {.vt = VT_EMPTY}, index = {.vt = VT_INTEGER, .lVal = -1};
+    ScriptVariant result = {.vt = VT_EMPTY}, *out = &result;
+    ScriptVariant *args[] = {&text, &index};
+    ScriptVariant_ChangeType(&text, VT_STR);
+    StrCache_Copy(text.strVal, "stage");
+    assert(openbor_strright(args, &out, 2) == E_FAIL && !out);
+    index.lVal = 6;
+    out = &result;
+    assert(openbor_strright(args, &out, 2) == E_FAIL && !out);
+    assert(result.vt == VT_EMPTY && !strcmp(StrCache_Get(text.strVal), "stage"));
+    index.lVal = 2;
+    out = &text;
+    assert(openbor_strright(args, &out, 2) == S_OK && out == &text);
+    assert(text.vt == VT_STR && !strcmp(StrCache_Get(text.strVal), "age"));
+    ScriptVariant_Clear(&text);
+    assert(strcache_top == strcache_size - 1);
+}
+
+int main(void)
+{
+    static const struct {
+        unsigned revision;
+        HRESULT (*operation)(ScriptVariant **, ScriptVariant **, int);
+        char *source, *argument;
+        const char *expected;
+        LONG index;
+    } cases[] = {@CONTEXTS@};
+
+    for(size_t i = 0; i < sizeof(cases) / sizeof(*cases); ++i)
+    {
+        const __typeof__(*cases) *test = &cases[i];
+        ScriptVariant source, argument, result, retained, *out = &result;
+        ScriptVariant *args[] = {&source, &argument};
+        obor_profile_build = test->revision;
+        ScriptVariant_Init(&source);
+        ScriptVariant_Init(&argument);
+        ScriptVariant_Init(&result);
+        ScriptVariant_Init(&retained);
+        ScriptVariant_ChangeType(&source, VT_STR);
+        StrCache_Copy(source.strVal, test->source);
+        if(test->argument)
+        {
+            ScriptVariant_ChangeType(&argument, VT_STR);
+            StrCache_Copy(argument.strVal, test->argument);
+        }
+        else
+        {
+            ScriptVariant_ChangeType(&argument, VT_INTEGER);
+            argument.lVal = test->index;
+        }
+        ScriptVariant_ChangeType(&result, VT_STR);
+        StrCache_Copy(result.strVal, "earlier result");
+        ScriptVariant_Copy(&retained, &result);
+
+        assert(test->operation(args, &out, 2) == S_OK && out == &result);
+        if(test->expected)
+            assert(result.vt == VT_STR && !strcmp(StrCache_Get(result.strVal), test->expected));
+        else
+            assert(result.vt == VT_INTEGER && result.lVal == -1);
+        assert(!strcmp(StrCache_Get(source.strVal), test->source));
+        assert(!strcmp(StrCache_Get(retained.strVal), "earlier result"));
+        ScriptVariant_Clear(&source);
+        ScriptVariant_Clear(&argument);
+        ScriptVariant_Clear(&result);
+        ScriptVariant_Clear(&retained);
+        assert(strcache_top == strcache_size - 1);
+        printf("%u\n", obor_profile_build);
+    }
+    check_suffix_limits();
+    StrCache_Clear();
+    return 0;
+}

@@ -35,7 +35,27 @@ int main(void) {
    const char *name=Script_GetFunctionName(pointers[i]);assert(name);
    printf("%s\"%s\"",i?",":"",name);
   }
-  printf("],\"unknown\":\"%s\"}\n",Script_GetFunctionName((void*)unknown_function));
+  printf("],\"unknown\":\"%s\"",Script_GetFunctionName((void*)unknown_function));
+#ifdef CHECK_REGISTRY_MAPPERS
+  printf(",\"mappers\":[");
+  for(size_t i = 0; i < sizeof(pointers) / sizeof(*pointers); ++i)
+  {
+   void *mapper = Script_GetStringMapFunction(pointers[i]);
+   const char *name = "";
+   if(mapper)
+   {
+    size_t j = 0;
+    while(j < sizeof(pointers) / sizeof(*pointers) && pointers[j] != mapper)
+     ++j;
+    assert(j < sizeof(pointers) / sizeof(*pointers));
+    name = symbols[j];
+   }
+   printf("%s\"%s\"", i ? "," : "", name);
+  }
+  printf("]");
+  assert(!Script_GetStringMapFunction((void *)unknown_function));
+#endif
+  puts("}");
  }
  return 0;
 }

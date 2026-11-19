@@ -5,10 +5,13 @@
  * Upstream code retains its original license and notices.
  * Allocate collision pointer slots through the highest author-facing index
  * used by each collection. Track each model's allocated animation-table
- * capacity and reject lookups outside it. Retain the historical last-hit
- * scalar independently of the live attack reference. Define native set
- * property selectors and retain ownership of their level orders. Define the
- * active player spawn extent and native level flags.
+ * capacity and reject lookups outside it. Declare the shared force
+ * calculation and its read-only script query. Declare native game-over
+ * request storage and script entry points by profile. Retain the historical
+ * last-hit scalar independently of the live attack reference. Define native
+ * set property selectors and retain ownership of their level orders. Define
+ * the active player spawn extent and native level flags. Store star launch
+ * multipliers with their animation.
  * Existing changes recorded here; this is not their implementation date.
  * See MODIFICATIONS.md and docs/modifications/4432.md
  * at the source repository root. Original notices follow below.
@@ -79,7 +82,7 @@
 			"\n" \
 			"Special thanks to SEGA and SNK.\n\n"
 
-#define		COMPATIBLEVERSION	0x00033747
+#define		COMPATIBLEVERSION	((obor_profile_build >= 4574 && obor_profile_build <= 4750) ? 0x00033748u : 0x00033747u)
 #define		CV_SAVED_GAME		0x00033747
 #define		CV_HIGH_SCORE		0x00033747
 #define     GAME_SPEED          200
@@ -1462,6 +1465,7 @@ typedef struct
     s_hitbox            *coords;            // Collision detection coordinates.
     int                 counterattack;      // Treat other attack boxes as body box.
     int                 damage_on_landing;  // Same as throw damage type
+    int                 damage_on_landing_type;
     s_axis_f            dropv;              // Velocity of target if knocked down.
     e_direction_adjust  force_direction;    // Adjust target's direction on hit.
     int                 forcemap;           // Set target's palette on hit.
@@ -1489,6 +1493,7 @@ typedef struct
     s_staydown          staydown;           // Modify victum's stayodwn properties.
     int                 steal;              // Add damage to owner's hp.
     int                 tag;                // User defined tag for scripts. No hard coded purpose.
+    int                 obor_landing_hit;   // Pending landing damage callback.
 } s_collision_attack;
 
 // Caskey, Damon V.
@@ -1514,6 +1519,7 @@ typedef struct
     int                 confirm;    // Will engine's default hit handling be used?
     s_axis_f            position;   // X,Y,Z of last hit.
     int                 type;       // Historical scalar snapshot, separate from the live attack.
+    int                 landing_type_valid; // Retained type of a completed landing hit.
 } s_lasthit;
 
 typedef struct
@@ -1666,6 +1672,8 @@ typedef struct
     int             *soundtoplay;           // each frame can have a sound
     float           *spawnframe;            // Spawn the subentity as its default type. {frame} {x} {z} {a} {relative?}
     int             *sprite;                // sprite[set][framenumber]
+    float starvelocity[3];  /* Per-animation horizontal launch multipliers. */
+    int starvelocity_set;
     int             subentity;              // Store the sub-entity's name for further use
     float           *summonframe;           // Summon the subentity as an ally, only one though {frame} {x} {z} {a} {relative?}
     int             sync;                   // sychronize frame to previous animation if they matches
@@ -2181,6 +2189,8 @@ typedef struct entity
     s_anim *animation;
     float knockdowncount;
     int damage_on_landing;
+    int damage_on_landing_type;
+    int die_on_landing;
     int damagetype; // used for set death animation or pain animation
     int map; // Stores the colourmap for restoring purposes
     void (*think)();
@@ -2534,6 +2544,7 @@ typedef struct
     };
     int nohit; // Not able to grab / hit other player on a per level basis
     int forcefinishlevel; // flag to forca to finish a level
+    int force_gameover;
     s_axis_f spawn[MAX_PLAYERS]; // Storage for the admitted player spawn positions.
     int player_spawn_count;
     int setweap; // Levels can now specified which weapon will be used by default
@@ -2608,9 +2619,9 @@ void    execute_ondeath_script      (entity *ent, entity *other, int force, int 
 void    execute_onkill_script       (entity *ent);
 void    execute_onpain_script       (entity *ent, int iType, int iReset);
 void    execute_onfall_script       (entity *ent, entity *other, int force, int drop, int type, int noblock, int guardcost, int jugglecost, int pauseadd, int tag);
-void    execute_inhole_script       (entity *ent, int plane, float height, int index);
+void    execute_inhole_script       (entity *ent, int plane, float height, int index, float depth, int type);
 void    execute_onblocks_script     (entity *ent);
-void    execute_onblockw_script     (entity *ent, int plane, float height, int index);
+void    execute_onblockw_script     (entity *ent, int plane, float height, int index, float depth, int type);
 void    execute_onblockp_script     (entity *ent, int plane, entity *platform);
 void    execute_onblocko_script     (entity *ent, entity *other);
 void    execute_onblockz_script     (entity *ent);
@@ -2827,6 +2838,7 @@ void common_grab(void);
 void common_grabattack();
 void common_grabbed();
 void common_block(void);
+int obor_force_damage(entity *other, s_collision_attack *attack);
 int arrow_takedamage(entity *other, s_collision_attack *attack);
 int common_takedamage(entity *other, s_collision_attack *attack);
 int normal_attack();

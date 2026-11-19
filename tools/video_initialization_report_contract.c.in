@@ -1,0 +1,67 @@
+/* SPDX-License-Identifier: BSD-3-Clause
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me>
+ */
+#include <stdarg.h>
+#include <stdint.h>
+#include <stdio.h>
+#include <string.h>
+#include "openbor.h"
+#undef assert
+#undef printf
+#include <assert.h>
+
+uint32_t obor_profile_build;
+s_videomodes videomodes;
+int videoMode, screenformat, pixelformat;
+static char message[128];
+
+static int capture(const char *format, ...)
+{
+    va_list args;
+    va_start(args, format);
+    int written = vsnprintf(message, sizeof(message), format, args);
+    va_end(args);
+    assert(written >= 0 && (size_t)written < sizeof(message));
+    return written;
+}
+
+static void defaults(void)
+{
+    @DEFAULTS@
+}
+
+static int ignore_colourdepth(void)
+{
+    return @COLOUR@;
+}
+
+#define printf capture
+static void finish(int log, int bits)
+{
+    @REPORT@
+}
+#undef printf
+
+int main(void)
+{
+    static const struct { unsigned revision; int fixed; const char *report; } profiles[] = {@PROFILES@};
+    videomodes.hRes = 640;
+    videomodes.vRes = 480;
+    videoMode = 2;
+    for(size_t p = 0; p < sizeof(profiles) / sizeof(*profiles); p++)
+    {
+        obor_profile_build = profiles[p].revision;
+        screenformat = pixelformat = PIXEL_8;
+        defaults();
+        assert(screenformat == (profiles[p].fixed ? PIXEL_32 : PIXEL_8));
+        assert(pixelformat == (profiles[p].fixed ? PIXEL_x8 : PIXEL_8));
+        assert(ignore_colourdepth() == profiles[p].fixed);
+        message[0] = 0;
+        finish(0, 8);
+        assert(message[0] == 0);
+        finish(1, 8);
+        assert(strcmp(message, profiles[p].report) == 0);
+        printf("{\"revision\":%u,\"status\":\"PASS\"}\n", obor_profile_build);
+    }
+    return 0;
+}

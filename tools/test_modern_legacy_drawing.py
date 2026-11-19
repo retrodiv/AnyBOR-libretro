@@ -12,10 +12,14 @@ import unittest
 from contract_fixtures import contract_revisions, load_contract_fixture
 from test_historical_common_think import ROOT, native_output
 from test_historical_player import function, rename_identifiers, switch_cases
+from test_early_jump_walkoff import braced_statement
 
 
 FIXTURE = Path(__file__).with_name('fixtures') / 'modern-legacy-drawing-contracts.json'
 SETTINGS = FIXTURE.with_name('profile-4432-settings-record-contracts.json')
+VIDEO_REPORT = FIXTURE.with_name('profile-4432-video-report-contracts.json')
+PALETTES = FIXTURE.with_name('profile-4432-model-palette-boundaries.json')
+MODEL_LOG = FIXTURE.with_name('profile-4432-model-loading-log.json')
 
 
 def program(data):
@@ -49,8 +53,8 @@ def program(data):
     return code
 
 
-def late_4432_program(data):
-    engine = ROOT / 'src/engines' / data['engine']
+def late_4432_program(data, engine=None):
+    engine = engine or ROOT / 'src/engines' / data['engine']
     core = (engine / 'openbor.c').read_text()
     script = (engine / 'openborscript.c').read_text()
     variants = (engine / 'source/scriptlib/ScriptVariant.c').read_text()
@@ -120,11 +124,80 @@ class ModernLegacyDrawingContracts(unittest.TestCase):
         rows = data['video_and_drawing']
         self.assertEqual([row['revision'] for row in rows], [4432, 4453, 4454, 4455, 4456, 4510])
         self.assertTrue({row['revision'] for row in rows} <= {row['revision'] for row in data['sources']})
-        observed = json.loads(native_output(late_4432_program(data), data))
+        engine = Path(os.environ.get('OBOR_HISTORICAL_ENGINE', ROOT / 'src/engines' / data['engine']))
+        observed = json.loads(native_output(late_4432_program(data, engine), data, engine_source=engine))
         self.assertEqual(observed, {'profiles': len(rows),
             'palette_and_system_profiles': len(data['model_palette_and_system_routes']),
             'set_handle_profiles': len(data['set_handle_routes']),
             'layer_handle_profiles': len(data['layer_handle_routes']), 'status': 'PASS'})
+
+    def test_4432_video_format_and_startup_report(self):
+        data = load_contract_fixture(VIDEO_REPORT)
+        rows = data['sources']
+        revisions = {row['revision'] for row in rows}
+        self.assertEqual(len(revisions), len(rows))
+        self.assertEqual(revisions, contract_revisions(data, data['expected_revisions']))
+        engine = ROOT / 'src/engines' / data['engine']
+        video = function((engine / 'openbor.c').read_text(), 'init_videomodes')
+        defaults = re.search(r'(?ms)^    if\(.*?screenformat = PIXEL_32;.*?^    \}', video)[0]
+        colour = re.search(r'(?ms)^                if\(([^\n]+)\)\n[^\n]+\n[^\n]+Colordepth is depreciated',
+                           video)[1]
+        report = braced_statement(video[video.rindex('clearscreen(vscreen);'):], 'if(log)')
+        values = dict(DEFAULTS=defaults, COLOUR=colour, REPORT=report,
+            PROFILES=',\n'.join('{%du,%d,%s}' % (row['revision'], row['fixed_video'],
+                                                json.dumps(row['completion'])) for row in rows))
+        template = Path(__file__).with_name('video_initialization_report_contract.c.in').read_text()
+        probe = re.sub(r'@([A-Z_]+)@', lambda match: values[match[1]], template)
+        output = native_output(probe, data, extra_cflags=('-fgnu89-inline',))
+        self.assertEqual([json.loads(line) for line in output.splitlines()],
+                         [dict(revision=row['revision'], status='PASS') for row in rows])
+
+    def test_4432_model_palette_paths_and_release_logs(self):
+        data = load_contract_fixture(PALETTES)
+        rows = data['sources']
+        revisions = {row['revision'] for row in rows}
+        self.assertEqual(len(revisions), len(rows))
+        self.assertEqual(revisions, contract_revisions(data, data['expected_revisions']))
+        engine = Path(os.environ.get('OBOR_HISTORICAL_ENGINE', ROOT / 'src/engines' / data['engine']))
+        source = (engine / 'openbor.c').read_text(encoding='latin-1')
+        _, cases = switch_cases(source, 'load_cached_model', 'cmd', outermost=True)
+        names = ('PALETTE', 'ALTERNATEPAL', 'GLOBALMAP')
+        parts = dict(LOADER=function(source, 'obor_load_model_palette'),
+                     COMMANDS='\n'.join('case CMD_MODEL_' + name + ':' +
+                         cases['CMD_MODEL_' + name]['body'] for name in names),
+                     FRAME=braced_statement(cases['CMD_MODEL_FRAME']['body'],
+                             'if(loadimagepalette(value, packfile, newchar->palette) == 0)'),
+                     REVISIONS=','.join(str(row['revision']) for row in rows))
+        template = Path(__file__).with_name('model_palette_release_contract.c.in').read_text()
+        probe = re.sub(r'@([A-Z_]+)@', lambda match: parts[match[1]], template)
+        outputs = [json.loads(line) for line in native_output(
+            probe, data, engine_source=engine, extra_cflags=('-fgnu89-inline',)).splitlines()]
+        for row in outputs:
+            row[-1] = bytes.fromhex(row[-1]).decode('ascii')
+        expected = [[row['revision'], *case] for row in rows for case in data['contracts'][row['contract']]]
+        self.assertEqual(len(outputs), len(expected))
+        for observed, reference in zip(outputs, expected):
+            with self.subTest(revision=reference[0], case=reference[1]):
+                self.assertEqual(observed, reference)
+
+    def test_4432_model_loading_log_timing(self):
+        data = load_contract_fixture(MODEL_LOG)
+        rows = data['sources']
+        revisions = [row['revision'] for row in rows]
+        self.assertEqual(revisions, sorted(set(revisions)))
+        self.assertEqual(set(revisions), contract_revisions(data, data['expected_revisions']))
+        engine = Path(os.environ.get('OBOR_HISTORICAL_ENGINE', ROOT / 'src/engines' / data['engine']))
+        loader = function((engine / 'openbor.c').read_text(encoding='latin-1'), 'load_cached_model')
+        start = loader.index('    const int log_model_on_entry = ')
+        end = loader.index('    sbsize = size + 1;', start)
+        values = dict(ENTRY=loader[start:end],
+                      COMPLETE=braced_statement(loader, 'if(!log_model_on_entry)'),
+                      PROFILES=',\n'.join('{%du,%d}' % (row['revision'], row['entry_log'])
+                                          for row in rows))
+        template = Path(__file__).with_name('model_loading_log_contract.c.in').read_text()
+        probe = re.sub(r'@([A-Z_]+)@', lambda match: values[match[1]], template)
+        results = native_output(probe, data, engine_source=engine, extra_cflags=('-fgnu89-inline',))
+        self.assertEqual([int(line) for line in results.splitlines()], revisions)
 
 
 if __name__ == '__main__':

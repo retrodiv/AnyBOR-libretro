@@ -4,6 +4,7 @@ SPDX-License-Identifier: BSD-3-Clause
 Copyright (c) 2026 retrodiv <retrodiv@proton.me>
 """
 import json
+import os
 from pathlib import Path
 import re
 import unittest
@@ -13,6 +14,11 @@ from test_historical_common_think import ROOT, native_output
 from test_historical_player import function, rename_identifiers, switch_cases
 
 FIXTURE = Path(__file__).with_name('fixtures') / 'profile-system-variables-contracts.json'
+TEXT_FIXTURE = FIXTURE.with_name('profile-4432-system-text-queries.json')
+
+
+def source_engine(data):
+    return Path(os.environ.get('OBOR_SYSTEM_ENGINE', ROOT / 'src/engines' / data['engine']))
 
 
 def fixture_data():
@@ -47,7 +53,7 @@ def selected_fields(core, name, selected):
 
 
 def program(data):
-    engine = ROOT / 'src/engines' / data['engine']
+    engine = source_engine(data)
     core = (engine / 'openbor.c').read_text()
     script = (engine / 'openborscript.c').read_text()
     variant = (engine / 'source/scriptlib/ScriptVariant.c').read_text()
@@ -127,8 +133,28 @@ def program(data):
 class SystemVariableContracts(unittest.TestCase):
     def test_native_names_values_mutations_and_target_conditions(self):
         data = fixture_data()
-        actual = [json.loads(line) for line in native_output(program(data), data).splitlines()]
+        output = native_output(program(data), data, engine_source=source_engine(data))
+        actual = [json.loads(line) for line in output.splitlines()]
         self.assertEqual(actual, [dict(revision=r['revision'], status='PASS') for r in data['sources']])
+
+    def test_native_scene_branch_and_pak_text(self):
+        data = load_contract_fixture(TEXT_FIXTURE)
+        revisions = [row['revision'] for row in data['sources']]
+        self.assertEqual(revisions, sorted(set(revisions)))
+        self.assertEqual(set(revisions), contract_revisions(data, data['expected_revisions']))
+        engine = source_engine(data)
+        core = (engine / 'openbor.c').read_text(encoding='latin-1')
+        variant = (engine / 'source/scriptlib/ScriptVariant.c').read_text()
+        cache = variant[variant.index('typedef struct'):variant.index('// find an existing constant')]
+        symbols = ('_sv_current_scene', '_sv_branchname', '_sv_current_branch', '_sv_pakname')
+        parts = dict(CACHE=cache + '\n' + function(variant, 'ScriptVariant_Copy'),
+                     QUERIES=selected_fields(core, 'getsyspropertybyindex', symbols),
+                     PROFILES=',\n'.join('{%du,%d}' % (row['revision'], row['pak_label_capacity'])
+                                         for row in data['sources']))
+        template = Path(__file__).with_name('system_text_queries_contract.c.in').read_text()
+        probe = re.sub(r'@([A-Z_]+)@', lambda item: parts[item[1]], template)
+        output = native_output(probe, data, engine_source=engine, extra_cflags=('-fgnu89-inline',))
+        self.assertEqual([int(line) for line in output.splitlines()], revisions)
 
 
 if __name__ == '__main__':

@@ -4,6 +4,7 @@ SPDX-License-Identifier: BSD-3-Clause
 Copyright (c) 2026 retrodiv <retrodiv@proton.me>
 """
 import json
+import os
 from pathlib import Path
 import re
 import unittest
@@ -57,7 +58,7 @@ class HistoricalAttackRuleTests(unittest.TestCase):
         revisions = [row['revision'] for row in rows]
         self.assertEqual(len(revisions), len(set(revisions)))
         self.assertEqual(set(revisions), contract_revisions(data, data['expected_revisions']))
-        engine = ROOT / 'src/engines' / data['engine']
+        engine = Path(os.environ.get('OBOR_HISTORICAL_ENGINE', ROOT / 'src/engines' / data['engine']))
         actual = [json.loads(line) for line in native_output(program(data, engine), data).splitlines()]
         self.assertEqual(len(actual), len(rows))
         for row, (revision, observed) in zip(rows, actual, strict=True):

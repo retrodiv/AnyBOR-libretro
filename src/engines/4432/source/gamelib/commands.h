@@ -1,3 +1,14 @@
+/* AnyBOR modification record: 2026-09-30.
+ * Port maintained by retrodiv <retrodiv@proton.me>.
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me> (original contributions).
+ * These contributions are licensed under BSD-3-Clause; see LICENSE at the root.
+ * Upstream code retains its original license and notices.
+ * Declare the internal starvelocity command selector.
+ * Existing changes recorded here; this is not their implementation date.
+ * See MODIFICATIONS.md and docs/modifications/4432.md
+ * at the source repository root. Original notices follow below.
+ */
+
 /*
  * OpenBOR - http://www.LavaLit.com
  * -
@@ -586,6 +597,7 @@ typedef enum modelCommand
     CMD_MODEL_WEAPNUM,
     CMD_MODEL_WEAPONFRAME,
     CMD_MODEL_WEAPONS,
+    CMD_MODEL_STAR_VELOCITY,
 
 } modelCommands;
 

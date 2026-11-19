@@ -1,0 +1,92 @@
+/* SPDX-License-Identifier: BSD-3-Clause
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me>
+ */
+#include <limits.h>
+#include <stdint.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include "openbor.h"
+#undef printf
+#undef assert
+#include <assert.h>
+
+uint32_t obor_profile_build;
+
+void *checkAlloc(void *ptr, size_t size, const char *func, const char *file, int line)
+{
+    assert(!size || ptr);
+    return ptr;
+}
+
+@METHODS@
+
+static void set_text(ScriptVariant *value, char *text)
+{
+    ScriptVariant_ChangeType(value, VT_STR);
+    StrCache_Copy(value->strVal, text);
+}
+
+static void check_text(const ScriptVariant *value, const char *text)
+{
+    assert(value->vt == VT_STR && !strcmp(StrCache_Get(value->strVal), text));
+}
+
+int main(void)
+{
+    static const struct {
+        unsigned revision;
+        int long_join;
+    } contexts[] = {@CONTEXTS@};
+    for(size_t i = 0; i < sizeof(contexts) / sizeof(*contexts); ++i)
+    {
+        obor_profile_build = contexts[i].revision;
+        ScriptVariant left = {.vt = VT_EMPTY}, right = {.vt = VT_EMPTY}, saved = {.vt = VT_EMPTY};
+        ScriptVariant integer = {.vt = VT_INTEGER, .lVal = -12};
+        ScriptVariant decimal = {.vt = VT_DECIMAL, .dblVal = 0.25};
+        ScriptVariant empty = {.vt = VT_EMPTY};
+        set_text(&left, "stage");
+        set_text(&right, " ready");
+        ScriptVariant *value = ScriptVariant_Add(&left, &right);
+        check_text(value, "stage ready");
+        ScriptVariant_Copy(&saved, value);
+        check_text(ScriptVariant_Add(&left, &integer), "stage-12");
+        check_text(ScriptVariant_Add(&decimal, &right), "0.250000 ready");
+        check_text(ScriptVariant_Add(&empty, &left), "<VT_EMPTY>   Unitializedstage");
+        check_text(&saved, "stage ready");
+
+        set_text(&right, "");
+        check_text(ScriptVariant_Add(&left, &right), "stage");
+        set_text(&right, " ready");
+        assert(ScriptVariant_AddAssign(&left, &right) == &left);
+        check_text(&left, "stage ready");
+        check_text(ScriptVariant_Add(value, &right), "stage ready ready");
+        value = ScriptVariant_Add(&integer, &integer);
+        assert(value->vt == VT_INTEGER && value->lVal == -24);
+        value = ScriptVariant_Add(&decimal, &integer);
+        assert(value->vt == VT_DECIMAL && value->dblVal == -11.75);
+
+        if(contexts[i].long_join)
+        {
+            char first[65], second[81], joined[145];
+            memset(first, 'a', sizeof(first) - 1);
+            memset(second, 'b', sizeof(second) - 1);
+            first[sizeof(first) - 1] = second[sizeof(second) - 1] = 0;
+            assert(snprintf(joined, sizeof(joined), "%s%s", first, second) == 144);
+            set_text(&left, first);
+            set_text(&right, second);
+            value = ScriptVariant_Add(&left, &right);
+            check_text(value, joined);
+            check_text(&left, first);
+            check_text(&right, second);
+        }
+        ScriptVariant_Clear(value);
+        ScriptVariant_Clear(&left);
+        ScriptVariant_Clear(&right);
+        ScriptVariant_Clear(&saved);
+        assert(strcache_top == strcache_size - 1);
+        StrCache_Clear();
+        printf("%u\n", obor_profile_build);
+    }
+    return 0;
+}

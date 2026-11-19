@@ -1,0 +1,97 @@
+/* SPDX-License-Identifier: BSD-3-Clause
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me>
+ */
+#include <stdint.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include "openbor.h"
+#undef printf
+#undef assert
+#include <assert.h>
+
+uint32_t obor_profile_build;
+
+void *checkAlloc(void *ptr, size_t size, const char *func, const char *file, int line)
+{
+    assert(!size || ptr);
+    return ptr;
+}
+
+@METHODS@
+
+static ScriptVariant *compile_text(char *text)
+{
+    Token token = {0};
+    strcpy(token.theSource, text);
+    Instruction instruction = {.storageType = INSTRUCTION_SOURCE_TOKEN, .OpCode = CONSTSTR,
+                               .theToken = &token};
+    Instruction_ConvertConstant(&instruction);
+    assert(instruction.theVal && instruction.theVal->vt == VT_STR);
+    return instruction.theVal;
+}
+
+static void free_text(ScriptVariant *value)
+{
+    ScriptVariant_Clear(value);
+    free(value);
+}
+
+static void check_slot_reuse(void)
+{
+    ScriptVariant *values[70];
+    char text[24];
+    for(int i = 0; i < 70; ++i)
+    {
+        snprintf(text, sizeof(text), "text %d", i);
+        values[i] = compile_text(text);
+        assert(values[i]->strVal == (i < 64 ? 63 - i : 191 - i));
+    }
+    int first_slot = values[20]->strVal, second_slot = values[65]->strVal;
+    free_text(values[20]);
+    free_text(values[65]);
+    values[65] = compile_text("new second");
+    values[20] = compile_text("new first");
+    assert(values[20]->strVal == first_slot && values[65]->strVal == second_slot);
+    assert(!strcmp(StrCache_Get(values[20]->strVal), "new first"));
+    assert(!strcmp(StrCache_Get(values[65]->strVal), "new second"));
+    for(int i = 0; i < 70; ++i)
+    {
+        if(i != 20 && i != 65)
+        {
+            snprintf(text, sizeof(text), "text %d", i);
+            assert(!strcmp(StrCache_Get(values[i]->strVal), text));
+        }
+        free_text(values[i]);
+    }
+    assert(strcache_top == strcache_size - 1);
+    StrCache_Clear();
+}
+
+int main(void)
+{
+    static const unsigned profiles[] = {@CONTEXTS@};
+    for(size_t i = 0; i < sizeof(profiles) / sizeof(*profiles); ++i)
+    {
+        obor_profile_build = profiles[i];
+        ScriptVariant *first = compile_text("repeat");
+        ScriptVariant *second = compile_text("repeat");
+        ScriptVariant *source = compile_text("x?first>second?last>end");
+        ScriptVariant *args[] = {source, second};
+        ScriptVariant result, *out = &result;
+        ScriptVariant_Init(&result);
+        int shared = first->strVal == second->strVal;
+        free_text(first);
+        assert(!strcmp(StrCache_Get(second->strVal), "repeat"));
+        assert(openbor_strinlast(args, &out, 2) == S_OK && out == &result);
+        assert(result.vt == VT_STR);
+        printf("%u\t%d\t%s\n", obor_profile_build, shared, StrCache_Get(result.strVal));
+        ScriptVariant_Clear(&result);
+        free_text(second);
+        free_text(source);
+        assert(strcache_top == strcache_size - 1);
+        StrCache_Clear();
+        check_slot_reuse();
+    }
+    return 0;
+}

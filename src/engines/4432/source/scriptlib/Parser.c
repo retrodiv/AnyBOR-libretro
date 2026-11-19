@@ -658,6 +658,29 @@ void Parser_Decl_list2(Parser *pparser )
 ******************************************************************************/
 void Parser_Stmt_list(Parser *pparser )
 {
+    if(obor_profile_build >= 4574)
+    {
+        while(1)
+        {
+            if(ParserSet_First(&pparser->theParserSet, stmt, pparser->theNextToken.theType))
+            {
+                Parser_Stmt(pparser);
+            }
+            else if(ParserSet_First(&pparser->theParserSet, decl, pparser->theNextToken.theType))
+            {
+                Parser_Decl(pparser);
+            }
+            else
+            {
+                break;
+            }
+        }
+        if(!ParserSet_Follow(&pparser->theParserSet, stmt_list, pparser->theNextToken.theType))
+        {
+            Parser_Error(pparser, stmt_list);
+        }
+        return;
+    }
     if (ParserSet_First(&(pparser->theParserSet), stmt, pparser->theNextToken.theType ))
     {
         Parser_Stmt(pparser );
@@ -741,6 +764,19 @@ void Parser_Expr_stmt(Parser *pparser )
     }
 }
 
+static void obor_parser_compound_body(Parser *pparser)
+{
+    if(obor_profile_build >= 4574)
+    {
+        Parser_Stmt_list(pparser);
+    }
+    else
+    {
+        Parser_Comp_stmt2(pparser);
+        Parser_Comp_stmt3(pparser);
+    }
+}
+
 void Parser_Comp_stmt_Label(Parser *pparser, Label theLabel )
 {
     Label label;
@@ -750,8 +786,7 @@ void Parser_Comp_stmt_Label(Parser *pparser, Label theLabel )
         Parser_AddInstructionViaToken(pparser, PUSH, (Token *)NULL, NULL );
         label = Parser_CreateLabel(pparser);
         strcpy((CHAR *)theLabel, label);
-        Parser_Comp_stmt2(pparser );
-        Parser_Comp_stmt3(pparser );
+        obor_parser_compound_body(pparser);
         Parser_AddInstructionViaToken(pparser, NOOP, (Token *)NULL, label );
         free(label);//dont forget to free the label
         Parser_AddInstructionViaToken(pparser, POP, (Token *)NULL, NULL );
@@ -772,8 +807,7 @@ void Parser_Comp_stmt(Parser *pparser )
         Parser_Match(pparser);
         Parser_AddInstructionViaToken(pparser, PUSH, (Token *)NULL, NULL );
         jumpLabel = Parser_CreateLabel(pparser);
-        Parser_Comp_stmt2(pparser );
-        Parser_Comp_stmt3(pparser );
+        obor_parser_compound_body(pparser);
         Parser_AddInstructionViaToken(pparser, NOOP, (Token *)NULL, jumpLabel );
         free(jumpLabel);
         Parser_AddInstructionViaToken(pparser, POP, (Token *)NULL, NULL );
@@ -935,6 +969,7 @@ void Parser_Opt_else(Parser *pparser )
 
 void Parser_Switch_body(Parser *pparser, List *pCases )
 {
+    const int uses_statement_list = obor_profile_build >= 4574;
     //Using a loop here instead of recursion goes against the idea of a
     //recursive descent parser, but it keeps us from having 200 stack frames.
     while(1)
@@ -943,12 +978,16 @@ void Parser_Switch_body(Parser *pparser, List *pCases )
         {
             Parser_Case_label(pparser, pCases );
         }
-        else if (ParserSet_First(&(pparser->theParserSet), stmt, pparser->theNextToken.theType ))
+        else if(uses_statement_list && ParserSet_First(&pparser->theParserSet, stmt_list, pparser->theNextToken.theType))
+        {
+            Parser_Stmt_list(pparser);
+        }
+        else if (!uses_statement_list && ParserSet_First(&(pparser->theParserSet), stmt, pparser->theNextToken.theType ))
         {
             Parser_Stmt(pparser );
             Parser_Stmt_list2(pparser );
         }
-        else if (ParserSet_First(&(pparser->theParserSet), decl, pparser->theNextToken.theType ))
+        else if (!uses_statement_list && ParserSet_First(&(pparser->theParserSet), decl, pparser->theNextToken.theType ))
         {
             Parser_Decl(pparser );
             Parser_Decl_list2(pparser );

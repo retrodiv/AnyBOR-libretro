@@ -1,0 +1,117 @@
+/* SPDX-License-Identifier: BSD-3-Clause
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me>
+ */
+#include <stdint.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+@DECLARATION_ALIASES@
+#include "openbor.h"
+#undef execute_inhole_script
+#undef execute_onblockw_script
+#undef assert
+#undef printf
+#include <assert.h>
+
+uint32_t obor_profile_build;
+static entity actor;
+static s_scripts scripts;
+static Script script;
+static Varlist local_vars;
+
+static const char *const names[] = {"self", "plane", "height", "index", "depth", "type"};
+static ScriptVariant locals[6];
+static int initialized, installed, executed, cleared, fields;
+static int expected_plane, expected_depth, expected_type;
+
+void StrCache_Collect(int index) { (void)index; abort(); }
+void StrCache_Grab(int index) { (void)index; abort(); }
+int StrCache_Pop(void) { abort(); }
+@VARIANTS@
+
+int Script_IsInitialized(Script *value)
+{
+    assert(value == &script);
+    return initialized;
+}
+
+int Varlist_SetByName(Varlist *list, char *name, ScriptVariant *value)
+{
+    assert(list == &local_vars);
+    int index = executed ? cleared++ : installed++;
+    assert(index < fields && strcmp(name, names[index]) == 0);
+    ScriptVariant_Copy(&locals[index], value);
+    if(executed)
+    {
+        assert(locals[index].vt == VT_EMPTY);
+    }
+    return 1;
+}
+
+int Script_Execute(Script *value)
+{
+    assert(value == &script && installed == fields && executed == 0 && cleared == 0);
+    assert(locals[0].vt == VT_PTR && locals[0].ptrVal == &actor);
+    assert(locals[1].vt == VT_INTEGER && locals[1].lVal == expected_plane);
+    assert(locals[2].vt == VT_DECIMAL && locals[2].dblVal == 12.5);
+    assert(locals[3].vt == VT_INTEGER && locals[3].lVal == 3);
+    if(fields == 6)
+    {
+        assert(locals[4].vt == VT_INTEGER && locals[4].lVal == expected_depth);
+        assert(locals[5].vt == VT_INTEGER && locals[5].lVal == expected_type);
+    }
+    locals[1].lVal = -1;
+    executed++;
+    return 0;
+}
+
+@CALLBACKS@
+
+int main(void)
+{
+    static const struct { unsigned revision; int fields; } profiles[] = {@PROFILES@};
+    static const struct {
+        int plane, initialized;
+        float depth;
+        int depth_value, type;
+    } cases[] = {@CASES@};
+    actor.scripts = &scripts;
+    script.varlist = &local_vars;
+    scripts.onblockw_script = scripts.inhole_script = &script;
+
+    for(size_t p = 0; p < sizeof(profiles) / sizeof(*profiles); p++)
+    {
+        obor_profile_build = profiles[p].revision;
+        fields = profiles[p].fields;
+        for(size_t c = 0; c < sizeof(cases) / sizeof(*cases); c++)
+        {
+            installed = executed = cleared = 0;
+            expected_plane = cases[c].plane;
+            expected_depth = cases[c].depth_value;
+            expected_type = cases[c].type;
+            initialized = cases[c].initialized;
+            memset(locals, 0, sizeof(locals));
+            locals[4].vt = locals[5].vt = VT_INTEGER;
+            locals[4].lVal = 19;
+            locals[5].lVal = 41;
+            if(expected_plane)
+            {
+                execute_onblockw_script(&actor, expected_plane, 12.5f, 3@EXTRA_ARGS@);
+            }
+            else
+            {
+                execute_inhole_script(&actor, 0, 12.5f, 3@EXTRA_ARGS@);
+            }
+            assert(executed == initialized);
+            assert(installed == initialized * fields && cleared == installed);
+            if(!initialized || fields == 4)
+            {
+                assert(locals[4].vt == VT_INTEGER && locals[4].lVal == 19);
+                assert(locals[5].vt == VT_INTEGER && locals[5].lVal == 41);
+            }
+        }
+        printf("{\"revision\":%u,\"calls\":%zu}\n", obor_profile_build,
+               sizeof(cases) / sizeof(*cases));
+    }
+    return 0;
+}

@@ -6,7 +6,9 @@
  * Select the native 6330 decimal negation fallthrough. Preserve native
  * signed32 integer conversion and truncated decimal results; refuse
  * unavailable arguments and non-representable decimal results before
- * conversion without changing result storage.
+ * conversion without changing result storage. Preserve the profile's sharing
+ * of identical compiled string constants. Size concatenation results from
+ * both formatted operands.
  * Existing changes recorded here; this is not their implementation date.
  * See MODIFICATIONS.md and docs/modifications/4432.md
  * at the source repository root. Original notices follow below.
@@ -24,6 +26,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
+#include <limits.h>
 
 typedef struct
 {
@@ -225,19 +228,20 @@ void ScriptVariant_ChangeType(ScriptVariant *var, VARTYPE cvt)
 }
 
 // find an existing constant before copy
-void ScriptVariant_ParseStringConstant(ScriptVariant *var, CHAR *str)
+void ScriptVariant_ParseStringConstant(ScriptVariant *var, CHAR *str, int share)
 {
-    //assert(index<strcache_size);
-    //assert(size>0);
-    int i;
-    for(i = 0; i < strcache_size; i++)
+    if(share)
     {
-        if(strcache[i].ref && strcmp(str, strcache[i].str) == 0)
+        for(int i = 0; i < strcache_size; ++i)
         {
-            var->strVal = i;
-            strcache[i].ref++;
-            var->vt = VT_STR;
-            break;
+            if(strcache[i].ref && strcmp(str, strcache[i].str) == 0)
+            {
+                StrCache_Grab(i);
+                ScriptVariant_Clear(var);
+                var->strVal = i;
+                var->vt = VT_STR;
+                return;
+            }
         }
     }
 
@@ -700,11 +704,72 @@ ScriptVariant *ScriptVariant_Shr( ScriptVariant *svar, ScriptVariant *rightChild
 }
 
 
+static int ScriptVariant_FormatValue(const ScriptVariant *value, CHAR *buffer, size_t capacity)
+{
+    switch(value->vt)
+    {
+    case VT_EMPTY:
+        return snprintf(buffer, capacity, "<VT_EMPTY>   Unitialized");
+    case VT_INTEGER:
+        return snprintf(buffer, capacity, "%d", value->lVal);
+    case VT_DECIMAL:
+        return snprintf(buffer, capacity, "%lf", value->dblVal);
+    case VT_PTR:
+        return snprintf(buffer, capacity, "#%ld", (long)value->ptrVal);
+    case VT_STR:
+    {
+        const CHAR *text = StrCache_GetIfPresent(value->strVal);
+        return text ? snprintf(buffer, capacity, "%s", text) : -1;
+    }
+    default:
+        return snprintf(buffer, capacity, "<Unprintable VARIANT type.>");
+    }
+}
+
+static void ScriptVariant_JoinText(ScriptVariant *result, ScriptVariant *left, ScriptVariant *right)
+{
+    const int left_length = ScriptVariant_FormatValue(left, NULL, 0);
+    const int right_length = ScriptVariant_FormatValue(right, NULL, 0);
+    if(left_length < 0 || right_length < 0 || left_length > INT_MAX - right_length)
+    {
+        ScriptVariant_Clear(result);
+        return;
+    }
+
+    // Preserve an operand that is also the previous temporary addition result.
+    ScriptVariant previous = {.vt = VT_EMPTY};
+    if(left == result || right == result)
+    {
+        ScriptVariant_Copy(&previous, result);
+        if(left == result) left = &previous;
+        if(right == result) right = &previous;
+    }
+
+    const int length = left_length + right_length;
+    ScriptVariant_ChangeType(result, VT_STR);
+    Varstr *entry = &strcache[result->strVal];
+    if(entry->len < length)
+    {
+        CHAR *expanded = realloc(entry->str, (size_t)length + 1);
+        if(!expanded)
+        {
+            ScriptVariant_Clear(result);
+            ScriptVariant_Clear(&previous);
+            return;
+        }
+        entry->str = expanded;
+        entry->len = length;
+    }
+
+    ScriptVariant_FormatValue(left, entry->str, (size_t)left_length + 1);
+    ScriptVariant_FormatValue(right, entry->str + left_length, (size_t)right_length + 1);
+    ScriptVariant_Clear(&previous);
+}
+
 ScriptVariant *ScriptVariant_Add( ScriptVariant *svar, ScriptVariant *rightChild )
 {
     static ScriptVariant retvar = {{.ptrVal = NULL}, VT_EMPTY};
     DOUBLE dbl1, dbl2;
-    CHAR buf[MAX_STR_VAR_LEN + 1];
     if(ScriptVariant_DecimalValue(svar, &dbl1) == S_OK &&
             ScriptVariant_DecimalValue(rightChild, &dbl2) == S_OK)
     {
@@ -721,10 +786,7 @@ ScriptVariant *ScriptVariant_Add( ScriptVariant *svar, ScriptVariant *rightChild
     }
     else if(svar->vt == VT_STR || rightChild->vt == VT_STR)
     {
-        ScriptVariant_ChangeType(&retvar, VT_STR);
-        ScriptVariant_ToString(svar, StrCache_Get(retvar.strVal));
-        ScriptVariant_ToString(rightChild, buf);
-        strcat(StrCache_Get(retvar.strVal), buf);
+        ScriptVariant_JoinText(&retvar, svar, rightChild);
     }
     else
     {

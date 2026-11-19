@@ -1,0 +1,105 @@
+/* SPDX-License-Identifier: BSD-3-Clause
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me>
+ */
+#include <assert.h>
+#include <stdarg.h>
+#include <stdint.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+
+static uint32_t obor_profile_build;
+static char message[384];
+static size_t used;
+
+static int capture(const char *format, ...)
+{
+    va_list args;
+    va_start(args, format);
+    int written = vsnprintf(message + used, sizeof(message) - used, format, args);
+    va_end(args);
+    assert(written >= 0 && (size_t)written < sizeof(message) - used);
+    used += (size_t)written;
+    return written;
+}
+
+#define printf capture
+@NUMBERS@
+
+static void level_order(const char *const *commands, size_t count)
+{
+    @LOCALS@
+    for(size_t i = 0; i < count; ++i)
+    {
+        const char *command = commands[i];
+        @ORDER@
+    }
+}
+
+static void video_setting(const char *command, const char *filename)
+{
+    @VIDEO@
+}
+#undef printf
+
+static void reset(void)
+{
+    message[0] = 0;
+    used = 0;
+}
+
+int main(void)
+{
+    static const int rows[][3] = {
+        @ROWS@
+    };
+    const char *const order_tokens[] = {"", "alpha", NULL, "beta", ""};
+    const char *const blank_tokens[] = {"", NULL};
+    for(size_t i = 0; i < sizeof(rows) / sizeof(rows[0]); ++i)
+    {
+        obor_profile_build = rows[i][0];
+        const int lines = rows[i][1];
+        const char *expected_order = lines
+            ? "\nCommand 'alpha' not understood in level order!\nCommand 'beta' not understood in level order!\n"
+            : "Command 'alpha' not understood in level order!Command 'beta' not understood in level order!";
+        const char *expected_video = lines
+            ? "Command 'alpha' not understood in file 'data/video.txt'!\n"
+              "Command 'beta' not understood in file 'data/videopc.txt'!\n"
+            : "Command 'alpha' not understood in file 'data/video.txt'!"
+              "Command 'beta' not understood in file 'data/videopc.txt'!";
+        const char *expected_number = rows[i][2]
+            ? "WARNING: config tries to load a non-numeric value at speed, where a number is expected!\nerroneus string: invalid\n"
+            : "WARNING: config tries to load a nonnumeric value at speed, where a number is expected!\nerroneus string: invalid\n";
+
+        reset();
+        level_order(blank_tokens, sizeof(blank_tokens) / sizeof(blank_tokens[0]));
+        assert(!used);
+        for(int load = 0; load < 2; ++load)
+        {
+            reset();
+            level_order(order_tokens, sizeof(order_tokens) / sizeof(order_tokens[0]));
+            assert(strcmp(message, expected_order) == 0);
+        }
+        reset();
+        video_setting(NULL, "data/video.txt");
+        video_setting("alpha", "data/video.txt");
+        video_setting("", "data/video.txt");
+        video_setting("beta", "data/videopc.txt");
+        assert(strcmp(message, expected_video) == 0);
+
+        reset();
+        assert(getValidInt("invalid", "config", "speed") == 0);
+        assert(strcmp(message, expected_number) == 0);
+        reset();
+        assert(getValidFloat("invalid", "config", "speed") == 0.0f);
+        assert(strcmp(message, expected_number) == 0);
+        reset();
+        assert(getValidInt("-12", "config", "speed") == -12);
+        assert(getValidFloat("75%", "config", "speed") == 0.75f);
+        assert(getValidInt("", "config", "speed") == 0);
+        assert(getValidFloat(NULL, "config", "speed") == 0.0f);
+        assert(!used);
+        printf("%u\n", obor_profile_build);
+    }
+    return 0;
+}

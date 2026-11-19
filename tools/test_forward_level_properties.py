@@ -10,16 +10,21 @@ import re
 import unittest
 
 from contract_fixtures import contract_profiles, contract_revisions, load_contract_fixture
+from test_early_jump_walkoff import braced_statement
 from test_historical_common_think import ROOT, native_output
 from test_historical_player import function, switch_cases
 
 FIXTURE = Path(__file__).with_name('fixtures') / 'profile-forward-level-property-contracts.json'
 RUNTIME_FIXTURE = FIXTURE.with_name('profile-4432-stage-runtime-contracts.json')
+SPAWN_FIXTURE = FIXTURE.with_name('profile-4432-stage-spawn-boundaries.json')
 SETTER_FIXTURE = FIXTURE.with_name('profile-4432-level-setter-contracts.json')
+TERRAIN_QUERY_FIXTURE = FIXTURE.with_name('profile-4432-terrain-script-queries.json')
+GAMEOVER_FIXTURE = FIXTURE.with_name('profile-4432-level-gameover.json')
+VALUE_QUERY_FIXTURE = FIXTURE.with_name('profile-4432-level-value-queries.json')
 
 
-def typed_level_setter_program(data):
-    engine = ROOT / 'src/engines' / data['engine']
+def typed_level_setter_program(data, engine=None, gameover=None):
+    engine = engine or ROOT / 'src/engines' / data['engine']
     script = (engine / 'openborscript.c').read_text()
     core = (engine / 'openbor.c').read_text()
     variant = (engine / 'source/scriptlib/ScriptVariant.c').read_text()
@@ -81,13 +86,33 @@ def typed_level_setter_program(data):
                  VARIANTS='\n'.join(function(variant, name) for name in
                                     ('ScriptVariant_IntegerValue', 'ScriptVariant_DecimalValue',
                                      'ScriptVariant_ChangeType', 'ScriptVariant_Clear', 'ScriptVariant_Init')),
-                 CASES='\n'.join(definitions), VIEWS='\n'.join(views), RUNNER='\n    '.join(runner))
+                 CASES='\n'.join(definitions), VIEWS='\n'.join(views), EXTRA='',
+                 RUNNER='\n    '.join(runner))
+    if gameover is not None:
+        registry = function(script, 'Script_LoadSystemFunctions')
+        reverse = function(script, 'Script_GetFunctionName')
+        query = function(script, 'obor_lookup_level_property')
+        rows = ',\n'.join('{%d,%d,%d,%d,%d}' % (row['revision'], row['gameover'],
+            row['damage_enemy'], row['weapon'], row['all_players']) for row in gameover['sources'])
+        values = dict(
+            GAMEOVER=function(script, 'openbor_gameover'),
+            LOOKUP=query,
+            APPLY=function(core, 'obor_apply_level_gameover'),
+            LOOP=braced_statement(function(core, 'playlevel'), 'while(!endgame)'),
+            REGISTER=braced_statement(registry, 'if(obor_profile_build >= 4642 && obor_profile_build <= 4750)'),
+            REVERSE=braced_statement(reverse, 'if (obor_profile_build >= 4642 && obor_profile_build <= 4750 &&'),
+            ROWS=rows,
+        )
+        extra = Path(__file__).with_name('level_gameover_contract.c.in').read_text()
+        parts['EXTRA'] = re.sub(r'@([A-Z_]+)@', lambda item: values[item[1]], extra)
+        parts['RUNNER'] += '\n    check_gameover_profiles();'
     template = Path(__file__).with_name('level_property_setter_contract.c.in').read_text()
     return re.sub(r'@([A-Z_]+)@', lambda item: parts[item[1]], template)
 
 
-def stage_runtime_program(data):
-    source = (ROOT / 'src/engines' / data['engine'] / 'openbor.c').read_text()
+def stage_runtime_program(data, engine=None):
+    engine = engine or ROOT / 'src/engines' / data['engine']
+    source = (engine / 'openbor.c').read_text()
     loader, cases = switch_cases(source, 'load_level', 'cmd', outermost=True)
     defaults = loader[loader.index('    level->nohurt ='):loader.index('    level->setweap = 0;')]
 
@@ -99,6 +124,9 @@ def stage_runtime_program(data):
     commands = ('NOSLOW', 'TYPE', 'NOHIT', 'SPAWN1', 'SPAWN2', 'SPAWN3', 'SPAWN4')
     parts = dict(
         SPAWN_COUNT=function(source, 'obor_level_spawn_count'),
+        ENTRY=braced_statement(function(source, 'ent_default_init'),
+                               'else if(!e->animation)').removeprefix('else '),
+        SCORE=function(source, 'addscore'),
         DEFAULTS=defaults,
         CASES='\n'.join('case CMD_LEVEL_' + name + ':' + cases['CMD_LEVEL_' + name]['body'] for name in commands),
         EXCLUDES=function(source, 'obor_spawn_excludes_player_targets'),
@@ -107,7 +135,9 @@ def stage_runtime_program(data):
         BLOCK=guard('do_attack', 'if(didblock && (obor_profile_build'),
         DAMAGE=guard('player_takedamage', 'if(healthcheat || ((obor_profile_build'),
         SLOW=guard('update', 'if((level_completed && !tospeedup &&'),
-        CONTEXTS=',\n'.join('{%d,%d,%d}' % (row['revision'], row['spawn_extent'], row['flag_modes'])
+        CONTEXTS=',\n'.join('{%d,%d,%d,%d,%d}' % (
+            row['revision'], row['spawn_extent'], row.get('flag_modes', -1),
+            row.get('spawn_y_policy', row['spawn_extent']), row.get('configured_entry', 0))
                             for row in data['sources']))
     template = Path(__file__).with_name('stage_runtime_contract.c.in').read_text()
     return re.sub(r'@([A-Z_]+)@', lambda item: parts[item[1]], template)
@@ -197,12 +227,10 @@ int main(void)
     return code
 
 
-def program(data, engine):
+def legacy_level_property_parts(engine):
     source = (engine / 'openborscript.c').read_text()
     variant = (engine / 'source/scriptlib/ScriptVariant.c').read_text()
     utils = (engine / 'source/utils.c').read_text()
-    start = source.index('enum levelproperty_enum')
-    declarations = source[start:source.index('HRESULT openbor_getlevelproperty(', start)]
     lines = source.splitlines(keepends=True)
     first = next(i for i, line in enumerate(lines) if line.startswith('#define MAPSTRINGS('))
     last = first
@@ -210,11 +238,18 @@ def program(data, engine):
         last += 1
     macros = ''.join(line for line in lines if line.startswith('#define _is_not_')) + ''.join(lines[first:last+1])
     providers = Path(__file__).with_name('classic_terrain_contract.c.in').read_text().split('@VARIANTS@')[0]
-    values = dict(PROVIDERS=providers,
+    return source, dict(PROVIDERS=providers,
         VARIANTS='\n'.join(function(variant, name) for name in
             ('ScriptVariant_Init', 'ScriptVariant_Clear', 'ScriptVariant_ChangeType',
              'ScriptVariant_IntegerValue', 'ScriptVariant_DecimalValue', 'ScriptVariant_ToString')),
-        SEARCH=function(utils, 'searchList'), MACROS=macros, DECLARATIONS=declarations,
+        SEARCH=function(utils, 'searchList'), MACROS=macros)
+
+
+def program(data, engine):
+    source, values = legacy_level_property_parts(engine)
+    start = source.index('enum levelproperty_enum')
+    declarations = source[start:source.index('HRESULT openbor_getlevelproperty(', start)]
+    values.update(DECLARATIONS=declarations,
         METHODS='\n'.join(function(source, name) for name in
             ('openbor_getlevelproperty', 'openbor_changelevelproperty')),
         CONTEXTS=','.join('{%du,%d,{%s},%d}' % (row['revision'], len(row['properties']),
@@ -228,6 +263,77 @@ def program(data, engine):
 
 
 class ForwardLevelPropertyTests(unittest.TestCase):
+    def test_4432_typed_level_and_set_value_queries(self):
+        data = load_contract_fixture(VALUE_QUERY_FIXTURE)
+        revisions = [row['revision'] for row in data['sources']]
+        self.assertEqual(revisions, sorted(set(revisions)))
+        self.assertEqual(set(revisions), contract_revisions(data, data['expected_revisions']))
+        engine = Path(os.environ.get('OBOR_HISTORICAL_ENGINE', ROOT / 'src/engines' / data['engine']))
+        script = (engine / 'openborscript.c').read_text()
+        variant = (engine / 'source/scriptlib/ScriptVariant.c').read_text()
+        start = script.index('/* Canonical property order from 4494.')
+        end = script.index('static int obor_lookup_level_property(', start)
+        cache = variant[variant.index('typedef struct'):variant.index('// find an existing constant')]
+        rows = ',\n'.join('{%du,%d,%d,%d,{%s},%d}' % (
+            row['revision'], row['set_name'], row['level_name'], row['boss_music'],
+            ','.join(map(str, row['scripts'])), row['spawn_players']) for row in data['sources'])
+        parts = dict(CACHE=cache + '\n' + function(variant, 'ScriptVariant_Copy'),
+                     SELECTORS=script[start:end] + function(script, 'obor_set_property_native'),
+                     GETTERS='\n'.join(function(script, n) for n in (
+                         'obor_script_set_handle', 'obor_level_property_has_early_getter',
+                         'openbor_get_set_property', 'openbor_get_level_property')),
+                     CONTEXTS=rows)
+        template = Path(__file__).with_name('level_value_queries_contract.c.in').read_text()
+        code = re.sub(r'@([A-Z_]+)@', lambda item: parts[item[1]], template)
+        output = native_output(code, data, engine_source=engine, extra_cflags=('-fgnu89-inline',))
+        self.assertEqual([int(line) for line in output.splitlines()], revisions)
+
+    def test_4432_level_gameover_request_and_ordinals(self):
+        data = load_contract_fixture(GAMEOVER_FIXTURE)
+        revisions = [row['revision'] for row in data['sources']]
+        self.assertEqual(revisions, sorted(set(revisions)))
+        self.assertEqual(set(revisions), contract_revisions(data, data['expected_revisions']))
+        self.assertTrue(set(data['boundary_controls']) <= set(revisions))
+        for profile in contract_profiles(data, json.loads((ROOT / 'src/pin.json').read_text())['profiles']):
+            revision = int(profile.get('revision', profile['build']))
+            if profile['engine'] == data['engine'] and 4510 <= revision <= data['range'][1]:
+                self.assertIn(revision, revisions)
+        engine = Path(os.environ.get('OBOR_HISTORICAL_ENGINE', ROOT / 'src/engines' / data['engine']))
+        existing = load_contract_fixture(SETTER_FIXTURE)
+        code = typed_level_setter_program(existing, engine, gameover=data)
+        results = [json.loads(line) for line in native_output(
+            code, data, engine_source=engine, extra_cflags=('-fgnu89-inline',)).splitlines()]
+        expected = [dict(revision=row['revision'], status='PASS') for row in existing['sources']
+                    if row['registered']]
+        expected.extend(dict(revision=revision, gameover='PASS') for revision in revisions)
+        self.assertEqual(results, expected)
+
+    def test_4432_legacy_terrain_property_results(self):
+        data = load_contract_fixture(TERRAIN_QUERY_FIXTURE)
+        revisions = [row['revision'] for row in data['sources']]
+        self.assertEqual(revisions, sorted(set(revisions)))
+        self.assertEqual(set(revisions), contract_revisions(data, data['expected_revisions']))
+        self.assertTrue(set(data['boundary_controls']) <= set(revisions))
+        for profile in contract_profiles(data, json.loads((ROOT / 'src/pin.json').read_text())['profiles']):
+            revision = int(profile.get('revision', profile['build']))
+            if profile['engine'] == data['engine'] and 4510 <= revision <= data['range'][1]:
+                self.assertIn(revision, revisions)
+        engine = Path(os.environ.get('OBOR_HISTORICAL_ENGINE', ROOT / 'src/engines' / data['engine']))
+        source, parts = legacy_level_property_parts(engine)
+        start = source.index('enum levelproperty_enum')
+        end = source.index('int mapstrings_levelproperty(', start)
+        parts.update(
+            SELECTORS=source[start:end],
+            METHODS='\n'.join(function(source, name) for name in (
+                'mapstrings_levelproperty', 'obor_terrain_query_selector',
+                'openbor_getlevelproperty', 'obor_basemap_set_cell', 'openbor_changelevelproperty')),
+            ROWS=',\n'.join('{%d,%d}' % (row['revision'], row['mapped_selectors']) for row in data['sources']),
+        )
+        code = Path(__file__).with_name('legacy_terrain_script_queries_contract.c.in').read_text()
+        code = re.sub(r'@([A-Z_]+)@', lambda match: parts[match[1]], code)
+        results = native_output(code, data, engine_source=engine, extra_cflags=('-fgnu89-inline',))
+        self.assertEqual([int(line) for line in results.splitlines()], revisions)
+
     def test_4432_typed_level_setter_scalars_and_results(self):
         data = load_contract_fixture(SETTER_FIXTURE)
         revisions = [row['revision'] for row in data['sources']]
@@ -242,7 +348,19 @@ class ForwardLevelPropertyTests(unittest.TestCase):
         revisions = [row['revision'] for row in data['sources']]
         self.assertEqual(revisions, sorted(set(revisions)))
         self.assertEqual(set(revisions), contract_revisions(data, data['expected_revisions']))
-        results = [json.loads(line) for line in native_output(stage_runtime_program(data), data).splitlines()]
+        engine = Path(os.environ.get('OBOR_HISTORICAL_ENGINE', ROOT / 'src/engines' / data['engine']))
+        results = [json.loads(line) for line in native_output(
+            stage_runtime_program(data, engine), data, engine_source=engine).splitlines()]
+        self.assertEqual(results, [dict(revision=revision, status='PASS') for revision in revisions])
+
+    def test_4432_stage_spawn_boundaries_and_score_rewards(self):
+        data = load_contract_fixture(SPAWN_FIXTURE)
+        revisions = [row['revision'] for row in data['sources']]
+        self.assertEqual(revisions, sorted(set(revisions)))
+        self.assertEqual(set(revisions), contract_revisions(data, data['expected_revisions']))
+        engine = Path(os.environ.get('OBOR_HISTORICAL_ENGINE', ROOT / 'src/engines' / data['engine']))
+        results = [json.loads(line) for line in native_output(
+            stage_runtime_program(data, engine), data, engine_source=engine).splitlines()]
         self.assertEqual(results, [dict(revision=revision, status='PASS') for revision in revisions])
 
     def test_original_representation_refuses_incomplete_or_generated_source(self):

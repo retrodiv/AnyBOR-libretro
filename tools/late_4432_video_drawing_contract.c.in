@@ -1,6 +1,7 @@
 /* SPDX-License-Identifier: BSD-3-Clause
  * Copyright (c) 2026 retrodiv <retrodiv@proton.me> */
 #include <stdint.h>
+#include <stdarg.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -355,9 +356,13 @@ int loadimagepalette(char *filename, char *archive, unsigned char *out)
 
 @PALETTE_LOADER@
 
-static int restricted_command(const char *format, const char *command)
+static int restricted_command(const char *format, ...)
 {
     assert(!strcmp(format, "Warning: command '%s' is not available under 8bit mode\n"));
+    va_list args;
+    va_start(args, format);
+    const char *command = va_arg(args, const char *);
+    va_end(args);
     assert(!strcmp(command, "palette") || !strcmp(command, "alternatepal") || !strcmp(command, "globalmap"));
     return ++restrictions;
 }
@@ -374,7 +379,7 @@ static const char *apply_palette_command(int cmd, s_model *newchar, unsigned **f
     unsigned *mapflag = *flags;
     char *shutdownmessage = NULL;
     int nopalette = *disabled;
-    char *value;
+    char *value = NULL;
     switch(cmd)
     {
         @PALETTE_COMMANDS@

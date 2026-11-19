@@ -1,0 +1,146 @@
+/* SPDX-License-Identifier: BSD-3-Clause
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me>
+ */
+#include <stdint.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include "openbor.h"
+#include "commands.h"
+#include "ScriptVariant.h"
+#undef printf
+
+uint32_t obor_profile_build;
+entity *self;
+static List *modelcmdlist;
+static s_model model;
+static entity actor;
+static entity *actors[] = {&actor};
+entity **ent_list = actors;
+
+void StrCache_Collect(int index) { (void)index; abort(); }
+int StrCache_Pop(void) { abort(); }
+
+modelCommands getModelCommand(List *list, char *name)
+{
+    (void)list;
+    if(strcmp(name, "attack") == 0) return CMD_MODEL_COLLISION;
+    if(strcmp(name, "attack2") == 0) return CMD_MODEL_COLLISION2;
+    if(strcmp(name, "attack11") == 0) return CMD_MODEL_COLLISION_ETC;
+    if(strcmp(name, "burn") == 0) return CMD_MODEL_BURN;
+    return (modelCommands)0;
+}
+
+@VARIANTS@
+@TYPE@
+@DEFAULT@
+
+static int read_field(entity *ent, int paramCount, LONG index)
+{
+    ScriptVariant arg = {.vt = VT_INTEGER, .lVal = index};
+    ScriptVariant result = {.vt = VT_EMPTY}, *out = &result, **pretvar = &out;
+    ScriptVariant *varlist[] = {NULL, NULL, &arg};
+    LONG ltemp2;
+    switch(0)
+    {
+        case 0:
+        @GET@
+    }
+    if(out != &result || result.vt != VT_INTEGER) abort();
+    return result.lVal;
+}
+
+static void write_field(entity *ent, LONG force, LONG index)
+{
+    LONG ltemp, ltemp2;
+    int paramCount = 4;
+    ScriptVariant amount = {.vt = VT_INTEGER, .lVal = force};
+    ScriptVariant selected = {.vt = VT_INTEGER, .lVal = index};
+    ScriptVariant *varlist[] = {NULL, NULL, &amount, &selected};
+    switch(0)
+    {
+        case 0:
+        @SET@
+    }
+}
+
+static s_collision_attack model_record(char *name, int use_smartbomb)
+{
+    s_collision_attack attack = emptyattack, smartbomb = emptyattack, *pattack;
+    s_model *newchar = &model;
+    void *newanim = use_smartbomb ? NULL : &actor;
+    newchar->smartbomb = &smartbomb;
+    #undef GET_INT_ARG
+    #undef GET_ARG
+    #define GET_INT_ARG(index) ((index) == 1 ? 17 : 1)
+    #define GET_ARG(index) (name)
+    switch(CMD_MODEL_DAMAGEONLANDING)
+    {
+        @COMMAND@
+        default: abort();
+    }
+    #undef GET_INT_ARG
+    #undef GET_ARG
+    newchar->smartbomb = NULL;
+    return use_smartbomb ? smartbomb : attack;
+}
+
+static void copy_record(const s_collision_attack *attack)
+{
+    @COPY@
+}
+
+static void reset_record(unsigned route)
+{
+    const int i = 0;
+    switch(route)
+    {
+        @RESET@
+        default: abort();
+    }
+}
+
+int main(void)
+{
+    static const unsigned builds[] = {@REVISIONS@};
+    static const struct { char name[14]; int type; } commands[] = {
+        {"attack", ATK_NORMAL}, {"attack2", ATK_NORMAL2},
+        {"attack11", (11 < MAX_ATKS - STA_ATKS + 1 ? MAX_ATKS - STA_ATKS + 1 : 11) + STA_ATKS - 1},
+        {"burn", ATK_BURN}, {"", -1}, {"unknown", -1}
+    };
+    self = &actor;
+    for(size_t n = 0; n < sizeof(builds) / sizeof(*builds); ++n)
+    {
+        obor_profile_build = builds[n];
+        actor.damage_on_landing = 23;
+        actor.damage_on_landing_type = 37;
+        printf("[%u,%d,%d,%d", builds[n], read_field(&actor, 2, 0),
+            read_field(&actor, 3, 0), read_field(&actor, 3, 1));
+        write_field(&actor, 47, 0);
+        printf(",%d,%d", read_field(&actor, 2, 0), read_field(&actor, 3, 1));
+        write_field(&actor, 59, 1);
+        printf(",%d,%d", read_field(&actor, 2, 0), read_field(&actor, 3, 1));
+        unsigned typed = 0;
+        for(size_t c = 0; c < sizeof(commands) / sizeof(*commands); ++c)
+        {
+            char name[sizeof(commands[c].name)];
+            strcpy(name, commands[c].name);
+            s_collision_attack attack = model_record(name, c % 2);
+            if(attack.damage_on_landing != 17 || attack.blast != 1) abort();
+            if(commands[c].type != -1 && attack.damage_on_landing_type == commands[c].type)
+                typed |= 1u << c;
+            if(commands[c].type == -1 && attack.damage_on_landing_type != -1) abort();
+        }
+        const s_collision_attack impact = {.damage_on_landing = 79, .damage_on_landing_type = 83};
+        copy_record(&impact);
+        printf(",%u,%d,%d", typed, read_field(&actor, 2, 0), read_field(&actor, 3, 1));
+        for(unsigned route = 0; route < @RESET_COUNT@; ++route)
+        {
+            copy_record(&impact);
+            reset_record(route);
+            if(actor.damage_on_landing != 0 || actor.damage_on_landing_type != -1) abort();
+        }
+        printf(",%d,%d]\n", read_field(&actor, 2, 0), read_field(&actor, 3, 1));
+    }
+    return 0;
+}

@@ -3,9 +3,11 @@
  * Copyright (c) 2026 retrodiv <retrodiv@proton.me> (original contributions).
  * These contributions are licensed under BSD-3-Clause; see LICENSE at the root.
  * Upstream code retains its original license and notices.
- * Declare owned script-variable name storage. Declare the native game timer
- * and set count selectors in system-variable order and expose the native set
- * and layer callbacks.
+ * Declare owned script-variable name storage. Declare the shared force
+ * calculation and its read-only script query. Declare native game-over
+ * request storage and script entry points by profile. Declare the native
+ * game timer and set count selectors in system-variable order and expose the
+ * native set and layer callbacks.
  * Existing changes recorded here; this is not their implementation date.
  * See MODIFICATIONS.md and docs/modifications/4432.md
  * at the source repository root. Original notices follow below.
@@ -213,6 +215,7 @@ HRESULT openbor_fadeout(ScriptVariant **varlist , ScriptVariant **pretvar, int p
 HRESULT openbor_playerkeys(ScriptVariant **varlist , ScriptVariant **pretvar, int paramCount);
 HRESULT openbor_changepalette(ScriptVariant **varlist , ScriptVariant **pretvar, int paramCount);
 HRESULT openbor_damageentity(ScriptVariant **varlist , ScriptVariant **pretvar, int paramCount);
+HRESULT openbor_getcomputeddamage(ScriptVariant **varlist, ScriptVariant **pretvar, int paramCount);
 HRESULT openbor_killentity(ScriptVariant **varlist , ScriptVariant **pretvar, int paramCount);
 HRESULT openbor_dograb(ScriptVariant **varlist , ScriptVariant **pretvar, int paramCount);
 HRESULT openbor_findtarget(ScriptVariant **varlist , ScriptVariant **pretvar, int paramCount);
@@ -331,6 +334,7 @@ HRESULT openbor_executescript(ScriptVariant **varlist , ScriptVariant **pretvar,
 
 HRESULT openbor_loadgamefile(ScriptVariant **varlist , ScriptVariant **pretvar, int paramCount);
 HRESULT openbor_finishlevel(ScriptVariant **varlist , ScriptVariant **pretvar, int paramCount);
+HRESULT openbor_gameover(ScriptVariant **varlist, ScriptVariant **pretvar, int paramCount);
 HRESULT openbor_gotomainmenu(ScriptVariant **varlist , ScriptVariant **pretvar, int paramCount);
 HRESULT openbor_playgame(ScriptVariant **varlist , ScriptVariant **pretvar, int paramCount);
 HRESULT openbor_getrecordingstatus(ScriptVariant **varlist , ScriptVariant **pretvar, int paramCount);

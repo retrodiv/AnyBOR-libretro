@@ -3,7 +3,7 @@
 SPDX-License-Identifier: BSD-3-Clause
 Copyright (c) 2026 retrodiv <retrodiv@proton.me>
 """
-from contract_fixtures import load_contract_fixture, contract_profiles
+from contract_fixtures import contract_profiles, contract_revisions, load_contract_fixture
 import json
 import os
 from pathlib import Path
@@ -19,6 +19,7 @@ from test_historical_player import function
 
 SOURCE = Path(os.environ.get('OBOR_TEST_SOURCE', Path(__file__).resolve().parents[1]))
 CONTRACT_PATH = Path(__file__).parent / 'fixtures/profile-line-argument-contracts.json'
+QUOTED_PATH = CONTRACT_PATH.with_name('profile-quoted-line-arguments.json')
 
 ARGUMENT_PROGRAM = r'''
 #include <assert.h>
@@ -104,6 +105,51 @@ int main(void) {
 }
 '''
 
+QUOTED_PROGRAM = r'''
+#include <assert.h>
+#include <stdint.h>
+#include <stddef.h>
+#include <string.h>
+static uint32_t obor_profile_build;
+@DECLARATIONS@
+@PARSER@
+static void check(const char *input, const char *const *tokens, int quoted) {
+    ArgList list = {0};
+    char output[MAX_ARG_LEN + 1];
+    memset(output, 0x5a, sizeof(output));
+    size_t count = ParseArgs(&list, (char *)input, output);
+    assert(count == list.count);
+    for(size_t index = 0; index < count; index++) {
+        assert(tokens[index] != NULL);
+        assert(!strcmp(list.args[index], tokens[index]));
+        assert(list.arglen[index] == strlen(tokens[index]));
+    }
+    assert(tokens[count] == NULL);
+    assert(output[MAX_ARG_LEN - 1] == (quoted ? 0 : 0x5a));
+    assert(output[MAX_ARG_LEN] == 0x5a);
+}
+int main(void) {
+@CASES@
+}
+'''
+
+def quoted_program(data, code, header):
+    record = re.search(r'typedef\s+struct\s+ArgList\s*\{[\s\S]*?\}\s*ArgList\s*;', header)
+    constants = re.findall(r'^#define[ \t]+MAX_ARG_(?:LEN|COUNT)[^\r\n]*', header, re.M)
+    if record is None or len(constants) != 2:
+        raise ValueError('Missing parser record or capacities')
+    checks = []
+    for profile in data['sources']:
+        checks.append(f"    obor_profile_build = {profile['revision']}u;")
+        for case in data['cases']:
+            tokens = case[profile['contract']]
+            values = ', '.join([json.dumps(token) for token in tokens] + ['NULL'])
+            mode = int(profile['contract'] == 'quoted')
+            checks.append(f"    check({json.dumps(case['input'])}, (const char *[]){{{values}}}, {mode});")
+    return (QUOTED_PROGRAM.replace('@DECLARATIONS@', '\n'.join(constants + [record[0]]))
+            .replace('@PARSER@', function(code, 'ParseArgs'))
+            .replace('@CASES@', '\n'.join(checks)))
+
 def native(program):
     with tempfile.TemporaryDirectory(prefix='anybor-line-parser-') as directory:
         source = Path(directory) / 'probe.c'
@@ -168,6 +214,20 @@ class LineArgumentTests(unittest.TestCase):
                 native(ARGUMENT_PROGRAM.replace('CONSTANTS',constants)
                     .replace('RECORD',record[0]).replace('PARSER',function(code,'ParseArgs'))
                     .replace('CONTRACTS',contracts(rows)))
+
+    def test_quoted_argument_bytes_on_own_profiles(self):
+        data = load_contract_fixture(QUOTED_PATH)
+        revisions = [row['revision'] for row in data['sources']]
+        self.assertEqual(len(revisions), len(set(revisions)))
+        self.assertEqual(set(revisions), contract_revisions(data, data['expected_revisions']))
+        for row in data['sources']:
+            self.assertEqual(row['engine'], data['engine'])
+            self.assertRegex(row['commit'], r'^[0-9a-f]{40}$')
+            self.assertRegex(row['parser_sha256'], r'^[0-9a-f]{64}$')
+            self.assertIn(row['contract'], ('legacy', 'quoted'))
+        root = SOURCE / 'src/engines' / data['engine']
+        native(quoted_program(data, (root / 'openbor.c').read_text(),
+                              (root / 'openbor.h').read_text()))
 
     def test_findarg_capacity_and_native_script_constant(self):
         for engine, rows in self.groups.items():

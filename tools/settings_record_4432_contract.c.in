@@ -6,6 +6,7 @@
 #include <stdint.h>
 #include <stdio.h>
 #include <string.h>
+#include <strings.h>
 
 #define SDL 0
 #define PSP 0
@@ -15,7 +16,64 @@
 static s_savedata savedata;
 static uint32_t obor_profile_build;
 
+@VERSION_DEFINITION@
+
 @HELPER@
+
+static void clearsettings(void)
+{
+    @RESET_VERSION@
+    savedata.gamma = 0;
+}
+
+static void validate_title(void)
+{
+    @VALIDATE_TITLE@
+}
+
+static void validate_default(void)
+{
+    @VALIDATE_DEFAULT@
+}
+
+typedef long LONG;
+#define stricmp strcasecmp
+@SCRIPT_MACRO@
+
+static LONG script_version(const char *constname)
+{
+    struct { LONG lVal; } v = {0};
+    @SCRIPT_CONSTANT@
+    return v.lVal;
+}
+#undef IICMPCONST
+#undef stricmp
+
+static void check_version(unsigned expected)
+{
+    static void (*const validators[])(void) = {validate_title, validate_default};
+    clearsettings();
+    assert(savedata.compatibleversion == expected);
+    assert(script_version("compatibleversion") == (LONG)expected);
+    for(size_t i = 0; i < sizeof(validators) / sizeof(*validators); ++i)
+    {
+        savedata.gamma = 21;
+        validators[i]();
+        assert(savedata.compatibleversion == expected && savedata.gamma == 21);
+        savedata.compatibleversion = expected == 0x33747u ? 0x33748u : 0x33747u;
+        validators[i]();
+        assert(savedata.compatibleversion == expected && savedata.gamma == 0);
+    }
+}
+
+static void check_controls(int expected)
+{
+    enum { SDID_ESC = MAX_BTN_NUM - 1 };
+    int disabledkey[MAX_BTN_NUM + 2] = {0};
+    @BUTTON_COUNT@
+    @EXIT_BUTTON@
+    assert(btnnum == expected && disabledkey[SDID_ESC] == (expected == MAX_BTN_NUM));
+}
 
 enum { ORIGINAL_SEED = 100, DEFAULT_SEED = 300 };
 

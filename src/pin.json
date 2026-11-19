@@ -1,7 +1,7 @@
 {
   "core_name": "AnyBOR",
   "core_basename": "anybor_libretro",
-  "version": "0.2.40",
+  "version": "0.2.41",
   "fallback_build": "6391",
   "profiles": [
     {
@@ -3431,6 +3431,138 @@
       "upstream_date": "2017-05-18",
       "covers": "Exact Build 4510 tag or core option; development profile",
       "upstream_branch": "identical complete source tree to 0c984c543b0e2aa83f4013007d4a0da850efe335"
+    },
+    {
+      "build": "4574",
+      "engine": "4432",
+      "major": "v3.0",
+      "automatic": true,
+      "tagged": true,
+      "upstream_commit": "6a80b70cf785fe9f7f3ad090ccac26ef2d2828fd",
+      "upstream_date": "2017-12-31",
+      "upstream_branch": "official tag v4574",
+      "covers": "4457-4574 automatically; exact filename tag or core option"
+    },
+    {
+      "build": "4580",
+      "engine": "4432",
+      "major": "v3.0",
+      "automatic": true,
+      "tagged": true,
+      "upstream_commit": "a0177b62d6265379447f273e7d095908706289bc",
+      "upstream_date": "2017-12-31",
+      "upstream_branch": "official tag v4580",
+      "covers": "4575-4580 automatically; exact filename tag or core option"
+    },
+    {
+      "build": "4583",
+      "engine": "4432",
+      "major": "v3.0",
+      "automatic": true,
+      "tagged": true,
+      "upstream_commit": "00ee6580f47f88f506029f347166c8559e75eb6c",
+      "upstream_date": "2017-12-31",
+      "upstream_branch": "official tag v4583",
+      "covers": "4581-4583 automatically; exact filename tag or core option"
+    },
+    {
+      "build": "4596",
+      "engine": "4432",
+      "major": "v3.0",
+      "automatic": true,
+      "tagged": true,
+      "upstream_commit": "ea819ac435e9af594fbf2eb55b4f230360a05321",
+      "upstream_date": "2018-01-07",
+      "upstream_branch": "official tag v4596",
+      "covers": "4584-4596 automatically; exact filename tag or core option"
+    },
+    {
+      "build": "4624",
+      "engine": "4432",
+      "major": "v3.0",
+      "automatic": true,
+      "tagged": true,
+      "upstream_commit": "402918976e1d093f3dc095bc8f3391b72780f676",
+      "upstream_date": "2018-01-09",
+      "upstream_branch": "official tag v4624",
+      "covers": "4597-4624 automatically; exact filename tag or core option"
+    },
+    {
+      "build": "4626",
+      "engine": "4432",
+      "major": "v3.0",
+      "automatic": true,
+      "tagged": true,
+      "upstream_commit": "de6a42b8aa647a684ff73e5434d53d7cc870b98b",
+      "upstream_date": "2018-01-21",
+      "upstream_branch": "official tag v4626",
+      "covers": "4625-4626 automatically; exact filename tag or core option"
+    },
+    {
+      "build": "4642",
+      "engine": "4432",
+      "major": "v3.0",
+      "automatic": true,
+      "tagged": true,
+      "upstream_commit": "1ddd723af88e4edb60691d8944d73a70b30c6cf9",
+      "upstream_date": "2018-01-27",
+      "upstream_branch": "official tag v4642",
+      "covers": "4627-4642 automatically; exact filename tag or core option"
+    },
+    {
+      "build": "4665",
+      "engine": "4432",
+      "major": "v3.0",
+      "automatic": true,
+      "tagged": true,
+      "upstream_commit": "216bfb556e0905270d6c33dfa063723c4477cf0d",
+      "upstream_date": "2018-02-05",
+      "upstream_branch": "official tag v4665",
+      "covers": "4643-4665 automatically; exact filename tag or core option"
+    },
+    {
+      "build": "4682",
+      "engine": "4432",
+      "major": "v3.0",
+      "automatic": true,
+      "tagged": true,
+      "upstream_commit": "c3aec096c78006b4cb25d2ade8f929b5c8453097",
+      "upstream_date": "2018-02-16",
+      "upstream_branch": "official tag v4682",
+      "covers": "4666-4682 automatically; exact filename tag or core option"
+    },
+    {
+      "build": "4701",
+      "engine": "4432",
+      "major": "v3.0",
+      "automatic": true,
+      "tagged": true,
+      "upstream_commit": "3f7c41c05c83cd7671969eec01e9561a8ebf8f37",
+      "upstream_date": "2018-02-25",
+      "upstream_branch": "official tag v4701",
+      "covers": "4683-4701 automatically; exact filename tag or core option"
+    },
+    {
+      "build": "4742",
+      "engine": "4432",
+      "major": "v3.0",
+      "automatic": true,
+      "tagged": true,
+      "upstream_commit": "dbd6dc588ac9070e82058f129a99078753091165",
+      "upstream_date": "2018-03-17",
+      "upstream_branch": "official tag v4742",
+      "covers": "4702-4742 automatically; exact filename tag or core option"
+    },
+    {
+      "build": "4750",
+      "engine": "4432",
+      "major": "v3.0",
+      "automatic": true,
+      "tagged": true,
+      "upstream_commit": "d02e1b4c8645bf30e5333909ba5f8fd2b3618ea2",
+      "upstream_date": "2018-03-24",
+      "upstream_branch": "official tag v4750",
+      "covers": "4743-4750 automatically; exact filename tag or core option"
     },
     {
       "build": "6330",

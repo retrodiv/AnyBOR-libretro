@@ -1,0 +1,100 @@
+/* SPDX-License-Identifier: BSD-3-Clause
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me>
+ */
+#include <stdint.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include "openbor.h"
+#undef assert
+#include <assert.h>
+#undef printf
+#undef control_rumble
+#define control_rumble(port, force) abort()
+
+uint32_t obor_profile_build;
+int livescheat, noshare, credits, nodropen, timeleft;
+int nomaxrushreset[5];
+s_player player[MAX_PLAYERS];
+static entity actor, other;
+entity *self = &actor, *firstplayer;
+static s_level room;
+s_level *level = &room;
+static int deaths, kills;
+
+void execute_pdie_script(int index)
+{
+    assert(index == self->playerindex);
+    ++deaths;
+}
+void kill(entity *victim)
+{
+    assert(victim == self);
+    ++kills;
+}
+void spawnplayer(int slot) { (void)slot; abort(); }
+void execute_respawn_script(int slot) { (void)slot; abort(); }
+void drop_all_enemies(void) { abort(); }
+
+@PLAYER_DIE@
+
+static void check(int late, int slot, unsigned joins, unsigned personal,
+                  int shared_credits, int private_mode, int other_active)
+{
+    memset(player, 0, sizeof(player));
+    actor.playerindex = slot;
+    actor.modeldata.health = 101;
+    actor.modeldata.mp = 52;
+    actor.modeldata.nodieblink = other_active ? 3 : 0;
+    actor.modeldata.weaploss[0] = WEAPLOSS_TYPE_CHANGE;
+    actor.rush.count.max = 12;
+    firstplayer = self;
+    for(int i = 0; i < MAX_PLAYERS; ++i)
+    {
+        player[i].joining = (joins >> i) & 1;
+        player[i].credits = (personal >> i) & 1;
+    }
+    player[slot].lives = 1;
+    player[slot].ent = self;
+    if(other_active) player[(slot + 1) % MAX_PLAYERS].ent = &other;
+    level->setweap = 7;
+    nomaxrushreset[4] = 1;
+    timeleft = 12345;
+    deaths = kills = 0;
+    credits = shared_credits;
+    noshare = private_mode;
+
+    player_die();
+
+    const int nobody_joining = (joins & (late ? 15u : 3u)) == 0;
+    int out_of_credits = private_mode ? personal == 0 : shared_credits == 0;
+    if(late) out_of_credits = personal == 0 || (!private_mode && shared_credits == 0);
+    int expected = other_active ? 12345 : 10 * COUNTER_SPEED;
+    if(!other_active && nobody_joining && out_of_credits) expected = COUNTER_SPEED / 2;
+    assert(timeleft == expected);
+    assert(deaths == 1 && kills == !other_active);
+    assert(!firstplayer && !player[slot].ent && player[slot].lives == 0);
+    assert(player[slot].spawnhealth == 101 && player[slot].spawnmp == 52);
+    assert(player[slot].weapnum == 7 && nomaxrushreset[slot] == 0);
+}
+
+int main(void)
+{
+    static const int rows[][2] = {
+        @ROWS@
+    };
+    assert(MAX_PLAYERS == 4);
+    for(size_t i = 0; i < sizeof(rows) / sizeof(rows[0]); ++i)
+    {
+        obor_profile_build = rows[i][0];
+        for(int slot = 0; slot < MAX_PLAYERS; ++slot)
+        for(unsigned joins = 0; joins < 16; ++joins)
+        for(unsigned personal = 0; personal < 16; ++personal)
+        for(int shared = 0; shared < 2; ++shared)
+        for(int private_mode = 0; private_mode < 2; ++private_mode)
+        for(int other_active = 0; other_active < 2; ++other_active)
+            check(rows[i][1], slot, joins, personal, shared, private_mode, other_active);
+        printf("%u\n", obor_profile_build);
+    }
+    return 0;
+}

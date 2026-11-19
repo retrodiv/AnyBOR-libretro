@@ -25,9 +25,10 @@ int holez;
 static int basemap_calls,callback_count,expected_hole;
 entity *check_platform_below_entity(entity *e){(void)e;abort();}
 void check_gravity(entity *e){(void)e;abort();}
-void execute_inhole_script(entity *e,int plane,float height,int index)
+void execute_inhole_script(entity *e,int plane,float height,int index,float depth,int type)
 {
     CHECK(e==&actor && self==&actor && plane==0 && height==7 && index==expected_hole);
+    CHECK(depth==world.holes[index].depth && type==world.holes[index].type);
     CHECK(actor.base==3 && actor.link==&partner && partner.link==&actor);
     callback_count++;
 }

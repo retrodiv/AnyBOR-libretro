@@ -13,13 +13,16 @@ import sys
 import tempfile
 import unittest
 
+from contract_fixtures import contract_revisions, load_contract_fixture
 from native_sanitizers import sanitizer_environment
+from test_historical_common_think import native_output
 from test_historical_player import function
 
 ROOT = Path(os.environ.get('OBOR_TEST_SOURCE', Path(__file__).resolve().parents[1]))
 PIN = json.loads((ROOT / 'src/pin.json').read_text())
 NATIVE_ENGINES = {'3400', '3741', '3842', '4086', '4432'}
 CONTRACT = Path(__file__).with_name('dot_bounds_contract.c')
+PERIODIC_FIXTURE = Path(__file__).with_name('fixtures') / 'profile-4432-periodic-damage.json'
 
 
 def run_contract(engine, revisions):
@@ -104,6 +107,32 @@ class DotBoundsTests(unittest.TestCase):
                            sorted({int(p.get('revision', p['build'])) for p in PIN['profiles']
                                    if p['engine'] == row['build']}))
                        for row in PIN['engines'] if row['build'] in NATIVE_ENGINES}
+
+
+class HistoricalPeriodicDamageTests(unittest.TestCase):
+    def test_4432_periodic_damage_modes_and_recipient(self):
+        data = load_contract_fixture(PERIODIC_FIXTURE)
+        rows = data['sources']
+        revisions = {row['revision'] for row in rows}
+        self.assertEqual(len(revisions), len(rows))
+        self.assertEqual(revisions, contract_revisions(data, data['expected_revisions']))
+        engine = Path(os.environ.get('OBOR_HISTORICAL_ENGINE', ROOT / 'src/engines' / data['engine']))
+        source = (engine / 'openbor.c').read_text(encoding='latin-1')
+        parts = dict(
+            FUNCTION=function(source, 'common_dot'),
+            REVISIONS=','.join(str(row['revision']) for row in rows),
+            CASES=',\n'.join('{' + ','.join(str(int(n)) for n in case) + '}' for case in data['cases']),
+        )
+        template = Path(__file__).with_name('periodic_damage_contract.c.in').read_text()
+        code = re.sub(r'@([A-Z_]+)@', lambda match: parts[match[1]], template)
+        output = native_output(code, data, engine_source=engine, extra_cflags=('-fgnu89-inline',))
+        actual = [json.loads(line) for line in output.splitlines()]
+        expected = [[row['revision'], *outcome] for row in rows
+                    for outcome in data['contracts'][row['contract']]]
+        self.assertEqual(len(actual), len(expected))
+        for result, reference in zip(actual, expected):
+            with self.subTest(revision=reference[0], case=reference[1]):
+                self.assertEqual(result, reference)
 
 
 def profile_test(profile):

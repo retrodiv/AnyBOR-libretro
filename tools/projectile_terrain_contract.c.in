@@ -1,0 +1,378 @@
+/* SPDX-License-Identifier: BSD-3-Clause
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me>
+ */
+#include <stdint.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include "openbor.h"
+#include "commands.h"
+#include "soundmix.h"
+#undef assert
+#undef printf
+#include <assert.h>
+
+uint32_t obor_profile_build;
+entity *self;
+s_level *level;
+s_savedata savedata;
+s_videomodes videomodes;
+float advancex;
+u32 time;
+
+static entity projectile_body, platform;
+static entity stars[3];
+static int star_count, star_limit, star_direction, kills;
+static int wall_result, platform_present, hole_present;
+static int wall_calls, platform_calls, falls, hole_calls, played, selected_animation;
+static float platform_top;
+
+float diff(float a, float b) { return a > b ? a - b : b - a; }
+int inair(entity *actor) { return actor->position.y != actor->base; }
+float randf(float range) { return range / 4; }
+void common_fall(void) { abort(); }
+void common_lie(void) { abort(); }
+void common_think(void) { abort(); }
+void common_animation_normal(void) { abort(); }
+static void common_up_anim(entity *actor) { abort(); }
+static void common_down_anim(entity *actor) { abort(); }
+static void common_walk_anim(entity *actor) { abort(); }
+void bomb_explode(void) { abort(); }
+void kill(entity *actor) { assert(actor == self); ++kills; }
+void debug_printf(char *format, ...) { abort(); }
+entity *homing_find_target(int type) { abort(); }
+HRESULT Interpreter_Call(Interpreter *interpreter) { abort(); }
+HRESULT Interpreter_EvalInstruction(Interpreter *interpreter) { abort(); }
+int arrow_takedamage(entity *other, s_collision_attack *attack) { abort(); }
+
+entity *spawn(float x, float z, float a, int direction, char *name, int index, s_model *model)
+{
+    assert(x == 3 && z == 7 && a == 11 && direction == star_direction);
+    assert(name && !strcmp(name, "Star") && index == -1 && !model);
+    if(star_count == star_limit)
+    {
+        return NULL;
+    }
+    entity *star = &stars[star_count];
+    *star = (entity){0};
+    star->sortid = 30 + 10 * star_count++;
+    star->modeldata.subject_to_basemap = -1;
+    return star;
+}
+
+int checkwall(float x, float z)
+{
+    assert(x == 4 && z == 8);
+    ++wall_calls;
+    return level ? wall_result : -1;
+}
+
+entity *check_platform_between(float x, float z, float bottom, float top, entity *exclude)
+{
+    assert(x == 4 && z == 8 && bottom == 10.5f && top == platform_top && exclude == self);
+    ++platform_calls;
+    return level && platform_present ? &platform : NULL;
+}
+
+int checkhole(float x, float z)
+{
+    assert(x == 4 && z == 8 && self->takeaction == bomb_explode);
+    assert(self->modeldata.subject_to_wall == 1 && self->modeldata.subject_to_platform == 1);
+    assert(self->modeldata.subject_to_hole == 1 && self->modeldata.subject_to_basemap == 1);
+    ++hole_calls;
+    return hole_present;
+}
+
+void toss(entity *actor, float height)
+{
+    assert(actor == self && height == 2.75f);
+}
+
+int set_fall(entity *actor, int type, int reset, entity *other, int force, int drop,
+             int noblock, int guardcost, int jugglecost, int pauseadd, int tag)
+{
+    assert(actor == self && other == self && type == ATK_NORMAL && force == 100000);
+    assert(!reset && !drop && !noblock && !guardcost && !jugglecost && !pauseadd && !tag);
+    return ++falls;
+}
+
+void ent_set_anim(entity *actor, int animation, int reset)
+{
+    assert(actor == self && !reset);
+    selected_animation = animation;
+}
+
+int sound_play_sample(int sample, unsigned priority, int left, int right, unsigned speed)
+{
+    assert(sample == 1 && priority == 0 && left == 31 && right == 31 && speed == 100);
+    return ++played;
+}
+
+@MOVEMENT@
+
+static void bomb_spawn_terrain(entity *e)
+{
+    @SPAWN@
+}
+
+static void reset_projectile(s_anim *animation, s_anim **slots, size_t capacity)
+{
+    projectile_body = (entity){0};
+    self = &projectile_body;
+    self->animation = animation;
+    self->modeldata.animation = slots;
+    self->modeldata.animation_capacity = capacity;
+    self->modeldata.size.y = 7;
+    self->modeldata.nomove = 1;
+    self->modeldata.speed = 5;
+    self->position.x = 4;
+    self->position.z = 8;
+    self->position.y = 10.5f;
+    self->health = 30;
+    self->attacking = self->projectile = 1;
+    self->direction = DIRECTION_RIGHT;
+    wall_calls = platform_calls = falls = hole_calls = played = selected_animation = kills = 0;
+}
+
+static void check_projectiles(int terrain)
+{
+    s_anim motion = {0}, fall = {.numframes = 1};
+    s_anim *slots[ANI_GETBOOMERANGINAIR + 1] = {0};
+    s_level area = {0};
+    __typeof__(*area.walls) walls[2] = {{0}};
+    area.walls = walls;
+    area.numwalls = 2;
+    level = &area;
+    for(int arrow = 0; arrow < 2; ++arrow)
+    for(int fall_available = 0; fall_available < 2; ++fall_available)
+    for(int wall_flag = 0; wall_flag < 2; ++wall_flag)
+    for(int wall = -1; wall < 2; ++wall)
+    for(int blocking = 0; blocking < 2; ++blocking)
+    for(int platform_flag = -1; platform_flag < 2; ++platform_flag)
+    for(int on_platform = 0; on_platform < 2; ++on_platform)
+    for(int height = 0; height < 2; ++height)
+    {
+        motion.size.y = height ? 12 : 0;
+        slots[ANI_FALL] = fall_available ? &fall : NULL;
+        reset_projectile(&motion, slots, sizeof(slots) / sizeof(*slots));
+        self->modeldata.subject_to_wall = wall_flag;
+        self->modeldata.subject_to_platform = platform_flag;
+        walls[0].height = walls[1].height = blocking ? 15 : 10.5f;
+        wall_result = wall;
+        platform_present = on_platform;
+        platform_top = height ? 22.5f : 17.5f;
+        const int probe_wall = wall_flag && (arrow || fall_available);
+        const int wall_hit = probe_wall && wall >= (arrow ? 0 : 1) && blocking;
+        const int probe_platform = terrain && !wall_hit &&
+                                   (arrow ? platform_flag != 0 : fall_available && platform_flag > 0);
+        const int fell = fall_available && (wall_hit || (probe_platform && on_platform));
+        assert((arrow ? arrow_move() : boomerang_move()) == 1);
+        assert(wall_calls == probe_wall && platform_calls == probe_platform && falls == fell);
+        assert(!kills);
+        assert((self->takeaction == common_fall) == fell);
+        assert(self->health == (fell ? 0 : 30) && self->projectile == !fell);
+    }
+    level = NULL;
+    reset_projectile(&motion, slots, sizeof(slots) / sizeof(*slots));
+    self->modeldata.subject_to_wall = self->modeldata.subject_to_platform = 1;
+    assert(arrow_move() == 1 && !wall_calls && !platform_calls && !falls);
+}
+
+static void check_bombs(int terrain)
+{
+    s_anim motion = {0}, explosion = {.numframes = 1};
+    s_anim *slots[ANI_ATTACK2 + 1] = {[ANI_ATTACK1] = &explosion, [ANI_ATTACK2] = &explosion};
+    for(int hole = 0; hole < 2; ++hole)
+    for(int mode = 0; mode < 3; ++mode)
+    {
+        reset_projectile(&motion, slots, sizeof(slots) / sizeof(*slots));
+        self->modeldata.subject_to_basemap = -1;
+        bomb_spawn_terrain(self);
+        assert(self->modeldata.subject_to_basemap == (terrain ? 1 : -1));
+        assert(!self->modeldata.no_adjust_base && self->modeldata.subject_to_wall == 1 &&
+               self->modeldata.subject_to_platform == 1 && self->modeldata.subject_to_hole == 1 &&
+               self->modeldata.subject_to_gravity == 1);
+        self->modeldata.diesound = 1;
+        savedata.effectvol = 31;
+        self->base = 2;
+        self->velocity.x = 3;
+        self->velocity.y = 4;
+        self->velocity.z = 5;
+        self->toexplode = mode;
+        hole_present = hole;
+        assert(bomb_move() == 1);
+        if(mode == 1)
+        {
+            assert(self->velocity.x == 5 && self->velocity.y == 4 && self->velocity.z == 5);
+            assert(!hole_calls && !played && !selected_animation && !self->takeaction);
+            continue;
+        }
+        const int falls_in_hole = terrain && hole;
+        assert(self->takeaction == bomb_explode && played == 1 && hole_calls == terrain);
+        assert(self->modeldata.no_adjust_base == !terrain);
+        assert(self->modeldata.subject_to_wall == terrain && self->modeldata.subject_to_platform == 1);
+        assert(self->modeldata.subject_to_hole == terrain && self->modeldata.subject_to_basemap == (terrain ? 1 : -1));
+        assert(self->base == (falls_in_hole ? 2 : 10.5f));
+        assert(self->velocity.x == (falls_in_hole ? 3 : 0));
+        assert(self->velocity.y == (falls_in_hole ? 4 : 0));
+        assert(self->velocity.z == (falls_in_hole ? 5 : 0));
+        assert(selected_animation == (mode == 2 ? ANI_ATTACK2 : ANI_ATTACK1));
+        assert(bomb_move() == 1 && played == 1 && hole_calls == terrain);
+    }
+}
+
+static int star_command(void)
+{
+    int cmd = 0;
+#define LIST_ADD(id, name) do { assert(!strcmp(name, "starvelocity")); cmd = id; } while(0)
+    @STAR_REGISTRATION@
+#undef LIST_ADD
+    return cmd;
+}
+
+static int read_star_command(int cmd, s_anim *newanim, const float args[3])
+{
+    const char *shutdownmessage;
+#undef GET_FLOAT_ARG
+#define GET_FLOAT_ARG(index) (args[(index) - 1])
+    switch(cmd)
+    {
+        case CMD_MODEL_STAR_VELOCITY:
+            @STAR_COMMAND@
+        default:
+            return 0;
+    }
+#undef GET_FLOAT_ARG
+    return 1;
+lCleanup:
+    assert(!strcmp(shutdownmessage, "Cannot set starvelocity: no animation!"));
+    return -1;
+}
+
+static int star_draw_sort(entity *e)
+{
+    int sortid = e->sortid;
+    @STAR_DRAW_SORT@
+    return sortid;
+}
+
+static void check_star_launch(int terrain)
+{
+    const float custom[3] = {-2.5f, 0.0f, 1.75f};
+    const float zero[3] = {0};
+    for(int direction = 0; direction < 2; ++direction)
+    for(int mode = 0; mode < 3; ++mode)
+    for(int limit = 0; limit <= 3; ++limit)
+    {
+        s_anim motion = {0};
+        reset_projectile(&motion, NULL, 0);
+        motion.projectile.star = self->modeldata.star = -1;
+        const int command = star_command();
+        assert((command == CMD_MODEL_STAR_VELOCITY) == terrain);
+        const float *speeds = mode == 2 ? zero : custom;
+        if(mode)
+        {
+            assert(read_star_command(command, NULL, speeds) == (terrain ? -1 : 0));
+            assert(read_star_command(command, &motion, custom) == terrain);
+            assert(read_star_command(command, &motion, speeds) == terrain);
+        }
+        star_count = 0;
+        star_limit = limit;
+        star_direction = direction;
+        assert(star_spawn(3, 7, 11, direction) == (limit == 3));
+        assert(star_count == limit && self->attacking == !limit);
+        self->sortid = 90;
+        for(int i = 0; i < limit; ++i)
+        {
+            entity *star = &stars[i];
+            const int sortid = terrain ? 30 - i : 30 + 10 * i;
+            assert(star->sortid == sortid && star->owner == self);
+            const float sign = direction ? 1 : -1;
+            assert(star->velocity.x == sign * (terrain && mode ? 2 * speeds[i] : i));
+            assert(star->position.y == 11 && star->base == 11);
+            assert(star->modeldata.no_adjust_base == !terrain);
+            assert(star->modeldata.subject_to_basemap == (terrain ? 1 : -1));
+            assert(star->modeldata.subject_to_wall == 1 && star->modeldata.subject_to_platform == 1);
+            assert(star->modeldata.subject_to_hole == 1 && star->modeldata.subject_to_gravity == 1);
+            self->modeldata.aimove = AIMOVE1_STAR;
+            assert(star_draw_sort(star) == (terrain ? sortid : 91));
+            self->modeldata.aimove = AIMOVE1_BOOMERANG;
+            assert(star_draw_sort(star) == sortid);
+            self->modeldata.aimove = 0;
+            assert(star_draw_sort(star) == 91);
+        }
+    }
+}
+
+static void check_star_motion(int terrain)
+{
+    s_anim motion = {0}, fall = {.numframes = 1};
+    s_anim *slots[ANI_FALL + 1] = {[ANI_FALL] = &fall};
+    s_level area = {0};
+    __typeof__(*area.walls) wall = {.height = 15};
+    area.walls = &wall;
+    area.numwalls = 1;
+    level = &area;
+    const float heights[] = {0, 3, 10.5f, 18};
+    for(size_t i = 0; i < sizeof(heights) / sizeof(*heights); ++i)
+    for(int falldie = 0; falldie < 2; ++falldie)
+    for(int fall_available = 0; fall_available < 2; ++fall_available)
+    for(int landed = 0; landed < 2; ++landed)
+    for(int wall_flag = -1; wall_flag <= 1; ++wall_flag)
+    for(int platform_flag = -1; platform_flag <= 1; ++platform_flag)
+    {
+        slots[ANI_FALL] = fall_available ? &fall : NULL;
+        reset_projectile(&motion, slots, sizeof(slots) / sizeof(*slots));
+        self->base = heights[i];
+        self->modeldata.falldie = falldie;
+        self->modeldata.nodieblink = 2;
+        self->landed_on_platform = landed ? &platform : NULL;
+        self->animating = 1;
+        self->modeldata.subject_to_wall = wall_flag;
+        self->modeldata.subject_to_platform = platform_flag;
+        wall_result = 0;
+        platform_present = 1;
+        platform_top = 17.5f;
+        const int expired = !falldie && (terrain ? 10.5f <= heights[i] : heights[i] <= 0);
+        assert(star_move() == !expired && kills == expired);
+        if(expired)
+        {
+            assert(!wall_calls && !platform_calls && !falls);
+            continue;
+        }
+        const int wall_probe = fall_available && (!terrain || wall_flag > 0);
+        const int platform_probe = fall_available && terrain && !wall_probe && platform_flag > 0;
+        const int fell = wall_probe || platform_probe;
+        const float base = terrain ? heights[i] : heights[i] - 4;
+        const float altitude = terrain ? 10.5f : base;
+        const int died = landed || (terrain ? altitude <= base : base <= 0);
+        assert(self->position.y == altitude && self->base == base);
+        assert(wall_calls == wall_probe && platform_calls == platform_probe && falls == fell);
+        assert(self->takeaction == (died ? common_lie : fell ? common_fall : NULL));
+        assert(self->health == (fell || died ? 0 : 30) && self->animating == !died);
+    }
+    videomodes.hRes = 320;
+    for(int right = 0; right < 2; ++right)
+    {
+        reset_projectile(&motion, slots, sizeof(slots) / sizeof(*slots));
+        self->position.x = right ? 401 : -81;
+        self->modeldata.falldie = 1;
+        assert(star_move() == 0 && kills == 1 && !wall_calls && !platform_calls && !falls);
+    }
+    level = NULL;
+}
+
+int main(void)
+{
+    static const struct { unsigned revision; int terrain; } rows[] = {@PROFILES@};
+    for(size_t i = 0; i < sizeof(rows) / sizeof(*rows); ++i)
+    {
+        obor_profile_build = rows[i].revision;
+        check_projectiles(rows[i].terrain);
+        check_bombs(rows[i].terrain);
+        check_star_launch(rows[i].terrain);
+        check_star_motion(rows[i].terrain);
+        printf("%u\n", obor_profile_build);
+    }
+    return 0;
+}

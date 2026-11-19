@@ -5,6 +5,7 @@
  * Upstream code retains its original license and notices.
  * Declare the cache and variant helpers as ordinary functions; the header
  * only declared them inline and the definitions live in ScriptVariant.c.
+ * Preserve the profile's sharing of identical compiled string constants.
  * Existing changes recorded here; this is not their implementation date.
  * See MODIFICATIONS.md and docs/modifications/4432.md
  * at the source repository root. Original notices follow below.
@@ -59,7 +60,7 @@ void ScriptVariant_Clear(ScriptVariant *var);
 void ScriptVariant_Init(ScriptVariant *var);
 void ScriptVariant_Copy(ScriptVariant *svar, ScriptVariant *rightChild ); // faster in some situations
 void ScriptVariant_ChangeType(ScriptVariant *var, VARTYPE cvt);
-void ScriptVariant_ParseStringConstant(ScriptVariant *var, CHAR *str);
+void ScriptVariant_ParseStringConstant(ScriptVariant *var, CHAR *str, int share);
 HRESULT ScriptVariant_IntegerValue(ScriptVariant *var, LONG *pVal);
 HRESULT ScriptVariant_DecimalValue(ScriptVariant *var, DOUBLE *pVal);
 BOOL ScriptVariant_IsTrue(ScriptVariant *svar);

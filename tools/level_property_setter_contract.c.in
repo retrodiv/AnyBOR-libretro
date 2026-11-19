@@ -4,6 +4,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <strings.h>
 #include "openbor.h"
 #undef printf
 #undef assert
@@ -396,6 +397,8 @@ static void check_level_setter(uint32_t revision, void (*check_case)(void), void
     level = NULL;
     printf("{\"revision\":%u,\"status\":\"PASS\"}\n", revision);
 }
+
+@EXTRA@
 
 int main(void)
 {

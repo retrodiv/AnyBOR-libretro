@@ -6,7 +6,8 @@
  * Convert the command-list lookup result to its command enumeration
  * explicitly instead of through a plain pointer cast. Admit basemap
  * participation, shadow-opacity and stage-completion display commands only
- * for profiles whose original build registered them.
+ * for profiles whose original build registered them. Admit the starvelocity
+ * animation command from 4574.
  * Existing changes recorded here; this is not their implementation date.
  * See MODIFICATIONS.md and docs/modifications/4432.md
  * at the source repository root. Original notices follow below.
@@ -464,6 +465,10 @@ List *createModelCommandList(void)
     LIST_ADD(CMD_MODEL_SPEED, "speed");
     LIST_ADD(CMD_MODEL_SPEEDF, "speedf");
     LIST_ADD(CMD_MODEL_STAR, "star");
+    if(obor_profile_build >= 4574)
+    {
+        LIST_ADD(CMD_MODEL_STAR_VELOCITY, "starvelocity");
+    }
     LIST_ADD(CMD_MODEL_STATS, "stats");
     LIST_ADD(CMD_MODEL_STAYDOWN, "staydown");
     LIST_ADD(CMD_MODEL_STEAL, "steal");

@@ -1,0 +1,174 @@
+/* SPDX-License-Identifier: BSD-3-Clause
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me>
+ */
+#include <stdarg.h>
+#include <stdint.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include "Parser.h"
+#include "anybor_content_error.h"
+#undef printf
+#undef assert
+#undef malloc
+#include <assert.h>
+
+uint32_t obor_profile_build;
+#include "ParserSet.c"
+
+enum { BLOCK, LABELED_BLOCK, SWITCH_BODY };
+static const struct sample {
+    int route;
+    size_t count;
+    MY_TOKEN_TYPE tokens[12];
+    const char *trace[2];
+    const char *diagnostic[2];
+} cases[] = {@CASES@};
+static const MY_TOKEN_TYPE tables[][2][END_OF_TOKENS + 1] = {@TABLES@};
+static const struct { unsigned revision; unsigned table; } contexts[] = {@CONTEXTS@};
+static const struct sample *active;
+static size_t next_token, length;
+static char trace[32], diagnostic[128];
+static Parser parser;
+
+static void event(char symbol)
+{
+    assert(length + 1 < sizeof(trace));
+    trace[length++] = symbol;
+    trace[length] = 0;
+}
+
+HRESULT Lexer_GetNextToken(Lexer *lexer, Token *out)
+{
+    assert(lexer == &parser.theLexer && next_token < active->count);
+    *out = (Token){0};
+    out->theType = active->tokens[next_token++];
+    strcpy(out->theSource, "token");
+    return S_OK;
+}
+
+HRESULT pp_error(pp_parser *p, char *format, ...)
+{
+    assert(p == &parser.theLexer.preprocessor && !diagnostic[0]);
+    va_list args;
+    va_start(args, format);
+    int n = vsnprintf(diagnostic, sizeof(diagnostic), format, args);
+    va_end(args);
+    assert(n >= 0 && (size_t)n < sizeof(diagnostic));
+    return E_FAIL;
+}
+
+void obor_content_error(const char *path, unsigned long row, unsigned long col, const char *reason)
+{
+    abort();
+}
+
+void Parser_Stmt(Parser *p)
+{
+    assert(ParserSet_First(&p->theParserSet, stmt, p->theNextToken.theType));
+    event(p->theNextToken.theType == TOKEN_BITWISE_NOT ? 'B' : 'S');
+    Parser_Match(p);
+}
+
+void Parser_Decl(Parser *p)
+{
+    assert(ParserSet_First(&p->theParserSet, decl, p->theNextToken.theType));
+    event('D');
+    Parser_Match(p);
+}
+
+void Parser_Case_label(Parser *p, List *labels)
+{
+    assert(labels && ParserSet_First(&p->theParserSet, case_label, p->theNextToken.theType));
+    event('C');
+    Parser_Match(p);
+}
+
+Label Parser_CreateLabel(Parser *p)
+{
+    char *label = malloc(sizeof("end"));
+    assert(p == &parser && label);
+    memcpy(label, "end", sizeof("end"));
+    return label;
+}
+
+void Parser_AddInstructionViaToken(Parser *p, OpCode op, Token *token, Label label)
+{
+    assert(p == &parser && !token);
+    if(op == NOOP)
+    {
+        assert(label && !strcmp(label, "end"));
+        event('N');
+    }
+    else
+    {
+        assert(!label && (op == PUSH || op == POP));
+        event(op == PUSH ? 'P' : 'R');
+    }
+}
+
+@FUNCTIONS@
+
+static void check_membership(unsigned table)
+{
+    const MY_TOKEN_TYPE *native[] = {parser.theParserSet.FirstSet[stmt_list],
+                                     parser.theParserSet.FollowSet[stmt_list]};
+    for(size_t family = 0; family < 2; ++family)
+    {
+        size_t index = 0;
+        while(tables[table][family][index] != END_OF_TOKENS)
+        {
+            assert(native[family][index] == tables[table][family][index]);
+            ++index;
+        }
+        assert(native[family][index] == END_OF_TOKENS);
+    }
+}
+
+static void check_case(const struct sample *row, unsigned table)
+{
+    active = row;
+    next_token = length = 0;
+    trace[0] = diagnostic[0] = 0;
+    parser.errorFound = FALSE;
+    assert(SUCCEEDED(Lexer_GetNextToken(&parser.theLexer, &parser.theNextToken)));
+    if(row->route == SWITCH_BODY)
+    {
+        List labels = {0};
+        Parser_Switch_body(&parser, &labels);
+        assert(parser.theNextToken.theType == TOKEN_RCURLY);
+    }
+    else
+    {
+        if(row->route == LABELED_BLOCK)
+        {
+            char label[12] = "";
+            Parser_Comp_stmt_Label(&parser, label);
+            assert(!strcmp(label, "end"));
+        }
+        else
+        {
+            Parser_Comp_stmt(&parser);
+        }
+        assert(parser.theNextToken.theType == TOKEN_EOF);
+    }
+    const char *expected = row->diagnostic[table];
+    assert(!strcmp(trace, row->trace[table]) && next_token == row->count);
+    assert(parser.errorFound == (expected != NULL));
+    assert(!strcmp(diagnostic, expected ? expected : ""));
+}
+
+int main(void)
+{
+    for(size_t i = 0; i < sizeof(contexts) / sizeof(*contexts); ++i)
+    {
+        obor_profile_build = contexts[i].revision;
+        ParserSet_Buildup(&parser.theParserSet);
+        check_membership(contexts[i].table);
+        for(size_t j = 0; j < sizeof(cases) / sizeof(*cases); ++j)
+            check_case(&cases[j], contexts[i].table);
+        ParserSet_Clear(&parser.theParserSet);
+        printf("%u\n", obor_profile_build);
+    }
+    return 0;
+}

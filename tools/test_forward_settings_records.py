@@ -16,6 +16,7 @@ import unittest
 
 from contract_fixtures import contract_profiles, contract_revisions, load_contract_fixture
 from native_sanitizers import sanitizer_environment
+from test_early_jump_walkoff import braced_statement
 from test_historical_player import function
 
 ROOT = Path(os.environ.get('OBOR_TEST_SOURCE', Path(__file__).resolve().parents[1]))
@@ -76,7 +77,8 @@ class ForwardSettingsRecordTests(unittest.TestCase):
                 self.assertRegex(row['commit'], r'^[0-9a-f]{40}$')
                 self.assertRegex(row['source_sha256'], r'^[0-9a-f]{64}$')
 
-        engine = ROOT / 'src/engines' / fixture['engine']
+        engine = Path(os.environ.get('OBOR_FORWARD_SETTINGS_ENGINE',
+                                     ROOT / 'src/engines' / fixture['engine']))
         source = (engine / 'openbor.c').read_text()
         header = (engine / 'source/savedata.h').read_text()
         definitions = [re.search(r'^#define\s+' + field + r'\s+\d+', header, re.M)[0]
@@ -84,11 +86,30 @@ class ForwardSettingsRecordTests(unittest.TestCase):
         definitions.append(re.search(r'typedef struct\s*\{[^{}]*\}\s*s_savedata;', header)[0])
         start = source.index('#define OBOR_SETTINGS_4432_SIZE')
         helper = source[start:source.index('void savesettings()', start)]
+        version_definition = re.search(r'(?m)^#define\s+COMPATIBLEVERSION\b[^\n]*',
+                                       (engine / 'openbor.h').read_text())[0]
         for name, call in [('savesettings', 'obor_write_settings'),
                            ('saveasdefault', 'obor_write_settings'),
                            ('loadsettings', 'obor_read_settings'),
                            ('loadfromdefault', 'obor_read_settings')]:
             self.assertIn(call + '(handle)', function(source, name))
+        reset_version = re.search(r'(?m)^    savedata\.compatibleversion = [^;]+;',
+                                  function(source, 'clearsettings'))[0]
+        validation = {}
+        for name in ('loadsettings', 'loadfromdefault'):
+            method = function(source, name)
+            _, closing, check = method.partition('    fclose(handle);')
+            self.assertTrue(closing)
+            check = check.strip()
+            condition = re.match(r'if\([^\n]+\)', check)[0]
+            validation[name] = braced_statement(check, condition)
+        script = (engine / 'openborscript.c').read_text()
+        macro = script[script.index('#define IICMPCONST('):script.index('#define ICMPCONST(')].strip()
+        version_constant = re.search(r'(?m)^        IICMPCONST\(COMPATIBLEVERSION\)$',
+                                     function(script, 'mapstrings_transconst'))[0]
+        keyboard = function(source, 'keyboard_setup')
+        button_count = re.search(r'(?m)^    const int btnnum = [^;]+;', keyboard)[0]
+        exit_button = re.search(r'(?m)^    if\([^\n]+disabledkey\[SDID_ESC\] = 1;', keyboard)[0]
 
         debug_fields = ('debug_collision_attack', 'debug_collision_body', 'debug_collision_range',
                         'debug_position', 'debug_features')
@@ -125,10 +146,17 @@ class ForwardSettingsRecordTests(unittest.TestCase):
             self.assertEqual(row['engine'], fixture['engine'])
             self.assertIn(row['record'], range(len(checks)))
             calls.append(f"    check_{row['record']}({row['revision']}u);")
+            calls.append(f"    check_controls({fixture['records'][row['record']]['keys']});")
+            if 'compatibility_version' in row:
+                calls.append(f"    check_version({row['compatibility_version']}u);")
         marker = f'settings_4432={len(rows)}'
         program = Path(__file__).with_name('settings_record_4432_contract.c.in').read_text()
         values = dict(DEFINITIONS='\n'.join(definitions), HELPER=helper, CHECKS='\n\n'.join(checks),
-                      CALLS='\n'.join(calls), MARKER=marker)
+                      CALLS='\n'.join(calls), MARKER=marker, VERSION_DEFINITION=version_definition,
+                      RESET_VERSION=reset_version, VALIDATE_TITLE=validation['loadsettings'],
+                      VALIDATE_DEFAULT=validation['loadfromdefault'],
+                      SCRIPT_MACRO=macro, SCRIPT_CONSTANT=version_constant,
+                      BUTTON_COUNT=button_count, EXIT_BUTTON=exit_button)
         for key, value in values.items():
             program = program.replace('@' + key + '@', value)
         self.run_native(program, marker=marker)

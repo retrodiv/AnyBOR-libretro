@@ -4212,6 +4212,16 @@
       "ci": "shared"
     },
     {
+      "id": "test_historical_script_strings",
+      "memory_mib": 512,
+      "seconds": 180,
+      "command": [
+        "python3",
+        "tools/test_historical_script_strings.py"
+      ],
+      "ci": "shared"
+    },
+    {
       "id": "test_historical_system_variables",
       "memory_mib": 512,
       "seconds": 180,

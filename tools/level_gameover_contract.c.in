@@ -1,0 +1,167 @@
+/* SPDX-License-Identifier: BSD-3-Clause
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me>
+ */
+s_player player[MAX_PLAYERS];
+int noshare, credits, endgame, level_completed;
+unsigned current_set;
+static s_set_entry test_set;
+s_set_entry *levelsets = &test_set;
+static entity actors[MAX_PLAYERS];
+static int frames, kill_calls, finishing;
+static void *registered_gameover;
+
+void kill(entity *victim)
+{
+    assert(!finishing || (level_completed && (endgame & 1)));
+    ++kill_calls;
+    if(!victim || !victim->exists) return;
+    victim->exists = 0;
+    for(int i = 0; i < MAX_PLAYERS; ++i)
+    {
+        if(player[i].ent == victim)
+        {
+            player[i].ent = NULL;
+            return;
+        }
+    }
+    abort();
+}
+
+void update(int ingame, int usevwait)
+{
+    assert(ingame == 1 && usevwait == 0 && frames < 2);
+    if(++frames == 2) endgame |= 2;
+}
+
+entity *findent(int types)
+{
+    return types == TYPE_ENEMY ? &actors[0] : NULL;
+}
+
+void List_InsertAfter(List *list, void *value, const char *name)
+{
+    (void)list;
+    assert(strcmp(name, "gameover") == 0);
+    registered_gameover = value;
+}
+
+@GAMEOVER@
+@LOOKUP@
+@APPLY@
+
+static void register_gameover(void)
+{
+    List theFunctionList;
+    @REGISTER@
+}
+
+static const char *reverse_gameover(void *functionRef)
+{
+    @REVERSE@
+    return NULL;
+}
+
+static void gameover_loop(void)
+{
+    @LOOP@
+}
+
+static int typed_integer(int selector)
+{
+    property = (ScriptVariant){.vt = VT_INTEGER, .lVal = selector};
+    output = &result;
+    assert(openbor_get_level_property(args, &output, 2) == S_OK);
+    assert(output == &result && result.vt == VT_INTEGER);
+    return result.lVal;
+}
+
+static void setup_gameover(int private_credits, int finish)
+{
+    stage.force_gameover = 1;
+    stage.forcefinishlevel = finish;
+    finishing = finish;
+    noshare = private_credits;
+    credits = 8;
+    kill_calls = frames = endgame = level_completed = 0;
+    test_set.maxplayers = 2;
+    for(int i = 0; i < MAX_PLAYERS; ++i)
+    {
+        actors[i].exists = i != 1;
+        player[i].ent = i == 3 ? NULL : &actors[i];
+        player[i].lives = i + 2;
+        player[i].credits = i + 5;
+    }
+}
+
+static void check_gameover_profiles(void)
+{
+    static const int rows[][5] = {
+        @ROWS@
+    };
+    s_level state = {0};
+    level = &state;
+    handle = (ScriptVariant){.vt = VT_PTR, .ptrVal = level};
+    assert(MAX_PLAYERS == 4);
+
+    for(size_t i = 0; i < sizeof(rows) / sizeof(rows[0]); ++i)
+    {
+        obor_profile_build = rows[i][0];
+        const int gameover = rows[i][1];
+        const int enemy = rows[i][2];
+        const int weapon = rows[i][3];
+        const int all_players = rows[i][4];
+        const int enabled = gameover >= 0;
+        registered_gameover = NULL;
+        stage.force_gameover = 0;
+        register_gameover();
+        const char *reverse = reverse_gameover((void *)openbor_gameover);
+        assert(enabled ? (registered_gameover == (void *)openbor_gameover &&
+                         reverse && strcmp(reverse, "gameover") == 0) : (!registered_gameover && !reverse));
+        LONG ordinal = -1;
+        assert(!obor_lookup_level_property("LEVEL_PROP_GAMEOVER", &ordinal));
+        if(enemy >= 0)
+        {
+            assert(obor_lookup_level_property("LEVEL_PROP_DAMAGE_FROM_ENEMY", &ordinal) && ordinal == enemy);
+            assert(obor_lookup_level_property("LEVEL_PROP_WEAPON", &ordinal) && ordinal == weapon);
+            assert(obor_level_property_native(weapon + 1) == -1);
+            stage.nohurt = 7;
+            stage.setweap = 3;
+            assert(typed_integer(enemy) == 7 && typed_integer(weapon) == 3);
+        }
+        if(enabled)
+        {
+            SET_INTEGERS(gameover, force_gameover);
+            assert(typed_integer(gameover) == 22 && stage.nohurt == 7);
+        }
+        output = &result;
+        assert(openbor_gameover(NULL, &output, 0) == (enabled ? S_OK : E_FAIL));
+        assert(!output && stage.force_gameover == (enabled ? 1 : 0));
+
+        for(int private_credits = 0; private_credits < 2; ++private_credits)
+        {
+            for(int finish = 0; finish < 2; ++finish)
+            {
+                setup_gameover(private_credits, finish);
+                gameover_loop();
+                const int affected = enabled ? (all_players ? MAX_PLAYERS : 2) : 0;
+                for(int slot = 0; slot < MAX_PLAYERS; ++slot)
+                {
+                    unsigned lives = slot < affected ? 0 : slot + 2;
+                    unsigned remaining = private_credits && slot < affected ? 0 : slot + 5;
+                    assert(player[slot].lives == lives);
+                    assert(player[slot].credits == remaining);
+                }
+                assert(credits == (!private_credits && enabled ? 0 : 8));
+                assert(kill_calls == (enabled ? (all_players ? 3 : 2) : 0));
+                assert(player[0].ent == (enabled ? NULL : &actors[0]));
+                assert(player[1].ent == (all_players ? NULL : &actors[1]));
+                assert(player[2].ent == (all_players ? NULL : &actors[2]));
+                assert(endgame == (finish || all_players ? 1 : 2));
+                assert(frames == (finish || all_players ? 1 : 2));
+                assert(stage.force_gameover == !enabled && stage.forcefinishlevel == 0);
+            }
+        }
+        printf("{\"revision\":%u,\"gameover\":\"PASS\"}\n", obor_profile_build);
+    }
+    level = NULL;
+}

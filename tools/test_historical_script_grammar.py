@@ -4,6 +4,7 @@ SPDX-License-Identifier: BSD-3-Clause
 Copyright (c) 2026 retrodiv <retrodiv@proton.me>
 """
 import json
+import os
 from pathlib import Path
 import re
 import unittest
@@ -13,6 +14,11 @@ from test_historical_common_think import ROOT, native_output
 from test_historical_player import function
 
 FIXTURE = Path(__file__).with_name('fixtures') / 'profile-script-grammar-contracts.json'
+STATEMENTS = FIXTURE.with_name('profile-4432-statement-list-contracts.json')
+
+
+def source_engine(data):
+    return Path(os.environ.get('OBOR_GRAMMAR_ENGINE', ROOT / 'src/engines' / data['engine']))
 
 
 def fixture_data():
@@ -39,7 +45,7 @@ def quoted(value):
 
 
 def program(data):
-    engine = ROOT / 'src/engines' / data['engine']
+    engine = source_engine(data)
     source = (engine / 'source/scriptlib/Parser.c').read_text()
     lexer = (engine / 'source/scriptlib/Lexer.c').read_text()
     names = ('obor_parser_legacy_bitwise', 'obor_parser_prefix_token',
@@ -97,9 +103,41 @@ def program(data):
 class ScriptGrammarContracts(unittest.TestCase):
     def test_complete_memberships_native_emission_and_error_recovery(self):
         data = fixture_data()
-        lines = [json.loads(line) for line in native_output(program(data), data).splitlines()]
+        output = native_output(program(data), data, engine_source=source_engine(data))
+        lines = [json.loads(line) for line in output.splitlines()]
         self.assertEqual(lines, [dict(revision=r['revision'], status='PASS',
             tables=2, productions=67, cases=len(data['cases'])) for r in data['sources']])
+
+    def test_native_compound_and_switch_statement_lists(self):
+        data = load_contract_fixture(STATEMENTS)
+        revisions = [row['revision'] for row in data['sources']]
+        self.assertEqual(revisions, sorted(set(revisions)))
+        self.assertEqual(set(revisions), contract_revisions(data, data['expected_revisions']))
+        engine = source_engine(data)
+        source = (engine / 'source/scriptlib/Parser.c').read_text()
+        names = ('Parser_Check', 'Parser_Match', 'Parser_Decl_list', 'Parser_Decl_list2',
+                 'Parser_Stmt_list', 'Parser_Stmt_list2', 'obor_parser_compound_body',
+                 'Parser_Comp_stmt_Label', 'Parser_Comp_stmt', 'Parser_Comp_stmt2',
+                 'Parser_Comp_stmt3', 'Parser_Switch_body', '_production_error_message',
+                 'Parser_Error2')
+        cases = []
+        for row in data['cases']:
+            self.assertLessEqual(len(row['tokens']), 12)
+            cases.append('{%s,%d,{%s},{%s},{%s}}' % (
+                row['route'], len(row['tokens']), ','.join(row['tokens']),
+                ','.join(quoted(item) for item in row['trace']),
+                ','.join(quoted(item) for item in row['diagnostic'])))
+        families = ('first', 'follow')
+        tables = ',\n'.join('{' + ','.join('{' + ','.join(table[key] + ['END_OF_TOKENS']) + '}'
+                            for key in families) + '}' for table in data['tables'])
+        parts = dict(FUNCTIONS='\n'.join(function(source, n) for n in names),
+                     CASES=',\n'.join(cases), TABLES=tables,
+                     CONTEXTS=',\n'.join('{%du,%d}' % (row['revision'], row['table'])
+                                         for row in data['sources']))
+        template = Path(__file__).with_name('statement_lists_contract.c.in').read_text()
+        probe = re.sub(r'@([A-Z_]+)@', lambda item: parts[item[1]], template)
+        output = native_output(probe, data, engine_source=engine)
+        self.assertEqual([int(line) for line in output.splitlines()], revisions)
 
 
 if __name__ == '__main__':

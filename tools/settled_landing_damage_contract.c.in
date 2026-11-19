@@ -1,0 +1,98 @@
+/* SPDX-License-Identifier: BSD-3-Clause
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me>
+ */
+#include <stdio.h>
+#include <stdint.h>
+#include <string.h>
+#include "openbor.h"
+#undef printf
+
+uint32_t obor_profile_build;
+int autoland;
+entity *self;
+static entity actor, opponent;
+static int recipient, force, type, landing_hit, kills;
+static const s_collision_attack emptyattack;
+
+float diff(float a, float b) { return a > b ? a - b : b - a; }
+void kill(entity *victim) { victim->dead = 1; ++kills; }
+
+int common_takedamage(entity *other, s_collision_attack *attack)
+{
+    recipient = other == &opponent ? 2 : other == &actor ? 1 : 0;
+    force = attack->attack_force;
+    type = attack->attack_type == ATK_LAND;
+    landing_hit = attack->obor_landing_hit;
+    return 1;
+}
+
+static int alternate_damage(entity *other, s_collision_attack *attack)
+{
+    return common_takedamage(other, attack);
+}
+
+static void landing(void)
+{
+    s_collision_attack attack;
+    @GRAVITY@
+}
+
+static int continue_damage(s_collision_attack *attack)
+{
+    @CONTINUATION@
+    return 0;
+}
+
+static int keep_existing_fall(s_collision_attack *attack)
+{
+    @FALL@
+    return 0;
+}
+
+int main(void)
+{
+    static const unsigned builds[] = {@REVISIONS@};
+    static const struct landing_case {
+        int x, y, z, contact, handler, mask, damage, health, other_attack;
+    } cases[] = {@CASES@};
+    static s_anim animation;
+    static s_defense defense[ATK_LAND + 1];
+    defense[ATK_LAND].factor = 0.5f;
+    animation.bounce = 2;
+    self = &actor;
+    for(size_t i = 0; i < sizeof(builds) / sizeof(*builds); ++i)
+    {
+        obor_profile_build = builds[i];
+        for(size_t j = 0; j < sizeof(cases) / sizeof(*cases); ++j)
+        {
+            const struct landing_case *input = &cases[j];
+            memset(&actor, 0, sizeof(actor));
+            actor.animation = &animation;
+            actor.defense = defense;
+            actor.velocity.x = input->x;
+            actor.velocity.y = input->y;
+            actor.velocity.z = input->z;
+            actor.opponent = input->contact ? &opponent : NULL;
+            opponent.exists = input->contact == 2;
+            actor.takedamage = input->handler == 1 ? common_takedamage :
+                input->handler == 2 ? alternate_damage : NULL;
+            actor.modeldata.bounce = input->mask;
+            actor.damage_on_landing = input->damage;
+            actor.health = input->health;
+            recipient = force = type = landing_hit = kills = 0;
+            landing();
+            printf("[%u,%zu,%d,%d,%d,%d,%d,%d,%d,", builds[i], j,
+                recipient, force, type, landing_hit, actor.damage_on_landing, actor.health, kills);
+
+            actor.damage_on_landing = input->damage;
+            actor.health = input->health;
+            s_collision_attack attack = emptyattack;
+            attack.attack_type = input->other_attack ? ATK_NORMAL : ATK_LAND;
+            attack.obor_landing_hit = 1;
+            int stopped = continue_damage(&attack);
+            printf("%d,%d,%d,%d]\n", stopped, actor.modeldata.falldie, actor.damage_on_landing,
+                keep_existing_fall(&attack));
+        }
+    }
+    return 0;
+}

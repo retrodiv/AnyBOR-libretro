@@ -23,6 +23,7 @@ HRESULT Interpreter_EvalInstruction(Interpreter *p) { abort(); }
 float diff(float a, float b) { return a > b ? a-b : b-a; }
 int inair(entity *actor) { return diff(actor->position.y, actor->base) >= 0.1; }
 int checkwall(float x, float z) { ++wall_calls; return wall_result; }
+entity *check_platform_between(float x, float z, float bottom, float top, entity *exclude) { abort(); }
 void common_fall(void) {}
 void common_animation_normal(void) {}
 static void idle_action(void) {}

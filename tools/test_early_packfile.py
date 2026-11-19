@@ -15,7 +15,7 @@ import sys
 import tempfile
 import unittest
 
-from contract_fixtures import contract_profiles, load_contract_fixture
+from contract_fixtures import contract_profiles, contract_revisions, load_contract_fixture
 from native_sanitizers import sanitizer_environment
 from native_allocation_policy import bind_named_allocation_support
 from test_historical_player import function
@@ -57,6 +57,154 @@ class EarlyPackfileTests(unittest.TestCase):
     def test_large_header_acceptance(self):
         self._exercise(load_contract_fixture(FIXTURE.with_name(
             'profile-early-pack-header.json')), header=True)
+
+    def test_direct_member_name_capacity(self):
+        from make_fixture import write_pak
+
+        fixture = load_contract_fixture(FIXTURE.with_name('profile-4432-pack-member-names.json'))
+        revisions = {row['revision'] for row in fixture['sources']}
+        self.assertEqual(len(fixture['sources']), len(revisions))
+        self.assertEqual(revisions, contract_revisions(fixture, fixture['expected_revisions']))
+        self.assertTrue(set(fixture['boundary_controls']) <= revisions)
+        pin = json.loads((ROOT / 'src/pin.json').read_text())
+        for profile in contract_profiles(fixture, pin['profiles']):
+            revision = int(profile.get('revision', profile['build']))
+            if profile['engine'] == fixture['engine'] and 4510 <= revision <= fixture['range'][1]:
+                self.assertIn(revision, revisions)
+        engine = Path(os.environ.get('OBOR_PACK_MEMBER_ENGINE',
+                                     ROOT / 'src/engines' / fixture['engine']))
+        gamelib = engine / 'source/gamelib'
+        unit = (gamelib / 'packfile.c').read_text(encoding='latin-1')
+        definitions = '\n'.join(re.findall(
+            r'(?m)^#define[ \t]+(?:MAXPACKHANDLES|PACKMAGIC|PACKVERSION|PACKFILE_PATH_MAX)\b[^\n]*'
+            r'|^static [^\n]*\b(?:packhandle|packfilepointer|packfilesize)\[MAXPACKHANDLES\][^\n]*;', unit))
+        names = ('packfile_path_capacity', 'slashback', 'slashfwd', 'getFreeHandle', 'openPackfile',
+                 'readPackfile', 'closePackfile')
+        bodies = '\n'.join(function(unit, name) for name in names)
+        program = r'''
+#include <assert.h>
+#include <fcntl.h>
+#include <stddef.h>
+#include <stdint.h>
+#include <stdlib.h>
+#include <string.h>
+#include <strings.h>
+#include "packfile.h"
+#include "borendian.h"
+#define stricmp strcasecmp
+uint32_t obor_profile_build;
+static int obor_loose_may_exist(const char *path) { (void)path; return 0; }
+@DEFINITIONS@
+@FUNCTIONS@
+int main(int argc, char **argv)
+{
+    assert(argc == 8);
+    obor_profile_build = (uint32_t)strtoul(argv[1], NULL, 10);
+    size_t capacity = (size_t)strtoul(argv[2], NULL, 10);
+    for(int i = 4; i < argc; ++i)
+    {
+        int handle = openPackfile(argv[i], argv[3]);
+        if(strlen(argv[i]) >= capacity)
+        {
+            assert(handle == -1);
+        }
+        else
+        {
+            char content[2];
+            assert(handle >= 0);
+            assert(readPackfile(handle, content, sizeof(content)) == 1);
+            assert(content[0] == 'a' + i - 4);
+            assert(closePackfile(handle) == 0);
+        }
+    }
+    return 0;
+}
+'''.replace('@DEFINITIONS@', definitions).replace('@FUNCTIONS@', bodies)
+        filenames = ['data/' + c * (length - len('data/.bin')) + '.bin'
+                     for c, length in [('a', 79), ('b', 80), ('c', 255)]]
+        filenames.append('data/z.bin')
+        with tempfile.TemporaryDirectory(prefix='pack-member-names-') as name:
+            work = Path(name)
+            pak, source, binary = (work / filename for filename in ('names.pak', 'probe.c', 'probe'))
+            write_pak(pak, {key: bytes([ord('a') + index]) for index, key in enumerate(filenames)})
+            source.write_text(program)
+            compiler = shlex.split(os.environ.get('HOST_CC', 'cc'))
+            links = [] if sys.platform == 'darwin' else ['-no-pie']
+            build = subprocess.run(compiler + ['-std=gnu99', '-O1', '-UNDEBUG',
+                '-Wall', '-Wextra', '-Werror', '-Wno-sign-compare',
+                '-Wno-error=deprecated-declarations', '-fsanitize=address,undefined',
+                '-fno-sanitize-recover=all', '-I', str(gamelib), '-I', str(ROOT / 'src/port/libretro'),
+                str(source), *links, '-o', str(binary)],
+                capture_output=True, text=True, timeout=45)
+            self.assertEqual(build.returncode, 0, build.stdout + build.stderr)
+            for row in fixture['sources']:
+                with self.subTest(revision=row['revision']):
+                    self.assertEqual(row['engine'], fixture['engine'])
+                    run = subprocess.run([str(binary), str(row['revision']), str(row['capacity']),
+                        str(pak), *(filename.upper() for filename in filenames)],
+                        cwd=work, env=sanitizer_environment(), capture_output=True, text=True, timeout=10)
+                    self.assertEqual(run.returncode, 0, run.stdout + run.stderr)
+
+    def test_4432_loose_and_cached_name_capacity(self):
+        from make_fixture import write_pak
+
+        fixture = load_contract_fixture(FIXTURE.with_name('profile-4432-packfile-paths.json'))
+        rows = fixture['sources']
+        revisions = {row['revision'] for row in rows}
+        self.assertEqual(len(rows), len(revisions))
+        self.assertEqual(revisions, contract_revisions(fixture, fixture['expected_revisions']))
+        self.assertTrue(set(fixture['boundary_controls']) <= revisions)
+        pin = json.loads((ROOT / 'src/pin.json').read_text())
+        for profile in contract_profiles(fixture, pin['profiles']):
+            revision = int(profile.get('revision', profile['build']))
+            if profile['engine'] == fixture['engine'] and 4510 <= revision <= fixture['range'][1]:
+                self.assertIn(revision, revisions)
+
+        engine = Path(os.environ.get('OBOR_PACK_MEMBER_ENGINE',
+                                     ROOT / 'src/engines' / fixture['engine']))
+        gamelib = engine / 'source/gamelib'
+        scriptlib = engine / 'source/scriptlib'
+        unit = (gamelib / 'packfile.c').read_text(encoding='latin-1')
+        definitions = '\n'.join(re.findall(
+            r'(?m)^#define[ \t]+(?:MAXPACKHANDLES|CACHEBLOCKSIZE|PACKFILE_PATH_MAX)\b[^\n]*'
+            r'|^static const size_t USED_FLAG[^\n]*;', unit))
+        names = ('tolowerOneChar', 'fnlc', 'myfilenamecmp', 'packfile_path_capacity', 'slashback',
+                 'slashfwd', 'casesearch', 'pak_header_entry', 'makefilenamecache',
+                 'freefilenamecache', 'openreadaheadpackfile', 'openPackfileCached')
+        bodies = '\n'.join(function(unit, name) for name in names)
+        endian = function((engine / 'source/utils.c').read_text(), 'readlsb32')
+        program = Path(__file__).with_name('packfile_path_contract.c.in').read_text()
+        program = program.replace('@DEFINITIONS@', definitions).replace('@FUNCTIONS@', endian + bodies)
+        filenames = ['data/' + letter * (length - len('data/.bin')) + '.bin'
+                     for letter, length in zip('abcde', (10, 255, 256, 511, 512))]
+        short_path = Path('Assets/Item.txt')
+        long_path = Path('Assets', 'A' * 130, 'B' * 130, 'Item.txt')
+        with tempfile.TemporaryDirectory(prefix='packfile-paths-') as name:
+            work = Path(name)
+            pak, source, binary, obj = (work / file for file in ('valid.pak', 'probe.c', 'probe', 'list.o'))
+            write_pak(pak, {key: bytes([index]) for index, key in enumerate(filenames)})
+            for path in (short_path, long_path):
+                (work / path).parent.mkdir(parents=True, exist_ok=True)
+                (work / path).write_bytes(b'asset')
+            source.write_text(bind_named_allocation_support(program, engine))
+            compiler = shlex.split(os.environ.get('HOST_CC', 'cc'))
+            flags = ['-std=gnu99', '-O1', '-UNDEBUG', '-DUNIT_TEST=1',
+                     '-fsanitize=address,undefined', '-fno-sanitize-recover=all',
+                     '-I', str(scriptlib), '-I', str(gamelib), '-I', str(ROOT / 'src/port/libretro')]
+            links = [] if sys.platform == 'darwin' else ['-no-pie']
+            build = subprocess.run(compiler + flags + ['-c', str(scriptlib / 'List.c'), '-o', str(obj)],
+                                   capture_output=True, text=True, timeout=45)
+            self.assertEqual(build.returncode, 0, build.stdout + build.stderr)
+            build = subprocess.run(compiler + flags + ['-Wall', '-Wextra', '-Werror', '-Wno-sign-compare',
+                                   str(source), str(obj), *links, '-o', str(binary)],
+                                   capture_output=True, text=True, timeout=45)
+            self.assertEqual(build.returncode, 0, build.stdout + build.stderr)
+            for row in rows:
+                with self.subTest(revision=row['revision']):
+                    run = subprocess.run([str(binary), str(row['revision']), str(row['capacity']),
+                        str(pak), short_path.as_posix(), long_path.as_posix(), *filenames],
+                        cwd=work, env=sanitizer_environment(), capture_output=True, text=True, timeout=10)
+                    self.assertEqual(run.returncode, 0, run.stdout + run.stderr)
 
     def _exercise(self, fixture, lookup=False, header=False):
         rows = fixture['sources']

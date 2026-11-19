@@ -1,0 +1,98 @@
+/* SPDX-License-Identifier: BSD-3-Clause
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me>
+ */
+#include <stdint.h>
+#include <stdio.h>
+#include <string.h>
+#include "openbor.h"
+#undef assert
+#undef printf
+#include <assert.h>
+
+uint32_t obor_profile_build;
+entity *self;
+int ent_max = 1;
+static entity enemy, previous;
+static entity *actors[] = {&enemy};
+entity **ent_list = actors;
+static unsigned unlinks, weapon_drops, tosses, falls;
+
+void common_fall(void) {}
+
+void ent_unlink(entity *ent)
+{
+    assert(ent == &enemy && self == ent);
+    assert(ent->takeaction == common_fall && !ent->attacking && !ent->projectile);
+    assert(ent->damage_on_landing == 0);
+    unlinks++;
+}
+
+void dropweapon(int flag)
+{
+    assert(flag == 1 && self == &enemy && unlinks == 1 && tosses == 0);
+    weapon_drops++;
+}
+
+float randf(float maximum)
+{
+    assert(maximum == 1.0f);
+    return 0.25f;
+}
+
+void toss(entity *ent, float height)
+{
+    assert(ent == &enemy && self == ent && unlinks == 1);
+    assert(ent->velocity.x == -1.2f && height == 2.75f);
+    tosses++;
+}
+
+int set_fall(entity *ent, int type, int reset, entity *other, int force, int drop,
+             int noblock, int guardcost, int jugglecost, int pauseadd, int tag)
+{
+    assert(ent == &enemy && self == ent && other == ent && tosses == 1);
+    assert(type == ATK_NORMAL && reset == 1);
+    assert(!force && !drop && !noblock && !guardcost && !jugglecost && !pauseadd && !tag);
+    assert(ent->knockdowncount == 7 && ent->knockdowntime == 0);
+    falls++;
+    return 1;
+}
+
+@FUNCTION@
+
+int main(void)
+{
+    static const unsigned profiles[] = {@PROFILES@};
+    static const struct { int weapon_loss, blocked; } cases[] = {@CASES@};
+    static s_anim animation;
+    static s_anim *animations[ANI_FALL + 1];
+    animations[ANI_FALL] = &animation;
+    animation.numframes = 1;
+    for(size_t p = 0; p < sizeof(profiles) / sizeof(*profiles); p++)
+    {
+        obor_profile_build = profiles[p];
+        printf("{\"revision\":%u,\"cases\":[", profiles[p]);
+        for(size_t c = 0; c < sizeof(cases) / sizeof(*cases); c++)
+        {
+            memset(&enemy, 0, sizeof(enemy));
+            enemy.exists = 1;
+            enemy.health = 5;
+            enemy.attacking = enemy.projectile = 1;
+            enemy.damage_on_landing = 9;
+            enemy.direction = DIRECTION_RIGHT;
+            enemy.knockdowntime = 32;
+            enemy.modeldata.type = TYPE_ENEMY;
+            enemy.modeldata.animation = animations;
+            enemy.modeldata.animation_capacity = ANI_FALL + 1;
+            enemy.modeldata.knockdowncount = 7;
+            enemy.modeldata.weaploss[0] = cases[c].weapon_loss;
+            enemy.modeldata.nodrop = cases[c].blocked;
+            unlinks = weapon_drops = tosses = falls = 0;
+            self = &previous;
+            drop_all_enemies();
+            assert(self == &previous);
+            printf("%s[%u,%u,%u,%u]", c ? "," : "", unlinks, weapon_drops, tosses, falls);
+        }
+        puts("]}");
+    }
+    return 0;
+}

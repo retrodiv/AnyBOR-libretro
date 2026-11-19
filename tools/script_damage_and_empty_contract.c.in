@@ -1,0 +1,172 @@
+/* SPDX-License-Identifier: BSD-3-Clause
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me>
+ */
+#include <limits.h>
+#include <stdint.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+
+#include "openbor.h"
+#include "ScriptVariant.h"
+#undef assert
+#include <assert.h>
+#undef printf
+
+uint32_t obor_profile_build;
+int max_attack_types = 2;
+entity *self;
+static entity defender, attacker, caller;
+static entity *pool[] = {&defender, &attacker, &caller};
+entity **ent_list = pool;
+int ent_list_size = sizeof(pool) / sizeof(pool[0]);
+static s_defense defense[2];
+static float offense[2];
+static const char *last_message;
+static void *registered;
+
+@DEFAULT@
+
+size_t obor_allocation_size(const void *owner)
+{
+    if(owner == pool) return sizeof(pool);
+    if(owner == defense) return sizeof(defense);
+    if(owner == offense) return sizeof(offense);
+    return 0;
+}
+
+void StrCache_Collect(int index) { (void)index; abort(); }
+int StrCache_Pop(void) { abort(); }
+
+@VARIANTS@
+@CORE@
+
+#define printf(message) (last_message = (message))
+@QUERIES@
+#undef printf
+
+void List_InsertAfter(List *list, void *value, const char *name)
+{
+    (void)list;
+    assert(strcmp(name, "getcomputeddamage") == 0);
+    registered = value;
+}
+
+static void register_function(void)
+{
+    List theFunctionList;
+    @REGISTRATION@
+}
+
+static const char *reverse_name(void *functionRef)
+{
+    @REVERSE@
+    return NULL;
+}
+
+static void empty_case(ScriptVariant *argument, int count, int accepted, int expected)
+{
+    ScriptVariant result = {.vt = VT_EMPTY};
+    ScriptVariant *out = &result;
+    ScriptVariant *arguments[] = {argument, argument};
+    HRESULT status = system_isempty(arguments, &out, count);
+    assert(status == (accepted ? S_OK : E_FAIL));
+    if(accepted)
+    {
+        assert(out == &result && result.vt == VT_INTEGER && result.lVal == expected);
+    }
+    else
+    {
+        assert(!out && result.vt == VT_EMPTY);
+    }
+}
+
+static void damage_case(ScriptVariant **arguments, int count, int accepted, int expected,
+                        const char *diagnostic)
+{
+    ScriptVariant result = {.vt = VT_EMPTY};
+    ScriptVariant *out = &result;
+    last_message = NULL;
+    HRESULT status = openbor_getcomputeddamage(arguments, &out, count);
+    assert(status == (accepted ? S_OK : E_FAIL));
+    if(accepted)
+    {
+        assert(out == &result && result.vt == VT_INTEGER && result.lVal == expected);
+    }
+    else
+    {
+        assert(!out);
+    }
+    assert(diagnostic ? last_message && strcmp(last_message, diagnostic) == 0 : !last_message);
+    assert(self == &caller && defender.health == 80 && attacker.health == 90);
+}
+
+int main(void)
+{
+    static const int rows[][3] = {
+        @ROWS@
+    };
+    ScriptVariant left = {.vt = VT_PTR, .ptrVal = &defender};
+    ScriptVariant right = {.vt = VT_PTR, .ptrVal = &attacker};
+    ScriptVariant force = {.vt = VT_INTEGER, .lVal = 19};
+    ScriptVariant drop = {.vt = VT_DECIMAL, .dblVal = 1.25};
+    ScriptVariant type = {.vt = VT_INTEGER, .lVal = ATK_NORMAL2};
+    ScriptVariant empty = {.vt = VT_EMPTY};
+    ScriptVariant *arguments[] = {&left, &right, &force, &drop, &type};
+
+    self = &caller;
+    defender.health = 80;
+    defender.defense = defense;
+    attacker.health = 90;
+    attacker.offense_factors = offense;
+    offense[ATK_NORMAL] = 1.25f;
+    defense[ATK_NORMAL].factor = 0.5f;
+    offense[ATK_NORMAL2] = 0.75f;
+    defense[ATK_NORMAL2].factor = 2.0f;
+
+    for(size_t i = 0; i < sizeof(rows) / sizeof(rows[0]); ++i)
+    {
+        obor_profile_build = rows[i][0];
+        const int computed = rows[i][1];
+        const int empty_result = rows[i][2];
+        registered = NULL;
+        register_function();
+        const char *name = reverse_name((void *)openbor_getcomputeddamage);
+        assert(computed ? (name && strcmp(name, "getcomputeddamage") == 0 &&
+                           registered == (void *)openbor_getcomputeddamage) : (!name && !registered));
+        empty_case(&empty, 1, empty_result, 1);
+        empty_case(&force, 1, empty_result, 0);
+        empty_case(&empty, 0, 0, 0);
+        empty_case(&empty, 2, 0, 0);
+        damage_case(arguments, 3, computed, 11, NULL);
+
+        if(computed)
+        {
+            force.lVal = -19;
+            damage_case(arguments, 4, 1, -11, NULL);
+            force.lVal = 19;
+            damage_case(arguments, 5, 1, 28, NULL);
+            defender.modeldata.guardpoints.max = 5;
+            damage_case(arguments, 5, 1, 0, NULL);
+            defender.modeldata.guardpoints.max = 0;
+
+            type.lVal = -1;
+            arguments[1] = &empty;
+            damage_case(arguments, 5, 1, 19, NULL);
+            arguments[1] = &right;
+            type.lVal = ATK_NORMAL2;
+            damage_case(arguments, 2, 0, 0, "Function requires at least 3 parameters.\n");
+            arguments[2] = &empty;
+            damage_case(arguments, 3, 0, 0, "Wrong force value.\n");
+            arguments[2] = &force;
+            arguments[3] = &empty;
+            damage_case(arguments, 4, 0, 0, "Wrong drop value.\n");
+            arguments[3] = &drop;
+            arguments[4] = &empty;
+            damage_case(arguments, 5, 0, 0, "Wrong type value.\n");
+            arguments[4] = &type;
+        }
+        printf("%u\n", obor_profile_build);
+    }
+    return 0;
+}

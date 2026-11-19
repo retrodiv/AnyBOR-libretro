@@ -17,9 +17,9 @@
       "upstream_sha256": null
     },
     "openbor.c": {
-      "distributed_sha256": "c5fc43ff66dd8874ab22f1d3f02524f2c2e53a485837fab2a5f3f214e28a4dcc",
+      "distributed_sha256": "3ef91b35e9e1571a25874d0dbf45f8891f044963be81c81a3ec4c7828144fbb0",
       "modified": true,
-      "summary": "Apply the port's engine corrections and select the PC video configuration on macOS. Derive output names from the content basename with explicit destination capacities, and reject overflowing output path joins. Preserve the historical 32-bit screen and palette behavior starting at 4453, preserve each profile's native settings record and control layout, and disable Exit reassignment in those 32-bit control menus. Expose the native game timer from 4456. Bound the DOT loop and control-menu arrays to allocated storage. Preserve native historical debug-menu input, terrain edge inclusion, height ties, selected-hole updates, movement/spawn hole-query periods and basemap participation by profile. Leave multiplayer slots without a selected model available to join even if game scripts preassign lives to them. Let a missing basename-only PAK self-check read the active frontend content after it has been validated and prepared. Allocate each model's animation pointer table through the highest animation index that model uses, and bound cache, copy and cleanup paths to that capacity. Ignore optional defense and offense entries outside the configured attack-type range with a log warning before accessing their tables. Yield after each newly completed model during explicit model-list or level preparation, and defer states until that preparation has cleaned up its intermediate parsers and handles. Resize repeated weapon lists and detach borrowed lists before replacing their entries. Return a defined null result for absent colourmap models or tables while retaining valid palette fallback. Keep selected palette-conversion reads bounded and reject missing maps or flags, while preserving unselected slots and native allocation failure callbacks. Check destination animation capacity when retaining an animation across model changes, preserving the native fallback and timing. Access script-container pointer slots with byte copies, preserving record layout, pointer values and native copy/cleanup order. Pointer-slot allocation and release accept byte storage without imposing pointer alignment on a packed field. Release each sprite owner once and complete cleanup independently of alias counts. Preserve native sprite-map capacity policies, check allocation extents and retain existing storage and capacity when growth is unavailable. Validate sprite-node allocations and release partial resources without changing existing owners. Check cached sprite availability before reading metadata and ignore cache requests for absent nodes. Capture explicit shutdown failure text before cleanup and bound legacy diagnostic formatting. Preserve native basemap position, slope continuation, height progression and grid indexing by profile within checked map storage. Select native model palette file routes, mode admission and diagnostics by profile. Preserve the decimal blockade read from 4466. Return the native read-only set count from 4477. Preserve native background loading, neon rotation and scrolled layer palette selection by profile. Release each set's original level order when scripts share collections. Preserve native player spawn defaults, level damage flags and boss slowdown by profile. Keep loaded level allocations owned by the game while typed scripts reassign collection views and counts. Preserve historical collision pair traversal, counter fallback, target eligibility order and juggle cost comparisons by profile. Construct native frame collision records with each profile's instance counts, indices and recursive damage defaults. Retain historical boomerang dispatch, movement, catches and wall response by profile. Preserve source-defined temporary model type defaults, subtype spellings, platform-local variant tags and retirement callback placement around the live-entity guard by profile. Initialize complete callback variant storage before publishing historical decimal-tagged pointers. Preserve system-variable field availability, pause/menu context, platform result types, scalar last-hit snapshots and live attack mutations by profile. Preserve native shadow-opacity command admission, level-event selection and drawing channels by profile. Preserve stage-completion display availability by profile. Preserve the profile's model animation script load order, main recognition, comment handling and generated script composition. Preserve source-defined menu layouts, selection order, legacy options and menu context flags by profile.",
+      "summary": "Apply the port's engine corrections and select the PC video configuration on macOS. Derive output names from the content basename with explicit destination capacities, and reject overflowing output path joins. Preserve the historical 32-bit screen and palette behavior starting at 4453, preserve each profile's native settings record and control layout, and disable Exit reassignment in those 32-bit control menus. Expose the native game timer from 4456. Bound the DOT loop and control-menu arrays to allocated storage. Preserve native historical debug-menu input, terrain edge inclusion, height ties, selected-hole updates, movement/spawn hole-query periods and basemap participation by profile. Leave multiplayer slots without a selected model available to join even if game scripts preassign lives to them. Let a missing basename-only PAK self-check read the active frontend content after it has been validated and prepared. Allocate each model's animation pointer table through the highest animation index that model uses, and bound cache, copy and cleanup paths to that capacity. Ignore optional defense and offense entries outside the configured attack-type range with a log warning before accessing their tables. Yield after each newly completed model during explicit model-list or level preparation, and defer states until that preparation has cleaned up its intermediate parsers and handles. Resize repeated weapon lists and detach borrowed lists before replacing their entries. Return a defined null result for absent colourmap models or tables while retaining valid palette fallback. Keep selected palette-conversion reads bounded and reject missing maps or flags, while preserving unselected slots and native allocation failure callbacks. Check destination animation capacity when retaining an animation across model changes, preserving the native fallback and timing. Access script-container pointer slots with byte copies, preserving record layout, pointer values and native copy/cleanup order. Pointer-slot allocation and release accept byte storage without imposing pointer alignment on a packed field. Release each sprite owner once and complete cleanup independently of alias counts. Preserve native sprite-map capacity policies, check allocation extents and retain existing storage and capacity when growth is unavailable. Validate sprite-node allocations and release partial resources without changing existing owners. Check cached sprite availability before reading metadata and ignore cache requests for absent nodes. Capture explicit shutdown failure text before cleanup and bound legacy diagnostic formatting. Preserve native basemap position, slope continuation, height progression and grid indexing by profile within checked map storage. Preserve native spacing for unknown level-order and video commands by profile. Preserve the native final-player countdown checks for joining players and remaining credits. Preserve native skip-selection lives, playable-list reset and saved shared-credit routing by profile. Process the force-game-over request after each frame with the native player scope and end-of-level behavior. Share the native force calculation with the read-only damage query and bound the two integer conversions. Select native model palette file routes, mode admission and diagnostics by profile. Preserve the decimal blockade read from 4466. Return the native read-only set count from 4477. Preserve native background loading, neon rotation and scrolled layer palette selection by profile. Release each set's original level order when scripts share collections. Preserve native player spawn defaults, level damage flags and boss slowdown by profile. Keep loaded level allocations owned by the game while typed scripts reassign collection views and counts. Preserve historical collision pair traversal, counter fallback, target eligibility order and juggle cost comparisons by profile. Construct native frame collision records with each profile's instance counts, indices and recursive damage defaults. Retain historical boomerang dispatch, movement, catches and wall response by profile. Preserve source-defined temporary model type defaults, subtype spellings, platform-local variant tags and retirement callback placement around the live-entity guard by profile. Initialize complete callback variant storage before publishing historical decimal-tagged pointers. Preserve system-variable field availability, pause/menu context, platform result types, scalar last-hit snapshots and live attack mutations by profile. Preserve native shadow-opacity command admission, level-event selection and drawing channels by profile. Preserve stage-completion display availability by profile. Preserve the profile's model animation script load order, main recognition, comment handling and generated script composition. Preserve source-defined menu layouts, selection order, legacy options and menu context flags by profile. Select native projectile terrain checks, star launch velocities and sprite ordering by profile.",
       "topics": [
         "active-content-pak-aliases",
         "animation-frame-ownership",
@@ -63,9 +63,9 @@
       "upstream_sha256": "16bc3699253b5738707ac89e5422d6dde467b0a518928ad7e3c4eae1dd22329b"
     },
     "openbor.h": {
-      "distributed_sha256": "ed9b4400ce9d67d4067b92133a4dbc3f7a2955472809bbcb226a459f5d15239d",
+      "distributed_sha256": "648a76c9983de883237b00e9fd4ccacaebf0876b9522615166107bbca53caa5b",
       "modified": true,
-      "summary": "Allocate collision pointer slots through the highest author-facing index used by each collection. Track each model's allocated animation-table capacity and reject lookups outside it. Retain the historical last-hit scalar independently of the live attack reference. Define native set property selectors and retain ownership of their level orders. Define the active player spawn extent and native level flags.",
+      "summary": "Allocate collision pointer slots through the highest author-facing index used by each collection. Track each model's allocated animation-table capacity and reject lookups outside it. Declare the shared force calculation and its read-only script query. Declare native game-over request storage and script entry points by profile. Retain the historical last-hit scalar independently of the live attack reference. Define native set property selectors and retain ownership of their level orders. Define the active player spawn extent and native level flags. Store star launch multipliers with their animation.",
       "topics": [
         "animation-frame-ownership",
         "animation-memory-layout",
@@ -78,9 +78,9 @@
       "upstream_sha256": "0f8ed97474bbdc9936f217247023cd04014cd226c18969493b7fbc7e6f527dd0"
     },
     "openborscript.c": {
-      "distributed_sha256": "d3fa5e450eed3878241362e2f9c28c19c7b182150aa82eced94b5396cefd1b4f",
+      "distributed_sha256": "acd0e9c28001510ac1b372a2e32a7d0615b9be56cfc442450ce60865d3d2c2ea",
       "modified": true,
-      "summary": "Keep the dormant constant-lowering diagnostic compatible with the single-value instruction layout. Derive output names from the content basename with explicit destination capacities, and reject overflowing output path joins. Compact compiler-only instruction records after resolving value ownership, preserving branch and export anchors, all mutable values and exactly-once pool cleanup. Retain shared interpreters through the last script reference while preserving independent variables, replacement and native callbacks. Track diagnostic comments independently so interpreter replacement can retain them. Resolve text-property names within the actual table bounds while preserving native numeric selectors. Reuse each text object's owned buffer when replacing its contents. Reject missing colourtable indices and keep selector arithmetic and table reads defined. Transfer loaded stream buffers through aligned local outputs while preserving native record layout and results. Close owned input files after stream loading and on buffer allocation failure. Register the native typed drawing getter from 4455 and preserve older system-variable ordinals when admitting the game timer from 4456. Admit setopenborvariant from 4467 with the existing setter and canonical reverse name, and preserve older ordinals when exposing sets_count from 4477. Expose the native set handle lookup from 4478 with its original empty result for an index outside the loaded sets. Preserve native set property names, ordinals, result types, fallthrough results and writable collection aliases by profile. Expose native layer handles and the profile's scroll, boss slowdown and damage control constants. Expose native typed level property names, numeric selectors, handle rules and result values by profile. Register the native typed level setter and preserve its scalar assignments and result handling by profile. Preserve level collection and spawn view assignment by profile, including the early background selector. Preserve typed level script assignment and shared local variables while keeping executing interpreters live. Preserve the platform aliases and animation and array script names by profile. Reject a missing fourth platform coordinate and handle an empty cursor as no movement. Preserve named action admission and numeric action slots around the simple animation insertion. Retain the original entity property names, ordinal values and lookup order across historical script profiles. Resolve those ordinals before native property dispatch. Preserve the native entity property reads, writes and argument handling around the historical weapon, remap, block and boomerang changes. Preserve historical script wall-height argument selection before querying the terrain. Preserve script reads and writes of attack and body collision coordinates by profile while retaining native conversions. Retain the profile's frame record or collection reference and the identity behavior of native instance queries. Preserve each profile's complete system-variable names and cached numeric identifiers. Retain native basemap script-name availability, the registered height alias and private helper result epochs. Preserve native cell selection and initial map size by profile, checking owned map storage before writes. Route the optional basemap generation argument by profile.",
+      "summary": "Keep the dormant constant-lowering diagnostic compatible with the single-value instruction layout. Derive output names from the content basename with explicit destination capacities, and reject overflowing output path joins. Compact compiler-only instruction records after resolving value ownership, preserving branch and export anchors, all mutable values and exactly-once pool cleanup. Retain shared interpreters through the last script reference while preserving independent variables, replacement and native callbacks. Track diagnostic comments independently so interpreter replacement can retain them. Resolve text-property names within the actual table bounds while preserving native numeric selectors. Reuse each text object's owned buffer when replacing its contents. Reject missing colourtable indices and keep selector arithmetic and table reads defined. Transfer loaded stream buffers through aligned local outputs while preserving native record layout and results. Close owned input files after stream loading and on buffer allocation failure. Bound string suffix selection to the live source text. Enable the native empty-value result and computed damage query from 4682. Expose the native game-over entry point and preserve numeric level-property ordinals from 4642. Select the mapped legacy terrain getter and setter behavior from 4682 and bound basemap cell reads. Register the native typed drawing getter from 4455 and preserve older system-variable ordinals when admitting the game timer from 4456. Admit setopenborvariant from 4467 with the existing setter and canonical reverse name, and preserve older ordinals when exposing sets_count from 4477. Expose the native set handle lookup from 4478 with its original empty result for an index outside the loaded sets. Preserve native set property names, ordinals, result types, fallthrough results and writable collection aliases by profile. Expose native layer handles and the profile's scroll, boss slowdown and damage control constants. Expose native typed level property names, numeric selectors, handle rules and result values by profile. Register the native typed level setter and preserve its scalar assignments and result handling by profile. Preserve level collection and spawn view assignment by profile, including the early background selector. Preserve typed level script assignment and shared local variables while keeping executing interpreters live. Preserve the platform aliases and animation and array script names by profile. Reject a missing fourth platform coordinate and handle an empty cursor as no movement. Preserve named action admission and numeric action slots around the simple animation insertion. Retain the original entity property names, ordinal values and lookup order across historical script profiles. Resolve those ordinals before native property dispatch. Preserve the native entity property reads, writes and argument handling around the historical weapon, remap, block and boomerang changes. Preserve historical script wall-height argument selection before querying the terrain. Preserve script reads and writes of attack and body collision coordinates by profile while retaining native conversions. Retain the profile's frame record or collection reference and the identity behavior of native instance queries. Preserve each profile's complete system-variable names and cached numeric identifiers. Retain native basemap script-name availability, the registered height alias and private helper result epochs. Preserve native cell selection and initial map size by profile, checking owned map storage before writes. Route the optional basemap generation argument by profile.",
       "topics": [
         "attack-query-input-bounds",
         "collision-selector-inputs",
@@ -112,9 +112,9 @@
       "upstream_sha256": "b81919d0d3017fc933e5c23104de9266dde8fab15b1585e3ad48585d4b068bd1"
     },
     "openborscript.h": {
-      "distributed_sha256": "9008116d277da1c81d1b1d364c24a68989c984409a807cf81239038822396b6e",
+      "distributed_sha256": "3bbffc27cc74799c1be5359778afab7e5f4f24e432804ee839baf3dfdeb42d5c",
       "modified": true,
-      "summary": "Declare owned script-variable name storage. Declare the native game timer and set count selectors in system-variable order and expose the native set and layer callbacks.",
+      "summary": "Declare owned script-variable name storage. Declare the shared force calculation and its read-only script query. Declare native game-over request storage and script entry points by profile. Declare the native game timer and set count selectors in system-variable order and expose the native set and layer callbacks.",
       "topics": [
         "logical-profile-compatibility",
         "record-dates-and-file-notices",
@@ -175,9 +175,9 @@
       "upstream_sha256": "54377e86b27c03f1b41abc4cad9bb0466a3ab870cd2f9bec70392715709e32f7"
     },
     "source/gamelib/commands.c": {
-      "distributed_sha256": "9ac7c233052301d7bd45d2be0fde2fee63c6b5af265f7a2e26bf8d3a321f8863",
+      "distributed_sha256": "1283bb6c5c40f93cf0509acfe6b996e2f9e27208ea20dfecd3aad3584af932d5",
       "modified": true,
-      "summary": "Convert the command-list lookup result to its command enumeration explicitly instead of through a plain pointer cast. Admit basemap participation, shadow-opacity and stage-completion display commands only for profiles whose original build registered them.",
+      "summary": "Convert the command-list lookup result to its command enumeration explicitly instead of through a plain pointer cast. Admit basemap participation, shadow-opacity and stage-completion display commands only for profiles whose original build registered them. Admit the starvelocity animation command from 4574.",
       "topics": [
         "compiler-warning-cleanup",
         "logical-profile-compatibility",
@@ -186,9 +186,13 @@
       "upstream_sha256": "a761b5ec1378e97c5c16b6c43ad8310c58810a2c87aae1e95e5d3b72101b0cf0"
     },
     "source/gamelib/commands.h": {
-      "distributed_sha256": "c9727e690c23a6a3c06fc027c54f33eeed25b3e920758b872624c574c8b1a139",
-      "modified": false,
-      "topics": [],
+      "distributed_sha256": "1d837f3743a989f3c7f4adfcdc9b32b2c11c549a8b38d56131b2ab3f75766fd5",
+      "modified": true,
+      "summary": "Declare the internal starvelocity command selector.",
+      "topics": [
+        "logical-profile-compatibility",
+        "record-dates-and-file-notices"
+      ],
       "upstream_sha256": "c9727e690c23a6a3c06fc027c54f33eeed25b3e920758b872624c574c8b1a139"
     },
     "source/gamelib/draw.c": {
@@ -290,12 +294,13 @@
       "upstream_sha256": "35621ea64c356f8f50e514ac848d090b077b16a8d7e52f5530acf8ff1a633307"
     },
     "source/gamelib/packfile.c": {
-      "distributed_sha256": "e2e6f96d29cf005e179bb6146a6719ec84d985b6881cc8c18a8a2218b2a481e8",
+      "distributed_sha256": "c429f459ea5712a6e824a8f0325a06dc1a8c78926f66f371e371438a7e7e6f2a",
       "modified": true,
-      "summary": "Repair PAK handles after state loads, close resources on reset, prune unused frontend APIs, and compile the case-insensitive loose-file search on macOS. Skip a loose lookup only when the common bounded, watched directory index proves its first component absent; preserve script changes and case-insensitive overrides.",
+      "summary": "Repair PAK handles after state loads, close resources on reset, prune unused frontend APIs, and compile the case-insensitive loose-file search on macOS. Skip a loose lookup only when the common bounded, watched directory index proves its first component absent; preserve script changes and case-insensitive overrides. Select native loose-path and cached-name limits from 4682 and direct member-name limits from 4701.",
       "topics": [
         "compiler-warning-cleanup",
         "darwin-platform-support",
+        "logical-profile-compatibility",
         "packfile-state-and-resource-lifecycle",
         "record-dates-and-file-notices",
         "session-relative-filesystem",
@@ -304,10 +309,11 @@
       "upstream_sha256": "2c416de4ec88555c9a69aad7b7c147d798919708cbd9dc85fb7104a794963961"
     },
     "source/gamelib/packfile.h": {
-      "distributed_sha256": "74c488c2b5c6f7defbce72a5cc9d515dfce397bdc6d028b63cda44a8275f3001",
+      "distributed_sha256": "cecae75368e529d33a40f9d9269c81b2353a8fbd36dffb70da2e722b61f58d14",
       "modified": true,
       "summary": "Remove declarations of unused standalone frontend APIs and define O_BINARY where macOS lacks it.",
       "topics": [
+        "logical-profile-compatibility",
         "record-dates-and-file-notices",
         "source-selection-and-pruning"
       ],
@@ -678,10 +684,11 @@
       "upstream_sha256": "0e9408c351e17abb471a76da666460664604ae0c93a90d1f554f65fab8ab6f73"
     },
     "source/scriptlib/Instruction.c": {
-      "distributed_sha256": "2dba7db17714207043d049aef1d9fe0fe4e191573c9c5e14beebd3ff7e4cd9c3",
+      "distributed_sha256": "76bb2e54c673bddd278025f1de2784e99ac0de186683f4a87450c542c5d8fa30",
       "modified": true,
-      "summary": "Store each compiled script constant once, compact call parameter references, and distinguish parser storage from compiled call and jump targets.",
+      "summary": "Store each compiled script constant once, compact call parameter references, and distinguish parser storage from compiled call and jump targets. Preserve the profile's sharing of identical compiled string constants.",
       "topics": [
+        "logical-profile-compatibility",
         "record-dates-and-file-notices",
         "script-memory-layout"
       ],
@@ -746,7 +753,7 @@
       "upstream_sha256": "ae888365fe9b41ec44820548170f1ab4ea752065f7015d691811d490c2e9260a"
     },
     "source/scriptlib/Parser.c": {
-      "distributed_sha256": "e2275f3cfc8e6cd870ce8a14ca2a87c3a3fc9c194129aaf303a1e6ebc7db7179",
+      "distributed_sha256": "f5689c9f35120ccc62961ec66819a92f9989decfc5b6278a630d4c67efe380f3",
       "modified": true,
       "summary": "Check constant-token prefix capacity and resolve instruction labels before recording control targets. Stop terminal lexer failures and EOF recovery without changing finite historical recovery. Preserve native bitwise forms, constant logical-not and chained-assignment instruction order by profile, with bounded token prefixes. Propagate rejected recursive operands before consuming instruction results.",
       "topics": [
@@ -763,7 +770,7 @@
       "upstream_sha256": "fe5028e18becf396bb544336c35cc53a354a098646ca2354cb1622ceb43ea57c"
     },
     "source/scriptlib/ParserSet.c": {
-      "distributed_sha256": "6e4e9f3b978614620786f79656c22d1b9ef9ce0579c1732ac4b4fd629a156c05",
+      "distributed_sha256": "f77be492962e8d358bb5ba22a2e12f0b1466aaad6f7b09525412bf4d6d8e2c26",
       "modified": true,
       "summary": "Keep terminal grammar-table writes within the declared production count while retaining every valid native entry. Select complete native first/follow memberships and error-recovery sets by profile.",
       "topics": [
@@ -786,10 +793,11 @@
       "upstream_sha256": "7e273c8e8ebe5b031cf46393046256b6214617894fbe12a508ec382f72f5d76a"
     },
     "source/scriptlib/ScriptVariant.c": {
-      "distributed_sha256": "96f8613c78804a234188fa2427cd4e31f992bd82269ea96d6f927558c7c22625",
+      "distributed_sha256": "f62da699188f41fa35e48dc14508ef588a9374f2fddacbe263de7e4363997254",
       "modified": true,
-      "summary": "Select the native 6330 decimal negation fallthrough. Preserve native signed32 integer conversion and truncated decimal results; refuse unavailable arguments and non-representable decimal results before conversion without changing result storage.",
+      "summary": "Select the native 6330 decimal negation fallthrough. Preserve native signed32 integer conversion and truncated decimal results; refuse unavailable arguments and non-representable decimal results before conversion without changing result storage. Preserve the profile's sharing of identical compiled string constants. Size concatenation results from both formatted operands.",
       "topics": [
+        "logical-profile-compatibility",
         "numeric-argument-inputs",
         "record-dates-and-file-notices",
         "script-integer-conversion",
@@ -798,11 +806,12 @@
       "upstream_sha256": "e086a602db4889a5755b5e201f714ccee7dcb1b16245b76464daff44011fb57f"
     },
     "source/scriptlib/ScriptVariant.h": {
-      "distributed_sha256": "0b4e88a8c5c1dc38ddd9ce3fb4a027eedd5f547c38bba1990ee1d2c10af0b77c",
+      "distributed_sha256": "bcf22f86b0b261d040c3d5c260abc0a225b3d7737d1b309ef01eedce91fc67be",
       "modified": true,
-      "summary": "Declare the cache and variant helpers as ordinary functions; the header only declared them inline and the definitions live in ScriptVariant.c.",
+      "summary": "Declare the cache and variant helpers as ordinary functions; the header only declared them inline and the definitions live in ScriptVariant.c. Preserve the profile's sharing of identical compiled string constants.",
       "topics": [
         "compiler-warning-cleanup",
+        "logical-profile-compatibility",
         "record-dates-and-file-notices",
         "script-text-object-ownership"
       ],

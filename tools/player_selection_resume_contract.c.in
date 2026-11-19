@@ -1,0 +1,170 @@
+/* SPDX-License-Identifier: BSD-3-Clause
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me>
+ */
+#include <stdarg.h>
+#include <stdint.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include "openbor.h"
+#undef assert
+#include <assert.h>
+#undef printf
+
+uint32_t obor_profile_build;
+unsigned current_set, current_level, current_stage;
+s_player player[MAX_PLAYERS];
+char allowselect_args[MAX_ALLOWSELECT_LEN];
+char skipselect[MAX_PLAYERS][MAX_NAME_LEN + 1];
+int PLAYER_LIVES = 3, CONTINUES = 5;
+int noshare, credits, creditscheat, selectScreen;
+static s_set_entry test_set;
+s_set_entry *levelsets = &test_set;
+static s_savelevel test_save;
+s_savelevel *savelevel = &test_save;
+static entity example_player;
+static int reset_calls, load_calls, spawn_calls, custom_selection;
+static char diagnostic[128];
+
+void kill_all(void) {}
+void reset_playable_list(int clear)
+{
+    assert(clear == 1);
+    ++reset_calls;
+}
+static void load_select_screen_info(s_savelevel *save)
+{
+    assert(save == &test_save);
+    ++load_calls;
+}
+void load_playable_list(char *arguments)
+{
+    assert(arguments == test_save.allowSelectArgs && load_calls == 1);
+}
+static entity *spawnexample(int slot)
+{
+    assert(slot == 0 || slot == 2);
+    ++spawn_calls;
+    if(custom_selection) credits = 13;
+    return &example_player;
+}
+static int selection_log(const char *format, ...)
+{
+    va_list args;
+    va_start(args, format);
+    int written = vsnprintf(diagnostic, sizeof(diagnostic), format, args);
+    va_end(args);
+    return written;
+}
+
+#if defined(__GNUC__) && !defined(__clang__)
+#pragma GCC diagnostic push
+#pragma GCC diagnostic warning "-Wstringop-truncation"
+#endif
+@METHODS@
+#if defined(__GNUC__) && !defined(__clang__)
+#pragma GCC diagnostic pop
+#endif
+
+static int select_setup(int *players, const char *filename, int useSavedGame)
+{
+    int i, defaultselect = 0;
+    entity *example[MAX_PLAYERS] = {0};
+    @SETUP@
+    if(filename && filename[0])
+    {
+        const char *command = "unknown";
+        #define printf selection_log
+        @DIAGNOSTIC@
+        #undef printf
+    }
+    else
+    {
+        @DEFAULT@
+    }
+    @RESTORE@
+    assert(saved_select_screen == load_calls);
+    assert(example[0] == &example_player && example[2] == &example_player);
+    return 2;
+}
+
+static void check_selection(int mode, int file, int skip, int prior,
+                            int private_credits, int cheat, int allow)
+{
+    int players[MAX_PLAYERS] = {1, 0, 1, 0};
+    unsigned old_lives[MAX_PLAYERS] = {0, 0, 0, 0};
+    if(prior == 1) old_lives[2] = 7;
+    if(prior == 2) old_lives[1] = 9;
+    memset(player, 0, sizeof(player));
+    memset(skipselect, 0, sizeof(skipselect));
+    memset(&test_save, 0, sizeof(test_save));
+    for(int i = 0; i < MAX_PLAYERS; ++i)
+    {
+        player[i].lives = old_lives[i];
+        player[i].credits = 9 + i;
+        player[i].score = 100 + i;
+    }
+    if(skip == 1) strcpy(skipselect[0], "Hero");
+    if(skip) strcpy(skipselect[2], "Partner");
+    test_set.noselect = skip == 2;
+    test_set.maxplayers = 3;
+    test_set.name = "Test Set";
+    test_save.selectFlag = 1;
+    credits = 8;
+    noshare = private_credits;
+    creditscheat = cheat;
+    custom_selection = file;
+    allowselect_args[0] = allow ? 'a' : '\0';
+    reset_calls = spawn_calls = load_calls = 0;
+    diagnostic[0] = '\0';
+
+    const int late = mode == 3;
+    const int bypassed = !file && skip;
+    const int restored = file || (late && bypassed && prior);
+    assert(select_setup(players, file ? "custom.txt" : NULL, prior == 2) == (bypassed ? 1 : 2));
+    assert(selectScreen == !bypassed && spawn_calls == (bypassed ? 0 : 2));
+    assert(reset_calls == (late ? !skip : !allow));
+    assert(load_calls == (prior == 2));
+    const char *message = late ? "Command 'unknown' is not understood in file 'custom.txt'\n"
+                               : "Command 'unknown' is not understood in file 'custom.txt'";
+    assert(strcmp(diagnostic, file ? message : "") == 0);
+    int expected_credits = 8;
+    if(file && (!late || private_credits)) expected_credits = 13;
+    if(!private_credits && !restored) expected_credits = 5 - 2 * !cheat;
+    assert(credits == expected_credits);
+    for(int i = 0; i < MAX_PLAYERS; ++i)
+    {
+        assert(player[i].hasplayed == players[i]);
+        if(!players[i])
+        {
+            assert(!player[i].lives && !player[i].score && !player[i].credits);
+            continue;
+        }
+        unsigned lives = restored || (bypassed && mode == 1 && skip == 1) ? old_lives[i] : 3;
+        unsigned score = restored ? (unsigned)(100 + i) : 0;
+        unsigned own_credits = restored ? (late && !private_credits ? 0 : (unsigned)(9 + i))
+                                       : (private_credits ? 5 - !cheat : 0);
+        assert(player[i].lives == lives && player[i].score == score && player[i].credits == own_credits);
+        if(bypassed) assert(strcmp(player[i].name, skipselect[i]) == 0);
+    }
+}
+
+int main(void)
+{
+    static const int rows[][2] = {
+        @ROWS@
+    };
+    for(size_t i = 0; i < sizeof(rows) / sizeof(rows[0]); ++i)
+    {
+        obor_profile_build = rows[i][0];
+        for(int file = 0; file < 2; ++file)
+        for(int skip = 0; skip < 3; ++skip)
+        for(int prior = 0; prior < 3; ++prior)
+        for(int private_credits = 0; private_credits < 2; ++private_credits)
+        for(int cheat = 0; cheat < 2; ++cheat)
+        for(int allow = 0; allow < 2; ++allow)
+            check_selection(rows[i][1], file, skip, prior, private_credits, cheat, allow);
+        printf("%u\n", obor_profile_build);
+    }
+    return 0;
+}

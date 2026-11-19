@@ -5,7 +5,8 @@
  * Upstream code retains its original license and notices.
  * Store each compiled script constant once, compact call parameter
  * references, and distinguish parser storage from compiled call and jump
- * targets.
+ * targets. Preserve the profile's sharing of identical compiled string
+ * constants.
  * Existing changes recorded here; this is not their implementation date.
  * See MODIFICATIONS.md and docs/modifications/4432.md
  * at the source repository root. Original notices follow below.
@@ -23,6 +24,8 @@
 #include <stdlib.h>
 #include <string.h>
 #include <stdint.h>
+
+extern uint32_t obor_profile_build;
 
 void Instruction_InitViaToken(Instruction *pins, OpCode code, Token *pToken )
 {
@@ -294,7 +297,8 @@ void Instruction_ConvertConstant(Instruction *pins)
     {
         pvar = (ScriptVariant *)malloc(sizeof(ScriptVariant));
         ScriptVariant_Init(pvar);
-        ScriptVariant_ParseStringConstant(pvar, pins->theToken->theSource);
+        ScriptVariant_ParseStringConstant(pvar, pins->theToken->theSource,
+                                          obor_profile_build >= 4574);
     }
     else
     {

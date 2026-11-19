@@ -1,0 +1,107 @@
+/*
+ * Check original cached and loose path limits with valid assets.
+ * SPDX-License-Identifier: BSD-3-Clause
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me>
+ */
+#include <assert.h>
+#include <ctype.h>
+#include <dirent.h>
+#include <stdint.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <strings.h>
+
+#include "List.h"
+#include "borendian.h"
+
+#define stricmp strcasecmp
+@DEFINITIONS@
+
+uint32_t obor_profile_build;
+static const char *packfile;
+static unsigned char *pak_header;
+static int pak_headersize;
+static int pak_vfdexists[MAXPACKHANDLES];
+static int pak_vfdstart[MAXPACKHANDLES];
+static int pak_vfdsize[MAXPACKHANDLES];
+static int pak_vfdpos[MAXPACKHANDLES];
+static int pak_vfdreadahead[MAXPACKHANDLES];
+static List *filenamelist;
+static int printFileUsageStatistics;
+
+static void update_filecache_vfd(int fd) { (void)fd; }
+static void filecache_wait_for_prebuffer(int fd, int blocks) { (void)fd; (void)blocks; }
+
+@FUNCTIONS@
+
+int main(int argc, char **argv)
+{
+    assert(argc == 11);
+    obor_profile_build = strtoul(argv[1], NULL, 10);
+    const size_t capacity = strtoul(argv[2], NULL, 10);
+    packfile = argv[3];
+
+    FILE *file = fopen(packfile, "rb");
+    assert(file);
+    assert(fseek(file, 0, SEEK_END) == 0);
+    long length = ftell(file);
+    assert(length > 4);
+    rewind(file);
+    unsigned char *image = malloc((size_t)length);
+    assert(image);
+    assert(fread(image, 1, (size_t)length, file) == (size_t)length);
+    assert(fclose(file) == 0);
+    int start = readlsb32(image + length - 4);
+    pak_header = image + start;
+    pak_headersize = length - start - 4;
+
+    for(int i = 4; i < 6; ++i)
+    {
+        char requested[512], expected[512];
+        assert(strlen(argv[i]) < sizeof(requested));
+        for(size_t j = 0; (requested[j] = tolower((unsigned char)argv[i][j])); ++j) {}
+        assert(snprintf(expected, sizeof(expected), "./%s", argv[i]) < (int)sizeof(expected));
+        const char *match = casesearch(".", requested);
+        if(strlen(expected) < capacity)
+        {
+            assert(match && strcmp(match, expected) == 0);
+        }
+        else
+        {
+            assert(!match);
+        }
+    }
+
+    for(int i = 6; i < argc; ++i)
+    {
+        size_t name_length = strlen(argv[i]);
+        size_t converted_length = name_length < capacity ? name_length : capacity - 1;
+        const char *dos = slashback(argv[i]);
+        assert(strlen(dos) == converted_length && dos[4] == '\\');
+        const char *unix_path = slashfwd(dos);
+        assert(strlen(unix_path) == converted_length);
+        assert(strncmp(unix_path, argv[i], converted_length) == 0);
+
+        char name[513];
+        assert(name_length < sizeof(name));
+        for(size_t j = 0; j <= name_length; ++j)
+        {
+            name[j] = toupper((unsigned char)argv[i][j]);
+        }
+        int fd = openPackfileCached(name, packfile);
+        if(name_length < capacity)
+        {
+            assert(fd == 0);
+            assert(pak_vfdsize[fd] == 1 && image[pak_vfdstart[fd]] == i - 6);
+            pak_vfdexists[fd] = 0;
+        }
+        else
+        {
+            assert(fd == -1);
+        }
+    }
+    freefilenamecache();
+    free(image);
+    return 0;
+}

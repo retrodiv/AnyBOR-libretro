@@ -1,0 +1,138 @@
+/* SPDX-License-Identifier: BSD-3-Clause
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me>
+ */
+@PROVIDERS@
+
+static s_terrain hole, wall;
+static s_basemap basemap;
+static float cells[] = {0.25f, 3.0f, 4.5f, 9.5f, -1.0f, 6.75f};
+
+size_t obor_allocation_size(const void *owner)
+{
+    return owner == cells ? sizeof(cells) : 0;
+}
+
+int obor_level_grow_array(s_level *owner, obor_level_array_id id, int count)
+{
+    (void)owner;
+    (void)id;
+    (void)count;
+    abort();
+}
+
+@VARIANTS@
+@SEARCH@
+#define printf record_printf
+@MACROS@
+@SELECTORS@
+@METHODS@
+#undef printf
+
+static ScriptVariant named(const char *name)
+{
+    ScriptVariant value = {.vt = VT_EMPTY};
+    ScriptVariant_ChangeType(&value, VT_STR);
+    StrCache_Copy(value.strVal, (char *)name);
+    return value;
+}
+
+static void check_read(const char *collection, const char *name, int selector,
+                       int accepts, VARTYPE expected_tag, double expected)
+{
+    ScriptVariant key = named(collection);
+    ScriptVariant row = {.vt = VT_INTEGER, .lVal = 0};
+    ScriptVariant sub = name ? named(name) : (ScriptVariant){.vt = VT_INTEGER, .lVal = selector};
+    ScriptVariant x = {.vt = VT_DECIMAL, .dblVal = 1.75};
+    ScriptVariant z = {.vt = VT_DECIMAL, .dblVal = 0.5};
+    ScriptVariant result = {.vt = VT_EMPTY};
+    ScriptVariant *out = &result;
+    ScriptVariant *arguments[] = {&key, &row, &sub, &x, &z};
+
+    diagnostic[0] = 0;
+    HRESULT status = openbor_getlevelproperty(arguments, &out, 5);
+    assert(key.vt == VT_INTEGER);
+    assert(sub.vt == VT_INTEGER && sub.lVal == selector);
+    if(accepts)
+    {
+        assert(status == S_OK && out == &result && result.vt == expected_tag);
+        assert((expected_tag == VT_DECIMAL ? result.dblVal : (double)result.lVal) == expected);
+        assert(!diagnostic[0]);
+    }
+    else
+    {
+        char message[128];
+        snprintf(message, sizeof(message), "You must provide a string value for %s subproperty.\n", collection);
+        assert(status == E_FAIL && !out && result.vt == VT_EMPTY);
+        assert(strcmp(diagnostic, message) == 0);
+    }
+}
+
+static void check_write(const char *collection, const char *name, ScriptVariant value, int accepts)
+{
+    ScriptVariant key = named(collection);
+    ScriptVariant row = {.vt = VT_INTEGER, .lVal = 0};
+    ScriptVariant sub = named(name);
+    ScriptVariant result = {.vt = VT_EMPTY};
+    ScriptVariant *out = &result;
+    ScriptVariant *arguments[] = {&key, &row, &sub, &value};
+
+    diagnostic[0] = 0;
+    HRESULT status = openbor_changelevelproperty(arguments, &out, 4);
+    assert(!out && key.vt == VT_INTEGER && sub.vt == VT_INTEGER);
+    if(accepts)
+    {
+        assert(status == S_OK && !diagnostic[0]);
+    }
+    else
+    {
+        char message[128];
+        snprintf(message, sizeof(message), "You must provide a string value for %s subproperty.\n", collection);
+        assert(status == E_FAIL && strstr(diagnostic, message) == diagnostic);
+        assert(strstr(diagnostic, "Function changelevelproperty(prop, value) received invalid value(s)."));
+    }
+}
+
+int main(void)
+{
+    static const int rows[][2] = {
+        @ROWS@
+    };
+    level->holes = &hole;
+    level->walls = &wall;
+    level->basemaps = &basemap;
+    level->numholes = level->numwalls = level->numbasemaps = 1;
+    basemap.position.x = -7;
+    basemap.size.x = 3;
+    basemap.size.z = 2;
+    ScriptVariant height = {.vt = VT_DECIMAL, .dblVal = 12.75};
+    ScriptVariant kind = {.vt = VT_INTEGER, .lVal = 3};
+
+    for(size_t i = 0; i < sizeof(rows) / sizeof(rows[0]); ++i)
+    {
+        obor_profile_build = rows[i][0];
+        const int accepts = rows[i][1];
+        hole.height = 1.25f;
+        wall.depth = 4.5f;
+        hole.type = wall.type = 1;
+        basemap.map = cells;
+
+        check_read("hole", "height", _lp_terrain_height, accepts, VT_DECIMAL, 1.25);
+        check_read("wall", NULL, _lp_terrain_depth, accepts, VT_DECIMAL, 4.5);
+        check_read("basemap", "x", _lp_bm_x, accepts, VT_DECIMAL, -7.0);
+        check_read("basemap", "map", _lp_bm_map, accepts, VT_DECIMAL, 9.5);
+        basemap.map = NULL;
+        check_read("basemap", "map", _lp_bm_map, accepts, VT_DECIMAL, 0.0);
+
+        check_write("hole", "height", height, accepts);
+        check_write("wall", "depth", height, accepts);
+        check_write("hole", "type", kind, accepts);
+        check_write("wall", "type", kind, accepts);
+        assert(hole.height == (accepts ? 12.75 : 1.25));
+        assert(wall.depth == (accepts ? 12.75 : 4.5));
+        assert(hole.type == (accepts ? 3 : 1));
+        assert(wall.type == hole.type);
+        check_read("wall", "type", _lp_terrain_type, accepts, VT_INTEGER, 3);
+        printf("%u\n", obor_profile_build);
+    }
+    return 0;
+}

@@ -9,11 +9,14 @@ from pathlib import Path
 import re
 import unittest
 
-from contract_fixtures import contract_profiles, load_contract_fixture
+from contract_fixtures import contract_profiles, contract_revisions, load_contract_fixture
+from test_early_jump_walkoff import braced_statement
 from test_historical_common_think import ROOT, native_output
 from test_historical_player import function, switch_cases
 
 FIXTURE = Path(__file__).with_name('fixtures') / 'profile-forward-level-order-contracts.json'
+SELECTION_FIXTURE = FIXTURE.with_name('profile-4432-player-selection-resume.json')
+DIAGNOSTIC_FIXTURE = FIXTURE.with_name('profile-4432-parser-diagnostics.json')
 
 
 def program(data, engine):
@@ -51,6 +54,67 @@ def program(data, engine):
 
 
 class ForwardLevelOrderTests(unittest.TestCase):
+    def test_4432_level_order_and_video_diagnostic_lines(self):
+        data = load_contract_fixture(DIAGNOSTIC_FIXTURE)
+        rows = data['sources']
+        revisions = [row['revision'] for row in rows]
+        self.assertEqual(revisions, sorted(set(revisions)))
+        self.assertEqual(set(revisions), contract_revisions(data, data['expected_revisions']))
+        self.assertTrue(set(data['boundary_controls']) <= set(revisions))
+        for profile in contract_profiles(data, json.loads((ROOT / 'src/pin.json').read_text())['profiles']):
+            revision = int(profile.get('revision', profile['build']))
+            if profile['engine'] == data['engine'] and 4510 <= revision <= data['range'][1]:
+                self.assertIn(revision, revisions)
+        engine = Path(os.environ.get('OBOR_HISTORICAL_ENGINE', ROOT / 'src/engines' / data['engine']))
+        source = (engine / 'openbor.c').read_text()
+        order, cases = switch_cases(source, 'load_levelorder', 'cmd', outermost=True)
+        video = function(source, 'init_videomodes')
+        unknown = video[video.rindex('else if(command && command[0])'):]
+        values = dict(
+            NUMBERS='\n'.join(function(source, name) for name in ('isNumeric', 'getValidInt', 'getValidFloat')),
+            LOCALS=re.search(r'(?m)^    const int line_diagnostics[^\n]+\n    int warned_unknown[^\n]+', order)[0],
+            ORDER=cases['default']['body'],
+            VIDEO=braced_statement(unknown, 'if(command && command[0])'),
+            ROWS=',\n'.join('{%d,%d,%d}' % (row['revision'], row['separate_lines'],
+                                         row['hyphenated_number_warning']) for row in rows),
+        )
+        code = Path(__file__).with_name('parser_diagnostics_contract.c.in').read_text()
+        code = re.sub(r'@([A-Z_]+)@', lambda item: values[item[1]], code)
+        actual = native_output(code, data, engine_source=engine)
+        self.assertEqual([int(line) for line in actual.splitlines()], revisions)
+
+    def test_4432_skip_selection_lives_and_saved_credits(self):
+        data = load_contract_fixture(SELECTION_FIXTURE)
+        revisions = [row['revision'] for row in data['sources']]
+        self.assertEqual(revisions, sorted(set(revisions)))
+        self.assertEqual(set(revisions), contract_revisions(data, data['expected_revisions']))
+        self.assertTrue(set(data['boundary_controls']) <= set(revisions))
+        for profile in contract_profiles(data, json.loads((ROOT / 'src/pin.json').read_text())['profiles']):
+            revision = int(profile.get('revision', profile['build']))
+            if profile['engine'] == data['engine'] and 4510 <= revision <= data['range'][1]:
+                self.assertIn(revision, revisions)
+        engine = Path(os.environ.get('OBOR_HISTORICAL_ENGINE', ROOT / 'src/engines' / data['engine']))
+        source = (engine / 'openbor.c').read_text()
+        select = function(source, 'selectplayer')
+        setup = select[select.index('    s_set_entry *set ='):select.index('    if(filename && filename[0])')]
+        begin = select.index('    else // without select.txt')
+        start = select.index('        defaultselect = 1;', begin)
+        default = select[start:select.index('        if (!saved_select_screen)', start)]
+        tail = select[:select.index('    time = 0;')]
+        restore = tail[tail.rindex('    for(i = 0; i < set->maxplayers; i++)'):]
+        diagnostic = re.search(r'printf\("Command .*?historical_resume[^;]+;', select, re.S)[0]
+        values = dict(
+            METHODS='\n'.join(function(source, name) for name in (
+                'obor_profile_name_limit', 'obor_profile_copy_name', 'savelevelinfo',
+                'obor_restore_selection_player')),
+            SETUP=setup, DEFAULT=default, RESTORE=restore, DIAGNOSTIC=diagnostic,
+            ROWS=',\n'.join('{%d,%d}' % (row['revision'], row['selection_mode']) for row in data['sources']),
+        )
+        code = Path(__file__).with_name('player_selection_resume_contract.c.in').read_text()
+        code = re.sub(r'@([A-Z_]+)@', lambda item: values[item[1]], code)
+        output = native_output(code, data, engine_source=engine, extra_cflags=('-fgnu89-inline',))
+        self.assertEqual([int(line) for line in output.splitlines()], revisions)
+
     def test_native_selection_ownership_saved_rows_menu_and_progression(self):
         data = load_contract_fixture(FIXTURE)
         revisions = {row['revision'] for row in data['sources']}

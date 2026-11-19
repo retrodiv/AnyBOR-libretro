@@ -1,0 +1,123 @@
+/* SPDX-License-Identifier: BSD-3-Clause
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me>
+ */
+#include <stdarg.h>
+#include <stdint.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include "openbor.h"
+#include "commands.h"
+#undef printf
+
+uint32_t obor_profile_build;
+int pixelformat = PIXEL_x8, screenformat = PIXEL_32;
+int pixelbytes[5] = {1, 1, 2, 3, 4};
+char packfile[OBOR_CONTENT_PATH_MAX] = "fixture";
+static int direct_calls, image_calls, success;
+static char log_text[512];
+
+static int capture_log(const char *format, ...)
+{
+    size_t used = strlen(log_text);
+    va_list args;
+    va_start(args, format);
+    int count = vsnprintf(log_text + used, sizeof(log_text) - used, format, args);
+    va_end(args);
+    if(count < 0 || (size_t)count >= sizeof(log_text) - used) abort();
+    return count;
+}
+
+void *checkAlloc(void *ptr, size_t size, const char *func, const char *file, int line)
+{
+    if(size && !ptr) abort();
+    return ptr;
+}
+
+int load_palette(unsigned char *palette, char *filename)
+{
+    if(!palette || strcmp(filename, "colors.act")) abort();
+    ++direct_calls;
+    return success;
+}
+
+int loadimagepalette(char *filename, char *pak, unsigned char *palette)
+{
+    if(!palette || pak != packfile) abort();
+    ++image_calls;
+    return success;
+}
+
+#define printf capture_log
+@LOADER@
+
+#undef GET_ARG
+#undef GET_INT_ARG
+#define GET_ARG(n) ((void)(n),argument)
+#define GET_INT_ARG(n) ((void)(n),7)
+static int apply(int cmd, char *argument, s_model *newchar, int *none, char **error)
+{
+    const char *command = cmd == CMD_MODEL_PALETTE ? "palette" :
+                          cmd == CMD_MODEL_ALTERNATEPAL ? "alternatepal" : "globalmap";
+    char *value = "previous.png", *shutdownmessage = NULL;
+    int nopalette = 0, loaded = 1;
+    unsigned *mapflag = NULL;
+    switch(cmd)
+    {
+        @COMMANDS@
+        case CMD_MODEL_FRAME:
+            value = argument;
+            newchar->palette = malloc(PAL_BYTES);
+            if(!newchar->palette) abort();
+            @FRAME@
+            break;
+    }
+    goto done;
+lCleanup:
+    loaded = 0;
+done:
+    free(mapflag);
+    *none = nopalette;
+    *error = shutdownmessage;
+    return loaded;
+}
+#undef printf
+
+int main(void)
+{
+    static const unsigned profiles[] = {@REVISIONS@};
+    static const struct { int cmd; char *argument; int succeeds; } cases[] = {
+        {CMD_MODEL_PALETTE, "colors.act", 1}, {CMD_MODEL_PALETTE, "colors.png", 1},
+        {CMD_MODEL_PALETTE, "none", 1}, {CMD_MODEL_PALETTE, "colors.act", 0},
+        {CMD_MODEL_PALETTE, "colors.png", 0},
+        {CMD_MODEL_ALTERNATEPAL, "colors.act", 1}, {CMD_MODEL_ALTERNATEPAL, "colors.act", 0},
+        {CMD_MODEL_ALTERNATEPAL, "colors.png", 0}, {CMD_MODEL_GLOBALMAP, "7", 1},
+        {CMD_MODEL_FRAME, "frame.png", 0},
+    };
+    for(size_t row = 0; row < sizeof(profiles) / sizeof(*profiles); ++row)
+    {
+        obor_profile_build = profiles[row];
+        for(size_t i = 0; i < sizeof(cases) / sizeof(*cases); ++i)
+        {
+            s_model stage = {0};
+            int none;
+            char *error;
+            log_text[0] = 0;
+            direct_calls = image_calls = 0;
+            success = cases[i].succeeds;
+            const int result = apply(cases[i].cmd, cases[i].argument, &stage, &none, &error);
+            printf("[%u,%zu,%d,%d,%d,%d,%d,%d,%d,\"%s\",\"", obor_profile_build, i,
+                result, none, stage.palette != NULL, stage.maps_loaded, stage.globalmap,
+                direct_calls, image_calls, error ? error : "");
+            for(size_t c = 0; log_text[c]; ++c) printf("%02x", (unsigned char)log_text[c]);
+            puts("\"]");
+            free(stage.palette);
+            if(stage.colourmap)
+            {
+                free(stage.colourmap[0]);
+                free(stage.colourmap);
+            }
+        }
+    }
+    return 0;
+}

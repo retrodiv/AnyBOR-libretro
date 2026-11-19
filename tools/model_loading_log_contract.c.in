@@ -1,0 +1,142 @@
+/* SPDX-License-Identifier: BSD-3-Clause
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me>
+ */
+#include <setjmp.h>
+#include <stdarg.h>
+#include <stdint.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include "openbor.h"
+#undef assert
+#undef printf
+#undef shutdown
+#include <assert.h>
+
+uint32_t obor_profile_build;
+static s_model model = {.name = "Display"};
+static s_modelcache entry = {.path = "models/unit.txt"};
+static jmp_buf failure;
+static char log_text[256];
+static int entry_log, outcome, cache_updates, reads;
+enum { CACHED, NO_CACHE, NO_FILE, PARSE_FAILURE, COMPLETE };
+
+static void append_log(const char *format, va_list args)
+{
+    size_t used = strlen(log_text);
+    int n = vsnprintf(log_text + used, sizeof(log_text) - used, format, args);
+    assert(n >= 0 && (size_t)n < sizeof(log_text) - used);
+}
+
+static void capture_log(const char *format, ...)
+{
+    va_list args;
+    va_start(args, format);
+    append_log(format, args);
+    va_end(args);
+}
+
+static void stop(int status, const char *format, ...)
+{
+    assert(status == 1);
+    va_list args;
+    va_start(args, format);
+    append_log(format, args);
+    va_end(args);
+    longjmp(failure, 1);
+}
+
+s_model *findmodel(char *name)
+{
+    assert(!strcmp(name, "Lookup"));
+    assert(!strcmp(log_text, entry_log ? "Loaded 'Lookup'" : ""));
+    return outcome == CACHED ? &model : NULL;
+}
+
+void update_model_loadflag(s_model *target, char unload)
+{
+    assert(target == &model && unload == 1);
+}
+
+void cache_model_sprites(s_model *target, int load)
+{
+    assert(target == &model && load == 1);
+    ++cache_updates;
+}
+
+int get_cached_model_index(char *name)
+{
+    assert(!strcmp(name, "Lookup"));
+    return outcome == NO_CACHE ? -1 : 0;
+}
+
+int buffer_pakfile(char *filename, char **buffer, size_t *size)
+{
+    assert(filename == entry.path);
+    assert(!strcmp(log_text, entry_log ? "Loaded 'Lookup' from models/unit.txt \n" : ""));
+    *size = 0;
+    ++reads;
+    return outcome != NO_FILE;
+}
+
+static s_model *load_model(char *name, char *owner, char unload)
+{
+    int cacheindex;
+    char *filename, *buf = NULL;
+    size_t size;
+    s_model *tempmodel, *newchar = &model;
+#define printf capture_log
+#define shutdown stop
+    @ENTRY@
+    if(outcome == PARSE_FAILURE)
+    {
+        return NULL;
+    }
+    @COMPLETE@
+#undef shutdown
+#undef printf
+    return newchar;
+}
+
+static void check(void)
+{
+    static const char *expected[][5] = {
+        {"", "Fatal: No cache entry for 'Lookup' within 'test'\n\n",
+         "Unable to open file 'models/unit.txt'\n\n", "",
+         "Loading 'Display' from models/unit.txt\n"},
+        {"Loaded 'Lookup'", "Loaded 'Lookup'Fatal: No cache entry for 'Lookup' within 'test'\n\n",
+         "Loaded 'Lookup' from models/unit.txt \nUnable to open file 'models/unit.txt'\n\n",
+         "Loaded 'Lookup' from models/unit.txt \n", "Loaded 'Lookup' from models/unit.txt \n"},
+    };
+    model_cache = &entry;
+    for(outcome = CACHED; outcome <= COMPLETE; ++outcome)
+    {
+        log_text[0] = 0;
+        cache_updates = reads = 0;
+        const int stops = outcome == NO_CACHE || outcome == NO_FILE;
+        if(setjmp(failure))
+        {
+            assert(stops);
+        }
+        else
+        {
+            assert(load_model("Lookup", "test", 1) == (outcome == PARSE_FAILURE ? NULL : &model));
+            assert(!stops);
+        }
+        assert(cache_updates == (outcome == CACHED) && reads == (outcome >= NO_FILE));
+        assert(!strcmp(log_text, expected[entry_log][outcome]));
+    }
+}
+
+int main(void)
+{
+    static const struct { unsigned revision; int early; } rows[] = {@PROFILES@};
+    for(size_t i = 0; i < sizeof(rows) / sizeof(*rows); ++i)
+    {
+        obor_profile_build = rows[i].revision;
+        entry_log = rows[i].early;
+        check();
+        printf("%u\n", obor_profile_build);
+    }
+    return 0;
+}

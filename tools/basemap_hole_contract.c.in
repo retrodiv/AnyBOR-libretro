@@ -1,0 +1,208 @@
+/* SPDX-License-Identifier: BSD-3-Clause
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me>
+ */
+#include <stdint.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include "openbor.h"
+#include "commands.h"
+#undef assert
+#undef printf
+#include <assert.h>
+
+uint32_t obor_profile_build;
+entity *self;
+s_level *level;
+int holez;
+
+static entity actor, sentinel;
+static int wall_present, callbacks, unlinks;
+static int holesprite, pack_has_sprite, sprite_lookups, sprite_loads, sprite_draws;
+static int added_holes;
+static const float advancex = 3, advancey = 4;
+static const int gfx_x_offset = 2, gfx_y_offset = -1;
+static const int PLAYER_MIN_Z = 160;
+int pixelformat = PIXEL_32;
+const s_drawmethod plainmethod = {.xrepeat = 1};
+
+int openpackfile(const char *name, const char *pack)
+{
+    assert(!strcmp(name, "8") && !strcmp(pack, "unit.pak"));
+    ++sprite_lookups;
+    return pack_has_sprite ? 3 : -1;
+}
+
+int closepackfile(int handle)
+{
+    assert(handle == (pack_has_sprite ? 3 : -1));
+    return pack_has_sprite ? 0 : -1;
+}
+
+int loadsprite(char *name, int x, int y, int format)
+{
+    assert(!strcmp(name, pack_has_sprite ? "8" : "data/sprites/hole"));
+    assert(!x && !y && format == pixelformat);
+    ++sprite_loads;
+    return 9;
+}
+
+void spriteq_add_sprite(int x, int y, int z, int id, s_drawmethod *method, int sortid)
+{
+    assert(x == 7 && y == 1 && z == 114 && id == 9 && !sortid);
+    assert(method->xrepeat == plainmethod.xrepeat);
+    ++sprite_draws;
+}
+
+static void addhole(float x, float z, float x1, float x2, float x3, float x4,
+                    float depth, float height, int type)
+{
+    assert(x == 8 && z == 12 && x1 == -1 && x2 == 1 && x3 == -2 && x4 == 2);
+    assert(depth == 6 && height == 3 && type == 2);
+    ++added_holes;
+}
+
+static void load_hole(void)
+{
+    const float args[] = {0, 8, 12, -1, 1, -2, 2, 6, 3, 2};
+    const char *packfile = "unit.pak";
+    char *value;
+#undef GET_ARG
+#undef GET_FLOAT_ARG
+#define GET_ARG(index) ("8")
+#define GET_FLOAT_ARG(index) (args[index])
+    switch(CMD_LEVEL_HOLE)
+    {
+        case CMD_LEVEL_HOLE:
+            @LOAD_HOLE@
+    }
+#undef GET_ARG
+#undef GET_FLOAT_ARG
+}
+
+static void check_hole_sprite(int enabled, s_level *scene)
+{
+    __typeof__(*scene->holes) visible_hole = {.x = 8, .z = 12, .depth = 6};
+    level = scene;
+    scene->numholes = 1;
+    scene->holes = &visible_hole;
+    for(int has_sprite = 0; has_sprite < 2; ++has_sprite)
+    {
+        holesprite = -1;
+        pack_has_sprite = has_sprite;
+        added_holes = sprite_lookups = sprite_loads = sprite_draws = 0;
+        load_hole();
+        load_hole();
+        assert(added_holes == 2);
+        assert(sprite_lookups == enabled && sprite_loads == enabled);
+        assert(holesprite == (enabled ? 9 : -1));
+        int i = 0;
+        @DRAW_HOLES@
+        assert(sprite_draws == enabled);
+    }
+    scene->holes = NULL;
+    scene->numholes = 0;
+}
+
+entity *check_platform_below_entity(entity *ent)
+{
+    (void)ent;
+    abort();
+}
+
+int testplatform(entity *platform, float x, float z, entity *ent)
+{
+    (void)platform; (void)x; (void)z; (void)ent;
+    abort();
+}
+
+void check_gravity(entity *ent)
+{
+    (void)ent;
+    abort();
+}
+
+int checkwall_below(float x, float z, float y)
+{
+    (void)x; (void)z; (void)y;
+    return wall_present ? 0 : -1;
+}
+
+void execute_inhole_script(entity *ent, int plane, float height, int index, float depth, int type)
+{
+    assert(ent == &actor && self == ent);
+    assert(plane == 0 && height == 7 && index == 0);
+    assert(depth == level->holes[index].depth && type == level->holes[index].type);
+    callbacks++;
+}
+
+void ent_unlink(entity *ent)
+{
+    assert(ent == &actor);
+    unlinks++;
+}
+
+@FUNCTIONS@
+
+int main(void)
+{
+    static const struct { unsigned revision; int draw_hole_sprite; } profiles[] = {@PROFILES@};
+    static const struct input_case {
+        int basemap, map_present, height, hole_enabled, level_present, frame_base, wall;
+    } cases[] = {@CASES@};
+    static s_level scene;
+    static s_anim animation;
+    static s_axis_i movement;
+    static s_axis_i *moves[] = {&movement};
+    static s_basemap map;
+    static float cell;
+    static __typeof__(*scene.holes) hole, wall;
+
+    hole.z = 1;
+    hole.depth = 2;
+    hole.upperleft = hole.lowerleft = -1;
+    hole.upperright = hole.lowerright = 1;
+    hole.height = 7;
+    hole.type = 3;
+    wall.height = 6;
+    map.size.x = map.size.z = 1;
+    map.map = &cell;
+    animation.move = moves;
+
+    for(size_t p = 0; p < sizeof(profiles) / sizeof(*profiles); p++)
+    {
+        obor_profile_build = profiles[p].revision;
+        check_hole_sprite(profiles[p].draw_hole_sprite, &scene);
+        printf("{\"revision\":%u,\"cases\":[", obor_profile_build);
+        for(size_t c = 0; c < sizeof(cases) / sizeof(*cases); c++)
+        {
+            memset(&actor, 0, sizeof(actor));
+            self = &sentinel;
+            level = cases[c].level_present ? &scene : NULL;
+            actor.animation = &animation;
+            actor.modeldata.subject_to_hole = cases[c].hole_enabled;
+            actor.modeldata.subject_to_basemap = cases[c].basemap;
+            actor.modeldata.subject_to_wall = wall_present = cases[c].wall;
+            scene.numholes = 1;
+            scene.holes = &hole;
+            scene.numwalls = wall_present;
+            scene.walls = &wall;
+            scene.numbasemaps = cases[c].map_present;
+            scene.basemaps = &map;
+            cell = cases[c].height;
+            movement.base = cases[c].frame_base;
+            callbacks = unlinks = 0;
+            int present = checkhole_in(0, 0, 0);
+            int index = check_basemap_index(0, 0);
+            holez = -7;
+            entity *on_platform = &sentinel;
+            adjust_base(&actor, &on_platform);
+            assert(self == &sentinel && on_platform == NULL);
+            printf("%s[%d,%d,%d,%d,%d,%d,%d]", c ? "," : "",
+                   present, index, (int)actor.base, (int)actor.position.y,
+                   callbacks, unlinks, holez);
+        }
+        puts("]}");
+    }
+    return 0;
+}

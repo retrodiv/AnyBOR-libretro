@@ -1,0 +1,49 @@
+/* SPDX-License-Identifier: BSD-3-Clause
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me>
+ */
+#include <stdint.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include "openbor.h"
+#undef printf
+#undef assert
+#include <assert.h>
+
+uint32_t obor_profile_build;
+
+void *checkAlloc(void *ptr, size_t size, const char *func, const char *file, int line)
+{
+    assert(!size || ptr);
+    return ptr;
+}
+
+@CACHE@
+@GETTER@
+
+int main(void)
+{
+    static const struct {
+        unsigned revision;
+        LONG selector;
+    } profiles[] = {@ROWS@};
+    static const int forces[] = {-4, 0, 7};
+    s_collision_attack attack = {.damage_on_landing_type = 3};
+    ScriptVariant handle = {.vt = VT_PTR, .ptrVal = &attack};
+    ScriptVariant selector = {.vt = VT_INTEGER};
+    ScriptVariant *args[] = {&handle, &selector};
+    ScriptVariant value = {.vt = VT_EMPTY}, *out = &value;
+    for(size_t i = 0; i < sizeof(profiles) / sizeof(*profiles); ++i)
+    {
+        obor_profile_build = profiles[i].revision;
+        selector.lVal = profiles[i].selector;
+        for(size_t j = 0; j < sizeof(forces) / sizeof(*forces); ++j)
+        {
+            attack.damage_on_landing = forces[j];
+            assert(openbor_get_attack_property(args, &out, 2) == S_OK && out == &value);
+            assert(value.vt == VT_INTEGER && value.lVal == forces[j]);
+        }
+        printf("%u\n", obor_profile_build);
+    }
+    return 0;
+}

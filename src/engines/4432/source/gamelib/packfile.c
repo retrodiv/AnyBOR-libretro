@@ -7,7 +7,8 @@
  * unused frontend APIs, and compile the case-insensitive loose-file search
  * on macOS. Skip a loose lookup only when the common bounded, watched
  * directory index proves its first component absent; preserve script changes
- * and case-insensitive overrides.
+ * and case-insensitive overrides. Select native loose-path and cached-name
+ * limits from 4682 and direct member-name limits from 4701.
  * Existing changes recorded here; this is not their implementation date.
  * See MODIFICATIONS.md and docs/modifications/4432.md
  * at the source repository root. Original notices follow below.
@@ -41,6 +42,7 @@
 #ifndef SPK_SUPPORTED
 
 #include <fcntl.h>
+#include <stddef.h>
 #include <stdio.h>
 #include <string.h>
 #include "utils.h"
@@ -300,13 +302,22 @@ cont:
     return -2; // should never be reached
 }
 
+#define PACKFILE_PATH_MAX 512
+
+static size_t packfile_path_capacity(void)
+{
+    return obor_profile_build >= 4682 && obor_profile_build <= 4750
+        ? PACKFILE_PATH_MAX : 256;
+}
+
 // Convert slashes (UNIX) to backslashes (DOS).
 // Return a pointer to buffer with filename converted to DOS format.
 static char *slashback(const char *sz)
 {
     int i = 0;
-    static char new[256];
-    while(sz[i] && i < 255)
+    const size_t capacity = packfile_path_capacity();
+    static char new[PACKFILE_PATH_MAX];
+    while((size_t)i < capacity - 1 && sz[i])
     {
         new[i] = sz[i];
         if(new[i] == '/')
@@ -325,8 +336,9 @@ static char *slashback(const char *sz)
 static char *slashfwd(const char *sz)
 {
     int i = 0;
-    static char new[256];
-    while(sz[i] && i < 255)
+    const size_t capacity = packfile_path_capacity();
+    static char new[PACKFILE_PATH_MAX];
+    while((size_t)i < capacity - 1 && sz[i])
     {
         new[i] = sz[i];
         if(new[i] == '\\')
@@ -345,11 +357,11 @@ char *casesearch(const char *dir, const char *filepath)
 {
     DIR *d;
     struct dirent *entry;;
-    char filename[256] = {""}, *rest_of_path;
-    static char fullpath[256];
+    char filename[PACKFILE_PATH_MAX] = {""}, *rest_of_path;
+    static char fullpath[PACKFILE_PATH_MAX];
     int i = 0;
-    if(!dir || !filepath || strcspn(filepath, "/") >= sizeof(filename)) return NULL;
-
+    const size_t capacity = packfile_path_capacity();
+    if(!dir || !filepath || strcspn(filepath, "/") >= capacity) return NULL;
 #ifdef VERBOSE
     printf("casesearch: %s, %s\n", dir, filepath);
 #endif
@@ -387,8 +399,8 @@ char *casesearch(const char *dir, const char *filepath)
     if(entry != NULL)
     {
         char joined[sizeof(fullpath)];
-        int length = snprintf(joined, sizeof(joined), "%s/%s", dir, entry->d_name);
-        if(length < 0 || (size_t)length >= sizeof(joined))
+        int length = snprintf(joined, capacity, "%s/%s", dir, entry->d_name);
+        if(length < 0 || (size_t)length >= capacity)
         {
             (void)closedir(d);
             return NULL;
@@ -487,6 +499,10 @@ int openPackfile(const char *filename, const char *packfilename)
     int h, handle;
     unsigned int magic, version, headerstart, p;
     pnamestruct pn;
+    const size_t name_offset = offsetof(pnamestruct, namebuf);
+    const size_t name_capacity = obor_profile_build >= 4701 &&
+        obor_profile_build <= 4750 ? sizeof(pn.namebuf) : 80;
+    int entry_bytes;
 #if defined(LINUX) || defined(DARWIN)
     char *fspath;
 #endif
@@ -632,13 +648,22 @@ int openPackfile(const char *filename, const char *packfilename)
     p = headerstart;
 
     // Search for filename
-    while(read(handle, &pn, sizeof(pn)) > 12)
+    while((entry_bytes = read(handle, &pn, name_offset + name_capacity)) > (int)name_offset)
     {
         pn.filesize = SwapLSB32(pn.filesize);
         pn.filestart = SwapLSB32(pn.filestart);
         pn.pns_len = SwapLSB32(pn.pns_len);
 
-        if(stricmp(filename, pn.namebuf) == 0)
+        if(pn.pns_len <= name_offset)
+        {
+            break;
+        }
+        size_t name_bytes = (size_t)entry_bytes - name_offset;
+        if(name_bytes > pn.pns_len - name_offset)
+        {
+            name_bytes = pn.pns_len - name_offset;
+        }
+        if(memchr(pn.namebuf, '\0', name_bytes) && stricmp(filename, pn.namebuf) == 0)
         {
             packhandle[h] = handle;
             packfilesize[h] = pn.filesize;
@@ -675,30 +700,45 @@ void update_filecache_vfd(int vfd)
     }
 }
 
+static int pak_header_entry(size_t hpos, size_t *next, size_t *length)
+{
+    size_t remaining, record;
+    const unsigned char *name, *end;
+    if(!pak_header || pak_headersize < 0 || hpos > (size_t)pak_headersize) return 0;
+    remaining = (size_t)pak_headersize - hpos;
+    if(remaining <= 12) return 0;
+    record = (unsigned int)readlsb32(pak_header + hpos);
+    if(record <= 12 || record > remaining) return 0;
+    name = pak_header + hpos + 12;
+    end = memchr(name, 0, record - 12);
+    if(!end) return 0;
+    *next = hpos + record;
+    *length = (size_t)(end - name);
+    return 1;
+}
+
 void makefilenamecache(void)
 {
-    ptrdiff_t hpos;
-    char target[256];
+    size_t hpos = 0, next, length;
+    char target[PACKFILE_PATH_MAX];
+    const size_t capacity = packfile_path_capacity();
 
     if(!filenamelist)
     {
         filenamelist = malloc(sizeof(List));
     }
+    if(!filenamelist) return;
     List_Init(filenamelist);
 
-    // look for filename in the header
-
-    hpos = 0;
-    for(;;)
+    while(pak_header_entry(hpos, &next, &length))
     {
-        if((hpos + 12) >= pak_headersize)
+        if(length < capacity)
         {
-            return;
+            memcpy(target, pak_header + hpos + 12, length + 1);
+            fnlc(target);
+            List_InsertAfter(filenamelist, (void *)hpos, target);
         }
-        strncpy(target, (char *)pak_header + hpos + 12, 256);
-        fnlc(target);
-        List_InsertAfter(filenamelist, (void *) hpos, target);
-        hpos += readlsb32(pak_header + hpos);
+        hpos = next;
     }
 }
 
@@ -749,7 +789,8 @@ int openreadaheadpackfile(const char *filename, const char *packfilename, int re
     int vfd;
     size_t fnl;
     size_t al;
-    char target[256];
+    char target[PACKFILE_PATH_MAX];
+    size_t name_length;
     Node *n;
 
     if(packfilename != packfile)
@@ -763,12 +804,15 @@ int openreadaheadpackfile(const char *filename, const char *packfilename, int re
         }
     }
 
+    name_length = strlen(filename);
+    if(name_length >= packfile_path_capacity()) return -1;
     if(!filenamelist)
     {
         makefilenamecache();
     }
+    if(!filenamelist) return -1;
 
-    strncpy(target, filename, 256);
+    memcpy(target, filename, name_length + 1);
     fnlc(target);
 
     n = List_GetNodeByName(filenamelist, target);

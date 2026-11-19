@@ -1,0 +1,187 @@
+/* SPDX-License-Identifier: BSD-3-Clause
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me>
+ */
+#include <stdint.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include "openbor.h"
+#include "anybor_resources.h"
+#undef assert
+#undef printf
+#include <assert.h>
+
+uint32_t obor_profile_build;
+static s_modelcache model_entry;
+static s_savelevel save_entry;
+static s_filestream stream;
+static s_level stage;
+static s_textobj text;
+static s_sprite_list sprite;
+static s_sprite_map sprite_entry;
+static char filename[] = "sprites/hero";
+static char text_buffer[MAX_STR_VAR_LEN + 1] = "Stage notice";
+s_level *level = &stage;
+s_savelevel *savelevel = &save_entry;
+s_filestream *filestreams = &stream;
+s_sprite_map *sprite_map = &sprite_entry;
+s_player player[MAX_PLAYERS];
+int models_cached = 1;
+int noshare;
+
+void *checkAlloc(void *ptr, size_t size, const char *func, const char *file, int line)
+{
+    assert(!size || ptr);
+    return ptr;
+}
+
+int obor_allocation_query(const void *address, const void **base, size_t *remaining)
+{
+    if(address != filename) return 0;
+    if(base) *base = filename;
+    if(remaining) *remaining = sizeof(filename);
+    return 1;
+}
+
+@CACHE@
+@SUPPORT@
+@GETTERS@
+
+static HRESULT entity_query(ScriptVariant **varlist, ScriptVariant **pretvar, int paramCount)
+{
+    entity *ent = varlist[0]->ptrVal;
+    int i = 0;
+    char *tempstr;
+    switch(varlist[1]->lVal)
+    {
+        @ENTITY_CASES@
+    }
+    return S_OK;
+}
+
+static HRESULT player_name(ScriptVariant **varlist, ScriptVariant **pretvar, int paramCount)
+{
+    int index = varlist[0]->lVal;
+    do { @PLAYER_CASE@ } while(0);
+    return S_OK;
+}
+
+static HRESULT stage_text(ScriptVariant **varlist, ScriptVariant **pretvar, int paramCount)
+{
+    LONG ind = varlist[0]->lVal;
+    do { @TEXT_CASE@ } while(0);
+    return S_OK;
+gettextobjproperty_error:
+    *pretvar = NULL;
+    return E_FAIL;
+}
+
+typedef HRESULT (*text_query)(ScriptVariant **, ScriptVariant **, int);
+
+static void check_text(text_query query, ScriptVariant **args, int count, const char *expected)
+{
+    ScriptVariant value, saved, *out = &value;
+    ScriptVariant_Init(&value);
+    ScriptVariant_Init(&saved);
+    ScriptVariant_ChangeType(&value, VT_STR);
+    StrCache_Copy(value.strVal, "Earlier result");
+    ScriptVariant_Copy(&saved, &value);
+    assert(query(args, &out, count) == S_OK && out == &value);
+    if(expected)
+        assert(value.vt == VT_STR && !strcmp(StrCache_Get(value.strVal), expected));
+    else
+        assert(value.vt == VT_EMPTY);
+    assert(saved.vt == VT_STR && !strcmp(StrCache_Get(saved.strVal), "Earlier result"));
+    ScriptVariant_Clear(&value);
+    ScriptVariant_Clear(&saved);
+}
+
+int main(void)
+{
+    static const unsigned profiles[] = {@CONTEXTS@};
+    static s_model default_model, current_model;
+    static entity actor;
+    static char input[] = "sample \r\n\n  tail";
+    Node entry = {.name = "Selection key"};
+    List list = {.current = &entry};
+    Varlist array = {.magic = varlist_magic, .list = &list};
+    ScriptVariant index = {.vt = VT_INTEGER, .lVal = 0};
+    ScriptVariant selector = {.vt = VT_INTEGER}, property;
+    ScriptVariant actor_handle = {.vt = VT_PTR, .ptrVal = &actor};
+    ScriptVariant array_handle = {.vt = VT_PTR, .ptrVal = &array};
+    ScriptVariant *args[] = {&index, &selector, &property};
+
+    model_entry.name = "Cache model";
+    model_entry.path = "models/cache.txt";
+    model_cache = &model_entry;
+    default_model.name = "Default model";
+    current_model.name = "Current model";
+    actor.defaultmodel = &default_model;
+    actor.model = &current_model;
+    strcpy(actor.name, "Actor name");
+    actor.modeldata.path = "models/actor.txt";
+    sprite.filename = filename;
+    sprite_entry.node = &sprite;
+    strcpy(player[0].name, "Player name");
+    text.text = text_buffer;
+    stage.textobjs = &text;
+    stream.buf = input;
+    stream.size = sizeof(input) - 1;
+    strcpy(save_entry.dName, "Saved mode");
+    strcpy(save_entry.pName[0], "Saved player");
+
+    for(size_t i = 0; i < sizeof(profiles) / sizeof(*profiles); ++i)
+    {
+        obor_profile_build = profiles[i];
+        selector.lVal = 1;
+        check_text(openbor_getmodelproperty, args, 2, "Cache model");
+        selector.lVal = 2;
+        check_text(openbor_getmodelproperty, args, 2, "Cache model");
+        selector.lVal = 3;
+        check_text(openbor_getmodelproperty, args, 2, "models/cache.txt");
+        const char *actor_results[] = {"Default model", "Current model", "Actor name",
+                                       "models/actor.txt", filename};
+        args[0] = &actor_handle;
+        for(selector.lVal = 0; selector.lVal < 5; ++selector.lVal)
+            check_text(entity_query, args, 2, actor_results[selector.lVal]);
+        args[0] = &index;
+        check_text(player_name, args, 1, "Player name");
+        check_text(stage_text, args, 1, "Stage notice");
+
+        stream.pos = 0;
+        check_text(openbor_getfilestreamline, args, 1, "sample ");
+        stream.pos = 9;
+        check_text(openbor_getfilestreamline, args, 1, "");
+        stream.pos = 10;
+        check_text(openbor_getfilestreamline, args, 1, "  tail");
+        ScriptVariant_Init(&property);
+        ScriptVariant_ChangeType(&property, VT_STR);
+        StrCache_Copy(property.strVal, "string");
+        stream.pos = 0;
+        selector.lVal = 0;
+        check_text(openbor_getfilestreamargument, args, 3, "sample");
+        selector.lVal = 1;
+        check_text(openbor_getfilestreamargument, args, 3, "");
+
+        args[0] = &array_handle;
+        list.size = 1;
+        check_text(openbor_key, args, 1, "Selection key");
+        list.size = 0;
+        check_text(openbor_key, args, 1, NULL);
+
+        args[0] = &index;
+        args[1] = &property;
+        args[2] = &index;
+        StrCache_Copy(property.strVal, "name");
+        check_text(openbor_getsaveinfo, args, 2, "Saved mode");
+        StrCache_Copy(property.strVal, "playername");
+        check_text(openbor_getsaveinfo, args, 3, "Saved player");
+        args[1] = &selector;
+        args[2] = &property;
+        ScriptVariant_Clear(&property);
+        assert(strcache_top == strcache_size - 1);
+        printf("%u\n", obor_profile_build);
+    }
+    StrCache_Clear();
+    return 0;
+}
