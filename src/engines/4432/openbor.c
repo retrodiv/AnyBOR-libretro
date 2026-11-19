@@ -5,13 +5,14 @@
  * Upstream code retains its original license and notices.
  * Apply the port's engine corrections and select the PC video configuration
  * on macOS. Derive output names from the content basename with explicit
- * destination capacities, and reject overflowing output path joins. Select
- * the 4453 profile's 32-bit screen and palette behavior, preserve each
- * profile's native settings record and control layout, and disable the Exit
- * mapping in the 4453 control menu. Bound the DOT loop and control-menu
- * arrays to allocated storage. Preserve native historical debug-menu input,
- * terrain edge inclusion, height ties, selected-hole updates, movement/spawn
- * hole-query periods and basemap participation by profile. Leave multiplayer
+ * destination capacities, and reject overflowing output path joins. Preserve
+ * the historical 32-bit screen and palette behavior starting at 4453,
+ * preserve each profile's native settings record and control layout, and
+ * disable Exit reassignment in those 32-bit control menus. Expose the native
+ * game timer from 4456. Bound the DOT loop and control-menu arrays to
+ * allocated storage. Preserve native historical debug-menu input, terrain
+ * edge inclusion, height ties, selected-hole updates, movement/spawn hole-
+ * query periods and basemap participation by profile. Leave multiplayer
  * slots without a selected model available to join even if game scripts
  * preassign lives to them. Let a missing basename-only PAK self-check read
  * the active frontend content after it has been validated and prepared.
@@ -40,23 +41,31 @@
  * ignore cache requests for absent nodes. Capture explicit shutdown failure
  * text before cleanup and bound legacy diagnostic formatting. Preserve
  * native basemap position, slope continuation, height progression and grid
- * indexing by profile within checked map storage. Preserve historical
- * collision pair traversal, counter fallback, target eligibility order and
- * juggle cost comparisons by profile. Construct native frame collision
- * records with each profile's instance counts, indices and recursive damage
- * defaults. Retain historical boomerang dispatch, movement, catches and wall
- * response by profile. Preserve source-defined temporary model type
- * defaults, subtype spellings, platform-local variant tags and retirement
- * callback placement around the live-entity guard by profile. Initialize
- * complete callback variant storage before publishing historical decimal-
- * tagged pointers. Preserve system-variable field availability, pause/menu
- * context, platform result types, scalar last-hit snapshots and live attack
- * mutations by profile. Preserve native shadow-opacity command admission,
- * level-event selection and drawing channels by profile. Preserve stage-
- * completion display availability by profile. Preserve the profile's model
- * animation script load order, main recognition, comment handling and
- * generated script composition. Preserve source-defined menu layouts,
- * selection order, legacy options and menu context flags by profile.
+ * indexing by profile within checked map storage. Select native model
+ * palette file routes, mode admission and diagnostics by profile. Preserve
+ * the decimal blockade read from 4466. Return the native read-only set count
+ * from 4477. Preserve native background loading, neon rotation and scrolled
+ * layer palette selection by profile. Release each set's original level
+ * order when scripts share collections. Preserve native player spawn
+ * defaults, level damage flags and boss slowdown by profile. Keep loaded
+ * level allocations owned by the game while typed scripts reassign
+ * collection views and counts. Preserve historical collision pair traversal,
+ * counter fallback, target eligibility order and juggle cost comparisons by
+ * profile. Construct native frame collision records with each profile's
+ * instance counts, indices and recursive damage defaults. Retain historical
+ * boomerang dispatch, movement, catches and wall response by profile.
+ * Preserve source-defined temporary model type defaults, subtype spellings,
+ * platform-local variant tags and retirement callback placement around the
+ * live-entity guard by profile. Initialize complete callback variant storage
+ * before publishing historical decimal-tagged pointers. Preserve system-
+ * variable field availability, pause/menu context, platform result types,
+ * scalar last-hit snapshots and live attack mutations by profile. Preserve
+ * native shadow-opacity command admission, level-event selection and drawing
+ * channels by profile. Preserve stage-completion display availability by
+ * profile. Preserve the profile's model animation script load order, main
+ * recognition, comment handling and generated script composition. Preserve
+ * source-defined menu layouts, selection order, legacy options and menu
+ * context flags by profile.
  * Existing changes recorded here; this is not their implementation date.
  * See MODIFICATIONS.md and docs/modifications/4432.md
  * at the source repository root. Original notices follow below.
@@ -1126,6 +1135,10 @@ int getsyspropertybyindex(ScriptVariant *var, int index)
         ScriptVariant_ChangeType(var, VT_INTEGER);
         var->lVal = loadgameMenu;
         break;
+    case _sv_sets_count:
+        ScriptVariant_ChangeType(var, VT_INTEGER);
+        var->lVal = num_difficulties;
+        break;
     case _sv_in_showcomplete:
         ScriptVariant_ChangeType(var, VT_INTEGER);
         var->lVal = showComplete;
@@ -1163,6 +1176,10 @@ int getsyspropertybyindex(ScriptVariant *var, int index)
         if(obor_profile_build >= 4293 && obor_profile_build < 4310) var->lVal = 0;
         else if((obor_profile_build >= 4283 && obor_profile_build < 4293) || !(goto_mainmenu_flag&1)) var->lVal = (pause);
         else var->lVal = 0;
+        break;
+    case _sv_game_time:
+        ScriptVariant_ChangeType(var, VT_INTEGER);
+        var->lVal = timeleft;
         break;
     case _sv_porting:
         if(obor_profile_build >= 4283 && obor_profile_build < 4345) { printf("Unknown system property name.\n"); return 0; }
@@ -1585,8 +1602,16 @@ int getsyspropertybyindex(ScriptVariant *var, int index)
         var->dblVal = scrollmaxz;
         break;
     case _sv_blockade:
-        ScriptVariant_ChangeType(var, VT_INTEGER);
-        var->lVal = blockade;
+        if(obor_profile_build >= 4466)
+        {
+            ScriptVariant_ChangeType(var, VT_DECIMAL);
+            var->dblVal = blockade;
+        }
+        else
+        {
+            ScriptVariant_ChangeType(var, VT_INTEGER);
+            var->lVal = blockade;
+        }
         break;
     case _sv_waiting:
         ScriptVariant_ChangeType(var, VT_INTEGER);
@@ -1655,6 +1680,12 @@ int changesyspropertybyindex(int index, ScriptVariant *value)
         if(SUCCEEDED(ScriptVariant_IntegerValue(value, &ltemp)))
         {
             current_level = (int)ltemp;
+        }
+        break;
+    case _sv_game_time:
+        if(SUCCEEDED(ScriptVariant_IntegerValue(value, &ltemp)))
+        {
+            timeleft = (int)ltemp;
         }
         break;
     case _sv_gfx_x_offset:
@@ -3261,7 +3292,7 @@ static void obor_unpack_settings_4432(const unsigned char *data)
 
 static void obor_write_settings(FILE *handle)
 {
-    if(obor_profile_build == 4453)
+    if(obor_profile_build >= 4453 && obor_profile_build <= 4510)
     {
         fwrite(&savedata, 1, sizeof(savedata), handle);
     }
@@ -3275,7 +3306,7 @@ static void obor_write_settings(FILE *handle)
 
 static size_t obor_read_settings(FILE *handle)
 {
-    if(obor_profile_build == 4453)
+    if(obor_profile_build >= 4453 && obor_profile_build <= 4510)
     {
         return fread(&savedata, 1, sizeof(savedata), handle);
     }
@@ -4804,25 +4835,25 @@ void load_background(char *filename, int createtables)
     //if(pixelformat!=PIXEL_8) createtables = 0;
     unload_background();
 
-    if(pixelformat == PIXEL_8)
+    if(obor_profile_build < 4470 && pixelformat == PIXEL_8)
     {
         if(!loadscreen(filename, packfile, pal, PIXEL_8, &background))
         {
             shutdown(1, "Error loading background (PIXEL_8) file '%s'", filename);
         }
     }
-    else if(pixelformat == PIXEL_x8)
+    else if(obor_profile_build >= 4470 || pixelformat == PIXEL_x8)
     {
         if(!loadscreen(filename, packfile, NULL, PIXEL_x8, &background))
         {
-            if (screenformat == PIXEL_32)
+            if (obor_profile_build >= 4453 || screenformat == PIXEL_32)
             {
                 if (loadscreen32(filename, packfile, &background)) printf("Loaded 32-bit background '%s'\n", filename);
                 else shutdown(1, "Error loading background (PIXEL_x8/PIXEL_32) file '%s'", filename);
             }
             else shutdown(1, "Error loading background (PIXEL_x8) file '%s'", filename);
         }
-        if (background->pixelformat == PIXEL_x8)
+        if (background && background->pixelformat == PIXEL_x8 && background->palette)
         {
             memcpy(pal, background->palette, PAL_BYTES);
             memcpy(neontable, pal, PAL_BYTES);
@@ -9094,6 +9125,35 @@ void update_model_loadflag(s_model *model, char unload)
     model->unload = unload;
 }
 
+static unsigned char *obor_load_model_palette(char *filename, int alternate, char **error)
+{
+    size_t length = strlen(filename);
+    int direct = obor_profile_build >= 4465 && length >= 4 && !stricmp(filename + length - 4, ".act");
+    unsigned char *palette = malloc(PAL_BYTES);
+
+    if(direct ? load_palette(palette, filename) : loadimagepalette(filename, packfile, palette))
+    {
+        return palette;
+    }
+
+    free(palette);
+    if(direct)
+    {
+        *error = alternate ? "Alternatepal failed to load color table from .act!" :
+                             "Palette failed to load color table from .act!";
+    }
+    else if(obor_profile_build < 4465)
+    {
+        *error = "Failed to load palette!";
+    }
+    else
+    {
+        *error = alternate ? "Alternatepal failed to load color table from image!" :
+                             "Palette failed to load color table from image!";
+    }
+    return NULL;
+}
+
 s_model *load_cached_model(char *name, char *owner, char unload)
 {
     const unsigned int animation_build =
@@ -10370,35 +10430,29 @@ s_model *load_cached_model(char *name, char *owner, char unload)
             }
             break;
             case CMD_MODEL_PALETTE:
-                // main palette for the entity under 24bit mode
-                if(pixelformat != PIXEL_x8)
+                if(obor_profile_build < 4465 && pixelformat != PIXEL_x8)
                 {
                     printf("Warning: command '%s' is not available under 8bit mode\n", command);
                 }
                 else if(newchar->palette == NULL)
                 {
                     value = GET_ARG(1);
-                    if(stricmp(value, "none") == 0)
+                    if(obor_profile_build < 4465 && !stricmp(value, "none"))
                     {
-                        if(pixelformat == PIXEL_x8)
-                        {
-                            nopalette = 1;
-                        }
+                        nopalette = 1;
                     }
                     else
                     {
-                        newchar->palette = malloc(PAL_BYTES);
-                        if(loadimagepalette(value, packfile, newchar->palette) == 0)
+                        newchar->palette = obor_load_model_palette(value, 0, &shutdownmessage);
+                        if(!newchar->palette)
                         {
-                            shutdownmessage = "Failed to load palette!";
                             goto lCleanup;
                         }
                     }
                 }
                 break;
             case CMD_MODEL_ALTERNATEPAL:
-                // remap for the entity under 24bit mode, this method can replace remap command
-                if(pixelformat != PIXEL_x8)
+                if(obor_profile_build < 4465 && pixelformat != PIXEL_x8)
                 {
                     printf("Warning: command '%s' is not available under 8bit mode\n", command);
                 }
@@ -10407,18 +10461,16 @@ s_model *load_cached_model(char *name, char *owner, char unload)
                     __realloc(mapflag, newchar->maps_loaded);
                     __realloc(newchar->colourmap, newchar->maps_loaded);
                     value = GET_ARG(1);
-                    newchar->colourmap[newchar->maps_loaded] = malloc(PAL_BYTES);
-                    if(loadimagepalette(value, packfile, newchar->colourmap[newchar->maps_loaded]) == 0)
+                    newchar->colourmap[newchar->maps_loaded] = obor_load_model_palette(value, 1, &shutdownmessage);
+                    if(!newchar->colourmap[newchar->maps_loaded])
                     {
-                        shutdownmessage = "Failed to load palette!";
                         goto lCleanup;
                     }
                     newchar->maps_loaded++;
                 }
                 break;
             case CMD_MODEL_GLOBALMAP:
-                // use global palette under 24bit mode, so some entity/panel/bg can still use palette feature, that saves some memory
-                if(pixelformat != PIXEL_x8)
+                if(obor_profile_build < 4472 && pixelformat != PIXEL_x8)
                 {
                     printf("Warning: command '%s' is not available under 8bit mode\n", command);
                 }
@@ -12922,11 +12974,12 @@ void unload_levelorder()
             {
                 free(se->name);
             }
-            if(se->numlevels)
+            s_level_entry *owned = obor_owned_levelorder(se);
+            if(owned)
             {
                 for(j = 0; j < se->numlevels; j++)
                 {
-                    le = se->levelorder + j;
+                    le = owned + j;
                     if(le->branchname)
                     {
                         free(le->branchname);
@@ -12943,7 +12996,7 @@ void unload_levelorder()
                         }
                     }
                 }
-                free(se->levelorder);
+                free(owned);
             }
         }
 
@@ -14372,6 +14425,194 @@ lCleanup:
 }
 
 
+/* All pointers and counts stay in their native fields for gameplay. */
+static const struct
+{
+    size_t stride;
+    obor_level_array_kind kind;
+} obor_level_array_types[] = {
+#define OBOR_LEVEL_ARRAY_TYPE(id, field, count, kind) \
+    [OBOR_LEVEL_ARRAY_##id] = {sizeof(*((s_level *)0)->field), OBOR_LEVEL_KIND_##kind},
+    OBOR_LEVEL_ARRAYS(OBOR_LEVEL_ARRAY_TYPE)
+#undef OBOR_LEVEL_ARRAY_TYPE
+};
+
+static int *obor_level_array_count(s_level *lv, obor_level_array_id id)
+{
+    switch(id)
+    {
+#define OBOR_LEVEL_COUNT_FIELD(id, field, count, kind) case OBOR_LEVEL_ARRAY_##id: return &lv->count;
+        OBOR_LEVEL_ARRAYS(OBOR_LEVEL_COUNT_FIELD)
+#undef OBOR_LEVEL_COUNT_FIELD
+    default: return NULL;
+    }
+}
+
+static void obor_level_install_array(s_level *lv, obor_level_array_id id, void *data)
+{
+    switch(id)
+    {
+#define OBOR_LEVEL_ARRAY_FIELD(id, field, count, kind) case OBOR_LEVEL_ARRAY_##id: lv->field = data; break;
+        OBOR_LEVEL_ARRAYS(OBOR_LEVEL_ARRAY_FIELD)
+#undef OBOR_LEVEL_ARRAY_FIELD
+    default: break;
+    }
+}
+
+static obor_level_arrays *obor_level_bind_arrays(s_level *lv)
+{
+    obor_level_arrays *arrays = lv->obor_arrays;
+    if(lv->obor_loading || lv->obor_releasing) return NULL;
+    if(arrays) return arrays;
+
+    arrays = calloc(1, sizeof(*arrays));
+    if(!arrays) return NULL;
+#define OBOR_LEVEL_BIND_ARRAY(id, field, count, kind) \
+    arrays->owned[OBOR_LEVEL_ARRAY_##id] = (obor_level_array){lv->field, lv->count, OBOR_LEVEL_ARRAY_##id, NULL}; \
+    if(lv->field) arrays->views[OBOR_LEVEL_ARRAY_##id].array = &arrays->owned[OBOR_LEVEL_ARRAY_##id];
+    OBOR_LEVEL_ARRAYS(OBOR_LEVEL_BIND_ARRAY)
+#undef OBOR_LEVEL_BIND_ARRAY
+    lv->obor_arrays = arrays;
+    return arrays;
+}
+
+static int obor_level_array_offset(const obor_level_array *array, obor_level_array_kind kind,
+                                   const void *pointer)
+{
+    const size_t stride = obor_level_array_types[array->id].stride;
+    const uintptr_t base = (uintptr_t)array->data;
+    const uintptr_t address = (uintptr_t)pointer;
+    if(!array->data || array->extent <= 0 ||
+       obor_level_array_types[array->id].kind != kind || address < base) return -1;
+    if((address - base) % stride || (address - base) / stride >= (unsigned)array->extent) return -1;
+    return (int)((address - base) / stride);
+}
+
+static obor_level_array *obor_level_find_array(obor_level_arrays *arrays, obor_level_array_kind kind,
+                                              const void *pointer, int *offset)
+{
+    for(int index = 0; index < OBOR_LEVEL_ARRAY_COUNT; ++index)
+    {
+        obor_level_array *array = &arrays->owned[index];
+        *offset = obor_level_array_offset(array, kind, pointer);
+        if(*offset >= 0) return array;
+    }
+    for(obor_level_array *array = arrays->additional; array; array = array->next)
+    {
+        *offset = obor_level_array_offset(array, kind, pointer);
+        if(*offset >= 0) return array;
+    }
+    return NULL;
+}
+
+int obor_level_set_array(s_level *lv, obor_level_array_id id, void *data)
+{
+    obor_level_arrays *arrays = obor_level_bind_arrays(lv);
+    int *count = obor_level_array_count(lv, id);
+    if(!arrays || !count) return 0;
+    obor_level_array_view *view = &arrays->views[id];
+
+    if(!data)
+    {
+        view->hidden = 1;
+        if(!*count)
+        {
+            view->array = NULL;
+            obor_level_install_array(lv, id, NULL);
+        }
+        return 1;
+    }
+
+    int offset;
+    obor_level_array *array = obor_level_find_array(arrays, obor_level_array_types[id].kind, data, &offset);
+    if(!array || array->extent - offset < *count) return 0;
+    *view = (obor_level_array_view){array, offset, 0};
+    obor_level_install_array(lv, id, data);
+    return 1;
+}
+
+int obor_level_set_array_count(s_level *lv, obor_level_array_id id, int count)
+{
+    obor_level_arrays *arrays = obor_level_bind_arrays(lv);
+    int *target = obor_level_array_count(lv, id);
+    if(!arrays || !target || count < 0) return 0;
+    obor_level_array_view *view = &arrays->views[id];
+    int extent = view->array ? view->array->extent - view->offset : 0;
+    if(count > extent ||
+       (id == OBOR_LEVEL_ARRAY_PALETTE && count > arrays->owned[OBOR_LEVEL_ARRAY_BLENDING].extent))
+    {
+        return 0;
+    }
+
+    *target = count;
+    if(!count && view->hidden)
+    {
+        view->array = NULL;
+        obor_level_install_array(lv, id, NULL);
+    }
+    return 1;
+}
+
+int obor_level_set_background(s_level *lv, s_layer *layer)
+{
+    if(layer)
+    {
+        int offset;
+        obor_level_arrays *arrays = obor_level_bind_arrays(lv);
+        if(!arrays || !obor_level_find_array(arrays, OBOR_LEVEL_KIND_LAYER, layer, &offset)) return 0;
+    }
+    lv->background = layer;
+    return 1;
+}
+
+int obor_level_grow_array(s_level *lv, obor_level_array_id id, int count)
+{
+    obor_level_arrays *arrays = lv->obor_arrays;
+    obor_level_array_view *view = &arrays->views[id];
+    obor_level_array *array = view->array;
+    const size_t stride = obor_level_array_types[id].stride;
+    const int offset = array ? view->offset : 0;
+    if(lv->obor_releasing || count <= 0 || count > INT_MAX - offset ||
+       (size_t)(count + offset) > SIZE_MAX / stride) return 0;
+
+    if(!array)
+    {
+        array = calloc(1, sizeof(*array));
+        if(!array) return 0;
+        array->data = calloc((size_t)count, stride);
+        if(!array->data)
+        {
+            free(array);
+            return 0;
+        }
+        array->id = id;
+        array->extent = count;
+        array->next = arrays->additional;
+        arrays->additional = array;
+        *view = (obor_level_array_view){array, 0, 0};
+    }
+    else if(count + offset > array->extent)
+    {
+        void *grown = realloc(array->data, (size_t)(count + offset) * stride);
+        if(!grown) return 0;
+        memset((char *)grown + (size_t)array->extent * stride, 0,
+               (size_t)(count + offset - array->extent) * stride);
+        array->data = grown;
+        array->extent = count + offset;
+    }
+
+    for(int index = 0; index < OBOR_LEVEL_ARRAY_COUNT; ++index)
+    {
+        const obor_level_array_view *other = &arrays->views[index];
+        if(other->array == array)
+        {
+            obor_level_install_array(lv, index, (char *)array->data + (size_t)other->offset * stride);
+        }
+    }
+    *obor_level_array_count(lv, id) = count;
+    return 1;
+}
+
 void free_level(s_level *lv)
 {
     int i, j;
@@ -14381,50 +14622,61 @@ void free_level(s_level *lv)
         return;
     }
 
+
+    lv->obor_releasing = 1;
+    obor_level_arrays *arrays = lv->obor_arrays;
+#define LEVEL_OWNED(id, field) (arrays ? arrays->owned[OBOR_LEVEL_ARRAY_##id].data : (void *)lv->field)
+#define LEVEL_EXTENT(id, count) (arrays ? arrays->owned[OBOR_LEVEL_ARRAY_##id].extent : lv->count)
+    unsigned char *(*blendings)[MAX_BLENDINGS] = LEVEL_OWNED(BLENDING, blendings);
+    s_layer *layers = LEVEL_OWNED(LAYER, layers);
+    s_textobj *textobjs = LEVEL_OWNED(TEXT, textobjs);
+    s_basemap *basemaps = LEVEL_OWNED(BASEMAP, basemaps);
+    s_spawn_entry *spawnpoints = LEVEL_OWNED(SPAWN, spawnpoints);
+
     //offload blending tables
-    for(i = 0; i < lv->numpalettes; i++)
+    for(i = 0; i < LEVEL_EXTENT(BLENDING, numpalettes); i++)
     {
         for(j = 0; j < MAX_BLENDINGS; j++)
         {
-            if(lv->blendings[i][j])
+            if(blendings[i][j])
             {
-                free(lv->blendings[i][j]);
+                free(blendings[i][j]);
             }
-            lv->blendings[i][j] = NULL;
+            blendings[i][j] = NULL;
         }
     }
 
     //offload layers
-    for(i = 1; i < lv->numlayers; i++)
+    for(i = 1; i < LEVEL_EXTENT(LAYER, numlayers); i++)
     {
-        if(lv->layers[i].gfx.handle && lv->layers[i].gfx.handle != background)
+        if(layers[i].gfx.handle && layers[i].gfx.handle != background)
         {
-            if(lv->layers[i].gfx.sprite->magic == sprite_magic &&
-               lv->layers[i].gfx.sprite->mask != NULL)
+            if(layers[i].gfx.sprite->magic == sprite_magic &&
+               layers[i].gfx.sprite->mask != NULL)
             {
-                free(lv->layers[i].gfx.sprite->mask);
+                free(layers[i].gfx.sprite->mask);
             }
-            free(lv->layers[i].gfx.handle);
-            lv->layers[i].gfx.handle = NULL;
+            free(layers[i].gfx.handle);
+            layers[i].gfx.handle = NULL;
         }
     }
 
     //offload textobjs
-    for(i = 0; i < lv->numtextobjs; i++)
+    for(i = 0; i < LEVEL_EXTENT(TEXT, numtextobjs); i++)
     {
-        if(lv->textobjs[i].text)
+        if(textobjs[i].text)
         {
-            free(lv->textobjs[i].text);
-            lv->textobjs[i].text = NULL;
+            free(textobjs[i].text);
+            textobjs[i].text = NULL;
         }
     }
 
     //offload basemaps
-    for(i = 0; i < lv->numbasemaps; i++)
+    for(i = 0; i < LEVEL_EXTENT(BASEMAP, numbasemaps); i++)
     {
-        if(lv->basemaps[i].map)
+        if(basemaps[i].map)
         {
-            free(lv->basemaps[i].map);
+            free(basemaps[i].map);
         }
     }
 
@@ -14435,70 +14687,95 @@ void free_level(s_level *lv)
     Script_Clear(&(lv->level_script), 2);
     Script_Clear(&(lv->endlevel_script), 2);
 
-    for(i = 0; i < lv->numspawns; i++)
+    for(i = 0; i < LEVEL_EXTENT(SPAWN, numspawns); i++)
     {
-        Script_Clear(&(lv->spawnpoints[i].spawnscript), 2);
+        Script_Clear(&(spawnpoints[i].spawnscript), 2);
     }
 
-    if(lv->spawnpoints)
+    if(LEVEL_OWNED(SPAWN, spawnpoints))
     {
-        free(lv->spawnpoints);
+        free(LEVEL_OWNED(SPAWN, spawnpoints));
     }
-    if(lv->layers)
+    if(LEVEL_OWNED(LAYER, layers))
     {
-        free(lv->layers);
+        free(LEVEL_OWNED(LAYER, layers));
     }
-    if(lv->layersref)
+    if(LEVEL_OWNED(REFERENCE, layersref))
     {
-        free(lv->layersref);
+        free(LEVEL_OWNED(REFERENCE, layersref));
     }
-    if(lv->panels)
+    if(LEVEL_OWNED(PANEL, panels))
     {
-        free(lv->panels);
+        free(LEVEL_OWNED(PANEL, panels));
     }
-    if(lv->frontpanels)
+    if(LEVEL_OWNED(FRONT, frontpanels))
     {
-        free(lv->frontpanels);
+        free(LEVEL_OWNED(FRONT, frontpanels));
     }
-    if(lv->bglayers)
+    if(LEVEL_OWNED(BACKGROUND, bglayers))
     {
-        free(lv->bglayers);
+        free(LEVEL_OWNED(BACKGROUND, bglayers));
     }
-    if(lv->fglayers)
+    if(LEVEL_OWNED(FOREGROUND, fglayers))
     {
-        free(lv->fglayers);
+        free(LEVEL_OWNED(FOREGROUND, fglayers));
     }
-    if(lv->genericlayers)
+    if(LEVEL_OWNED(GENERIC, genericlayers))
     {
-        free(lv->genericlayers);
+        free(LEVEL_OWNED(GENERIC, genericlayers));
     }
-    if(lv->waters)
+    if(LEVEL_OWNED(WATER, waters))
     {
-        free(lv->waters);
+        free(LEVEL_OWNED(WATER, waters));
     }
-    if(lv->textobjs)
+    if(LEVEL_OWNED(TEXT, textobjs))
     {
-        free(lv->textobjs);
+        free(LEVEL_OWNED(TEXT, textobjs));
     }
-    if(lv->holes)
+    if(LEVEL_OWNED(HOLE, holes))
     {
-        free(lv->holes);
+        free(LEVEL_OWNED(HOLE, holes));
     }
-    if(lv->walls)
+    if(LEVEL_OWNED(WALL, walls))
     {
-        free(lv->walls);
+        free(LEVEL_OWNED(WALL, walls));
     }
-    if(lv->basemaps)
+    if(LEVEL_OWNED(BASEMAP, basemaps))
     {
-        free(lv->basemaps);
+        free(LEVEL_OWNED(BASEMAP, basemaps));
     }
-    if(lv->palettes)
+    if(LEVEL_OWNED(PALETTE, palettes))
     {
-        free(lv->palettes);
+        free(LEVEL_OWNED(PALETTE, palettes));
     }
-    if(lv->blendings)
+    if(LEVEL_OWNED(BLENDING, blendings))
     {
-        free(lv->blendings);
+        free(LEVEL_OWNED(BLENDING, blendings));
+    }
+
+#undef LEVEL_EXTENT
+#undef LEVEL_OWNED
+    if(arrays)
+    {
+        obor_level_array *array = arrays->additional;
+        while(array)
+        {
+            obor_level_array *next = array->next;
+            if(array->id == OBOR_LEVEL_ARRAY_TEXT)
+            {
+                s_textobj *objects = array->data;
+                for(i = 0; i < array->extent; ++i) free(objects[i].text);
+            }
+            if(array->id == OBOR_LEVEL_ARRAY_BASEMAP)
+            {
+                s_basemap *maps = array->data;
+                for(i = 0; i < array->extent; ++i) free(maps[i].map);
+            }
+            free(array->data);
+            free(array);
+            array = next;
+        }
+        free(arrays);
     }
 
     free(lv);
@@ -14673,16 +14950,23 @@ void generate_basemap(int map_index, float rx, float rz, float x_size, float z_s
 
     if(map_index >= level->numbasemaps)
     {
-        s_basemap *grown;
-        const size_t count = (size_t)map_index + 1;
-        if(count > SIZE_MAX / sizeof(*grown))
-            return;
-        grown = realloc(level->basemaps, count * sizeof(*grown));
-        if(!grown)
-            return;
-        memset(grown + level->numbasemaps, 0, (count - level->numbasemaps) * sizeof(*grown));
-        level->basemaps = grown;
-        level->numbasemaps = map_index + 1;
+        if(level->obor_arrays)
+        {
+            if(!obor_level_grow_array(level, OBOR_LEVEL_ARRAY_BASEMAP, map_index + 1)) return;
+        }
+        else
+        {
+            s_basemap *grown;
+            const size_t count = (size_t)map_index + 1;
+            if(count > SIZE_MAX / sizeof(*grown))
+                return;
+            grown = realloc(level->basemaps, count * sizeof(*grown));
+            if(!grown)
+                return;
+            memset(grown + level->numbasemaps, 0, (count - level->numbasemaps) * sizeof(*grown));
+            level->basemaps = grown;
+            level->numbasemaps = map_index + 1;
+        }
     }
     map = level->basemaps + map_index;
     if(!map->map)
@@ -14750,6 +15034,16 @@ void generate_basemap(int map_index, float rx, float rz, float x_size, float z_s
             map->map[cell] = y;
         }
     }
+}
+
+static int obor_level_spawn_count(void)
+{
+    if(obor_profile_build < 4495 || !levelsets || current_set < 0 || current_set >= num_difficulties)
+    {
+        return MAX_PLAYERS;
+    }
+    int players = levelsets[current_set].maxplayers;
+    return players < 0 ? 0 : MIN(players, MAX_PLAYERS);
 }
 
 void load_level(char *filename)
@@ -14833,6 +15127,7 @@ void load_level(char *filename)
         errormessage = "load_level() #1 FATAL: Out of memory!";
         goto lCleanup;
     }
+    level->obor_loading = 1;
     len = strlen(filename);
     level->name = malloc(len + 1);
 
@@ -14851,9 +15146,14 @@ void load_level(char *filename)
 
     level->settime = 100;    // Feb 25, 2005 - Default time limit set to 100
     level->nospecial = 0;    // Default set to specials can be used during bonus levels
-    level->nohurt = 0;    // Default set to players can hurt each other during bonus levels
-    level->nohit = 0;    // Default able to hit the other player
-    level->spawn[0].y = level->spawn[1].y = level->spawn[2].y = level->spawn[3].y = 300;    // Set the default spawn y to 300
+    level->nohurt = obor_profile_build >= 4504 ? DAMAGE_FROM_ENEMY_ON : 0;
+    level->nohit = obor_profile_build >= 4504 ? DAMAGE_FROM_PLAYER_ON : 0;
+    if(obor_profile_build >= 4504) level->boss_slow = BOSS_SLOW_ON;
+    level->player_spawn_count = obor_level_spawn_count();
+    for(int player = 0; player < level->player_spawn_count; ++player)
+    {
+        level->spawn[player].y = obor_profile_build >= 4495 ? videomodes.vRes + 60 : 300;
+    }
     level->setweap = 0;
     level->maxtossspeed = default_level_maxtossspeed;
     level->maxfallspeed = default_level_maxfallspeed;
@@ -15215,16 +15515,36 @@ void load_level(char *filename)
             level->noreset = GET_INT_ARG(1);
             break;
         case CMD_LEVEL_NOSLOW:
-            // If set, level will not slow down when bosses are defeated
-            level->noslow = GET_INT_ARG(1);
+            if(obor_profile_build >= 4504)
+            {
+                if(GET_INT_ARG(1)) level->boss_slow = BOSS_SLOW_OFF;
+            }
+            else
+            {
+                level->noslow = GET_INT_ARG(1);
+            }
             break;
         case CMD_LEVEL_TYPE:
             level->type = GET_INT_ARG(1);    // Level type - 1 = bonus, else regular
             level->nospecial = GET_INT_ARG(2);    // Can use specials during bonus levels (default 0 - yes)
-            level->nohurt = GET_INT_ARG(3);    // Can hurt other players during bonus levels (default 0 - yes)
+            if(obor_profile_build >= 4504)
+            {
+                if(GET_INT_ARG(3)) level->nohurt = DAMAGE_FROM_ENEMY_OFF;
+            }
+            else
+            {
+                level->nohurt = GET_INT_ARG(3);
+            }
             break;
         case CMD_LEVEL_NOHIT:
-            level->nohit = GET_INT_ARG(1);
+            if(obor_profile_build >= 4504)
+            {
+                if(GET_INT_ARG(1)) level->nohit = DAMAGE_FROM_PLAYER_OFF;
+            }
+            else
+            {
+                level->nohit = GET_INT_ARG(1);
+            }
             break;
         case CMD_LEVEL_GRAVITY:
             level->gravity = GET_FLOAT_ARG(1);
@@ -15266,14 +15586,15 @@ void load_level(char *filename)
             default:
                 assert(0);
             }
-            level->spawn[i].x = GET_INT_ARG(1);
-            level->spawn[i].z = GET_INT_ARG(2);
-            level->spawn[i].y = GET_INT_ARG(3);
-
-            //if(level->spawn[i].z > 232 || level->spawn[i].z < 0) level->spawn[i].z= 232;
-            if(level->spawn[i].y < 0)
+            if(i < level->player_spawn_count)
             {
-                level->spawn[i].y = 300;
+                level->spawn[i].x = GET_INT_ARG(1);
+                level->spawn[i].z = GET_INT_ARG(2);
+                level->spawn[i].y = GET_INT_ARG(3);
+                if(obor_profile_build < 4495 && level->spawn[i].y < 0)
+                {
+                    level->spawn[i].y = 300;
+                }
             }
             break;
         case CMD_LEVEL_FRONTPANEL:
@@ -15979,6 +16300,7 @@ void load_level(char *filename)
     {
         printf("\n");
     }
+    level->obor_loading = 0;
     printf("Level Loaded:    '%s'\n", level->name);
     totalram = getSystemRam(BYTES);
     freeram = getFreeRam(BYTES);
@@ -17654,10 +17976,10 @@ void ent_default_init(entity *e)
         }
         else if(!e->animation)
         {
-            if(time && level->spawn[(int)e->playerindex].y > e->position.y)
+            if(time && obor_level_player_spawn(level, e->playerindex)->y > e->position.y)
             {
                 e->takeaction = common_drop;
-                e->position.y = (float)level->spawn[(int)e->playerindex].y;
+                e->position.y = (float)obor_level_player_spawn(level, e->playerindex)->y;
                 if(validanim(e, ANI_JUMP))
                 {
                     ent_set_anim(e, ANI_JUMP, 0);
@@ -18513,6 +18835,11 @@ void ent_set_model(entity *ent, char *modelname, int syncAnim)
 }
 
 
+static int obor_spawn_excludes_player_targets(const s_level *stage)
+{
+    return stage && (obor_profile_build >= 4504 ? stage->nohit == DAMAGE_FROM_PLAYER_ON : stage->nohit);
+}
+
 entity *spawn(float x, float z, float a, int direction, char *name, int index, s_model *model)
 {
     entity *e = NULL;
@@ -18610,7 +18937,7 @@ entity *spawn(float x, float z, float a, int direction, char *name, int index, s
             e->speedmul = 1;
             ent_set_colourmap(e, 0);
             e->lifespancountdown = model->lifespan; // new life span countdown
-            if((e->modeldata.type & TYPE_PLAYER) && ((level && level->nohit) || savedata.mode))
+            if((e->modeldata.type & TYPE_PLAYER) && (obor_spawn_excludes_player_targets(level) || savedata.mode))
             {
                 e->modeldata.hostile &= ~TYPE_PLAYER;
                 e->modeldata.candamage &= ~TYPE_PLAYER;
@@ -20369,7 +20696,7 @@ void do_attack(entity *e)
 
         // New blocking checks
         //04/27/2008 Damon Caskey: Added checks for defense property specfic blockratio and type. Could probably use some cleaning.
-        if(didblock && !level->nohurt)
+        if(didblock && (obor_profile_build >= 4504 ? level->nohurt == DAMAGE_FROM_ENEMY_ON : !level->nohurt))
         {
             if(blockratio || def->defense[attack->attack_type].blockratio) // Is damage reduced?
             {
@@ -30498,7 +30825,8 @@ int player_takedamage(entity *other, s_collision_attack *attack)
 {
     s_collision_attack atk = *attack;
     //printf("damaged by: '%s' %d\n", other->name, attack->attack_force);
-    if(healthcheat || (level->nohurt && (other->modeldata.type & TYPE_ENEMY)))
+    if(healthcheat || ((obor_profile_build >= 4504 ? level->nohurt == DAMAGE_FROM_ENEMY_OFF : level->nohurt)
+                       && (other->modeldata.type & TYPE_ENEMY)))
     {
         atk.attack_force = 0;
     }
@@ -30801,7 +31129,7 @@ entity *knife_spawn(char *name, int index, float x, float z, float a, int direct
     {
         e->modeldata.candamage = self->modeldata.candamage;
     }
-    if((self->modeldata.type & TYPE_PLAYER) && ((level && level->nohit) || savedata.mode))
+    if((self->modeldata.type & TYPE_PLAYER) && (obor_spawn_excludes_player_targets(level) || savedata.mode))
     {
         e->modeldata.hostile &= ~TYPE_PLAYER;
         e->modeldata.candamage &= ~TYPE_PLAYER;
@@ -31437,11 +31765,12 @@ void spawnplayer(int index)
     p.colourmap = player[index].colourmap;
     p.spawnplayer_count = -1;
 
+    const s_axis_f *spawn_position = obor_level_player_spawn(level, index);
     if(level->scrolldir & SCROLL_LEFT)
     {
-        if(level->spawn[index].x)
+        if(spawn_position->x)
         {
-            p.position.x = (float)(videomodes.hRes - level->spawn[index].x);
+            p.position.x = (float)(videomodes.hRes - spawn_position->x);
         }
         else
         {
@@ -31450,9 +31779,9 @@ void spawnplayer(int index)
     }
     else
     {
-        if(level->spawn[index].x)
+        if(spawn_position->x)
         {
-            p.position.x = (float)(level->spawn[index].x);
+            p.position.x = (float)(spawn_position->x);
         }
         else
         {
@@ -31460,15 +31789,15 @@ void spawnplayer(int index)
         }
         p.flip = 1;
     }
-    if(level->spawn[index].z)
+    if(spawn_position->z)
     {
         if(level->scrolldir & (SCROLL_INWARD | SCROLL_OUTWARD))
         {
-            p.position.z = (float)(level->spawn[index].z);
+            p.position.z = (float)(spawn_position->z);
         }
         else
         {
-            p.position.z = (float)(PLAYER_MIN_Z + level->spawn[index].z);
+            p.position.z = (float)(PLAYER_MIN_Z + spawn_position->z);
         }
     }
     else if(PLAYER_MAX_Z - PLAYER_MIN_Z > 5)
@@ -32255,18 +32584,18 @@ void update_scrolled_bg()
         2, 2, 3, 3, 2, 2, 3, 3,
         2, 2, 3, 3, 2, 3, 2, 3,
     };   // fast, constant rumbling, like in/on a van or trailer
-    int pb = pixelbytes[(int)screenformat];
+    int pb = pixelbytes[(int)(obor_profile_build >= 4453 ? PIXEL_32 : screenformat)];
 
     if(time >= neon_time && !freezeall)   // Added freezeall so neon lights don't update if animations are frozen
     {
-        if(pixelformat == PIXEL_8) // under 8bit mode just cycle the palette from 128 to 135
+        if(obor_profile_build < 4471 && pixelformat == PIXEL_8) // under 8bit mode just cycle the palette from 128 to 135
         {
             for(i = 0; i < 8; i++)
             {
                 neontable[128 + i] = 128 + ((i + neon_count) & 7);
             }
         }
-        else if(pixelformat == PIXEL_x8) // copy palette under 16/32bit mode
+        else if(obor_profile_build >= 4471 || pixelformat == PIXEL_x8) // copy palette under 16/32bit mode
         {
             memcpy(neonp, neontable + 128 * pb, 8 * pb);
             memcpy(neontable + 128 * pb, neonp + 2 * pb, 6 * pb);
@@ -32433,14 +32762,19 @@ void draw_scrolled_bg()
         }
         if(layer->neon)
         {
-            if(pixelformat != PIXEL_x8 || current_palette <= 0)
+            if(obor_profile_build >= 4473 || pixelformat != PIXEL_x8 || current_palette <= 0)
             {
                 screenmethod.table = neontable;
             }
         }
         else
         {
-            screenmethod.table = (pixelformat == PIXEL_x8) ? (current_palette > 0 ? (level->palettes[current_palette - 1]) : NULL) : NULL;
+            screenmethod.table = NULL;
+            if((obor_profile_build >= 4469 || pixelformat == PIXEL_x8) &&
+               current_palette > 0 && current_palette <= level->numpalettes && level->palettes)
+            {
+                screenmethod.table = level->palettes[current_palette - 1];
+            }
         }
         screenmethod.water.wavetime =  (int)(timevar * screenmethod.water.wavespeed);
         screenmethod.xrepeat = screenmethod.yrepeat = 0;
@@ -32974,7 +33308,9 @@ void update(int ingame, int usevwait)
             execute_keyscripts();
         }
 
-        if((level_completed && !level->noslow && !tospeedup) || slowmotion.toggle > SLOW_MOTION_OFF)
+        if((level_completed && !tospeedup &&
+            (obor_profile_build >= 4504 ? level->boss_slow == BOSS_SLOW_ON : !level->noslow)) ||
+           slowmotion.toggle > SLOW_MOTION_OFF)
         {
             if(slowmotion.duration == slowmotion.counter)
             {
@@ -35575,7 +35911,7 @@ void init_videomodes(int log)
     ArgList arglist;
     char argbuf[MAX_ARG_LEN + 1] = "";
 
-    if(obor_profile_build == 4453)
+    if(obor_profile_build >= 4453 && obor_profile_build <= 4510)
     {
         /* 4453 dropped screenformat: its framebuffer is always PIXEL_32,
          * while model images retain their individual indexed palettes. */
@@ -35686,7 +36022,7 @@ readfile:
             }
             else if(stricmp(command, "colourdepth") == 0)
             {
-                if(obor_profile_build == 4453)
+                if(obor_profile_build >= 4453 && obor_profile_build <= 4510)
                 {
                     printf("\nColordepth is depreciated. All modules are displayed with a 32bit color screen.\n\n");
                     pos += getNewLineStart(buf + pos);
@@ -35904,7 +36240,7 @@ void safe_set(int *arr, int index, int newkey, int oldkey)
 
 void keyboard_setup(int player)
 {
-    const int btnnum = obor_profile_build == 4453 ? MAX_BTN_NUM : 12;
+    const int btnnum = (obor_profile_build >= 4453 && obor_profile_build <= 4510) ? MAX_BTN_NUM : 12;
     int quit = 0, sdid,
         selector = 0,
         setting = -1,
@@ -35933,7 +36269,7 @@ void keyboard_setup(int player)
     strncpy(buttonnames[SDID_START], "Start", 16);
     strncpy(buttonnames[SDID_SCREENSHOT], "Screenshot", 16);
     strncpy(buttonnames[SDID_ESC], "Exit", 16);
-    if(obor_profile_build == 4453) disabledkey[SDID_ESC] = 1;
+    if(obor_profile_build >= 4453 && obor_profile_build <= 4510) disabledkey[SDID_ESC] = 1;
 
     savesettings();
     bothnewkeys = 0;

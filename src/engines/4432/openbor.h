@@ -6,7 +6,9 @@
  * Allocate collision pointer slots through the highest author-facing index
  * used by each collection. Track each model's allocated animation-table
  * capacity and reject lookups outside it. Retain the historical last-hit
- * scalar independently of the live attack reference.
+ * scalar independently of the live attack reference. Define native set
+ * property selectors and retain ownership of their level orders. Define the
+ * active player spawn extent and native level flags.
  * Existing changes recorded here; this is not their implementation date.
  * See MODIFICATIONS.md and docs/modifications/4432.md
  * at the source repository root. Original notices follow below.
@@ -626,6 +628,47 @@ typedef enum
     ARG_STRING,
     ARG_INT
 } e_arg_types;
+
+/* Native set property order from build 4493. */
+typedef enum
+{
+    SET_PROP_COMPLETE_FLAG,
+    SET_PROP_COMPLETE_SKIP,
+    SET_PROP_CONTINUE_SCORE_TYPE,
+    SET_PROP_CREDITS,
+    SET_PROP_GAME_OVER_SKIP,
+    SET_PROP_HOF_DISABLE,
+    SET_PROP_LEVELSET_COLLECTION,
+    SET_PROP_LEVELSET_COUNT,
+    SET_PROP_LIVES,
+    SET_PROP_MP_RECOVER_TYPE,
+    SET_PROP_MUSIC_FADE_TIME,
+    SET_PROP_MUSIC_OVERLAP,
+    SET_PROP_NAME,
+    SET_PROP_PLAYER_MAX,
+    SET_PROP_SAVE_TYPE,
+    SET_PROP_SELECT_DISABLE,
+    SET_PROP_SELECT_NO_SAME,
+    OBOR_SET_PROP_COUNT
+} e_set_properties;
+
+typedef enum
+{
+    BOSS_SLOW_OFF,
+    BOSS_SLOW_ON
+} e_boss_slow_flag;
+
+typedef enum
+{
+    DAMAGE_FROM_ENEMY_OFF,
+    DAMAGE_FROM_ENEMY_ON
+} e_damage_from_enemy_flag;
+
+typedef enum
+{
+    DAMAGE_FROM_PLAYER_OFF,
+    DAMAGE_FROM_PLAYER_ON
+} e_damage_from_player_flag;
 
 typedef enum
 {
@@ -2294,7 +2337,15 @@ typedef struct
     int saveflag;
     int nosame;
     int noshowcomplete;
+    s_level_entry *levelorder_owner;
+    int levelorder_replaced;
+    int levelorder_hidden;
 } s_set_entry;
+
+static inline s_level_entry *obor_owned_levelorder(const s_set_entry *set)
+{
+    return set->levelorder_replaced ? set->levelorder_owner : set->levelorder;
+}
 
 typedef struct
 {
@@ -2359,6 +2410,67 @@ typedef struct
     int type;
 } s_terrain;
 
+/* The loader owns its allocations even when scripts replace visible views. */
+#define OBOR_LEVEL_ARRAYS(X) \
+    X(BASEMAP, basemaps, numbasemaps, BASEMAP) \
+    X(HOLE, holes, numholes, TERRAIN) \
+    X(WALL, walls, numwalls, TERRAIN) \
+    X(LAYER, layers, numlayers, LAYER) \
+    X(REFERENCE, layersref, numlayersref, LAYER) \
+    X(PANEL, panels, numpanels, PANEL) \
+    X(FRONT, frontpanels, numfrontpanels, LAYER_POINTER) \
+    X(BACKGROUND, bglayers, numbglayers, LAYER_POINTER) \
+    X(FOREGROUND, fglayers, numfglayers, LAYER_POINTER) \
+    X(GENERIC, genericlayers, numgenericlayers, LAYER_POINTER) \
+    X(WATER, waters, numwaters, LAYER_POINTER) \
+    X(PALETTE, palettes, numpalettes, PALETTE) \
+    X(BLENDING, blendings, numpalettes, BLENDING) \
+    X(SPAWN, spawnpoints, numspawns, SPAWN) \
+    X(TEXT, textobjs, numtextobjs, TEXT)
+
+typedef enum
+{
+#define OBOR_LEVEL_ARRAY_ID(id, field, count, kind) OBOR_LEVEL_ARRAY_##id,
+    OBOR_LEVEL_ARRAYS(OBOR_LEVEL_ARRAY_ID)
+#undef OBOR_LEVEL_ARRAY_ID
+    OBOR_LEVEL_ARRAY_COUNT
+} obor_level_array_id;
+
+typedef enum
+{
+    OBOR_LEVEL_KIND_BASEMAP,
+    OBOR_LEVEL_KIND_TERRAIN,
+    OBOR_LEVEL_KIND_LAYER,
+    OBOR_LEVEL_KIND_LAYER_POINTER,
+    OBOR_LEVEL_KIND_PANEL,
+    OBOR_LEVEL_KIND_PALETTE,
+    OBOR_LEVEL_KIND_BLENDING,
+    OBOR_LEVEL_KIND_SPAWN,
+    OBOR_LEVEL_KIND_TEXT
+} obor_level_array_kind;
+
+typedef struct obor_level_array
+{
+    void *data;
+    int extent;
+    obor_level_array_id id;
+    struct obor_level_array *next;
+} obor_level_array;
+
+typedef struct
+{
+    obor_level_array *array;
+    int offset;
+    int hidden;
+} obor_level_array_view;
+
+typedef struct
+{
+    obor_level_array owned[OBOR_LEVEL_ARRAY_COUNT];
+    obor_level_array_view views[OBOR_LEVEL_ARRAY_COUNT];
+    obor_level_array *additional;
+} obor_level_arrays;
+
 typedef struct
 {
     char *name;
@@ -2415,10 +2527,15 @@ typedef struct
     int type; // Used to specify which level type (1 = bonus, else regular)
     int nospecial; // Used to specify if you can use your special during bonus levels
     int nohurt; // Used to specify if you can hurt the other player during bonus levels
-    int noslow; // Flag so the level doesn't slow down after a boss is defeated
+    union
+    {
+        int noslow;
+        int boss_slow;
+    };
     int nohit; // Not able to grab / hit other player on a per level basis
     int forcefinishlevel; // flag to forca to finish a level
-    s_axis_f spawn[MAX_PLAYERS]; // Used to determine the spawn position of players
+    s_axis_f spawn[MAX_PLAYERS]; // Storage for the admitted player spawn positions.
+    int player_spawn_count;
     int setweap; // Levels can now specified which weapon will be used by default
     e_facing_adjust facing; // Force the players to face to ...
 //--------------------gravity system-------------------------
@@ -2437,7 +2554,27 @@ typedef struct
     int quake;
     int waiting;
 
+    obor_level_arrays *obor_arrays;
+    s_axis_f *obor_spawn_view;
+    int obor_releasing;
+    int obor_loading;
 } s_level;
+
+int obor_level_set_array(s_level *lv, obor_level_array_id id, void *data);
+int obor_level_set_array_count(s_level *lv, obor_level_array_id id, int count);
+int obor_level_set_background(s_level *lv, s_layer *layer);
+int obor_level_grow_array(s_level *lv, obor_level_array_id id, int count);
+
+static inline void *obor_level_script_array(const s_level *lv, obor_level_array_id id, void *data)
+{
+    return lv->obor_arrays && lv->obor_arrays->views[id].hidden ? NULL : data;
+}
+
+static inline const s_axis_f *obor_level_player_spawn(const s_level *lv, int index)
+{
+    if(lv->obor_spawn_view && index < lv->player_spawn_count) return &lv->obor_spawn_view[index];
+    return &lv->spawn[index];
+}
 
 typedef struct ArgList
 {

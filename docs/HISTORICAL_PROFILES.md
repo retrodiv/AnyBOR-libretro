@@ -41,7 +41,7 @@ v3.0 4383, v3.0 4385, v3.0 4387, v3.0 4389, v3.0 4390, v3.0 4393, v3.0 4394, v3.
 v3.0 4401, v3.0 4403, v3.0 4404-dev, v3.0 4406, v3.0 4411, v3.0 4412, v3.0 4413, v3.0 4414,
 v3.0 4417, v3.0 4419, v3.0 4420, v3.0 4421-dev, v3.0 4423, v3.0 4424, v3.0 4426, v3.0 4429,
 v3.0 4430, v3.0 4431,
-v3.0 4432, v3.0 4453, v3.0 6330, v3.0 6330-lns-010g, v3.0 6391, v3.0 6391-mod, v3.0 6392-dev,
+v3.0 4432, v3.0 4453, v3.0 4454-dev, v3.0 4456, v3.0 4510-dev, v3.0 6330, v3.0 6330-lns-010g, v3.0 6391, v3.0 6391-mod, v3.0 6392-dev,
 v3.0 6412-dev, v3.0 6510-dev, v3.0 7086-dev, v3.0 7123-dev, v4.0 7142-alpha,
 v4.0 7530, v4.0 7533, v4.0 7555, v4.0 7556, v4.0 7735 and v4.0 8023-dev.
 
@@ -837,6 +837,9 @@ Profiles are compatibility selections. Several profiles use one physical source 
 | v3.0 4213 | `4086` |
 | v3.0 4432 | `4432` |
 | v3.0 4453 | `4432` |
+| v3.0 4454-dev | `4432` |
+| v3.0 4456 | `4432` |
+| v3.0 4510-dev | `4432` |
 | v3.0 6330 | `6391` |
 | v3.0 6330-lns-010g | `6391` |
 | v3.0 6391 | `6391` |
@@ -954,6 +957,19 @@ their directories and save states separate. The later control menu disables
 Exit reassignment. Both profiles bound the DOT loop to its allocated slots
 and keep control-menu indexing within its arrays.
 
+[4454-dev](https://github.com/DCurrent/openbor/commit/551df628ecc86831879a4dc041874a06885de15a)
+and [4456](https://github.com/DCurrent/openbor/commit/670315aa6c7feec39adf17f97cb9891e306a669b)
+use engine 4432. Both retain the 32-bit screen and settings layout of 4453
+and restore conversion of indexed model remaps into palettes. The 4456
+profile exposes the typed `getdrawmethod` getter introduced in 4455 and
+allows scripts to read and change the current timer through `game_time`.
+
+[4510-dev](https://github.com/DCurrent/openbor/commit/dd5b281049ec52d03535808b489c26d01edd2b5e)
+uses engine 4432. It retains the later 32-bit screen and settings layout and
+exposes native set, level and layer queries, level collection and script
+assignments and `SCROLL_BACK`. The profile reproduces the original level
+spawn positions, slowdown and damage rules. An exact build tag or manual
+option selects the profile.
 
 Engine 6391 uses upstream commit
 [`494708eb34e71d1afda237873907701c4ec3a569`](https://github.com/DCurrent/openbor/commit/494708eb34e71d1afda237873907701c4ec3a569).

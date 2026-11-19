@@ -149,8 +149,8 @@ version by themselves. Built-in content-evidence rules do not use game identitie
 or game-content hashes.
 The reconstructed test profile has no invented content signature.
 
-Unlabelled content retains the existing inference/fallback policy. The two
-official releases v3.0 4453 and v3.0 6330 participate in ordinary automatic
+Unlabelled content retains the existing inference/fallback policy. The
+official releases v3.0 4453, v3.0 4456 and v3.0 6330 participate in ordinary automatic
 routing. Unidentified executable declarations and unlabelled inference do not select
 nonautomatic test profiles. Loose mod directories retain metadata routing;
 the packed-content analysis applies to prepared PACK content.

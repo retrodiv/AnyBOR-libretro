@@ -44,6 +44,99 @@ def check_constants_continuation(log, profile, restarts=0):
         raise RuntimeError('Historical unknown-constant contract differs: ' + log)
 
 
+def render_set_property_checks(core, script, fixture):
+    from test_historical_player import rename_identifiers
+
+    api = ('openbor_get_set_property', 'openbor_set_set_property')
+    registry = '\n'.join(function(script, name) for name in
+                         ('Script_GetFunctionName', 'Script_LoadSystemFunctions'))
+    symbols = sorted(set(re.findall(r'\(void\s*\*\)\s*((?:openbor|math|system)_\w+)', registry)) - set(api))
+    renamed = {name: 'probe_' + name for name in symbols}
+    renamed.update(theFunctionList='probe_list', List_Reset='probe_reset', List_InsertAfter='probe_insert')
+    tables, checks = [], {}
+    for row in fixture['sources']:
+        if not row['views']:
+            checks[row['revision']] = 'check_set_properties(NULL, 0, -1);'
+            continue
+        table = 'set_results_%d' % row['revision']
+        entries = []
+        for property_view in row['views']:
+            tag, field = property_view['tag'], property_view['field']
+            if tag not in ('VT_INTEGER', 'VT_DECIMAL', 'VT_PTR', 'VT_STR'):
+                raise ValueError('Original set property result tag required')
+            value = 0 if tag in ('VT_PTR', 'VT_STR') else fixture['values'][field]
+            entries.append('{%d,%s,%d}' % (property_view['index'], tag, value))
+        tables.append('static const struct set_result '+table+'[]={'+','.join(entries)+'};')
+        checks[row['revision']] = 'check_set_properties(%s,%d,%d);' % (
+            table, len(entries), row['writable'])
+    fields = fixture['values']
+    if not all(re.fullmatch(r'[a-z_]+', name) and type(value) is int for name, value in fields.items()):
+        raise ValueError('Explicit integer seed fields required')
+    parts = dict(STUBS='\n'.join('static void probe_' + name + '(void) {}' for name in symbols),
+        NATIVE='\n'.join(function(script, name) for name in ('obor_script_set_handle',
+                      'obor_assign_levelorder', *api)),
+        REGISTRY=rename_identifiers(registry, renamed), UNLOAD=function(core, 'unload_levelorder'),
+        SEED=', '.join('.%s = %d' % (name, value) for name, value in fields.items()), TABLES='\n'.join(tables))
+    template = Path(__file__).with_name('set_property_contract.c.in').read_text()
+    return re.sub(r'@([A-Z_]+)@', lambda item: parts[item[1]], template), checks
+
+
+def render_level_getter_checks(script, fixture):
+    from test_historical_player import rename_identifiers
+
+    callback = 'openbor_get_level_property'
+    registry = '\n'.join(function(script, name) for name in
+                         ('Script_GetFunctionName', 'Script_LoadSystemFunctions'))
+    symbols = sorted(set(re.findall(r'\(void\s*\*\)\s*((?:openbor|math|system)_\w+)', registry)) - {callback})
+    renamed = {name: 'probe_' + name for name in symbols}
+    renamed.update(theFunctionList='probe_list', List_Reset='probe_reset', List_InsertAfter='probe_insert')
+    values = fixture['values']
+    if not all(re.fullmatch(r'[a-z_]+', field) and type(value) in (int, float)
+               for field, value in values.items()):
+        raise ValueError('Explicit level property seed values required')
+    pointers = set()
+    strings = set()
+    tables = []
+    for index, view in enumerate(fixture['views']):
+        entries = []
+        for item in view:
+            if item is None:
+                entries.append('{.tag = UNSUPPORTED}')
+                continue
+            tag, field = item
+            if not re.fullmatch(r'[a-z_]+', field):
+                raise ValueError('Explicit level field required')
+            if tag in ('VT_INTEGER', 'VT_DECIMAL', 'DECIMAL_INTEGER'):
+                entries.append('{%s, .number = %s}' % (tag, values[field]))
+            elif tag in ('VT_PTR', 'POINTER_BASEMAPS'):
+                if field != 'active_level':
+                    pointers.add(field)
+                pointer = '&stage' if field == 'active_level' else '&collection_' + field
+                entries.append('{%s, .pointer = %s}' % (tag, pointer))
+            elif tag == 'VT_STR':
+                strings.add(field)
+                entries.append('{VT_STR, .text = %s}' % json.dumps('Level ' + field))
+            else:
+                raise ValueError('Original level property result tag required')
+        tables.append('static const struct level_result level_results_%d[] = {%s};' %
+                      (index, ','.join(entries or ['{.tag = UNSUPPORTED}'])))
+    seeds = ['stage.%s = %s;' % item for item in values.items() if item[0] not in ('noslow', 'boss_slow')]
+    seeds += ['if(obor_profile_build < 4502) stage.noslow = %s;' % values['noslow'],
+              'else stage.boss_slow = %s;' % values['boss_slow']]
+    seeds += ['stage.%s = (void *)&collection_%s;' % (field, field) for field in sorted(pointers)]
+    seeds += ['stage.name = "Level name";' if field == 'name' else
+              'strcpy(stage.%s, %s);' % (field, json.dumps('Level ' + field)) for field in sorted(strings)]
+    checks = {row['revision']: 'check_level_getter(level_results_%d, %d, %d, %d, %d);' %
+              (row['view'], len(fixture['views'][row['view']]), row['getter'],
+               row['compact_reverse'], row['current_level']) for row in fixture['sources']}
+    parts = dict(STUBS='\n'.join('static void probe_' + name + '(void) {}' for name in symbols),
+                 GETTER=function(script, callback), REGISTRY=rename_identifiers(registry, renamed),
+                 COLLECTIONS='\n'.join('static double collection_%s;' % field for field in sorted(pointers)),
+                 SEED='\n    '.join(seeds), TABLES='\n'.join(tables))
+    template = Path(__file__).with_name('level_property_getter_contract.c.in').read_text()
+    return re.sub(r'@([A-Z_]+)@', lambda item: parts[item[1]], template), checks
+
+
 class UnknownConstantsTests(unittest.TestCase):
     def test_4432_historical_script_constant_lookups(self):
         self._check_4432_constants('profile-script-constant-lookup-contracts.json')
@@ -51,7 +144,18 @@ class UnknownConstantsTests(unittest.TestCase):
     def test_4432_historical_animation_property_numbers(self):
         self._check_4432_constants('profile-animation-property-number-contracts.json', frame_properties=True)
 
-    def _check_4432_constants(self, name, *, frame_properties=False):
+    def test_4432_set_property_ordinals_and_collections(self):
+        self._check_4432_constants('profile-4432-set-property-contracts.json', set_properties=True)
+
+    def test_4432_stage_flag_constants(self):
+        self._check_4432_constants('profile-4432-stage-runtime-contracts.json')
+
+    def test_4432_typed_level_property_ordinals_and_getter(self):
+        self._check_4432_constants('profile-4432-level-getter-contracts.json',
+                                   render_checks=render_level_getter_checks)
+
+    def _check_4432_constants(self, name, *, frame_properties=False, set_properties=False,
+                              render_checks=None):
         from test_historical_common_think import ROOT, native_output
         fixture = load_contract_fixture(Path(__file__).parent / 'fixtures' / name)
         engine = ROOT / 'src/engines' / fixture['engine']
@@ -86,6 +190,7 @@ class UnknownConstantsTests(unittest.TestCase):
                 support += function(script, 'obor_native_animation_property')
         native = macros + mapper + function(script, 'openbor_transconst')
         extra_checks = ''
+        extra_context_checks = {}
         if frame_properties:
             variant = (engine / 'source/scriptlib/ScriptVariant.c').read_text()
             native += function(variant, 'ScriptVariant_IntegerValue')
@@ -93,6 +198,10 @@ class UnknownConstantsTests(unittest.TestCase):
                                 ('openbor_get_animation_property', 'openbor_set_animation_property'))
             extra_checks = Path(__file__).with_name('animation_property_number_contract.c.in').read_text()
             frames_index = fixture['names'].index('ANI_PROP_NUMFRAMES')
+        if set_properties:
+            extra_checks, extra_context_checks = render_set_property_checks(core, script, fixture)
+        if render_checks:
+            extra_checks, extra_context_checks = render_checks(script, fixture)
         checks = []
         for row in rows:
             checks.append('check(%du, table_%d, %d);' %
@@ -101,6 +210,8 @@ class UnknownConstantsTests(unittest.TestCase):
                 self.assertIs(type(row['frame_setter']), bool)
                 number = fixture['contracts'][row['contract']][frames_index]
                 checks.append('check_frame_property(%d, %d);' % (number, row['frame_setter']))
+            if extra_context_checks:
+                checks.append(extra_context_checks[row['revision']])
         parts = dict(
             TABLES='\n'.join(tables),
             CHECKS='\n'.join(checks),

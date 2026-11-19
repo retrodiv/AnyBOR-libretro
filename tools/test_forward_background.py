@@ -9,11 +9,12 @@ from pathlib import Path
 import re
 import unittest
 
-from contract_fixtures import contract_profiles, load_contract_fixture
+from contract_fixtures import contract_profiles, contract_revisions, load_contract_fixture
 from test_historical_common_think import ROOT, native_output
 from test_historical_player import function, switch_cases
 
 FIXTURE = Path(__file__).with_name('fixtures') / 'profile-forward-background-contracts.json'
+SCROLLED_FIXTURE = FIXTURE.with_name('profile-4432-scrolled-background-contracts.json')
 
 
 def program(data, engine):
@@ -62,6 +63,26 @@ def program(data, engine):
     return result
 
 
+def scrolled_background_program(data):
+    source = (ROOT / 'src/engines' / data['engine'] / 'openbor.c').read_text()
+    loader = function(source, 'load_background')
+    update = function(source, 'update_scrolled_bg')
+    draw = function(source, 'draw_scrolled_bg')
+    load = loader[loader.index('    unload_background();'):loader.index('    if(createtables)')]
+    neon = update[update.index('    int pb ='):update.index('    if(!freezeall)')]
+    table = draw[draw.index('        if(layer->neon)'):draw.index('        screenmethod.water.wavetime')]
+    replacements = dict(LOAD=load, NEON=neon, TABLE=table,
+        CONTEXTS=',\n'.join('{%d,%d,%d,%d,%d,%d}' % (row['revision'], row['fixed_palette_width'],
+            row['indexed_first'], row['always_rotate'], row['select_palette_all_modes'],
+            row['always_neon']) for row in data['sources']))
+    rendered = Path(__file__).with_name('later_scrolled_background_contract.c.in').read_text()
+    for key, value in replacements.items():
+        rendered = rendered.replace('@' + key + '@', value)
+    if re.search(r'@[A-Z_]+@', rendered):
+        raise ValueError('Unresolved 4432 background dependency')
+    return rendered
+
+
 class ForwardBackgroundTests(unittest.TestCase):
     def test_native_command_parser_clocks_and_layer_requests(self):
         data = load_contract_fixture(FIXTURE)
@@ -80,6 +101,14 @@ class ForwardBackgroundTests(unittest.TestCase):
         rows = [json.loads(line) for line in native_output(program(data, engine), data,
                 engine_source=engine).splitlines()]
         self.assertEqual(rows, [dict(revision=row['revision'], status='PASS') for row in data['sources']])
+
+    def test_4432_scrolled_background_palette_routes(self):
+        data = load_contract_fixture(SCROLLED_FIXTURE)
+        revisions = [row['revision'] for row in data['sources']]
+        self.assertEqual(revisions, sorted(set(revisions)))
+        self.assertEqual(set(revisions), contract_revisions(data, data['expected_revisions']))
+        observed = [json.loads(line) for line in native_output(scrolled_background_program(data), data).splitlines()]
+        self.assertEqual(observed, [dict(revision=r, status='PASS') for r in revisions])
 
 
 if __name__ == '__main__':

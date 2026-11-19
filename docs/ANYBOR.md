@@ -42,7 +42,7 @@ v3.0 4383, v3.0 4385, v3.0 4387, v3.0 4389, v3.0 4390, v3.0 4393, v3.0 4394, v3.
 v3.0 4401, v3.0 4403, v3.0 4404-dev, v3.0 4406, v3.0 4411, v3.0 4412, v3.0 4413, v3.0 4414,
 v3.0 4417, v3.0 4419, v3.0 4420, v3.0 4421-dev, v3.0 4423, v3.0 4424, v3.0 4426, v3.0 4429,
 v3.0 4430, v3.0 4431,
-v3.0 4432, v3.0 4453, v3.0 6330, v3.0 6330-lns-010g, v3.0 6391, v3.0 6391-mod, v3.0 6392-dev,
+v3.0 4432, v3.0 4453, v3.0 4454-dev, v3.0 4456, v3.0 4510-dev, v3.0 6330, v3.0 6330-lns-010g, v3.0 6391, v3.0 6391-mod, v3.0 6392-dev,
 v3.0 6412-dev, v3.0 6510-dev, v3.0 7086-dev, v3.0 7123-dev, v4.0 7142-alpha,
 v4.0 7530, v4.0 7533, v4.0 7555, v4.0 7556, v4.0 7735 and v4.0 8023-dev.
 Automatic selection uses build tags and content clues to choose a profile. You can select one
@@ -244,8 +244,9 @@ select the first compatible intervening era up to v4.0 7735; requirements
 beyond that stable release select the latest compatible snapshot, currently
 v4.0 8023-dev. Explicit filename intervals retain their highest-profile /
 next-revision policy. Ordinary unlabelled inference offers only automatic
-profiles, including the official releases v3.0 4453 and v3.0 6330. Test profiles
-v3.0 6392-dev, v3.0 6412-dev and v3.0 6510-dev can be selected directly by an
+profiles, including the official releases v3.0 4453, v3.0 4456 and v3.0 6330.
+Test profiles v3.0 4454-dev, v3.0 4510-dev, v3.0 6392-dev, v3.0 6412-dev
+and v3.0 6510-dev can be selected directly by an
 exact filename Build tag or a manual choice. Unidentified executable declarations and
 ordinary unlabelled inference do not select these nonautomatic profiles.
 Imprecise filename tags can select them when no stable or automatic candidate

@@ -1,7 +1,7 @@
 {
   "core_name": "AnyBOR",
   "core_basename": "anybor_libretro",
-  "version": "0.2.39",
+  "version": "0.2.40",
   "fallback_build": "6391",
   "profiles": [
     {
@@ -3396,9 +3396,46 @@
       "auto_until": 4453
     },
     {
+      "build": "4454",
+      "engine": "4432",
+      "major": "v3.0",
+      "automatic": false,
+      "tagged": true,
+      "stage": "dev",
+      "triage": false,
+      "upstream_commit": "551df628ecc86831879a4dc041874a06885de15a",
+      "upstream_date": "2017-04-15",
+      "covers": "Exact Build 4454 tag or core option; development profile",
+      "upstream_branch": "identical complete source tree to e3f4ce83ae8f5769858069c998020841bef13c3e"
+    },
+    {
+      "build": "4456",
+      "engine": "4432",
+      "major": "v3.0",
+      "automatic": true,
+      "tagged": true,
+      "upstream_commit": "670315aa6c7feec39adf17f97cb9891e306a669b",
+      "upstream_date": "2017-04-18",
+      "covers": "4454-4456 automatically; exact filename tag or core option",
+      "upstream_branch": "identical complete source tree to 68b6406726c7fd20c97527edb8a72b80ae7ca8cf"
+    },
+    {
+      "build": "4510",
+      "engine": "4432",
+      "major": "v3.0",
+      "automatic": false,
+      "tagged": true,
+      "stage": "dev",
+      "triage": false,
+      "upstream_commit": "dd5b281049ec52d03535808b489c26d01edd2b5e",
+      "upstream_date": "2017-05-18",
+      "covers": "Exact Build 4510 tag or core option; development profile",
+      "upstream_branch": "identical complete source tree to 0c984c543b0e2aa83f4013007d4a0da850efe335"
+    },
+    {
       "build": "6330",
       "engine": "6391",
-      "covers": "4454-6330 automatically; exact filename tag or core option",
+      "covers": "4457-6330 automatically; exact filename tag or core option",
       "automatic": true,
       "major": "v3.0",
       "auto_until": 6330
@@ -3688,14 +3725,14 @@
       "build": "4432",
       "commit": "2566cbee6185025e6a69d2aa1823b15c7a154ff9",
       "date": "2017-01-25",
-      "covers": "4087-4453 through profiles 4432 and 4453",
+      "covers": "4283-4510 through logical profiles",
       "major": "v3.0"
     },
     {
       "build": "6391",
       "commit": "494708eb34e71d1afda237873907701c4ec3a569",
       "date": "2018-08-21",
-      "covers": "4454-6412 through profiles 6330 and 6391; explicit test profiles 6392, 6412 and 6510; default fallback",
+      "covers": "4457-6412 through profiles 6330 and 6391; explicit test profiles 6392, 6412 and 6510; default fallback",
       "major": "v3.0"
     },
     {

@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.2.40
+
+- Added selectable OpenBOR profiles v3.0 4454-dev, v3.0 4456 and v3.0 4510-dev.
+- Matched their script behavior for level and set properties, scrolling layers,
+  drawing, time queries and animation and collision handles.
+
 ## 0.2.39
 
 - Add 48 selectable OpenBOR v3.0 profiles from 4283-dev through 4431.

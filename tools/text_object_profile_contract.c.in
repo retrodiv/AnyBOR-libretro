@@ -22,6 +22,14 @@ uint32_t obor_profile_build;
 static s_level fixture_level;
 static s_textobj object;
 s_level *level = &fixture_level;
+
+#ifdef OBOR_LEVEL_ARRAYS
+int obor_level_grow_array(s_level *record, obor_level_array_id id, int count)
+{
+    (void)record; (void)id; (void)count;
+    abort();
+}
+#endif
 static unsigned fixture_time;
 static char strings[3][MAX_STR_VAR_LEN + 1];
 static const char *expected_display;

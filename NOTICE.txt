@@ -2171,6 +2171,80 @@ Source: src/engines/8023/source/scriptlib/ImportCache.c
  * at the source repository root. Original notices follow below.
  */
 
+Source: src/engines/4432/openbor.c
+/* AnyBOR modification record: 2026-11-15.
+ * Port maintained by retrodiv <retrodiv@proton.me>.
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me> (original contributions).
+ * These contributions are licensed under BSD-3-Clause; see LICENSE at the root.
+ * Upstream code retains its original license and notices.
+ * Apply the port's engine corrections and select the PC video configuration
+ * on macOS. Derive output names from the content basename with explicit
+ * destination capacities, and reject overflowing output path joins. Preserve
+ * the historical 32-bit screen and palette behavior starting at 4453,
+ * preserve each profile's native settings record and control layout, and
+ * disable Exit reassignment in those 32-bit control menus. Expose the native
+ * game timer from 4456. Bound the DOT loop and control-menu arrays to
+ * allocated storage. Preserve native historical debug-menu input, terrain
+ * edge inclusion, height ties, selected-hole updates, movement/spawn hole-
+ * query periods and basemap participation by profile. Leave multiplayer
+ * slots without a selected model available to join even if game scripts
+ * preassign lives to them. Let a missing basename-only PAK self-check read
+ * the active frontend content after it has been validated and prepared.
+ * Allocate each model's animation pointer table through the highest
+ * animation index that model uses, and bound cache, copy and cleanup paths
+ * to that capacity. Ignore optional defense and offense entries outside the
+ * configured attack-type range with a log warning before accessing their
+ * tables. Yield after each newly completed model during explicit model-list
+ * or level preparation, and defer states until that preparation has cleaned
+ * up its intermediate parsers and handles. Resize repeated weapon lists and
+ * detach borrowed lists before replacing their entries. Return a defined
+ * null result for absent colourmap models or tables while retaining valid
+ * palette fallback. Keep selected palette-conversion reads bounded and
+ * reject missing maps or flags, while preserving unselected slots and native
+ * allocation failure callbacks. Check destination animation capacity when
+ * retaining an animation across model changes, preserving the native
+ * fallback and timing. Access script-container pointer slots with byte
+ * copies, preserving record layout, pointer values and native copy/cleanup
+ * order. Pointer-slot allocation and release accept byte storage without
+ * imposing pointer alignment on a packed field. Release each sprite owner
+ * once and complete cleanup independently of alias counts. Preserve native
+ * sprite-map capacity policies, check allocation extents and retain existing
+ * storage and capacity when growth is unavailable. Validate sprite-node
+ * allocations and release partial resources without changing existing
+ * owners. Check cached sprite availability before reading metadata and
+ * ignore cache requests for absent nodes. Capture explicit shutdown failure
+ * text before cleanup and bound legacy diagnostic formatting. Preserve
+ * native basemap position, slope continuation, height progression and grid
+ * indexing by profile within checked map storage. Select native model
+ * palette file routes, mode admission and diagnostics by profile. Preserve
+ * the decimal blockade read from 4466. Return the native read-only set count
+ * from 4477. Preserve native background loading, neon rotation and scrolled
+ * layer palette selection by profile. Release each set's original level
+ * order when scripts share collections. Preserve native player spawn
+ * defaults, level damage flags and boss slowdown by profile. Keep loaded
+ * level allocations owned by the game while typed scripts reassign
+ * collection views and counts. Preserve historical collision pair traversal,
+ * counter fallback, target eligibility order and juggle cost comparisons by
+ * profile. Construct native frame collision records with each profile's
+ * instance counts, indices and recursive damage defaults. Retain historical
+ * boomerang dispatch, movement, catches and wall response by profile.
+ * Preserve source-defined temporary model type defaults, subtype spellings,
+ * platform-local variant tags and retirement callback placement around the
+ * live-entity guard by profile. Initialize complete callback variant storage
+ * before publishing historical decimal-tagged pointers. Preserve system-
+ * variable field availability, pause/menu context, platform result types,
+ * scalar last-hit snapshots and live attack mutations by profile. Preserve
+ * native shadow-opacity command admission, level-event selection and drawing
+ * channels by profile. Preserve stage-completion display availability by
+ * profile. Preserve the profile's model animation script load order, main
+ * recognition, comment handling and generated script composition. Preserve
+ * source-defined menu layouts, selection order, legacy options and menu
+ * context flags by profile.
+ * Existing changes recorded here; this is not their implementation date.
+ * See MODIFICATIONS.md and docs/modifications/4432.md
+ * at the source repository root. Original notices follow below.
+ */
+
 Source: src/deps/zlib/inftrees.c
 /* inftrees.c -- generate Huffman trees for efficient decoding
  * Copyright (C) 1995-2026 Mark Adler
@@ -4952,49 +5026,6 @@ Source: src/engines/3741/source/gamelib/transform.c
  * replacement.
  * Existing changes recorded here; this is not their implementation date.
  * See MODIFICATIONS.md and docs/modifications/3741.md
- * at the source repository root. Original notices follow below.
- */
-
-Source: src/engines/4432/openborscript.c
-/* AnyBOR modification record: 2026-10-22.
- * Port maintained by retrodiv <retrodiv@proton.me>.
- * Copyright (c) 2026 retrodiv <retrodiv@proton.me> (original contributions).
- * These contributions are licensed under BSD-3-Clause; see LICENSE at the root.
- * Upstream code retains its original license and notices.
- * Keep the dormant constant-lowering diagnostic compatible with the single-
- * value instruction layout. Derive output names from the content basename
- * with explicit destination capacities, and reject overflowing output path
- * joins. Compact compiler-only instruction records after resolving value
- * ownership, preserving branch and export anchors, all mutable values and
- * exactly-once pool cleanup. Retain shared interpreters through the last
- * script reference while preserving independent variables, replacement and
- * native callbacks. Track diagnostic comments independently so interpreter
- * replacement can retain them. Resolve text-property names within the actual
- * table bounds while preserving native numeric selectors. Reuse each text
- * object's owned buffer when replacing its contents. Reject missing
- * colourtable indices and keep selector arithmetic and table reads defined.
- * Transfer loaded stream buffers through aligned local outputs while
- * preserving native record layout and results. Close owned input files after
- * stream loading and on buffer allocation failure. Preserve the platform
- * aliases and animation and array script names by profile. Reject a missing
- * fourth platform coordinate and handle an empty cursor as no movement.
- * Preserve named action admission and numeric action slots around the simple
- * animation insertion. Retain the original entity property names, ordinal
- * values and lookup order across historical script profiles. Resolve those
- * ordinals before native property dispatch. Preserve the native entity
- * property reads, writes and argument handling around the historical weapon,
- * remap, block and boomerang changes. Preserve historical script wall-height
- * argument selection before querying the terrain. Preserve script reads and
- * writes of attack and body collision coordinates by profile while retaining
- * native conversions. Retain the profile's frame record or collection
- * reference and the identity behavior of native instance queries. Preserve
- * each profile's complete system-variable names and cached numeric
- * identifiers. Retain native basemap script-name availability, the
- * registered height alias and private helper result epochs. Preserve native
- * cell selection and initial map size by profile, checking owned map storage
- * before writes. Route the optional basemap generation argument by profile.
- * Existing changes recorded here; this is not their implementation date.
- * See MODIFICATIONS.md and docs/modifications/4432.md
  * at the source repository root. Original notices follow below.
  */
 
@@ -9084,6 +9115,23 @@ Source: src/engines/4086/source/gamelib/commands.h
  * at the source repository root. Original notices follow below.
  */
 
+Source: src/engines/4432/openbor.h
+/* AnyBOR modification record: 2026-09-30.
+ * Port maintained by retrodiv <retrodiv@proton.me>.
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me> (original contributions).
+ * These contributions are licensed under BSD-3-Clause; see LICENSE at the root.
+ * Upstream code retains its original license and notices.
+ * Allocate collision pointer slots through the highest author-facing index
+ * used by each collection. Track each model's allocated animation-table
+ * capacity and reject lookups outside it. Retain the historical last-hit
+ * scalar independently of the live attack reference. Define native set
+ * property selectors and retain ownership of their level orders. Define the
+ * active player spawn extent and native level flags.
+ * Existing changes recorded here; this is not their implementation date.
+ * See MODIFICATIONS.md and docs/modifications/4432.md
+ * at the source repository root. Original notices follow below.
+ */
+
 Source: src/engines/3842/source/scriptlib/ImportCache.h
 /* AnyBOR modification record: 2026-09-12.
  * Port maintained by retrodiv <retrodiv@proton.me>.
@@ -9393,6 +9441,20 @@ Source: src/engines/7533/source/utils.c
  * allocator statistics only when that host libc supports them.
  * Existing changes recorded here; this is not their implementation date.
  * See MODIFICATIONS.md and docs/modifications/7533.md
+ * at the source repository root. Original notices follow below.
+ */
+
+Source: src/engines/4432/openborscript.h
+/* AnyBOR modification record: 2026-10-22.
+ * Port maintained by retrodiv <retrodiv@proton.me>.
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me> (original contributions).
+ * These contributions are licensed under BSD-3-Clause; see LICENSE at the root.
+ * Upstream code retains its original license and notices.
+ * Declare owned script-variable name storage. Declare the native game timer
+ * and set count selectors in system-variable order and expose the native set
+ * and layer callbacks.
+ * Existing changes recorded here; this is not their implementation date.
+ * See MODIFICATIONS.md and docs/modifications/4432.md
  * at the source repository root. Original notices follow below.
  */
 
@@ -10726,6 +10788,64 @@ Source: src/deps/libvpx/vpx_dsp/arm/idct4x4_1_add_neon.asm
 ;  tree. All contributing project authors may be found in the AUTHORS
 ;  file in the root of the source tree.
 ;
+
+Source: src/engines/4432/openborscript.c
+/* AnyBOR modification record: 2026-10-22.
+ * Port maintained by retrodiv <retrodiv@proton.me>.
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me> (original contributions).
+ * These contributions are licensed under BSD-3-Clause; see LICENSE at the root.
+ * Upstream code retains its original license and notices.
+ * Keep the dormant constant-lowering diagnostic compatible with the single-
+ * value instruction layout. Derive output names from the content basename
+ * with explicit destination capacities, and reject overflowing output path
+ * joins. Compact compiler-only instruction records after resolving value
+ * ownership, preserving branch and export anchors, all mutable values and
+ * exactly-once pool cleanup. Retain shared interpreters through the last
+ * script reference while preserving independent variables, replacement and
+ * native callbacks. Track diagnostic comments independently so interpreter
+ * replacement can retain them. Resolve text-property names within the actual
+ * table bounds while preserving native numeric selectors. Reuse each text
+ * object's owned buffer when replacing its contents. Reject missing
+ * colourtable indices and keep selector arithmetic and table reads defined.
+ * Transfer loaded stream buffers through aligned local outputs while
+ * preserving native record layout and results. Close owned input files after
+ * stream loading and on buffer allocation failure. Register the native typed
+ * drawing getter from 4455 and preserve older system-variable ordinals when
+ * admitting the game timer from 4456. Admit setopenborvariant from 4467 with
+ * the existing setter and canonical reverse name, and preserve older
+ * ordinals when exposing sets_count from 4477. Expose the native set handle
+ * lookup from 4478 with its original empty result for an index outside the
+ * loaded sets. Preserve native set property names, ordinals, result types,
+ * fallthrough results and writable collection aliases by profile. Expose
+ * native layer handles and the profile's scroll, boss slowdown and damage
+ * control constants. Expose native typed level property names, numeric
+ * selectors, handle rules and result values by profile. Register the native
+ * typed level setter and preserve its scalar assignments and result handling
+ * by profile. Preserve level collection and spawn view assignment by
+ * profile, including the early background selector. Preserve typed level
+ * script assignment and shared local variables while keeping executing
+ * interpreters live. Preserve the platform aliases and animation and array
+ * script names by profile. Reject a missing fourth platform coordinate and
+ * handle an empty cursor as no movement. Preserve named action admission and
+ * numeric action slots around the simple animation insertion. Retain the
+ * original entity property names, ordinal values and lookup order across
+ * historical script profiles. Resolve those ordinals before native property
+ * dispatch. Preserve the native entity property reads, writes and argument
+ * handling around the historical weapon, remap, block and boomerang changes.
+ * Preserve historical script wall-height argument selection before querying
+ * the terrain. Preserve script reads and writes of attack and body collision
+ * coordinates by profile while retaining native conversions. Retain the
+ * profile's frame record or collection reference and the identity behavior
+ * of native instance queries. Preserve each profile's complete system-
+ * variable names and cached numeric identifiers. Retain native basemap
+ * script-name availability, the registered height alias and private helper
+ * result epochs. Preserve native cell selection and initial map size by
+ * profile, checking owned map storage before writes. Route the optional
+ * basemap generation argument by profile.
+ * Existing changes recorded here; this is not their implementation date.
+ * See MODIFICATIONS.md and docs/modifications/4432.md
+ * at the source repository root. Original notices follow below.
+ */
 
 Source: src/engines/3741/source/preprocessorlib/pp_parser.c
 /* AnyBOR modification record: 2026-11-15.
@@ -12787,71 +12907,6 @@ Carsten Bormann
 
 *********************************************************************/
 
-Source: src/engines/4432/openbor.c
-/* AnyBOR modification record: 2026-11-15.
- * Port maintained by retrodiv <retrodiv@proton.me>.
- * Copyright (c) 2026 retrodiv <retrodiv@proton.me> (original contributions).
- * These contributions are licensed under BSD-3-Clause; see LICENSE at the root.
- * Upstream code retains its original license and notices.
- * Apply the port's engine corrections and select the PC video configuration
- * on macOS. Derive output names from the content basename with explicit
- * destination capacities, and reject overflowing output path joins. Select
- * the 4453 profile's 32-bit screen and palette behavior, preserve each
- * profile's native settings record and control layout, and disable the Exit
- * mapping in the 4453 control menu. Bound the DOT loop and control-menu
- * arrays to allocated storage. Preserve native historical debug-menu input,
- * terrain edge inclusion, height ties, selected-hole updates, movement/spawn
- * hole-query periods and basemap participation by profile. Leave multiplayer
- * slots without a selected model available to join even if game scripts
- * preassign lives to them. Let a missing basename-only PAK self-check read
- * the active frontend content after it has been validated and prepared.
- * Allocate each model's animation pointer table through the highest
- * animation index that model uses, and bound cache, copy and cleanup paths
- * to that capacity. Ignore optional defense and offense entries outside the
- * configured attack-type range with a log warning before accessing their
- * tables. Yield after each newly completed model during explicit model-list
- * or level preparation, and defer states until that preparation has cleaned
- * up its intermediate parsers and handles. Resize repeated weapon lists and
- * detach borrowed lists before replacing their entries. Return a defined
- * null result for absent colourmap models or tables while retaining valid
- * palette fallback. Keep selected palette-conversion reads bounded and
- * reject missing maps or flags, while preserving unselected slots and native
- * allocation failure callbacks. Check destination animation capacity when
- * retaining an animation across model changes, preserving the native
- * fallback and timing. Access script-container pointer slots with byte
- * copies, preserving record layout, pointer values and native copy/cleanup
- * order. Pointer-slot allocation and release accept byte storage without
- * imposing pointer alignment on a packed field. Release each sprite owner
- * once and complete cleanup independently of alias counts. Preserve native
- * sprite-map capacity policies, check allocation extents and retain existing
- * storage and capacity when growth is unavailable. Validate sprite-node
- * allocations and release partial resources without changing existing
- * owners. Check cached sprite availability before reading metadata and
- * ignore cache requests for absent nodes. Capture explicit shutdown failure
- * text before cleanup and bound legacy diagnostic formatting. Preserve
- * native basemap position, slope continuation, height progression and grid
- * indexing by profile within checked map storage. Preserve historical
- * collision pair traversal, counter fallback, target eligibility order and
- * juggle cost comparisons by profile. Construct native frame collision
- * records with each profile's instance counts, indices and recursive damage
- * defaults. Retain historical boomerang dispatch, movement, catches and wall
- * response by profile. Preserve source-defined temporary model type
- * defaults, subtype spellings, platform-local variant tags and retirement
- * callback placement around the live-entity guard by profile. Initialize
- * complete callback variant storage before publishing historical decimal-
- * tagged pointers. Preserve system-variable field availability, pause/menu
- * context, platform result types, scalar last-hit snapshots and live attack
- * mutations by profile. Preserve native shadow-opacity command admission,
- * level-event selection and drawing channels by profile. Preserve stage-
- * completion display availability by profile. Preserve the profile's model
- * animation script load order, main recognition, comment handling and
- * generated script composition. Preserve source-defined menu layouts,
- * selection order, legacy options and menu context flags by profile.
- * Existing changes recorded here; this is not their implementation date.
- * See MODIFICATIONS.md and docs/modifications/4432.md
- * at the source repository root. Original notices follow below.
- */
-
 Source: src/engines/8023/openbor.c
 /* AnyBOR modification record: 2026-11-15.
  * Port maintained by retrodiv <retrodiv@proton.me>.
@@ -13932,18 +13987,6 @@ Source: src/engines/7533/source/openborscript/commands.h
  * shifting existing selectors.
  * Existing changes recorded here; this is not their implementation date.
  * See MODIFICATIONS.md and docs/modifications/7533.md
- * at the source repository root. Original notices follow below.
- */
-
-Source: src/engines/4432/openborscript.h
-/* AnyBOR modification record: 2026-10-22.
- * Port maintained by retrodiv <retrodiv@proton.me>.
- * Copyright (c) 2026 retrodiv <retrodiv@proton.me> (original contributions).
- * These contributions are licensed under BSD-3-Clause; see LICENSE at the root.
- * Upstream code retains its original license and notices.
- * Declare owned script-variable name storage.
- * Existing changes recorded here; this is not their implementation date.
- * See MODIFICATIONS.md and docs/modifications/4432.md
  * at the source repository root. Original notices follow below.
  */
 
@@ -15827,21 +15870,6 @@ Source: src/deps/libpng/scripts/intprefix.c
  * This code is released under the libpng license.
  * For conditions of distribution and use, see the disclaimer
  * and license in png.h
- */
-
-Source: src/engines/4432/openbor.h
-/* AnyBOR modification record: 2026-09-30.
- * Port maintained by retrodiv <retrodiv@proton.me>.
- * Copyright (c) 2026 retrodiv <retrodiv@proton.me> (original contributions).
- * These contributions are licensed under BSD-3-Clause; see LICENSE at the root.
- * Upstream code retains its original license and notices.
- * Allocate collision pointer slots through the highest author-facing index
- * used by each collection. Track each model's allocated animation-table
- * capacity and reject lookups outside it. Retain the historical last-hit
- * scalar independently of the live attack reference.
- * Existing changes recorded here; this is not their implementation date.
- * See MODIFICATIONS.md and docs/modifications/4432.md
- * at the source repository root. Original notices follow below.
  */
 
 Source: src/engines/3741/source/gamelib/soundmix.c

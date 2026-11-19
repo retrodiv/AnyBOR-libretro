@@ -9,11 +9,108 @@ from pathlib import Path
 import re
 import unittest
 
-from contract_fixtures import contract_profiles, load_contract_fixture
+from contract_fixtures import contract_profiles, contract_revisions, load_contract_fixture
 from test_historical_common_think import ROOT, native_output
 from test_historical_player import function, switch_cases
 
 FIXTURE = Path(__file__).with_name('fixtures') / 'profile-forward-level-property-contracts.json'
+RUNTIME_FIXTURE = FIXTURE.with_name('profile-4432-stage-runtime-contracts.json')
+SETTER_FIXTURE = FIXTURE.with_name('profile-4432-level-setter-contracts.json')
+
+
+def typed_level_setter_program(data):
+    engine = ROOT / 'src/engines' / data['engine']
+    script = (engine / 'openborscript.c').read_text()
+    core = (engine / 'openbor.c').read_text()
+    variant = (engine / 'source/scriptlib/ScriptVariant.c').read_text()
+    start = script.index('/* Canonical property order from 4494.')
+    end = script.index('static int obor_lookup_level_property(', start)
+    definitions = []
+    for index, case in enumerate(data['cases']):
+        body = []
+        for group in ('integers', 'decimals', 'names'):
+            for selector, field in case[group]:
+                if type(selector) is not int or not re.fullmatch(r'[a-z_]+', field):
+                    raise ValueError('Explicit original setter selector and field required')
+                body.append('SET_%s(%d, %s);' % (group.upper(), selector, field))
+        for control in ('unknown_success', 'wall_collection', 'read_only', 'spawn_noop'):
+            if control in case:
+                body.append('check_%s(%d);' % (control, case[control]))
+        definitions.append('static void check_case_%d(void) {\n    %s\n}' % (index, '\n    '.join(body)))
+    views = []
+    for index, view in enumerate(data['collection_views']):
+        body = []
+        if 'early_background' in view:
+            body.append('check_early_background(%d, %d);' %
+                        (view['early_background'], view['early_getter']))
+        for selector, count, field in view.get('arrays', []):
+            if not re.fullmatch(r'[a-z_]+', field) or type(selector) is not int or type(count) is not int:
+                raise ValueError('Original collection and count fields required')
+            body.append('CHECK_ARRAY(%d, %d, %s);' % (selector, count, field))
+        if 'background' in view:
+            body.append('check_background_handle(%d);' % view['background'])
+            body.append('check_wall_count(%d, %d);' % (view['wall_count'], view['wall_collection']))
+            body.append('check_collection_growth();')
+        if 'player_spawn' in view:
+            body.append('check_player_spawn(%d);' % view['player_spawn'])
+        for selector, field in view.get('scripts', []):
+            if type(selector) is not int or not re.fullmatch(r'[a-z_]+', field):
+                raise ValueError('Original script slot selector and member required')
+            body.append('check_script_slot(%d, &stage.%s);' % (selector, field))
+        if body:
+            body.insert(0, 'seed_arrays();')
+        views.append('static void check_view_%d(void) {\n    %s\n}' % (index, '\n    '.join(body)))
+    runner = []
+    for row in data['sources']:
+        if row['registered']:
+            runner.append('check_level_setter(%du, check_case_%d, check_view_%d);' %
+                          (row['revision'], row['case'], row['view']))
+    arrays = core.index('/* All pointers and counts stay in their native fields for gameplay. */')
+    release = core.index('void free_level(s_level *lv)', arrays)
+    execution = script.index('/* A running script can replace the record through which it was entered. */')
+    initialization = script.index('static void execute_init_method(', execution)
+    parts = dict(SELECTORS=script[start:end], SETTER=function(script, 'openbor_set_level_property'),
+                 LIFECYCLE=script[execution:initialization] + '\n'.join(function(script, name) for name in (
+                     'execute_init_method', 'Script_Clear', 'Script_Execute')),
+                 SCRIPT_SLOTS='\n'.join(function(script, name) for name in (
+                     'obor_level_script_source', 'obor_assign_level_script')),
+                 GETTER=function(script, 'obor_level_property_has_early_getter') +
+                    function(script, 'openbor_get_level_property'),
+                 SET_PROPERTY_NATIVE=function(script, 'obor_set_property_native'),
+                 ARRAYS=core[arrays:release] + function(core, 'free_level'),
+                 VARIANTS='\n'.join(function(variant, name) for name in
+                                    ('ScriptVariant_IntegerValue', 'ScriptVariant_DecimalValue',
+                                     'ScriptVariant_ChangeType', 'ScriptVariant_Clear', 'ScriptVariant_Init')),
+                 CASES='\n'.join(definitions), VIEWS='\n'.join(views), RUNNER='\n    '.join(runner))
+    template = Path(__file__).with_name('level_property_setter_contract.c.in').read_text()
+    return re.sub(r'@([A-Z_]+)@', lambda item: parts[item[1]], template)
+
+
+def stage_runtime_program(data):
+    source = (ROOT / 'src/engines' / data['engine'] / 'openbor.c').read_text()
+    loader, cases = switch_cases(source, 'load_level', 'cmd', outermost=True)
+    defaults = loader[loader.index('    level->nohurt ='):loader.index('    level->setweap = 0;')]
+
+    def guard(method, anchor):
+        body = function(source, method)
+        start = body.index(anchor)
+        return body[start:body.index('{', start)].strip()
+
+    commands = ('NOSLOW', 'TYPE', 'NOHIT', 'SPAWN1', 'SPAWN2', 'SPAWN3', 'SPAWN4')
+    parts = dict(
+        SPAWN_COUNT=function(source, 'obor_level_spawn_count'),
+        DEFAULTS=defaults,
+        CASES='\n'.join('case CMD_LEVEL_' + name + ':' + cases['CMD_LEVEL_' + name]['body'] for name in commands),
+        EXCLUDES=function(source, 'obor_spawn_excludes_player_targets'),
+        SPAWN=guard('spawn', 'if((e->modeldata.type & TYPE_PLAYER) && (obor_spawn_excludes_player_targets'),
+        KNIFE=guard('knife_spawn', 'if((self->modeldata.type & TYPE_PLAYER) && (obor_spawn_excludes_player_targets'),
+        BLOCK=guard('do_attack', 'if(didblock && (obor_profile_build'),
+        DAMAGE=guard('player_takedamage', 'if(healthcheat || ((obor_profile_build'),
+        SLOW=guard('update', 'if((level_completed && !tospeedup &&'),
+        CONTEXTS=',\n'.join('{%d,%d,%d}' % (row['revision'], row['spawn_extent'], row['flag_modes'])
+                            for row in data['sources']))
+    template = Path(__file__).with_name('stage_runtime_contract.c.in').read_text()
+    return re.sub(r'@([A-Z_]+)@', lambda item: parts[item[1]], template)
 
 
 def representation_program(fragments, decimal):
@@ -131,6 +228,23 @@ def program(data, engine):
 
 
 class ForwardLevelPropertyTests(unittest.TestCase):
+    def test_4432_typed_level_setter_scalars_and_results(self):
+        data = load_contract_fixture(SETTER_FIXTURE)
+        revisions = [row['revision'] for row in data['sources']]
+        self.assertEqual(revisions, sorted(set(revisions)))
+        self.assertEqual(set(revisions), contract_revisions(data, data['expected_revisions']))
+        results = [json.loads(line) for line in native_output(typed_level_setter_program(data), data).splitlines()]
+        self.assertEqual(results, [dict(revision=row['revision'], status='PASS') for row in data['sources']
+                                   if row['registered']])
+
+    def test_4432_stage_spawn_and_flag_modes(self):
+        data = load_contract_fixture(RUNTIME_FIXTURE)
+        revisions = [row['revision'] for row in data['sources']]
+        self.assertEqual(revisions, sorted(set(revisions)))
+        self.assertEqual(set(revisions), contract_revisions(data, data['expected_revisions']))
+        results = [json.loads(line) for line in native_output(stage_runtime_program(data), data).splitlines()]
+        self.assertEqual(results, [dict(revision=revision, status='PASS') for revision in revisions])
+
     def test_original_representation_refuses_incomplete_or_generated_source(self):
         with self.assertRaisesRegex(ValueError, 'Explicit original'):
             representation_program({}, 'decimal')

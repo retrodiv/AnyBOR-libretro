@@ -33,6 +33,7 @@ static s_set_entry set_record;
 static s_level_entry level_entry;
 s_set_entry *levelsets=&set_record;
 int current_set,current_level,pause,goto_mainmenu_flag,optionsMenu,cheatoptionsMenu,cheats,forcecheatsoff,shadowopacity;
+int timeleft, num_difficulties;
 s_lasthit lasthit;
 static s_collision_attack first_attack,live_attack;
 static s_collision_body body;
@@ -213,6 +214,68 @@ static void read_fields(void)
         vscreen=present?&screen_b:NULL;read_check(_sv_vscreen,"vscreen",1,VT_PTR,0,0,vscreen,NULL);
     }
 }
+static void check_game_time(void)
+{
+    active_name = "game_time";
+    assert((logical_index(active_name) >= 0) == F(game_time));
+    if(!F(game_time)) return; /* The namespace checks cover the unavailable name. */
+
+    for(int in_level = 0; in_level <= 1; ++in_level)
+    {
+        reset_fields();
+        level = in_level ? &world : NULL;
+        timeleft = 317;
+        read_check(_sv_game_time, active_name, 1, VT_INTEGER, 317, 317, NULL, NULL);
+        for(unsigned i = 0; i < sizeof(numbers) / sizeof(*numbers); ++i)
+        {
+            ScriptVariant name, value = {0}, result, *out = &result;
+            ScriptVariant *args[] = {&name, &value};
+            named(&name, active_name, 0);
+            value.vt = numbers[i].tag;
+            if(value.vt == VT_DECIMAL) value.dblVal = numbers[i].value;
+            else if(value.vt == VT_INTEGER) value.lVal = (LONG)numbers[i].value;
+            else if(value.vt == VT_STR) value.strVal = StrCache_Pop();
+            seed_result(&result);
+            timeleft = 317;
+            assert(openbor_changesystemvariant(args, &out, 2) == S_OK);
+            assert(out == &result && result.vt == VT_INTEGER && result.lVal == 777);
+            assert(timeleft == (numbers[i].accepted ? numbers[i].converted : 317));
+            ScriptVariant_Clear(&name);
+            ScriptVariant_Clear(&value);
+        }
+    }
+}
+static void check_sets_count(void)
+{
+    active_name = "sets_count";
+    int logical = logical_index(active_name);
+    assert((logical >= 0) == F(sets_count));
+    if(logical < 0) return;
+
+    for(int count = 0; count <= 3; count += 3)
+    {
+        reset_fields();
+        level = NULL;
+        levelsets = NULL;
+        num_difficulties = count;
+        read_check(_sv_sets_count, "sets_count", 1, VT_INTEGER, count, count, NULL, NULL);
+        for(int numeric = 0; numeric <= 1; ++numeric)
+        {
+            ScriptVariant name, value = {.lVal = 27, .vt = VT_INTEGER}, result, *out = &result;
+            ScriptVariant *args[] = {&name, &value};
+            named(&name, "sets_count", 0);
+            if(numeric)
+            {
+                ScriptVariant_ChangeType(&name, VT_INTEGER);
+                name.lVal = logical;
+            }
+            seed_result(&result);
+            assert(openbor_changesystemvariant(args, &out, 2) == E_FAIL && !out);
+            assert(num_difficulties == count && result.vt == VT_INTEGER && result.lVal == 777);
+            ScriptVariant_Clear(&name);
+        }
+    }
+}
 typedef struct{int type,live,first,confirm,pause,completion,shadow;float x,y,z;s_screen *back,*video;s_collision_attack *attack;entity *text;} observed_state;
 static observed_state state(void){return (observed_state){lasthit.type,live_attack.attack_type,first_attack.attack_type,lasthit.confirm,pause,set_record.noshowcomplete,shadowopacity,lasthit.position.x,lasthit.position.y,lasthit.position.z,background,vscreen,lasthit.attack,textbox};}
 static void compare_state(observed_state expected)
@@ -323,7 +386,7 @@ int main(void)
     @ENUM_CHECKS@
     assert(sizeof(svlist)/sizeof(*svlist)==_sv_the_end);
     for(row=0;row<sizeof(contexts)/sizeof(*contexts);row++){
-        obor_profile_build=contexts[row].revision;active_case=0;namespace_checks();read_fields();write_fields();publication_checks();target_checks();
+        obor_profile_build=contexts[row].revision;active_case=0;namespace_checks();read_fields();write_fields();check_game_time();check_sets_count();publication_checks();target_checks();
         assert(!unused_calls);for(unsigned i=0;i<32;i++)assert(!references[i]);
         printf("{\"revision\":%u,\"status\":\"PASS\"}\n",obor_profile_build);
     }

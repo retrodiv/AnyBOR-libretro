@@ -3,7 +3,9 @@
  * Copyright (c) 2026 retrodiv <retrodiv@proton.me> (original contributions).
  * These contributions are licensed under BSD-3-Clause; see LICENSE at the root.
  * Upstream code retains its original license and notices.
- * Declare owned script-variable name storage.
+ * Declare owned script-variable name storage. Declare the native game timer
+ * and set count selectors in system-variable order and expose the native set
+ * and layer callbacks.
  * Existing changes recorded here; this is not their implementation date.
  * See MODIFICATIONS.md and docs/modifications/4432.md
  * at the source repository root. Original notices follow below.
@@ -55,6 +57,7 @@ typedef struct
     int magic;
     List *list;
     ScriptVariant *vars;
+    size_t obor_shared_owners; // Additional owners of this script's local variables.
 } Varlist;
 
 #include "anybor_script_storage.h"
@@ -91,6 +94,18 @@ extern int global_var_count;
 //these functions can be used by openbor.c
 void Varlist_Init(Varlist *varlist, int size);
 void Varlist_Clear(Varlist *varlist);
+
+static inline void obor_release_script_locals(Varlist *locals)
+{
+    if(locals->obor_shared_owners)
+    {
+        --locals->obor_shared_owners;
+        return;
+    }
+    Varlist_Clear(locals);
+    free(locals);
+}
+
 void Varlist_Cleanup(Varlist *varlist);
 int Varlist_SetByName(Varlist *varlist, char *theName, ScriptVariant *var);
 #define Script_Set_Local_Variant(s, k, v) Varlist_SetByName((s)->varlist, (k), (v))
@@ -208,6 +223,12 @@ HRESULT openbor_settextobj(ScriptVariant **varlist , ScriptVariant **pretvar, in
 HRESULT openbor_cleartextobj(ScriptVariant **varlist , ScriptVariant **pretvar, int paramCount);
 HRESULT openbor_getlayerproperty(ScriptVariant **varlist , ScriptVariant **pretvar, int paramCount);
 HRESULT openbor_changelayerproperty(ScriptVariant **varlist , ScriptVariant **pretvar, int paramCount);
+HRESULT openbor_get_set_property(ScriptVariant **varlist, ScriptVariant **pretvar, int paramCount);
+HRESULT openbor_set_set_property(ScriptVariant **varlist, ScriptVariant **pretvar, int paramCount);
+HRESULT openbor_get_level_property(ScriptVariant **varlist, ScriptVariant **pretvar, int paramCount);
+HRESULT openbor_set_level_property(ScriptVariant **varlist, ScriptVariant **pretvar, int paramCount);
+HRESULT openbor_get_layer_handle(ScriptVariant **varlist, ScriptVariant **pretvar, int paramCount);
+HRESULT openbor_get_set_handle(ScriptVariant **varlist, ScriptVariant **pretvar, int paramCount);
 HRESULT openbor_getlevelproperty(ScriptVariant **varlist , ScriptVariant **pretvar, int paramCount);
 HRESULT openbor_changelevelproperty(ScriptVariant **varlist , ScriptVariant **pretvar, int paramCount);
 HRESULT openbor_checkhole(ScriptVariant **varlist , ScriptVariant **pretvar, int paramCount);
@@ -353,6 +374,7 @@ enum systemvariant_enum
     _sv_freeram,
     _sv_game_paused,
     _sv_game_speed,
+    _sv_game_time,
     _sv_gfx_x_offset,
     _sv_gfx_y_offset,
     _sv_gfx_y_offset_adj,
@@ -426,6 +448,7 @@ enum systemvariant_enum
     _sv_scrollminx,
     _sv_scrollminz,
     _sv_self,
+    _sv_sets_count,
     _sv_shadowalpha,
     _sv_shadowcolor,
     _sv_shadowopacity,

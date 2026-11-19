@@ -1,0 +1,504 @@
+/* SPDX-License-Identifier: BSD-3-Clause
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me> */
+#include <stdint.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <strings.h>
+#include "openbor.h"
+#include "commands.h"
+#undef assert
+#include <assert.h>
+#undef printf
+#ifndef stricmp
+#define stricmp strcasecmp
+#endif
+
+uint32_t obor_profile_build;
+int pixelformat, screenformat;
+s_drawmethod drawmethod;
+static entity actor;
+static int probe_list, registered, conversions;
+static int setter_registered, setter_alias_registered, set_handle_registered, layer_handle_registered;
+static int drawing_diagnostics;
+static int set_handle_diagnostics;
+static int layer_handle_diagnostics;
+static s_level scene;
+s_level *level;
+static s_set_entry sets[2];
+s_set_entry *levelsets;
+int num_difficulties;
+static unsigned char palette;
+static const char *property_name;
+
+HRESULT Interpreter_Call(Interpreter *interpreter) { (void)interpreter; abort(); }
+HRESULT Interpreter_EvalInstruction(Interpreter *interpreter) { (void)interpreter; abort(); }
+void *checkAlloc(void *ptr, size_t size, const char *function, const char *file, int line)
+{
+    (void)function; (void)file; (void)line;
+    assert(ptr || !size);
+    return ptr;
+}
+CHAR *StrCache_Get(int slot) { assert(slot == 0); return (CHAR *)property_name; }
+void StrCache_Collect(int slot) { assert(slot == 0); }
+int StrCache_Pop(void) { abort(); }
+static int drawing_message(const char *format, ...)
+{
+    assert(!strcmp(format, "Function getdrawmethod must have at least 2 parameters: entity, propertyname\n"));
+    ++drawing_diagnostics;
+    return 0;
+}
+@VARIANTS@
+@SEARCH@
+@ENUM@
+@MAP_MACRO@
+#define printf drawing_message
+@METHODS@
+#undef printf
+
+static int set_handle_message(const char *format)
+{
+    assert(!strcmp(format, "You must provide a valid index: get_set_handle(int index)\n"));
+    return ++set_handle_diagnostics;
+}
+#define printf set_handle_message
+@GET_SET_HANDLE@
+#undef printf
+
+static int layer_handle_message(const char *format)
+{
+    assert(!strcmp(format, "You must provide a valid handle and index: openbor_get_layer_handle(void level_handle, int index)\n"));
+    return ++layer_handle_diagnostics;
+}
+#define printf layer_handle_message
+@GET_LAYER_HANDLE@
+#undef printf
+
+@STUBS@
+static void probe_reset(int *list)
+{
+    assert(list == &probe_list);
+    registered = setter_registered = setter_alias_registered = set_handle_registered = layer_handle_registered = 0;
+}
+static void probe_insert(int *list, void *callback, const char *name)
+{
+    assert(list == &probe_list && callback);
+    if(!strcmp(name, "getdrawmethod"))
+    {
+        assert(callback == (void *)openbor_getdrawmethod && !registered);
+        ++registered;
+    }
+    if(!strcmp(name, "changeopenborvariant"))
+    {
+        assert(callback == (void *)probe_openbor_changesystemvariant && !setter_registered);
+        ++setter_registered;
+    }
+    if(!strcmp(name, "setopenborvariant"))
+    {
+        assert(callback == (void *)probe_openbor_changesystemvariant && setter_registered && !setter_alias_registered);
+        ++setter_alias_registered;
+    }
+    if(!strcmp(name, "get_set_handle"))
+    {
+        assert(callback == (void *)openbor_get_set_handle && !set_handle_registered);
+        ++set_handle_registered;
+    }
+    if(!strcmp(name, "get_layer_handle"))
+    {
+        assert(callback == (void *)openbor_get_layer_handle && !layer_handle_registered);
+        ++layer_handle_registered;
+    }
+}
+@REGISTRY@
+
+static int probe_convert(s_model *model, unsigned *flags)
+{
+    assert(model && flags && model->palette == &palette && flags[0] == 1);
+    ++conversions;
+    return 1;
+}
+
+static void palette_and_video(int fixed_video, int map_conversion)
+{
+    int disabledkey[MAX_BTN_NUM + 2] = {0};
+    s_model model = {0}, *newchar = &model;
+    unsigned mapflag[] = {1};
+    const char *shutdownmessage = NULL;
+    newchar->palette = &palette;
+    pixelformat = screenformat = PIXEL_8;
+@VIDEO@
+    assert(screenformat == (fixed_video ? PIXEL_32 : PIXEL_8));
+    assert(pixelformat == (fixed_video ? PIXEL_x8 : PIXEL_8));
+    assert(((@COLOURDEPTH@) != 0) == fixed_video);
+@BUTTONS@
+@EXIT@
+    assert(btnnum == (fixed_video ? MAX_BTN_NUM : 12));
+    assert(disabledkey[SDID_ESC] == fixed_video);
+
+    for(int indexed = 0; indexed < 2; ++indexed)
+    {
+        conversions = 0;
+        pixelformat = indexed ? PIXEL_x8 : PIXEL_8;
+#define convert_map_to_palette probe_convert
+@PALETTE@
+#undef convert_map_to_palette
+        assert(conversions == (indexed && map_conversion));
+    }
+lCleanup:
+    assert(!shutdownmessage);
+}
+
+static ScriptVariant getter(ScriptVariant *target, const char *name, int number, int numeric)
+{
+    ScriptVariant property = {0}, result = {.ptrVal = &palette, .vt = VT_PTR};
+    ScriptVariant *args[] = {target, &property}, *out = &result;
+    property_name = name;
+    property.vt = numeric ? VT_INTEGER : VT_STR;
+    property.lVal = numeric ? number : 0;
+    assert(openbor_getdrawmethod(args, &out, 2) == S_OK && out == &result);
+    assert(property.vt == VT_INTEGER && property.lVal == number);
+    return result;
+}
+
+static void drawing(int available)
+{
+    const char *name = Script_GetFunctionName((void *)openbor_getdrawmethod);
+    Script_LoadSystemFunctions();
+    assert(registered == available && name && (!strcmp(name, "getdrawmethod")) == available);
+    if(!available) return;
+
+    for(int access = 0; access < 3; ++access)
+    {
+        ScriptVariant dest = {0}, result;
+        s_drawmethod *method = access == 2 ? &actor.drawmethod : &drawmethod;
+        if(access) { dest.vt = VT_PTR; dest.ptrVal = access == 2 ? &actor : NULL; }
+        method->alpha = 47 + access;
+        method->flag = 5 + access;
+        method->rotate = -15.75f;
+        method->table = &palette;
+        method->centerx = 1; method->centery = 2;
+        method->channelb = 3; method->channelg = 4; method->channelr = 5;
+        method->clipx = 6; method->clipy = 7; method->clipw = 8; method->cliph = 9;
+        method->fillcolor = 10;
+        method->fliprotate = 11; method->flipx = 12; method->flipy = 13;
+        method->remap = 14; method->scalex = 16; method->scaley = 17;
+        method->shiftx = 18; method->tintmode = 19; method->tintcolor = 20;
+        method->transbg = 21; method->water.watermode = 22; method->water.wavetime = 23;
+        method->xrepeat = 24; method->yrepeat = 25; method->xspan = 26; method->yspan = 27;
+        method->water.beginsize = 1.25f;
+        method->water.endsize = 2.5f;
+        method->water.wavespeed = -0.75f;
+        for(int numeric = 0; numeric < 2; ++numeric)
+        {
+#define EXPECT(n, kind, field, value) \
+            result = getter(&dest, #n, _dm_##n, numeric); \
+            assert(result.vt == kind && result.field == (value))
+            EXPECT(alpha, VT_INTEGER, lVal, 47 + access);
+            EXPECT(rotate, VT_INTEGER, lVal, -15);
+            EXPECT(table, VT_PTR, ptrVal, &palette);
+            EXPECT(beginsize, VT_DECIMAL, dblVal, 1.25);
+            EXPECT(endsize, VT_DECIMAL, dblVal, 2.5);
+            EXPECT(wavelength, VT_DECIMAL, dblVal, 2.5);
+            EXPECT(wavespeed, VT_DECIMAL, dblVal, -0.75);
+            EXPECT(flag, VT_INTEGER, lVal, 5 + access);
+            EXPECT(enabled, VT_INTEGER, lVal, 5 + access);
+            EXPECT(clip, VT_INTEGER, lVal, 5 + access);
+            EXPECT(reset, VT_INTEGER, lVal, 5 + access);
+#define EXPECT_INTEGER(n, value) EXPECT(n, VT_INTEGER, lVal, value)
+            EXPECT_INTEGER(centerx, 1); EXPECT_INTEGER(centery, 2);
+            EXPECT_INTEGER(channelb, 3); EXPECT_INTEGER(channelg, 4); EXPECT_INTEGER(channelr, 5);
+            EXPECT_INTEGER(clipx, 6); EXPECT_INTEGER(clipy, 7);
+            EXPECT_INTEGER(clipw, 8); EXPECT_INTEGER(cliph, 9);
+            EXPECT_INTEGER(fillcolor, 10);
+            EXPECT_INTEGER(fliprotate, 11); EXPECT_INTEGER(flipx, 12); EXPECT_INTEGER(flipy, 13);
+            EXPECT_INTEGER(remap, 14); EXPECT_INTEGER(scalex, 16); EXPECT_INTEGER(scaley, 17);
+            EXPECT_INTEGER(shiftx, 18); EXPECT_INTEGER(tintmode, 19); EXPECT_INTEGER(tintcolor, 20);
+            EXPECT_INTEGER(transbg, 21); EXPECT_INTEGER(watermode, 22); EXPECT_INTEGER(wavetime, 23);
+            EXPECT_INTEGER(xrepeat, 24); EXPECT_INTEGER(yrepeat, 25);
+            EXPECT_INTEGER(xspan, 26); EXPECT_INTEGER(yspan, 27);
+            method->water.amplitude = 28;
+            method->water.perspective = 29;
+            EXPECT_INTEGER(amplitude, 28); EXPECT_INTEGER(perspective, 29);
+            method->water.beginsize = 1.25f;
+            method->water.wavespeed = -0.75f;
+#undef EXPECT_INTEGER
+#undef EXPECT
+        }
+        result = getter(&dest, NULL, _dm_the_end + 1, 1);
+        assert(result.vt == VT_INTEGER && result.lVal == 5 + access);
+    }
+    ScriptVariant target = {.vt = VT_INTEGER}, property = {.vt = VT_INTEGER};
+    ScriptVariant result = {.lVal = 7, .vt = VT_INTEGER}, *out = &result;
+    ScriptVariant *args[] = {&target, &property};
+    drawing_diagnostics = 0;
+    assert(openbor_getdrawmethod(args, &out, 1) == E_FAIL && !out);
+    assert(drawing_diagnostics == 1 && result.vt == VT_INTEGER && result.lVal == 7);
+    out = &result;
+    assert(openbor_getdrawmethod(args, &out, 2) == E_FAIL && !out);
+    assert(drawing_diagnostics == 2 && result.vt == VT_EMPTY);
+}
+
+static void system_routes(int decimal_blockade, int setter_alias)
+{
+    ScriptVariant result = {.vt = VT_EMPTY}, *var = &result;
+    float blockade = -17.25f;
+    switch(_sv_blockade)
+    {
+    case _sv_blockade:
+        @BLOCKADE@
+    }
+    assert(result.vt == (decimal_blockade ? VT_DECIMAL : VT_INTEGER));
+    assert(decimal_blockade ? result.dblVal == -17.25 : result.lVal == -17);
+    Script_LoadSystemFunctions();
+    assert(setter_registered == 1 && setter_alias_registered == setter_alias);
+    assert(!strcmp(Script_GetFunctionName((void *)probe_openbor_changesystemvariant), "changeopenborvariant"));
+}
+
+static void set_handle_routes(int available)
+{
+    const char *name = Script_GetFunctionName((void *)openbor_get_set_handle);
+    Script_LoadSystemFunctions();
+    assert(set_handle_registered == available && name && (!strcmp(name, "get_set_handle")) == available);
+    if(!available) return;
+
+    levelsets = sets;
+    num_difficulties = 2;
+    set_handle_diagnostics = 0;
+    for(int decimal = 0; decimal <= 1; ++decimal)
+    for(int index = -1; index <= num_difficulties; ++index)
+    {
+        ScriptVariant result = {.vt = VT_INTEGER, .lVal = 91}, *out = &result;
+        ScriptVariant argument = {0}, *args[] = {&argument};
+        if(decimal)
+        {
+            argument.vt = VT_DECIMAL;
+            argument.dblVal = index + (index < 0 ? -0.25 : 0.25);
+        }
+        else
+        {
+            argument.vt = VT_INTEGER;
+            argument.lVal = index;
+        }
+        assert(openbor_get_set_handle(args, &out, 1) == S_OK && out == &result);
+        if(index >= 0 && index < num_difficulties)
+            assert(result.vt == VT_PTR && result.ptrVal == &sets[index]);
+        else assert(result.vt == VT_EMPTY);
+        assert(!set_handle_diagnostics);
+    }
+    ScriptVariant invalid = {.vt = VT_PTR, .ptrVal = &sets[0]}, *args[] = {&invalid};
+    ScriptVariant result = {.vt = VT_INTEGER, .lVal = 91}, *out = &result;
+    assert(openbor_get_set_handle(args, &out, 1) == E_FAIL && !out && set_handle_diagnostics == 1);
+    assert(result.vt == VT_INTEGER && result.lVal == 91);
+    out = &result;
+    assert(openbor_get_set_handle(args, &out, 0) == E_FAIL && !out && set_handle_diagnostics == 2);
+}
+
+static void layer_handle_routes(int available)
+{
+    const char *name = Script_GetFunctionName((void *)openbor_get_layer_handle);
+    Script_LoadSystemFunctions();
+    assert(layer_handle_registered == available && name && (!strcmp(name, "get_layer_handle")) == available);
+    if(!available) return;
+
+    static s_layer layers[2];
+    level = &scene;
+    level->layersref = layers;
+    level->numlayersref = 2;
+    level->numlayers = 2;
+    layer_handle_diagnostics = 0;
+    for(int tag = 0; tag <= 1; ++tag)
+    for(int index = -1; index <= 2; ++index)
+    {
+        ScriptVariant handle = {.vt = tag ? VT_PTR : VT_EMPTY, .ptrVal = level};
+        ScriptVariant key = {.vt = VT_DECIMAL, .dblVal = index + (index < 0 ? -0.5 : 0.5)};
+        ScriptVariant result = {.vt = VT_INTEGER, .lVal = 91}, *out = &result;
+        ScriptVariant *args[] = {&handle, &key};
+        assert(openbor_get_layer_handle(args, &out, 2) == S_OK && out == &result);
+        if(index >= 0 && index < 2)
+            assert(result.vt == VT_PTR && result.ptrVal == &layers[index]);
+        else assert(result.vt == VT_EMPTY);
+        assert(!layer_handle_diagnostics);
+    }
+    ScriptVariant handle = {.vt = VT_PTR, .ptrVal = level};
+    ScriptVariant key = {.vt = VT_INTEGER, .lVal = 1}, *args[] = {&handle, &key};
+    ScriptVariant result = {.vt = VT_INTEGER, .lVal = 91}, *out = &result;
+    level->numlayersref = 1;
+    assert(openbor_get_layer_handle(args, &out, 2) == S_OK && result.vt == VT_EMPTY);
+    handle.ptrVal = NULL;
+    assert(openbor_get_layer_handle(args, &out, 2) == E_FAIL && !out && layer_handle_diagnostics == 1);
+    out = &result;
+    assert(openbor_get_layer_handle(args, &out, 1) == E_FAIL && !out && layer_handle_diagnostics == 2);
+    level = NULL;
+}
+
+int pixelbytes[5] = {1, 1, 2, 3, 4};
+static int act_calls, image_calls, palette_loaded;
+static int restrictions;
+static char *expected_path;
+char packfile[OBOR_CONTENT_PATH_MAX] = "module.pak";
+
+int load_palette(unsigned char *out, char *filename)
+{
+    assert(out && !strcmp(filename, expected_path));
+    ++act_calls;
+    if(palette_loaded) memset(out, 41, PAL_BYTES);
+    return palette_loaded;
+}
+
+int loadimagepalette(char *filename, char *archive, unsigned char *out)
+{
+    assert(out && archive == packfile && !strcmp(filename, expected_path));
+    ++image_calls;
+    if(palette_loaded) memset(out, 53, PAL_BYTES);
+    return palette_loaded;
+}
+
+@PALETTE_LOADER@
+
+static int restricted_command(const char *format, const char *command)
+{
+    assert(!strcmp(format, "Warning: command '%s' is not available under 8bit mode\n"));
+    assert(!strcmp(command, "palette") || !strcmp(command, "alternatepal") || !strcmp(command, "globalmap"));
+    return ++restrictions;
+}
+
+#undef GET_ARG
+#undef GET_INT_ARG
+#define GET_ARG(n) (assert((n) == 1), expected_path)
+#define GET_INT_ARG(n) (assert((n) == 1), 7)
+#define printf restricted_command
+static const char *apply_palette_command(int cmd, s_model *newchar, unsigned **flags, int *disabled)
+{
+    const char *command = cmd == CMD_MODEL_PALETTE ? "palette" :
+                          cmd == CMD_MODEL_ALTERNATEPAL ? "alternatepal" : "globalmap";
+    unsigned *mapflag = *flags;
+    char *shutdownmessage = NULL;
+    int nopalette = *disabled;
+    char *value;
+    switch(cmd)
+    {
+        @PALETTE_COMMANDS@
+    }
+lCleanup:
+    *flags = mapflag;
+    *disabled = nopalette;
+    return shutdownmessage;
+}
+#undef printf
+
+static void palette_commands(int act, int globalmap_indexed)
+{
+    static char *paths[] = {"palette.AcT", "image.gif", "x", "", "none", "file.act.gif"};
+    for(int builtin = PIXEL_8; builtin <= PIXEL_x8; ++builtin)
+    {
+        pixelformat = builtin;
+        screenformat = builtin == PIXEL_x8 ? PIXEL_32 : PIXEL_8;
+        s_model model = {0};
+        unsigned *flags = NULL;
+        int disabled = 0;
+        restrictions = 0;
+        assert(!apply_palette_command(CMD_MODEL_GLOBALMAP, &model, &flags, &disabled));
+        assert(model.globalmap == ((builtin == PIXEL_x8 || globalmap_indexed) ? 7 : 0));
+        assert(restrictions == (builtin == PIXEL_8 && !globalmap_indexed));
+        for(int alternate = 0; alternate <= 1; ++alternate)
+        for(int seed = 0; seed <= 1; ++seed)
+        for(unsigned path = 0; path < sizeof(paths) / sizeof(*paths); ++path)
+        for(int success = 0; success <= 1; ++success)
+        {
+            int restricted = !act && builtin != PIXEL_x8;
+            int disables = !act && !alternate && !seed && !restricted && path == 4;
+            int calls = !restricted && !disables && (alternate || !seed);
+            int via_act = act && path == 0;
+            unsigned char *existing = NULL, *published;
+            model = (s_model){0};
+            disabled = act_calls = image_calls = restrictions = 0;
+            expected_path = paths[path];
+            palette_loaded = success;
+            if(seed)
+            {
+                existing = malloc(PAL_BYTES);
+                memset(existing, 71, PAL_BYTES);
+                if(alternate)
+                {
+                    model.maps_loaded = 1;
+                    model.colourmap = malloc(sizeof(*model.colourmap));
+                    model.colourmap[0] = existing;
+                    flags = malloc(sizeof(*flags));
+                    flags[0] = 3;
+                }
+                else model.palette = existing;
+            }
+            const char *error = apply_palette_command(alternate ? CMD_MODEL_ALTERNATEPAL : CMD_MODEL_PALETTE,
+                                                     &model, &flags, &disabled);
+            assert((error != NULL) == (calls && !success));
+            if(error)
+            {
+                const char *primary = via_act ? "Palette failed to load color table from .act!" :
+                                                "Palette failed to load color table from image!";
+                const char *secondary = via_act ? "Alternatepal failed to load color table from .act!" :
+                                                  "Alternatepal failed to load color table from image!";
+                assert(!strcmp(error, act ? (alternate ? secondary : primary) : "Failed to load palette!"));
+            }
+            assert(disabled == disables && restrictions == restricted);
+            assert(act_calls == (calls && via_act) && image_calls == (calls && !via_act));
+            assert(model.maps_loaded == (alternate ? seed + (calls && success) : 0));
+            if(alternate && calls) assert(flags[seed] == 0);
+            if(seed)
+            {
+                assert(existing[0] == 71);
+                if(alternate) assert(flags[0] == 3 && model.colourmap[0] == existing);
+                else assert(model.palette == existing);
+            }
+            published = alternate ? (calls ? model.colourmap[seed] : NULL) : (seed ? NULL : model.palette);
+            assert((published != NULL) == (calls && success));
+            if(published) assert(published[0] == (via_act ? 41 : 53));
+            free(published);
+            free(existing);
+            free(model.colourmap);
+            free(flags);
+            flags = NULL;
+        }
+    }
+}
+
+int main(void)
+{
+    static const struct { uint32_t revision; int fixed_video, conversion, getter; } rows[] = {
+        @PROFILES@
+    };
+    for(unsigned i = 0; i < sizeof(rows) / sizeof(*rows); ++i)
+    {
+        obor_profile_build = rows[i].revision;
+        palette_and_video(rows[i].fixed_video, rows[i].conversion);
+        drawing(rows[i].getter);
+    }
+    static const struct { uint32_t revision; int act, decimal_blockade, setter_alias, globalmap_indexed; } later[] = {
+        @PALETTE_AND_SYSTEM_PROFILES@
+    };
+    for(unsigned i = 0; i < sizeof(later) / sizeof(*later); ++i)
+    {
+        obor_profile_build = later[i].revision;
+        palette_commands(later[i].act, later[i].globalmap_indexed);
+        system_routes(later[i].decimal_blockade, later[i].setter_alias);
+    }
+    static const struct { uint32_t revision; int available; } set_handles[] = {
+        @SET_HANDLE_PROFILES@
+    };
+    for(unsigned i = 0; i < sizeof(set_handles) / sizeof(*set_handles); ++i)
+    {
+        obor_profile_build = set_handles[i].revision;
+        set_handle_routes(set_handles[i].available);
+    }
+    static const struct { uint32_t revision; int available; } layer_handles[] = {
+        @LAYER_HANDLE_PROFILES@
+    };
+    for(unsigned i = 0; i < sizeof(layer_handles) / sizeof(*layer_handles); ++i)
+    {
+        obor_profile_build = layer_handles[i].revision;
+        layer_handle_routes(layer_handles[i].available);
+    }
+    printf("{\"profiles\":%zu,\"palette_and_system_profiles\":%zu,\"set_handle_profiles\":%zu,\"layer_handle_profiles\":%zu,\"status\":\"PASS\"}\n",
+           sizeof(rows) / sizeof(*rows), sizeof(later) / sizeof(*later),
+           sizeof(set_handles) / sizeof(*set_handles), sizeof(layer_handles) / sizeof(*layer_handles));
+    return 0;
+}

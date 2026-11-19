@@ -21,7 +21,14 @@ static struct {
     float bgspeed, vbgspeed, scrollspeed, gravity, maxfallspeed, maxtossspeed;
     s_basemap *basemaps;
     s_terrain *holes, *walls;
+    void *obor_arrays;
 } level_data, *level = &level_data;
+enum { OBOR_LEVEL_ARRAY_BASEMAP, OBOR_LEVEL_ARRAY_HOLE, OBOR_LEVEL_ARRAY_WALL };
+static int obor_level_grow_array(void *record, int id, int count)
+{
+    (void)record; (void)id; (void)count;
+    abort();
+}
 
 uint32_t obor_profile_build;
 static const char *strings[] = {"basemap", "map", "text"};

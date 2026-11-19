@@ -1,0 +1,130 @@
+/* SPDX-License-Identifier: BSD-3-Clause
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me> */
+
+s_set_entry *levelsets;
+int num_difficulties;
+static char set_name[64];
+
+void *checkAlloc(void *ptr, size_t size, const char *function, const char *file, int line)
+{
+    (void)function; (void)file; (void)line;
+    CHECK(ptr || !size);
+    return ptr;
+}
+
+void StrCache_Copy(int index, CHAR *name)
+{
+    CHECK(index == 0 && strlen(name) < sizeof(set_name));
+    strcpy(set_name, name);
+}
+
+#define printf discard_diagnostic
+@NATIVE@
+#undef printf
+@UNLOAD@
+
+static int probe_list, registered;
+static void probe_reset(int *list) { CHECK(list == &probe_list); registered = 0; }
+static void probe_insert(int *list, void *callback, const char *name)
+{
+    CHECK(list == &probe_list);
+    if(!strcmp(name, "get_set_property"))
+    {
+        CHECK(callback == (void *)openbor_get_set_property && registered == 0);
+        registered = 1;
+    }
+    if(!strcmp(name, "set_set_property"))
+    {
+        CHECK(callback == (void *)openbor_set_set_property && registered == 1);
+        registered = 2;
+    }
+}
+@STUBS@
+@REGISTRY@
+
+struct set_result { int index; VARTYPE tag; LONG value; };
+@TABLES@
+
+static void seed_levelorder(s_set_entry *set, int count)
+{
+    set->numlevels = count;
+    set->levelorder = calloc((size_t)count, sizeof(*set->levelorder));
+    for(int i = 0; i < count; ++i)
+    {
+        set->levelorder[i].branchname = strdup("branch");
+        set->levelorder[i].filename = strdup("level");
+        set->levelorder[i].skipselect[0] = strdup("model");
+    }
+}
+
+static void check_set_properties(const struct set_result *expected, int count, int collection_index)
+{
+    Script_LoadSystemFunctions();
+    CHECK(registered == (count ? 2 : 0));
+    CHECK(!strcmp(Script_GetFunctionName((void *)openbor_get_set_property), "get_set_property") == !!count);
+    CHECK(!strcmp(Script_GetFunctionName((void *)openbor_set_set_property), "set_set_property") == !!count);
+    if(!count) return;
+
+    num_difficulties = 3;
+    levelsets = calloc((size_t)num_difficulties, sizeof(*levelsets));
+    levelsets[0] = (s_set_entry){@SEED@};
+    levelsets[0].name = strdup("Historical set");
+    seed_levelorder(&levelsets[0], levelsets[0].numlevels);
+    seed_levelorder(&levelsets[1], levelsets[0].numlevels + 1);
+    seed_levelorder(&levelsets[2], levelsets[0].numlevels - 1);
+    s_level_entry *original = levelsets[0].levelorder;
+    s_level_entry *shared = levelsets[1].levelorder;
+    ScriptVariant handle = {.vt = VT_PTR, .ptrVal = &levelsets[0]};
+    ScriptVariant property = {.vt = VT_INTEGER};
+    ScriptVariant value = {.vt = VT_PTR, .ptrVal = shared};
+    ScriptVariant result = {.vt = VT_INTEGER, .lVal = 91}, *out = &result;
+    ScriptVariant *args[] = {&handle, &property, &value};
+    for(int index = 0; index < count; ++index)
+    {
+        property.lVal = expected[index].index;
+        CHECK(openbor_get_set_property(args, &out, 2) == S_OK && out == &result);
+        CHECK(result.vt == expected[index].tag);
+        switch(result.vt)
+        {
+            case VT_INTEGER: CHECK(result.lVal == expected[index].value); break;
+            case VT_DECIMAL:
+            {
+                ScriptVariant bits = {.vt = VT_DECIMAL, .dblVal = 0};
+                bits.lVal = expected[index].value;
+                CHECK(result.lVal == bits.lVal && !memcmp(&result.dblVal, &bits.dblVal, sizeof(bits.dblVal)));
+                break;
+            }
+            case VT_PTR: CHECK(result.ptrVal == original); break;
+            case VT_STR: CHECK(!strcmp(set_name, levelsets[0].name)); break;
+            default: CHECK(0);
+        }
+    }
+    property.lVal = count;
+    CHECK(openbor_get_set_property(args, &out, 2) == E_FAIL && out == &result && result.vt == VT_EMPTY);
+    CHECK(openbor_set_set_property(args, &out, 3) == E_FAIL && out == &result);
+    CHECK(openbor_get_set_property(args, &out, 1) == E_FAIL && !out);
+    out = &result;
+    CHECK(openbor_set_set_property(args, &out, 2) == E_FAIL && !out);
+
+    property.lVal = collection_index;
+    result = (ScriptVariant){.vt = VT_INTEGER, .lVal = 91};
+    out = &result;
+    CHECK(openbor_set_set_property(args, &out, 3) == S_OK && out == &result);
+    CHECK(result.vt == VT_INTEGER && result.lVal == 91);
+    CHECK(levelsets[0].levelorder == shared && levelsets[0].numlevels == 2);
+    CHECK(openbor_get_set_property(args, &out, 2) == S_OK && result.vt == VT_PTR && result.ptrVal == shared);
+    value.ptrVal = levelsets[2].levelorder;
+    CHECK(openbor_set_set_property(args, &out, 3) == E_FAIL && levelsets[0].levelorder == shared);
+
+    value = (ScriptVariant){.vt = VT_EMPTY};
+    CHECK(openbor_set_set_property(args, &out, 3) == S_OK);
+    CHECK(openbor_get_set_property(args, &out, 2) == S_OK && result.vt == VT_EMPTY);
+    value = (ScriptVariant){.vt = VT_PTR, .ptrVal = original};
+    CHECK(openbor_set_set_property(args, &out, 3) == S_OK);
+    CHECK(openbor_get_set_property(args, &out, 2) == S_OK && result.vt == VT_PTR && result.ptrVal == original);
+    value.ptrVal = shared;
+    CHECK(openbor_set_set_property(args, &out, 3) == S_OK);
+    CHECK(levelsets[0].levelorder == shared && obor_owned_levelorder(&levelsets[0]) == original);
+    unload_levelorder();
+    CHECK(!levelsets && !num_difficulties);
+}

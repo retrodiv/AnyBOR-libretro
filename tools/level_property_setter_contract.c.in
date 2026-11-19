@@ -1,0 +1,404 @@
+/* SPDX-License-Identifier: BSD-3-Clause
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me> */
+#include <stdint.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include "openbor.h"
+#undef printf
+#undef assert
+#include <assert.h>
+
+uint32_t obor_profile_build;
+s_level *level;
+#define stage (*level)
+static s_screen *background;
+static s_terrain walls[1];
+static ScriptVariant handle, property, value, result, *output;
+static ScriptVariant *args[] = {&handle, &property, &value};
+static char input_text[] = "A new name or music path";
+static List scriptheap;
+static Script *pcurrentscript;
+int no_cmd_compatible;
+int no_nested_script;
+static int clear_calls, interpreter_releases, callback_active;
+static Script *pending_source;
+static Varlist *pending_locals;
+static int pending_selector;
+static void replace_running_script(Interpreter *running);
+
+CHAR *StrCache_GetIfPresent(int index) { return index == 17 ? input_text : NULL; }
+void StrCache_Collect(int index) { (void)index; abort(); }
+int StrCache_Pop(void) { abort(); }
+void StrCache_Copy(int index, CHAR *text) { (void)index; (void)text; abort(); }
+void Varlist_Clear(Varlist *locals) { free(locals->vars); }
+void Varlist_Cleanup(Varlist *locals) { (void)locals; abort(); }
+int Varlist_SetByName(Varlist *locals, char *key, ScriptVariant *argument)
+{
+    assert(locals);
+    if(!strcmp(key, "iscopy"))
+        assert(argument->vt == VT_EMPTY || (argument->vt == VT_INTEGER && argument->lVal == 0));
+    else
+    {
+        assert(!strcmp(key, "localclear"));
+        assert(argument->vt == VT_EMPTY || (argument->vt == VT_INTEGER && argument->lVal == (pending_source ? 1 : 2)));
+    }
+    return 1;
+}
+void shutdown(int status, char *message, ...) { (void)status; (void)message; abort(); }
+void Interpreter_Reset(Interpreter *interpreter) { assert(interpreter); }
+HRESULT Interpreter_EvaluateCall(Interpreter *interpreter)
+{
+    if(interpreter->pCurrentInstruction == interpreter->pInitEntry)
+        replace_running_script(interpreter);
+    else
+    {
+        assert(interpreter->pCurrentInstruction == interpreter->pClearEntry);
+        ++clear_calls;
+    }
+    return S_OK;
+}
+HRESULT Interpreter_Call(Interpreter *interpreter) { (void)interpreter; abort(); }
+HRESULT Interpreter_EvalInstruction(Interpreter *interpreter) { (void)interpreter; abort(); }
+static void discard_diagnostic(const char *message) { (void)message; }
+
+void *checkAlloc(void *pointer, size_t size, const char *function, const char *file, int line)
+{
+    (void)function;
+    (void)file;
+    (void)line;
+    assert(pointer || !size);
+    return pointer;
+}
+
+@SELECTORS@
+@SET_PROPERTY_NATIVE@
+@VARIANTS@
+@LIFECYCLE@
+@ARRAYS@
+#define printf discard_diagnostic
+@GETTER@
+@SCRIPT_SLOTS@
+@SETTER@
+#undef printf
+
+static void call(int expected)
+{
+    output = &result;
+    result = (ScriptVariant){.vt = VT_INTEGER, .lVal = 991};
+    assert(openbor_set_level_property(args, &output, 3) == expected && output == &result);
+}
+
+static void assert_result_unchanged(void)
+{
+    assert(result.vt == VT_INTEGER && result.lVal == 991);
+}
+
+#define CHECK_NUMERIC(selector, field, expected_decimal) do { \
+    property.lVal = selector; \
+    value = (ScriptVariant){.vt = VT_INTEGER, .lVal = 71}; \
+    call(S_OK); \
+    assert(stage.field == 71); \
+    assert_result_unchanged(); \
+    value = (ScriptVariant){.vt = VT_DECIMAL, .dblVal = 22.5}; \
+    call(S_OK); \
+    assert(stage.field == expected_decimal); \
+    assert_result_unchanged(); \
+    value = (ScriptVariant){.vt = VT_STR, .strVal = 17}; \
+    call(E_FAIL); \
+    assert(stage.field == expected_decimal); \
+    assert_result_unchanged(); \
+} while(0)
+#define SET_INTEGERS(selector, field) CHECK_NUMERIC(selector, field, 22)
+#define SET_DECIMALS(selector, field) CHECK_NUMERIC(selector, field, 22.5)
+#define SET_NAMES(selector, field) do { \
+    property.lVal = selector; \
+    value = (ScriptVariant){.vt = VT_STR, .strVal = 17}; \
+    call(S_OK); \
+    assert(!strcmp(stage.field, input_text)); \
+    assert_result_unchanged(); \
+    value = (ScriptVariant){.vt = VT_INTEGER, .lVal = 81}; \
+    call(E_FAIL); \
+    assert(!strcmp(stage.field, input_text)); \
+    assert_result_unchanged(); \
+} while(0)
+
+static void check_read_only(int selector)
+{
+    property.lVal = selector;
+    value = (ScriptVariant){.vt = VT_EMPTY};
+    call(E_FAIL);
+    assert_result_unchanged();
+}
+
+static void check_unknown_success(int success)
+{
+    for(int probe = -1; probe <= 300; probe += 301)
+    {
+        property.lVal = probe;
+        value = (ScriptVariant){.vt = VT_INTEGER, .lVal = 81};
+        call(success ? S_OK : E_FAIL);
+        assert_result_unchanged();
+    }
+    if(!success)
+    {
+        property.lVal = 0;
+        call(E_FAIL);
+        assert_result_unchanged();
+    }
+}
+
+static void check_wall_collection(int selector)
+{
+    property.lVal = selector;
+    value = (ScriptVariant){.vt = VT_INTEGER, .lVal = 81};
+    stage.walls = walls;
+    call(S_OK);
+    assert(stage.walls == walls && result.vt == VT_PTR && result.ptrVal == walls);
+    stage.walls = NULL;
+    call(S_OK);
+    assert(!stage.walls);
+    assert_result_unchanged();
+}
+
+static void check_spawn_noop(int selector)
+{
+    property.lVal = selector;
+    value = (ScriptVariant){.vt = VT_INTEGER, .lVal = 81};
+    stage.spawn[0].x = 14.5;
+    call(S_OK);
+    assert(stage.spawn[0].x == 14.5);
+    assert_result_unchanged();
+}
+
+@CASES@
+
+static void seed_arrays(void)
+{
+#define SEED_ARRAY(id, field, count, kind) \
+    stage.field = calloc(2, sizeof(*stage.field)); \
+    assert(stage.field); \
+    stage.count = 2;
+    OBOR_LEVEL_ARRAYS(SEED_ARRAY)
+#undef SEED_ARRAY
+}
+
+static void select_count(int selector, int count, int expected)
+{
+    property.lVal = selector;
+    value = (ScriptVariant){.vt = VT_INTEGER, .lVal = count};
+    call(expected);
+    assert_result_unchanged();
+}
+
+static void select_pointer(int selector, VARTYPE kind, void *pointer, int expected)
+{
+    property.lVal = selector;
+    value = (ScriptVariant){.vt = kind, .ptrVal = pointer};
+    call(expected);
+    assert_result_unchanged();
+}
+
+static void check_pointer_view(int selector, VARTYPE tag, void *expected)
+{
+    property.lVal = selector;
+    output = &result;
+    assert(openbor_get_level_property(args, &output, 2) == S_OK && output == &result);
+    assert(result.vt == tag);
+    if(tag == VT_PTR) assert(result.ptrVal == expected);
+}
+
+#define CHECK_ARRAY(select, count_selector, field) do { \
+    void *saved = stage.field; \
+    select_pointer(select, VT_PTR, saved, S_OK); \
+    select_count(count_selector, 3, E_FAIL); \
+    select_pointer(select, VT_EMPTY, NULL, S_OK); \
+    assert(stage.field == saved); \
+    select_count(count_selector, 0, S_OK); \
+    assert(!stage.field); \
+    select_count(count_selector, 1, E_FAIL); \
+    select_pointer(select, VT_PTR, saved, S_OK); \
+    select_count(count_selector, 2, S_OK); \
+    assert(stage.field == saved); \
+} while(0)
+
+static void check_early_background(int setter, int getter)
+{
+    select_pointer(setter, VT_PTR, stage.fglayers, S_OK);
+    assert(stage.bglayers == stage.fglayers);
+    check_pointer_view(getter, VT_PTR, stage.fglayers);
+    select_pointer(setter, VT_EMPTY, NULL, S_OK);
+    check_pointer_view(getter, VT_PTR, NULL);
+    assert(stage.bglayers == stage.fglayers);
+}
+
+static void check_background_handle(int selector)
+{
+    s_layer *selected = &stage.layersref[1];
+    select_pointer(selector, VT_PTR, selected, S_OK);
+    assert(stage.background == selected);
+    check_pointer_view(selector, VT_PTR, selected);
+    select_pointer(selector, VT_EMPTY, NULL, S_OK);
+    check_pointer_view(selector, VT_EMPTY, NULL);
+}
+
+static void check_wall_count(int count, int read)
+{
+    select_count(count, 1, S_OK);
+    assert(stage.numwalls == 1);
+    select_count(count, -1, E_FAIL);
+    assert(stage.numwalls == 1);
+    check_pointer_view(read, VT_PTR, stage.walls);
+    select_count(count, 2, S_OK);
+}
+
+static void check_collection_growth(void)
+{
+    s_terrain *walls = stage.walls;
+    stage.walls[0].x = 14.5;
+    assert(obor_level_set_array(level, OBOR_LEVEL_ARRAY_HOLE, walls));
+    assert(stage.holes == stage.walls);
+    assert(obor_level_grow_array(level, OBOR_LEVEL_ARRAY_HOLE, 4));
+    assert(stage.holes == stage.walls && stage.holes[0].x == 14.5 && stage.holes[3].x == 0);
+    assert(stage.numholes == 4 && stage.numwalls == 2);
+    assert(obor_level_set_array_count(level, OBOR_LEVEL_ARRAY_TEXT, 0));
+    assert(obor_level_set_array(level, OBOR_LEVEL_ARRAY_TEXT, NULL));
+    assert(obor_level_grow_array(level, OBOR_LEVEL_ARRAY_TEXT, 3));
+    assert(stage.numtextobjs == 3 && stage.textobjs[2].text == NULL);
+    stage.textobjs[2].text = calloc(7, 1);
+    assert(stage.textobjs[2].text);
+    assert(obor_level_set_array_count(level, OBOR_LEVEL_ARRAY_TEXT, 1));
+}
+
+static void check_player_spawn(int selector)
+{
+    stage.player_spawn_count = 2;
+    stage.spawn[0].x = 12.5;
+    stage.spawn[1].x = 23.5;
+    select_pointer(selector, VT_PTR, &stage.spawn[1], S_OK);
+    assert(obor_level_player_spawn(level, 0)->x == 23.5);
+    select_pointer(selector, VT_PTR, &stage.spawn[MAX_PLAYERS - 1], E_FAIL);
+    select_pointer(selector, VT_EMPTY, NULL, S_OK);
+    assert(obor_level_player_spawn(level, 0)->x == 12.5);
+}
+
+static void release_interpreter(void *value)
+{
+    assert(!callback_active);
+    ++interpreter_releases;
+    free(value);
+}
+
+static Script runnable(void)
+{
+    static Instruction init_entry, clear_entry;
+    Script script = {.magic = script_magic, .initialized = 1, .interpreterowner = 1};
+    script.varlist = calloc(1, sizeof(*script.varlist));
+    assert(script.varlist);
+    script.varlist->vars = calloc(1, sizeof(*script.varlist->vars));
+    script.pinterpreter = calloc(1, sizeof(*script.pinterpreter));
+    assert(script.varlist->vars && script.pinterpreter);
+    script.pinterpreter->pInitEntry = &init_entry;
+    script.pinterpreter->pClearEntry = &clear_entry;
+    script.pinterpreter->bReset = 1;
+    script.obor_interpreter = obor_script_reference_new(script.pinterpreter, release_interpreter);
+    assert(script.obor_interpreter);
+    char *comment = calloc(1, 8);
+    assert(comment);
+    strcpy(comment, "script");
+    script.comment = comment;
+    script.obor_comment = obor_script_reference_new(comment, free);
+    assert(script.obor_comment);
+    return script;
+}
+
+static void replace_running_script(Interpreter *running)
+{
+    assert(pending_source && pending_selector >= 0 && pcurrentscript);
+    int before = interpreter_releases;
+    callback_active = 1;
+    select_pointer(pending_selector, VT_PTR, pending_source, S_OK);
+    assert(running->pClearEntry && interpreter_releases == before);
+    assert(pending_locals->vars[0].lVal == 83);
+    callback_active = 0;
+}
+
+HRESULT Interpreter_EvaluateImmediate(Interpreter *running)
+{
+    replace_running_script(running);
+    return S_OK;
+}
+
+static void check_script_slot(int selector, Script *destination)
+{
+    Script source = runnable();
+    Node entry = {.value = &source, .name = "openbor_allocscript"};
+    scriptheap.first = &entry;
+    *destination = runnable();
+    assert(scriptheap.first && scriptheap.current == NULL);
+    int before_clear = clear_calls;
+    int before_release = interpreter_releases;
+
+    pending_source = &source;
+    pending_selector = selector;
+    pending_locals = destination->varlist;
+    pending_locals->vars[0].lVal = 83;
+    if(destination == &stage.level_script)
+        execute_init_method(destination, 0, 1);
+    else
+        assert(Script_Execute(destination));
+    pending_source = NULL;
+    pending_locals = NULL;
+    assert(interpreter_releases == before_release + 1 && clear_calls == before_clear);
+    assert(destination->pinterpreter == source.pinterpreter && destination->comment == source.comment);
+    assert(destination->varlist == source.varlist && source.varlist->obor_shared_owners == 1);
+    destination->varlist->vars[0].lVal = 144;
+    assert(source.varlist->vars[0].lVal == 144);
+
+    select_pointer(selector, VT_PTR, destination, S_OK);
+    assert(source.varlist->obor_shared_owners == 1);
+    entry.name = "openbor_array";
+    select_pointer(selector, VT_PTR, &source, E_FAIL);
+    select_pointer(selector, VT_EMPTY, NULL, E_FAIL);
+    assert(destination->varlist == source.varlist);
+
+    Script_Clear(&source, 2);
+    scriptheap.first = NULL;
+    assert(clear_calls == before_clear + 1 && interpreter_releases == before_release + 1);
+    assert(destination->varlist->vars[0].lVal == 144 && !strcmp(destination->comment, "script"));
+    Script_Clear(destination, 2);
+    assert(clear_calls == before_clear + 2 && interpreter_releases == before_release + 2);
+}
+
+@VIEWS@
+
+static void check_level_setter(uint32_t revision, void (*check_case)(void), void (*check_view)(void))
+{
+    obor_profile_build = revision;
+    level = calloc(1, sizeof(*level));
+    assert(level);
+    stage.name = malloc(2);
+    assert(stage.name);
+    memcpy(stage.name, "L", 2);
+    handle = (ScriptVariant){.vt = VT_PTR, .ptrVal = level};
+    property = (ScriptVariant){.vt = VT_INTEGER, .lVal = 0};
+    check_case();
+    check_view();
+    assert(openbor_set_level_property(args, &output, 2) == E_FAIL && !output);
+    handle = (ScriptVariant){.vt = VT_EMPTY};
+    output = &result;
+    assert(openbor_set_level_property(args, &output, 3) == E_FAIL && !output);
+    handle = (ScriptVariant){.vt = VT_PTR, .ptrVal = NULL};
+    call(E_FAIL);
+    assert_result_unchanged();
+    free(stage.name);
+    free_level(level);
+    level = NULL;
+    printf("{\"revision\":%u,\"status\":\"PASS\"}\n", revision);
+}
+
+int main(void)
+{
+    @RUNNER@
+    return 0;
+}

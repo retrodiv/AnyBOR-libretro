@@ -17,24 +17,39 @@
  * colourtable indices and keep selector arithmetic and table reads defined.
  * Transfer loaded stream buffers through aligned local outputs while
  * preserving native record layout and results. Close owned input files after
- * stream loading and on buffer allocation failure. Preserve the platform
- * aliases and animation and array script names by profile. Reject a missing
- * fourth platform coordinate and handle an empty cursor as no movement.
- * Preserve named action admission and numeric action slots around the simple
- * animation insertion. Retain the original entity property names, ordinal
- * values and lookup order across historical script profiles. Resolve those
- * ordinals before native property dispatch. Preserve the native entity
- * property reads, writes and argument handling around the historical weapon,
- * remap, block and boomerang changes. Preserve historical script wall-height
- * argument selection before querying the terrain. Preserve script reads and
- * writes of attack and body collision coordinates by profile while retaining
- * native conversions. Retain the profile's frame record or collection
- * reference and the identity behavior of native instance queries. Preserve
- * each profile's complete system-variable names and cached numeric
- * identifiers. Retain native basemap script-name availability, the
- * registered height alias and private helper result epochs. Preserve native
- * cell selection and initial map size by profile, checking owned map storage
- * before writes. Route the optional basemap generation argument by profile.
+ * stream loading and on buffer allocation failure. Register the native typed
+ * drawing getter from 4455 and preserve older system-variable ordinals when
+ * admitting the game timer from 4456. Admit setopenborvariant from 4467 with
+ * the existing setter and canonical reverse name, and preserve older
+ * ordinals when exposing sets_count from 4477. Expose the native set handle
+ * lookup from 4478 with its original empty result for an index outside the
+ * loaded sets. Preserve native set property names, ordinals, result types,
+ * fallthrough results and writable collection aliases by profile. Expose
+ * native layer handles and the profile's scroll, boss slowdown and damage
+ * control constants. Expose native typed level property names, numeric
+ * selectors, handle rules and result values by profile. Register the native
+ * typed level setter and preserve its scalar assignments and result handling
+ * by profile. Preserve level collection and spawn view assignment by
+ * profile, including the early background selector. Preserve typed level
+ * script assignment and shared local variables while keeping executing
+ * interpreters live. Preserve the platform aliases and animation and array
+ * script names by profile. Reject a missing fourth platform coordinate and
+ * handle an empty cursor as no movement. Preserve named action admission and
+ * numeric action slots around the simple animation insertion. Retain the
+ * original entity property names, ordinal values and lookup order across
+ * historical script profiles. Resolve those ordinals before native property
+ * dispatch. Preserve the native entity property reads, writes and argument
+ * handling around the historical weapon, remap, block and boomerang changes.
+ * Preserve historical script wall-height argument selection before querying
+ * the terrain. Preserve script reads and writes of attack and body collision
+ * coordinates by profile while retaining native conversions. Retain the
+ * profile's frame record or collection reference and the identity behavior
+ * of native instance queries. Preserve each profile's complete system-
+ * variable names and cached numeric identifiers. Retain native basemap
+ * script-name availability, the registered height alias and private helper
+ * result epochs. Preserve native cell selection and initial map size by
+ * profile, checking owned map storage before writes. Route the optional
+ * basemap generation argument by profile.
  * Existing changes recorded here; this is not their implementation date.
  * See MODIFICATIONS.md and docs/modifications/4432.md
  * at the source repository root. Original notices follow below.
@@ -647,6 +662,34 @@ void Script_Init(Script *pscript, char *theName, char *comment, int first)
     }
 }
 
+/* A running script can replace the record through which it was entered. */
+typedef struct
+{
+    obor_script_reference *interpreter;
+    Varlist *locals;
+} obor_script_execution;
+
+static obor_script_execution obor_script_pin_execution(const Script *script)
+{
+    obor_script_execution execution = {0};
+    if(obor_profile_build < 4494) return execution;
+
+    if(obor_script_reference_retain(script->obor_interpreter))
+        execution.interpreter = script->obor_interpreter;
+    if(script->varlist && script->varlist->obor_shared_owners < SIZE_MAX)
+    {
+        ++script->varlist->obor_shared_owners;
+        execution.locals = script->varlist;
+    }
+    return execution;
+}
+
+static void obor_script_unpin_execution(obor_script_execution *execution)
+{
+    obor_script_reference_release(&execution->interpreter);
+    if(execution->locals) obor_release_script_locals(execution->locals);
+}
+
 static void execute_init_method(Script *pdest, int iscopy, int localclear)
 {
     Script *temp;
@@ -654,6 +697,8 @@ static void execute_init_method(Script *pdest, int iscopy, int localclear)
     //Execute init method
     if(pdest->initialized && pdest->pinterpreter->pInitEntry)
     {
+        Interpreter *interpreter = pdest->pinterpreter;
+        obor_script_execution executing = obor_script_pin_execution(pdest);
         temp = pcurrentscript;
         pcurrentscript = pdest;
 
@@ -667,13 +712,14 @@ static void execute_init_method(Script *pdest, int iscopy, int localclear)
         pdest->pinterpreter->pCurrentInstruction = pdest->pinterpreter->pInitEntry;
         if(FAILED( Interpreter_EvaluateCall(pdest->pinterpreter)))
         {
-            shutdown(1, "Fatal: failed to execute 'init' in script %s %s", pdest->pinterpreter->theSymbolTable.name, pdest->comment ? pdest->comment : "");
+            shutdown(1, "Fatal: failed to execute 'init' in script %s %s", interpreter->theSymbolTable.name, pdest->comment ? pdest->comment : "");
         }
-        pdest->pinterpreter->bReset = FALSE; // not needed, perhaps
+        if(pdest->pinterpreter) pdest->pinterpreter->bReset = FALSE;
         ScriptVariant_Clear(&tempvar);
         Script_Set_Local_Variant(pdest, "iscopy", &tempvar);
         Script_Set_Local_Variant(pdest, "localclear", &tempvar);
         pcurrentscript = temp;
+        obor_script_unpin_execution(&executing);
     }
 }
 
@@ -738,8 +784,7 @@ void Script_Clear(Script *pscript, int localclear)
     {
         if(localclear == 2)
         {
-            Varlist_Clear(pscript->varlist);
-            free(pscript->varlist);
+            obor_release_script_locals(pscript->varlist);
             pscript->varlist = NULL;
         }
         else
@@ -1133,7 +1178,31 @@ const char *Script_GetFunctionName(void *functionRef)
     {
         return "changelayerproperty";
     }
-    else if (functionRef == ((void *)openbor_getlevelproperty))
+    else if (obor_profile_build >= 4476 && functionRef == ((void *)openbor_get_set_property))
+    {
+        return "get_set_property";
+    }
+    else if (obor_profile_build >= 4476 && functionRef == ((void *)openbor_set_set_property))
+    {
+        return "set_set_property";
+    }
+    else if (obor_profile_build >= 4478 && functionRef == ((void *)openbor_get_set_handle))
+    {
+        return "get_set_handle";
+    }
+    else if (obor_profile_build >= 4489 && functionRef == ((void *)openbor_get_layer_handle))
+    {
+        return "get_layer_handle";
+    }
+    else if (obor_profile_build >= 4475 && functionRef == ((void *)openbor_get_level_property))
+    {
+        return "get_level_property";
+    }
+    else if (obor_profile_build >= 4475 && functionRef == ((void *)openbor_set_level_property))
+    {
+        return "set_level_property";
+    }
+    else if (obor_profile_build < 4475 && functionRef == ((void *)openbor_getlevelproperty))
     {
         return "getlevelproperty";
     }
@@ -1336,6 +1405,10 @@ const char *Script_GetFunctionName(void *functionRef)
     else if (functionRef == ((void *)openbor_changedrawmethod))
     {
         return "changedrawmethod";
+    }
+    else if (obor_profile_build >= 4455 && functionRef == ((void *)openbor_getdrawmethod))
+    {
+        return "getdrawmethod";
     }
     else if (functionRef == ((void *)openbor_updateframe))
     {
@@ -1649,7 +1722,8 @@ int Script_Execute(Script *pscript)
     int result, nested;
     extern int no_cmd_compatible;
     Script *temp = pcurrentscript;
-    Interpreter tinter, *pinter;
+    Interpreter tinter, *pinter = pscript->pinterpreter;
+    obor_script_execution executing = obor_script_pin_execution(pscript);
     pcurrentscript = pscript; //used by local script functions
     nested = pscript->pinterpreter->bReset;
     if(no_nested_script && nested)
@@ -1658,7 +1732,6 @@ int Script_Execute(Script *pscript)
     }
     else
     {
-        pinter = pscript->pinterpreter;
         if(nested && no_cmd_compatible)
         {
             tinter = *pinter;
@@ -1677,8 +1750,9 @@ int Script_Execute(Script *pscript)
     pcurrentscript = temp;
     if(!result)
     {
-        shutdown(1, "There's an exception while executing script '%s' %s", pscript->pinterpreter->theSymbolTable.name, pscript->comment ? pscript->comment : "");
+        shutdown(1, "There's an exception while executing script '%s' %s", pinter->theSymbolTable.name, pscript->comment ? pscript->comment : "");
     }
+    obor_script_unpin_execution(&executing);
     return result;
 }
 
@@ -1688,10 +1762,12 @@ int Script_Call(Script *pscript, char *method, ScriptVariant *pretvar)
 {
     int result;
     Script *temp = pcurrentscript;
+    obor_script_execution executing = obor_script_pin_execution(pscript);
     pcurrentscript = pscript; //used by local script functions
     Interpreter_Reset(pscript->pinterpreter);
     result = (int)SUCCEEDED(Interpreter_Call(pscript->pinterpreter, method, pretvar));
     pcurrentscript = temp;
+    obor_script_unpin_execution(&executing);
     return result;
 }
 #endif
@@ -1761,6 +1837,10 @@ void Script_LoadSystemFunctions()
                      (void *)openbor_systemvariant, "openborvariant");
     List_InsertAfter(&theFunctionList,
                      (void *)openbor_changesystemvariant, "changeopenborvariant");
+    if(obor_profile_build >= 4467)
+    {
+        List_InsertAfter(&theFunctionList, (void *)openbor_changesystemvariant, "setopenborvariant");
+    }
     List_InsertAfter(&theFunctionList,
                      (void *)openbor_drawstring, "drawstring");
     List_InsertAfter(&theFunctionList,
@@ -1894,6 +1974,24 @@ void Script_LoadSystemFunctions()
                      (void *)openbor_getlayerproperty, "getlayerproperty");
     List_InsertAfter(&theFunctionList,
                      (void *)openbor_changelayerproperty, "changelayerproperty");
+    if(obor_profile_build >= 4476)
+    {
+        List_InsertAfter(&theFunctionList, (void *)openbor_get_set_property, "get_set_property");
+        List_InsertAfter(&theFunctionList, (void *)openbor_set_set_property, "set_set_property");
+    }
+    if(obor_profile_build >= 4478)
+    {
+        List_InsertAfter(&theFunctionList, (void *)openbor_get_set_handle, "get_set_handle");
+    }
+    if(obor_profile_build >= 4489)
+    {
+        List_InsertAfter(&theFunctionList, (void *)openbor_get_layer_handle, "get_layer_handle");
+    }
+    if(obor_profile_build >= 4475)
+    {
+        List_InsertAfter(&theFunctionList, (void *)openbor_get_level_property, "get_level_property");
+        List_InsertAfter(&theFunctionList, (void *)openbor_set_level_property, "set_level_property");
+    }
     List_InsertAfter(&theFunctionList,
                      (void *)openbor_getlevelproperty, "getlevelproperty");
     List_InsertAfter(&theFunctionList,
@@ -2004,6 +2102,10 @@ void Script_LoadSystemFunctions()
                      (void *)openbor_setdrawmethod, "setdrawmethod");
     List_InsertAfter(&theFunctionList,
                      (void *)openbor_changedrawmethod, "changedrawmethod");
+    if(obor_profile_build >= 4455)
+    {
+        List_InsertAfter(&theFunctionList, (void *)openbor_getdrawmethod, "getdrawmethod");
+    }
     List_InsertAfter(&theFunctionList,
                      (void *)openbor_updateframe, "updateframe");
     List_InsertAfter(&theFunctionList,
@@ -2546,6 +2648,7 @@ static const char *svlist[] =
     "freeram",
     "game_paused",
     "game_speed",
+    "game_time",
     "gfx_x_offset",
     "gfx_y_offset",
     "gfx_y_offset_adj",
@@ -2619,6 +2722,7 @@ static const char *svlist[] =
     "scrollminx",
     "scrollminz",
     "self",
+    "sets_count",
     "shadowalpha",
     "shadowcolor",
     "shadowopacity",
@@ -2647,6 +2751,8 @@ static const char *svlist[] =
 /* Native names remain sorted; translate only the profile's missing entries. */
 static int obor_systemvariant_available(int property)
 {
+    if(property == _sv_game_time) return obor_profile_build >= 4456;
+    if(property == _sv_sets_count) return obor_profile_build >= 4477;
     if(obor_profile_build < 4283) return 1;
     return (property != _sv_maxsoundchannels || obor_profile_build >= 4304) &&
            (property != _sv_noshowcomplete || obor_profile_build >= 4394) &&
@@ -2657,9 +2763,11 @@ static int obor_systemvariant_available(int property)
 static int obor_systemvariant_native(int property)
 {
     if(property < 0 || property >= _sv_the_end) return _sv_the_end;
+    if(!obor_systemvariant_available(_sv_game_time) && property >= _sv_game_time) ++property;
     if(!obor_systemvariant_available(_sv_maxsoundchannels) && property >= _sv_maxsoundchannels) ++property;
     if(!obor_systemvariant_available(_sv_noshowcomplete) && property >= _sv_noshowcomplete) ++property;
     if(!obor_systemvariant_available(_sv_porting) && property >= _sv_porting) ++property;
+    if(!obor_systemvariant_available(_sv_sets_count) && property >= _sv_sets_count) ++property;
     if(!obor_systemvariant_available(_sv_shadowopacity) && property >= _sv_shadowopacity) ++property;
     return property < _sv_the_end ? property : _sv_the_end;
 }
@@ -2667,9 +2775,11 @@ static int obor_systemvariant_native(int property)
 static int obor_systemvariant_logical(int property)
 {
     int logical = property;
+    if(!obor_systemvariant_available(_sv_game_time) && property > _sv_game_time) --logical;
     if(!obor_systemvariant_available(_sv_maxsoundchannels) && property > _sv_maxsoundchannels) --logical;
     if(!obor_systemvariant_available(_sv_noshowcomplete) && property > _sv_noshowcomplete) --logical;
     if(!obor_systemvariant_available(_sv_porting) && property > _sv_porting) --logical;
+    if(!obor_systemvariant_available(_sv_sets_count) && property > _sv_sets_count) --logical;
     if(!obor_systemvariant_available(_sv_shadowopacity) && property > _sv_shadowopacity) --logical;
     return logical;
 }
@@ -13791,6 +13901,12 @@ else if((obor_profile_build < 4283 || obor_profile_build >= (version)) && stricm
     v.lVal = (LONG)(x); \
 }
 
+#define ICMPCONST_LATE_LEVEL(x, version) \
+else if(obor_profile_build >= (version) && !stricmp(#x, constname)) \
+{ \
+    v.lVal = (LONG)(x); \
+}
+
 #define ICMPSBACKCONST(x, table) \
 else if((obor_profile_build < 4283 || obor_profile_build >= 4414) && \
         strnicmp(constname, #x, sizeof(#x) - 1) == 0 && \
@@ -13807,6 +13923,368 @@ else if((obor_profile_build < 4283 || obor_profile_build >= 4414) && \
 else if(stricmp(#x, constname) == 0) \
 { \
     v.lVal = (LONG)(x) - (obor_uses_early_animation_properties() && (x) > ANI_PROP_IGNOREATTACKID); \
+}
+
+static int obor_set_property_native(int index)
+{
+    static const int middle_order[] = {
+        SET_PROP_CREDITS, SET_PROP_GAME_OVER_SKIP, SET_PROP_HOF_DISABLE,
+        SET_PROP_COMPLETE_FLAG, SET_PROP_COMPLETE_SKIP, SET_PROP_CONTINUE_SCORE_TYPE,
+        SET_PROP_LEVELSET_COUNT, SET_PROP_LEVELSET_COLLECTION
+    };
+
+    if(index < 0 || index >= OBOR_SET_PROP_COUNT) return -1;
+    if(obor_profile_build < 4489)
+    {
+        if(index == 0) return SET_PROP_LEVELSET_COUNT;
+        if(index == 1) return SET_PROP_LEVELSET_COLLECTION;
+        return -1;
+    }
+    if(obor_profile_build < 4493 && (unsigned)index < sizeof(middle_order) / sizeof(middle_order[0]))
+    {
+        return middle_order[index];
+    }
+    return index;
+}
+
+static int obor_lookup_set_property(const char *name, LONG *value)
+{
+    static const char *const names[] = {
+        [SET_PROP_COMPLETE_FLAG] = "SET_PROP_COMPLETE_FLAG",
+        [SET_PROP_COMPLETE_SKIP] = "SET_PROP_COMPLETE_SKIP",
+        [SET_PROP_CONTINUE_SCORE_TYPE] = "SET_PROP_CONTINUE_SCORE_TYPE",
+        [SET_PROP_CREDITS] = "SET_PROP_CREDITS",
+        [SET_PROP_GAME_OVER_SKIP] = "SET_PROP_GAME_OVER_SKIP",
+        [SET_PROP_HOF_DISABLE] = "SET_PROP_HOF_DISABLE",
+        [SET_PROP_LEVELSET_COLLECTION] = "SET_PROP_LEVELSET_COLLECTION",
+        [SET_PROP_LEVELSET_COUNT] = "SET_PROP_LEVELSET_COUNT",
+        [SET_PROP_LIVES] = "SET_PROP_LIVES",
+        [SET_PROP_MP_RECOVER_TYPE] = "SET_PROP_MP_RECOVER_TYPE",
+        [SET_PROP_MUSIC_FADE_TIME] = "SET_PROP_MUSIC_FADE_TIME",
+        [SET_PROP_MUSIC_OVERLAP] = "SET_PROP_MUSIC_OVERLAP",
+        [SET_PROP_NAME] = "SET_PROP_NAME",
+        [SET_PROP_PLAYER_MAX] = "SET_PROP_PLAYER_MAX",
+        [SET_PROP_SAVE_TYPE] = "SET_PROP_SAVE_TYPE",
+        [SET_PROP_SELECT_DISABLE] = "SET_PROP_SELECT_DISABLE",
+        [SET_PROP_SELECT_NO_SAME] = "SET_PROP_SELECT_NO_SAME",
+    };
+
+    if(obor_profile_build < 4476 || strnicmp(name, "SET_PROP_", sizeof("SET_PROP_") - 1)) return 0;
+    for(int index = 0; index < OBOR_SET_PROP_COUNT; ++index)
+    {
+        int property = obor_set_property_native(index);
+        if(property < 0) break;
+        const char *label = names[property];
+        if(obor_profile_build < 4493)
+        {
+            if(property == SET_PROP_LEVELSET_COUNT) label = "SET_PROP_LEVELS_COUNT";
+            if(property == SET_PROP_LEVELSET_COLLECTION) label = "SET_PROP_LEVELS_HANDLE";
+        }
+        if(!stricmp(label, name))
+        {
+            *value = index;
+            return 1;
+        }
+    }
+    return 0;
+}
+
+/* Canonical property order from 4494. Earlier ordinals are translated below. */
+enum
+{
+    LEVEL_PROP_AUTO_SCROLL_DIRECTION,
+    LEVEL_PROP_AUTO_SCROLL_X,
+    LEVEL_PROP_AUTO_SCROLL_Y,
+    LEVEL_PROP_BASEMAP_COLLECTION,
+    LEVEL_PROP_BASEMAP_COUNT,
+    LEVEL_PROP_BOSS_COUNT,
+    LEVEL_PROP_BOSS_MUSIC_NAME,
+    LEVEL_PROP_BOSS_MUSIC_OFFSET,
+    LEVEL_PROP_BOSS_SLOW,
+    LEVEL_PROP_CAMERA_OFFSET_X,
+    LEVEL_PROP_CAMERA_OFFSET_Z,
+    LEVEL_PROP_COMPLETE_FORCE,
+    LEVEL_PROP_DAMAGE_FROM_ENEMY,
+    LEVEL_PROP_DAMAGE_FROM_PLAYER,
+    LEVEL_PROP_FACING,
+    LEVEL_PROP_GRAVITY,
+    LEVEL_PROP_HOLE_COLLECTION,
+    LEVEL_PROP_HOLE_COUNT,
+    LEVEL_PROP_LAYER_BACKGROUND_DEFAULT_HANDLE,
+    LEVEL_PROP_LAYER_BACKGROUND_COLLECTION,
+    LEVEL_PROP_LAYER_BACKGROUND_COUNT,
+    LEVEL_PROP_LAYER_COLLECTION,
+    LEVEL_PROP_LAYER_COUNT,
+    LEVEL_PROP_LAYER_FOREGROUND_COLLECTION,
+    LEVEL_PROP_LAYER_FOREGROUND_COUNT,
+    LEVEL_PROP_LAYER_FRONTPANEL_COLLECTION,
+    LEVEL_PROP_LAYER_FRONTPANEL_COUNT,
+    LEVEL_PROP_LAYER_GENERIC_COLLECTION,
+    LEVEL_PROP_LAYER_GENERIC_COUNT,
+    LEVEL_PROP_LAYER_PANEL_COLLECTION,
+    LEVEL_PROP_LAYER_PANEL_COUNT,
+    LEVEL_PROP_LAYER_REF_COLLECTION,
+    LEVEL_PROP_LAYER_REF_COUNT,
+    LEVEL_PROP_LAYER_WATER_COLLECTION,
+    LEVEL_PROP_LAYER_WATER_COUNT,
+    LEVEL_PROP_MAX_FALL_VELOCITY,
+    LEVEL_PROP_MAX_TOSS_VELOCITY,
+    LEVEL_PROP_MIRROR,
+    LEVEL_PROP_NAME,
+    LEVEL_PROP_PALETTE_BLENDING_COLLECTION,
+    LEVEL_PROP_PALETTE_COLLECTION,
+    LEVEL_PROP_PALETTE_COUNT,
+    LEVEL_PROP_POSITION_X,
+    LEVEL_PROP_QUAKE,
+    LEVEL_PROP_QUAKE_TIME,
+    LEVEL_PROP_ROCKING,
+    LEVEL_PROP_SCRIPT_LEVEL_END,
+    LEVEL_PROP_SCRIPT_LEVEL_START,
+    LEVEL_PROP_SCRIPT_KEY,
+    LEVEL_PROP_SCRIPT_UPDATE,
+    LEVEL_PROP_SCRIPT_UPDATED,
+    LEVEL_PROP_SCROLL_DIRECTION,
+    LEVEL_PROP_SCROLL_VELOCITY,
+    LEVEL_PROP_SIZE_X,
+    LEVEL_PROP_SPAWN_COLLECTION,
+    LEVEL_PROP_SPAWN_COUNT,
+    LEVEL_PROP_SPAWN_PLAYER_COLLECTION,
+    LEVEL_PROP_SPECIAL_DISABLE,
+    LEVEL_PROP_TEXT_OBJECT_COLLECTION,
+    LEVEL_PROP_TEXT_OBJECT_COUNT,
+    LEVEL_PROP_TIME_ADVANCE,
+    LEVEL_PROP_TIME_DISPLAY,
+    LEVEL_PROP_TIME_RESET,
+    LEVEL_PROP_TIME_SET,
+    LEVEL_PROP_TYPE,
+    LEVEL_PROP_WAITING,
+    LEVEL_PROP_WALL_COLLECTION,
+    LEVEL_PROP_WALL_COUNT,
+    LEVEL_PROP_WEAPON,
+    OBOR_LEVEL_PROP_COUNT
+};
+
+static int obor_level_property_native(int index)
+{
+    static const int early_order[] = {
+        LEVEL_PROP_AUTO_SCROLL_X,
+        LEVEL_PROP_AUTO_SCROLL_Y,
+        LEVEL_PROP_BASEMAP_COUNT,
+        LEVEL_PROP_BASEMAP_COLLECTION,
+        LEVEL_PROP_LAYER_BACKGROUND_COUNT,
+        LEVEL_PROP_LAYER_BACKGROUND_COLLECTION,
+        LEVEL_PROP_CAMERA_OFFSET_X,
+        LEVEL_PROP_CAMERA_OFFSET_Z,
+        LEVEL_PROP_GRAVITY,
+        LEVEL_PROP_HOLE_COUNT,
+        LEVEL_PROP_HOLE_COLLECTION,
+        LEVEL_PROP_LAYER_COUNT,
+        LEVEL_PROP_LAYER_COLLECTION,
+        LEVEL_PROP_MAX_FALL_VELOCITY,
+        LEVEL_PROP_MAX_TOSS_VELOCITY,
+        LEVEL_PROP_QUAKE,
+        LEVEL_PROP_PALETTE_COUNT,
+        LEVEL_PROP_PALETTE_COLLECTION,
+        LEVEL_PROP_ROCKING,
+        LEVEL_PROP_SCROLL_VELOCITY,
+        LEVEL_PROP_TYPE,
+        LEVEL_PROP_WALL_COUNT,
+        LEVEL_PROP_WALL_COLLECTION,
+    };
+    static const int order_4490_middle[] = {
+        LEVEL_PROP_QUAKE,
+        LEVEL_PROP_QUAKE_TIME,
+        LEVEL_PROP_PALETTE_BLENDING_COLLECTION,
+        LEVEL_PROP_PALETTE_COLLECTION,
+        LEVEL_PROP_PALETTE_COUNT,
+        LEVEL_PROP_POSITION_X,
+    };
+    static const int order_4490_end[] = {
+        LEVEL_PROP_TIME_SET,
+        LEVEL_PROP_TIME_DISPLAY,
+        LEVEL_PROP_TIME_RESET,
+        LEVEL_PROP_TYPE,
+        LEVEL_PROP_WALL_COLLECTION,
+        LEVEL_PROP_WALL_COUNT,
+        LEVEL_PROP_WEAPON,
+        LEVEL_PROP_WAITING,
+    };
+
+    if(index < 0 || index >= OBOR_LEVEL_PROP_COUNT) return -1;
+    if(obor_profile_build < 4490)
+    {
+        if(obor_profile_build < 4474) return -1;
+        if(index >= 4)
+        {
+            // The background collection appeared before the count.
+            if(obor_profile_build < 4486) index += 2;
+            else if(obor_profile_build < 4489) ++index;
+        }
+        return index < (int)(sizeof(early_order) / sizeof(early_order[0])) ? early_order[index] : -1;
+    }
+    if(obor_profile_build < 4494)
+    {
+        if(index == 5) return LEVEL_PROP_LAYER_BACKGROUND_COLLECTION;
+        if(index == 6) return LEVEL_PROP_LAYER_BACKGROUND_COUNT;
+        if(index >= 7 && index <= 20) return index - 2;
+    }
+    if(obor_profile_build == 4490)
+    {
+        if(index >= 39 && index <= 44) return order_4490_middle[index - 39];
+        if(index >= 61) return order_4490_end[index - 61];
+    }
+    return index;
+}
+
+static int obor_lookup_level_property(const char *name, LONG *value)
+{
+    static const char *const names[] = {
+        [LEVEL_PROP_AUTO_SCROLL_DIRECTION] = "LEVEL_PROP_AUTO_SCROLL_DIRECTION",
+        [LEVEL_PROP_AUTO_SCROLL_X] = "LEVEL_PROP_AUTO_SCROLL_X",
+        [LEVEL_PROP_AUTO_SCROLL_Y] = "LEVEL_PROP_AUTO_SCROLL_Y",
+        [LEVEL_PROP_BASEMAP_COLLECTION] = "LEVEL_PROP_BASEMAP_COLLECTION",
+        [LEVEL_PROP_BASEMAP_COUNT] = "LEVEL_PROP_BASEMAP_COUNT",
+        [LEVEL_PROP_BOSS_COUNT] = "LEVEL_PROP_BOSS_COUNT",
+        [LEVEL_PROP_BOSS_MUSIC_NAME] = "LEVEL_PROP_BOSS_MUSIC_NAME",
+        [LEVEL_PROP_BOSS_MUSIC_OFFSET] = "LEVEL_PROP_BOSS_MUSIC_OFFSET",
+        [LEVEL_PROP_BOSS_SLOW] = "LEVEL_PROP_BOSS_SLOW",
+        [LEVEL_PROP_CAMERA_OFFSET_X] = "LEVEL_PROP_CAMERA_OFFSET_X",
+        [LEVEL_PROP_CAMERA_OFFSET_Z] = "LEVEL_PROP_CAMERA_OFFSET_Z",
+        [LEVEL_PROP_COMPLETE_FORCE] = "LEVEL_PROP_COMPLETE_FORCE",
+        [LEVEL_PROP_DAMAGE_FROM_ENEMY] = "LEVEL_PROP_DAMAGE_FROM_ENEMY",
+        [LEVEL_PROP_DAMAGE_FROM_PLAYER] = "LEVEL_PROP_DAMAGE_FROM_PLAYER",
+        [LEVEL_PROP_FACING] = "LEVEL_PROP_FACING",
+        [LEVEL_PROP_GRAVITY] = "LEVEL_PROP_GRAVITY",
+        [LEVEL_PROP_HOLE_COLLECTION] = "LEVEL_PROP_HOLE_COLLECTION",
+        [LEVEL_PROP_HOLE_COUNT] = "LEVEL_PROP_HOLE_COUNT",
+        [LEVEL_PROP_LAYER_BACKGROUND_DEFAULT_HANDLE] = "LEVEL_PROP_LAYER_BACKGROUND_DEFAULT_HANDLE",
+        [LEVEL_PROP_LAYER_BACKGROUND_COLLECTION] = "LEVEL_PROP_LAYER_BACKGROUND_COLLECTION",
+        [LEVEL_PROP_LAYER_BACKGROUND_COUNT] = "LEVEL_PROP_LAYER_BACKGROUND_COUNT",
+        [LEVEL_PROP_LAYER_COLLECTION] = "LEVEL_PROP_LAYER_COLLECTION",
+        [LEVEL_PROP_LAYER_COUNT] = "LEVEL_PROP_LAYER_COUNT",
+        [LEVEL_PROP_LAYER_FOREGROUND_COLLECTION] = "LEVEL_PROP_LAYER_FOREGROUND_COLLECTION",
+        [LEVEL_PROP_LAYER_FOREGROUND_COUNT] = "LEVEL_PROP_LAYER_FOREGROUND_COUNT",
+        [LEVEL_PROP_LAYER_FRONTPANEL_COLLECTION] = "LEVEL_PROP_LAYER_FRONTPANEL_COLLECTION",
+        [LEVEL_PROP_LAYER_FRONTPANEL_COUNT] = "LEVEL_PROP_LAYER_FRONTPANEL_COUNT",
+        [LEVEL_PROP_LAYER_GENERIC_COLLECTION] = "LEVEL_PROP_LAYER_GENERIC_COLLECTION",
+        [LEVEL_PROP_LAYER_GENERIC_COUNT] = "LEVEL_PROP_LAYER_GENERIC_COUNT",
+        [LEVEL_PROP_LAYER_PANEL_COLLECTION] = "LEVEL_PROP_LAYER_PANEL_COLLECTION",
+        [LEVEL_PROP_LAYER_PANEL_COUNT] = "LEVEL_PROP_LAYER_PANEL_COUNT",
+        [LEVEL_PROP_LAYER_REF_COLLECTION] = "LEVEL_PROP_LAYER_REF_COLLECTION",
+        [LEVEL_PROP_LAYER_REF_COUNT] = "LEVEL_PROP_LAYER_REF_COUNT",
+        [LEVEL_PROP_LAYER_WATER_COLLECTION] = "LEVEL_PROP_LAYER_WATER_COLLECTION",
+        [LEVEL_PROP_LAYER_WATER_COUNT] = "LEVEL_PROP_LAYER_WATER_COUNT",
+        [LEVEL_PROP_MAX_FALL_VELOCITY] = "LEVEL_PROP_MAX_FALL_VELOCITY",
+        [LEVEL_PROP_MAX_TOSS_VELOCITY] = "LEVEL_PROP_MAX_TOSS_VELOCITY",
+        [LEVEL_PROP_MIRROR] = "LEVEL_PROP_MIRROR",
+        [LEVEL_PROP_NAME] = "LEVEL_PROP_NAME",
+        [LEVEL_PROP_PALETTE_BLENDING_COLLECTION] = "LEVEL_PROP_PALETTE_BLENDING_COLLECTION",
+        [LEVEL_PROP_PALETTE_COLLECTION] = "LEVEL_PROP_PALETTE_COLLECTION",
+        [LEVEL_PROP_PALETTE_COUNT] = "LEVEL_PROP_PALETTE_COUNT",
+        [LEVEL_PROP_POSITION_X] = "LEVEL_PROP_POSITION_X",
+        [LEVEL_PROP_QUAKE] = "LEVEL_PROP_QUAKE",
+        [LEVEL_PROP_QUAKE_TIME] = "LEVEL_PROP_QUAKE_TIME",
+        [LEVEL_PROP_ROCKING] = "LEVEL_PROP_ROCKING",
+        [LEVEL_PROP_SCRIPT_LEVEL_END] = "LEVEL_PROP_SCRIPT_LEVEL_END",
+        [LEVEL_PROP_SCRIPT_LEVEL_START] = "LEVEL_PROP_SCRIPT_LEVEL_START",
+        [LEVEL_PROP_SCRIPT_KEY] = "LEVEL_PROP_SCRIPT_KEY",
+        [LEVEL_PROP_SCRIPT_UPDATE] = "LEVEL_PROP_SCRIPT_UPDATE",
+        [LEVEL_PROP_SCRIPT_UPDATED] = "LEVEL_PROP_SCRIPT_UPDATED",
+        [LEVEL_PROP_SCROLL_DIRECTION] = "LEVEL_PROP_SCROLL_DIRECTION",
+        [LEVEL_PROP_SCROLL_VELOCITY] = "LEVEL_PROP_SCROLL_VELOCITY",
+        [LEVEL_PROP_SIZE_X] = "LEVEL_PROP_SIZE_X",
+        [LEVEL_PROP_SPAWN_COLLECTION] = "LEVEL_PROP_SPAWN_COLLECTION",
+        [LEVEL_PROP_SPAWN_COUNT] = "LEVEL_PROP_SPAWN_COUNT",
+        [LEVEL_PROP_SPAWN_PLAYER_COLLECTION] = "LEVEL_PROP_SPAWN_PLAYER_COLLECTION",
+        [LEVEL_PROP_SPECIAL_DISABLE] = "LEVEL_PROP_SPECIAL_DISABLE",
+        [LEVEL_PROP_TEXT_OBJECT_COLLECTION] = "LEVEL_PROP_TEXT_OBJECT_COLLECTION",
+        [LEVEL_PROP_TEXT_OBJECT_COUNT] = "LEVEL_PROP_TEXT_OBJECT_COUNT",
+        [LEVEL_PROP_TIME_ADVANCE] = "LEVEL_PROP_TIME_ADVANCE",
+        [LEVEL_PROP_TIME_DISPLAY] = "LEVEL_PROP_TIME_DISPLAY",
+        [LEVEL_PROP_TIME_RESET] = "LEVEL_PROP_TIME_RESET",
+        [LEVEL_PROP_TIME_SET] = "LEVEL_PROP_TIME_SET",
+        [LEVEL_PROP_TYPE] = "LEVEL_PROP_TYPE",
+        [LEVEL_PROP_WAITING] = "LEVEL_PROP_WAITING",
+        [LEVEL_PROP_WALL_COLLECTION] = "LEVEL_PROP_WALL_COLLECTION",
+        [LEVEL_PROP_WALL_COUNT] = "LEVEL_PROP_WALL_COUNT",
+        [LEVEL_PROP_WEAPON] = "LEVEL_PROP_WEAPON",
+    };
+    static const struct
+    {
+        const char *singular;
+        const char *plural;
+    } early_names[] = {
+        [LEVEL_PROP_BASEMAP_COLLECTION] = {"LEVEL_PROP_BASEMAP_HANDLE", "LEVEL_PROP_BASEMAPS_HANDLE"},
+        [LEVEL_PROP_BASEMAP_COUNT] = {"LEVEL_PROP_BASEMAP_COUNT", "LEVEL_PROP_BASEMAPS_COUNT"},
+        [LEVEL_PROP_HOLE_COLLECTION] = {"LEVEL_PROP_HOLE_HANDLE", "LEVEL_PROP_HOLES_HANDLE"},
+        [LEVEL_PROP_HOLE_COUNT] = {"LEVEL_PROP_HOLE_COUNT", "LEVEL_PROP_HOLES_COUNT"},
+        [LEVEL_PROP_LAYER_BACKGROUND_COLLECTION] = {NULL, "LEVEL_PROP_BGLAYERS_HANDLE"},
+        [LEVEL_PROP_LAYER_BACKGROUND_COUNT] = {NULL, "LEVEL_PROP_BGLAYERS_COUNT"},
+        [LEVEL_PROP_LAYER_COLLECTION] = {"LEVEL_PROP_LAYER_HANDLE", "LEVEL_PROP_LAYERS_HANDLE"},
+        [LEVEL_PROP_LAYER_COUNT] = {"LEVEL_PROP_LAYER_COUNT", "LEVEL_PROP_LAYERS_COUNT"},
+        [LEVEL_PROP_PALETTE_COLLECTION] = {"LEVEL_PROP_PALETTE_HANDLE", "LEVEL_PROP_PALETTES_HANDLE"},
+        [LEVEL_PROP_PALETTE_COUNT] = {"LEVEL_PROP_PALETTE_COUNT", "LEVEL_PROP_PALETTES_COUNT"},
+        [LEVEL_PROP_WALL_COLLECTION] = {"LEVEL_PROP_WALL_HANDLE", "LEVEL_PROP_WALLS_HANDLE"},
+        [LEVEL_PROP_WALL_COUNT] = {"LEVEL_PROP_WALL_COUNT", "LEVEL_PROP_WALLS_COUNT"},
+        [OBOR_LEVEL_PROP_COUNT - 1] = {NULL, NULL}
+    };
+
+    if(obor_profile_build < 4474 || strnicmp(name, "LEVEL_PROP_", sizeof("LEVEL_PROP_") - 1)) return 0;
+    for(int index = 0; index < OBOR_LEVEL_PROP_COUNT; ++index)
+    {
+        int property = obor_level_property_native(index);
+        if(property < 0) break;
+        const char *label = names[property];
+        if(obor_profile_build < 4490 && early_names[property].plural)
+        {
+            label = obor_profile_build < 4476 ? early_names[property].singular : early_names[property].plural;
+        }
+        else if(obor_profile_build < 4494)
+        {
+            if(property == LEVEL_PROP_LAYER_BACKGROUND_COLLECTION) label = "LEVEL_PROP_BGLAYER_COLLECTION";
+            if(property == LEVEL_PROP_LAYER_BACKGROUND_COUNT) label = "LEVEL_PROP_BGLAYER_COUNT";
+        }
+        if(label && !stricmp(label, name))
+        {
+            *value = index;
+            return 1;
+        }
+    }
+    return 0;
+}
+
+static int obor_level_property_has_early_getter(int property)
+{
+    switch(property)
+    {
+    case LEVEL_PROP_AUTO_SCROLL_X:
+    case LEVEL_PROP_AUTO_SCROLL_Y:
+    case LEVEL_PROP_BASEMAP_COUNT:
+    case LEVEL_PROP_BASEMAP_COLLECTION:
+    case LEVEL_PROP_LAYER_BACKGROUND_COUNT:
+    case LEVEL_PROP_LAYER_BACKGROUND_COLLECTION:
+    case LEVEL_PROP_CAMERA_OFFSET_X:
+    case LEVEL_PROP_CAMERA_OFFSET_Z:
+    case LEVEL_PROP_GRAVITY:
+    case LEVEL_PROP_HOLE_COUNT:
+    case LEVEL_PROP_HOLE_COLLECTION:
+    case LEVEL_PROP_LAYER_COUNT:
+    case LEVEL_PROP_LAYER_COLLECTION:
+    case LEVEL_PROP_MAX_FALL_VELOCITY:
+    case LEVEL_PROP_MAX_TOSS_VELOCITY:
+    case LEVEL_PROP_QUAKE:
+    case LEVEL_PROP_PALETTE_COUNT:
+    case LEVEL_PROP_PALETTE_COLLECTION:
+    case LEVEL_PROP_ROCKING:
+    case LEVEL_PROP_SCROLL_VELOCITY:
+    case LEVEL_PROP_TYPE:
+    case LEVEL_PROP_WALL_COUNT:
+    case LEVEL_PROP_WALL_COLLECTION:
+    case LEVEL_PROP_NAME:
+        return 1;
+    default:
+        return 0;
+    }
 }
 
 int mapstrings_transconst(ScriptVariant **varlist, int paramCount)
@@ -13827,6 +14305,15 @@ int mapstrings_transconst(ScriptVariant **varlist, int paramCount)
         constname = (char *)StrCache_Get(varlist[0]->strVal);
 
         IICMPCONST(COMPATIBLEVERSION)
+        else if(obor_lookup_set_property(constname, &v.lVal)) { /* The value is mapped above. */ }
+        else if(obor_lookup_level_property(constname, &v.lVal)) { /* The value is mapped above. */ }
+        ICMPCONST_LATE_LEVEL(BOSS_SLOW_OFF, 4502)
+        ICMPCONST_LATE_LEVEL(BOSS_SLOW_ON, 4502)
+        ICMPCONST_LATE_LEVEL(DAMAGE_FROM_ENEMY_OFF, 4504)
+        ICMPCONST_LATE_LEVEL(DAMAGE_FROM_ENEMY_ON, 4504)
+        ICMPCONST_LATE_LEVEL(DAMAGE_FROM_PLAYER_OFF, 4504)
+        ICMPCONST_LATE_LEVEL(DAMAGE_FROM_PLAYER_ON, 4504)
+        ICMPCONST_LATE_LEVEL(SCROLL_BACK, 4501)
         ICMPCONST(DIRECTION_LEFT)
         ICMPCONST(DIRECTION_RIGHT)
         ICMPCONST(DIRECTION_ADJUST_LEFT)
@@ -15166,6 +15653,8 @@ static int obor_textobj_index(int index, int grow)
     if(!grow) return 0;
     if(index == INT_MAX ||
         (size_t)(index + 1) > (size_t)-1 / sizeof(*grown)) return -1;
+    if(level->obor_arrays)
+        return obor_level_grow_array(level, OBOR_LEVEL_ARRAY_TEXT, index + 1) ? 1 : -1;
     grown = realloc(level->textobjs, (size_t)(index + 1) * sizeof(*grown));
     if(!grown) return -1;
     memset(grown + count, 0, (size_t)(index + 1 - count) * sizeof(*grown));
@@ -16255,6 +16744,768 @@ int mapstrings_levelproperty(ScriptVariant **varlist, int paramCount)
     return 1;
 }
 
+static s_set_entry *obor_script_set_handle(const ScriptVariant *value)
+{
+    extern s_set_entry *levelsets;
+    extern int num_difficulties;
+
+    if(!value || value->vt != VT_PTR || !levelsets) return NULL;
+    for(int index = 0; index < num_difficulties; ++index)
+    {
+        if(value->ptrVal == &levelsets[index]) return &levelsets[index];
+    }
+    return NULL;
+}
+
+static int obor_assign_levelorder(s_set_entry *set, s_level_entry *entries)
+{
+    extern s_set_entry *levelsets;
+    extern int num_difficulties;
+
+    if(!entries)
+    {
+        /* Expose the empty script view while keeping a usable level order for the engine. */
+        set->levelorder_hidden = 1;
+        return 1;
+    }
+    for(int index = 0; index < num_difficulties; ++index)
+    {
+        s_set_entry *owner = &levelsets[index];
+        if(entries == obor_owned_levelorder(owner) && owner->numlevels >= set->numlevels)
+        {
+            if(!set->levelorder_replaced)
+            {
+                set->levelorder_owner = set->levelorder;
+                set->levelorder_replaced = 1;
+            }
+            set->levelorder = entries;
+            set->levelorder_hidden = 0;
+            return 1;
+        }
+    }
+    return 0;
+}
+
+HRESULT openbor_get_set_property(ScriptVariant **varlist, ScriptVariant **pretvar, int paramCount)
+{
+    s_set_entry *handle;
+    LONG value;
+
+    if(!pretvar || !*pretvar) return E_FAIL;
+    ScriptVariant_Clear(*pretvar);
+    if(paramCount < 2 || !varlist || !(handle = obor_script_set_handle(varlist[0])) ||
+       !varlist[1] || varlist[1]->vt != VT_INTEGER)
+    {
+        *pretvar = NULL;
+        goto error;
+    }
+
+    switch(obor_set_property_native(varlist[1]->lVal))
+    {
+        case SET_PROP_COMPLETE_FLAG: value = handle->ifcomplete; break;
+        case SET_PROP_COMPLETE_SKIP:
+        case SET_PROP_CONTINUE_SCORE_TYPE:
+            /* These original cases fall through to the next terminating property. */
+            value = obor_profile_build < 4493 ? handle->numlevels : handle->credits;
+            break;
+        case SET_PROP_CREDITS: value = handle->credits; break;
+        case SET_PROP_GAME_OVER_SKIP: value = handle->noshowgameover; break;
+        case SET_PROP_HOF_DISABLE: value = handle->noshowhof; break;
+        case SET_PROP_LEVELSET_COLLECTION:
+            if(handle->levelorder && !handle->levelorder_hidden)
+            {
+                ScriptVariant_ChangeType(*pretvar, VT_PTR);
+                (*pretvar)->ptrVal = handle->levelorder;
+            }
+            return S_OK;
+        case SET_PROP_LEVELSET_COUNT:
+            if(obor_profile_build < 4478)
+            {
+                ScriptVariant_ChangeType(*pretvar, VT_DECIMAL);
+                (*pretvar)->dblVal = 0;
+                (*pretvar)->lVal = handle->numlevels;
+                return S_OK;
+            }
+            value = handle->numlevels;
+            break;
+        case SET_PROP_LIVES: value = handle->lives; break;
+        case SET_PROP_MP_RECOVER_TYPE: value = handle->typemp; break;
+        case SET_PROP_MUSIC_FADE_TIME: value = handle->custfade; break;
+        case SET_PROP_MUSIC_OVERLAP: value = handle->musicoverlap; break;
+        case SET_PROP_NAME:
+            if(handle->name)
+            {
+                ScriptVariant_ChangeType(*pretvar, VT_STR);
+                StrCache_Copy((*pretvar)->strVal, handle->name);
+            }
+            return S_OK;
+        case SET_PROP_PLAYER_MAX: value = handle->maxplayers; break;
+        case SET_PROP_SAVE_TYPE: value = handle->saveflag; break;
+        case SET_PROP_SELECT_DISABLE: value = handle->noselect; break;
+        case SET_PROP_SELECT_NO_SAME: value = handle->nosame; break;
+        default:
+            printf("Unsupported property.\n");
+            goto error;
+    }
+    ScriptVariant_ChangeType(*pretvar, VT_INTEGER);
+    (*pretvar)->lVal = value;
+    return S_OK;
+
+error:
+    printf("You must provide a valid handle and property: get_set_property(void handle, int property)\n");
+    return E_FAIL;
+}
+
+HRESULT openbor_set_set_property(ScriptVariant **varlist, ScriptVariant **pretvar, int paramCount)
+{
+    s_set_entry *handle;
+    ScriptVariant *value;
+
+    if(!pretvar || !*pretvar) return E_FAIL;
+    if(paramCount < 3 || !varlist || !(handle = obor_script_set_handle(varlist[0])) ||
+       !varlist[1] || varlist[1]->vt != VT_INTEGER)
+    {
+        *pretvar = NULL;
+        goto error;
+    }
+    if(obor_set_property_native(varlist[1]->lVal) != SET_PROP_LEVELSET_COLLECTION)
+    {
+        printf("Unsupported or read only property.\n");
+        goto error;
+    }
+    value = varlist[2];
+    if(!value || (value->vt != VT_PTR && value->vt != VT_EMPTY) ||
+       !obor_assign_levelorder(handle, value->vt == VT_PTR ? value->ptrVal : NULL))
+    {
+        goto error;
+    }
+    return S_OK;
+
+error:
+    printf("You must provide a valid handle, property and value: set_set_property(void handle, int property, value)\n");
+    return E_FAIL;
+}
+
+HRESULT openbor_get_layer_handle(ScriptVariant **varlist, ScriptVariant **pretvar, int paramCount)
+{
+    extern s_level *level;
+    LONG index;
+
+    if(!pretvar || !*pretvar) return E_FAIL;
+    if(paramCount != 2 || !varlist || !varlist[0] ||
+       (varlist[0]->vt != VT_PTR && varlist[0]->vt != VT_EMPTY) ||
+       FAILED(ScriptVariant_IntegerValue(varlist[1], &index)) || !level || varlist[0]->ptrVal != level)
+    {
+        printf("You must provide a valid handle and index: openbor_get_layer_handle(void level_handle, int index)\n");
+        *pretvar = NULL;
+        return E_FAIL;
+    }
+
+    ScriptVariant_Clear(*pretvar);
+    if(level->layersref && index >= 0 && index < level->numlayers && index < level->numlayersref)
+    {
+        ScriptVariant_ChangeType(*pretvar, VT_PTR);
+        (*pretvar)->ptrVal = &level->layersref[index];
+    }
+    return S_OK;
+}
+
+HRESULT openbor_get_set_handle(ScriptVariant **varlist, ScriptVariant **pretvar, int paramCount)
+{
+    extern s_set_entry *levelsets;
+    extern int num_difficulties;
+    LONG index;
+
+    if(!pretvar || !*pretvar)
+    {
+        return E_FAIL;
+    }
+    if(paramCount != 1 || !varlist || FAILED(ScriptVariant_IntegerValue(varlist[0], &index)))
+    {
+        printf("You must provide a valid index: get_set_handle(int index)\n");
+        *pretvar = NULL;
+        return E_FAIL;
+    }
+
+    ScriptVariant_Clear(*pretvar);
+    if(levelsets && index >= 0 && index < num_difficulties)
+    {
+        ScriptVariant_ChangeType(*pretvar, VT_PTR);
+        (*pretvar)->ptrVal = &levelsets[index];
+    }
+    return S_OK;
+}
+
+HRESULT openbor_get_level_property(ScriptVariant **varlist, ScriptVariant **pretvar, int paramCount)
+{
+    extern s_level *level;
+    ScriptVariant *result;
+    s_level *handle;
+    int property;
+
+    if(!pretvar || !*pretvar) return E_FAIL;
+    result = *pretvar;
+    ScriptVariant_Clear(result);
+    if(paramCount < 2 || !varlist || !varlist[0] || !varlist[1] ||
+       varlist[1]->vt != VT_INTEGER ||
+       (obor_profile_build < 4490 && varlist[0]->vt != VT_PTR))
+    {
+        *pretvar = NULL;
+        goto error;
+    }
+
+    // A single level can be loaded at a time.
+    handle = varlist[0]->vt == VT_PTR ? varlist[0]->ptrVal : level;
+    if(!handle || handle != level)
+    {
+        *pretvar = NULL;
+        goto error;
+    }
+    property = obor_level_property_native(varlist[1]->lVal);
+    if(obor_profile_build == 4490 && property == LEVEL_PROP_PALETTE_COUNT)
+    {
+        ScriptVariant_ChangeType(result, VT_PTR);
+        result->ptrVal = level;
+        return S_OK;
+    }
+    if(obor_profile_build < 4491 &&
+       ((obor_profile_build < 4490 && property == LEVEL_PROP_NAME) ||
+        (property >= 0 && !obor_level_property_has_early_getter(property))))
+    {
+        property = -1;
+    }
+
+    // These early implementations return the next case's result.
+    if(property >= LEVEL_PROP_SCRIPT_LEVEL_END && property <= LEVEL_PROP_SCRIPT_UPDATED)
+    {
+        property = LEVEL_PROP_SCROLL_DIRECTION;
+    }
+    if(property == LEVEL_PROP_SPAWN_COLLECTION) property = LEVEL_PROP_SPAWN_COUNT;
+    if(property == LEVEL_PROP_SPAWN_PLAYER_COLLECTION) property = LEVEL_PROP_SPECIAL_DISABLE;
+    if(property == LEVEL_PROP_TEXT_OBJECT_COLLECTION) property = LEVEL_PROP_TEXT_OBJECT_COUNT;
+
+#define LEVEL_RESULT(tag, member, value) \
+    do { ScriptVariant_ChangeType(result, tag); result->member = value; } while(0)
+#define LEVEL_INTEGER(value) LEVEL_RESULT(VT_INTEGER, lVal, (LONG)(value))
+#define LEVEL_DECIMAL(value) LEVEL_RESULT(VT_DECIMAL, dblVal, (DOUBLE)(value))
+#define LEVEL_POINTER(value) \
+    do { if(value) LEVEL_RESULT(VT_PTR, ptrVal, (VOID *)(value)); } while(0)
+#define LEVEL_STRING(value) \
+    do { ScriptVariant_ChangeType(result, VT_STR); StrCache_Copy(result->strVal, value); } while(0)
+    switch(property)
+    {
+    case LEVEL_PROP_AUTO_SCROLL_DIRECTION:
+        LEVEL_INTEGER(handle->bgdir);
+        break;
+    case LEVEL_PROP_AUTO_SCROLL_X:
+        LEVEL_DECIMAL(handle->bgspeed);
+        break;
+    case LEVEL_PROP_AUTO_SCROLL_Y:
+        LEVEL_DECIMAL(handle->vbgspeed);
+        break;
+    case LEVEL_PROP_BASEMAP_COLLECTION:
+        LEVEL_POINTER(obor_level_script_array(handle, OBOR_LEVEL_ARRAY_BASEMAP, handle->basemaps));
+        break;
+    case LEVEL_PROP_BASEMAP_COUNT:
+        LEVEL_INTEGER(handle->numbasemaps);
+        break;
+    case LEVEL_PROP_BOSS_COUNT:
+        LEVEL_INTEGER(handle->bosses);
+        break;
+    case LEVEL_PROP_BOSS_MUSIC_NAME:
+        LEVEL_STRING(handle->bossmusic);
+        break;
+    case LEVEL_PROP_BOSS_MUSIC_OFFSET:
+        LEVEL_INTEGER(handle->bossmusic_offset);
+        break;
+    case LEVEL_PROP_BOSS_SLOW:
+        LEVEL_INTEGER(obor_profile_build < 4492 ? (LONG)handle->bossmusic_offset : handle->boss_slow);
+        break;
+    case LEVEL_PROP_CAMERA_OFFSET_X:
+        LEVEL_INTEGER(handle->cameraxoffset);
+        break;
+    case LEVEL_PROP_CAMERA_OFFSET_Z:
+        LEVEL_INTEGER(handle->camerazoffset);
+        break;
+    case LEVEL_PROP_COMPLETE_FORCE:
+        LEVEL_INTEGER(handle->forcefinishlevel);
+        break;
+    case LEVEL_PROP_DAMAGE_FROM_ENEMY:
+        LEVEL_INTEGER(handle->nohurt);
+        break;
+    case LEVEL_PROP_DAMAGE_FROM_PLAYER:
+        LEVEL_INTEGER(handle->nohit);
+        break;
+    case LEVEL_PROP_FACING:
+        LEVEL_INTEGER(handle->facing);
+        break;
+    case LEVEL_PROP_GRAVITY:
+        LEVEL_DECIMAL(handle->gravity);
+        break;
+    case LEVEL_PROP_HOLE_COLLECTION:
+        LEVEL_POINTER(obor_level_script_array(handle, OBOR_LEVEL_ARRAY_HOLE, handle->holes));
+        break;
+    case LEVEL_PROP_HOLE_COUNT:
+        LEVEL_INTEGER(handle->numholes);
+        break;
+    case LEVEL_PROP_LAYER_BACKGROUND_DEFAULT_HANDLE:
+        LEVEL_POINTER(handle->background);
+        break;
+    case LEVEL_PROP_LAYER_BACKGROUND_COLLECTION:
+        if(obor_profile_build < 4494)
+        {
+            if(obor_level_script_array(handle, OBOR_LEVEL_ARRAY_BASEMAP, handle->basemaps))
+                LEVEL_RESULT(VT_PTR, ptrVal, obor_level_script_array(handle, OBOR_LEVEL_ARRAY_BACKGROUND, handle->bglayers));
+        }
+        else
+        {
+            LEVEL_POINTER(obor_level_script_array(handle, OBOR_LEVEL_ARRAY_BACKGROUND, handle->bglayers));
+        }
+        break;
+    case LEVEL_PROP_LAYER_BACKGROUND_COUNT:
+        LEVEL_INTEGER(handle->numbglayers);
+        break;
+    case LEVEL_PROP_LAYER_COLLECTION:
+        LEVEL_POINTER(obor_level_script_array(handle, OBOR_LEVEL_ARRAY_LAYER, handle->layers));
+        break;
+    case LEVEL_PROP_LAYER_COUNT:
+        LEVEL_INTEGER(handle->numlayers);
+        break;
+    case LEVEL_PROP_LAYER_FOREGROUND_COLLECTION:
+        LEVEL_POINTER(obor_level_script_array(handle, OBOR_LEVEL_ARRAY_FOREGROUND, handle->fglayers));
+        break;
+    case LEVEL_PROP_LAYER_FOREGROUND_COUNT:
+        LEVEL_INTEGER(handle->numfglayers);
+        break;
+    case LEVEL_PROP_LAYER_FRONTPANEL_COLLECTION:
+        LEVEL_POINTER(obor_level_script_array(handle, OBOR_LEVEL_ARRAY_FRONT, handle->frontpanels));
+        break;
+    case LEVEL_PROP_LAYER_FRONTPANEL_COUNT:
+        LEVEL_INTEGER(handle->numfrontpanels);
+        break;
+    case LEVEL_PROP_LAYER_GENERIC_COLLECTION:
+        LEVEL_POINTER(obor_level_script_array(handle, OBOR_LEVEL_ARRAY_GENERIC, handle->genericlayers));
+        break;
+    case LEVEL_PROP_LAYER_GENERIC_COUNT:
+        LEVEL_INTEGER(handle->numgenericlayers);
+        break;
+    case LEVEL_PROP_LAYER_PANEL_COLLECTION:
+        LEVEL_POINTER(obor_level_script_array(handle, OBOR_LEVEL_ARRAY_PANEL, handle->panels));
+        break;
+    case LEVEL_PROP_LAYER_PANEL_COUNT:
+        LEVEL_INTEGER(handle->numpanels);
+        break;
+    case LEVEL_PROP_LAYER_REF_COLLECTION:
+        LEVEL_POINTER(obor_level_script_array(handle, OBOR_LEVEL_ARRAY_REFERENCE, handle->layersref));
+        break;
+    case LEVEL_PROP_LAYER_REF_COUNT:
+        LEVEL_INTEGER(handle->numlayersref);
+        break;
+    case LEVEL_PROP_LAYER_WATER_COLLECTION:
+        LEVEL_POINTER(obor_level_script_array(handle, OBOR_LEVEL_ARRAY_WATER, handle->waters));
+        break;
+    case LEVEL_PROP_LAYER_WATER_COUNT:
+        LEVEL_INTEGER(handle->numwaters);
+        break;
+    case LEVEL_PROP_MAX_FALL_VELOCITY:
+        LEVEL_DECIMAL(handle->maxfallspeed);
+        break;
+    case LEVEL_PROP_MAX_TOSS_VELOCITY:
+        LEVEL_DECIMAL(handle->maxtossspeed);
+        break;
+    case LEVEL_PROP_MIRROR:
+        LEVEL_INTEGER(handle->mirror);
+        break;
+    case LEVEL_PROP_NAME:
+        LEVEL_STRING(handle->name);
+        break;
+    case LEVEL_PROP_PALETTE_BLENDING_COLLECTION:
+        LEVEL_POINTER(obor_level_script_array(handle, OBOR_LEVEL_ARRAY_BLENDING, handle->blendings));
+        break;
+    case LEVEL_PROP_PALETTE_COLLECTION:
+        LEVEL_POINTER(obor_level_script_array(handle, OBOR_LEVEL_ARRAY_PALETTE, handle->palettes));
+        break;
+    case LEVEL_PROP_PALETTE_COUNT:
+        LEVEL_INTEGER(handle->numpalettes);
+        break;
+    case LEVEL_PROP_POSITION_X:
+        LEVEL_INTEGER(handle->pos);
+        break;
+    case LEVEL_PROP_QUAKE:
+        LEVEL_INTEGER(handle->quake);
+        break;
+    case LEVEL_PROP_QUAKE_TIME:
+        LEVEL_INTEGER(handle->quaketime);
+        break;
+    case LEVEL_PROP_ROCKING:
+        LEVEL_INTEGER(handle->rocking);
+        break;
+    case LEVEL_PROP_SCROLL_DIRECTION:
+        LEVEL_INTEGER(handle->scrolldir);
+        break;
+    case LEVEL_PROP_SCROLL_VELOCITY:
+        // The original decimal tag is paired with an integer payload.
+        LEVEL_DECIMAL(0.0);
+        if(handle->scrollspeed >= INT32_MIN && (DOUBLE)handle->scrollspeed < (DOUBLE)INT32_MAX + 1.0)
+        {
+            result->lVal = (LONG)handle->scrollspeed;
+        }
+        break;
+    case LEVEL_PROP_SIZE_X:
+        LEVEL_INTEGER(handle->width);
+        break;
+    case LEVEL_PROP_SPAWN_COUNT:
+        LEVEL_INTEGER(handle->numspawns);
+        break;
+    case LEVEL_PROP_SPECIAL_DISABLE:
+        LEVEL_INTEGER(handle->nospecial);
+        break;
+    case LEVEL_PROP_TEXT_OBJECT_COUNT:
+        LEVEL_INTEGER(handle->numtextobjs);
+        break;
+    case LEVEL_PROP_TIME_ADVANCE:
+        LEVEL_INTEGER(handle->advancetime);
+        break;
+    case LEVEL_PROP_TIME_DISPLAY:
+        LEVEL_INTEGER(handle->notime);
+        break;
+    case LEVEL_PROP_TIME_RESET:
+        LEVEL_INTEGER(handle->noreset);
+        break;
+    case LEVEL_PROP_TIME_SET:
+        LEVEL_INTEGER(handle->settime);
+        break;
+    case LEVEL_PROP_TYPE:
+        LEVEL_INTEGER(handle->type);
+        break;
+    case LEVEL_PROP_WAITING:
+        LEVEL_INTEGER(obor_profile_build < 4494 ? handle->numwalls : handle->waiting);
+        break;
+    case LEVEL_PROP_WALL_COLLECTION:
+        LEVEL_POINTER(obor_level_script_array(handle, OBOR_LEVEL_ARRAY_WALL, handle->walls));
+        break;
+    case LEVEL_PROP_WALL_COUNT:
+        LEVEL_INTEGER(handle->numwalls);
+        break;
+    case LEVEL_PROP_WEAPON:
+        LEVEL_INTEGER(handle->setweap);
+        break;
+    default:
+        printf("Unsupported property.\n");
+        goto error;
+    }
+#undef LEVEL_STRING
+#undef LEVEL_POINTER
+#undef LEVEL_DECIMAL
+#undef LEVEL_INTEGER
+#undef LEVEL_RESULT
+    return S_OK;
+
+error:
+    printf("You must provide a valid handle and property: get_level_property(void handle, int property)\n");
+    return E_FAIL;
+}
+
+/* The typed assignment shares the original record without running init or clear. */
+static Script *obor_level_script_source(s_level *level, const ScriptVariant *value)
+{
+    if((value->vt != VT_PTR && value->vt != VT_EMPTY) || !value->ptrVal) return NULL;
+    Script *script = value->ptrVal;
+    if(script == &level->endlevel_script || script == &level->level_script ||
+       script == &level->key_script || script == &level->update_script ||
+       script == &level->updated_script)
+    {
+        return script;
+    }
+    for(const Node *entry = scriptheap.first; entry; entry = entry->next)
+    {
+        if(entry->value == script && entry->name && !strcmp(entry->name, "openbor_allocscript"))
+        {
+            return script->magic == script_magic ? script : NULL;
+        }
+    }
+    return NULL;
+}
+
+static int obor_assign_level_script(Script *destination, Script *source)
+{
+    if(!source) return 0;
+    if(destination == source) return 1;
+    if(obor_script_cleanup_active(destination)) return 0;
+
+    Script shared = *source;
+    if(shared.varlist && shared.varlist->obor_shared_owners == SIZE_MAX) return 0;
+    if(shared.obor_interpreter && !obor_script_reference_retain(shared.obor_interpreter)) return 0;
+    if(shared.obor_comment && !obor_script_reference_retain(shared.obor_comment))
+    {
+        obor_script_reference_release(&shared.obor_interpreter);
+        return 0;
+    }
+    if(shared.varlist) ++shared.varlist->obor_shared_owners;
+
+    obor_script_reference_release(&destination->obor_interpreter);
+    obor_script_reference_release(&destination->obor_comment);
+    if(destination->varlist) obor_release_script_locals(destination->varlist);
+    *destination = shared;
+    return 1;
+}
+
+HRESULT openbor_set_level_property(ScriptVariant **varlist, ScriptVariant **pretvar, int paramCount)
+{
+    extern s_level *level;
+    s_level *handle;
+    ScriptVariant *value;
+    LONG integer;
+    DOUBLE decimal;
+    int property;
+
+    if(!pretvar || !*pretvar) return E_FAIL;
+    if(paramCount < 3 || !varlist || !varlist[0] || varlist[0]->vt != VT_PTR ||
+       !varlist[1] || varlist[1]->vt != VT_INTEGER)
+    {
+        *pretvar = NULL;
+        goto error;
+    }
+    handle = varlist[0]->ptrVal;
+    value = varlist[2];
+    if(!handle || handle != level || !value || handle->obor_releasing) goto error;
+
+    if(obor_profile_build < 4494)
+    {
+        if(obor_profile_build >= 4487 &&
+           obor_set_property_native(varlist[1]->lVal) == SET_PROP_LEVELSET_COLLECTION &&
+           obor_level_set_array(handle, OBOR_LEVEL_ARRAY_BACKGROUND, value->ptrVal))
+        {
+            return S_OK;
+        }
+        printf("Unsupported property.\n");
+        goto error;
+    }
+
+    property = obor_level_property_native(varlist[1]->lVal);
+
+#define SET_LEVEL_INTEGER(field) \
+    do { \
+        if(FAILED(ScriptVariant_IntegerValue(value, &integer))) goto error; \
+        handle->field = integer; \
+    } while(0)
+#define SET_LEVEL_DECIMAL(field) \
+    do { \
+        if(FAILED(ScriptVariant_DecimalValue(value, &decimal))) goto error; \
+        handle->field = decimal; \
+    } while(0)
+#define SET_LEVEL_COLLECTION(property, id) \
+    case LEVEL_PROP_##property##_COLLECTION: \
+        if((value->vt != VT_PTR && value->vt != VT_EMPTY) || \
+           !obor_level_set_array(handle, OBOR_LEVEL_ARRAY_##id, value->ptrVal)) goto error; \
+        break
+#define SET_LEVEL_COUNT(property, id) \
+    case LEVEL_PROP_##property##_COUNT: \
+        if(FAILED(ScriptVariant_IntegerValue(value, &integer)) || \
+           !obor_level_set_array_count(handle, OBOR_LEVEL_ARRAY_##id, integer)) goto error; \
+        break
+    switch(property)
+    {
+    SET_LEVEL_COLLECTION(BASEMAP, BASEMAP);
+    SET_LEVEL_COUNT(BASEMAP, BASEMAP);
+    SET_LEVEL_COLLECTION(HOLE, HOLE);
+    SET_LEVEL_COUNT(HOLE, HOLE);
+    SET_LEVEL_COLLECTION(LAYER, LAYER);
+    SET_LEVEL_COUNT(LAYER, LAYER);
+    SET_LEVEL_COLLECTION(LAYER_BACKGROUND, BACKGROUND);
+    SET_LEVEL_COUNT(LAYER_BACKGROUND, BACKGROUND);
+    SET_LEVEL_COLLECTION(LAYER_FOREGROUND, FOREGROUND);
+    SET_LEVEL_COUNT(LAYER_FOREGROUND, FOREGROUND);
+    SET_LEVEL_COLLECTION(LAYER_FRONTPANEL, FRONT);
+    SET_LEVEL_COUNT(LAYER_FRONTPANEL, FRONT);
+    SET_LEVEL_COLLECTION(LAYER_GENERIC, GENERIC);
+    SET_LEVEL_COUNT(LAYER_GENERIC, GENERIC);
+    SET_LEVEL_COLLECTION(LAYER_PANEL, PANEL);
+    SET_LEVEL_COUNT(LAYER_PANEL, PANEL);
+    SET_LEVEL_COLLECTION(LAYER_REF, REFERENCE);
+    SET_LEVEL_COUNT(LAYER_REF, REFERENCE);
+    SET_LEVEL_COLLECTION(LAYER_WATER, WATER);
+    SET_LEVEL_COUNT(LAYER_WATER, WATER);
+    SET_LEVEL_COLLECTION(PALETTE, PALETTE);
+    SET_LEVEL_COUNT(PALETTE, PALETTE);
+    SET_LEVEL_COLLECTION(SPAWN, SPAWN);
+    SET_LEVEL_COUNT(SPAWN, SPAWN);
+    SET_LEVEL_COLLECTION(TEXT_OBJECT, TEXT);
+    SET_LEVEL_COUNT(TEXT_OBJECT, TEXT);
+    SET_LEVEL_COUNT(WALL, WALL);
+    case LEVEL_PROP_LAYER_BACKGROUND_DEFAULT_HANDLE:
+        if((value->vt != VT_PTR && value->vt != VT_EMPTY) ||
+           !obor_level_set_background(handle, value->ptrVal)) goto error;
+        break;
+    case LEVEL_PROP_AUTO_SCROLL_DIRECTION:
+        SET_LEVEL_INTEGER(bgdir);
+        break;
+    case LEVEL_PROP_AUTO_SCROLL_X:
+        SET_LEVEL_DECIMAL(bgspeed);
+        break;
+    case LEVEL_PROP_AUTO_SCROLL_Y:
+        SET_LEVEL_DECIMAL(vbgspeed);
+        break;
+    case LEVEL_PROP_BOSS_COUNT:
+        SET_LEVEL_INTEGER(bosses);
+        break;
+    case LEVEL_PROP_BOSS_MUSIC_NAME:
+    {
+        const char *text = value->vt == VT_STR ? StrCache_GetIfPresent(value->strVal) : NULL;
+        if(!text || strlen(text) >= sizeof(handle->bossmusic)) goto error;
+        memcpy(handle->bossmusic, text, strlen(text) + 1);
+        break;
+    }
+    case LEVEL_PROP_BOSS_MUSIC_OFFSET:
+        SET_LEVEL_INTEGER(bossmusic_offset);
+        break;
+    case LEVEL_PROP_BOSS_SLOW:
+        SET_LEVEL_INTEGER(boss_slow);
+        break;
+    case LEVEL_PROP_CAMERA_OFFSET_X:
+        SET_LEVEL_INTEGER(cameraxoffset);
+        break;
+    case LEVEL_PROP_CAMERA_OFFSET_Z:
+        SET_LEVEL_INTEGER(camerazoffset);
+        break;
+    case LEVEL_PROP_COMPLETE_FORCE:
+        SET_LEVEL_INTEGER(forcefinishlevel);
+        break;
+    case LEVEL_PROP_DAMAGE_FROM_ENEMY:
+        SET_LEVEL_INTEGER(nohurt);
+        break;
+    case LEVEL_PROP_DAMAGE_FROM_PLAYER:
+        SET_LEVEL_INTEGER(nohit);
+        break;
+    case LEVEL_PROP_FACING:
+        SET_LEVEL_INTEGER(facing);
+        break;
+    case LEVEL_PROP_GRAVITY:
+        SET_LEVEL_DECIMAL(gravity);
+        break;
+    case LEVEL_PROP_MAX_FALL_VELOCITY:
+        SET_LEVEL_DECIMAL(maxfallspeed);
+        break;
+    case LEVEL_PROP_MAX_TOSS_VELOCITY:
+        SET_LEVEL_DECIMAL(maxtossspeed);
+        break;
+    case LEVEL_PROP_MIRROR:
+        SET_LEVEL_INTEGER(mirror);
+        break;
+    case LEVEL_PROP_NAME:
+    {
+        const char *text = value->vt == VT_STR ? StrCache_GetIfPresent(value->strVal) : NULL;
+        if(!text) goto error;
+        size_t size = strlen(text) + 1;
+        char *name = malloc(size);
+        if(!name) goto error;
+        memcpy(name, text, size);
+        free(handle->name);
+        handle->name = name;
+        break;
+    }
+    case LEVEL_PROP_POSITION_X:
+        SET_LEVEL_INTEGER(pos);
+        break;
+    case LEVEL_PROP_QUAKE:
+        SET_LEVEL_INTEGER(quake);
+        break;
+    case LEVEL_PROP_QUAKE_TIME:
+        SET_LEVEL_INTEGER(quaketime);
+        break;
+    case LEVEL_PROP_ROCKING:
+        SET_LEVEL_INTEGER(rocking);
+        break;
+    case LEVEL_PROP_SCROLL_DIRECTION:
+        SET_LEVEL_INTEGER(scrolldir);
+        break;
+    case LEVEL_PROP_SCROLL_VELOCITY:
+        SET_LEVEL_DECIMAL(scrollspeed);
+        break;
+    case LEVEL_PROP_SIZE_X:
+        SET_LEVEL_INTEGER(width);
+        break;
+    case LEVEL_PROP_SPAWN_PLAYER_COLLECTION:
+    {
+        if(obor_profile_build < 4496) break;
+        if(value->vt != VT_PTR && value->vt != VT_EMPTY) goto error;
+        if(!value->ptrVal)
+        {
+            handle->obor_spawn_view = NULL;
+            break;
+        }
+        for(int offset = 0; offset < MAX_PLAYERS; ++offset)
+        {
+            if(value->ptrVal == &handle->spawn[offset] && handle->player_spawn_count <= MAX_PLAYERS - offset)
+            {
+                handle->obor_spawn_view = value->ptrVal;
+                return S_OK;
+            }
+        }
+        goto error;
+    }
+    case LEVEL_PROP_SPECIAL_DISABLE:
+        SET_LEVEL_INTEGER(nospecial);
+        break;
+    case LEVEL_PROP_TIME_ADVANCE:
+        SET_LEVEL_INTEGER(advancetime);
+        break;
+    case LEVEL_PROP_TIME_DISPLAY:
+        SET_LEVEL_INTEGER(notime);
+        break;
+    case LEVEL_PROP_TIME_RESET:
+        SET_LEVEL_INTEGER(noreset);
+        break;
+    case LEVEL_PROP_TIME_SET:
+        SET_LEVEL_INTEGER(settime);
+        break;
+    case LEVEL_PROP_TYPE:
+        SET_LEVEL_INTEGER(type);
+        break;
+    case LEVEL_PROP_WAITING:
+        SET_LEVEL_INTEGER(waiting);
+        break;
+    case LEVEL_PROP_WALL_COLLECTION:
+        if(handle->walls)
+        {
+            ScriptVariant_ChangeType(*pretvar, VT_PTR);
+            (*pretvar)->ptrVal = handle->walls;
+        }
+        break;
+    case LEVEL_PROP_WEAPON:
+        SET_LEVEL_INTEGER(setweap);
+        break;
+    case LEVEL_PROP_SCRIPT_LEVEL_END:
+        if(!obor_assign_level_script(&handle->endlevel_script, obor_level_script_source(handle, value))) goto error;
+        break;
+    case LEVEL_PROP_SCRIPT_LEVEL_START:
+        if(!obor_assign_level_script(&handle->level_script, obor_level_script_source(handle, value))) goto error;
+        break;
+    case LEVEL_PROP_SCRIPT_KEY:
+        if(!obor_assign_level_script(&handle->key_script, obor_level_script_source(handle, value))) goto error;
+        break;
+    case LEVEL_PROP_SCRIPT_UPDATE:
+        if(!obor_assign_level_script(&handle->update_script, obor_level_script_source(handle, value))) goto error;
+        break;
+    case LEVEL_PROP_SCRIPT_UPDATED:
+        if(!obor_assign_level_script(&handle->updated_script, obor_level_script_source(handle, value))) goto error;
+        break;
+    case LEVEL_PROP_PALETTE_BLENDING_COLLECTION:
+        goto error;
+    default:
+        break;
+    }
+#undef SET_LEVEL_COUNT
+#undef SET_LEVEL_COLLECTION
+#undef SET_LEVEL_DECIMAL
+#undef SET_LEVEL_INTEGER
+    return S_OK;
+
+error:
+    printf("You must provide a valid handle and property: set_level_property(void handle, int property, value)\n");
+    return E_FAIL;
+}
+
 HRESULT openbor_getlevelproperty(ScriptVariant **varlist , ScriptVariant **pretvar, int paramCount)
 {
     LONG ltemp;
@@ -16730,8 +17981,16 @@ HRESULT openbor_changelevelproperty(ScriptVariant **varlist , ScriptVariant **pr
         {
             if(ltemp >= level->numbasemaps)
             {
-                __reallocto(level->basemaps, level->numbasemaps, ltemp + 1);
-                level->numbasemaps = ltemp + 1;
+                if(level->obor_arrays)
+                {
+                    if(ltemp == INT_MAX || !obor_level_grow_array(level, OBOR_LEVEL_ARRAY_BASEMAP, ltemp + 1))
+                        goto clperror;
+                }
+                else
+                {
+                    __reallocto(level->basemaps, level->numbasemaps, ltemp + 1);
+                    level->numbasemaps = ltemp + 1;
+                }
             }
             if(paramCount >= 4)
             {
@@ -16809,8 +18068,16 @@ HRESULT openbor_changelevelproperty(ScriptVariant **varlist , ScriptVariant **pr
 
             if(ltemp >= level->numholes)
             {
-                __reallocto(level->holes, level->numholes, ltemp + 1);
-                level->numholes = ltemp + 1;
+                if(level->obor_arrays)
+                {
+                    if(ltemp == INT_MAX || !obor_level_grow_array(level, OBOR_LEVEL_ARRAY_HOLE, ltemp + 1))
+                        goto clperror;
+                }
+                else
+                {
+                    __reallocto(level->holes, level->numholes, ltemp + 1);
+                    level->numholes = ltemp + 1;
+                }
             }
 
             switch(varlist[2]->lVal)
@@ -16885,8 +18152,16 @@ HRESULT openbor_changelevelproperty(ScriptVariant **varlist , ScriptVariant **pr
 
             if(ltemp >= level->numwalls)
             {
-                __reallocto(level->walls, level->numwalls, ltemp + 1);
-                level->numwalls = ltemp + 1;
+                if(level->obor_arrays)
+                {
+                    if(ltemp == INT_MAX || !obor_level_grow_array(level, OBOR_LEVEL_ARRAY_WALL, ltemp + 1))
+                        goto clperror;
+                }
+                else
+                {
+                    __reallocto(level->walls, level->numwalls, ltemp + 1);
+                    level->numwalls = ltemp + 1;
+                }
             }
 
             switch(varlist[2]->lVal)
@@ -18011,13 +19286,18 @@ HRESULT openbor_getdrawmethod(ScriptVariant **varlist , ScriptVariant **pretvar,
     */
     entity *e;
     s_drawmethod *pmethod;
-    *pretvar = NULL;
 
-    if(paramCount < 2)
+    if(!pretvar || !*pretvar)
+    {
+        return E_FAIL;
+    }
+
+    if(paramCount < 2 || !varlist || !varlist[0] || !varlist[1])
     {
         goto getdm_error;
     }
 
+    ScriptVariant_Clear(*pretvar);
     mapstrings_drawmethodproperty(varlist, paramCount);
 
     if(varlist[0]->vt == VT_EMPTY)
@@ -18042,109 +19322,116 @@ HRESULT openbor_getdrawmethod(ScriptVariant **varlist , ScriptVariant **pretvar,
         pmethod = &(drawmethod);
     }
 
+    ScriptVariant_ChangeType(*pretvar, VT_INTEGER);
+
     switch(varlist[1]->lVal)
     {
         case _dm_alpha:
-            (*pretvar)->lVal = pmethod->alpha;
+            (*pretvar)->lVal = (int)pmethod->alpha;
             break;
         case _dm_amplitude:
-            (*pretvar)->lVal = pmethod->water.amplitude;
+            (*pretvar)->lVal = (int)pmethod->water.amplitude;
             break;
         case _dm_beginsize:
-            (*pretvar)->dblVal = pmethod->water.beginsize;
+            ScriptVariant_ChangeType(*pretvar, VT_DECIMAL);
+            (*pretvar)->dblVal = (float)pmethod->water.beginsize;
             break;
         case _dm_centerx:
-            (*pretvar)->lVal = pmethod->centerx;
+            (*pretvar)->lVal = (int)pmethod->centerx;
             break;
         case _dm_centery:
-            (*pretvar)->lVal = pmethod->centery;
+            (*pretvar)->lVal = (int)pmethod->centery;
             break;
         case _dm_channelb:
-            (*pretvar)->lVal = pmethod->channelb;
+            (*pretvar)->lVal = (int)pmethod->channelb;
             break;
         case _dm_channelg:
-            (*pretvar)->lVal = pmethod->channelg;
+            (*pretvar)->lVal = (int)pmethod->channelg;
             break;
         case _dm_channelr:
-            (*pretvar)->lVal = pmethod->channelr;
+            (*pretvar)->lVal = (int)pmethod->channelr;
             break;
         case _dm_clipx:
-            (*pretvar)->lVal = pmethod->clipx;
+            (*pretvar)->lVal = (int)pmethod->clipx;
             break;
         case _dm_clipy:
-            (*pretvar)->lVal = pmethod->clipy;
+            (*pretvar)->lVal = (int)pmethod->clipy;
             break;
         case _dm_clipw:
-            (*pretvar)->lVal = pmethod->clipw;
+            (*pretvar)->lVal = (int)pmethod->clipw;
             break;
         case _dm_cliph:
-            (*pretvar)->lVal = pmethod->cliph;
+            (*pretvar)->lVal = (int)pmethod->cliph;
             break;
         case _dm_endsize:
-            (*pretvar)->dblVal = pmethod->water.endsize;
+            ScriptVariant_ChangeType(*pretvar, VT_DECIMAL);
+            (*pretvar)->dblVal = (float)pmethod->water.endsize;
             break;
         case _dm_fillcolor:
-            (*pretvar)->lVal = pmethod->fillcolor;
+            (*pretvar)->lVal = (int)pmethod->fillcolor;
             break;
         case _dm_fliprotate:
-            (*pretvar)->lVal = pmethod->fliprotate;
+            (*pretvar)->lVal = (int)pmethod->fliprotate;
             break;
         case _dm_flipx:
-            (*pretvar)->lVal = pmethod->flipx;
+            (*pretvar)->lVal = (int)pmethod->flipx;
             break;
         case _dm_flipy:
-            (*pretvar)->lVal = pmethod->flipy;
+            (*pretvar)->lVal = (int)pmethod->flipy;
             break;
         case _dm_perspective:
-            (*pretvar)->lVal = pmethod->water.perspective;
+            (*pretvar)->lVal = (int)pmethod->water.perspective;
             break;
         case _dm_remap:
-            (*pretvar)->lVal = pmethod->remap;
+            (*pretvar)->lVal = (int)pmethod->remap;
             break;
         case _dm_rotate:
-            (*pretvar)->lVal = pmethod->rotate;
+            (*pretvar)->lVal = (int)pmethod->rotate;
             break;
         case _dm_scalex:
-            (*pretvar)->lVal = pmethod->scalex;
+            (*pretvar)->lVal = (int)pmethod->scalex;
             break;
         case _dm_scaley:
-            (*pretvar)->lVal = pmethod->scaley;
+            (*pretvar)->lVal = (int)pmethod->scaley;
             break;
         case _dm_shiftx:
-            (*pretvar)->lVal = pmethod->shiftx;
+            (*pretvar)->lVal = (int)pmethod->shiftx;
             break;
         case _dm_table:
-            (*pretvar)->ptrVal = pmethod->table;
+            ScriptVariant_ChangeType(*pretvar, VT_PTR);
+            (*pretvar)->ptrVal = (void *)pmethod->table;
             break;
         case _dm_tintmode:
-            (*pretvar)->lVal = pmethod->tintmode;
+            (*pretvar)->lVal = (int)pmethod->tintmode;
             break;
         case _dm_tintcolor:
-            (*pretvar)->lVal = pmethod->tintcolor;
+            (*pretvar)->lVal = (int)pmethod->tintcolor;
             break;
         case _dm_transbg:
-            (*pretvar)->lVal = pmethod->transbg;
+            (*pretvar)->lVal = (int)pmethod->transbg;
             break;
         case _dm_watermode:
-            (*pretvar)->lVal = pmethod->water.watermode;
+            (*pretvar)->lVal = (int)pmethod->water.watermode;
             break;
         case _dm_wavelength:
-            (*pretvar)->dblVal = pmethod->water.wavelength;
+            ScriptVariant_ChangeType(*pretvar, VT_DECIMAL);
+            (*pretvar)->dblVal = (float)pmethod->water.wavelength;
             break;
         case _dm_wavespeed:
-            (*pretvar)->dblVal = pmethod->water.wavespeed;
+            ScriptVariant_ChangeType(*pretvar, VT_DECIMAL);
+            (*pretvar)->dblVal = (float)pmethod->water.wavespeed;
             break;
         case _dm_wavetime:
-            (*pretvar)->lVal = pmethod->water.wavetime;
+            (*pretvar)->lVal = (int)pmethod->water.wavetime;
             break;
         case _dm_xrepeat:
-            (*pretvar)->lVal = pmethod->xrepeat;
+            (*pretvar)->lVal = (int)pmethod->xrepeat;
             break;
         case _dm_yrepeat:
-            (*pretvar)->lVal = pmethod->yrepeat;
+            (*pretvar)->lVal = (int)pmethod->yrepeat;
             break;
         case _dm_xspan:
-            (*pretvar)->lVal = pmethod->xspan;
+            (*pretvar)->lVal = (int)pmethod->xspan;
             break;
         case _dm_yspan:
             (*pretvar)->lVal = pmethod->yspan;
@@ -18152,7 +19439,7 @@ HRESULT openbor_getdrawmethod(ScriptVariant **varlist , ScriptVariant **pretvar,
         default:
         case _dm_enabled:
         case _dm_flag:
-            (*pretvar)->lVal = pmethod->flag;
+            (*pretvar)->lVal = (int)pmethod->flag;
             break;
     }
 
@@ -18160,6 +19447,7 @@ HRESULT openbor_getdrawmethod(ScriptVariant **varlist , ScriptVariant **pretvar,
 
 getdm_error:
     printf("Function getdrawmethod must have at least 2 parameters: entity, propertyname\n");
+    *pretvar = NULL;
     return E_FAIL;
 }
 

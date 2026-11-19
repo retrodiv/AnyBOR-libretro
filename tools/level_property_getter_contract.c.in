@@ -1,0 +1,118 @@
+/* SPDX-License-Identifier: BSD-3-Clause
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me> */
+
+static s_level stage;
+s_level *level = &stage;
+static char level_text[64];
+@COLLECTIONS@
+
+void StrCache_Copy(int index, CHAR *text)
+{
+    CHECK(index == 0 && strlen(text) < sizeof(level_text));
+    strcpy(level_text, text);
+}
+
+#define printf discard_diagnostic
+@GETTER@
+#undef printf
+
+static int probe_list, native_getter, native_setter, compact_getter;
+static void probe_reset(int *list)
+{
+    CHECK(list == &probe_list);
+    native_getter = native_setter = compact_getter = 0;
+}
+@STUBS@
+static void probe_insert(int *list, void *callback, const char *name)
+{
+    CHECK(list == &probe_list);
+    if(!strcmp(name, "get_level_property"))
+    {
+        CHECK(callback == (void *)openbor_get_level_property);
+        ++native_getter;
+    }
+    if(!strcmp(name, "set_level_property"))
+    {
+        CHECK(callback == (void *)probe_openbor_set_level_property);
+        ++native_setter;
+    }
+    if(!strcmp(name, "getlevelproperty"))
+    {
+        CHECK(callback == (void *)probe_openbor_getlevelproperty);
+        ++compact_getter;
+    }
+}
+@REGISTRY@
+
+enum { UNSUPPORTED = -3, POINTER_BASEMAPS, DECIMAL_INTEGER };
+struct level_result { int tag; DOUBLE number; const void *pointer; const char *text; };
+@TABLES@
+
+static void check_level_getter(const struct level_result *expected, int count,
+                               int registered, int compact_reverse, int current_level)
+{
+    Script_LoadSystemFunctions();
+    CHECK(native_getter == registered && native_setter == registered && compact_getter == 1);
+    CHECK(!strcmp(Script_GetFunctionName((void *)openbor_get_level_property),
+                  registered ? "get_level_property" : "<unknown function>"));
+    CHECK(!strcmp(Script_GetFunctionName((void *)probe_openbor_set_level_property),
+                  registered ? "set_level_property" : "<unknown function>"));
+    CHECK(!strcmp(Script_GetFunctionName((void *)probe_openbor_getlevelproperty),
+                  compact_reverse ? "getlevelproperty" : "<unknown function>"));
+    if(!registered) return;
+
+    memset(&stage, 0, sizeof(stage));
+    @SEED@
+    ScriptVariant handle = {.vt = VT_PTR, .ptrVal = level};
+    ScriptVariant property = {.vt = VT_INTEGER, .lVal = 0};
+    ScriptVariant result = {.vt = VT_INTEGER, .lVal = 123}, *out = &result;
+    ScriptVariant *args[] = {&handle, &property};
+    for(int index = 0; index < count; ++index)
+    {
+        property.lVal = index;
+        const struct level_result *entry = &expected[index];
+        snprintf(query, sizeof(query), "typed level property %d", index);
+        if(entry->tag == UNSUPPORTED)
+        {
+            CHECK(openbor_get_level_property(args, &out, 2) == E_FAIL && out == &result && result.vt == VT_EMPTY);
+            continue;
+        }
+        CHECK(openbor_get_level_property(args, &out, 2) == S_OK && out == &result);
+        switch(entry->tag)
+        {
+        case VT_INTEGER: CHECK(result.vt == VT_INTEGER && result.lVal == (LONG)entry->number); break;
+        case VT_DECIMAL: CHECK(result.vt == VT_DECIMAL && result.dblVal == entry->number); break;
+        case DECIMAL_INTEGER:
+        {
+            ScriptVariant bits = {.vt = VT_DECIMAL, .dblVal = 0.0};
+            bits.lVal = (LONG)entry->number;
+            CHECK(result.vt == VT_DECIMAL && !memcmp(&result.dblVal, &bits.dblVal, sizeof(bits.dblVal)));
+            break;
+        }
+        case POINTER_BASEMAPS:
+        {
+            CHECK(result.vt == VT_PTR && result.ptrVal == entry->pointer);
+            void *basemaps = stage.basemaps;
+            void *bglayers = stage.bglayers;
+            stage.basemaps = NULL;
+            CHECK(openbor_get_level_property(args, &out, 2) == S_OK && result.vt == VT_EMPTY);
+            stage.basemaps = basemaps;
+            stage.bglayers = NULL;
+            CHECK(openbor_get_level_property(args, &out, 2) == S_OK && result.vt == VT_PTR && !result.ptrVal);
+            stage.bglayers = bglayers;
+            break;
+        }
+        case VT_PTR: CHECK(result.vt == VT_PTR && result.ptrVal == entry->pointer); break;
+        case VT_STR: CHECK(result.vt == VT_STR && !strcmp(level_text, entry->text)); break;
+        default: CHECK(0);
+        }
+    }
+    property.lVal = count;
+    CHECK(openbor_get_level_property(args, &out, 2) == E_FAIL && out == &result && result.vt == VT_EMPTY);
+    property.lVal = 1;
+    handle.vt = VT_EMPTY;
+    CHECK(openbor_get_level_property(args, &out, 2) == (current_level ? S_OK : E_FAIL));
+    CHECK(current_level ? out == &result && result.vt == VT_DECIMAL && result.dblVal == stage.bgspeed : !out);
+    out = &result;
+    CHECK(openbor_get_level_property(args, &out, 1) == E_FAIL && !out && result.vt == VT_EMPTY);
+}

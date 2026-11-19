@@ -1,0 +1,241 @@
+/* SPDX-License-Identifier: BSD-3-Clause
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me> */
+#include <setjmp.h>
+#include <stdarg.h>
+#include <stdint.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include "openbor.h"
+#undef printf
+#undef assert
+#include <assert.h>
+
+uint32_t obor_profile_build;
+int screenformat, pixelformat, pixelbytes[5] = {1, 1, 2, 3, 4};
+char packfile[OBOR_CONTENT_PATH_MAX] = "module.pak";
+static char filename[] = "background.png";
+static s_screen screen;
+static s_screen *background;
+static unsigned char source_palette[MAX_PAL_SIZE], pal[MAX_PAL_SIZE], neontable[MAX_PAL_SIZE];
+static int unloads, indexed_reads, direct_reads, reader_mode, indexed_result, direct_result;
+static int supplied_destination;
+static char message[160];
+static jmp_buf load_stop;
+
+HRESULT Interpreter_Call(Interpreter *p) { (void)p; abort(); }
+HRESULT Interpreter_EvalInstruction(Interpreter *p) { (void)p; abort(); }
+
+void unload_background(void)
+{
+    assert(background == &screen && unloads == 0);
+    ++unloads;
+    background = NULL;
+}
+
+int loadscreen(char *path, char *archive, unsigned char *palette, int format, s_screen **out)
+{
+    assert(path == filename && archive == packfile && out == &background);
+    assert(unloads == 1 && indexed_reads == 0 && direct_reads == 0);
+    ++indexed_reads;
+    reader_mode = format;
+    supplied_destination = palette != NULL;
+    if(palette) assert(palette == pal);
+    if(indexed_result)
+    {
+        screen.pixelformat = format;
+        screen.palette = source_palette;
+        *out = &screen;
+        if(palette) memcpy(palette, source_palette, PAL_BYTES);
+    }
+    return indexed_result;
+}
+
+int loadscreen32(char *path, char *archive, s_screen **out)
+{
+    assert(path == filename && archive == packfile && out == &background);
+    assert(unloads == 1 && indexed_reads == 1 && direct_reads == 0 && !indexed_result);
+    ++direct_reads;
+    if(direct_result)
+    {
+        screen.pixelformat = PIXEL_32;
+        screen.palette = NULL;
+        *out = &screen;
+    }
+    return direct_result;
+}
+
+static int observe(const char *pattern, ...)
+{
+    va_list arguments;
+    va_start(arguments, pattern);
+    int length = vsnprintf(message, sizeof(message), pattern, arguments);
+    va_end(arguments);
+    assert(length >= 0 && (size_t)length < sizeof(message));
+    return length;
+}
+
+void borShutdown(int status, char *pattern, ...)
+{
+    va_list arguments;
+    assert(status == 1 && !message[0]);
+    va_start(arguments, pattern);
+    int length = vsnprintf(message, sizeof(message), pattern, arguments);
+    va_end(arguments);
+    assert(length >= 0 && (size_t)length < sizeof(message));
+    longjmp(load_stop, 1);
+}
+
+#define printf observe
+static int background_route(void)
+{
+    if(setjmp(load_stop)) return 0;
+@LOAD@
+    return 1;
+}
+#undef printf
+
+static void check_load(int fixed, int indexed_first)
+{
+    const int depths[] = {PIXEL_8, PIXEL_16, PIXEL_32};
+    for(unsigned depth = 0; depth < sizeof(depths) / sizeof(*depths); ++depth)
+    for(int mode = PIXEL_8; mode <= PIXEL_16; ++mode)
+    for(int indexed = 0; indexed <= 1; ++indexed)
+    for(int direct = 0; direct <= 1; ++direct)
+    {
+        screenformat = depths[depth];
+        pixelformat = mode;
+        indexed_result = indexed;
+        direct_result = direct;
+        background = &screen;
+        unloads = indexed_reads = direct_reads = supplied_destination = 0;
+        reader_mode = -1;
+        message[0] = 0;
+        memset(source_palette, 41, sizeof(source_palette));
+        memset(pal, 12, sizeof(pal));
+        memset(neontable, 29, sizeof(neontable));
+
+        int x8 = indexed_first || mode == PIXEL_x8;
+        int old_indexed = !x8 && mode == PIXEL_8;
+        int reads = x8 || old_indexed;
+        int fallback = x8 && !indexed && (fixed || screenformat == PIXEL_32);
+        int accepted = (reads && indexed) || (fallback && direct);
+        assert(background_route() == accepted);
+        assert(unloads == 1 && indexed_reads == reads && direct_reads == fallback);
+        assert(reader_mode == (x8 ? PIXEL_x8 : old_indexed ? PIXEL_8 : -1));
+        assert(supplied_destination == old_indexed && (background != NULL) == accepted);
+        for(size_t i = 0; i < sizeof(pal); ++i)
+        {
+            assert(pal[i] == (reads && indexed && i < (size_t)PAL_BYTES ? 41 : 12));
+            assert(neontable[i] == (x8 && indexed && i < (size_t)PAL_BYTES ? 41 : 29));
+        }
+        const char *expected = !reads ? "Error loading background, Unknown Pixel Format!\n" :
+            indexed ? "" : fallback ? (direct ? "Loaded 32-bit background 'background.png'\n" :
+            "Error loading background (PIXEL_x8/PIXEL_32) file 'background.png'") :
+            x8 ? "Error loading background (PIXEL_x8) file 'background.png'" :
+            "Error loading background (PIXEL_8) file 'background.png'";
+        assert(!strcmp(message, expected));
+    }
+}
+
+static unsigned int time, neon_time;
+static int neon_count;
+static entity frozen;
+entity *smartbomber, *textbox;
+static void advance_neon(void)
+{
+    int i = 0;
+    unsigned char neonp[32];
+@NEON@
+}
+
+static void check_neon(int fixed, int always_rotate)
+{
+    unsigned char before[MAX_PAL_SIZE], expected[MAX_PAL_SIZE];
+    const int depths[] = {PIXEL_8, PIXEL_16, PIXEL_32};
+    for(unsigned depth = 0; depth < sizeof(depths) / sizeof(*depths); ++depth)
+    for(int mode = PIXEL_8; mode <= PIXEL_16; ++mode)
+    {
+        screenformat = depths[depth];
+        pixelformat = mode;
+        for(size_t i = 0; i < sizeof(neontable); ++i) before[i] = (unsigned char)((i * 3 + 1) % 251);
+        memcpy(neontable, before, sizeof(neontable));
+        memcpy(expected, before, sizeof(expected));
+        time = 500;
+        neon_time = 501;
+        neon_count = 4;
+        smartbomber = textbox = NULL;
+        advance_neon();
+        assert(neon_time == 501 && neon_count == 4 && !memcmp(neontable, before, sizeof(before)));
+        time = 501;
+        smartbomber = &frozen;
+        advance_neon();
+        assert(neon_time == 501 && neon_count == 4 && !memcmp(neontable, before, sizeof(before)));
+        smartbomber = NULL;
+        textbox = &frozen;
+        advance_neon();
+        assert(neon_time == 501 && neon_count == 4 && !memcmp(neontable, before, sizeof(before)));
+        textbox = NULL;
+        if(!always_rotate && mode == PIXEL_8)
+        {
+            for(int entry = 0; entry < 8; ++entry) expected[128 + entry] = 128 + ((entry + 4) & 7);
+        }
+        else if(always_rotate || mode == PIXEL_x8)
+        {
+            int bytes = pixelbytes[fixed ? PIXEL_32 : screenformat];
+            for(int entry = 0; entry < 8; ++entry)
+                memcpy(expected + (128 + entry) * bytes, before + (128 + ((entry + 2) & 7)) * bytes, bytes);
+        }
+        advance_neon();
+        assert(neon_time == 501 + GAME_SPEED / 3 && neon_count == 6);
+        assert(!memcmp(neontable, expected, sizeof(expected)));
+    }
+}
+
+static s_level scene;
+static s_level *level = &scene;
+static int current_palette;
+static unsigned char *layer_palette(s_layer *layer)
+{
+    s_drawmethod screenmethod = layer->drawmethod;
+@TABLE@
+    return screenmethod.table;
+}
+
+static void check_layer(int select_palette_all_modes, int always_neon)
+{
+    static unsigned char stage_palettes[2][1024], own_palette[1024];
+    s_layer layer = {0};
+    level->palettes = stage_palettes;
+    level->numpalettes = 2;
+    layer.drawmethod.table = own_palette;
+    for(int mode = PIXEL_8; mode <= PIXEL_x8; ++mode)
+    for(int neon = 0; neon <= 1; ++neon)
+    for(int index = -1; index <= 3; ++index)
+    {
+        pixelformat = mode;
+        current_palette = index;
+        layer.neon = neon;
+        unsigned char *expected = NULL;
+        if(neon) expected = always_neon || mode != PIXEL_x8 || index <= 0 ? neontable : own_palette;
+        else if((select_palette_all_modes || mode == PIXEL_x8) && index > 0 && index <= 2)
+            expected = stage_palettes[index - 1];
+        assert(layer_palette(&layer) == expected);
+    }
+}
+
+int main(void)
+{
+    static const struct { uint32_t revision; int width, load, rotate, palette, neon; } profiles[] = {
+        @CONTEXTS@
+    };
+    for(unsigned i = 0; i < sizeof(profiles) / sizeof(*profiles); ++i)
+    {
+        obor_profile_build = profiles[i].revision;
+        check_load(profiles[i].width, profiles[i].load);
+        check_neon(profiles[i].width, profiles[i].rotate);
+        check_layer(profiles[i].palette, profiles[i].neon);
+        printf("{\"revision\":%u,\"status\":\"PASS\"}\n", obor_profile_build);
+    }
+    return 0;
+}

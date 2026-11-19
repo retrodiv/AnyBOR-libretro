@@ -1,0 +1,179 @@
+/* SPDX-License-Identifier: BSD-3-Clause
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me> */
+#include <stdint.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include "openbor.h"
+#include "commands.h"
+#undef printf
+#undef assert
+#include <assert.h>
+
+uint32_t obor_profile_build;
+static s_level stage;
+static s_level *level = &stage;
+static s_set_entry set;
+s_set_entry *levelsets = &set;
+int current_set, num_difficulties = 1;
+s_videomodes videomodes;
+s_savedata savedata;
+static int healthcheat, level_completed, tospeedup;
+static s_slow_motion slowmotion;
+static int arguments[4];
+
+HRESULT Interpreter_Call(Interpreter *p) { (void)p; abort(); }
+HRESULT Interpreter_EvalInstruction(Interpreter *p) { (void)p; abort(); }
+
+@SPAWN_COUNT@
+@EXCLUDES@
+
+static void defaults(void)
+{
+    memset(&stage, 0, sizeof(stage));
+@DEFAULTS@
+}
+
+#undef GET_INT_ARG
+#define GET_INT_ARG(n) (arguments[n])
+static void command(int cmd)
+{
+    int i;
+    switch(cmd)
+    {
+        @CASES@
+    }
+}
+#undef GET_INT_ARG
+
+static int actor_filter(entity *e)
+{
+    @SPAWN@
+    { return 1; }
+    return 0;
+}
+
+static int knife_filter(entity *self)
+{
+    @KNIFE@
+    { return 1; }
+    return 0;
+}
+
+static int apply_block(int didblock)
+{
+    @BLOCK@
+    { return 1; }
+    return 0;
+}
+
+static int ignore_damage(entity *other)
+{
+    @DAMAGE@
+    { return 1; }
+    return 0;
+}
+
+static int slow_frame(void)
+{
+    @SLOW@
+    { return 1; }
+    return 0;
+}
+
+static void check_spawn(int native_extent)
+{
+    const int commands[] = {CMD_LEVEL_SPAWN1, CMD_LEVEL_SPAWN2, CMD_LEVEL_SPAWN3, CMD_LEVEL_SPAWN4};
+    assert(sizeof(commands) / sizeof(*commands) == MAX_PLAYERS);
+    const int heights[] = {240, 360, 480};
+    for(unsigned i = 0; i < sizeof(heights) / sizeof(*heights); ++i)
+    for(int players = -1; players <= MAX_PLAYERS + 1; ++players)
+    {
+        videomodes.vRes = heights[i];
+        set.maxplayers = players;
+        defaults();
+        int expected = native_extent ? (players < 0 ? 0 : players > MAX_PLAYERS ? MAX_PLAYERS : players) : MAX_PLAYERS;
+        assert(level->player_spawn_count == expected);
+        for(int player = 0; player < MAX_PLAYERS; ++player)
+        {
+            float y = player >= expected ? 0 : native_extent ? heights[i] + 60 : 300;
+            assert(level->spawn[player].x == 0 && level->spawn[player].z == 0 && level->spawn[player].y == y);
+            arguments[1] = -17;
+            arguments[2] = 23;
+            arguments[3] = -41;
+            command(commands[player]);
+            y = player >= expected ? 0 : native_extent ? -41 : 300;
+            assert(level->spawn[player].x == (player < expected ? -17 : 0));
+            assert(level->spawn[player].z == (player < expected ? 23 : 0));
+            assert(level->spawn[player].y == y);
+            arguments[3] = 321;
+            command(commands[player]);
+            assert(level->spawn[player].y == (player < expected ? 321 : 0));
+        }
+    }
+    levelsets = NULL;
+    defaults();
+    assert(level->player_spawn_count == MAX_PLAYERS);
+    levelsets = &set;
+}
+
+static void check_flags(int native_flags)
+{
+    defaults();
+    assert(level->nohurt == native_flags && level->nohit == native_flags && level->boss_slow == native_flags);
+    arguments[1] = 0;
+    arguments[3] = 0;
+    command(CMD_LEVEL_NOHIT);
+    command(CMD_LEVEL_NOSLOW);
+    command(CMD_LEVEL_TYPE);
+    assert(level->nohurt == native_flags && level->nohit == native_flags && level->boss_slow == native_flags);
+    arguments[1] = -7;
+    arguments[2] = 19;
+    arguments[3] = 4;
+    command(CMD_LEVEL_NOHIT);
+    command(CMD_LEVEL_NOSLOW);
+    command(CMD_LEVEL_TYPE);
+    assert(level->nohit == (native_flags ? 0 : -7));
+    assert(level->boss_slow == (native_flags ? 0 : -7));
+    assert(level->nohurt == (native_flags ? 0 : 4));
+    assert(level->type == -7 && level->nospecial == 19);
+    arguments[1] = arguments[3] = 0;
+    command(CMD_LEVEL_NOHIT);
+    command(CMD_LEVEL_NOSLOW);
+    command(CMD_LEVEL_TYPE);
+    assert(level->nohurt == 0 && level->nohit == 0 && level->boss_slow == 0);
+
+    static entity actor;
+    for(int value = -1; value <= 2; ++value)
+    for(int flag_a = 0; flag_a <= 1; ++flag_a)
+    for(int flag_b = 0; flag_b <= 1; ++flag_b)
+    {
+        actor.modeldata.type = flag_a ? TYPE_PLAYER : TYPE_ENEMY;
+        level->nohit = level->nohurt = level->boss_slow = value;
+        savedata.mode = flag_b;
+        int exclusion = flag_a && (flag_b || (native_flags ? value == 1 : value != 0));
+        assert(actor_filter(&actor) == exclusion && knife_filter(&actor) == exclusion);
+        assert(apply_block(flag_a) == (flag_a && (native_flags ? value == 1 : value == 0)));
+        healthcheat = flag_b;
+        assert(ignore_damage(&actor) == (flag_b || (!flag_a && (native_flags ? value == 0 : value != 0))));
+        level_completed = flag_a;
+        tospeedup = flag_b;
+        slowmotion.toggle = SLOW_MOTION_OFF;
+        assert(slow_frame() == (flag_a && !flag_b && (native_flags ? value == 1 : value == 0)));
+        slowmotion.toggle = SLOW_MOTION_OFF + 1;
+        assert(slow_frame());
+    }
+}
+
+int main(void)
+{
+    static const struct { uint32_t revision; int spawn_extent, flags; } rows[] = {@CONTEXTS@};
+    for(unsigned i = 0; i < sizeof(rows) / sizeof(*rows); ++i)
+    {
+        obor_profile_build = rows[i].revision;
+        check_spawn(rows[i].spawn_extent);
+        check_flags(rows[i].flags);
+        printf("{\"revision\":%u,\"status\":\"PASS\"}\n", obor_profile_build);
+    }
+    return 0;
+}

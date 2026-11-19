@@ -14,7 +14,13 @@
 
 @VARIANT_TYPES@
 @TYPES@
-static struct { int numbasemaps; s_basemap *basemaps; } level_data, *level = &level_data;
+static struct { int numbasemaps; s_basemap *basemaps; void *obor_arrays; } level_data, *level = &level_data;
+enum { OBOR_LEVEL_ARRAY_BASEMAP };
+static int obor_level_grow_array(void *record, int id, int count)
+{
+    (void)record; (void)id; (void)count;
+    abort();
+}
 uint32_t obor_profile_build;
 static struct { float *cells; size_t bytes; } recorded[4];
 static unsigned allocations;

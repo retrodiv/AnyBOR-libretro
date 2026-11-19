@@ -53,9 +53,10 @@ profiles:
 | v3.0 4404-dev | v3.0 4406 | v3.0 4411 | v3.0 4412 | v3.0 4413 | v3.0 4414 |
 | v3.0 4417 | v3.0 4419 | v3.0 4420 | v3.0 4421-dev | v3.0 4423 | v3.0 4424 |
 | v3.0 4426 | v3.0 4429 | v3.0 4430 | v3.0 4431 | v3.0 4432 | v3.0 4453 |
-| v3.0 6330 | v3.0 6330-lns-010g | v3.0 6391 | v3.0 6391-mod | v3.0 6392-dev | v3.0 6412-dev |
-| v3.0 6510-dev | v3.0 7086-dev | v3.0 7123-dev | v4.0 7142-alpha | v4.0 7530 | v4.0 7533 |
-| v4.0 7555 | v4.0 7556 | v4.0 7735 | v4.0 8023-dev |  |  |
+| v3.0 4454-dev | v3.0 4456 | v3.0 4510-dev | v3.0 6330 | v3.0 6330-lns-010g | v3.0 6391 |
+| v3.0 6391-mod | v3.0 6392-dev | v3.0 6412-dev | v3.0 6510-dev | v3.0 7086-dev | v3.0 7123-dev |
+| v4.0 7142-alpha | v4.0 7530 | v4.0 7533 | v4.0 7555 | v4.0 7556 | v4.0 7735 |
+| v4.0 8023-dev |  |  |  |  |  |
 
 Automatic engine selection uses build tags and content clues to choose a profile.
 Turn it off in Core Options to choose one manually when a game needs it.
