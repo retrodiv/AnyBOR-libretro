@@ -9,7 +9,7 @@ from pathlib import Path
 import re
 import unittest
 
-from contract_fixtures import contract_profiles, load_contract_fixture
+from contract_fixtures import contract_profiles, contract_revisions, load_contract_fixture
 from test_historical_common_think import ROOT, native_output
 from test_historical_player import function
 
@@ -63,6 +63,29 @@ def program(data, engine):
 
 
 class ForwardByteStreamTests(unittest.TestCase):
+    def test_4432_evolving_append_and_save_arguments(self):
+        fixture = Path(__file__).with_name('fixtures') / 'profile-stream-output-contracts.json'
+        data = load_contract_fixture(fixture)
+        self.assertEqual(data['engine'], '4432')
+        contexts = data['sources']
+        self.assertEqual({row['revision'] for row in contexts},
+                         contract_revisions(data, data['expected_revisions']))
+        self.assertEqual(len(contexts), len({row['revision'] for row in contexts}))
+        script = (ROOT / 'src/engines/4432/openborscript.c').read_text()
+        callbacks = ('openbor_filestreamappend', 'openbor_savefilestream')
+        template = Path(__file__).with_name('stream_output_profile_contract.c.in').read_text()
+        checks = []
+        for row in contexts:
+            self.assertIn(row['path_index'], (2, 3))
+            self.assertIs(type(row['always_end_byte']), bool)
+            checks.append('check_profile(%du, %d, %d);' % (
+                row['revision'], row['path_index'], row['always_end_byte']))
+        code = template.replace('@CALLBACKS@', '\n'.join(function(script, n) for n in callbacks))
+        code = code.replace('@CHECKS@', '\n'.join(checks))
+        result = native_output(code, data, extra_cflags=('-fgnu89-inline',))
+        self.assertEqual(json.loads(result), {'contexts': len(contexts), 'cases': 13 * len(contexts)})
+        print(result.strip(), flush=True)
+
     def test_native_reads_append_offsets_and_save_routes(self):
         data = load_contract_fixture(FIXTURE)
         revisions = {r['revision'] for r in data['sources']}

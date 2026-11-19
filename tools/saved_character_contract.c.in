@@ -1,0 +1,317 @@
+/* SPDX-License-Identifier: BSD-3-Clause
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me>
+ */
+#include <stddef.h>
+#include <stdint.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <strings.h>
+#include "openbor.h"
+#include "translation.h"
+#undef printf
+#ifndef stricmp
+#define stricmp strcasecmp
+#endif
+
+uint32_t obor_profile_build;
+static s_set_entry stage_set;
+static s_savelevel record;
+s_set_entry *levelsets = &stage_set;
+s_savelevel *savelevel = &record;
+s_player player[MAX_PLAYERS];
+s_savedata savedata;
+char allowselect_args[MAX_ALLOWSELECT_LEN];
+@NAME_STORAGE@
+char branch_name[MAX_NAME_LEN + 1];
+char *custBkgrds = "custom/";
+int current_set, current_level, current_stage, num_difficulties = 1;
+int useSave, useSet, allow_secret_chars, musicoverlap, magic_type, fade;
+int PLAYER_LIVES = 4, CONTINUES = 6, psmenu[4][4], noshare, credits, creditscheat;
+int selectScreen, nofadeout = 1, nosave, sameplayer, colourselect, unlockbg = 1, bonus = 1;
+int goto_mainmenu_flag, PLAYER_MIN_Z, PLAYER_MAX_Z, BGHEIGHT;
+int SAMPLE_BEEP = -1, SAMPLE_BEEP2 = -1;
+u32 time, bothnewkeys;
+
+static s_model models[] = {
+    {.name = "Scout", .type = TYPE_PLAYER}, {.name = "Guard", .type = TYPE_PLAYER},
+    {.name = "Pilot", .type = TYPE_PLAYER}, {.name = "Guest", .type = TYPE_PLAYER},
+};
+static s_modelcache cache[3];
+unsigned models_cached = 3;
+static int events;
+static int music_fallback;
+static const char select_file[] =
+    "music file.ogg 1 42\n"
+    "allowselect Scout Pilot\n"
+    "background file-bg\n"
+    "load Guard 3\n"
+    "load Guest 5\n"
+    "load Scout\n";
+
+static void text_value(const char *value, int trim)
+{
+    size_t size = strlen(value);
+    if(trim)
+    {
+        while(size && value[size - 1] == ' ') --size;
+    }
+    if(strpbrk(value, "\"\\\n")) abort();
+    printf("\"%.*s\"", (int)size, value);
+}
+
+static void event(const char *kind, const char *value, int flag, long extra)
+{
+    if(events++) putchar(',');
+    printf("[\"%s\",", kind);
+    text_value(value, 1);
+    printf(",%d,%ld]", flag, extra);
+}
+
+HRESULT Interpreter_Call(Interpreter *interpreter) { abort(); }
+HRESULT Interpreter_EvalInstruction(Interpreter *interpreter) { abort(); }
+void *checkAlloc(void *pointer, size_t size, const char *fn, const char *file, int line)
+{
+    if(size && !pointer) abort();
+    return pointer;
+}
+void exitIfFalse(int value, const char *assertion, const char *name, const char *file, int line)
+{
+    if(!value) abort();
+}
+void shutdown(int status, char *format, ...) { abort(); }
+void borExit(int status) { abort(); }
+void kill_all(void) {}
+void savelevelinfo(void) {}
+char *ob_gettrans(char *text) { return text; }
+void update(int ingame, int usevwait) { bothnewkeys = FLAG_ESC; }
+void sound_close_music(void) {}
+void font_printf(int x, int y, int font, int layer, char *format, ...) { abort(); }
+int sound_play_sample(int sample, unsigned priority, int left, int right, unsigned speed) { abort(); }
+entity *spawnexample(int slot) { return NULL; }
+void ent_set_model(entity *ent, char *name, int sync) { abort(); }
+void ent_set_anim(entity *ent, int animation, int reset) { abort(); }
+void ent_set_colourmap(entity *ent, unsigned map) { abort(); }
+int nextcolourmap(s_model *model, int map) { abort(); }
+int prevcolourmap(s_model *model, int map) { abort(); }
+s_model *nextplayermodeln(s_model *model, int slot) { abort(); }
+s_model *prevplayermodeln(s_model *model, int slot) { abort(); }
+void gameover(void) { abort(); }
+void hallfame(int addtoscore) { abort(); }
+void showcomplete(int stage) { abort(); }
+void fade_out(int type, int speed) { abort(); }
+void playscene(char *filename) { abort(); }
+int saveGameFile(void) { abort(); }
+
+s_model *findmodel(char *name)
+{
+    for(unsigned i = 0; i < models_cached; ++i)
+    {
+        if(!strcasecmp(models[i].name, name)) return &models[i];
+    }
+    return NULL;
+}
+
+int get_cached_model_index(char *name)
+{
+    for(unsigned i = 0; i < models_cached; ++i)
+    {
+        if(!strcasecmp(models[i].name, name)) return (int)i;
+    }
+    abort();
+}
+
+void update_model_loadflag(s_model *model, int flag)
+{
+    event("model", model->name, flag, 0);
+}
+
+s_model *load_cached_model(char *name, char *owner, char unload)
+{
+    if(strcmp(name, "Guest") || strcmp(owner, "select.txt")) abort();
+    event("load", name, unload, 0);
+    return &models[3];
+}
+
+int buffer_pakfile(char *filename, char **buf, size_t *size)
+{
+    if(strcmp(filename, "select.txt")) abort();
+    event("file", filename, 0, 0);
+    *buf = strdup(select_file);
+    *size = strlen(*buf);
+    return 1;
+}
+
+int music(char *name, int loop, long offset)
+{
+    event("music", name, loop, offset);
+    return !music_fallback || strcmp(name, "data/music/menu") != 0;
+}
+
+void load_background(char *name, int create) { event("background", name, create, 0); }
+void load_cached_background(char *name, int create) { event("cached", name, create, 0); }
+
+int loadScriptFile(void)
+{
+    event("script", "", 0, 0);
+    return 1;
+}
+
+int playlevel(char *filename)
+{
+    event("level", filename, player[0].lives, credits);
+    return 0;
+}
+
+@BASE@
+#define reset_playable_list native_reset_playable_list
+@RESET@
+#undef reset_playable_list
+static void reset_playable_list(char choice)
+{
+    event("reset", "", choice, 0);
+    native_reset_playable_list(choice);
+}
+
+#define load_playable_list native_load_playable_list
+@ALLOW@
+#undef load_playable_list
+static void load_playable_list(char *line)
+{
+    char argbuf[MAX_ARG_LEN + 1] = {0};
+    ArgList arglist;
+    if(ParseArgs(&arglist, line, argbuf))
+    {
+        const char *value = arglist.count > 1 ? arglist.args[1] : "";
+        event("allow", value, (int)arglist.count - 1, 0);
+    }
+    native_load_playable_list(line);
+}
+
+@NATIVE@
+@RECORD_WRITER@
+
+static const struct {
+    int game, with_file, mode, save_flag, menu, global_allow, saved_skip, level_kind;
+    int background, music_fallback;
+} cases[] = {@CASES@};
+
+static void prepare(size_t i)
+{
+    const __typeof__(cases[0]) *input = cases + i;
+    stage_set = (s_set_entry){.maxplayers = 1, .lives = 4, .credits = 6, .numlevels = 2};
+    stage_set.levelorder = calloc(2, sizeof(*stage_set.levelorder));
+    for(int j = 0; j < stage_set.numlevels; ++j)
+    {
+        stage_set.levelorder[j].filename = "stage";
+    }
+    if(input->level_kind == 1)
+    {
+        stage_set.levelorder[0].type = LE_TYPE_SELECT_SCREEN;
+        stage_set.levelorder[0].filename = "select.txt";
+    }
+    if(input->level_kind == 2)
+    {
+        stage_set.levelorder[0].type = LE_TYPE_SKIP_SELECT;
+        stage_set.levelorder[0].skipselect[0] = strdup("Pilot");
+    }
+    if(input->level_kind == 3)
+    {
+        stage_set.levelorder[0].skipselect[0] = strdup("Guard");
+    }
+
+    memset(&record, 0, sizeof(record));
+    record.flag = input->save_flag;
+    record.stage = 1;
+    record.pLives[0] = 4;
+    record.pCredits[0] = 3;
+    record.credits = 7;
+    strcpy(record.pName[0], "Guard");
+    record.selectFlag = input->menu;
+    strcpy(record.selectMusic, "music stored.ogg 0 18");
+    strcpy(record.selectBackground, "background stored-bg");
+    strcpy(record.allowSelectArgs, "allowselect Guard");
+    strcpy(record.selectLoad[0], "load Guard 3");
+    strcpy(record.selectLoad[2], "load Missing 9");
+    strcpy(record.selectLoad[3], "load Scout 7");
+    record.selectLoadCount = 4;
+    if(input->saved_skip)
+    {
+        strcpy(record.selectSkipSelect, input->saved_skip == 1 ? "skipselect Scout" : "skipselect");
+    }
+
+    memset(player, 0, sizeof(player));
+    memset(skipselect, 0, sizeof(skipselect));
+    memset(allowselect_args, 0, sizeof(allowselect_args));
+    if(input->global_allow)
+    {
+        strcpy(allowselect_args, "allowselect Guard");
+    }
+    for(unsigned j = 0; j < models_cached; ++j)
+    {
+        cache[j].model = &models[j];
+        cache[j].selectable = !input->global_allow || j == 1;
+    }
+    model_cache = cache;
+    custBkgrds = (input->background & 1) ? NULL : "custom/";
+    unlockbg = !(input->background & 2);
+    music_fallback = input->music_fallback;
+    bothnewkeys = 0;
+    credits = 0;
+    events = 0;
+}
+
+static void select_case(size_t i)
+{
+    prepare(i);
+    int players[MAX_PLAYERS] = {1};
+    int result = -1;
+    printf("%s{\"events\":[", i ? "," : "");
+    if(cases[i].game)
+    {
+        playgame(players, 0, cases[i].mode);
+    }
+    else
+    {
+        result = selectplayer(players, cases[i].with_file ? "select.txt" : NULL, cases[i].mode);
+    }
+    printf("],\"state\":[%d,%d,%d,%d,%d,%d,%d,",
+           result, record.selectFlag, record.selectLoadCount, stage_set.numlevels,
+           cache[0].selectable, cache[1].selectable, cache[2].selectable);
+    text_value(record.selectMusic, 0); putchar(',');
+    text_value(record.selectBackground, 0); putchar(',');
+    text_value(record.allowSelectArgs, 1); putchar(',');
+    text_value(record.selectLoad[0], 0); putchar(',');
+    text_value(record.selectLoad[2], 0); putchar(',');
+    text_value(record.selectSkipSelect, 0); putchar(',');
+    text_value(skipselect[0], 0);
+    printf(",%d,%d]}", player[0].lives, credits);
+    for(int j = 0; j < stage_set.numlevels; ++j)
+    {
+        for(int k = 0; k < MAX_PLAYERS; ++k)
+        {
+            free(stage_set.levelorder[j].skipselect[k]);
+        }
+    }
+    free(stage_set.levelorder);
+}
+
+int main(void)
+{
+    static const struct { unsigned revision; size_t allow_extent; } profiles[] = {@PROFILES@};
+    for(size_t i = 0; i < sizeof(profiles) / sizeof(*profiles); ++i)
+    {
+        obor_profile_build = profiles[i].revision;
+        printf("{\"revision\":%u,\"cases\":[", obor_profile_build);
+        for(size_t j = 0; j < sizeof(cases) / sizeof(*cases); ++j)
+        {
+            select_case(j);
+        }
+        stage_set.name = "Unit";
+        const size_t last = profiles[i].allow_extent - 1;
+        allowselect_args[last] = 'Z';
+        native_savelevelinfo();
+        printf("],\"record_copy\":[%d,%d]}\n", (unsigned char)record.allowSelectArgs[last],
+               (unsigned char)allowselect_args[last]);
+    }
+}

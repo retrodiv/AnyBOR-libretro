@@ -1,0 +1,217 @@
+/* SPDX-License-Identifier: BSD-3-Clause
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me> */
+#include <stdint.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <stdarg.h>
+@DEFINES@
+#include "savedata.h"
+@FLAGS@
+/* Selected native declarations avoid importing foreign platform SDK headers.
+ * The callback only updates its output pointer;no variant service is mocked. */
+typedef int32_t LONG;
+typedef void VOID;
+typedef double DOUBLE;
+typedef int32_t HRESULT;
+#define S_OK ((HRESULT)0)
+@VARIANT_TYPES@
+static uint32_t obor_profile_build,bothnewkeys;
+static unsigned case_index,domain_index,frame_count,effect_count,system_calls;
+#define CHECK(c) do{if(!(c)){fprintf(stderr,"NATIVE_MENU_ACTION revision=%u domain=%u case=%u line=%d: %s\n",obor_profile_build,domain_index,case_index,__LINE__,#c);abort();}}while(0)
+s_savedata savedata;
+static int cheats,forcecheatsoff,livescheat,creditscheat,healthcheat,nodebugoptions,pause;
+static int optionsMenu,cheatoptionsMenu,controloptionsMenu,videooptionsMenu,systemoptionsMenu;
+static int current_set,versusdamage,SAMPLE_BEEP,SAMPLE_BEEP2,cpu_setting,current_clock;
+static void *level;
+static unsigned char pal[768];
+static struct {int maxplayers;} levelsets[1];
+struct scene {int usejoy,joy,cheats,force,level,pause,nodebug,debug,infinite,versus,mode;
+    int fullscreen,stretch,filter,swfilter,power,battery,life;double scale;};
+static const struct scene scenes[]={@SCENES@};
+static const struct scene *scene;
+static const struct context {unsigned revision;int debug,features,early,gate,merged;} contexts[]={@CONTEXTS@};
+static const struct context *context;
+static const struct recipe {int slot,scene,mask;const char *events;int beep,beep2,brightness,gamma,cpu,event_count,change_count;int changes[4][2];} recipes[]={@CASES@};
+static const struct recipe *recipe;
+static int prefix_steps;
+static const char *Tr(const char *text){return text;}
+#define KBYTES 1024
+static unsigned getSystemRam(int unit){CHECK(unit==KBYTES);return 123;}
+static unsigned getUsedRam(int unit){CHECK(unit==KBYTES);return 45;}
+static char *commaprint(unsigned value){static char out[32];snprintf(out,sizeof(out),"%u",value);return out;}
+static int scePowerIsPowerOnline(void){return scene->power;}
+static int scePowerGetCpuClockFrequency(void){return current_clock;}
+static int scePowerGetBatteryLifePercent(void){return scene->battery;}
+static int scePowerGetBatteryLifeTime(void){return scene->life;}
+enum {SOUND=1,SAVE,MENU,VWAIT,PALETTE,CLOCK};
+static struct {int kind,a,b,c,d,flags[3];} effects[128];
+static void effect(int kind,int a,int b,int c,int d)
+{
+    CHECK(effect_count<128);unsigned n=effect_count++;
+    effects[n].kind=kind;effects[n].a=a;effects[n].b=b;effects[n].c=c;effects[n].d=d;
+    effects[n].flags[0]=optionsMenu;effects[n].flags[1]=cheatoptionsMenu;effects[n].flags[2]=systemoptionsMenu;
+}
+static int sound_play_sample(int sample,int channel,int left,int right,int speed)
+{CHECK(channel==0 && left==23 && right==23 && speed==100);effect(SOUND,sample,0,0,0);return 0;}
+static void savesettings(void){effect(SAVE,pause,0,0,0);}
+static void vga_vwait(void){effect(VWAIT,0,0,0,0);}
+static void palette_set_corrected(unsigned char *p,int r,int g,int b,int x,int y,int z)
+{CHECK(p==pal && r==g && g==b && x==y && y==z);effect(PALETTE,r,x,0,0);}
+static void scePowerSetClockFrequency(int cpu,int bus,int half)
+{CHECK(cpu==bus);current_clock=cpu;effect(CLOCK,cpu,bus,half,0);}
+static void delegate(int name)
+{
+    effect(MENU,name,cheats,forcecheatsoff,pause);
+    if(name==3){
+        if(system_calls<(unsigned)recipe->change_count){cheats=recipe->changes[system_calls][0];forcecheatsoff=recipe->changes[system_calls][1];}
+        system_calls++;
+    }
+    bothnewkeys=0;
+}
+static void menu_options_video(void){delegate(0);}
+static void menu_options_sound(void){delegate(1);}
+static void menu_options_input(void){delegate(2);}
+static void menu_options_system(void){delegate(3);}
+static void menu_options_debug(void){delegate(4);}
+static void menu_options_config(void){delegate(5);}
+static struct {char selected[128];int title,back,flags[5];} frames[128];
+static char selected[128];
+static int title_row,back_row;
+static void observe(int font,double y,const char *format)
+{
+    if(font==1 && !selected[0]){int n=snprintf(selected,sizeof(selected),"%s",format);CHECK(n>=0 && (size_t)n<sizeof(selected));}
+    if(font==2)title_row=(int)y;
+    if(!strcmp(format,"Back"))back_row=(int)y;
+}
+static void _menutext(int font,double x,double y,const char *format,...){(void)x;observe(font,y,format);}
+static void _menutextm(int font,double y,double shift,const char *format,...){(void)shift;observe(font,y,format);}
+static uint32_t keys(unsigned step)
+{
+    if(step<(unsigned)prefix_steps)return FLAG_MOVEDOWN;
+    step-=prefix_steps;
+    if(step>=(unsigned)recipe->event_count)return FLAG_ESC;
+    const char *start=recipe->events;
+    while(step--){start=strchr(start,'|');CHECK(start);start++;}
+    uint32_t result=0;
+    for(const char *p=start;*p && *p!='|';p++){
+        switch(*p){case 'U':result|=FLAG_MOVEUP;break;case 'D':result|=FLAG_MOVEDOWN;break;
+        case 'L':result|=FLAG_MOVELEFT;break;case 'R':result|=FLAG_MOVERIGHT;break;
+        case 'A':result|=FLAG_ATTACK;break;case 'E':result|=FLAG_ESC;break;default:CHECK(0);}
+    }
+    return result;
+}
+static void update(int ingame,int wait)
+{
+    CHECK(ingame==(level!=NULL) && wait==0 && frame_count<128);
+    if(!frame_count)CHECK(bothnewkeys==0);
+    unsigned n=frame_count++;strcpy(frames[n].selected,selected);
+    frames[n].title=title_row;frames[n].back=back_row;
+    int flags[]={optionsMenu,cheatoptionsMenu,controloptionsMenu,videooptionsMenu,systemoptionsMenu};
+    memcpy(frames[n].flags,flags,sizeof(flags));
+    selected[0]=0;title_row=back_row=-999;bothnewkeys=keys(n);
+}
+@CHEATS@
+@PROTOTYPES@
+@FUNCTIONS@
+@CALLBACK@
+static void script_options(void)
+{
+    ScriptVariant marker={.lVal=7,.vt=VT_INTEGER},*out=&marker;
+    HRESULT status=openbor_menu_options(NULL,&out,0);
+    CHECK(status==S_OK && out==NULL && marker.vt==VT_INTEGER && marker.lVal==7);
+}
+static void (*menus[])(void)={run_menu_options_debug,run_menu_options_system,script_options};
+static int limit(void)
+{
+    if(domain_index==0)return context->debug?5+context->features:-1;
+    if(domain_index==1){
+        int last=context->early?6:5-(context->gate && scene->nodebug!=0);
+#if PSP
+        last++;
+#endif
+        return last;
+    }
+    return scene->cheats && !scene->force?(context->merged?7:8):4;
+}
+static int slot(void)
+{
+    int last=limit();if(last<0)return -1;
+    if(recipe->slot>=0)return recipe->slot<=last?recipe->slot:-1;
+    if(recipe->slot==-1)return last;
+    if(recipe->slot==-2)return domain_index==2?(context->merged || !scene->cheats || scene->force?3:4):-1;
+    if(recipe->slot==-3)return domain_index==1?(context->early?3:1):-1;
+#if PSP
+    if(recipe->slot==-4)return domain_index==1?last-1:-1;
+#endif
+    return -1;
+}
+static void initialize(void)
+{
+    memset(&savedata,0,sizeof(savedata));memset(frames,0,sizeof(frames));memset(effects,0,sizeof(effects));
+    frame_count=effect_count=system_calls=0;selected[0]=0;title_row=back_row=-999;
+    optionsMenu=cheatoptionsMenu=controloptionsMenu=videooptionsMenu=systemoptionsMenu=0;
+    cheats=scene->cheats;forcecheatsoff=scene->force;nodebugoptions=scene->nodebug;pause=scene->pause;
+    livescheat=scene->infinite&1;creditscheat=scene->infinite&2;healthcheat=scene->infinite&4;
+    level=scene->level?(void*)levelsets:NULL;levelsets[0].maxplayers=4;versusdamage=scene->versus;
+    savedata.usejoy=scene->usejoy;savedata.mode=savedata.uselog=scene->mode;savedata.effectvol=23;
+    savedata.brightness=recipe->brightness;savedata.gamma=recipe->gamma;
+    savedata.debuginfo=scene->debug&1;savedata.debug_position=scene->debug&2;savedata.debug_features=scene->debug&4;
+    savedata.debug_collision_attack=scene->debug&8;savedata.debug_collision_body=scene->debug&16;savedata.debug_collision_range=scene->debug&32;
+#if PSP
+    savedata.pspcpuspeed=recipe->cpu;
+#endif
+    SAMPLE_BEEP=recipe->beep;SAMPLE_BEEP2=recipe->beep2;current_clock=222;bothnewkeys=0xdeadbeefu;
+}
+static void string(const char *text)
+{
+    putchar('"');for(const unsigned char *p=(const unsigned char*)text;*p;p++){
+        if(*p=='"'||*p=='\\'){putchar('\\');putchar(*p);}else{CHECK(*p>=32);putchar(*p);}
+    }putchar('"');
+}
+static void emit(void)
+{
+#if PSP
+    cpu_setting=savedata.pspcpuspeed;
+#else
+    cpu_setting=0;
+#endif
+    int state[]={@STATE@};
+    printf("{\"revision\":%u,\"domain\":%u,\"case\":%u,\"state\":[",obor_profile_build,domain_index,case_index);
+    for(unsigned i=0;i<sizeof(state)/sizeof(*state);i++)printf("%s%d",i?",":"",state[i]);
+    fputs("],\"frames\":[",stdout);
+    for(unsigned i=0;i<frame_count;i++){
+        if(i){putchar(',');}putchar('[');string(frames[i].selected);
+        printf(",%d,%d,[%d,%d,%d,%d,%d]]",frames[i].title,frames[i].back,
+            frames[i].flags[0],frames[i].flags[1],frames[i].flags[2],frames[i].flags[3],frames[i].flags[4]);
+    }
+    fputs("],\"effects\":[",stdout);
+    static const char *routes[]={"video","sound","control","system","debug","config"};
+    for(unsigned i=0;i<effect_count;i++){
+        if(i){putchar(',');}int *f=effects[i].flags;
+        switch(effects[i].kind){
+        case SOUND:printf("[\"sound\",%d]",effects[i].a);break;
+        case SAVE:printf("[\"save\",%d,%d,%d,%d]",effects[i].a,f[0],f[1],f[2]);break;
+        case MENU:printf("[\"menu\",\"%s\",%d,%d,%d,%d,%d,%d]",routes[effects[i].a],effects[i].b,effects[i].c,effects[i].d,f[0],f[1],f[2]);break;
+        case VWAIT:fputs("[\"vwait\"]",stdout);break;
+        case PALETTE:printf("[\"palette\",%d,%d]",effects[i].a,effects[i].b);break;
+        case CLOCK:printf("[\"clock\",%d,%d,%d]",effects[i].a,effects[i].b,effects[i].c);break;
+        default:CHECK(0);
+        }
+    }
+    puts("]}");
+}
+int main(void)
+{
+    for(unsigned p=0;p<sizeof(contexts)/sizeof(*contexts);p++){
+        context=contexts+p;obor_profile_build=context->revision;
+        for(domain_index=0;domain_index<3;domain_index++){
+            for(case_index=0;case_index<sizeof(recipes)/sizeof(*recipes);case_index++){
+                recipe=recipes+case_index;if(!(recipe->mask&(1<<domain_index)))continue;
+                scene=scenes+recipe->scene;prefix_steps=slot();if(prefix_steps<0)continue;
+                initialize();menus[domain_index]();emit();
+            }
+        }
+    }
+    return 0;
+}

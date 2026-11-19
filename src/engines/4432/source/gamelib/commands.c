@@ -4,7 +4,9 @@
  * These contributions are licensed under BSD-3-Clause; see LICENSE at the root.
  * Upstream code retains its original license and notices.
  * Convert the command-list lookup result to its command enumeration
- * explicitly instead of through a plain pointer cast.
+ * explicitly instead of through a plain pointer cast. Admit basemap
+ * participation, shadow-opacity and stage-completion display commands only
+ * for profiles whose original build registered them.
  * Existing changes recorded here; this is not their implementation date.
  * See MODIFICATIONS.md and docs/modifications/4432.md
  * at the source repository root. Original notices follow below.
@@ -13,6 +15,9 @@
 #include <string.h>
 #include "commands.h"
 #include "globals.h"
+#include <stdint.h>
+
+extern uint32_t obor_profile_build;
 
 void freeCommandList(List *list)
 {
@@ -105,7 +110,10 @@ List *createModelstxtCommandList(void)
     LIST_ADD(CMD_MODELSTXT_NOCHEATS, "nocheats");
     LIST_ADD(CMD_MODELSTXT_NOCHIPDEATH, "nochipdeath");
     LIST_ADD(CMD_MODELSTXT_NOCOST, "nocost");
-    LIST_ADD(CMD_MODELSTXT_NODEBUG, "nodebug");
+    if(obor_profile_build < 4283 || obor_profile_build >= 4328)
+    {
+        LIST_ADD(CMD_MODELSTXT_NODEBUG, "nodebug");
+    }
     LIST_ADD(CMD_MODELSTXT_NODROPEN, "nodropen");
     LIST_ADD(CMD_MODELSTXT_NODROPSPAWN, "nodropspawn");
     LIST_ADD(CMD_MODELSTXT_NOLOST, "nolost");
@@ -225,7 +233,18 @@ List *createModelCommandList(void)
     LIST_ADD(CMD_MODEL_BLOCKODDS, "blockodds");
     LIST_ADD(CMD_MODEL_BLOCKPAIN, "blockpain");
     LIST_ADD(CMD_MODEL_BOMB, "bomb");
-    LIST_ADD(CMD_MODEL_BOOMERANG, "boomerang");
+    if(obor_profile_build >= 4405 && obor_profile_build < 4407)
+    {
+        LIST_ADD(CMD_MODEL_BOOMERANG, "boomrangacc");
+    }
+    else if(obor_profile_build == 4407)
+    {
+        LIST_ADD(CMD_MODEL_BOOMERANG, "boomrang");
+    }
+    else if(obor_profile_build < 4283 || obor_profile_build >= 4408)
+    {
+        LIST_ADD(CMD_MODEL_BOOMERANG, "boomerang");
+    }
     LIST_ADD(CMD_MODEL_BOUNCE, "bounce");
     LIST_ADD(CMD_MODEL_BOUNCEFACTOR, "bouncefactor");
     LIST_ADD(CMD_MODEL_BRANCH, "branch");
@@ -314,7 +333,10 @@ List *createModelCommandList(void)
     LIST_ADD(CMD_MODEL_ICONPOSITION, "iconposition");
     LIST_ADD(CMD_MODEL_ICONW, "iconw");
     LIST_ADD(CMD_MODEL_IDLE, "idle");
-    LIST_ADD(CMD_MODEL_IGNOREATTACKID, "ignoreattackid");
+    if(obor_profile_build < 4283 || obor_profile_build >= 4380)
+    {
+        LIST_ADD(CMD_MODEL_IGNOREATTACKID, "ignoreattackid");
+    }
     LIST_ADD(CMD_MODEL_INHOLESCRIPT, "inholescript");
     LIST_ADD(CMD_MODEL_INSTANTITEMDEATH, "instantitemdeath");
     LIST_ADD(CMD_MODEL_ITEMBOX, "itembox");
@@ -363,7 +385,10 @@ List *createModelCommandList(void)
     LIST_ADD(CMD_MODEL_NOTGRAB, "notgrab");
     LIST_ADD(CMD_MODEL_OFFENSE, "offense");
     LIST_ADD(CMD_MODEL_OFFSCREENKILL, "offscreenkill");
-    LIST_ADD(CMD_MODEL_ONAF, "offscreen_noatk_factor");
+    if(obor_profile_build < 4283 || obor_profile_build >= 4404)
+    {
+        LIST_ADD(CMD_MODEL_ONAF, "offscreen_noatk_factor");
+    }
     LIST_ADD(CMD_MODEL_OFFSET, "offset");
     LIST_ADD(CMD_MODEL_ONBLOCKASCRIPT, "onblockascript");
     LIST_ADD(CMD_MODEL_ONBLOCKOSCRIPT, "onblockoscript");
@@ -446,7 +471,10 @@ List *createModelCommandList(void)
     LIST_ADD(CMD_MODEL_STUN, "stun");
     LIST_ADD(CMD_MODEL_SUBCLASS, "subclass");
     LIST_ADD(CMD_MODEL_SUBENTITY, "subentity");
-    LIST_ADD(CMD_MODEL_SUBJECT_TO_BASEMAP, "subject_to_basemap");
+    if(obor_profile_build < 4283 || obor_profile_build >= 4311)
+    {
+        LIST_ADD(CMD_MODEL_SUBJECT_TO_BASEMAP, "subject_to_basemap");
+    }
     LIST_ADD(CMD_MODEL_SUBJECT_TO_GRAVITY, "subject_to_gravity");
     LIST_ADD(CMD_MODEL_SUBJECT_TO_HOLE, "subject_to_hole");
     LIST_ADD(CMD_MODEL_SUBJECT_TO_MAXZ, "subject_to_maxz");
@@ -571,7 +599,10 @@ List *createLevelCommandList(void)
     LIST_ADD(CMD_LEVEL_SETWEAP, "setweap");
     LIST_ADD(CMD_LEVEL_SHADOWALPHA, "shadowalpha");
     LIST_ADD(CMD_LEVEL_SHADOWCOLOR, "shadowcolor");
-    LIST_ADD(CMD_LEVEL_SHADOWOPACITY, "shadowopacity");
+    if(obor_profile_build < 4283 || obor_profile_build >= 4432)
+    {
+        LIST_ADD(CMD_LEVEL_SHADOWOPACITY, "shadowopacity");
+    }
     LIST_ADD(CMD_LEVEL_SPAWN, "spawn");
     LIST_ADD(CMD_LEVEL_SPAWN1, "spawn1");
     LIST_ADD(CMD_LEVEL_SPAWN2, "spawn2");
@@ -645,7 +676,10 @@ List *createLevelOrderCommandList(void)
     LIST_ADD(CMD_LEVELORDER_NEXT, "next");
     LIST_ADD(CMD_LEVELORDER_NOSAME, "nosame");
     LIST_ADD(CMD_LEVELORDER_NOSHARE, "noshare");
-    LIST_ADD(CMD_LEVELORDER_NOSHOWCOMPLETE, "noshowcomplete");
+    if(obor_profile_build < 4283 || obor_profile_build >= 4394)
+    {
+        LIST_ADD(CMD_LEVELORDER_NOSHOWCOMPLETE, "noshowcomplete");
+    }
     LIST_ADD(CMD_LEVELORDER_NOSLOWFX, "noslowfx");
     LIST_ADD(CMD_LEVELORDER_OLBARSIZE, "olbarsize");
     LIST_ADD(CMD_LEVELORDER_OLICON, "olicon");
@@ -693,7 +727,10 @@ List *createLevelOrderCommandList(void)
     LIST_ADD(CMD_LEVELORDER_P4SCORE, "p4score");
     LIST_ADD(CMD_LEVELORDER_P4SHOOT, "p4shoot");
     LIST_ADD(CMD_LEVELORDER_P4SMENU, "p4smenu");
-    LIST_ADD(CMD_LEVELORDER_PAUSEOFFSET, "pauseoffset");
+    if(obor_profile_build < 4283 || obor_profile_build >= 4356)
+    {
+        LIST_ADD(CMD_LEVELORDER_PAUSEOFFSET, "pauseoffset");
+    }
     LIST_ADD(CMD_LEVELORDER_RUSH, "rush");
     LIST_ADD(CMD_LEVELORDER_RUSHBONUS, "rushbonus");
     LIST_ADD(CMD_LEVELORDER_SCBONUSES, "scbonuses");

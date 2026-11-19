@@ -1,0 +1,190 @@
+/* SPDX-License-Identifier: BSD-3-Clause
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me>
+ */
+#include <stdint.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include "openbor.h"
+#undef printf
+
+uint32_t obor_profile_build;
+static entity actor, parent;
+static s_anim animations[2];
+static s_anim *slots[] = { &animations[0], &animations[1] };
+static unsigned animations_set, frames_set, kills;
+static const char *stage;
+
+#define CHECK(condition) do {                                                \
+    if(!(condition))                                                        \
+    {                                                                       \
+        fprintf(stderr, "Profile %u %s: %s\n", obor_profile_build, stage, #condition); \
+        abort();                                                            \
+    }                                                                       \
+} while(0)
+
+void kill(entity *ent) { CHECK(ent == &actor); ++kills; }
+void ent_set_anim(entity *ent, int number, int reset)
+{
+    CHECK(ent == &actor && number == 1 && reset == 1);
+    ent->animnum = number;
+    ent->animation = slots[number];
+    ent->animpos = 0;
+    ++animations_set;
+}
+void update_frame(entity *ent, int frame)
+{
+    CHECK(ent == &actor && frame == 3);
+    ent->animpos = frame;
+    ++frames_set;
+}
+
+@METHODS@
+
+static void reset(void)
+{
+    memset(&actor, 0, sizeof(actor));
+    memset(&parent, 0, sizeof(parent));
+    actor.modeldata.animation = slots;
+    actor.modeldata.animation_capacity = 2;
+    animations[0].numframes = animations[1].numframes = 4;
+    actor.animation = slots[0];
+    actor.direction = DIRECTION_RIGHT;
+    actor.sortid = 19;
+    actor.binding.sortid = 73;
+    actor.position.x = 11;
+    actor.position.z = 12;
+    actor.position.y = 13;
+    parent.position.x = 100;
+    parent.position.z = 200;
+    parent.position.y = 300;
+    parent.direction = DIRECTION_LEFT;
+    parent.sortid = 200;
+    animations_set = frames_set = kills = 0;
+}
+
+static unsigned native_checks(int has_sort)
+{
+    static const struct { int mode, direction[2]; float x[2]; } directions[] = {
+        { DIRECTION_ADJUST_NONE, {DIRECTION_RIGHT, DIRECTION_RIGHT}, {95, 105} },
+        { DIRECTION_ADJUST_SAME, {DIRECTION_LEFT, DIRECTION_RIGHT}, {95, 105} },
+        { DIRECTION_ADJUST_OPPOSITE, {DIRECTION_RIGHT, DIRECTION_LEFT}, {95, 105} },
+        { DIRECTION_ADJUST_RIGHT, {DIRECTION_RIGHT, DIRECTION_RIGHT}, {105, 105} },
+        { DIRECTION_ADJUST_LEFT, {DIRECTION_LEFT, DIRECTION_LEFT}, {105, 105} },
+        { 12345, {DIRECTION_RIGHT, DIRECTION_RIGHT}, {105, 105} },
+    };
+    static const int parent_directions[] = { DIRECTION_LEFT, DIRECTION_RIGHT };
+    stage = "unattached actor";
+    reset();
+    adjust_bind(&actor);
+    CHECK(actor.sortid == 19 && actor.position.x == 11);
+
+    stage = "native direction";
+    for(unsigned d = 0; d < sizeof(directions) / sizeof(*directions); d++)
+    for(unsigned p = 0; p < sizeof(parent_directions) / sizeof(*parent_directions); p++)
+    {
+        reset();
+        parent.direction = parent_directions[p];
+        actor.binding.ent = &parent;
+        actor.binding.offset_flag.x = actor.binding.offset_flag.z = 1;
+        actor.binding.offset.x = 5;
+        actor.binding.offset.z = 6;
+        actor.binding.direction = directions[d].mode;
+        adjust_bind(&actor);
+        CHECK(actor.direction == directions[d].direction[p] && actor.position.x == directions[d].x[p]);
+        CHECK(actor.position.z == 206 && actor.position.y == 13);
+        CHECK(actor.sortid == (has_sort ? 273 : 19));
+    }
+
+    stage = "animation and frame alignment";
+    reset();
+    actor.binding.ani_bind = 3;
+    actor.binding.ent = &parent;
+    parent.animnum = 1;
+    parent.animpos = 3;
+    adjust_bind(&actor);
+    CHECK(animations_set == 1 && frames_set == 1 && actor.animnum == 1 && actor.animpos == 3);
+
+    stage = "unavailable bound animation";
+    for(int destroy = 0; destroy <= 1; destroy++)
+    {
+        reset();
+        actor.binding.ani_bind = destroy ? 7 : 3;
+        actor.binding.ent = &parent;
+        actor.binding.offset_flag.x = 1;
+        parent.animnum = 2;
+        adjust_bind(&actor);
+        CHECK(actor.binding.ent == NULL && kills == (unsigned)destroy);
+        CHECK(actor.position.x == 11 && actor.sortid == 19 && !animations_set && !frames_set);
+    }
+    return 16;
+}
+
+static unsigned script_checks(int has_sort)
+{
+    static const struct {
+        int argc, detach, bad_x;
+        VARTYPE sort_type;
+        LONG sort_value;
+    } cases[] = {
+        {2, 0, 0, VT_EMPTY, 0},
+        {7, 0, 0, VT_EMPTY, 0},
+        {8, 0, 0, VT_INTEGER, -4},
+        {8, 0, 0, VT_EMPTY, 0},
+        {8, 0, 0, VT_STR, 0},
+        {2, 1, 0, VT_EMPTY, 0},
+        {8, 0, 1, VT_INTEGER, 5},
+    };
+    stage = "script binding";
+    for(unsigned i = 0; i < sizeof(cases) / sizeof(*cases); i++)
+    {
+        reset();
+        if(cases[i].detach)
+        {
+            actor.binding.ent = &parent;
+            actor.binding.offset_flag.x = actor.binding.offset_flag.z = actor.binding.offset_flag.y = 1;
+        }
+        ScriptVariant data[] = {
+            {.vt = VT_PTR, .ptrVal = &actor},
+            {.vt = VT_PTR, .ptrVal = cases[i].detach ? NULL : &parent},
+            {.vt = cases[i].bad_x ? VT_PTR : VT_INTEGER, .lVal = 2},
+            {.vt = VT_INTEGER, .lVal = 4}, {.vt = VT_INTEGER, .lVal = 6},
+            {.vt = VT_INTEGER, .lVal = DIRECTION_ADJUST_RIGHT},
+            {.vt = VT_INTEGER, .lVal = 0},
+            {.vt = cases[i].sort_type, .lVal = cases[i].sort_value},
+        };
+        ScriptVariant *args[] = {
+            &data[0], &data[1], &data[2], &data[3], &data[4], &data[5], &data[6], &data[7]
+        };
+        ScriptVariant ret = {0}, *out = &ret;
+        int status = openbor_bindentity(args, &out, cases[i].argc);
+        const int failed = cases[i].bad_x || (has_sort && cases[i].sort_type == VT_STR);
+        CHECK(status == (failed ? E_FAIL : S_OK) && out == NULL);
+        CHECK(actor.binding.ent == (cases[i].detach ? NULL : &parent));
+        const int moved = cases[i].argc >= 7 && !failed;
+        CHECK(actor.position.x == (moved ? 102 : 11));
+        CHECK(actor.position.z == (moved ? 204 : 12));
+        CHECK(actor.position.y == (moved ? 306 : 13));
+        const int sorted = has_sort && !cases[i].detach;
+        const int offset = cases[i].sort_type == VT_INTEGER && !failed ? cases[i].sort_value : -1;
+        CHECK(actor.binding.sortid == (sorted ? offset : 73));
+        CHECK(actor.sortid == (sorted && !failed ? 200 + offset : 19));
+        if(cases[i].detach)
+            CHECK(!actor.binding.offset_flag.x && !actor.binding.offset_flag.z && !actor.binding.offset_flag.y);
+    }
+    return sizeof(cases) / sizeof(*cases);
+}
+
+int main(void)
+{
+    static const struct { unsigned revision; int has_sort; } contexts[] = { @PROFILES@ };
+    unsigned checks = 0;
+    for(unsigned r = 0; r < sizeof(contexts) / sizeof(*contexts); r++)
+    {
+        obor_profile_build = contexts[r].revision;
+        checks += native_checks(contexts[r].has_sort);
+        checks += script_checks(contexts[r].has_sort);
+    }
+    printf("{\"contexts\":%zu,\"checks\":%u}\n", sizeof(contexts) / sizeof(*contexts), checks);
+    return 0;
+}

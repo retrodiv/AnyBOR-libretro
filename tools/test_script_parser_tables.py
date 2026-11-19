@@ -32,7 +32,7 @@ class ParserTables(unittest.TestCase):
                     includes = [library, library.parent, library.parent / 'gamelib',
                                 library.parent / 'preprocessorlib']
                     subprocess.run(compiler + warnings + [
-                        '-std=c11', '-Wall', '-Wextra', '-Werror',
+                        '-std=c11', '-D_GNU_SOURCE', '-Wall', '-Wextra', '-Werror',
                         '-Wno-error=deprecated-declarations',
                         '-DOBOR_ENGINE_BUILD=' + engine['build'],
                         '-fsanitize=address,undefined', '-g',

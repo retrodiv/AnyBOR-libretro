@@ -1,0 +1,203 @@
+/* SPDX-License-Identifier: BSD-3-Clause
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me>
+ */
+#include <stdarg.h>
+#include <stdint.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <strings.h>
+#include "openbor.h"
+#include "translation.h"
+#undef printf
+#ifndef stricmp
+#define stricmp strcasecmp
+#endif
+
+uint32_t obor_profile_build;
+s_videomodes videomodes = {.hRes = 320, .dOffset = 200, .hShift = 3, .vShift = 4};
+s_savedata savedata;
+static s_level room;
+s_level *level = &room;
+const s_drawmethod plainmethod = {0};
+s_player player[MAX_PLAYERS];
+s_set_entry sets[1], *levelsets = sets;
+char skipselect[MAX_PLAYERS][MAX_NAME_LEN];
+int current_set, nojoin, nodropen, colourselect, PLAYER_LIVES = 3, CONTINUES = 5;
+entity *smartbomber, *textbox;
+int noshare, credits, creditscheat;
+int timeleft, oldtime, timetoshow, showtimeover, gosound, showgo, SAMPLE_GO = -1;
+u32 go_time, time;
+int timeicon = 9, timeicon_offsets[2] = {11, 12}, timeloc[6] = {6, 7, 0, 0, 0, 2};
+int golsprite = 10, gosprite = 11;
+u64 freeram = 12000, totalram = 32000, usedram = 20000;
+static s_model character = {.name = "unit-character"};
+static s_anim animation;
+static entity actor = {.animation = &animation};
+static entity *entities[] = {&actor};
+entity **ent_list = entities;
+int ent_max = 1, max_collisons = 2;
+static int model_selections;
+static int calls;
+
+HRESULT Interpreter_Call(Interpreter *interpreter) { abort(); }
+HRESULT Interpreter_EvalInstruction(Interpreter *interpreter) { abort(); }
+void spawnplayer(int slot) { abort(); }
+void drop_all_enemies(void) { abort(); }
+void execute_join_script(int slot) { abort(); }
+void execute_timetick_script(int value, int go) {}
+int sound_play_sample(int sample, unsigned priority, int left, int right, unsigned speed) { abort(); }
+int nextcolourmap(s_model *model, int index) { abort(); }
+int prevcolourmap(s_model *model, int index) { abort(); }
+s_model *findmodel(char *name) { abort(); }
+s_model *prevplayermodeln(s_model *model, int index) { abort(); }
+s_model *nextplayermodeln(s_model *model, int index)
+{
+    if(model || index != 0) abort();
+    ++model_selections;
+    return &character;
+}
+
+char *ob_gettrans(char *message) { return message; }
+unsigned getFPS(void) { return 42; }
+int spriteq_get_sprite_count(void) { return 13; }
+int spriteq_get_sprite_max(void) { return 5000; }
+char *commaprint(u64 value)
+{
+    static char buffer[32];
+    snprintf(buffer, sizeof(buffer), "%llu", (unsigned long long)value);
+    return buffer;
+}
+
+static void separator(void)
+{
+    if(calls++) putchar(',');
+}
+
+static void event(const char *name)
+{
+    separator();
+    printf("[\"%s\"]", name);
+}
+
+void font_printf(int x, int y, int font, int layer, char *format, ...)
+{
+    char buffer[80];
+    va_list args;
+    va_start(args, format);
+    int count = vsnprintf(buffer, sizeof(buffer), format, args);
+    va_end(args);
+    if(count < 0 || (size_t)count >= sizeof(buffer) || strpbrk(buffer, "\"\\\n")) abort();
+    separator();
+    printf("[\"text\",%d,%d,%d,%d,\"%s\"]", x, y, font, layer, buffer);
+}
+
+void spriteq_add_box(int x, int y, int width, int height, int z, int colour, s_drawmethod *method)
+{
+    if(method) abort();
+    separator();
+    printf("[\"box\",%d,%d,%d,%d,%d,%d]", x, y, width, height, z, colour);
+}
+
+void spriteq_add_sprite(int x, int y, int z, int id, s_drawmethod *method, int sortid)
+{
+    separator();
+    printf("[\"sprite\",%d,%d,%d,%d,%d,%d]", x, y, z, id, method ? method->flipx : 0, sortid);
+}
+
+// These providers mark dispatch; their geometry and text have separate contracts.
+int _makecolour(int r, int g, int b) { return (r << 16) | (g << 8) | b; }
+void draw_position_entity(entity *ent, int offset_z, int colour, s_drawmethod *method) { event("position"); }
+void draw_features_entity(entity *ent, int offset_z, int colour, s_drawmethod *method) { event("features"); }
+void draw_box_on_entity(entity *ent, int x, int y, int z, int width, int height,
+                        int offset_z, int colour, s_drawmethod *method) { event("range"); }
+
+#define draw_visual_debug native_draw_visual_debug
+@VISUAL_DEBUG@
+#undef draw_visual_debug
+
+void draw_visual_debug(void)
+{
+    event("overlay");
+    native_draw_visual_debug();
+}
+
+@PERFORMANCE@
+@UPDATE@
+static void draw_status_tail(void)
+{
+    s_drawmethod drawmethod = plainmethod;
+    @STATUS_TAIL@
+}
+
+static void overlay_cases(void)
+{
+    static const unsigned flags[] = {
+        0, 1, 2, 4, 8, 16, 32, 1|2, 1|4, 4|8, 1|2|4|8|16|32,
+    };
+    savedata.windowpos = 5;
+    room.notime = 0;
+    room.scrolldir = SCROLL_RIGHT;
+    timetoshow = 7;
+    showtimeover = showgo = 1;
+    for(size_t i = 0; i < sizeof(flags) / sizeof(*flags); ++i)
+    {
+        savedata.debuginfo = !!(flags[i] & 1);
+        savedata.debug_position = !!(flags[i] & 2);
+        savedata.debug_features = !!(flags[i] & 4);
+        savedata.debug_collision_range = !!(flags[i] & 8);
+        savedata.debug_collision_attack = !!(flags[i] & 16);
+        savedata.debug_collision_body = !!(flags[i] & 32);
+        calls = 0;
+        printf("%s[", i ? "," : "");
+        draw_status_tail();
+        putchar(']');
+    }
+}
+
+static void join_cases(void)
+{
+    static const struct { int disabled, start, local, shared, first, personal; } cases[] = {
+        {0, 1, 0, 3, 0, 0},
+        {1, 1, 0, 3, 0, 0},
+        {0, 0, 0, 3, 0, 0},
+        {0, 1, 0, 0, 0, 0},
+        {0, 1, 2, 0, 0, 1},
+        {1, 1, 2, 0, 0, 1},
+        {0, 1, 0, 0, 1, 1},
+        {1, 1, 0, 0, 1, 1},
+    };
+    sets[0].maxplayers = 1;
+    room.settime = 9;
+    for(size_t i = 0; i < sizeof(cases) / sizeof(*cases); ++i)
+    {
+        player[0] = (s_player){0};
+        player[0].hasplayed = !cases[i].first;
+        player[0].playkeys = cases[i].start ? FLAG_START : 0;
+        player[0].credits = cases[i].local;
+        player[0].lives = 4;
+        nojoin = cases[i].disabled;
+        credits = cases[i].shared;
+        noshare = cases[i].personal;
+        timeleft = 6 * COUNTER_SPEED;
+        model_selections = 0;
+        updatestatus();
+        printf("%s[%d,%d,%d,%d,%d,%d,%d]", i ? "," : "", player[0].joining,
+            credits, player[0].credits, timeleft / COUNTER_SPEED, model_selections,
+            player[0].lives, !!(player[0].playkeys & FLAG_START));
+    }
+}
+
+int main(void)
+{
+    const unsigned profiles[] = {@PROFILES@};
+    for(size_t i = 0; i < sizeof(profiles) / sizeof(*profiles); ++i)
+    {
+        obor_profile_build = profiles[i];
+        printf("{\"revision\":%u,\"overlay\":[", profiles[i]);
+        overlay_cases();
+        printf("],\"join\":[");
+        join_cases();
+        puts("]}");
+    }
+}

@@ -5,7 +5,8 @@
  * Upstream code retains its original license and notices.
  * Allocate collision pointer slots through the highest author-facing index
  * used by each collection. Track each model's allocated animation-table
- * capacity and reject lookups outside it.
+ * capacity and reject lookups outside it. Retain the historical last-hit
+ * scalar independently of the live attack reference.
  * Existing changes recorded here; this is not their implementation date.
  * See MODIFICATIONS.md and docs/modifications/4432.md
  * at the source repository root. Original notices follow below.
@@ -564,6 +565,8 @@ typedef enum //Animations
     ANI_GETBOOMERANGINAIR,
     MAX_ANIS                // Maximum # of animations. This must always be last.
 } e_animations;
+
+int obor_profile_animation_base(void);
 
 typedef enum
 {
@@ -1452,6 +1455,7 @@ typedef struct
 // per animation frame.
 typedef struct
 {
+    s_collision_attack *obor_frame_record;
     s_collision_attack **instance;
     size_t obor_instance_capacity;
 } s_collision_attack_list;
@@ -1466,6 +1470,7 @@ typedef struct
     s_collision_body    *body;      // Collision detect box.
     int                 confirm;    // Will engine's default hit handling be used?
     s_axis_f            position;   // X,Y,Z of last hit.
+    int                 type;       // Historical scalar snapshot, separate from the live attack.
 } s_lasthit;
 
 typedef struct
@@ -2040,6 +2045,7 @@ typedef struct entity
     unsigned per1; // Used to store at what health value the entity begins to flash
     unsigned per2; // Used to store at what health value the entity flashes more rapidly
     int boomerang_loop;
+    float boomerang_dest_vel;
     e_direction direction;
     int nograb; // Some enemies cannot be grabbed (bikes) - now used with cantgrab as well
     int nograb_default; // equal to nograb  but this is remain the default value setetd in entity txt file (by White Dragon)
@@ -2809,6 +2815,8 @@ int playRecordedInputs(void);
 int freeRecordedInputs(void);
 a_playrecstatus* init_input_recorder(void);
 void free_input_recorder(void);
+int obor_profile_name_limit(void);
+void obor_profile_copy_name(char *destination, const char *source);
 void goto_mainmenu(int);
 
 extern s_savelevel   *savelevel;

@@ -1,0 +1,171 @@
+/* SPDX-License-Identifier: BSD-3-Clause
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me>
+ */
+#include <stddef.h>
+#include <stdint.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#pragma GCC diagnostic ignored "-Wignored-qualifiers"
+#if defined(__clang__)
+#pragma GCC diagnostic ignored "-Wdeprecated-non-prototype"
+#endif
+#include "openbor.h"
+#undef printf
+#undef malloc
+#undef calloc
+#undef free
+
+#define CHECK(condition) do { if(!(condition)) { fprintf(stderr, "%s\n", #condition); abort(); } } while(0)
+uint32_t obor_profile_build;
+int max_collisons;
+
+void shutdown(int status, char *message, ...)
+{
+    fprintf(stderr, "%s\n", message);
+    abort();
+}
+
+HRESULT Interpreter_Call(Interpreter *p) { abort(); }
+HRESULT Interpreter_EvalInstruction(Interpreter *p) { abort(); }
+void exitIfFalse(int value, const char *expression, const char *func, const char *file, int line)
+{
+    if(!value)
+    {
+        fprintf(stderr, "%s\n", expression);
+        abort();
+    }
+}
+
+void setDrawMethod(s_anim *animation, ptrdiff_t frame, s_drawmethod *value) { abort(); }
+s_drawmethod *getDrawMethod(s_anim *animation, ptrdiff_t frame) { abort(); }
+
+@FUNCTIONS@
+
+static const struct {
+    int configured, damage;
+    s_hitbox body, attack;
+    s_axis_i_2d offset;
+} cases[] = {
+@CASES@
+};
+
+static void coordinates(const s_hitbox *box)
+{
+    CHECK(box);
+    printf("[%d,%d,%d,%d,%d,%d]", box->x, box->y, box->width, box->height, box->z1, box->z2);
+}
+
+static void observe(unsigned int index)
+{
+    const __typeof__(cases[0]) *input = &cases[index];
+    s_anim animation = {0};
+    s_collision_body body = {.tag = 127};
+    s_collision_attack attack = {.attack_type = 3, .attack_force = 71, .tag = 29};
+    s_damage_recursive recursive = {.mode = input->damage, .force = 17, .rate = 9};
+    s_drawmethod renderer = {0};
+    s_axis_i move = {0};
+    s_hitbox absent = {0}, body_box = input->body, attack_box = input->attack;
+    s_axis_i_2d offset = input->offset, no_offset = {0};
+    int shadow[2] = {0};
+    float platform[8] = {0};
+
+    max_collisons = input->configured;
+    CHECK(addframe(&animation, 10, 3, 1, 0, &body, &attack, &move, platform,
+                   -1, shadow, -1, &renderer, &no_offset, &recursive, &absent, &absent) == 1);
+    CHECK(addframe(&animation, 11, -3, 1, 0, &body, &attack, &move, platform,
+                   -1, shadow, -1, &renderer, &offset, &recursive, &attack_box, &body_box) == 2);
+    CHECK(addframe(&animation, 12, -3, 1, 0, &body, &attack, &move, platform,
+                   -1, shadow, -1, &renderer, &no_offset, &recursive, &absent, &absent) == 3);
+    CHECK(!animation.vulnerable[0] && !animation.vulnerable[2]);
+    if(animation.collision_body)
+    {
+        CHECK(!animation.collision_body[0] && !animation.collision_body[2]);
+    }
+    if(animation.collision_attack)
+    {
+        CHECK(!animation.collision_attack[0] && !animation.collision_attack[2]);
+    }
+    if(animation.offset)
+    {
+        CHECK(!animation.offset[0] && !animation.offset[2]);
+    }
+
+    s_collision_body_list *bodies = animation.collision_body ? animation.collision_body[1] : NULL;
+    s_collision_attack_list *attacks = animation.collision_attack ? animation.collision_attack[1] : NULL;
+    s_axis_i_2d *stored_offset = animation.offset ? animation.offset[1] : NULL;
+
+    printf("[%u,%u,%d,[%d,%d],[", obor_profile_build, index, animation.vulnerable[1],
+           stored_offset ? stored_offset->x : 0, stored_offset ? stored_offset->y : 0);
+    if(bodies)
+    {
+        CHECK(bodies->obor_instance_capacity == (size_t)max_collisons);
+        for(int i = 0; i < max_collisons; ++i)
+        {
+            s_collision_body *record = bodies->instance[i];
+            if(i) putchar(',');
+            if(!record)
+            {
+                printf("null");
+                continue;
+            }
+            if(i)
+            {
+                CHECK(record != bodies->instance[0]);
+                CHECK(record->coords != bodies->instance[0]->coords);
+            }
+            CHECK(record->coords != &body_box);
+            printf("[%d,%d,", record->index, record->tag);
+            coordinates(record->coords);
+            putchar(']');
+        }
+    }
+    printf("],[");
+    if(attacks)
+    {
+        CHECK(animation.obor_attack_frame_capacity == 3);
+        CHECK(attacks->obor_instance_capacity == (size_t)max_collisons);
+        for(int i = 0; i < max_collisons; ++i)
+        {
+            s_collision_attack *record = attacks->instance[i];
+            if(i) putchar(',');
+            if(!record)
+            {
+                printf("null");
+                continue;
+            }
+            if(i)
+            {
+                CHECK(record != attacks->instance[0]);
+                CHECK(record->coords != attacks->instance[0]->coords);
+                CHECK(!record->recursive || record->recursive != attacks->instance[0]->recursive);
+            }
+            CHECK(record->coords != &attack_box && record->recursive != &recursive);
+            printf("[%d,%d,%d,%d,", record->index, record->tag, record->attack_force, record->attack_type);
+            coordinates(record->coords);
+            if(record->recursive)
+                printf(",[%d,%d,%d]]", record->recursive->mode, record->recursive->force, record->recursive->rate);
+            else
+                printf(",null]");
+        }
+    }
+    printf("]]\n");
+
+    free_frames(&animation);
+    CHECK(!animation.collision_body && !animation.collision_attack && !animation.offset);
+    CHECK(!animation.sprite && !animation.delay && !animation.vulnerable);
+}
+
+int main(void)
+{
+    const unsigned int revisions[] = {@REVISIONS@};
+    for(size_t i = 0; i < sizeof(revisions) / sizeof(revisions[0]); ++i)
+    {
+        obor_profile_build = revisions[i];
+        for(unsigned int j = 0; j < sizeof(cases) / sizeof(cases[0]); ++j)
+        {
+            observe(j);
+        }
+    }
+    return 0;
+}

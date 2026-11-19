@@ -17,7 +17,24 @@
  * colourtable indices and keep selector arithmetic and table reads defined.
  * Transfer loaded stream buffers through aligned local outputs while
  * preserving native record layout and results. Close owned input files after
- * stream loading and on buffer allocation failure.
+ * stream loading and on buffer allocation failure. Preserve the platform
+ * aliases and animation and array script names by profile. Reject a missing
+ * fourth platform coordinate and handle an empty cursor as no movement.
+ * Preserve named action admission and numeric action slots around the simple
+ * animation insertion. Retain the original entity property names, ordinal
+ * values and lookup order across historical script profiles. Resolve those
+ * ordinals before native property dispatch. Preserve the native entity
+ * property reads, writes and argument handling around the historical weapon,
+ * remap, block and boomerang changes. Preserve historical script wall-height
+ * argument selection before querying the terrain. Preserve script reads and
+ * writes of attack and body collision coordinates by profile while retaining
+ * native conversions. Retain the profile's frame record or collection
+ * reference and the identity behavior of native instance queries. Preserve
+ * each profile's complete system-variable names and cached numeric
+ * identifiers. Retain native basemap script-name availability, the
+ * registered height alias and private helper result epochs. Preserve native
+ * cell selection and initial map size by profile, checking owned map storage
+ * before writes. Route the optional basemap generation argument by profile.
  * Existing changes recorded here; this is not their implementation date.
  * See MODIFICATIONS.md and docs/modifications/4432.md
  * at the source repository root. Original notices follow below.
@@ -778,7 +795,8 @@ const char *Script_GetFunctionName(void *functionRef)
     {
         return "rand";
     }
-    else if (functionRef == ((void *)system_srand))
+    else if ((obor_profile_build < 4283 || obor_profile_build >= 4324) &&
+             functionRef == ((void *)system_srand))
     {
         return "srand";
     }
@@ -850,11 +868,13 @@ const char *Script_GetFunctionName(void *functionRef)
     {
         return "atan";
     }
-    else if (functionRef == ((void *)math_trunc))
+    else if ((obor_profile_build < 4283 || obor_profile_build >= 4424) &&
+             functionRef == ((void *)math_trunc))
     {
         return "trunc";
     }
-    else if (functionRef == ((void *)math_round))
+    else if ((obor_profile_build < 4283 || obor_profile_build >= 4424) &&
+             functionRef == ((void *)math_round))
     {
         return "round";
     }
@@ -1017,11 +1037,13 @@ const char *Script_GetFunctionName(void *functionRef)
     {
         return "pausemusic";
     }
-    else if (functionRef == ((void *)openbor_pausesamples))
+    else if ((obor_profile_build < 4283 || obor_profile_build >= 4304) &&
+             functionRef == ((void *)openbor_pausesamples))
     {
         return "pausesamples";
     }
-    else if (functionRef == ((void *)openbor_pausesample))
+    else if ((obor_profile_build < 4283 || obor_profile_build >= 4423) &&
+             functionRef == ((void *)openbor_pausesample))
     {
         return "pausesample";
     }
@@ -1033,11 +1055,13 @@ const char *Script_GetFunctionName(void *functionRef)
     {
         return "stopchannel";
     }
-    else if (functionRef == ((void *)openbor_isactivesample))
+    else if ((obor_profile_build < 4283 || obor_profile_build >= 4305) &&
+             functionRef == ((void *)openbor_isactivesample))
     {
         return "isactivesample";
     }
-    else if (functionRef == ((void *)openbor_sampleid))
+    else if ((obor_profile_build < 4283 || obor_profile_build >= 4308) &&
+             functionRef == ((void *)openbor_sampleid))
     {
         return "sampleid";
     }
@@ -1149,7 +1173,8 @@ const char *Script_GetFunctionName(void *functionRef)
     {
         return "checkbasemap";
     }
-    else if (functionRef == ((void *)openbor_checkbasemapindex))
+    else if ((obor_profile_build < 4283 || obor_profile_build >= 4290) &&
+             functionRef == ((void *)openbor_checkbasemapindex))
     {
         return "checkbasemapindex";
     }
@@ -1273,7 +1298,8 @@ const char *Script_GetFunctionName(void *functionRef)
     {
         return "next";
     }
-    else if (functionRef == ((void *)openbor_previous))
+    else if ((obor_profile_build < 4283 || obor_profile_build >= 4420) &&
+             functionRef == ((void *)openbor_previous))
     {
         return "previous";
     }
@@ -1285,11 +1311,13 @@ const char *Script_GetFunctionName(void *functionRef)
     {
         return "value";
     }
-    else if (functionRef == ((void *)openbor_islast))
+    else if ((obor_profile_build < 4283 || obor_profile_build >= 4420) &&
+             functionRef == ((void *)openbor_islast))
     {
         return "islast";
     }
-    else if (functionRef == ((void *)openbor_isfirst))
+    else if ((obor_profile_build < 4283 || obor_profile_build >= 4420) &&
+             functionRef == ((void *)openbor_isfirst))
     {
         return "isfirst";
     }
@@ -1317,7 +1345,8 @@ const char *Script_GetFunctionName(void *functionRef)
     {
         return "performattack";
     }
-    else if (functionRef == ((void *)openbor_executeanimation))
+    else if ((obor_profile_build < 4283 || obor_profile_build >= 4410) &&
+             functionRef == ((void *)openbor_executeanimation))
     {
         return "executeanimation";
     }
@@ -1345,7 +1374,8 @@ const char *Script_GetFunctionName(void *functionRef)
     {
         return "options";
     }
-    else if (functionRef == ((void *)openbor_playwebm))
+    else if ((obor_profile_build < 4283 || obor_profile_build >= 4380) &&
+             functionRef == ((void *)openbor_playwebm))
     {
         return "playwebm";
     }
@@ -1453,7 +1483,8 @@ const char *Script_GetFunctionName(void *functionRef)
     {
         return "finishlevel";
     }
-    else if (functionRef == ((void *)openbor_gotomainmenu))
+    else if ((obor_profile_build < 4283 || obor_profile_build >= 4293) &&
+             functionRef == ((void *)openbor_gotomainmenu))
     {
         return "gotomainmenu";
     }
@@ -1680,8 +1711,10 @@ void Script_LoadSystemFunctions()
                      (void *)system_NULL, "NULL");
     List_InsertAfter(&theFunctionList,
                      (void *)system_rand, "rand");
-    List_InsertAfter(&theFunctionList,
-                     (void *)system_srand, "srand");
+    if(obor_profile_build < 4283 || obor_profile_build >= 4324)
+    {
+        List_InsertAfter(&theFunctionList, (void *)system_srand, "srand");
+    }
     List_InsertAfter(&theFunctionList,
                      (void *)system_getglobalvar, "getglobalvar");
     List_InsertAfter(&theFunctionList,
@@ -1716,10 +1749,14 @@ void Script_LoadSystemFunctions()
                      (void *)math_acos, "acos");
     List_InsertAfter(&theFunctionList,
                      (void *)math_atan, "atan");
-    List_InsertAfter(&theFunctionList,
-                     (void *)math_trunc, "trunc");
-    List_InsertAfter(&theFunctionList,
-                     (void *)math_round, "round");
+    if(obor_profile_build < 4283 || obor_profile_build >= 4424)
+    {
+        List_InsertAfter(&theFunctionList, (void *)math_trunc, "trunc");
+    }
+    if(obor_profile_build < 4283 || obor_profile_build >= 4424)
+    {
+        List_InsertAfter(&theFunctionList, (void *)math_round, "round");
+    }
     List_InsertAfter(&theFunctionList,
                      (void *)openbor_systemvariant, "openborvariant");
     List_InsertAfter(&theFunctionList,
@@ -1803,18 +1840,26 @@ void Script_LoadSystemFunctions()
                      (void *)openbor_setmusictempo, "setmusictempo");
     List_InsertAfter(&theFunctionList,
                      (void *)openbor_pausemusic, "pausemusic");
-    List_InsertAfter(&theFunctionList,
-                     (void *)openbor_pausesamples, "pausesamples");
-    List_InsertAfter(&theFunctionList,
-                     (void *)openbor_pausesample, "pausesample");
+    if(obor_profile_build < 4283 || obor_profile_build >= 4304)
+    {
+        List_InsertAfter(&theFunctionList, (void *)openbor_pausesamples, "pausesamples");
+    }
+    if(obor_profile_build < 4283 || obor_profile_build >= 4423)
+    {
+        List_InsertAfter(&theFunctionList, (void *)openbor_pausesample, "pausesample");
+    }
     List_InsertAfter(&theFunctionList,
                      (void *)openbor_querychannel, "querychannel");
     List_InsertAfter(&theFunctionList,
                      (void *)openbor_stopchannel, "stopchannel");
-    List_InsertAfter(&theFunctionList,
-                     (void *)openbor_isactivesample, "isactivesample");
-    List_InsertAfter(&theFunctionList,
-                     (void *)openbor_sampleid, "sampleid");
+    if(obor_profile_build < 4283 || obor_profile_build >= 4305)
+    {
+        List_InsertAfter(&theFunctionList, (void *)openbor_isactivesample, "isactivesample");
+    }
+    if(obor_profile_build < 4283 || obor_profile_build >= 4308)
+    {
+        List_InsertAfter(&theFunctionList, (void *)openbor_sampleid, "sampleid");
+    }
     List_InsertAfter(&theFunctionList,
                      (void *)openbor_playsample, "playsample");
     List_InsertAfter(&theFunctionList,
@@ -1864,13 +1909,17 @@ void Script_LoadSystemFunctions()
     List_InsertAfter(&theFunctionList,
                      (void *)openbor_checkplatformbelow, "checkplatformbelow");
     List_InsertAfter(&theFunctionList,
-                     (void *)openbor_checkplatformabove, "checkplatformabove");
+                     (void *)((obor_profile_build >= 4283 && obor_profile_build < 4411)
+                                  ? openbor_checkplatformbelow : openbor_checkplatformabove), "checkplatformabove");
     List_InsertAfter(&theFunctionList,
-                     (void *)openbor_checkplatformbetween, "checkplatformbetween");
+                     (void *)((obor_profile_build >= 4283 && obor_profile_build < 4411)
+                                  ? openbor_checkplatformbelow : openbor_checkplatformbetween), "checkplatformbetween");
     List_InsertAfter(&theFunctionList,
                      (void *)openbor_checkbasemap, "checkbasemap");
-    List_InsertAfter(&theFunctionList,
-                     (void *)openbor_checkbasemap, "checkbasemapindex");
+    if(obor_profile_build < 4283 || obor_profile_build >= 4290)
+    {
+        List_InsertAfter(&theFunctionList, (void *)openbor_checkbasemap, "checkbasemapindex");
+    }
     List_InsertAfter(&theFunctionList,
                      (void *)openbor_generatebasemap, "generatebasemap");
     List_InsertAfter(&theFunctionList,
@@ -1931,16 +1980,22 @@ void Script_LoadSystemFunctions()
                      (void *)openbor_reset, "reset");
     List_InsertAfter(&theFunctionList,
                      (void *)openbor_next, "next");
-    List_InsertAfter(&theFunctionList,
-                     (void *)openbor_previous, "previous");
+    if(obor_profile_build < 4283 || obor_profile_build >= 4420)
+    {
+        List_InsertAfter(&theFunctionList, (void *)openbor_previous, "previous");
+    }
     List_InsertAfter(&theFunctionList,
                      (void *)openbor_key, "key");
     List_InsertAfter(&theFunctionList,
                      (void *)openbor_value, "value");
-    List_InsertAfter(&theFunctionList,
-                     (void *)openbor_islast, "islast");
-    List_InsertAfter(&theFunctionList,
-                     (void *)openbor_isfirst, "isfirst");
+    if(obor_profile_build < 4283 || obor_profile_build >= 4420)
+    {
+        List_InsertAfter(&theFunctionList, (void *)openbor_islast, "islast");
+    }
+    if(obor_profile_build < 4283 || obor_profile_build >= 4420)
+    {
+        List_InsertAfter(&theFunctionList, (void *)openbor_isfirst, "isfirst");
+    }
     List_InsertAfter(&theFunctionList,
                      (void *)openbor_allocscreen, "allocscreen");
     List_InsertAfter(&theFunctionList,
@@ -1953,8 +2008,10 @@ void Script_LoadSystemFunctions()
                      (void *)openbor_updateframe, "updateframe");
     List_InsertAfter(&theFunctionList,
                      (void *)openbor_performattack, "performattack");
-    List_InsertAfter(&theFunctionList,
-                     (void *)openbor_executeanimation, "executeanimation");
+    if(obor_profile_build < 4283 || obor_profile_build >= 4410)
+    {
+        List_InsertAfter(&theFunctionList, (void *)openbor_executeanimation, "executeanimation");
+    }
     List_InsertAfter(&theFunctionList,
                      (void *)openbor_setidle, "setidle");
     List_InsertAfter(&theFunctionList,
@@ -1967,8 +2024,10 @@ void Script_LoadSystemFunctions()
                      (void *)openbor_hallfame, "hallfame");
     List_InsertAfter(&theFunctionList,
                      (void *)openbor_menu_options, "options");
-    List_InsertAfter(&theFunctionList,
-                     (void *)openbor_playwebm, "playwebm");
+    if(obor_profile_build < 4283 || obor_profile_build >= 4380)
+    {
+        List_InsertAfter(&theFunctionList, (void *)openbor_playwebm, "playwebm");
+    }
     List_InsertAfter(&theFunctionList,
                      (void *)openbor_playgif, "playgif");
     List_InsertAfter(&theFunctionList,
@@ -2022,8 +2081,11 @@ void Script_LoadSystemFunctions()
                      (void *)openbor_loadgamefile, "loadgamefile");
     List_InsertAfter(&theFunctionList,
                      (void *)openbor_finishlevel, "finishlevel");
-    List_InsertAfter(&theFunctionList,
-                     (void *)openbor_gotomainmenu, "gotomainmenu");
+    if(obor_profile_build < 4283 || obor_profile_build >= 4293)
+    {
+        List_InsertAfter(&theFunctionList,
+                         (void *)openbor_gotomainmenu, "gotomainmenu");
+    }
     List_InsertAfter(&theFunctionList,
                      (void *)openbor_playgame, "playgame");
     List_InsertAfter(&theFunctionList,
@@ -2078,7 +2140,7 @@ HRESULT system_srand(ScriptVariant **varlist , ScriptVariant **pretvar, int para
     LONG ltemp;
 
     *pretvar = NULL;
-    if(paramCount != 1)
+    if(paramCount != 1 || !varlist || !varlist[0])
     {
         return E_FAIL;
     }
@@ -2414,9 +2476,16 @@ HRESULT math_atan(ScriptVariant **varlist , ScriptVariant **pretvar, int paramCo
 
 HRESULT math_trunc(ScriptVariant **varlist , ScriptVariant **pretvar, int paramCount)
 {
+    if(paramCount < 1 || !varlist || !varlist[0])
+    {
+        *pretvar = NULL;
+        return E_FAIL;
+    }
+
     DOUBLE dbltemp;
 
-    if(SUCCEEDED(ScriptVariant_DecimalValue(varlist[0], &dbltemp)))
+    if(SUCCEEDED(ScriptVariant_DecimalValue(varlist[0], &dbltemp)) &&
+       dbltemp > -2147483649.0 && dbltemp < 2147483648.0)
     {
         ScriptVariant_ChangeType(*pretvar, VT_INTEGER);
         (*pretvar)->lVal = (LONG)(trunc(dbltemp));
@@ -2428,6 +2497,12 @@ HRESULT math_trunc(ScriptVariant **varlist , ScriptVariant **pretvar, int paramC
 
 HRESULT math_round(ScriptVariant **varlist , ScriptVariant **pretvar, int paramCount)
 {
+    if(paramCount < 1 || !varlist || !varlist[0])
+    {
+        *pretvar = NULL;
+        return E_FAIL;
+    }
+
     DOUBLE dbltemp;
 
     if(SUCCEEDED(ScriptVariant_DecimalValue(varlist[0], &dbltemp)))
@@ -2569,16 +2644,54 @@ static const char *svlist[] =
 
 
 // ===== openborvariant =====
+/* Native names remain sorted; translate only the profile's missing entries. */
+static int obor_systemvariant_available(int property)
+{
+    if(obor_profile_build < 4283) return 1;
+    return (property != _sv_maxsoundchannels || obor_profile_build >= 4304) &&
+           (property != _sv_noshowcomplete || obor_profile_build >= 4394) &&
+           (property != _sv_porting || obor_profile_build >= 4345) &&
+           (property != _sv_shadowopacity || obor_profile_build >= 4432);
+}
+
+static int obor_systemvariant_native(int property)
+{
+    if(property < 0 || property >= _sv_the_end) return _sv_the_end;
+    if(!obor_systemvariant_available(_sv_maxsoundchannels) && property >= _sv_maxsoundchannels) ++property;
+    if(!obor_systemvariant_available(_sv_noshowcomplete) && property >= _sv_noshowcomplete) ++property;
+    if(!obor_systemvariant_available(_sv_porting) && property >= _sv_porting) ++property;
+    if(!obor_systemvariant_available(_sv_shadowopacity) && property >= _sv_shadowopacity) ++property;
+    return property < _sv_the_end ? property : _sv_the_end;
+}
+
+static int obor_systemvariant_logical(int property)
+{
+    int logical = property;
+    if(!obor_systemvariant_available(_sv_maxsoundchannels) && property > _sv_maxsoundchannels) --logical;
+    if(!obor_systemvariant_available(_sv_noshowcomplete) && property > _sv_noshowcomplete) --logical;
+    if(!obor_systemvariant_available(_sv_porting) && property > _sv_porting) --logical;
+    if(!obor_systemvariant_available(_sv_shadowopacity) && property > _sv_shadowopacity) --logical;
+    return logical;
+}
+
 int mapstrings_systemvariant(ScriptVariant **varlist, int paramCount)
 {
-    char *propname;
-    int prop;
-
-
-    MAPSTRINGS(varlist[0], svlist, _sv_the_end,
-               "openborvariant: System variable name not found: '%s'\n");
-
-    return 1;
+    int property;
+    char *name;
+    if(paramCount < 1 || !varlist || !varlist[0]) return 0;
+    if(varlist[0]->vt != VT_STR) return 1;
+    name = StrCache_GetIfPresent(varlist[0]->strVal);
+    if(!name) return 0;
+    property = searchList(svlist, name, _sv_the_end);
+    if(property >= 0 && obor_systemvariant_available(property))
+    {
+        int logical = obor_systemvariant_logical(property);
+        ScriptVariant_ChangeType(varlist[0], VT_INTEGER);
+        varlist[0]->lVal = logical;
+        return 1;
+    }
+    printf("openborvariant: System variable name not found: '%s'\n", name);
+    return 0;
 }
 
 //sample function, used for getting a system variant
@@ -2599,7 +2712,7 @@ HRESULT openbor_systemvariant(ScriptVariant **varlist , ScriptVariant **pretvar,
     //you can check the argument type if you like
     if(varlist[0]->vt == VT_INTEGER)
     {
-        variantindex = varlist[0]->lVal;
+        variantindex = obor_systemvariant_native(varlist[0]->lVal);
     }
     else
     {
@@ -2642,7 +2755,7 @@ HRESULT openbor_changesystemvariant(ScriptVariant **varlist , ScriptVariant **pr
     //you can check the argument type if you like
     if(arg->vt == VT_INTEGER)
     {
-        variantindex = arg->lVal;
+        variantindex = obor_systemvariant_native(arg->lVal);
     }
     else
     {
@@ -4558,6 +4671,115 @@ int mapstrings_animationproperty(ScriptVariant **varlist, int paramCount)
 //    return result;
 }
 
+static int obor_script_collision_coordinates(void)
+{
+    return obor_profile_build >= 4283 && obor_profile_build < 4358;
+}
+
+/* Preserve the original ordinal in script values and resolve it at dispatch. */
+static const struct { int selector; unsigned introduced; } obor_entity_property_additions[] =
+{
+    {_ep_boomerang, 4405},
+    {_ep_custom_target, 4414},
+    {_ep_facing, 4306},
+    {_ep_jumpmovex, 4303},
+    {_ep_jumpmovez, 4303},
+    {_ep_jumpspeed, 4327},
+    {_ep_numweapons, 4400},
+    {_ep_offscreen_noatk_factor, 4405},
+    {_ep_offscreenkill, 4404},
+    {_ep_subject_to_basemap, 4311},
+    {_ep_walkoffmovex, 4303},
+    {_ep_walkoffmovez, 4303},
+    {_ep_weaploss, 4401},
+    {_ep_weapnum, 4400},
+};
+
+static LONG obor_profile_subtype_value(int subtype)
+{
+    if(obor_profile_build >= 4283 && obor_profile_build < 4407 &&
+       subtype >= SUBTYPE_TOUCH && subtype <= SUBTYPE_CHASE)
+    {
+        return subtype - 1;
+    }
+    return subtype;
+}
+
+static int obor_entity_property_uses_history(void)
+{
+    return obor_profile_build >= 4283 && obor_profile_build < 4414;
+}
+
+static int obor_resolve_entity_property(LONG ordinal)
+{
+    if(ordinal < 0 || ordinal >= _ep_the_end) return -1;
+    if(obor_entity_property_uses_history())
+    {
+        /* The insertions are ordered by their position in the physical table. */
+        for(size_t i = 0; i < sizeof(obor_entity_property_additions) / sizeof(*obor_entity_property_additions); ++i)
+        {
+            if(ordinal >= obor_entity_property_additions[i].selector &&
+               obor_profile_build < obor_entity_property_additions[i].introduced)
+                ++ordinal;
+        }
+    }
+    return ordinal < _ep_the_end ? (int)ordinal : -1;
+}
+
+static const char *obor_entity_property_name(int selector)
+{
+    if(selector < 0 || selector >= _ep_the_end) return "";
+    if(selector == _ep_boomerang && obor_entity_property_uses_history())
+    {
+        if(obor_profile_build < 4407) return "boomrangacc";
+        if(obor_profile_build < 4408) return "boomrang";
+    }
+    return eplist[selector];
+}
+
+static int obor_map_entity_property_name(ScriptVariant *value)
+{
+    const char *name;
+    int ordinal;
+    if(value->vt != VT_STR) return 1;
+    name = StrCache_Get(value->strVal);
+    if(obor_entity_property_uses_history())
+    {
+        const char *names[_ep_the_end];
+        int count = 0;
+        size_t addition = 0;
+        const size_t additions = sizeof(obor_entity_property_additions) / sizeof(*obor_entity_property_additions);
+        for(int selector = 0; selector < _ep_the_end; ++selector)
+        {
+            if(addition < additions && selector == obor_entity_property_additions[addition].selector)
+            {
+                const unsigned introduced = obor_entity_property_additions[addition++].introduced;
+                if(obor_profile_build < introduced) continue;
+            }
+            names[count++] = obor_entity_property_name(selector);
+        }
+        /* Preserve the native search even when a historical table is not sorted. */
+        ordinal = searchList(names, name, count);
+    }
+    else
+    {
+        ordinal = searchList(eplist, name, _ep_the_end);
+    }
+    if(ordinal < 0)
+    {
+        printf("Property name '%s' is not supported by function getentityproperty.\n", name);
+        return 0;
+    }
+    ScriptVariant_ChangeType(value, VT_INTEGER);
+    value->lVal = ordinal;
+    return 1;
+}
+
+static int obor_has_simple_animation_action(void)
+{
+    return obor_profile_build < 4283 || obor_profile_build >= 4409;
+}
+
 int mapstrings_entityproperty(ScriptVariant **varlist, int paramCount)
 {
     char *propname;
@@ -4743,16 +4965,15 @@ int mapstrings_entityproperty(ScriptVariant **varlist, int paramCount)
     }
 
     // map entity properties
-    MAPSTRINGS(varlist[1], eplist, _ep_the_end,
-               "Property name '%s' is not supported by function getentityproperty.\n");
+    if(!obor_map_entity_property_name(varlist[1])) return 0;
 
     if(paramCount < 3 || varlist[1]->vt != VT_INTEGER)
     {
         return 1;
     }
 
-    ep = varlist[1]->lVal;
-    eps = (ep < _ep_the_end && ep >= 0) ? eplist[ep] : "";
+    ep = obor_resolve_entity_property(varlist[1]->lVal);
+    eps = obor_entity_property_name(ep);
 
     switch (ep)
     {
@@ -4888,8 +5109,23 @@ int mapstrings_entityproperty(ScriptVariant **varlist, int paramCount)
     // action for takeaction
     case _ep_takeaction:
     {
-        MAPSTRINGS(varlist[2], proplist_takeaction, _ep_ta_the_end,
-                   _is_not_supported_by_, eps);
+        if(!obor_has_simple_animation_action() && varlist[2]->vt == VT_STR)
+        {
+            propname = (char *)StrCache_Get(varlist[2]->strVal);
+            prop = searchList(proplist_takeaction, propname, _ep_ta_the_end);
+            if(prop < 0 || prop == _ep_ta_common_animation_normal)
+            {
+                printf(_is_not_supported_by_, propname, eps);
+                return 0;
+            }
+            ScriptVariant_ChangeType(varlist[2], VT_INTEGER);
+            varlist[2]->lVal = prop - (prop > _ep_ta_common_animation_normal);
+        }
+        else
+        {
+            MAPSTRINGS(varlist[2], proplist_takeaction, _ep_ta_the_end,
+                       _is_not_supported_by_, eps);
+        }
         break;
     }
     // 2011_03_13, DC: Think sets for think.
@@ -4911,6 +5147,21 @@ int mapstrings_entityproperty(ScriptVariant **varlist, int paramCount)
 // Access animation property by handle (pointer).
 //
 // set_animation_property(void handle, int property, value)
+static int obor_uses_early_animation_properties(void)
+{
+    return obor_profile_build >= 4283 && obor_profile_build < 4414;
+}
+
+static e_animation_properties obor_native_animation_property(LONG property)
+{
+    if(obor_uses_early_animation_properties() && property >= ANI_PROP_IGNOREATTACKID &&
+        property < ANI_PROP_WEAPONFRAME)
+    {
+        ++property;
+    }
+    return (e_animation_properties)property;
+}
+
 HRESULT openbor_set_animation_property(ScriptVariant **varlist, ScriptVariant **pretvar, int paramCount)
 {
     #define SELF_NAME           "set_animation_property(void handle, int property, value)"
@@ -4941,7 +5192,7 @@ HRESULT openbor_set_animation_property(ScriptVariant **varlist, ScriptVariant **
     else
     {
         handle      = (s_anim *)varlist[ARG_HANDLE]->ptrVal;
-        property    = (LONG)varlist[ARG_PROPERTY]->lVal;
+        property    = obor_native_animation_property(varlist[ARG_PROPERTY]->lVal);
     }
 
     // Which property to modify?
@@ -4966,15 +5217,19 @@ HRESULT openbor_set_animation_property(ScriptVariant **varlist, ScriptVariant **
             break;
 
         case ANI_PROP_NUMFRAMES:
-
-            if(SUCCEEDED(ScriptVariant_IntegerValue(varlist[ARG_VALUE], &temp_int)))
+            if(obor_uses_early_animation_properties())
+            {
+                goto unsupported_animation_property;
+            }
+            if(handle && SUCCEEDED(ScriptVariant_IntegerValue(varlist[ARG_VALUE], &temp_int)) &&
+                temp_int > 0 && (size_t)temp_int <= handle->obor_frame_capacity)
             {
                 handle->numframes = (int)temp_int;
             }
-
             break;
 
         default:
+        unsupported_animation_property:
 
             printf("Unsupported property.\n");
             goto error_local;
@@ -5035,7 +5290,7 @@ HRESULT openbor_get_animation_property(ScriptVariant **varlist, ScriptVariant **
     else
     {
         handle      = (s_anim *)varlist[ARG_HANDLE]->ptrVal;
-        property    = (LONG)varlist[ARG_PROPERTY]->lVal;
+        property    = obor_native_animation_property(varlist[ARG_PROPERTY]->lVal);
     }
 
     // Which property to get?
@@ -5166,7 +5421,7 @@ HRESULT openbor_get_attack_collection(ScriptVariant **varlist, ScriptVariant **p
 
 
     int         result      = S_OK;     // Success or error?
-    s_collision_attack    **handle     = NULL;    // Property handle.
+    s_collision_attack_list **handle     = NULL;    // Property handle.
     int         frame       = 0;        // Property argument.
 
     // Clear pass by reference argument used to send
@@ -5187,7 +5442,7 @@ HRESULT openbor_get_attack_collection(ScriptVariant **varlist, ScriptVariant **p
     }
     else
     {
-        handle  = (s_collision_attack **)varlist[ARG_HANDLE]->ptrVal;
+        handle  = (s_collision_attack_list **)varlist[ARG_HANDLE]->ptrVal;
         frame   = (LONG)varlist[ARG_FRAME]->lVal;
     }
 
@@ -5201,7 +5456,25 @@ HRESULT openbor_get_attack_collection(ScriptVariant **varlist, ScriptVariant **p
     if(handle[frame])
     {
         ScriptVariant_ChangeType(*pretvar, VT_PTR);
-        (*pretvar)->ptrVal = handle[frame];
+        s_collision_attack_list *list = handle[frame];
+        if(obor_profile_build >= 4283 && obor_profile_build < 4301)
+        {
+            s_collision_attack *record = list->obor_frame_record;
+            if(!record && list->instance && list->obor_instance_capacity)
+            {
+                record = list->instance[0];
+            }
+            if(!record)
+            {
+                ScriptVariant_Clear(*pretvar);
+                return result;
+            }
+            (*pretvar)->ptrVal = record;
+        }
+        else
+        {
+            (*pretvar)->ptrVal = list;
+        }
     }
 
     return result;
@@ -5475,13 +5748,19 @@ HRESULT openbor_get_attack_property(ScriptVariant **varlist, ScriptVariant **pre
         case ATTACK_PROP_POSITION_X:
 
             ScriptVariant_ChangeType(*pretvar, VT_INTEGER);
-            //(*pretvar)->lVal = (LONG)handle->coords.x;
+            if(obor_script_collision_coordinates() && handle && handle->coords)
+            {
+                (*pretvar)->lVal = (LONG)handle->coords->x;
+            }
             break;
 
         case ATTACK_PROP_POSITION_Y:
 
             ScriptVariant_ChangeType(*pretvar, VT_INTEGER);
-            //(*pretvar)->lVal = (LONG)handle->coords.y;
+            if(obor_script_collision_coordinates() && handle && handle->coords)
+            {
+                (*pretvar)->lVal = (LONG)handle->coords->y;
+            }
             break;
 
         case ATTACK_PROP_REACTION_FALL_FORCE:
@@ -5585,25 +5864,37 @@ HRESULT openbor_get_attack_property(ScriptVariant **varlist, ScriptVariant **pre
         case ATTACK_PROP_SIZE_X:
 
             ScriptVariant_ChangeType(*pretvar, VT_INTEGER);
-            //(*pretvar)->lVal = (LONG)handle->coords.width;
+            if(obor_script_collision_coordinates() && handle && handle->coords)
+            {
+                (*pretvar)->lVal = (LONG)handle->coords->width;
+            }
             break;
 
         case ATTACK_PROP_SIZE_Y:
 
             ScriptVariant_ChangeType(*pretvar, VT_INTEGER);
-            //(*pretvar)->lVal = (LONG)handle->coords.height;
+            if(obor_script_collision_coordinates() && handle && handle->coords)
+            {
+                (*pretvar)->lVal = (LONG)handle->coords->height;
+            }
             break;
 
         case ATTACK_PROP_SIZE_Z_1:
 
             ScriptVariant_ChangeType(*pretvar, VT_INTEGER);
-            //(*pretvar)->lVal = (LONG)handle->coords.z1;
+            if(obor_script_collision_coordinates() && handle && handle->coords)
+            {
+                (*pretvar)->lVal = (LONG)handle->coords->z1;
+            }
             break;
 
         case ATTACK_PROP_SIZE_Z_2:
 
             ScriptVariant_ChangeType(*pretvar, VT_INTEGER);
-            //(*pretvar)->lVal = (LONG)handle->coords.z2;
+            if(obor_script_collision_coordinates() && handle && handle->coords)
+            {
+                (*pretvar)->lVal = (LONG)handle->coords->z2;
+            }
             break;
 
         case ATTACK_PROP_STAYDOWN_RISE:
@@ -5866,17 +6157,19 @@ HRESULT openbor_set_attack_property(ScriptVariant **varlist, ScriptVariant **pre
 
         case ATTACK_PROP_POSITION_X:
 
-            if(SUCCEEDED(ScriptVariant_IntegerValue(varlist[ARG_VALUE], &temp_int)))
+            if(SUCCEEDED(ScriptVariant_IntegerValue(varlist[ARG_VALUE], &temp_int)) &&
+               obor_script_collision_coordinates() && handle && handle->coords)
             {
-                //handle->coords.x = temp_int;
+                handle->coords->x = temp_int;
             }
             break;
 
         case ATTACK_PROP_POSITION_Y:
 
-            if(SUCCEEDED(ScriptVariant_IntegerValue(varlist[ARG_VALUE], &temp_int)))
+            if(SUCCEEDED(ScriptVariant_IntegerValue(varlist[ARG_VALUE], &temp_int)) &&
+               obor_script_collision_coordinates() && handle && handle->coords)
             {
-                //handle->coords.y = temp_int;
+                handle->coords->y = temp_int;
             }
             break;
 
@@ -5995,33 +6288,37 @@ HRESULT openbor_set_attack_property(ScriptVariant **varlist, ScriptVariant **pre
 
         case ATTACK_PROP_SIZE_X:
 
-            if(SUCCEEDED(ScriptVariant_IntegerValue(varlist[ARG_VALUE], &temp_int)))
+            if(SUCCEEDED(ScriptVariant_IntegerValue(varlist[ARG_VALUE], &temp_int)) &&
+               obor_script_collision_coordinates() && handle && handle->coords)
             {
-                //handle->coords.width = temp_int;
+                handle->coords->width = temp_int;
             }
             break;
 
         case ATTACK_PROP_SIZE_Y:
 
-            if(SUCCEEDED(ScriptVariant_IntegerValue(varlist[ARG_VALUE], &temp_int)))
+            if(SUCCEEDED(ScriptVariant_IntegerValue(varlist[ARG_VALUE], &temp_int)) &&
+               obor_script_collision_coordinates() && handle && handle->coords)
             {
-                //handle->coords.height = temp_int;
+                handle->coords->height = temp_int;
             }
             break;
 
         case ATTACK_PROP_SIZE_Z_1:
 
-            if(SUCCEEDED(ScriptVariant_IntegerValue(varlist[ARG_VALUE], &temp_int)))
+            if(SUCCEEDED(ScriptVariant_IntegerValue(varlist[ARG_VALUE], &temp_int)) &&
+               obor_script_collision_coordinates() && handle && handle->coords)
             {
-                //handle->coords.z1 = temp_int;
+                handle->coords->z1 = temp_int;
             }
             break;
 
         case ATTACK_PROP_SIZE_Z_2:
 
-            if(SUCCEEDED(ScriptVariant_IntegerValue(varlist[ARG_VALUE], &temp_int)))
+            if(SUCCEEDED(ScriptVariant_IntegerValue(varlist[ARG_VALUE], &temp_int)) &&
+               obor_script_collision_coordinates() && handle && handle->coords)
             {
-                //handle->coords.z2 = temp_int;
+                handle->coords->z2 = temp_int;
             }
             break;
 
@@ -6082,6 +6379,40 @@ HRESULT openbor_set_attack_property(ScriptVariant **varlist, ScriptVariant **pre
 // versions of each for details.
 
 // get_body_collision_collection(void handle, int frame)
+static int obor_body_collision_frame_is_valid(const void *table, int frame)
+{
+    uintptr_t address = (uintptr_t)table;
+    const s_anim_list *node;
+    if(!table || frame < 0)
+    {
+        return 0;
+    }
+    for(node = anim_list; node; node = node->next)
+    {
+        const s_anim *animation = node->anim;
+        uintptr_t start, offset;
+        size_t element, slot;
+        if(!animation || !animation->collision_body)
+        {
+            continue;
+        }
+        start = (uintptr_t)animation->collision_body;
+        if(address < start)
+        {
+            continue;
+        }
+        element = sizeof(*animation->collision_body);
+        offset = address - start;
+        slot = offset / element;
+        if(offset % element == 0 && slot < animation->obor_frame_capacity &&
+           (size_t)frame < animation->obor_frame_capacity - slot)
+        {
+            return 1;
+        }
+    }
+    return 0;
+}
+
 HRESULT openbor_get_body_collision_collection(ScriptVariant **varlist, ScriptVariant **pretvar, int paramCount)
 {
     #define SELF_NAME       "get_body_collision_collection(void handle, int frame)"
@@ -6091,17 +6422,19 @@ HRESULT openbor_get_body_collision_collection(ScriptVariant **varlist, ScriptVar
 
 
     int         result      = S_OK; // Success or error?
-    s_collision_body      **handle    = NULL; // Property handle.
+    s_collision_body_list **handle    = NULL; // Property handle.
     int         frame       = 0;    // Property argument.
 
     // Clear pass by reference argument used to send
     // property data back to calling script.     .
+    if(!pretvar || !*pretvar) return E_FAIL;
     ScriptVariant_Clear(*pretvar);
 
     // Verify incoming arguments. There should at least
     // be a pointer for the property handle and an integer
     // to determine which frame is accessed.
     if(paramCount < ARG_MINIMUM
+       || !varlist || !varlist[ARG_HANDLE] || !varlist[ARG_FRAME]
        || varlist[ARG_HANDLE]->vt != VT_PTR
        || varlist[ARG_FRAME]->vt != VT_INTEGER)
     {
@@ -6110,15 +6443,33 @@ HRESULT openbor_get_body_collision_collection(ScriptVariant **varlist, ScriptVar
     }
     else
     {
-        handle  = (s_collision_body **)varlist[ARG_HANDLE]->ptrVal;
+        handle  = (s_collision_body_list **)varlist[ARG_HANDLE]->ptrVal;
         frame   = (LONG)varlist[ARG_FRAME]->lVal;
     }
 
+    if(!obor_body_collision_frame_is_valid(handle, frame))
+    {
+        *pretvar = NULL;
+        goto error_local;
+    }
     // If this frame has property, send value back to user.
     if(handle[frame])
     {
         ScriptVariant_ChangeType(*pretvar, VT_PTR);
-        (*pretvar)->ptrVal = handle[frame];
+        s_collision_body_list *list = handle[frame];
+        if(obor_profile_build >= 4283 && obor_profile_build < 4355)
+        {
+            if(!list->instance || !list->obor_instance_capacity || !list->instance[0])
+            {
+                ScriptVariant_Clear(*pretvar);
+                return result;
+            }
+            (*pretvar)->ptrVal = list->instance[0];
+        }
+        else
+        {
+            (*pretvar)->ptrVal = list;
+        }
     }
 
     return result;
@@ -6245,37 +6596,55 @@ HRESULT openbor_get_body_collision_property(ScriptVariant **varlist, ScriptVaria
         case BODY_COLLISION_PROP_POSITION_X:
 
             ScriptVariant_ChangeType(*pretvar, VT_INTEGER);
-            //(*pretvar)->lVal = (LONG)handle->coords.x;
+            if(obor_script_collision_coordinates() && handle && handle->coords)
+            {
+                (*pretvar)->lVal = (LONG)handle->coords->x;
+            }
             break;
 
         case BODY_COLLISION_PROP_POSISTION_Y:
 
             ScriptVariant_ChangeType(*pretvar, VT_INTEGER);
-            //(*pretvar)->lVal = (LONG)handle->coords.y;
+            if(obor_script_collision_coordinates() && handle && handle->coords)
+            {
+                (*pretvar)->lVal = (LONG)handle->coords->y;
+            }
             break;
 
         case BODY_COLLISION_PROP_SIZE_X:
 
             ScriptVariant_ChangeType(*pretvar, VT_INTEGER);
-            //(*pretvar)->lVal = (LONG)handle->coords.width;
+            if(obor_script_collision_coordinates() && handle && handle->coords)
+            {
+                (*pretvar)->lVal = (LONG)handle->coords->width;
+            }
             break;
 
         case BODY_COLLISION_PROP_SIZE_Y:
 
             ScriptVariant_ChangeType(*pretvar, VT_INTEGER);
-            //(*pretvar)->lVal = (LONG)handle->coords.height;
+            if(obor_script_collision_coordinates() && handle && handle->coords)
+            {
+                (*pretvar)->lVal = (LONG)handle->coords->height;
+            }
             break;
 
         case BODY_COLLISION_PROP_SIZE_Z_1:
 
             ScriptVariant_ChangeType(*pretvar, VT_INTEGER);
-            //(*pretvar)->lVal = (LONG)handle->coords.z1;
+            if(obor_script_collision_coordinates() && handle && handle->coords)
+            {
+                (*pretvar)->lVal = (LONG)handle->coords->z1;
+            }
             break;
 
         case BODY_COLLISION_PROP_SIZE_Z_2:
 
             ScriptVariant_ChangeType(*pretvar, VT_INTEGER);
-            //(*pretvar)->lVal = (LONG)handle->coords.z2;
+            if(obor_script_collision_coordinates() && handle && handle->coords)
+            {
+                (*pretvar)->lVal = (LONG)handle->coords->z2;
+            }
             break;
 
         case BODY_COLLISION_PROP_TAG:
@@ -6353,49 +6722,55 @@ HRESULT openbor_set_body_collision_property(ScriptVariant **varlist, ScriptVaria
 
         case BODY_COLLISION_PROP_POSITION_X:
 
-            if(SUCCEEDED(ScriptVariant_IntegerValue(varlist[ARG_VALUE], &temp_int)))
+            if(SUCCEEDED(ScriptVariant_IntegerValue(varlist[ARG_VALUE], &temp_int)) &&
+               obor_script_collision_coordinates() && handle && handle->coords)
             {
-                //handle->coords.x = temp_int;
+                handle->coords->x = temp_int;
             }
             break;
 
         case BODY_COLLISION_PROP_POSISTION_Y:
 
-            if(SUCCEEDED(ScriptVariant_IntegerValue(varlist[ARG_VALUE], &temp_int)))
+            if(SUCCEEDED(ScriptVariant_IntegerValue(varlist[ARG_VALUE], &temp_int)) &&
+               obor_script_collision_coordinates() && handle && handle->coords)
             {
-                //handle->coords.y = temp_int;
+                handle->coords->y = temp_int;
             }
             break;
 
         case BODY_COLLISION_PROP_SIZE_X:
 
-            if(SUCCEEDED(ScriptVariant_IntegerValue(varlist[ARG_VALUE], &temp_int)))
+            if(SUCCEEDED(ScriptVariant_IntegerValue(varlist[ARG_VALUE], &temp_int)) &&
+               obor_script_collision_coordinates() && handle && handle->coords)
             {
-                //handle->coords.width = temp_int;
+                handle->coords->width = temp_int;
             }
             break;
 
         case BODY_COLLISION_PROP_SIZE_Y:
 
-            if(SUCCEEDED(ScriptVariant_IntegerValue(varlist[ARG_VALUE], &temp_int)))
+            if(SUCCEEDED(ScriptVariant_IntegerValue(varlist[ARG_VALUE], &temp_int)) &&
+               obor_script_collision_coordinates() && handle && handle->coords)
             {
-                //handle->coords.height = temp_int;
+                handle->coords->height = temp_int;
             }
             break;
 
         case BODY_COLLISION_PROP_SIZE_Z_1:
 
-            if(SUCCEEDED(ScriptVariant_IntegerValue(varlist[ARG_VALUE], &temp_int)))
+            if(SUCCEEDED(ScriptVariant_IntegerValue(varlist[ARG_VALUE], &temp_int)) &&
+               obor_script_collision_coordinates() && handle && handle->coords)
             {
-                //handle->coords.z1 = temp_int;
+                handle->coords->z1 = temp_int;
             }
             break;
 
         case BODY_COLLISION_PROP_SIZE_Z_2:
 
-            if(SUCCEEDED(ScriptVariant_IntegerValue(varlist[ARG_VALUE], &temp_int)))
+            if(SUCCEEDED(ScriptVariant_IntegerValue(varlist[ARG_VALUE], &temp_int)) &&
+               obor_script_collision_coordinates() && handle && handle->coords)
             {
-                //handle->coords.z2 = temp_int;
+                handle->coords->z2 = temp_int;
             }
             break;
 
@@ -6463,8 +6838,8 @@ HRESULT openbor_getentityproperty(ScriptVariant **varlist , ScriptVariant **pret
     if(!pretvar) return E_FAIL;
     if(paramCount >= 2 && (!*pretvar || !varlist || !varlist[0] || !varlist[1] ||
         (paramCount >= 3 && !varlist[2] &&
-         !((varlist[1]->vt == VT_INTEGER && varlist[1]->lVal >= 0 &&
-            varlist[1]->lVal < _ep_the_end && varlist[1]->lVal == _ep_defense) ||
+         !((varlist[1]->vt == VT_INTEGER &&
+            obor_resolve_entity_property(varlist[1]->lVal) == _ep_defense) ||
            (varlist[1]->vt == VT_STR && StrCache_GetIfPresent(varlist[1]->strVal) &&
             !stricmp(StrCache_GetIfPresent(varlist[1]->strVal), "defense"))))))
         { *pretvar = NULL; return E_FAIL; }
@@ -6507,7 +6882,7 @@ HRESULT openbor_getentityproperty(ScriptVariant **varlist , ScriptVariant **pret
         printf("Function getentityproperty must have a string property name.\n");
     }
 
-    propind = arg->lVal;
+    propind = obor_resolve_entity_property(arg->lVal);
 
     switch(propind)
     {
@@ -6805,6 +7180,12 @@ HRESULT openbor_getentityproperty(ScriptVariant **varlist , ScriptVariant **pret
     }
     case _ep_blockback:
     {
+        if(obor_profile_build >= 4283 && obor_profile_build < 4407)
+        {
+            if(paramCount >= 3 && SUCCEEDED(ScriptVariant_IntegerValue(varlist[2], &ltemp)))
+                ent->modeldata.blockback = (int)ltemp;
+            break;
+        }
         ScriptVariant_ChangeType(*pretvar, VT_INTEGER);
         (*pretvar)->lVal = (LONG)ent->modeldata.blockback;
         break;
@@ -6817,33 +7198,39 @@ HRESULT openbor_getentityproperty(ScriptVariant **varlist , ScriptVariant **pret
     }
     case _ep_blockpain:
     {
+        if(obor_profile_build >= 4283 && obor_profile_build < 4407)
+        {
+            if(paramCount >= 3 && SUCCEEDED(ScriptVariant_IntegerValue(varlist[2], &ltemp)))
+                ent->modeldata.blockpain = (int)ltemp;
+            break;
+        }
         ScriptVariant_ChangeType(*pretvar, VT_INTEGER);
         (*pretvar)->lVal = (LONG)ent->modeldata.blockpain;
         break;
     }
     case _ep_boomerang:
     {
-        if (paramCount < 3)
+        const char *name = obor_entity_property_name(_ep_boomerang);
+        if(obor_profile_build >= 4405 && obor_profile_build < 4407)
         {
-            printf("You must specify a flag value for boomerang property (0 = acceleration, 1 = distance_x).\n");
+            ScriptVariant_ChangeType(*pretvar, VT_DECIMAL);
+            (*pretvar)->dblVal = (DOUBLE)ent->modeldata.boomerang_acc;
+            break;
+        }
+        if(paramCount < 3)
+        {
+            printf("You must specify a flag value for %s property (0 = acceleration, 1 = distance_x).\n", name);
             *pretvar = NULL;
             return E_FAIL;
         }
-        else
+        ScriptVariant_ChangeType(*pretvar, VT_DECIMAL);
+        if(FAILED(ScriptVariant_IntegerValue(varlist[2], &ltemp)))
         {
-            ScriptVariant_ChangeType(*pretvar, VT_DECIMAL);
-            if(FAILED(ScriptVariant_IntegerValue(varlist[2], &ltemp)))
-            {
-                printf("You must specify a flag value for boomerang property (0 = acceleration, 1 = distance_x).\n");
-                *pretvar = NULL;
-                return E_FAIL;
-            }
-            else
-            {
-                if (ltemp == 0) (*pretvar)->dblVal = (DOUBLE)ent->modeldata.boomerang_acc;
-                else (*pretvar)->dblVal = (DOUBLE)ent->modeldata.boomerang_distx;
-            }
+            printf("You must specify a flag value for %s property (0 = acceleration, 1 = distance_x).\n", name);
+            *pretvar = NULL;
+            return E_FAIL;
         }
+        (*pretvar)->dblVal = (DOUBLE)(ltemp == 0 ? ent->modeldata.boomerang_acc : ent->modeldata.boomerang_distx);
         break;
     }
     case _ep_boss:
@@ -7015,15 +7402,13 @@ HRESULT openbor_getentityproperty(ScriptVariant **varlist , ScriptVariant **pret
         break;
     }
     case _ep_destx:
-    {
-        ScriptVariant_ChangeType(*pretvar, VT_DECIMAL);
-        (*pretvar)->dblVal = (DOUBLE)ent->destx;
-        break;
-    }
     case _ep_destz:
     {
-        ScriptVariant_ChangeType(*pretvar, VT_DECIMAL);
-        (*pretvar)->dblVal = (DOUBLE)ent->destz;
+        if(obor_profile_build < 4283 || obor_profile_build >= 4303)
+        {
+            ScriptVariant_ChangeType(*pretvar, VT_DECIMAL);
+        }
+        (*pretvar)->dblVal = (DOUBLE)(propind == _ep_destx ? ent->destx : ent->destz);
         break;
     }
     case _ep_detect:
@@ -7117,7 +7502,17 @@ HRESULT openbor_getentityproperty(ScriptVariant **varlist , ScriptVariant **pret
             }
         }
 
+        if(ltemp < 0 || ltemp >= ent->modeldata.animation_capacity ||
+                !ent->modeldata.animation[ltemp])
+        {
+            break;
+        }
+
         ScriptVariant_ChangeType(*pretvar, VT_INTEGER);
+        if(obor_profile_build >= 4283 && obor_profile_build < 4372)
+        {
+            (*pretvar)->lVal = -1;
+        }
 
         if(ent->modeldata.animation[ltemp]->dropframe)
         {
@@ -7700,8 +8095,8 @@ HRESULT openbor_getentityproperty(ScriptVariant **varlist , ScriptVariant **pret
     }
     case _ep_maps:
     {
-        arg = varlist[2];
-        if(arg->vt != VT_INTEGER)
+        arg = paramCount >= 3 ? varlist[2] : NULL;
+        if(!arg || arg->vt != VT_INTEGER)
         {
             printf("You must give a string name for maps property.\n");
             *pretvar = NULL;
@@ -7735,25 +8130,8 @@ HRESULT openbor_getentityproperty(ScriptVariant **varlist , ScriptVariant **pret
         }
         case _ep_maps_dying:
         {
-            ScriptVariant_ChangeType(*pretvar, VT_INTEGER);
-            if(paramCount >= 3)
-            {
-                if(FAILED(ScriptVariant_IntegerValue(varlist[2], &ltemp)))
-                {
-                    printf("You must specify the integer value for remap.\n");
-                    *pretvar = NULL;
-                    return E_FAIL;
-                }
-                else
-                {
-                    if (ltemp == 0) (*pretvar)->lVal = (LONG)(ent->dying);
-                    else (*pretvar)->lVal = (LONG)(ent->dying2);
-                }
-            }
-            else
-            {
-                (*pretvar)->lVal = (LONG)(ent->dying);
-            }
+            (*pretvar)->lVal = (LONG)((obor_profile_build >= 4283 && obor_profile_build < 4405) ?
+                                     ent->dying : ent->dying2);
             break;
         }
         case _ep_maps_dying_critical:
@@ -8477,7 +8855,7 @@ HRESULT openbor_getentityproperty(ScriptVariant **varlist , ScriptVariant **pret
     case _ep_subtype:
     {
         ScriptVariant_ChangeType(*pretvar, VT_INTEGER);
-        (*pretvar)->lVal = (LONG)ent->modeldata.subtype;
+        (*pretvar)->lVal = obor_profile_subtype_value(ent->modeldata.subtype);
         break;
     }
     case _ep_thold:
@@ -8612,6 +8990,17 @@ HRESULT openbor_getentityproperty(ScriptVariant **varlist , ScriptVariant **pret
 }
 
 
+static s_energycost *obor_script_animation_energycost(s_anim *animation)
+{
+    if(!animation->energycost && obor_profile_build >= 4283 &&
+            (obor_profile_build < 4374 || obor_profile_build == 4375))
+    {
+        animation->energycost = calloc(1, sizeof(*animation->energycost));
+    }
+    return animation->energycost;
+}
+
+
 //changeentityproperty(pentity, propname, value1[ ,value2, value3, ...]);
 HRESULT openbor_changeentityproperty(ScriptVariant **varlist , ScriptVariant **pretvar, int paramCount)
 {
@@ -8704,7 +9093,7 @@ HRESULT openbor_changeentityproperty(ScriptVariant **varlist , ScriptVariant **p
         goto changeentityproperty_error;
     }
 
-    propind = varlist[1]->lVal;
+    propind = obor_resolve_entity_property(varlist[1]->lVal);
 
     switch(propind)
     {
@@ -8949,29 +9338,23 @@ HRESULT openbor_changeentityproperty(ScriptVariant **varlist , ScriptVariant **p
     }
     case _ep_boomerang:
     {
-        if (paramCount < 4)
+        const char *name = obor_entity_property_name(_ep_boomerang);
+        if(obor_profile_build >= 4405 && obor_profile_build < 4407)
         {
-            printf("You must specify 2 float values to change boomerang property (acceleration anddistance_x).\n");
+            if(SUCCEEDED(ScriptVariant_DecimalValue(varlist[2], &dbltemp)))
+                ent->modeldata.boomerang_acc = (float)dbltemp;
+            break;
+        }
+        DOUBLE distance;
+        if(paramCount < 4 || FAILED(ScriptVariant_DecimalValue(varlist[2], &dbltemp)) ||
+           FAILED(ScriptVariant_DecimalValue(varlist[3], &distance)))
+        {
+            printf("You must specify 2 float values to change %s property (acceleration anddistance_x).\n", name);
             *pretvar = NULL;
             return E_FAIL;
         }
-        else
-        {
-            DOUBLE dbltemp2;
-
-            ScriptVariant_ChangeType(*pretvar, VT_DECIMAL);
-            if( FAILED(ScriptVariant_DecimalValue(varlist[2], &dbltemp)) || FAILED(ScriptVariant_DecimalValue(varlist[3], &dbltemp2)) )
-            {
-                printf("You must specify 2 float values to change boomerang property (acceleration anddistance_x).\n");
-                *pretvar = NULL;
-                return E_FAIL;
-            }
-            else
-            {
-                ent->modeldata.boomerang_acc     = (float)dbltemp;
-                ent->modeldata.boomerang_distx   = (float)dbltemp2;
-            }
-        }
+        ent->modeldata.boomerang_acc = (float)dbltemp;
+        ent->modeldata.boomerang_distx = (float)distance;
         break;
     }
     case _ep_boss:
@@ -9126,18 +9509,22 @@ HRESULT openbor_changeentityproperty(ScriptVariant **varlist , ScriptVariant **p
         break;
     }
     case _ep_destx:
-    {
-        if(SUCCEEDED(ScriptVariant_DecimalValue(varlist[2], &dbltemp)))
-        {
-            ent->destx = (float)dbltemp;
-        }
-        break;
-    }
     case _ep_destz:
     {
         if(SUCCEEDED(ScriptVariant_DecimalValue(varlist[2], &dbltemp)))
         {
-            ent->destz = (float)dbltemp;
+            float *destination = propind == _ep_destx ? &ent->destx : &ent->destz;
+            if(obor_profile_build >= 4283 && obor_profile_build < 4303)
+            {
+                if(dbltemp > (double)INT_MIN - 1.0 && dbltemp < (double)INT_MAX + 1.0)
+                {
+                    *destination = (int)dbltemp;
+                }
+            }
+            else
+            {
+                *destination = (float)dbltemp;
+            }
         }
         break;
     }
@@ -9252,9 +9639,10 @@ HRESULT openbor_changeentityproperty(ScriptVariant **varlist , ScriptVariant **p
         {
             if(SUCCEEDED(ScriptVariant_IntegerValue(varlist[4], &ltemp)))
             {
-                if(ent->modeldata.animation[i]->energycost)
+                s_energycost *cost = obor_script_animation_energycost(ent->modeldata.animation[i]);
+                if(cost)
                 {
-                    ent->modeldata.animation[i]->energycost->cost = ltemp;
+                    cost->cost = ltemp;
                 }
 
             }
@@ -9264,9 +9652,10 @@ HRESULT openbor_changeentityproperty(ScriptVariant **varlist , ScriptVariant **p
         {
             if(SUCCEEDED(ScriptVariant_IntegerValue(varlist[4], &ltemp)))
             {
-                if(ent->modeldata.animation[i]->energycost)
+                s_energycost *cost = obor_script_animation_energycost(ent->modeldata.animation[i]);
+                if(cost)
                 {
-                    ent->modeldata.animation[i]->energycost->disable = ltemp;
+                    cost->disable = ltemp;
                 }
             }
             break;
@@ -9275,9 +9664,10 @@ HRESULT openbor_changeentityproperty(ScriptVariant **varlist , ScriptVariant **p
         {
             if(SUCCEEDED(ScriptVariant_IntegerValue(varlist[4], &ltemp)))
             {
-                if(ent->modeldata.animation[i]->energycost)
+                s_energycost *cost = obor_script_animation_energycost(ent->modeldata.animation[i]);
+                if(cost)
                 {
-                    ent->modeldata.animation[i]->energycost->mponly = ltemp;
+                    cost->mponly = ltemp;
                 }
             }
             break;
@@ -9768,7 +10158,7 @@ HRESULT openbor_changeentityproperty(ScriptVariant **varlist , ScriptVariant **p
             printf("You must give a string value for entity name.\n");
             goto changeentityproperty_error;
         }
-        strcpy(ent->name, (char *)StrCache_Get(varlist[2]->strVal));
+        obor_profile_copy_name(ent->name, StrCache_Get(varlist[2]->strVal));
         break;
     }
     case _ep_nameposition:
@@ -10400,6 +10790,7 @@ HRESULT openbor_changeentityproperty(ScriptVariant **varlist , ScriptVariant **p
     }
     case _ep_subtype:
     {
+        if(obor_profile_build >= 4283 && obor_profile_build < 4413) goto changeentityproperty_error;
         if(SUCCEEDED(ScriptVariant_IntegerValue(varlist[2], &ltemp)))
         {
             ent->modeldata.subtype = (int)ltemp;
@@ -10423,9 +10814,11 @@ HRESULT openbor_changeentityproperty(ScriptVariant **varlist , ScriptVariant **p
 
         // otherwise, the parameter is a known action
         ltemp = varlist[2]->lVal;
-        if((ltemp >= 0) && (ltemp < _ep_ta_the_end))
+        const int legacy_action_table = !obor_has_simple_animation_action();
+        if(ltemp >= 0 && ltemp < _ep_ta_the_end - legacy_action_table)
         {
-            ent->takeaction = actions[(int)ltemp];
+            const int action_index = (int)ltemp + (legacy_action_table && ltemp >= _ep_ta_common_animation_normal);
+            ent->takeaction = actions[action_index];
         }
 
         break;
@@ -10567,6 +10960,7 @@ HRESULT openbor_changeentityproperty(ScriptVariant **varlist , ScriptVariant **p
     }
     case _ep_weapnum:
     {
+        if(obor_profile_build >= 4283 && obor_profile_build < 4401) goto changeentityproperty_error;
         if(SUCCEEDED(ScriptVariant_IntegerValue(varlist[2], &ltemp)))
         {
             ent->modeldata.weapnum = (int)ltemp;
@@ -10693,6 +11087,20 @@ enum playerproperty_enum
     _pp_the_end
 };
 
+static int obor_uses_early_player_properties(void)
+{
+    return obor_profile_build >= 4283 && obor_profile_build < 4400;
+}
+
+static int obor_player_property_native(int property)
+{
+    if(obor_uses_early_player_properties() && property >= _pp_numweapons)
+    {
+        return property < _pp_the_end - 1 ? property + 1 : _pp_the_end;
+    }
+    return property;
+}
+
 int mapstrings_playerproperty(ScriptVariant **varlist, int paramCount)
 {
     char *propname;
@@ -10732,10 +11140,30 @@ int mapstrings_playerproperty(ScriptVariant **varlist, int paramCount)
         return 1;
     }
 
-    // property name
-    MAPSTRINGS(varlist[1], proplist, _pp_the_end,
-               "Player property name '%s' is not supported yet.\n");
+    if(!varlist || !varlist[1])
+    {
+        return 0;
+    }
+    if(varlist[1]->vt != VT_STR)
+    {
+        return 1;
+    }
 
+    propname = (char *)StrCache_GetIfPresent(varlist[1]->strVal);
+    if(!propname)
+    {
+        return 0;
+    }
+    prop = searchList(proplist, propname, _pp_the_end);
+    const int legacy = obor_uses_early_player_properties();
+    if(prop < 0 || (legacy && prop == _pp_numweapons))
+    {
+        printf("Player property name '%s' is not supported yet.\n", propname);
+        return 0;
+    }
+
+    ScriptVariant_ChangeType(varlist[1], VT_INTEGER);
+    varlist[1]->lVal = prop - (legacy && prop > _pp_numweapons);
     return 1;
 }
 
@@ -10792,7 +11220,7 @@ HRESULT openbor_getplayerproperty(ScriptVariant **varlist , ScriptVariant **pret
         *pretvar = NULL;
         return E_FAIL;
     }
-    prop = arg->lVal;
+    prop = obor_player_property_native(arg->lVal);
 
     switch(prop)
     {
@@ -10913,24 +11341,18 @@ HRESULT openbor_getplayerproperty(ScriptVariant **varlist , ScriptVariant **pret
     }
     case _pp_numweapons:
     {
-        int cacheindex;
-
+        int cacheindex = -1;
         ScriptVariant_ChangeType(*pretvar, VT_INTEGER);
-
-        if ( stricmp(player[index].name,"") != 0 ) {
-            cacheindex = get_cached_model_index(player[index].name);
-            if ( cacheindex == -1 )
-            {
-               (*pretvar)->lVal = (LONG)0;
-               break;
-            }
-        } else
+        (*pretvar)->lVal = 0;
+        if(model_cache && player[index].name[0] &&
+           memchr(player[index].name, 0, sizeof(player[index].name)))
         {
-           (*pretvar)->lVal = (LONG)0;
-           break;
+            cacheindex = get_cached_model_index(player[index].name);
         }
-
-        (*pretvar)->lVal = (LONG)model_cache[cacheindex].model->numweapons;
+        if(cacheindex >= 0 && cacheindex < models_cached && model_cache[cacheindex].model)
+        {
+            (*pretvar)->lVal = (LONG)model_cache[cacheindex].model->numweapons;
+        }
         break;
     }
     case _pp_joining:
@@ -10946,7 +11368,9 @@ HRESULT openbor_getplayerproperty(ScriptVariant **varlist , ScriptVariant **pret
         if(!frm || frm->vt != VT_INTEGER || frm->lVal < 0 ||
            (size_t)frm->lVal >= sizeof(player[index].combokey) / sizeof(player[index].combokey[0]))
         {
-            printf("Need a combostep value number for this property.\n");
+            printf("%s", obor_uses_early_player_properties() ?
+                   "Need a frame number for this property.\n" :
+                   "Need a combostep value number for this property.\n");
             *pretvar = NULL;
             return E_FAIL;
         }
@@ -10967,7 +11391,9 @@ HRESULT openbor_getplayerproperty(ScriptVariant **varlist , ScriptVariant **pret
         if(!frm || frm->vt != VT_INTEGER || frm->lVal < 0 ||
            (size_t)frm->lVal >= sizeof(player[index].inputtime) / sizeof(player[index].inputtime[0]))
         {
-            printf("Need a combostep value number for this property.\n");
+            printf("%s", obor_uses_early_player_properties() ?
+                   "Need a frame number for this property.\n" :
+                   "Need a combostep value number for this property.\n");
             *pretvar = NULL;
             return E_FAIL;
         }
@@ -11102,7 +11528,7 @@ HRESULT openbor_changeplayerproperty(ScriptVariant **varlist , ScriptVariant **p
         }
         return E_FAIL;
     }
-    prop = varlist[1]->lVal;
+    prop = obor_player_property_native(varlist[1]->lVal);
 
     arg = varlist[2];
     if(!arg)
@@ -11172,7 +11598,7 @@ HRESULT openbor_changeplayerproperty(ScriptVariant **varlist , ScriptVariant **p
             goto cpperror;
         }
         tempstr = (char *)StrCache_GetIfPresent(arg->strVal);
-        if(!tempstr || strlen(tempstr) >= sizeof(player[index].name))
+        if(!tempstr || strlen(tempstr) > (size_t)obor_profile_name_limit())
         {
             *pretvar = NULL;
             return E_FAIL;
@@ -11355,11 +11781,13 @@ HRESULT openbor_changeplayerproperty(ScriptVariant **varlist , ScriptVariant **p
     {
         if(SUCCEEDED(ScriptVariant_IntegerValue(arg,&ltemp)))
         {
-            ScriptVariant *value = NULL;
-            value = varlist[3];
-            if(value->vt != VT_INTEGER)
+            ScriptVariant *value = paramCount > 3 ? varlist[3] : NULL;
+            if(!value || value->vt != VT_INTEGER || ltemp < 0 ||
+               (size_t)ltemp >= sizeof(player[index].combokey) / sizeof(player[index].combokey[0]))
             {
-                printf("Need a value and combostep value for this property.\n");
+                printf("%s", obor_uses_early_player_properties() ?
+                       "Need a value and frame number for this property.\n" :
+                       "Need a value and combostep value for this property.\n");
                 *pretvar = NULL;
                 return E_FAIL;
             }
@@ -11387,11 +11815,13 @@ HRESULT openbor_changeplayerproperty(ScriptVariant **varlist , ScriptVariant **p
     {
         if(SUCCEEDED(ScriptVariant_IntegerValue(arg,&ltemp)))
         {
-            ScriptVariant *value = NULL;
-            value = varlist[3];
-            if(value->vt != VT_INTEGER)
+            ScriptVariant *value = paramCount > 3 ? varlist[3] : NULL;
+            if(!value || value->vt != VT_INTEGER || ltemp < 0 ||
+               (size_t)ltemp >= sizeof(player[index].inputtime) / sizeof(player[index].inputtime[0]))
             {
-                printf("Need a value and combostep value number for this property.\n");
+                printf("%s", obor_uses_early_player_properties() ?
+                       "Need a value and frame number for this property.\n" :
+                       "Need a value and combostep value number for this property.\n");
                 *pretvar = NULL;
                 return E_FAIL;
             }
@@ -11562,7 +11992,17 @@ HRESULT openbor_checkwall(ScriptVariant **varlist , ScriptVariant **pretvar, int
         {
             return S_OK;
         }
-        h = (float)y;
+        if(obor_profile_build >= 4283 && obor_profile_build < 4411)
+        {
+            /* The original wrapper read the stored representation after conversion. */
+            DOUBLE stored;
+            memcpy(&stored, &arg->dblVal, sizeof(stored));
+            h = (float)stored;
+        }
+        else
+        {
+            h = (float)y;
+        }
     }
 
     if((wall = checkwall_below((float)x, (float)z, (float)h)) >= 0)
@@ -11733,6 +12173,11 @@ HRESULT openbor_checkplatformbetween(ScriptVariant **varlist , ScriptVariant **p
         return S_OK;
     }
 
+    if(paramCount < 4 || !varlist[3])
+    {
+        *pretvar = NULL;
+        return E_FAIL;
+    }
     arg = varlist[3];
     if(FAILED(ScriptVariant_DecimalValue(arg, &amax)))
     {
@@ -11803,7 +12248,10 @@ HRESULT openbor_checkbasemapindex(ScriptVariant **varlist , ScriptVariant **pret
         return S_OK;
     }
 
-    (*pretvar)->dblVal = (DOUBLE)check_basemap_index((float)x, (float)z);
+    if(obor_profile_build == 4290)
+        (*pretvar)->dblVal = (DOUBLE)check_basemap((float)x, (float)z);
+    else
+        (*pretvar)->dblVal = (DOUBLE)check_basemap_index((float)x, (float)z);
 
     return S_OK;
 }
@@ -11828,7 +12276,8 @@ HRESULT openbor_generatebasemap(ScriptVariant **varlist , ScriptVariant **pretva
     }
     if(paramCount > 7)
     {
-        if ( FAILED(ScriptVariant_IntegerValue(varlist[7], &x_cont)) )
+        if ( FAILED(ScriptVariant_IntegerValue(varlist[7],
+                obor_profile_build >= 4283 && obor_profile_build < 4390 ? &index : &x_cont)) )
         {
             *pretvar = NULL;
             return E_FAIL;
@@ -12208,7 +12657,8 @@ HRESULT openbor_filestreamappend(ScriptVariant **varlist , ScriptVariant **pretv
             if ( len2 <= 0 ) inc = 0;
 
             filestreams[filestreamindex].buf[filestreams[filestreamindex].size+inc] = byte; // overwrite 0x00 byte
-            if (appendtype <= 1) filestreams[filestreamindex].buf[filestreams[filestreamindex].size+1+inc] = 0x00;
+            if (appendtype <= 1 || (obor_profile_build >= 4283 && obor_profile_build < 4399))
+                filestreams[filestreamindex].buf[filestreams[filestreamindex].size+1+inc] = 0x00;
             //printf("b:%s\n",filestreams[filestreamindex].buf);
 
             filestreams[filestreamindex].size = len1 + len2;
@@ -12283,6 +12733,8 @@ HRESULT openbor_createfilestream(ScriptVariant **varlist , ScriptVariant **pretv
 HRESULT openbor_savefilestream(ScriptVariant **varlist , ScriptVariant **pretvar, int paramCount)
 {
     int i;
+    const int path_index = obor_profile_build >= 4283 && obor_profile_build < 4399 ? 3 : 2;
+    const int mode_index = path_index + 1;
     LONG filestreamindex;
     ScriptVariant *arg = NULL;
     char *bytearg = NULL, *patharg = NULL;
@@ -12290,43 +12742,51 @@ HRESULT openbor_savefilestream(ScriptVariant **varlist , ScriptVariant **pretvar
     char path[256] = {""};
     char tmpname[256] = {""};
 
+    if(!pretvar) return E_FAIL;
     *pretvar = NULL;
 
-    if(paramCount < 1)
+    if(paramCount < 2 || !varlist)
     {
         return E_FAIL;
     }
 
     arg = varlist[0];
-    if(FAILED(ScriptVariant_IntegerValue(arg, &filestreamindex)))
+    if(!arg || FAILED(ScriptVariant_IntegerValue(arg, &filestreamindex)) ||
+        filestreamindex < 0 || filestreamindex >= numfilestreams ||
+        !filestreams || !filestreams[filestreamindex].buf)
     {
         printf("You must give a valid filestrema handle for savefilestream!\n");
         return E_FAIL;
     }
 
     arg = varlist[1];
-    if(arg->vt != VT_STR)
+    if(!arg || arg->vt != VT_STR)
     {
         printf("Filename for savefilestream must be a string.\n");
         return E_FAIL;
     }
 
-    if (paramCount > 2)
+    if(paramCount > path_index)
     {
-        patharg = (char *)StrCache_Get(varlist[2]->strVal);
-        if( varlist[2]->vt != VT_STR )
+        ScriptVariant *pathname = varlist[path_index];
+        if(!pathname || pathname->vt != VT_STR)
         {
             printf("The pathname parameter must be a string.\n");
             return E_FAIL;
         }
+        patharg = (char *)StrCache_GetIfPresent(pathname->strVal);
+        if(!patharg) return E_FAIL;
     }
 
-    if (paramCount > 3) // By White Dragon
+    if(paramCount > mode_index)
     {
-        bytearg = (char *)StrCache_Get(varlist[3]->strVal);
-        if( stricmp(bytearg, "byte") != 0 )
+        ScriptVariant *mode = varlist[mode_index];
+        if(!mode || mode->vt != VT_STR) return E_FAIL;
+        bytearg = (char *)StrCache_GetIfPresent(mode->strVal);
+        if(!bytearg) return E_FAIL;
+        if(stricmp(bytearg, "byte") != 0)
         {
-            printf("%s parameter does not exist.\n",bytearg);
+            printf("%s parameter does not exist.\n", bytearg);
             return E_FAIL;
         }
     }
@@ -12372,7 +12832,7 @@ HRESULT openbor_savefilestream(ScriptVariant **varlist , ScriptVariant **pretvar
     fwrite(filestreams[filestreamindex].buf, 1, strlen(filestreams[filestreamindex].buf), handle);
 
     // add blank line so it can be read successfully
-    if ( paramCount <= 3 || (paramCount > 3 && stricmp(bytearg, "byte") != 0 ) ) fwrite("\r\n", 1, 2, handle);
+    if(!bytearg) fwrite("\r\n", 1, 2, handle);
     fclose(handle);
 
     return S_OK;
@@ -12833,7 +13293,7 @@ HRESULT openbor_setspawnentry(ScriptVariant **varlist, ScriptVariant **pretvar, 
         {
             goto setspawnentry_error;
         }
-        strcpy(spawnentry.alias, (char *)StrCache_Get(arg->strVal));
+        obor_profile_copy_name(spawnentry.alias, StrCache_Get(arg->strVal));
         break;
     case _sse_item:
         if(arg->vt != VT_STR)
@@ -12902,7 +13362,7 @@ HRESULT openbor_setspawnentry(ScriptVariant **varlist, ScriptVariant **pretvar, 
         {
             return E_FAIL;
         }
-        strcpy(spawnentry.itemalias, (char *)StrCache_Get(arg->strVal));
+        obor_profile_copy_name(spawnentry.itemalias, StrCache_Get(arg->strVal));
         break;
     case _sse_2phealth:
         if(SUCCEEDED(ScriptVariant_IntegerValue(arg, &ltemp)))
@@ -13302,6 +13762,11 @@ else if(stricmp(#x, constname)==0) {\
 	v.lVal = (LONG)x;\
 }
 
+#define ICMPSUBTYPE(x) \
+else if(stricmp(#x, constname)==0) {\
+    v.lVal = obor_profile_subtype_value(x);\
+}
+
 #define ICMPSCONSTA(x, y) \
 else if(strnicmp(constname, #x, sizeof(#x)-1)==0 && constname[sizeof(#x)-1] >= '1' && constname[sizeof(#x)-1]<='9') \
 { \
@@ -13318,6 +13783,30 @@ else if(strnicmp(constname, #x, sizeof(#x)-1)==0 && constname[sizeof(#x)-1] >= '
 else if(strnicmp(constname, #x, sizeof(#x)-1)==0 && constname[sizeof(#x)-1] >= '1' && constname[sizeof(#x)-1]<='9') \
 { \
 	v.lVal = (LONG)(atoi(constname+(sizeof(#x)-1))+STA_ATKS-1);\
+}
+
+#define ICMPCONST_FROM(x, version) \
+else if((obor_profile_build < 4283 || obor_profile_build >= (version)) && stricmp(#x, constname) == 0) \
+{ \
+    v.lVal = (LONG)(x); \
+}
+
+#define ICMPSBACKCONST(x, table) \
+else if((obor_profile_build < 4283 || obor_profile_build >= 4414) && \
+        strnicmp(constname, #x, sizeof(#x) - 1) == 0 && \
+        constname[sizeof(#x) - 1] >= '1' && constname[sizeof(#x) - 1] <= '9') \
+{ \
+    long slot = strtol(constname + sizeof(#x) - 1, NULL, 10); \
+    if((table) && slot > 0 && slot <= max_attack_types) \
+        v.lVal = (LONG)(table)[slot - 1]; \
+    else \
+        found = FALSE; \
+}
+
+#define ICMPANIMPROP(x) \
+else if(stricmp(#x, constname) == 0) \
+{ \
+    v.lVal = (LONG)(x) - (obor_uses_early_animation_properties() && (x) > ANI_PROP_IGNOREATTACKID); \
 }
 
 int mapstrings_transconst(ScriptVariant **varlist, int paramCount)
@@ -13361,13 +13850,19 @@ int mapstrings_transconst(ScriptVariant **varlist, int paramCount)
         ICMPCONST(THINK_SPEED)
         ICMPCONST(COUNTER_SPEED)
         ICMPCONST(MAX_ENTS)
-        ICMPCONST(MAX_NAME_LEN)
+        else if(stricmp(constname, "MAX_NAME_LEN")==0)
+        {
+            v.lVal = (LONG)obor_profile_name_limit();
+        }
         ICMPCONST(MAX_SPECIALS)
         ICMPCONST(MAX_ATCHAIN)
         ICMPCONST(MAX_ATTACKS)
         ICMPCONST(MAX_FOLLOWS)
         ICMPCONST(MAX_PLAYERS)
-        ICMPCONST(MAX_ARG_LEN)
+        else if(stricmp(constname, "MAX_ARG_LEN")==0)
+        {
+            v.lVal = (LONG)((obor_profile_build >= 4283 && obor_profile_build < 4429) ? 511 : MAX_ARG_LEN);
+        }
         ICMPCONST(FLAG_ESC)
         ICMPCONST(FLAG_START)
         ICMPCONST(FLAG_MOVELEFT)
@@ -13414,15 +13909,19 @@ int mapstrings_transconst(ScriptVariant **varlist, int paramCount)
         ICMPCONST(SUBTYPE_BIKER)
         ICMPCONST(SUBTYPE_NOTGRAB)
         ICMPCONST(SUBTYPE_ARROW)
-        ICMPCONST(SUBTYPE_BOOMERANG)
-        ICMPCONST(SUBTYPE_TOUCH)
-        ICMPCONST(SUBTYPE_WEAPON)
-        ICMPCONST(SUBTYPE_NOSKIP)
-        ICMPCONST(SUBTYPE_FLYDIE)
-        ICMPCONST(SUBTYPE_BOTH)
-        ICMPCONST(SUBTYPE_PROJECTILE)
-        ICMPCONST(SUBTYPE_FOLLOW)
-        ICMPCONST(SUBTYPE_CHASE)
+        else if((obor_profile_build < 4283 || obor_profile_build >= 4414) &&
+                stricmp("SUBTYPE_BOOMERANG", constname) == 0)
+        {
+            v.lVal = SUBTYPE_BOOMERANG;
+        }
+        ICMPSUBTYPE(SUBTYPE_TOUCH)
+        ICMPSUBTYPE(SUBTYPE_WEAPON)
+        ICMPSUBTYPE(SUBTYPE_NOSKIP)
+        ICMPSUBTYPE(SUBTYPE_FLYDIE)
+        ICMPSUBTYPE(SUBTYPE_BOTH)
+        ICMPSUBTYPE(SUBTYPE_PROJECTILE)
+        ICMPSUBTYPE(SUBTYPE_FOLLOW)
+        ICMPSUBTYPE(SUBTYPE_CHASE)
         ICMPCONST(AIMOVE1_NORMAL)
         ICMPCONST(AIMOVE1_CHASE)
         ICMPCONST(AIMOVE1_CHASEZ)
@@ -13436,10 +13935,10 @@ int mapstrings_transconst(ScriptVariant **varlist, int paramCount)
         ICMPCONST(AIMOVE1_STAR)
         ICMPCONST(AIMOVE1_ARROW)
         ICMPCONST(AIMOVE1_BOMB)
-        ICMPCONST(AIMOVE1_BOOMERANG)
+        ICMPCONST_FROM(AIMOVE1_BOOMERANG, 4414)
         ICMPCONST(AIMOVE2_NORMAL)
         ICMPCONST(AIMOVE2_IGNOREHOLES)
-        ICMPCONST(AIMOVE2_NOTARGETIDLE)
+        ICMPCONST_FROM(AIMOVE2_NOTARGETIDLE, 4417)
         ICMPCONST(AIATTACK1_NORMAL)
         ICMPCONST(AIATTACK1_LONG)
         ICMPCONST(AIATTACK1_MELEE)
@@ -13603,7 +14102,10 @@ int mapstrings_transconst(ScriptVariant **varlist, int paramCount)
         ICMPCONST(ANI_RUNSLIDE)
         ICMPCONST(ANI_BLOCKPAIN)
         ICMPCONST(ANI_DUCKATTACK)
-        ICMPCONST(MAX_ANIS)
+        else if(stricmp("MAX_ANIS", constname) == 0)
+        {
+            v.lVal = obor_profile_animation_base();
+        }
         ICMPCONST(PLAYER_MIN_Z)
         ICMPCONST(PLAYER_MAX_Z)
         ICMPCONST(BGHEIGHT)
@@ -13663,42 +14165,54 @@ int mapstrings_transconst(ScriptVariant **varlist, int paramCount)
         ICMPCONST(ANI_WALKOFF)
         ICMPCONST(ANI_FREESPECIAL)
         ICMPCONST(ANI_ATTACK)
-        ICMPCONST(ANI_BACKPAIN)
-        ICMPCONST(ANI_BACKPAIN2)
-        ICMPCONST(ANI_BACKPAIN3)
-        ICMPCONST(ANI_BACKPAIN4)
-        ICMPCONST(ANI_BACKPAIN5)
-        ICMPCONST(ANI_BACKPAIN6)
-        ICMPCONST(ANI_BACKPAIN7)
-        ICMPCONST(ANI_BACKPAIN8)
-        ICMPCONST(ANI_BACKPAIN9)
-        ICMPCONST(ANI_BACKPAIN10)
-        ICMPCONST(ANI_BACKFALL)
-        ICMPCONST(ANI_BACKFALL2)
-        ICMPCONST(ANI_BACKFALL3)
-        ICMPCONST(ANI_BACKFALL4)
-        ICMPCONST(ANI_BACKFALL5)
-        ICMPCONST(ANI_BACKFALL6)
-        ICMPCONST(ANI_BACKFALL7)
-        ICMPCONST(ANI_BACKFALL8)
-        ICMPCONST(ANI_BACKFALL9)
-        ICMPCONST(ANI_BACKFALL10)
-        ICMPCONST(ANI_BACKDIE)
-        ICMPCONST(ANI_BACKDIE2)
-        ICMPCONST(ANI_BACKDIE3)
-        ICMPCONST(ANI_BACKDIE4)
-        ICMPCONST(ANI_BACKDIE5)
-        ICMPCONST(ANI_BACKDIE6)
-        ICMPCONST(ANI_BACKDIE7)
-        ICMPCONST(ANI_BACKDIE8)
-        ICMPCONST(ANI_BACKDIE9)
-        ICMPCONST(ANI_BACKDIE10)
-        ICMPCONST(ANI_BACKRUN)
-        ICMPCONST(ANI_HITOBSTACLE)
-        ICMPCONST(ANI_HITPLATFORM)
+        ICMPCONST_FROM(ANI_BACKPAIN, 4414)
+        ICMPCONST_FROM(ANI_BACKPAIN2, 4414)
+        ICMPCONST_FROM(ANI_BACKPAIN3, 4414)
+        ICMPCONST_FROM(ANI_BACKPAIN4, 4414)
+        ICMPCONST_FROM(ANI_BACKPAIN5, 4414)
+        ICMPCONST_FROM(ANI_BACKPAIN6, 4414)
+        ICMPCONST_FROM(ANI_BACKPAIN7, 4414)
+        ICMPCONST_FROM(ANI_BACKPAIN8, 4414)
+        ICMPCONST_FROM(ANI_BACKPAIN9, 4414)
+        ICMPCONST_FROM(ANI_BACKPAIN10, 4414)
+        ICMPCONST_FROM(ANI_BACKFALL, 4414)
+        ICMPCONST_FROM(ANI_BACKFALL2, 4414)
+        ICMPCONST_FROM(ANI_BACKFALL3, 4414)
+        ICMPCONST_FROM(ANI_BACKFALL4, 4414)
+        ICMPCONST_FROM(ANI_BACKFALL5, 4414)
+        ICMPCONST_FROM(ANI_BACKFALL6, 4414)
+        ICMPCONST_FROM(ANI_BACKFALL7, 4414)
+        ICMPCONST_FROM(ANI_BACKFALL8, 4414)
+        ICMPCONST_FROM(ANI_BACKFALL9, 4414)
+        ICMPCONST_FROM(ANI_BACKFALL10, 4414)
+        ICMPCONST_FROM(ANI_BACKDIE, 4414)
+        ICMPCONST_FROM(ANI_BACKDIE2, 4414)
+        ICMPCONST_FROM(ANI_BACKDIE3, 4414)
+        ICMPCONST_FROM(ANI_BACKDIE4, 4414)
+        ICMPCONST_FROM(ANI_BACKDIE5, 4414)
+        ICMPCONST_FROM(ANI_BACKDIE6, 4414)
+        ICMPCONST_FROM(ANI_BACKDIE7, 4414)
+        ICMPCONST_FROM(ANI_BACKDIE8, 4414)
+        ICMPCONST_FROM(ANI_BACKDIE9, 4414)
+        ICMPCONST_FROM(ANI_BACKDIE10, 4414)
+        else if((obor_profile_build < 4283 || obor_profile_build >= 4414) &&
+                stricmp("ANI_BACKRUN", constname) == 0)
+        {
+            v.lVal = ANI_BACKRUN;
+        }
+        ICMPCONST_FROM(ANI_HITOBSTACLE, 4414)
+        ICMPCONST_FROM(ANI_HITPLATFORM, 4414)
         ICMPCONST(ANI_HITWALL)
-        ICMPCONST(ANI_GETBOOMERANG)
-        ICMPCONST(ANI_GETBOOMERANGINAIR)
+        else if((obor_profile_build < 4283 || obor_profile_build >= 4414) &&
+                stricmp("ANI_GETBOOMERANG", constname) == 0)
+        {
+            v.lVal = ANI_GETBOOMERANG;
+        }
+        else if((obor_profile_build < 4283 || obor_profile_build >= 4414) &&
+                stricmp("ANI_GETBOOMERANGINAIR", constname) == 0)
+        {
+            v.lVal = ANI_GETBOOMERANGINAIR;
+        }
 
 
         // for the extra animation ids
@@ -13716,52 +14230,52 @@ int mapstrings_transconst(ScriptVariant **varlist, int paramCount)
         ICMPSCONSTA(ANI_ATTACK, animattacks)
         ICMPSCONSTA(ANI_FOLLOW, animfollows)
         ICMPSCONSTA(ANI_FREESPECIAL, animspecials)
-        ICMPSCONSTA(ANI_BACKPAIN, animbackpains)
-        ICMPSCONSTA(ANI_BACKFALL, animbackfalls)
-        ICMPSCONSTA(ANI_BACKDIE, animbackdies)
+        ICMPSBACKCONST(ANI_BACKPAIN, animbackpains)
+        ICMPSBACKCONST(ANI_BACKFALL, animbackfalls)
+        ICMPSBACKCONST(ANI_BACKDIE, animbackdies)
 
         // Animation properties.
-        ICMPCONST(ANI_PROP_ANIMHITS)
-        ICMPCONST(ANI_PROP_ANTIGRAV)
-        ICMPCONST(ANI_PROP_ATTACK)
-        ICMPCONST(ANI_PROP_COLLISIONONE)
-        ICMPCONST(ANI_PROP_BODY_COLLISION)
-        ICMPCONST(ANI_PROP_BOUNCE)
-        ICMPCONST(ANI_PROP_CANCEL)
-        ICMPCONST(ANI_PROP_CHARGETIME)
-        ICMPCONST(ANI_PROP_COUNTERRANGE)
-        ICMPCONST(ANI_PROP_DELAY)
-        ICMPCONST(ANI_PROP_DRAWMETHODS)
-        ICMPCONST(ANI_PROP_DROPFRAME)
-        ICMPCONST(ANI_PROP_DROPV)
-        ICMPCONST(ANI_PROP_ENERGYCOST)
-        ICMPCONST(ANI_PROP_FLIPFRAME)
-        ICMPCONST(ANI_PROP_FOLLOWUP)
-        ICMPCONST(ANI_PROP_IDLE)
-        ICMPCONST(ANI_PROP_INDEX)
-        ICMPCONST(ANI_PROP_JUMPFRAME)
-        ICMPCONST(ANI_PROP_LANDFRAME)
-        ICMPCONST(ANI_PROP_LOOP)
-        ICMPCONST(ANI_PROP_MODEL_INDEX)
-        ICMPCONST(ANI_PROP_MOVE)
-        ICMPCONST(ANI_PROP_NUMFRAMES)
-        ICMPCONST(ANI_PROP_OFFSET)
-        ICMPCONST(ANI_PROP_PLATFORM)
-        ICMPCONST(ANI_PROP_PROJECTILE)
-        ICMPCONST(ANI_PROP_QUAKEFRAME)
-        ICMPCONST(ANI_PROP_RANGE)
-        ICMPCONST(ANI_PROP_SHADOW)
-        ICMPCONST(ANI_PROP_SIZE)
-        ICMPCONST(ANI_PROP_SOUNDTOPLAY)
-        ICMPCONST(ANI_PROP_SPAWNFRAME)
-        ICMPCONST(ANI_PROP_SPRITE)
-        ICMPCONST(ANI_PROP_SPRITEA)
-        ICMPCONST(ANI_PROP_SUBENTITY)
-        ICMPCONST(ANI_PROP_SUMMONFRAME)
-        ICMPCONST(ANI_PROP_SYNC)
-        ICMPCONST(ANI_PROP_UNSUMMONFRAME)
-        ICMPCONST(ANI_PROP_VULNERABLE)
-        ICMPCONST(ANI_PROP_WEAPONFRAME)
+        ICMPANIMPROP(ANI_PROP_ANIMHITS)
+        ICMPANIMPROP(ANI_PROP_ANTIGRAV)
+        ICMPANIMPROP(ANI_PROP_ATTACK)
+        ICMPANIMPROP(ANI_PROP_COLLISIONONE)
+        ICMPANIMPROP(ANI_PROP_BODY_COLLISION)
+        ICMPANIMPROP(ANI_PROP_BOUNCE)
+        ICMPANIMPROP(ANI_PROP_CANCEL)
+        ICMPANIMPROP(ANI_PROP_CHARGETIME)
+        ICMPANIMPROP(ANI_PROP_COUNTERRANGE)
+        ICMPANIMPROP(ANI_PROP_DELAY)
+        ICMPANIMPROP(ANI_PROP_DRAWMETHODS)
+        ICMPANIMPROP(ANI_PROP_DROPFRAME)
+        ICMPANIMPROP(ANI_PROP_DROPV)
+        ICMPANIMPROP(ANI_PROP_ENERGYCOST)
+        ICMPANIMPROP(ANI_PROP_FLIPFRAME)
+        ICMPANIMPROP(ANI_PROP_FOLLOWUP)
+        ICMPANIMPROP(ANI_PROP_IDLE)
+        ICMPANIMPROP(ANI_PROP_INDEX)
+        ICMPANIMPROP(ANI_PROP_JUMPFRAME)
+        ICMPANIMPROP(ANI_PROP_LANDFRAME)
+        ICMPANIMPROP(ANI_PROP_LOOP)
+        ICMPANIMPROP(ANI_PROP_MODEL_INDEX)
+        ICMPANIMPROP(ANI_PROP_MOVE)
+        ICMPANIMPROP(ANI_PROP_NUMFRAMES)
+        ICMPANIMPROP(ANI_PROP_OFFSET)
+        ICMPANIMPROP(ANI_PROP_PLATFORM)
+        ICMPANIMPROP(ANI_PROP_PROJECTILE)
+        ICMPANIMPROP(ANI_PROP_QUAKEFRAME)
+        ICMPANIMPROP(ANI_PROP_RANGE)
+        ICMPANIMPROP(ANI_PROP_SHADOW)
+        ICMPANIMPROP(ANI_PROP_SIZE)
+        ICMPANIMPROP(ANI_PROP_SOUNDTOPLAY)
+        ICMPANIMPROP(ANI_PROP_SPAWNFRAME)
+        ICMPANIMPROP(ANI_PROP_SPRITE)
+        ICMPANIMPROP(ANI_PROP_SPRITEA)
+        ICMPANIMPROP(ANI_PROP_SUBENTITY)
+        ICMPANIMPROP(ANI_PROP_SUMMONFRAME)
+        ICMPANIMPROP(ANI_PROP_SYNC)
+        ICMPANIMPROP(ANI_PROP_UNSUMMONFRAME)
+        ICMPANIMPROP(ANI_PROP_VULNERABLE)
+        ICMPANIMPROP(ANI_PROP_WEAPONFRAME)
 
         // Attack properties
         ICMPCONST(ATTACK_PROP_BLOCK_COST)
@@ -13821,18 +14335,18 @@ int mapstrings_transconst(ScriptVariant **varlist, int paramCount)
         ICMPCONST(BODY_COLLISION_PROP_TAG)
 
         // Porting
-        ICMPCONST(PORTING_ANDROID)
-        ICMPCONST(PORTING_DARWIN)
-        ICMPCONST(PORTING_DREAMCAST)
-        ICMPCONST(PORTING_GPX2)
-        ICMPCONST(PORTING_LINUX)
-        ICMPCONST(PORTING_OPENDINGUX)
-        ICMPCONST(PORTING_PSP)
-        ICMPCONST(PORTING_UNKNOWN)
-        ICMPCONST(PORTING_WII)
-        ICMPCONST(PORTING_WINDOWS)
-        ICMPCONST(PORTING_WIZ)
-        ICMPCONST(PORTING_XBOX)
+        ICMPCONST_FROM(PORTING_ANDROID, 4347)
+        ICMPCONST_FROM(PORTING_DARWIN, 4347)
+        ICMPCONST_FROM(PORTING_DREAMCAST, 4347)
+        ICMPCONST_FROM(PORTING_GPX2, 4347)
+        ICMPCONST_FROM(PORTING_LINUX, 4347)
+        ICMPCONST_FROM(PORTING_OPENDINGUX, 4347)
+        ICMPCONST_FROM(PORTING_PSP, 4347)
+        ICMPCONST_FROM(PORTING_UNKNOWN, 4347)
+        ICMPCONST_FROM(PORTING_WII, 4347)
+        ICMPCONST_FROM(PORTING_WINDOWS, 4347)
+        ICMPCONST_FROM(PORTING_WIZ, 4347)
+        ICMPCONST_FROM(PORTING_XBOX, 4349)
 
         else
         {
@@ -14230,7 +14744,7 @@ HRESULT openbor_pausemusic(ScriptVariant **varlist , ScriptVariant **pretvar, in
 HRESULT openbor_pausesamples(ScriptVariant **varlist , ScriptVariant **pretvar, int paramCount)
 {
     int pause = 0;
-    if(paramCount < 1)
+    if(paramCount < 1 || !varlist || !varlist[0])
     {
         return S_OK;
     }
@@ -14245,7 +14759,7 @@ HRESULT openbor_pausesamples(ScriptVariant **varlist , ScriptVariant **pretvar, 
 HRESULT openbor_pausesample(ScriptVariant **varlist , ScriptVariant **pretvar, int paramCount)
 {
     int pause = 0, channel = 0;
-    if(paramCount < 2)
+    if(paramCount < 2 || !varlist || !varlist[0] || !varlist[1])
     {
         return S_OK;
     }
@@ -14293,6 +14807,10 @@ HRESULT openbor_stopchannel(ScriptVariant **varlist , ScriptVariant **pretvar, i
 HRESULT openbor_isactivesample(ScriptVariant **varlist , ScriptVariant **pretvar, int paramCount)
 {
     LONG ltemp;
+    if(paramCount < 1 || !varlist || !varlist[0])
+    {
+        goto error;
+    }
     if(FAILED(ScriptVariant_IntegerValue(varlist[0], &ltemp)))
     {
         goto error;
@@ -14309,6 +14827,10 @@ HRESULT openbor_isactivesample(ScriptVariant **varlist , ScriptVariant **pretvar
 HRESULT openbor_sampleid(ScriptVariant **varlist , ScriptVariant **pretvar, int paramCount)
 {
     LONG ltemp;
+    if(paramCount < 1 || !varlist || !varlist[0])
+    {
+        goto error;
+    }
     if(FAILED(ScriptVariant_IntegerValue(varlist[0], &ltemp)))
     {
         goto error;
@@ -14553,10 +15075,31 @@ enum gtop_enum
     _top_the_end,
 };
 
+static int obor_textobj_property(int property)
+{
+    static const int early[] =
+    {
+        _top_font, _top_text, _top_time, _top_x, _top_a, _top_y, _top_z
+    };
+
+    if(obor_profile_build >= 4283 && obor_profile_build < 4377 &&
+        property >= 0 && property < _top_the_end)
+        return early[property];
+
+    return property;
+}
+
 int mapstrings_textobjproperty(ScriptVariant **varlist, int paramCount)
 {
     char *propname = NULL;
     int prop;
+    int first = 0;
+    int count;
+    const char **names;
+
+    /* The original search through 4376 only reached these three names. */
+    static const char *early[] = {"a", "y", "z"};
+    static const char *merged[] = {"a", "font", "text", "timex", "y", "z"};
 
     static const char *proplist[] =
     {
@@ -14579,12 +15122,25 @@ int mapstrings_textobjproperty(ScriptVariant **varlist, int paramCount)
     {
         propname = (char *)StrCache_GetIfPresent(varlist[1]->strVal);
         if(!propname) return 1;
-        prop = searchList(proplist, propname,
-                          (int)(sizeof(proplist) / sizeof(*proplist)));
+        names = proplist;
+        count = (int)(sizeof(proplist) / sizeof(*proplist));
+        if(obor_profile_build >= 4283 && obor_profile_build < 4377)
+        {
+            names = early;
+            count = (int)(sizeof(early) / sizeof(*early));
+            first = 3;
+        }
+        else if(obor_profile_build >= 4377 && obor_profile_build < 4382)
+        {
+            names = merged;
+            count = (int)(sizeof(merged) / sizeof(*merged));
+        }
+
+        prop = searchList(names, propname, count);
         if(prop >= 0)
         {
             ScriptVariant_ChangeType(varlist[1], VT_INTEGER);
-            varlist[1]->lVal = prop;
+            varlist[1]->lVal = first + prop;
         }
         else
         {
@@ -14719,7 +15275,7 @@ HRESULT openbor_gettextobjproperty(ScriptVariant **varlist , ScriptVariant **pre
         goto gettextobjproperty_error;
     }
 
-    propind = varlist[1]->lVal;
+    propind = obor_textobj_property(varlist[1]->lVal);
 
     switch(propind)
     {
@@ -14820,7 +15376,7 @@ HRESULT openbor_changetextobjproperty(ScriptVariant **varlist , ScriptVariant **
         return E_FAIL;
     }
 
-    propind = varlist[1]->lVal;
+    propind = obor_textobj_property(varlist[1]->lVal);
 
     switch(propind)
     {
@@ -15987,6 +16543,55 @@ getlevelproperty_error:
     return E_FAIL;
 }
 
+/* Older scripts converted the two coordinates separately. Later scripts
+ * check the fractional coordinates and convert only the resulting cell. */
+static int obor_basemap_set_cell(s_basemap *map, double x, double z, double height)
+{
+    const int legacy = obor_profile_build >= 4283 && obor_profile_build < 4390;
+    const int width = map->size.x;
+    const int depth = map->size.z;
+    uint64_t cell;
+
+    if(width <= 0 || depth <= 0)
+        return 0;
+    if(legacy)
+    {
+        if(!(x > -1.0 && x < width && z > -1.0 && z < depth))
+            return 0;
+        cell = (uint64_t)(int)z * width + (int)x;
+    }
+    else
+    {
+        double flat;
+        if(!(x >= 0 && x < width && z >= 0 && z < depth))
+            return 0;
+        flat = x + z * width;
+        if(flat >= (double)INT_MAX + 1.0)
+            return 0;
+        cell = (int)flat;
+    }
+    if(cell > INT_MAX)
+        return 0;
+
+    if(!map->map)
+    {
+        const unsigned padding = legacy ? 0 : 1;
+        const uint64_t cells = ((uint64_t)width + padding) * ((uint64_t)depth + padding);
+        const uint64_t limit = legacy ? SIZE_MAX : INT_MAX;
+        if(cell >= cells || cells > limit / sizeof(*map->map))
+            return 0;
+        map->map = calloc((size_t)cells, sizeof(*map->map));
+        if(!map->map)
+            return 0;
+    }
+    else if(cell >= obor_allocation_size(map->map) / sizeof(*map->map))
+    {
+        return 0;
+    }
+    map->map[cell] = (float)height;
+    return 1;
+}
+
 //changelevelproperty(name, value)
 HRESULT openbor_changelevelproperty(ScriptVariant **varlist , ScriptVariant **pretvar, int paramCount)
 {
@@ -16173,22 +16778,11 @@ HRESULT openbor_changelevelproperty(ScriptVariant **varlist , ScriptVariant **pr
                     }
                     break;
                 case _lp_bm_map:
-                    if(paramCount >= 6 && SUCCEEDED(ScriptVariant_DecimalValue(varlist[3], &dbltemp2)) &&
-                            SUCCEEDED(ScriptVariant_DecimalValue(varlist[4], &dbltemp3)) &&
-                            SUCCEEDED(ScriptVariant_DecimalValue(varlist[5], &dbltemp)) &&
-                            dbltemp2 >= 0 && dbltemp2 < level->basemaps[ltemp].size.x && dbltemp3 >= 0 && dbltemp3 < level->basemaps[ltemp].size.z
-                      )
-                    {
-                        if(!level->basemaps[ltemp].map)
-                        {
-                            level->basemaps[ltemp].map = calloc( 1, (LONG)(sizeof(*(level->basemaps[ltemp].map)) * (level->basemaps[ltemp].size.x+1)*(level->basemaps[ltemp].size.z+1)) );
-                        }
-                        level->basemaps[ltemp].map[(LONG)(dbltemp2 + dbltemp3 * level->basemaps[ltemp].size.x)] = (float)dbltemp;
-                    }
-                    else
-                    {
+                    if(paramCount < 6 || FAILED(ScriptVariant_DecimalValue(varlist[3], &dbltemp2)) ||
+                       FAILED(ScriptVariant_DecimalValue(varlist[4], &dbltemp3)) ||
+                       FAILED(ScriptVariant_DecimalValue(varlist[5], &dbltemp)) ||
+                       !obor_basemap_set_cell(&level->basemaps[ltemp], dbltemp2, dbltemp3, dbltemp))
                         goto clperror;
-                    }
                     break;
                 default:
                     goto clperror;
@@ -16414,7 +17008,7 @@ HRESULT openbor_jumptobranch(ScriptVariant **varlist , ScriptVariant **pretvar, 
         goto jumptobranch_error;
     }
 
-    strncpy(branch_name, StrCache_Get(varlist[0]->strVal), MIN(MAX_NAME_LEN, MAX_STR_VAR_LEN)); // copy the string value to branch name
+    obor_profile_copy_name(branch_name, StrCache_Get(varlist[0]->strVal));
 
     if(paramCount >= 2)
     {
@@ -16444,6 +17038,7 @@ HRESULT openbor_bindentity(ScriptVariant **varlist , ScriptVariant **pretvar, in
     ScriptVariant *arg = NULL;
     void adjust_bind(entity * e);
     LONG x = 0, z = 0, a = 0, dir = 0, anim = 0, sortid = -1;
+    const int bind_sort = obor_profile_build < 4283 || obor_profile_build >= 4396;
 
     *pretvar = NULL;
     if(paramCount < 2)
@@ -16468,7 +17063,10 @@ HRESULT openbor_bindentity(ScriptVariant **varlist , ScriptVariant **pretvar, in
     }
 
     ent->binding.ent = other;
-    ent->binding.sortid = sortid;
+    if(bind_sort)
+    {
+        ent->binding.sortid = sortid;
+    }
 
     if(paramCount < 3)
     {
@@ -16544,7 +17142,7 @@ HRESULT openbor_bindentity(ScriptVariant **varlist , ScriptVariant **pretvar, in
         }
         ent->binding.ani_bind = (int)anim;
     }
-    if(paramCount < 8)
+    if(!bind_sort || paramCount < 8)
     {
         goto BIND;
     }
@@ -16737,15 +17335,26 @@ HRESULT openbor_add(ScriptVariant **varlist , ScriptVariant **pretvar, int param
     Varlist *array;
     LONG index;
 
+    if(!pretvar)
+    {
+        return E_FAIL;
+    }
+
     *pretvar = NULL;
-    if(paramCount < 2 || varlist[0]->vt != VT_PTR || !(array = (Varlist *)varlist[0]->ptrVal) || array->magic != varlist_magic)
+    if(paramCount < 3 || !varlist || !varlist[0] || !varlist[1] || !varlist[2] ||
+       varlist[0]->vt != VT_PTR || !(array = (Varlist *)varlist[0]->ptrVal) || array->magic != varlist_magic)
     {
         goto add_error;
     }
 
-    if(varlist[1]->vt == VT_STR)
+    if((obor_profile_build < 4283 || obor_profile_build >= 4420) && varlist[1]->vt == VT_STR)
     {
-        Varlist_SetByName(array, StrCache_Get(varlist[1]->strVal), varlist[2]);
+        char *name = StrCache_GetIfPresent(varlist[1]->strVal);
+        if(!name)
+        {
+            goto add_error;
+        }
+        Varlist_SetByName(array, name, varlist[2]);
     }
     else if( SUCCEEDED(ScriptVariant_IntegerValue(varlist[1], &index)) )
     {
@@ -16812,7 +17421,7 @@ HRESULT openbor_previous(ScriptVariant **varlist , ScriptVariant **pretvar, int 
     }
 
     ScriptVariant_ChangeType(*pretvar, VT_INTEGER);
-    (*pretvar)->lVal = (LONG)(List_GotoPrevious(array->list));
+    (*pretvar)->lVal = (LONG)(array->list->current && List_GotoPrevious(array->list));
 
     return S_OK;
 previous_error:
@@ -18019,7 +18628,7 @@ HRESULT openbor_playwebm(ScriptVariant **varlist , ScriptVariant **pretvar, int 
     LONG temp = 0; //noskip
     extern int playwebm(char * filename, int noskip); // avoid implicit declaration
 
-    if(paramCount < 1)
+    if(paramCount < 1 || !varlist || !varlist[0])
     {
         goto playwebm_error;
     }
@@ -18031,7 +18640,7 @@ HRESULT openbor_playwebm(ScriptVariant **varlist , ScriptVariant **pretvar, int 
 
     if(paramCount > 1)
     {
-        if(FAILED(ScriptVariant_IntegerValue(varlist[1], &temp)))
+        if(!varlist[1] || FAILED(ScriptVariant_IntegerValue(varlist[1], &temp)))
         {
             goto playwebm_error;
         }
@@ -18041,7 +18650,8 @@ HRESULT openbor_playwebm(ScriptVariant **varlist , ScriptVariant **pretvar, int 
         ScriptVariant_ChangeType(*pretvar, VT_INTEGER);
         (*pretvar)->lVal = (LONG)playwebm(StrCache_Get(varlist[0]->strVal), (int)temp);
     #else
-        printf("Skipping video %s; WebM playback not supported on this platform\n");
+        printf("Skipping video %s; WebM playback not supported on this platform\n",
+               StrCache_Get(varlist[0]->strVal));
         *pretvar = NULL;
     #endif
 
@@ -18058,10 +18668,17 @@ HRESULT openbor_playgif(ScriptVariant **varlist , ScriptVariant **pretvar, int p
 {
     LONG temp[3] = {0, 0, 0}; //x,y,noskip
     int i;
+    char *filename;
+    const int early_result = obor_profile_build >= 4283 && obor_profile_build < 4380;
     extern unsigned char pal[1024];
     extern int playgif(char * filename, int x, int y, int noskip);
 
-    if(paramCount < 1)
+    if(!pretvar)
+    {
+        return E_FAIL;
+    }
+
+    if(paramCount < 1 || !varlist || !varlist[0] || !*pretvar)
     {
         goto playgif_error;
     }
@@ -18069,6 +18686,11 @@ HRESULT openbor_playgif(ScriptVariant **varlist , ScriptVariant **pretvar, int p
     if(varlist[0]->vt != VT_STR)
     {
         goto playgif_error;
+    }
+
+    if(early_result)
+    {
+        ScriptVariant_ChangeType(*pretvar, VT_INTEGER);
     }
 
     for(i = 0; i < 3 && i < paramCount - 1; i++)
@@ -18079,8 +18701,17 @@ HRESULT openbor_playgif(ScriptVariant **varlist , ScriptVariant **pretvar, int p
         }
     }
 
-    ScriptVariant_ChangeType(*pretvar, VT_INTEGER);
-    (*pretvar)->lVal = (LONG)playgif(StrCache_Get(varlist[0]->strVal), (int)(temp[0]), (int)(temp[1]), (int)(temp[2]));
+    if(!early_result)
+    {
+        ScriptVariant_ChangeType(*pretvar, VT_INTEGER);
+    }
+
+    filename = varlist[0]->vt == VT_STR ? StrCache_GetIfPresent(varlist[0]->strVal) : NULL;
+    if(!filename)
+    {
+        goto playgif_error;
+    }
+    (*pretvar)->lVal = (LONG)playgif(filename, (int)(temp[0]), (int)(temp[1]), (int)(temp[2]));
     palette_set_corrected(pal, savedata.gamma, savedata.gamma, savedata.gamma, savedata.brightness, savedata.brightness, savedata.brightness);
     return S_OK;
 

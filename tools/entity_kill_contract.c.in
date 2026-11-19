@@ -1,0 +1,109 @@
+/* SPDX-License-Identifier: BSD-3-Clause
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me> */
+#include <stdint.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include "openbor.h"
+#undef printf
+#undef assert
+uint32_t obor_profile_build;
+static unsigned active_case;
+#define assert(c) do{if(!(c)){fprintf(stderr,"ENTITY_KILL revision=%u case=%u line=%d: %s\n",obor_profile_build,active_case,__LINE__,#c);abort();}}while(0)
+HRESULT Interpreter_Call(Interpreter *p){(void)p;abort();}
+HRESULT Interpreter_EvalInstruction(Interpreter *p){(void)p;abort();}
+static entity victim,partner,owner,parent,child,observer,sentinel;
+entity *self=&sentinel,*smartbomber,*textbox;
+static entity *entities[]={&victim,&child,&observer};
+entity **ent_list=entities;
+int ent_max=3,ent_count,max_attack_types=3,level_completed;
+s_player player[MAX_PLAYERS];
+const s_collision_attack emptyattack={0};
+s_axis_f default_model_dropv={0};
+static s_scripts scripts;
+static Script callback_script;
+static unsigned callback_calls,execute_calls,cleanup_calls,local_writes;
+static int initialized,mutation,initial_active,has_scripts;
+int Script_IsInitialized(Script *script)
+{
+    assert(script==&callback_script && ++callback_calls==1);
+    assert(victim.exists==initial_active);
+    assert(self==&sentinel && victim.health==29 && owner.cantfire==1 && victim.weapent==&owner);
+    assert(victim.link==&partner && partner.link==&victim && victim.parent==&parent);
+    assert(parent.subentity==&victim && victim.subentity==&child && child.parent==&victim);
+    assert(smartbomber==&victim && textbox==&victim && observer.owner==&victim);
+    return initialized;
+}
+static void probe_variant_init(ScriptVariant *value){memset(value,0,sizeof(*value));}
+static void probe_variant_type(ScriptVariant *value,VARTYPE type){assert(type==VT_PTR);value->vt=type;}
+static void probe_variant_clear(ScriptVariant *value){assert(value->vt==VT_PTR && value->ptrVal==&victim);memset(value,0,sizeof(*value));}
+static void probe_local(Script *script,const char *name,ScriptVariant *value)
+{
+    assert(script==&callback_script && !strcmp(name,"self"));
+    if(!local_writes)assert(value->vt==VT_PTR && value->ptrVal==&victim);
+    else assert(local_writes==1 && value->vt==VT_EMPTY);
+    local_writes++;
+}
+int Script_Execute(Script *script)
+{
+    assert(script==&callback_script && initialized && ++execute_calls==1 && local_writes==1);
+    if(mutation>=0)victim.exists=mutation;
+    return 1;
+}
+void clear_all_scripts(s_scripts *value,int method)
+{
+    assert(value==(has_scripts?&scripts:NULL) && method==1 && ++cleanup_calls==1);
+    assert(victim.health==0 && victim.exists==0 && ent_count==9 && owner.cantfire==0);
+    assert(!victim.link && !partner.link && !victim.grabbing && !partner.grabbing && !victim.weapent);
+    assert(victim.parent==&parent && parent.subentity==&victim && victim.subentity==&child);
+}
+#undef Script_Set_Local_Variant
+#define Script_Set_Local_Variant probe_local
+#define ScriptVariant_Init probe_variant_init
+#define ScriptVariant_ChangeType probe_variant_type
+#define ScriptVariant_Clear probe_variant_clear
+@FUNCTIONS@
+static const unsigned contexts[]={@CONTEXTS@};
+static const struct {int active,initialized,mutation,player,null,missing_scripts;} cases[]={@CASES@};
+static void setup(void)
+{
+    memset(&victim,0,sizeof(victim));memset(&partner,0,sizeof(partner));memset(&owner,0,sizeof(owner));
+    memset(&parent,0,sizeof(parent));memset(&child,0,sizeof(child));memset(&observer,0,sizeof(observer));
+    memset(&scripts,0,sizeof(scripts));memset(player,0,sizeof(player));
+    self=&sentinel;smartbomber=textbox=&victim;ent_count=10;callback_calls=execute_calls=cleanup_calls=local_writes=0;
+    initialized=cases[active_case].initialized;mutation=cases[active_case].mutation;initial_active=cases[active_case].active;
+    victim.exists=cases[active_case].active;victim.health=29;victim.owner=victim.weapent=&owner;
+    victim.modeldata.type=TYPE_SHOT;owner.modeldata.type=TYPE_PLAYER;owner.cantfire=1;
+    victim.link=victim.grabbing=&partner;partner.link=partner.grabbing=&victim;
+    victim.parent=&parent;parent.subentity=&victim;victim.subentity=&child;child.parent=&victim;
+    child.exists=observer.exists=1;observer.modeldata.type=TYPE_TEXTBOX;
+    observer.owner=observer.opponent=observer.binding.ent=observer.landed_on_platform=&victim;
+    observer.hithead=observer.lasthit=&victim;
+    has_scripts=!cases[active_case].missing_scripts;
+    victim.scripts=has_scripts?&scripts:NULL;scripts.onkill_script=&callback_script;
+    for(int i=0;i<MAX_PLAYERS;i++)player[i].ent=&owner;
+    player[cases[active_case].player].ent=&victim;
+}
+int main(void)
+{
+    assert(MAX_PLAYERS==4);
+    for(unsigned context=0;context<sizeof(contexts)/sizeof(*contexts);context++){
+        obor_profile_build=contexts[context];
+        for(active_case=0;active_case<sizeof(cases)/sizeof(*cases);active_case++){
+            setup();kill(cases[active_case].null?NULL:&victim);
+            int values[]={callback_calls,execute_calls,cleanup_calls,local_writes,
+                victim.exists,victim.health,ent_count,owner.cantfire,
+                victim.link==&partner,partner.link==&victim,victim.grabbing==&partner,partner.grabbing==&victim,
+                victim.weapent==&owner,parent.subentity==&victim,victim.parent==&parent,
+                victim.subentity==&child,child.parent==&victim,player[cases[active_case].player].ent==&victim,
+                smartbomber==&victim,textbox==&victim,textbox==&observer,
+                observer.owner==&victim,observer.owner==&owner,observer.opponent==&victim,
+                observer.binding.ent==&victim,observer.landed_on_platform==&victim,
+                observer.hithead==&victim,observer.lasthit==&victim,observer.exists,self==&sentinel};
+            printf("{\"revision\":%u,\"values\":[",obor_profile_build);
+            for(unsigned i=0;i<sizeof(values)/sizeof(*values);i++)printf("%s%d",i?",":"",values[i]);
+            puts("]}");
+        }
+    }
+    return 0;
+}

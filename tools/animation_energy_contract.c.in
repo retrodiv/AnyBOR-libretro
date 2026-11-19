@@ -1,0 +1,110 @@
+/* SPDX-License-Identifier: BSD-3-Clause
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me>
+ */
+#include <stdint.h>
+#include <stdio.h>
+#include <strings.h>
+#include "openbor.h"
+#undef printf
+
+uint32_t obor_profile_build;
+entity *self;
+static s_player player[4];
+static s_level *level;
+static int healthcheat, noaircancel, selected;
+
+HRESULT Interpreter_Call(Interpreter *interpreter) { (void)interpreter; abort(); }
+HRESULT Interpreter_EvalInstruction(Interpreter *interpreter) { (void)interpreter; abort(); }
+
+void *checkAlloc(void *pointer, size_t bytes, const char *function, const char *file, int line)
+{
+    if (!pointer && bytes) abort();
+    return pointer;
+}
+
+void ent_set_anim(entity *ent, int aninum, int resetable)
+{
+    (void)ent;
+    (void)resetable;
+    selected = (aninum == ANI_JUMPSPECIAL) ? 1 : 2;
+}
+
+@ENERGY_CHECK@
+@JUMP_CHECK@
+
+static int special_default(const char *value, s_anim *newanim)
+{
+    int ani_id = -1;
+#ifndef stricmp
+#define stricmp strcasecmp
+#endif
+    @SPECIAL_DEFAULTS@
+    return ani_id;
+}
+
+int main(void)
+{
+    static entity actor;
+    static s_level current_level;
+    static s_anim animation, jumpcant;
+    static s_anim *animations[MAX_ANIS];
+    static const unsigned profiles[] = {@PROFILES@};
+    static const struct energy_case {
+        int declared, cost, mode, disabled, seal, mp, hp, type, frames;
+    } cases[] = {
+        @CASES@
+    };
+    static const e_cost_type cost_modes[] = {
+        COST_TYPE_MP_THEN_HP, COST_TYPE_MP_ONLY, COST_TYPE_HP_ONLY
+    };
+    static const e_entity_type actor_types[] = {
+        TYPE_PLAYER, TYPE_ENEMY, TYPE_NPC
+    };
+    static const char *const names[] = {"special", "special1", "special2", "special3", "jumpspecial"};
+    static const int ids[] = {ANI_SPECIAL, ANI_SPECIAL, ANI_SPECIAL2, ANI_JUMPSPECIAL, ANI_JUMPSPECIAL};
+    size_t p, c;
+    self = &actor;
+    level = &current_level;
+    animations[ANI_JUMPSPECIAL] = &animation;
+    animations[ANI_JUMPCANT] = &jumpcant;
+    jumpcant.numframes = 1;
+    actor.modeldata.animation = animations;
+    actor.modeldata.animation_capacity = MAX_ANIS;
+    for(p = 0; p < sizeof(profiles) / sizeof(profiles[0]); ++p)
+    {
+        obor_profile_build = profiles[p];
+        printf("[%u,[", profiles[p]);
+        for(c = 0; c < sizeof(cases) / sizeof(cases[0]); ++c)
+        {
+            const struct energy_case *input = &cases[c];
+            s_energycost cost = {0};
+            cost.cost = input->cost;
+            cost.mponly = cost_modes[input->mode];
+            cost.disable = input->disabled;
+            animation.energycost = input->declared ? &cost : NULL;
+            animation.numframes = input->frames;
+            actor.modeldata.type = actor_types[input->type];
+            actor.seal = input->seal;
+            actor.mp = input->mp;
+            actor.health = input->hp;
+            player[0].playkeys = FLAG_SPECIAL;
+            selected = 0;
+            printf("%s[%d,%d", c ? "," : "",
+                   check_energy(COST_CHECK_MP, ANI_JUMPSPECIAL), check_energy(COST_CHECK_HP, ANI_JUMPSPECIAL));
+            player_jump_check();
+            printf(",%d,%d,%d,%d]", selected, actor.mp, actor.health,
+                   !!(player[0].playkeys & FLAG_SPECIAL));
+        }
+        printf("],[");
+        for(c = 0; c < sizeof(names) / sizeof(names[0]); ++c)
+        {
+            s_anim named = {0};
+            int id = special_default(names[c], &named);
+            printf("%s[%d,%d]", c ? "," : "", id == ids[c],
+                   named.energycost ? named.energycost->cost : -1);
+            free(named.energycost);
+        }
+        puts("]]");
+    }
+    return 0;
+}

@@ -12,7 +12,7 @@ from pathlib import Path
 import re
 import unittest
 
-from contract_fixtures import load_contract_fixture
+from contract_fixtures import contract_revisions, load_contract_fixture
 from test_historical_player import function, rename_identifiers
 from test_model_constructor_ownership import run_native
 
@@ -21,7 +21,7 @@ ROOT = Path(os.environ.get('OBOR_TEST_SOURCE', HERE.parent))
 FIXTURE = HERE / 'fixtures/player-property-native-baseline.json'
 
 
-def program(engine, profiles, *, reject_last_slot=False):
+def program(engine, profiles, *, reject_last_slot=False, history=None, name_capacity=None):
     core = (engine / 'openborscript.c').read_text(encoding='latin1')
     oracle = load_contract_fixture(FIXTURE)
     data = oracle['engines'][engine.name]
@@ -37,12 +37,22 @@ def program(engine, profiles, *, reject_last_slot=False):
     baseline = rename_identifiers(data['getter'] + '\n' + data['setter'], {
         'openbor_getplayerproperty': 'original_get',
         'openbor_changeplayerproperty': 'original_set'})
+    if engine.name == '4432' and 'obor_player_property_native(' in core:
+        # This older fixture uses the native mapper with the physical enum in
+        # its frozen baseline. Its valid calls predate the new numbered probe.
+        for assignment in ('prop = arg->lVal;', 'prop = varlist[1]->lVal;'):
+            if baseline.count(assignment) != 1:
+                raise ValueError('Expected one numbered input in the player baseline')
+            baseline = baseline.replace(assignment, assignment + '''
+    if(obor_profile_build >= 4283 && obor_profile_build < 4400 && prop >= _pp_numweapons) ++prop;
+''')
     enums = '\n'.join(re.findall(
         r'enum (?:get|change)?playerproperty_enum\s*\{.*?\};', core, re.S))
     if not enums:
         raise ValueError('Native player namespaces required')
     support = []
-    names = ['obor_player_property_native', 'obor_player_get_property_native', 'obor_player_set_property_native',
+    names = ['obor_uses_early_player_properties', 'obor_player_property_native',
+                 'obor_player_get_property_native', 'obor_player_set_property_native',
                  'obor_playerproperty_native',
                  'mapstrings_playerproperty', 'mapstrings_getplayerproperty',
                  'mapstrings_changeplayerproperty']
@@ -55,6 +65,11 @@ def program(engine, profiles, *, reject_last_slot=False):
         if len(selected) == size:
             break
     support = [selected[name] for name in names if name in selected]
+    name_limit = '(sizeof(player[0].name) - 1)'
+    if 'obor_profile_name_limit(' in methods:
+        support.append(function((engine / 'openbor.c').read_text(encoding='latin1'),
+                                'obor_profile_name_limit'))
+        name_limit = '((size_t)obor_profile_name_limit())'
     lines = core.splitlines(keepends=True)
     first = next((i for i, line in enumerate(lines) if line.startswith('#define MAPSTRINGS(')), None)
     macro = ''
@@ -73,6 +88,30 @@ def program(engine, profiles, *, reject_last_slot=False):
         own = oracle['profiles'][profile['build']]
         contexts.append('{%du,%d,%d}' % (
             own['revision'], own['getter_requires_actor'], own['setter_integer_result']))
+    history_code = ''
+    if history:
+        contexts = ['{%du,0,0}' % row['revision'] for row in history['sources']]
+        contracts = []
+        numbers = []
+        for case in history['contracts']:
+            name_literals = ','.join(json.dumps(name) for name in case['names'])
+            diagnostics = ','.join(json.dumps(message) for message in case['diagnostics'])
+            contracts.append('{%d,%d,{%s},{%s}}' %
+                             (len(case['names']), case['weapons'], name_literals, diagnostics))
+        for row in history['sources']:
+            numbers.append(str(row['contract']))
+        history_code = (HERE / 'player_property_history_contract.c.in').read_text()
+        history_code = history_code.replace('@PLAYER_CONTRACTS@', ',\n'.join(contracts))
+        history_code = history_code.replace('@PLAYER_CONTRACT_IDS@', ','.join(numbers))
+    profile_support = ('uint32_t obor_profile_features;\nint obor_lns_players[MAX_PLAYERS];\n'
+                       if 'obor_lns_players' in methods else '')
+    if engine.name == '4432' and (history or 'models_cached' in methods):
+        profile_support += 'int models_cached;\n'
+    if name_capacity is not None:
+        contexts = ['{%du,0,0}' % row['revision'] for row in name_capacity]
+        limits = ','.join(str(row['name_bytes']) for row in name_capacity)
+        profile_support += ('#define NAME_CAPACITY_CONTRACT 1\n'
+                            f'static const size_t expected_name_limits[] = {{{limits}}};\n')
     values = dict(CONFIG='#include "config.h"' if (engine / 'config.h').is_file() else '',
         SCRIPT_HEADER='openborscript.h' if (engine / 'openborscript.h').is_file() else 'scriptcommon.h',
         POP_ARGUMENTS='int length' if 'StrCache_Pop(int length)' in header else 'void',
@@ -82,8 +121,9 @@ def program(engine, profiles, *, reject_last_slot=False):
         SEARCH=function((engine / 'source/utils.c').read_text(encoding='latin1'), 'searchList'),
         VARIANTS='\n'.join(function(variant, n) for n in conversions),
         METHODS=methods, BASELINE=baseline, CONTEXTS=','.join(contexts),
-        PROFILE_SUPPORT=('uint32_t obor_profile_features;\nint obor_lns_players[MAX_PLAYERS];\n'
-                         if 'obor_lns_players' in methods else ''),
+        PROFILE_SUPPORT=profile_support, NAME_LIMIT=name_limit,
+        HISTORY_FLAG='#define PLAYER_PROPERTY_HISTORY 1' if history else '',
+        HISTORICAL_CASES=history_code,
         HAS_HISTORY=str(int(engine.name in ['4432', '6391', '7142', '7533'])),
         CONTROL_UNDEF='#undef control_getmappedkeyname\n#undef control_getdevicename\n' if engine.name == '8023' else '',
         MODERN_VIEW=str(int(engine.name == '8023')))
@@ -96,6 +136,33 @@ def program(engine, profiles, *, reject_last_slot=False):
 
 
 class PlayerPropertyInputTests(unittest.TestCase):
+    def test_4432_historical_player_name_lengths(self):
+        fixture = load_contract_fixture(HERE / 'fixtures/profile-4432-name-capacity-contracts.json')
+        engine = ROOT / 'src/engines' / fixture['engine']
+        result = run_native(engine, program(engine, [], name_capacity=fixture['sources']))
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        total = len(fixture['sources'])
+        self.assertEqual(json.loads(result.stdout), {'status': 'PASS', 'profiles': total, 'cases': 3 * total})
+
+    def test_historical_4432_player_properties(self):
+        fixture = load_contract_fixture(HERE / 'fixtures/profile-player-property-history-contracts.json')
+        self.assertEqual(fixture['engine'], '4432')
+        revisions = {row['revision'] for row in fixture['sources']}
+        self.assertEqual(len(revisions), len(fixture['sources']))
+        self.assertEqual(revisions, contract_revisions(fixture, fixture['expected_revisions']))
+        for contract in fixture['contracts']:
+            self.assertEqual(len(contract['diagnostics']), 4)
+            self.assertIs(type(contract['weapons']), bool)
+            self.assertEqual(len(contract['names']), 25 if contract['weapons'] else 24)
+            self.assertEqual(contract['names'], sorted(set(contract['names'])))
+        engine = ROOT / 'src/engines' / fixture['engine']
+        result = run_native(engine, program(engine, [], history=fixture))
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        expected = sum(2 * len(fixture['contracts'][row['contract']]['names']) + 17
+                       for row in fixture['sources'])
+        self.assertEqual(json.loads(result.stdout), {'status': 'PASS', 'profiles': len(revisions), 'cases': expected})
+        print(result.stdout.strip(), flush=True)
+
     def check_family(self, engine_name):
         pin = json.loads((ROOT / 'src/pin.json').read_text())
         engine = ROOT / 'src/engines' / engine_name

@@ -6,37 +6,57 @@
  * Apply the port's engine corrections and select the PC video configuration
  * on macOS. Derive output names from the content basename with explicit
  * destination capacities, and reject overflowing output path joins. Select
- * the 4453 profile's 32-bit screen and palette behavior, preserve the 4432
- * 12-key native settings format while 4453 uses 13 keys, and disable the
- * Exit mapping in the 4453 control menu. Bound the DOT loop and control-menu
- * arrays to allocated storage. Leave multiplayer slots without a selected
- * model available to join even if game scripts preassign lives to them. Let
- * a missing basename-only PAK self-check read the active frontend content
- * after it has been validated and prepared. Allocate each model's animation
- * pointer table through the highest animation index that model uses, and
- * bound cache, copy and cleanup paths to that capacity. Ignore optional
- * defense and offense entries outside the configured attack-type range with
- * a log warning before accessing their tables. Yield after each newly
- * completed model during explicit model-list or level preparation, and defer
- * states until that preparation has cleaned up its intermediate parsers and
- * handles. Resize repeated weapon lists and detach borrowed lists before
- * replacing their entries. Return a defined null result for absent colourmap
- * models or tables while retaining valid palette fallback. Keep selected
- * palette-conversion reads bounded and reject missing maps or flags, while
- * preserving unselected slots and native allocation failure callbacks. Check
- * destination animation capacity when retaining an animation across model
- * changes, preserving the native fallback and timing. Access script-
- * container pointer slots with byte copies, preserving record layout,
- * pointer values and native copy/cleanup order. Pointer-slot allocation and
- * release accept byte storage without imposing pointer alignment on a packed
- * field. Release each sprite owner once and complete cleanup independently
- * of alias counts. Preserve native sprite-map capacity policies, check
- * allocation extents and retain existing storage and capacity when growth is
- * unavailable. Validate sprite-node allocations and release partial
- * resources without changing existing owners. Check cached sprite
- * availability before reading metadata and ignore cache requests for absent
- * nodes. Capture explicit shutdown failure text before cleanup and bound
- * legacy diagnostic formatting.
+ * the 4453 profile's 32-bit screen and palette behavior, preserve each
+ * profile's native settings record and control layout, and disable the Exit
+ * mapping in the 4453 control menu. Bound the DOT loop and control-menu
+ * arrays to allocated storage. Preserve native historical debug-menu input,
+ * terrain edge inclusion, height ties, selected-hole updates, movement/spawn
+ * hole-query periods and basemap participation by profile. Leave multiplayer
+ * slots without a selected model available to join even if game scripts
+ * preassign lives to them. Let a missing basename-only PAK self-check read
+ * the active frontend content after it has been validated and prepared.
+ * Allocate each model's animation pointer table through the highest
+ * animation index that model uses, and bound cache, copy and cleanup paths
+ * to that capacity. Ignore optional defense and offense entries outside the
+ * configured attack-type range with a log warning before accessing their
+ * tables. Yield after each newly completed model during explicit model-list
+ * or level preparation, and defer states until that preparation has cleaned
+ * up its intermediate parsers and handles. Resize repeated weapon lists and
+ * detach borrowed lists before replacing their entries. Return a defined
+ * null result for absent colourmap models or tables while retaining valid
+ * palette fallback. Keep selected palette-conversion reads bounded and
+ * reject missing maps or flags, while preserving unselected slots and native
+ * allocation failure callbacks. Check destination animation capacity when
+ * retaining an animation across model changes, preserving the native
+ * fallback and timing. Access script-container pointer slots with byte
+ * copies, preserving record layout, pointer values and native copy/cleanup
+ * order. Pointer-slot allocation and release accept byte storage without
+ * imposing pointer alignment on a packed field. Release each sprite owner
+ * once and complete cleanup independently of alias counts. Preserve native
+ * sprite-map capacity policies, check allocation extents and retain existing
+ * storage and capacity when growth is unavailable. Validate sprite-node
+ * allocations and release partial resources without changing existing
+ * owners. Check cached sprite availability before reading metadata and
+ * ignore cache requests for absent nodes. Capture explicit shutdown failure
+ * text before cleanup and bound legacy diagnostic formatting. Preserve
+ * native basemap position, slope continuation, height progression and grid
+ * indexing by profile within checked map storage. Preserve historical
+ * collision pair traversal, counter fallback, target eligibility order and
+ * juggle cost comparisons by profile. Construct native frame collision
+ * records with each profile's instance counts, indices and recursive damage
+ * defaults. Retain historical boomerang dispatch, movement, catches and wall
+ * response by profile. Preserve source-defined temporary model type
+ * defaults, subtype spellings, platform-local variant tags and retirement
+ * callback placement around the live-entity guard by profile. Initialize
+ * complete callback variant storage before publishing historical decimal-
+ * tagged pointers. Preserve system-variable field availability, pause/menu
+ * context, platform result types, scalar last-hit snapshots and live attack
+ * mutations by profile. Preserve native shadow-opacity command admission,
+ * level-event selection and drawing channels by profile. Preserve stage-
+ * completion display availability by profile. Preserve the profile's model
+ * animation script load order, main recognition, comment handling and
+ * generated script composition. Preserve source-defined menu layouts,
+ * selection order, legacy options and menu context flags by profile.
  * Existing changes recorded here; this is not their implementation date.
  * See MODIFICATIONS.md and docs/modifications/4432.md
  * at the source repository root. Original notices follow below.
@@ -257,8 +277,8 @@ char                *custScenes = NULL;
 char                *custBkgrds = NULL;
 char                *custLevels = NULL;
 char                *custModels = NULL;
-char                rush_names[2][MAX_NAME_LEN];
-char				skipselect[MAX_PLAYERS][MAX_NAME_LEN];
+char                rush_names[2][MAX_NAME_LEN + 1];
+char				skipselect[MAX_PLAYERS][MAX_NAME_LEN + 1];
 char                branch_name[MAX_NAME_LEN + 1];  // Used for branches
 char                allowselect_args[MAX_ALLOWSELECT_LEN]; // stored allowselect players
 int					useSave = 0;
@@ -528,6 +548,7 @@ int					menuScreen			= 0;
 int					enginecreditsScreen		= 0;								// CRxTRDude - Flag to determine if the credits for the engine is shown.
 int					hallOfFame			= 0;
 int					optionsMenu			= 0;
+int                 cheatoptionsMenu    = 0; // Historical separate cheat-menu state.
 int					newgameMenu			= 0;
 int					loadgameMenu		= 0;
 int					controloptionsMenu	= 0;
@@ -1074,7 +1095,8 @@ int getsyspropertybyindex(ScriptVariant *var, int index)
         break;
     case _sv_in_cheat_options:
         ScriptVariant_ChangeType(var, VT_INTEGER);
-        var->lVal = (optionsMenu && is_cheat_actived()) ? 1:0;
+        var->lVal = obor_profile_build >= 4283 && obor_profile_build < 4324 ?
+            cheatoptionsMenu : (optionsMenu && is_cheat_actived()) ? 1 : 0;
         break;
     case _sv_cheats:
         ScriptVariant_ChangeType(var, VT_INTEGER);
@@ -1138,10 +1160,47 @@ int getsyspropertybyindex(ScriptVariant *var, int index)
     case _sv_game_paused:
     case _sv_pause:
         ScriptVariant_ChangeType(var, VT_INTEGER);
-        if( !(goto_mainmenu_flag&1) ) var->lVal = (pause);
+        if(obor_profile_build >= 4293 && obor_profile_build < 4310) var->lVal = 0;
+        else if((obor_profile_build >= 4283 && obor_profile_build < 4293) || !(goto_mainmenu_flag&1)) var->lVal = (pause);
         else var->lVal = 0;
         break;
     case _sv_porting:
+        if(obor_profile_build >= 4283 && obor_profile_build < 4345) { printf("Unknown system property name.\n"); return 0; }
+        if(obor_profile_build >= 4283 && obor_profile_build < 4347)
+
+    {
+        char portname[128] = "";
+
+        #if WIN
+            strcpy(portname, "windows");
+        #elif WII
+            strcpy(portname, "wii");
+        #elif ANDROID
+            strcpy(portname, "android");
+        #elif PSP
+            strcpy(portname, "psp");
+        #elif LINUX
+            strcpy(portname, "linux");
+        #elif DC
+            strcpy(portname, "dreamcast");
+        #elif GPX2
+            strcpy(portname, "gpx2");
+        #elif OPENDINGUX
+            strcpy(portname, "opendingux");
+        #elif WIZ
+            strcpy(portname, "wiz");
+        #elif DARWIN
+            strcpy(portname, "darwin");
+        #else
+            if(obor_profile_build >= 4346) strcpy(portname, "unknown");
+        #endif
+
+        ScriptVariant_ChangeType(var, VT_STR);
+        strcpy(StrCache_Get(var->strVal), portname);
+        break;
+    }
+            else
+
     {
         e_porting porting;
 
@@ -1166,7 +1225,8 @@ int getsyspropertybyindex(ScriptVariant *var, int index)
         #elif WIZ
             porting = PORTING_WIZ;
         #elif XBOX
-            porting = PORTING_XBOX;
+            porting = obor_profile_build >= 4283 && obor_profile_build < 4349 ?
+                PORTING_UNKNOWN : PORTING_XBOX;
         #else
             porting = PORTING_UNKNOWN;
         #endif
@@ -1215,7 +1275,11 @@ int getsyspropertybyindex(ScriptVariant *var, int index)
     case _sv_lasthitt:
         ScriptVariant_ChangeType(var, VT_INTEGER);
 
-        if(lasthit.attack)
+        if(obor_profile_build >= 4283 && obor_profile_build < 4292)
+        {
+            var->lVal = lasthit.type;
+        }
+        else if(lasthit.attack)
         {
             var->lVal = lasthit.attack->attack_type;
         }
@@ -1302,7 +1366,7 @@ int getsyspropertybyindex(ScriptVariant *var, int index)
         break;
     case _sv_current_branch:
         ScriptVariant_ChangeType(var, VT_STR);
-        if(level != NULL && levelsets && levelsets[current_set].levelorder && levelsets[current_set].levelorder[current_level].branchname)
+        if(((obor_profile_build >= 4283 && obor_profile_build < 4392) || level != NULL) && levelsets && levelsets[current_set].levelorder && levelsets[current_set].levelorder[current_level].branchname)
         {
             strcpy(StrCache_Get(var->strVal), levelsets[current_set].levelorder[current_level].branchname);
         }
@@ -1316,6 +1380,7 @@ int getsyspropertybyindex(ScriptVariant *var, int index)
         getPakName(StrCache_Get(var->strVal), MAX_STR_VAR_LEN + 1, -1);
         break;
     case _sv_maxsoundchannels:
+        if(obor_profile_build >= 4283 && obor_profile_build < 4304) { printf("Unknown system property name.\n"); return 0; }
         ScriptVariant_ChangeType(var, VT_INTEGER);
         var->lVal = maxchannels();
         break;
@@ -1368,6 +1433,7 @@ int getsyspropertybyindex(ScriptVariant *var, int index)
         var->lVal = noscreenshot;
         break;
     case _sv_noshowcomplete:
+        if(obor_profile_build >= 4283 && obor_profile_build < 4394) { printf("Unknown system property name.\n"); return 0; }
         ScriptVariant_ChangeType(var, VT_INTEGER);
         var->lVal = levelsets[current_set].noshowcomplete;
         break;
@@ -1441,6 +1507,7 @@ int getsyspropertybyindex(ScriptVariant *var, int index)
         var->lVal = shadowcolor;
         break;
     case _sv_shadowopacity:
+        if(obor_profile_build >= 4283 && obor_profile_build < 4432) { printf("Unknown system property name.\n"); return 0; }
         ScriptVariant_ChangeType(var, VT_INTEGER);
         var->lVal = shadowopacity;
         break;
@@ -1473,6 +1540,7 @@ int getsyspropertybyindex(ScriptVariant *var, int index)
         var->lVal = getUsedRam(KBYTES);
         break;
     case _sv_textbox:
+        if(obor_profile_build >= 4283 && obor_profile_build < 4397) { printf("Unknown system property name.\n"); return 0; }
         ScriptVariant_ChangeType(var, VT_PTR);
         var->ptrVal = textbox;
         break;
@@ -1668,6 +1736,7 @@ int changesyspropertybyindex(int index, ScriptVariant *value)
         }
         break;
     case _sv_shadowopacity:
+        if(obor_profile_build >= 4283 && obor_profile_build < 4432) return 0;
         if(SUCCEEDED(ScriptVariant_IntegerValue(value, &ltemp)))
         {
             shadowopacity = (int)ltemp;
@@ -1717,9 +1786,17 @@ int changesyspropertybyindex(int index, ScriptVariant *value)
         }
         break;
     case _sv_lasthitt:
+        if(obor_profile_build >= 4292 && obor_profile_build < 4383) return 0;
         if(SUCCEEDED(ScriptVariant_IntegerValue(value, &ltemp)))
         {
-            lasthit.attack->attack_type = (int)ltemp;
+            if(obor_profile_build >= 4283 && obor_profile_build < 4292)
+            {
+                lasthit.type = (int)ltemp;
+            }
+            else if(lasthit.attack)
+            {
+                lasthit.attack->attack_type = (int)ltemp;
+            }
         }
         break;
     case _sv_smartbomber:
@@ -1729,9 +1806,11 @@ int changesyspropertybyindex(int index, ScriptVariant *value)
         textbox = (entity *)value->ptrVal;
         break;
     case _sv_background:
+        if(obor_profile_build >= 4283 && obor_profile_build < 4397) return 0;
         background = (s_screen *)value->ptrVal;
         break;
     case _sv_vscreen:
+        if(obor_profile_build >= 4283 && obor_profile_build < 4398) return 0;
         vscreen = (s_screen *)value->ptrVal;
         break;
     case _sv_nofadeout:
@@ -1765,6 +1844,7 @@ int changesyspropertybyindex(int index, ScriptVariant *value)
         }
         break;
     case _sv_noshowcomplete:
+        if(obor_profile_build >= 4283 && obor_profile_build < 4394) return 0;
         if(SUCCEEDED(ScriptVariant_IntegerValue(value, &ltemp)))
         {
             levelsets[current_set].noshowcomplete = (int)ltemp;
@@ -2389,6 +2469,8 @@ void execute_onblockp_script(entity *ent, int plane, entity *platform)
     Script *cs = ent->scripts->onblockp_script;
     if(Script_IsInitialized(cs))
     {
+        /* The historical decimal tag may copy the complete union. */
+        memset(&tempvar, 0, sizeof(tempvar));
         ScriptVariant_Init(&tempvar);
         ScriptVariant_ChangeType(&tempvar, VT_PTR);
         tempvar.ptrVal = (VOID *)ent;
@@ -2396,7 +2478,8 @@ void execute_onblockp_script(entity *ent, int plane, entity *platform)
         ScriptVariant_ChangeType(&tempvar, VT_INTEGER);
         tempvar.lVal = (LONG)plane;
         Script_Set_Local_Variant(cs, "plane",      &tempvar);
-        ScriptVariant_ChangeType(&tempvar, VT_PTR);
+        ScriptVariant_ChangeType(&tempvar,
+            obor_profile_build >= 4283 && obor_profile_build < 4287 ? VT_DECIMAL : VT_PTR);
         tempvar.ptrVal = (VOID *)platform;
         Script_Set_Local_Variant(cs, "platform",      &tempvar);
         Script_Execute(cs);
@@ -3120,14 +3203,31 @@ void clearsettings()
 }
 
 
-/* The shared runtime has room for the later 13-key layout. Preserve the
- * original 4432 on-disk layout, including the fields following keys. */
+/* The shared runtime holds the 13-key layout and all later debug fields.
+ * Project each historical 12-key settings record at its native width. */
 #define OBOR_SETTINGS_4432_SIZE (sizeof(s_savedata) - MAX_PLAYERS * sizeof(int))
+
+static size_t obor_settings_debug_omission(void)
+{
+    if(obor_profile_build < 4283 || obor_profile_build >= 4364)
+    {
+        return 0;
+    }
+
+    size_t last = offsetof(s_savedata, fullscreen);
+    if(obor_profile_build < 4315)
+    {
+        return last - offsetof(s_savedata, debug_collision_attack);
+    }
+    return last - offsetof(s_savedata, debug_features);
+}
 
 static void obor_pack_settings_4432(unsigned char *data)
 {
     size_t prefix = offsetof(s_savedata, keys);
     size_t tail = offsetof(s_savedata, showtitles);
+    size_t suffix = offsetof(s_savedata, fullscreen);
+    size_t middle = suffix - tail - obor_settings_debug_omission();
     int player;
     memcpy(data, &savedata, prefix);
     for(player = 0; player < MAX_PLAYERS; player++)
@@ -3135,14 +3235,17 @@ static void obor_pack_settings_4432(unsigned char *data)
         memcpy(data + prefix + player * 12 * sizeof(int),
                savedata.keys[player], 12 * sizeof(int));
     }
-    memcpy(data + prefix + MAX_PLAYERS * 12 * sizeof(int),
-           (unsigned char *)&savedata + tail, sizeof(savedata) - tail);
+    data += prefix + MAX_PLAYERS * 12 * sizeof(int);
+    memcpy(data, (unsigned char *)&savedata + tail, middle);
+    memcpy(data + middle, (unsigned char *)&savedata + suffix, sizeof(savedata) - suffix);
 }
 
 static void obor_unpack_settings_4432(const unsigned char *data)
 {
     size_t prefix = offsetof(s_savedata, keys);
     size_t tail = offsetof(s_savedata, showtitles);
+    size_t suffix = offsetof(s_savedata, fullscreen);
+    size_t middle = suffix - tail - obor_settings_debug_omission();
     int player;
     memcpy(&savedata, data, prefix);
     for(player = 0; player < MAX_PLAYERS; player++)
@@ -3151,8 +3254,9 @@ static void obor_unpack_settings_4432(const unsigned char *data)
                12 * sizeof(int));
         savedata.keys[player][12] = 0;
     }
-    memcpy((unsigned char *)&savedata + tail,
-           data + prefix + MAX_PLAYERS * 12 * sizeof(int), sizeof(savedata) - tail);
+    data += prefix + MAX_PLAYERS * 12 * sizeof(int);
+    memcpy((unsigned char *)&savedata + tail, data, middle);
+    memcpy((unsigned char *)&savedata + suffix, data + middle, sizeof(savedata) - suffix);
 }
 
 static void obor_write_settings(FILE *handle)
@@ -3165,23 +3269,24 @@ static void obor_write_settings(FILE *handle)
     {
         unsigned char data[OBOR_SETTINGS_4432_SIZE];
         obor_pack_settings_4432(data);
-        fwrite(data, 1, sizeof(data), handle);
+        fwrite(data, 1, sizeof(data) - obor_settings_debug_omission(), handle);
     }
 }
 
-static void obor_read_settings(FILE *handle)
+static size_t obor_read_settings(FILE *handle)
 {
     if(obor_profile_build == 4453)
     {
-        fread(&savedata, 1, sizeof(savedata), handle);
+        return fread(&savedata, 1, sizeof(savedata), handle);
     }
     else
     {
         unsigned char data[OBOR_SETTINGS_4432_SIZE];
         /* Like the upstream partial read, leave unread fields at defaults. */
         obor_pack_settings_4432(data);
-        fread(data, 1, sizeof(data), handle);
+        size_t bytes = fread(data, 1, sizeof(data) - obor_settings_debug_omission(), handle);
         obor_unpack_settings_4432(data);
+        return bytes;
     }
 }
 
@@ -3280,6 +3385,242 @@ void loadfromdefault()
 
 
 
+/* Logical input extents and saved bytes follow the selected source build. */
+
+
+typedef struct
+{
+    unsigned compatibleversion;
+    char dName[47 + 1]; // Difficulty Name
+    unsigned level; // Level Number
+    unsigned stage; // Stage
+    unsigned pLives[4]; // Player Lives Left
+    unsigned pCredits[4]; // Player Credits Left
+    unsigned pScores[4]; // Player Scores
+    unsigned credits; // Number Of Credits
+    unsigned times_completed;
+    unsigned which_set;
+    //-------------------new strict save features-----------------------
+    int flag; // 0 useless slot 1 only load level number 2 load player info and level
+    char pName[4][47 + 1];   // player names
+    int pSpawnhealth[4];              // hit points left
+    int pSpawnmp[4];                  // magic points left
+    int pWeapnum[4];                  // weapon
+    int pColourmap[4];                // colour map
+    char allowSelectArgs[511 + 1];      // allowselect arguments
+} obor_saved_before_4391;
+
+typedef struct
+{
+    unsigned compatibleversion;
+    char dName[47 + 1]; // Difficulty Name
+    unsigned level; // Level Number
+    unsigned stage; // Stage
+    unsigned pLives[4]; // Player Lives Left
+    unsigned pCredits[4]; // Player Credits Left
+    unsigned pScores[4]; // Player Scores
+    unsigned credits; // Number Of Credits
+    unsigned times_completed;
+    unsigned which_set;
+    //-------------------new strict save features-----------------------
+    int flag; // 0 useless slot 1 only load level number 2 load player info and level
+    char pName[4][47 + 1];   // player names
+    int pSpawnhealth[4];              // hit points left
+    int pSpawnmp[4];                  // magic points left
+    int pWeapnum[4];                  // weapon
+    int pColourmap[4];                // colour map
+
+    int selectFlag;                             // saved a select.txt infos
+    char allowSelectArgs[511 + 1];      // allowselect arguments
+    char selectMusic[511 + 1];          // select music arguments
+    char selectBackground[511 + 1];     // select background arguments
+    char selectLoad[511 + 1][511 + 1];           // select load arguments
+    int selectLoadCount;
+    char selectSkipSelect[511 + 1];     // skipselect arguments
+} obor_saved_before_4429;
+
+typedef struct
+{
+    unsigned compatibleversion;
+    char dName[47 + 1]; // Difficulty Name
+    unsigned level; // Level Number
+    unsigned stage; // Stage
+    unsigned pLives[4]; // Player Lives Left
+    unsigned pCredits[4]; // Player Credits Left
+    unsigned pScores[4]; // Player Scores
+    unsigned credits; // Number Of Credits
+    unsigned times_completed;
+    unsigned which_set;
+    //-------------------new strict save features-----------------------
+    int flag; // 0 useless slot 1 only load level number 2 load player info and level
+    char pName[4][47 + 1];   // player names
+    int pSpawnhealth[4];              // hit points left
+    int pSpawnmp[4];                  // magic points left
+    int pWeapnum[4];                  // weapon
+    int pColourmap[4];                // colour map
+
+    int selectFlag;                             // saved a select.txt infos
+    char allowSelectArgs[511 + 1];      // allowselect arguments
+    char selectMusic[511 + 1];          // select music arguments
+    char selectBackground[511 + 1];     // select background arguments
+    char selectLoad[511 + 1][511 + 1];           // select load arguments
+    int selectLoadCount;
+} obor_saved_before_4393;
+
+static int obor_profile_legacy_saved_game(void)
+{
+    return obor_profile_build >= 4283 && obor_profile_build < 4429;
+}
+
+static size_t obor_saved_level_record_size(void)
+{
+    if(!obor_profile_legacy_saved_game()) return sizeof(s_savelevel);
+    if(obor_profile_build < 4391) return sizeof(obor_saved_before_4391);
+    if(obor_profile_build < 4393) return sizeof(obor_saved_before_4393);
+    return sizeof(obor_saved_before_4429);
+}
+
+static void obor_profile_saved_record(s_savelevel *value, void *record, int restore)
+{
+#define OBOR_SAVED_MEMBER(member) do { \
+    if(restore) memcpy(&value->member, &wire->member, sizeof(wire->member)); \
+    else memcpy(&wire->member, &value->member, sizeof(wire->member)); \
+} while(0)
+    if(obor_profile_build < 4391)
+    {
+        obor_saved_before_4391 *wire = record;
+        OBOR_SAVED_MEMBER(compatibleversion);
+        OBOR_SAVED_MEMBER(dName);
+        OBOR_SAVED_MEMBER(level);
+        OBOR_SAVED_MEMBER(stage);
+        OBOR_SAVED_MEMBER(pLives);
+        OBOR_SAVED_MEMBER(pCredits);
+        OBOR_SAVED_MEMBER(pScores);
+        OBOR_SAVED_MEMBER(credits);
+        OBOR_SAVED_MEMBER(times_completed);
+        OBOR_SAVED_MEMBER(which_set);
+        OBOR_SAVED_MEMBER(flag);
+        for(size_t i = 0; i < sizeof(wire->pName) / sizeof(wire->pName[0]); i++)
+        {
+            if(restore) memcpy(value->pName[i], wire->pName[i], sizeof(wire->pName[i]));
+            else memcpy(wire->pName[i], value->pName[i], sizeof(wire->pName[i]));
+        }
+        OBOR_SAVED_MEMBER(pSpawnhealth);
+        OBOR_SAVED_MEMBER(pSpawnmp);
+        OBOR_SAVED_MEMBER(pWeapnum);
+        OBOR_SAVED_MEMBER(pColourmap);
+        OBOR_SAVED_MEMBER(allowSelectArgs);
+    }
+    else if(obor_profile_build < 4393)
+    {
+        obor_saved_before_4393 *wire = record;
+        OBOR_SAVED_MEMBER(compatibleversion);
+        OBOR_SAVED_MEMBER(dName);
+        OBOR_SAVED_MEMBER(level);
+        OBOR_SAVED_MEMBER(stage);
+        OBOR_SAVED_MEMBER(pLives);
+        OBOR_SAVED_MEMBER(pCredits);
+        OBOR_SAVED_MEMBER(pScores);
+        OBOR_SAVED_MEMBER(credits);
+        OBOR_SAVED_MEMBER(times_completed);
+        OBOR_SAVED_MEMBER(which_set);
+        OBOR_SAVED_MEMBER(flag);
+        for(size_t i = 0; i < sizeof(wire->pName) / sizeof(wire->pName[0]); i++)
+        {
+            if(restore) memcpy(value->pName[i], wire->pName[i], sizeof(wire->pName[i]));
+            else memcpy(wire->pName[i], value->pName[i], sizeof(wire->pName[i]));
+        }
+        OBOR_SAVED_MEMBER(pSpawnhealth);
+        OBOR_SAVED_MEMBER(pSpawnmp);
+        OBOR_SAVED_MEMBER(pWeapnum);
+        OBOR_SAVED_MEMBER(pColourmap);
+        OBOR_SAVED_MEMBER(selectFlag);
+        OBOR_SAVED_MEMBER(allowSelectArgs);
+        OBOR_SAVED_MEMBER(selectMusic);
+        OBOR_SAVED_MEMBER(selectBackground);
+        for(size_t i = 0; i < sizeof(wire->selectLoad) / sizeof(wire->selectLoad[0]); i++)
+        {
+            if(restore) memcpy(value->selectLoad[i], wire->selectLoad[i], sizeof(wire->selectLoad[i]));
+            else memcpy(wire->selectLoad[i], value->selectLoad[i], sizeof(wire->selectLoad[i]));
+        }
+        OBOR_SAVED_MEMBER(selectLoadCount);
+    }
+    else
+    {
+        obor_saved_before_4429 *wire = record;
+        OBOR_SAVED_MEMBER(compatibleversion);
+        OBOR_SAVED_MEMBER(dName);
+        OBOR_SAVED_MEMBER(level);
+        OBOR_SAVED_MEMBER(stage);
+        OBOR_SAVED_MEMBER(pLives);
+        OBOR_SAVED_MEMBER(pCredits);
+        OBOR_SAVED_MEMBER(pScores);
+        OBOR_SAVED_MEMBER(credits);
+        OBOR_SAVED_MEMBER(times_completed);
+        OBOR_SAVED_MEMBER(which_set);
+        OBOR_SAVED_MEMBER(flag);
+        for(size_t i = 0; i < sizeof(wire->pName) / sizeof(wire->pName[0]); i++)
+        {
+            if(restore) memcpy(value->pName[i], wire->pName[i], sizeof(wire->pName[i]));
+            else memcpy(wire->pName[i], value->pName[i], sizeof(wire->pName[i]));
+        }
+        OBOR_SAVED_MEMBER(pSpawnhealth);
+        OBOR_SAVED_MEMBER(pSpawnmp);
+        OBOR_SAVED_MEMBER(pWeapnum);
+        OBOR_SAVED_MEMBER(pColourmap);
+        OBOR_SAVED_MEMBER(selectFlag);
+        OBOR_SAVED_MEMBER(allowSelectArgs);
+        OBOR_SAVED_MEMBER(selectMusic);
+        OBOR_SAVED_MEMBER(selectBackground);
+        for(size_t i = 0; i < sizeof(wire->selectLoad) / sizeof(wire->selectLoad[0]); i++)
+        {
+            if(restore) memcpy(value->selectLoad[i], wire->selectLoad[i], sizeof(wire->selectLoad[i]));
+            else memcpy(wire->selectLoad[i], value->selectLoad[i], sizeof(wire->selectLoad[i]));
+        }
+        OBOR_SAVED_MEMBER(selectLoadCount);
+        OBOR_SAVED_MEMBER(selectSkipSelect);
+    }
+#undef OBOR_SAVED_MEMBER
+}
+
+static size_t obor_profile_write_saved_game(FILE *stream)
+{
+    if(!obor_profile_legacy_saved_game()) return fwrite(savelevel, sizeof(*savelevel), num_difficulties, stream);
+    if(num_difficulties <= 0 || !savelevel) return 0;
+    size_t bytes = obor_saved_level_record_size(), rows = 0;
+    void *record = malloc(bytes);
+    if(!record) return 0;
+    for(int i = 0; i < num_difficulties; i++)
+    {
+        memset(record, 0, bytes);
+        obor_profile_saved_record(savelevel + i, record, 0);
+        if(fwrite(record, bytes, 1, stream) != 1) break;
+        rows++;
+    }
+    free(record);
+    return rows;
+}
+
+static size_t obor_profile_read_saved_game(FILE *stream)
+{
+    if(!obor_profile_legacy_saved_game()) return fread(savelevel, sizeof(*savelevel), num_difficulties, stream);
+    if(num_difficulties <= 0 || !savelevel) return 0;
+    size_t bytes = obor_saved_level_record_size(), rows = 0;
+    void *record = malloc(bytes);
+    if(!record) return 0;
+    for(int i = 0; i < num_difficulties; i++)
+    {
+        memset(record, 0, bytes);
+        obor_profile_saved_record(savelevel + i, record, 0);
+        size_t received = fread(record, bytes, 1, stream);
+        obor_profile_saved_record(savelevel + i, record, 1);
+        rows += received;
+        if(received != 1) break;
+    }
+    free(record);
+    return rows;
+}
+
 void clearSavedGame()
 {
     memset(savelevel, 0, sizeof(*savelevel)*num_difficulties);
@@ -3318,7 +3659,7 @@ int saveGameFile()
         return 0;
     }
 
-    fwrite(savelevel, sizeof(*savelevel), num_difficulties, handle);
+    obor_profile_write_saved_game(handle);
 
     fclose(handle);
 
@@ -3353,7 +3694,7 @@ int loadGameFile()
     //fseek(handle, 0L, SEEK_SET); // or rewind(handle);
     //(filesize != sizeof(*savelevel)*num_difficulties)
 
-    if( (fread(savelevel, sizeof(*savelevel), num_difficulties, handle) >= sizeof(*savelevel) && savelevel[0].compatibleversion != CV_SAVED_GAME) )
+    if( (obor_profile_read_saved_game(handle) >= obor_saved_level_record_size() && savelevel[0].compatibleversion != CV_SAVED_GAME) )
     {
         clearSavedGame();
         result = 0;
@@ -3377,6 +3718,60 @@ int loadGameFile()
 }
 
 
+typedef struct
+{
+    unsigned compatibleversion;
+    unsigned highsc[10];
+    char hscoren[10][47 + 1];
+} obor_saved_score_before_4429;
+
+static void obor_pack_saved_scores(obor_saved_score_before_4429 *record)
+{
+    record->compatibleversion = savescore.compatibleversion;
+    memcpy(record->highsc, savescore.highsc, sizeof(record->highsc));
+    for(size_t i = 0; i < sizeof(record->hscoren) / sizeof(record->hscoren[0]); i++)
+    {
+        memcpy(record->hscoren[i], savescore.hscoren[i], sizeof(record->hscoren[i]));
+    }
+}
+
+static size_t obor_profile_write_saved_scores(FILE *stream)
+{
+    if(!obor_profile_legacy_saved_game()) return fwrite(&savescore, 1, sizeof(savescore), stream);
+    obor_saved_score_before_4429 record;
+    obor_pack_saved_scores(&record);
+    return fwrite(&record, 1, sizeof(record), stream);
+}
+
+static size_t obor_profile_read_saved_scores(FILE *stream)
+{
+    if(!obor_profile_legacy_saved_game()) return fread(&savescore, 1, sizeof(savescore), stream);
+    obor_saved_score_before_4429 record;
+    obor_pack_saved_scores(&record);
+    size_t bytes = fread(&record, 1, sizeof(record), stream);
+    savescore.compatibleversion = record.compatibleversion;
+    memcpy(savescore.highsc, record.highsc, sizeof(record.highsc));
+    for(size_t i = 0; i < sizeof(record.hscoren) / sizeof(record.hscoren[0]); i++)
+    {
+        memcpy(savescore.hscoren[i], record.hscoren[i], sizeof(record.hscoren[i]));
+        savescore.hscoren[i][sizeof(record.hscoren[i])] = '\0';
+    }
+    return bytes;
+}
+
+int obor_profile_name_limit(void)
+{
+    return (obor_profile_build >= 4283 && obor_profile_build < 4429) ? 47 : MAX_NAME_LEN;
+}
+
+/* All destinations have room for the physical maximum plus the terminator. */
+void obor_profile_copy_name(char *destination, const char *source)
+{
+    size_t limit = (size_t)obor_profile_name_limit();
+    strncpy(destination, source, limit);
+    destination[limit] = '\0';
+}
+
 int saveHighScoreFile()
 {
 #ifndef DC
@@ -3391,7 +3786,7 @@ int saveHighScoreFile()
     {
         return 0;
     }
-    fwrite(&savescore, 1, sizeof(savescore), handle);
+    obor_profile_write_saved_scores(handle);
     fclose(handle);
     return 1;
 #else
@@ -3415,7 +3810,7 @@ int loadHighScoreFile()
     {
         return 0;
     }
-    fread(&savescore, 1, sizeof(savescore), handle);
+    obor_profile_read_saved_scores(handle);
     fclose(handle);
     if(savescore.compatibleversion != CV_HIGH_SCORE)
     {
@@ -3775,6 +4170,7 @@ size_t ParseArgs(ArgList *list, char *input, char *output)
     assert(output);
     //static const char diff = 'a' - 'A';
 
+    size_t source_length = (obor_profile_build >= 4283 && obor_profile_build < 4429) ? 511 : MAX_ARG_LEN;
     size_t pos = 0;
     size_t wordstart = 0;
     size_t item = 0;
@@ -3782,7 +4178,7 @@ size_t ParseArgs(ArgList *list, char *input, char *output)
     int space = 0;
     //int makelower = 0;
 
-    while(pos < MAX_ARG_LEN - 1 && item < MAX_ARG_COUNT)
+    while(pos < source_length - 1 && item < MAX_ARG_COUNT)
     {
         switch(input[pos])
         {
@@ -3839,11 +4235,13 @@ int readByte(char *buf)
 char *findarg(char *command, int which)
 {
     static const char comment_mark[] = {"#"};
+    int source_length = (obor_profile_build >= 4283 && obor_profile_build < 4429) ? 511 : MAX_ARG_LEN;
     int d;
     int argc;
     int inarg;
     int argstart;
     static char arg[MAX_ARG_LEN];
+    arg[source_length - 1] = 0;
 
 
     // Copy the command line, replacing spaces by zeroes,
@@ -3853,7 +4251,7 @@ char *findarg(char *command, int which)
     argstart = 0;
     argc = -1;
 
-    while(d < MAX_ARG_LEN - 1 && command[d])
+    while(d < source_length - 1 && command[d])
     {
         // Zero out whitespace
         if(command[d] == ' ' || command[d] == '\t')
@@ -3889,7 +4287,7 @@ char *findarg(char *command, int which)
         }
         ++d;
     }
-    arg[d] = 0;
+    if(obor_profile_build < 4283 || obor_profile_build >= 4399) arg[d] = 0;
 
     return arg;
 }
@@ -4348,7 +4746,8 @@ void lifebar_colors()
                 {
                     shadowalpha = GET_INT_ARG(1);
                 }
-                else if(stricmp(command, "shadowopacity") == 0)
+                else if((obor_profile_build < 4283 || obor_profile_build >= 4432) &&
+                        stricmp(command, "shadowopacity") == 0)
                 {
                     shadowopacity = GET_INT_ARG(1);
                 }
@@ -5385,6 +5784,7 @@ static void load_playable_list(char *buf)
     s_model *playermodels = NULL;
     ArgList arglist;
     char argbuf[MAX_ALLOWSELECT_LEN] = "";
+    int stored_bytes = (obor_profile_build >= 4283 && obor_profile_build < 4429) ? 512 : (int)sizeof(argbuf);
 
     ParseArgs(&arglist, buf, argbuf);
 
@@ -5393,13 +5793,13 @@ static void load_playable_list(char *buf)
 
     reset_playable_list(0);
 
-    for(i = 0; i < sizeof(argbuf); i++) allowselect_args[i] = ' ';
-    for(i = 0; i < sizeof(argbuf); i++)
+    for(i = 0; i < stored_bytes; i++) allowselect_args[i] = ' ';
+    for(i = 0; i < stored_bytes; i++)
     {
         if ( argbuf[i] != '\0' ) allowselect_args[i] = argbuf[i]; // store allowselect players for savefile
         else allowselect_args[i] = ' ';
     }
-    allowselect_args[sizeof(argbuf)-1] = '\0';
+    allowselect_args[stored_bytes-1] = '\0';
 
     for(i = 1; (value = GET_ARG(i))[0]; i++)
     {
@@ -5617,6 +6017,8 @@ void free_frames(s_anim *anim)
                 free(anim->collision_attack[i]->instance);
                 anim->collision_attack[i]->instance = NULL;
 
+                free(anim->collision_attack[i]->obor_frame_record);
+
                 free(anim->collision_attack[i]);
                 anim->collision_attack[i] = NULL;
             }
@@ -5742,7 +6144,9 @@ void addFreeType(s_model *m, e_ModelFreetype t)
 
 void cache_model_sprites(s_model *m, int ld)
 {
-    int i, f, instance;
+    int i, f;
+    const int attack_slots = (obor_profile_build >= 4283 && obor_profile_build < 4298) ?
+                             1 : max_collisons;
     s_anim *anim;
     cachesprite(m->icon.def, ld);
     cachesprite(m->icon.die, ld);
@@ -5771,12 +6175,19 @@ void cache_model_sprites(s_model *m, int ld)
                 {
                     cachesound(anim->soundtoplay[f], ld);
                 }
-                if(anim->collision_attack && anim->collision_attack[f])
+                const s_collision_attack_list *attacks = anim->collision_attack ?
+                                                         anim->collision_attack[f] : NULL;
+                if(attacks && attacks->instance)
                 {
-                    for(instance = 0; instance < max_collisons; instance++)
+                    for(int instance = 0; instance < attack_slots &&
+                        (size_t)instance < attacks->obor_instance_capacity; instance++)
                     {
-                        cachesound(anim->collision_attack[f]->instance[instance]->hitsound, ld);
-                        cachesound(anim->collision_attack[f]->instance[instance]->blocksound, ld);
+                        const s_collision_attack *attack = attacks->instance[instance];
+                        if(attack)
+                        {
+                            cachesound(attack->hitsound, ld);
+                            cachesound(attack->blocksound, ld);
+                        }
                     }
                 }
             }
@@ -5882,7 +6293,7 @@ int free_model(s_model *model)
     deleteModel(model->name);
     printf(".");
 
-    printf("Done.\n");
+    printf("%s", obor_profile_build >= 4283 && obor_profile_build < 4368 ? "done.\n" : "Done.\n");
 
     return models_loaded--;
 }
@@ -6166,6 +6577,9 @@ int addframe(s_anim             *a,
              s_hitbox           *attack_coords,
              s_hitbox           *body_coords)
 {
+    const int single_body = obor_profile_build >= 4283 && obor_profile_build < 4355;
+    const int body_count = single_body ? 1 : max_collisons;
+    const int attack_count = obor_profile_build >= 4283 && obor_profile_build < 4289 ? 1 : max_collisons;
     int     i;
     size_t  size_col_on_frame,
             size_col_on_frame_struct;
@@ -6228,7 +6642,7 @@ int addframe(s_anim             *a,
 
         // Loop instances, allocate memory, and assign
         // user values.
-        for(i=0; i<max_collisons; i++)
+        for(i = 0; i < body_count; ++i)
         {
             // Allocate memory for this instance structure.
             // We're also using a local pointer for readability.
@@ -6239,7 +6653,10 @@ int addframe(s_anim             *a,
             // but will allow scripts to identify
             // which item instance has been acquired
             // by handle (pointer).
-            collision_body->index = i;
+            if(!single_body)
+            {
+                collision_body->index = i;
+            }
 
             // Now let's allocate sub-properties.
 
@@ -6274,12 +6691,31 @@ int addframe(s_anim             *a,
         a->collision_attack[currentframe]->instance = collision_alloc_attack_list();
         a->collision_attack[currentframe]->obor_instance_capacity = (size_t)(max_collisons > 0 ? max_collisons : 1);
 
-        for(i=0; i<max_collisons; i++)
+        // These profiles expose the frame record to scripts and use the
+        // separate instances for collision detection.
+        if(obor_profile_build >= 4298 && obor_profile_build < 4301)
+        {
+            struct { s_collision_attack attack; s_hitbox coords; } *record = malloc(sizeof(*record));
+            if(!record)
+            {
+                shutdown(1, "Not enough memory for collision frame record.");
+                return a->numframes;
+            }
+            record->attack = *attack;
+            record->coords = *attack_coords;
+            record->attack.coords = &record->coords;
+            a->collision_attack[currentframe]->obor_frame_record = &record->attack;
+        }
+
+        for(i = 0; i < attack_count; ++i)
         {
             collision_attack = collision_alloc_attack_instance(attack);
             a->collision_attack[currentframe]->instance[i] = collision_attack;
 
-            collision_attack->index = i;
+            if(obor_profile_build < 4283 || obor_profile_build >= 4301)
+            {
+                collision_attack->index = i;
+            }
 
             // Coordinates.
             if(!collision_attack->coords)
@@ -6288,7 +6724,11 @@ int addframe(s_anim             *a,
             }
 
             // Recursive damage.
-            if(!collision_attack->recursive && recursive->mode)
+            // The older frame record receives the copy before per-instance
+            // recursive properties are adopted.
+            if(!collision_attack->recursive && recursive->mode &&
+               (obor_profile_build < 4283 || obor_profile_build >= 4300 ||
+                (obor_profile_build < 4298 && i == 0)))
             {
                 collision_attack->recursive = malloc(sizeof(*recursive));
                 memcpy(collision_attack->recursive, recursive, sizeof(*recursive));
@@ -6523,6 +6963,23 @@ char *get_cached_model_path(char *name)
 static void _readbarstatus(char *, s_barstatus *);
 
 //move here to ease animation name to id logic
+int obor_profile_animation_base(void)
+{
+    if(obor_profile_build >= 4283 && obor_profile_build < 4306)
+    {
+        return ANI_BACKRUN;
+    }
+    if(obor_profile_build >= 4306 && obor_profile_build < 4407)
+    {
+        return ANI_GETBOOMERANG;
+    }
+    if(obor_profile_build == 4407)
+    {
+        return ANI_GETBOOMERANGINAIR;
+    }
+    return MAX_ANIS;
+}
+
 static int translate_ani_id(const char *value, s_model *newchar, s_anim *newanim, s_collision_attack *attack)
 {
     int ani_id = -1, tempInt;
@@ -6567,15 +7024,19 @@ static int translate_ani_id(const char *value, s_model *newchar, s_anim *newanim
     {
         ani_id = ANI_RUN;
     }
-    else if(stricmp(value, "backrun") == 0)
+    else if(obor_profile_animation_base() > ANI_BACKRUN && stricmp(value, "backrun") == 0)
     {
         ani_id = ANI_BACKRUN;
     }
-    else if(stricmp(value, "getboomerang") == 0)
+    else if(obor_profile_build == 4407 && stricmp(value, "getboomrang") == 0)
     {
         ani_id = ANI_GETBOOMERANG;
     }
-    else if(stricmp(value, "getboomeranginair") == 0)
+    else if(obor_profile_animation_base() > ANI_GETBOOMERANGINAIR && stricmp(value, "getboomerang") == 0)
+    {
+        ani_id = ANI_GETBOOMERANG;
+    }
+    else if(obor_profile_animation_base() > ANI_GETBOOMERANGINAIR && stricmp(value, "getboomeranginair") == 0)
     {
         ani_id = ANI_GETBOOMERANGINAIR;
     }
@@ -7134,7 +7595,7 @@ static int translate_ani_id(const char *value, s_model *newchar, s_anim *newanim
     else if(stricmp(value, "special2") == 0)
     {
         ani_id = ANI_SPECIAL2;
-        if(!newanim->energycost)
+        if(obor_profile_build >= 4431 && !newanim->energycost)
         {
             newanim->energycost         = malloc(sizeof(*newanim->energycost));
             memset(newanim->energycost, 0, sizeof(*newanim->energycost));
@@ -7146,7 +7607,7 @@ static int translate_ani_id(const char *value, s_model *newchar, s_anim *newanim
     else if(stricmp(value, "special3") == 0 || stricmp(value, "jumpspecial") == 0)
     {
         ani_id = ANI_JUMPSPECIAL;
-        if(!newanim->energycost)
+        if(obor_profile_build >= 4431 && !newanim->energycost)
         {
             newanim->energycost         = malloc(sizeof(*newanim->energycost));
             memset(newanim->energycost, 0, sizeof(*newanim->energycost));
@@ -7485,6 +7946,23 @@ void lcmHandleCommandType(ArgList *arglist, s_model *newchar, char *filename)
     if(stricmp(value, "none") == 0)
     {
         newchar->type = TYPE_NONE;
+        /* Preserve the short-lived defaults of each original build. */
+        if(obor_profile_build >= 4415 && obor_profile_build < 4419)
+        {
+            int enabled = obor_profile_build == 4415;
+            newchar->subject_to_basemap = enabled;
+            newchar->subject_to_wall = enabled;
+            newchar->subject_to_platform = enabled;
+            newchar->subject_to_hole = enabled;
+            newchar->subject_to_obstacle = enabled;
+            newchar->subject_to_minz = enabled;
+            newchar->subject_to_maxz = enabled;
+            if(obor_profile_build < 4418)
+            {
+                newchar->subject_to_gravity = enabled;
+                newchar->no_adjust_base = 0;
+            }
+        }
     }
     else if(stricmp(value, "player") == 0)
     {
@@ -7700,7 +8178,9 @@ void lcmHandleCommandSubtype(ArgList *arglist, s_model *newchar, char *filename)
         newchar->subject_to_maxz        = 1;
         newchar->no_adjust_base         = 1;
     }
-    else if(stricmp(value, "boomerang") == 0) // 16-12-2016 Boomrang type
+    else if(((obor_profile_build < 4283 || obor_profile_build >= 4408) &&
+             stricmp(value, "boomerang") == 0) ||
+            (obor_profile_build == 4407 && stricmp(value, "boomrang") == 0)) // 16-12-2016 Boomrang type
     {
         newchar->subtype = SUBTYPE_BOOMERANG;   // 16-12-2016 Boomrang type
         if(newchar->aimove == -1)
@@ -7993,7 +8473,9 @@ void lcmHandleCommandAimove(ArgList *arglist, s_model *newchar, int *aimoveset, 
         {
             newchar->aimove |= AIMOVE1_NOMOVE;
         }
-        else if(stricmp(value, "boomerang") == 0)
+        else if((obor_profile_build < 4283 || obor_profile_build >= 4404) &&
+            stricmp(value, obor_profile_build >= 4404 && obor_profile_build < 4408 ?
+                    "boomrang" : "boomerang") == 0)
         {
             newchar->aimove |= AIMOVE1_BOOMERANG;
         }
@@ -8164,300 +8646,214 @@ size_t lcmHandleCommandScripts(ArgList *arglist, char *buf, Script *script, char
     return pos;
 }
 
-ptrdiff_t lcmScriptAvoidComment(char *buf, size_t buf_len, ptrdiff_t pos)
+static size_t lcmAnimationSkipComment(const char *text, size_t length, size_t pos,
+                                     unsigned int build)
 {
-    if ( buf && buf[0] )
+    while(build >= 4343 && pos < length && text[pos] == '/')
     {
-        unsigned char c = '\0';
-        ptrdiff_t pre_pos = pos;
-
-        c = buf[pos];
-        if (c == '/')
+        if(length - pos <= 2)
         {
-            ++pos;
-            if ( pos < buf_len-1 )
-            {
-                c = buf[pos];
-                if (c == '/')
-                {
-                    while( pos < buf_len && c != 0x0D && c != 0x0A )
-                    {
-                        ++pos;
-                        c = buf[pos];
-                    }
-                    if (pos < buf_len) ++pos;
-                    pos = lcmScriptAvoidComment(buf,buf_len,pos);
-                    return pos;
-                }
-                else if (c == '*')
-                {
-                    ++pos;
-                    if ( pos >= buf_len ) return pos;
-                    c = buf[pos];
-                    while( pos+1 < buf_len )
-                    {
-                        if ( c == '*' )
-                        {
-                            unsigned char c2 = buf[pos+1];
+            return pos + (build >= 4365);
+        }
 
-                            if ( c2 == '/' )
-                            {
-                                pos += 2;
-                                pos = lcmScriptAvoidComment(buf,buf_len,pos);
-                                return pos;
-                            }
-                        }
-                        ++pos;
-                        c = buf[pos];
-                    }
-                }
-                else
-                {
-                    return pre_pos;
-                }
-            }
-        } else return pre_pos;
-    }
-
-    return pos;
-}
-
-ptrdiff_t lcmScriptGetMainPos(char *buf, size_t *buf_len)
-{
-    if ( buf && buf[0] )
-    {
-        size_t len = *buf_len;
-        ptrdiff_t pos = 0;
-        enum {START,PRE0,PRE1,PRE2,PRE3,M0,M1,M2,M3,P0,P1,END} current_state = START;
-        unsigned char c = '\0';
-        int index_res = -1;
-
-        pos = lcmScriptAvoidComment(buf,len,pos);
-        c = (unsigned char)tolower((int)buf[pos]);
-        while ( pos < len && current_state != END )
+        // The first comment scanner treated every eligible slash as a line comment.
+        if(build < 4365 || text[pos + 1] == '/')
         {
-            switch(current_state)
+            while(pos < length && text[pos] != '\r' && text[pos] != '\n')
             {
-                case START:
-                {
-                    if ( c == 'v' )
-                    {
-                        index_res = pos; // store void main() start pos
-                        current_state = PRE0;
-                    }
-                    else if ( c == ' ' || c == '\n' || c == '\r' || c == 0x0D || c == 0x0A || c == '\t' ) current_state = START;
-                    else if ( c == '\0' ) return -1;
-                    else current_state = START;
-                    break;
-                }
-                case PRE0:
-                {
-                    if ( c == 'o' ) current_state = PRE1;
-                    else if ( c == '\0' ) return -1;
-                    else current_state = START;
-                    break;
-                }
-                case PRE1:
-                {
-                    if ( c == 'i' ) current_state = PRE2;
-                    else if ( c == '\0' ) return -1;
-                    else current_state = START;
-                    break;
-                }
-                case PRE2:
-                {
-                    if ( c == 'd' ) current_state = PRE3;
-                    else if ( c == '\0' ) return -1;
-                    else current_state = START;
-                    break;
-                }
-                case PRE3:
-                {
-                    if ( c == 'm' ) current_state = M0;
-                    else if ( c == ' ' || c == '\n' || c == '\r' || c == 0x0D || c == 0x0A || c == '\t' ) current_state = PRE3;
-                    else if ( c == '\0' ) return -1;
-                    else current_state = START;
-                    break;
-                }
-                case M0:
-                {
-                    if ( c == 'a' ) current_state = M1;
-                    else if ( c == '\0' ) return -1;
-                    else current_state = START;
-                    break;
-                }
-                case M1:
-                {
-                    if ( c == 'i' ) current_state = M2;
-                    else if ( c == '\0' ) return -1;
-                    else current_state = START;
-                    break;
-                }
-                case M2:
-                {
-                    if ( c == 'n' ) current_state = M3;
-                    else if ( c == '\0' ) return -1;
-                    else current_state = START;
-                    break;
-                }
-                case M3:
-                {
-                    if ( c == '(' ) current_state = P0;
-                    else if ( c == ' ' || c == '\n' || c == '\r' || c == 0x0D || c == 0x0A || c == '\t' ) current_state = M3;
-                    else if ( c == '\0' ) return -1;
-                    else current_state = START;
-                    break;
-                }
-                case P0:
-                {
-                    if ( c == ')' ) current_state = P1;
-                    else if ( c == ' ' || c == '\n' || c == '\r' || c == 0x0D || c == 0x0A || c == '\t' ) current_state = P0;
-                    else if ( c == '\0' ) return -1;
-                    else current_state = START;
-                    break;
-                }
-                case P1:
-                {
-                    if ( c == '{' )
-                    {
-                        current_state = END;
-                        if (++pos < len)
-                        {
-                            *buf_len = pos-index_res;
-                            return index_res;
-                        }
-                        else return -1;
-                    }
-                    else if ( c == ' ' || c == '\n' || c == '\r' || c == 0x0D || c == 0x0A || c == '\t' ) current_state = P1;
-                    else if ( c == '\0' ) return -1;
-                    else current_state = START;
-                    break;
-                }
-                case END:
-                default:
-                    break;
+                ++pos;
             }
-            ++pos; // at the end position after the '{'
-            if (current_state == END)
+            if(build >= 4369 && pos < length)
             {
-                if (pos < len)
-                {
-                    *buf_len = pos-index_res;
-                    return index_res;
-                }
-                else return -1;
+                ++pos;
             }
-            pos = lcmScriptAvoidComment(buf,len,pos);
-            c = (unsigned char)tolower((int)buf[pos]);
-        } // end while loop
-
-        if (current_state == END)
+        }
+        else if(text[pos + 1] == '*')
         {
-            if (pos < len)
+            pos += 2;
+            while(pos + 1 < length && (text[pos] != '*' || text[pos + 1] != '/'))
             {
-                *buf_len = pos-index_res;
-                return index_res;
+                ++pos;
             }
-            else return -1;
-        } else return -1;
-    }
-
-    return -1;
-}
-
-// add main (or add vars in main) - used for animationscript file
-size_t lcmScriptAddMain(char **buf)
-{
-    size_t len = 0, len2 = 0, buf_len = 0;
-    ptrdiff_t pos = 0;
-    char* newbuf = NULL;
-
-    if ( (*buf) && (*buf)[0] )
-    {
-        buf_len = len = strlen(*buf);
-
-        pos = lcmScriptGetMainPos(*buf,&buf_len);
-        if ( pos == -1 ) // main() not found!
-        {
-            char mtxt[] = "\n\nvoid main()\n{\n    int frame = getlocalvar(\"frame\");\n    int animhandle = getlocalvar(\"animhandle\");\n\n}\n\n";
-
-            pos += buf_len;
-            pos = len; // pos before '\0' (at last char)
-            len2 = strlen(mtxt);
-            newbuf = malloc(sizeof(**buf)*len + sizeof(mtxt)*len2 + 1 );
-            strncpy(newbuf, *buf, pos);
-            strncpy(newbuf+pos, mtxt, len2);
-            newbuf[len+len2] = '\0';
-
-            free( (*buf) );
-            (*buf) = newbuf;
-
-            //printf("written main in buffer\n%s\n",newbuf);
+            if(pos + 1 == length)
+            {
+                return length;
+            }
+            pos += 2;
         }
         else
         {
-            int pos2 = 0;
-            char mtxt[] = "\n\nvoid main()\n{\n    int frame = getlocalvar(\"frame\");\n    int animhandle = getlocalvar(\"animhandle\");\n\n";
-
-            len2 = strlen(mtxt);
-            pos2 = pos + buf_len;
-
-            newbuf = malloc(sizeof(**buf)*pos + sizeof(mtxt)*len2 + sizeof(**buf)*(len-pos2) + 1 );
-            strncpy(newbuf, *buf, pos);
-            strncpy(newbuf+pos, mtxt, len2);
-            strncpy(newbuf+pos+len2, *buf+pos2, len-pos2);
-            newbuf[pos+len2+len-pos2] = '\0';
-
-            free( (*buf) );
-            (*buf) = newbuf;
-
-            //printf("search for main in buffer\n%s pos:%d\n",*buf,pos);
+            return pos + (build < 4368);
         }
-
-        //printf("search for main in buffer\n%s pos:%d\n",*buf,pos);
     }
-
-    return len;
+    return pos;
 }
 
-// used to join animationscript @scrip/@cmd width animationscript file main()
-size_t lcmScriptJoinMain(char **buf, char *first_buf)
+static int lcmAnimationFindMain(const char *text, size_t length, unsigned int build,
+                                size_t *start, size_t *body)
 {
-    size_t len = 0, len2 = 0, buf_len = 0;
-    ptrdiff_t pos = 0;
-    int pcount = 0;
-    char* newbuf = NULL;
+    static const char declaration[] = "voidmain(){";
+    size_t matched = 0;
+    size_t pos = lcmAnimationSkipComment(text, length, 0, build);
 
-    if ( (*buf) && first_buf && (*buf)[0] && first_buf[0] )
+    while(pos < length)
     {
-        buf_len = len = strlen(*buf);
-        len2 = strlen(first_buf);
-
-        pos = lcmScriptGetMainPos(*buf,&buf_len);
-        pos += buf_len;
-
-        pcount = 1;
-        while(pcount > 0)
+        int c = tolower((unsigned char)text[pos]);
+        if(c == declaration[matched])
         {
-            if( (*buf)[pos] == '{' ) ++pcount;
-            else if( (*buf)[pos] == '}' ) --pcount;
-            pos++;
+            if(matched == 0)
+            {
+                *start = pos;
+            }
+            if(++matched == sizeof(declaration) - 1)
+            {
+                *body = pos + 1;
+                return *body < length;
+            }
         }
-        --pos; // back to last '}' of main()
+        else if((matched == 0 || matched == 4 || matched >= 8) &&
+                (c == ' ' || c == '\t' || c == '\r' || c == '\n'))
+        {
+            // These are the gaps allowed by the original declaration scanner.
+        }
+        else
+        {
+            if(matched == 0 && build < 4363)
+            {
+                pos = lcmAnimationSkipComment(text, length, pos + 1, build);
+                if(pos == length)
+                {
+                    return 0;
+                }
+            }
+            matched = 0;
+        }
+        pos = lcmAnimationSkipComment(text, length, pos + 1, build);
+    }
+    return 0;
+}
 
-        newbuf = malloc(sizeof(**buf)*len + sizeof(*first_buf)*len2 + 1 );
-        strncpy(newbuf, *buf, pos);
-        strncpy(newbuf+pos, first_buf, len2);
-        strncpy(newbuf+pos+len2, *buf+pos, len-pos);
-        newbuf[len+len2] = '\0';
+static const char *lcmAnimationAfterToken(const char *text, const char *token)
+{
+    while(*text && !starts_with(text, token))
+    {
+        ++text;
+    }
+    return *text ? text + strlen(token) : NULL;
+}
 
-        free( (*buf) );
-        (*buf) = newbuf;
+static int lcmAnimationReplace(char **buffer, size_t begin, size_t end,
+                               const char *insert, size_t inserted)
+{
+    size_t tail = strlen(*buffer + end);
+    char *result;
 
-        //printf("test joined buffer\n%s\n",*buf);
+    if(inserted >= SIZE_MAX - begin || tail >= SIZE_MAX - begin - inserted)
+    {
+        return 0;
+    }
+    result = malloc(begin + inserted + tail + 1);
+    if(!result)
+    {
+        return 0;
+    }
+    memcpy(result, *buffer, begin);
+    memcpy(result + begin, insert, inserted);
+    memcpy(result + begin + inserted, *buffer + end, tail + 1);
+    free(*buffer);
+    *buffer = result;
+    return 1;
+}
+
+static int lcmScriptAddMain(char **buffer, unsigned int build)
+{
+    static const char header[] =
+        "\n\nvoid main()\n{\n"
+        "    int frame = getlocalvar(\"frame\");\n"
+        "    int animhandle = getlocalvar(\"animhandle\");\n\n";
+    static const char trailer[] = "}\n\n";
+    const size_t length = strlen(*buffer);
+    size_t start, body;
+    char wrapped[sizeof(header) + sizeof(trailer) - 1];
+    size_t added = sizeof(wrapped) - 1;
+
+    if(lcmAnimationFindMain(*buffer, length, build, &start, &body))
+    {
+        if(build < 4340)
+        {
+            return 1;
+        }
+        if(build < 4363)
+        {
+            body = (size_t)(strchr(*buffer + start, '{') - *buffer) + 1;
+        }
+        return lcmAnimationReplace(buffer, start, body, header, sizeof(header) - 1);
     }
 
-    return len;
+    // The early wrappers disagree on which terminal byte to retain.
+    start = length;
+    if(build < 4317 || build == 4321)
+    {
+        --start;
+    }
+    else if(build < 4319)
+    {
+        --added;
+    }
+    memcpy(wrapped, header, sizeof(header) - 1);
+    memcpy(wrapped + sizeof(header) - 1, trailer, sizeof(trailer));
+    return lcmAnimationReplace(buffer, start, length, wrapped, added);
+}
+
+static int lcmScriptJoinMain(char **buffer, const char *body_text, unsigned int build)
+{
+    size_t start, pos;
+    size_t depth = 1;
+    const size_t length = strlen(*buffer);
+
+    if(!*body_text)
+    {
+        return 1;
+    }
+    if(build < 4313)
+    {
+        const char *after = *buffer;
+        const char * const tokens[] = { "void", "main", "(", ")", "{" };
+        size_t i;
+        for(i = 0; after && i < sizeof(tokens) / sizeof(tokens[0]); ++i)
+        {
+            after = lcmAnimationAfterToken(after, tokens[i]);
+        }
+        if(!after)
+        {
+            return 0;
+        }
+        pos = (size_t)(after - *buffer);
+    }
+    else
+    {
+        if(!lcmAnimationFindMain(*buffer, length, build, &start, &pos))
+        {
+            return 0;
+        }
+        if(build >= 4340 && build < 4363)
+        {
+            pos = (size_t)(strchr(*buffer + start, '{') - *buffer) + 1;
+        }
+    }
+
+    for(; pos < length; ++pos)
+    {
+        if((*buffer)[pos] == '{')
+        {
+            ++depth;
+        }
+        else if((*buffer)[pos] == '}' && --depth == 0)
+        {
+            return lcmAnimationReplace(buffer, pos, pos, body_text, strlen(body_text));
+        }
+    }
+    return 0;
 }
 
 size_t lcmScriptCopyBuffer(ArgList *arglist, char *buf, char **script_buffer)
@@ -8478,46 +8874,38 @@ size_t lcmScriptCopyBuffer(ArgList *arglist, char *buf, char **script_buffer)
     return pos;
 }
 
-size_t lcmScriptDeleteMain(char **buf)
+static int lcmScriptDeleteMain(char **buffer, unsigned int build)
 {
-    size_t len = 0, i = 0;
-    ptrdiff_t pos = 0;
-    char *newbuf = NULL;
-
-    if ((*buf) && (*buf)[0])
+    const char *body = lcmAnimationAfterToken(*buffer, "main()");
+    const char *end = strrchr(*buffer, '}');
+    if(body)
     {
-        len = strlen(*buf);
-
-        while(!starts_with((*buf) + pos, "main()")) pos++;
-        pos += strclen("main()");
-        while(!starts_with(*buf + pos, "{")) pos++;
-        pos += strclen("{");
-        while(!starts_with(*buf + pos, "int frame = getlocalvar(\"frame\");")) pos++;
-        pos += strclen("int frame = getlocalvar(\"frame\");");
-        while(!starts_with(*buf + pos, "int animhandle = getlocalvar(\"animhandle\");\n")) pos++;
-        pos += strclen("int animhandle = getlocalvar(\"animhandle\");\n");
-
-        for(i = len-1; i >= 0; i--)
+        body = lcmAnimationAfterToken(body, "{");
+    }
+    if(body && build >= 4313)
+    {
+        body = lcmAnimationAfterToken(body, "int frame = getlocalvar(\"frame\");");
+        if(body)
         {
-            if ( (*buf)[i] == '}' )
-            {
-                len = i;
-                break;
-            } else continue;
+            body = lcmAnimationAfterToken(body, "int animhandle = getlocalvar(\"animhandle\");\n");
         }
-
-        len = len-pos;
-        newbuf = malloc(sizeof(newbuf) * (len) + 1);
-        strncpy(newbuf, *buf+pos, len);
-        newbuf[len] = '\0';
-
-        free( (*buf) );
-        (*buf) = newbuf;
-
-        //printf("test delete main\n%s\n",newbuf);
+    }
+    if(!body || !end || body > end)
+    {
+        return 0;
     }
 
-    return len;
+    memmove(*buffer, body, (size_t)(end - body));
+    (*buffer)[end - body] = '\0';
+    return 1;
+}
+
+static void lcmLogAnimationScript(const char *header, const char *filename, const char *text)
+{
+    writeToScriptLog(header);
+    writeToScriptLog(filename);
+    writeToScriptLog("\n########################################\n");
+    writeToScriptLog(text);
 }
 
 //alloc a new model, and everything thats required,
@@ -8623,7 +9011,8 @@ s_model *init_model(int cacheindex, int unload)
     newchar->attackthrottle				= 0.0f;
     newchar->attackthrottletime			= noatk_duration * GAME_SPEED;
 
-    newchar->animation_capacity = max_animations < MAX_ANIS ? max_animations : MAX_ANIS;
+    const int fixed_animations = obor_profile_animation_base();
+    newchar->animation_capacity = max_animations < fixed_animations ? max_animations : fixed_animations;
     newchar->animation = calloc(newchar->animation_capacity, sizeof(*newchar->animation));
     if(!newchar->animation)
     {
@@ -8707,6 +9096,13 @@ void update_model_loadflag(s_model *model, char unload)
 
 s_model *load_cached_model(char *name, char *owner, char unload)
 {
+    const unsigned int animation_build =
+        obor_profile_build >= 4283 && obor_profile_build < 4432 ? obor_profile_build : 4432;
+    const int live_animation_locals =
+        animation_build >= 4309 && animation_build < 4332 && animation_build != 4312;
+    const char *animation_guard = live_animation_locals ? "getlocalvar(\"animhandle\")" : "animhandle";
+    const char *frame_guard = live_animation_locals ? "getlocalvar(\"frame\")" : "frame";
+    const int separate_animation_script = animation_build >= 4309 && animation_build != 4312;
 
 
     s_model *newchar = NULL,
@@ -8814,6 +9210,9 @@ s_model *load_cached_model(char *name, char *owner, char unload)
         "\n}\n"
     };
 
+    const char *initial_frame_text = animation_build >= 4309 && animation_build < 4312 ?
+        "void main()\n{\n\n}\n" : pre_text;
+
     static const char sur_text[] =  // end of function text
     {
         "\n}\n"
@@ -8821,7 +9220,7 @@ s_model *load_cached_model(char *name, char *owner, char unload)
 
     static const char ifid_text[] =  // if expression to check animation id
     {
-        "    if(animhandle==%d)\n"
+        "    if(%s==%d)\n"
         "    {\n"
         "        return;\n"
         "    }\n"
@@ -8835,7 +9234,7 @@ s_model *load_cached_model(char *name, char *owner, char unload)
 
     static const char if_text[] =  // this is the if expression of frame function
     {
-        "        if(frame==%d)\n"
+        "        if(%s==%d)\n"
         "        {\n"
     };
 
@@ -9181,7 +9580,11 @@ s_model *load_cached_model(char *name, char *owner, char unload)
                 break;
             case CMD_MODEL_BOOMERANG:
                 newchar->boomerang_acc = GET_FLOAT_ARG(1);
-                newchar->boomerang_distx = GET_FLOAT_ARG(2);
+                if(obor_profile_build < 4283 || obor_profile_build >= 4407)
+                {
+                    newchar->boomerang_distx = GET_FLOAT_ARG(2);
+                }
+                /* fall through */
             case CMD_MODEL_BOMB:
             case CMD_MODEL_PLAYBOMB:
                 value = GET_ARG(1);
@@ -9252,7 +9655,7 @@ s_model *load_cached_model(char *name, char *owner, char unload)
                     newchar->branch = malloc(MAX_NAME_LEN + 1);
                     newchar->branch[0] = 0;
                 }
-                strncpy(newchar->branch, value, MAX_NAME_LEN);
+                obor_profile_copy_name(newchar->branch, value);
                 break;
             case CMD_MODEL_CANTGRAB:
             case CMD_MODEL_NOTGRAB:
@@ -10101,10 +10504,16 @@ s_model *load_cached_model(char *name, char *owner, char unload)
                 pos += lcmHandleCommandScripts(&arglist, buf + pos, newchar->scripts->ondraw_script, "ondrawscript", filename, 1, 0);
                 break;
             case CMD_MODEL_ANIMATIONSCRIPT:
-                //pos += lcmHandleCommandScripts(&arglist, buf + pos, newchar->scripts->animation_script, "animationscript", filename, 0, 0);
-                pos += lcmScriptCopyBuffer(&arglist, buf + pos, &animscriptbuf);
-                //dont compile, until at end of this function
+                if(separate_animation_script)
+                {
+                    pos += lcmScriptCopyBuffer(&arglist, buf + pos, &animscriptbuf);
+                }
+                else
+                {
+                    pos += lcmHandleCommandScripts(&arglist, buf + pos, newchar->scripts->animation_script, "animationscript", filename, 0, 0);
+                }
                 break;
+
             case CMD_MODEL_KEYSCRIPT:
                 pos += lcmHandleCommandScripts(&arglist, buf + pos, newchar->scripts->key_script, "entitykeyscript", filename, 1, 0);
                 break;
@@ -11414,7 +11823,7 @@ s_model *load_cached_model(char *name, char *owner, char unload)
             case CMD_MODEL_AT_SCRIPT:
                 if(!scriptbuf[0])  // if empty, paste the main function text here
                 {
-                    buffer_append(&scriptbuf, pre_text, 0xffffff, &sbsize, &scriptlen);
+                    buffer_append(&scriptbuf, initial_frame_text, 0xffffff, &sbsize, &scriptlen);
                 }
                 scriptbuf[scriptlen - strclen(sur_text)] = 0; // cut last chars
                 scriptlen = strlen(scriptbuf);
@@ -11422,7 +11831,7 @@ s_model *load_cached_model(char *name, char *owner, char unload)
                 {
                     if(script_id != ani_id)  // if expression 1
                     {
-                        sprintf(namebuf, ifid_text, newanim->index);
+                        sprintf(namebuf, ifid_text, animation_guard, newanim->index);
                         buffer_append(&scriptbuf, namebuf, 0xffffff, &sbsize, &scriptlen);
                         script_id = ani_id;
                     }
@@ -11458,13 +11867,13 @@ s_model *load_cached_model(char *name, char *owner, char unload)
                 }
                 if(!scriptbuf[0])  // if empty, paste the main function text here
                 {
-                    buffer_append(&scriptbuf, pre_text, 0xffffff, &sbsize, &scriptlen);
+                    buffer_append(&scriptbuf, initial_frame_text, 0xffffff, &sbsize, &scriptlen);
                 }
                 scriptbuf[scriptlen - strclen(sur_text)] = 0; // cut last chars
                 scriptlen = strlen(scriptbuf);
                 if(script_id != ani_id)  // if expression 1
                 {
-                    sprintf(namebuf, ifid_text, newanim->index);
+                    sprintf(namebuf, ifid_text, animation_guard, newanim->index);
                     buffer_append(&scriptbuf, namebuf, 0xffffff, &sbsize, &scriptlen);
                     script_id = ani_id;
                 }
@@ -11502,7 +11911,7 @@ s_model *load_cached_model(char *name, char *owner, char unload)
                      */
                     if(!no_cmd_compatible || frm_id != curframe)
                     {
-                        sprintf(namebuf, if_text, curframe);//only execute in current frame
+                        sprintf(namebuf, if_text, frame_guard, curframe);//only execute in current frame
                         buffer_append(&scriptbuf, namebuf, 0xffffff, &sbsize, &scriptlen);
                         frm_id = curframe;
                     }
@@ -11557,46 +11966,50 @@ s_model *load_cached_model(char *name, char *owner, char unload)
 
     tempInt = 1;
 
-    if(scriptbuf && animscriptbuf && scriptbuf[0] && animscriptbuf[0])
+    if(separate_animation_script && animscriptbuf && animscriptbuf[0])
     {
-        writeToScriptLog("\n#### animationscript function main #####\n# ");
-        writeToScriptLog(filename);
-        writeToScriptLog("\n########################################\n");
-        writeToScriptLog(scriptbuf);
-
-        lcmScriptDeleteMain(&scriptbuf);
-        lcmScriptAddMain(&animscriptbuf);
-        lcmScriptJoinMain(&animscriptbuf,scriptbuf);
+        const int has_body_script = scriptbuf && scriptbuf[0];
+        if(has_body_script)
+        {
+            lcmLogAnimationScript("\n#### animationscript function main #####\n# ", filename, scriptbuf);
+            tempInt = lcmScriptDeleteMain(&scriptbuf, animation_build);
+            if(tempInt && animation_build >= 4313)
+            {
+                tempInt = lcmScriptAddMain(&animscriptbuf, animation_build);
+            }
+            if(tempInt)
+            {
+                tempInt = lcmScriptJoinMain(&animscriptbuf, scriptbuf, animation_build);
+            }
+        }
+        else if(animation_build >= 4369)
+        {
+            tempInt = lcmScriptAddMain(&animscriptbuf, animation_build);
+        }
 
         if(!Script_IsInitialized(newchar->scripts->animation_script))
         {
             Script_Init(newchar->scripts->animation_script, newchar->name, filename, 0);
         }
-        tempInt = Script_AppendText(newchar->scripts->animation_script, animscriptbuf, filename);
-    }
-    else if(animscriptbuf && animscriptbuf[0])
-    {
-        lcmScriptAddMain(&animscriptbuf);
-
-        if(!Script_IsInitialized(newchar->scripts->animation_script))
+        if(animation_build >= 4343 && animation_build < 4369 && !has_body_script)
         {
-            Script_Init(newchar->scripts->animation_script, newchar->name, filename, 0);
+            tempInt = lcmScriptAddMain(&animscriptbuf, animation_build);
         }
-        tempInt = Script_AppendText(newchar->scripts->animation_script, animscriptbuf, filename);
+        if(tempInt)
+        {
+            tempInt = Script_AppendText(newchar->scripts->animation_script, animscriptbuf, filename);
+        }
     }
     else if(scriptbuf && scriptbuf[0])
     {
-        //printf("\n%s\n", scriptbuf);
         if(!Script_IsInitialized(newchar->scripts->animation_script))
         {
             Script_Init(newchar->scripts->animation_script, newchar->name, filename, 0);
         }
         tempInt = Script_AppendText(newchar->scripts->animation_script, scriptbuf, filename);
-        //Interpreter_OutputPCode(newchar->scripts->animation_script.pinterpreter, "code");
-        writeToScriptLog("\n#### animationscript function main #####\n# ");
-        writeToScriptLog(filename);
-        writeToScriptLog("\n########################################\n");
-        writeToScriptLog(scriptbuf);
+        lcmLogAnimationScript(separate_animation_script ?
+                              "\n#### animationscript function main #####\n# " :
+                              "\n####animationscript function main#####\n# ", filename, scriptbuf);
     }
 
     if(!newchar->isSubclassed)
@@ -11708,7 +12121,9 @@ s_model *load_cached_model(char *name, char *owner, char unload)
             break;
         case TYPE_ENEMY:
             newchar->candamage = TYPE_PLAYER | TYPE_SHOT;
-            if(newchar->subtype == SUBTYPE_ARROW || newchar->subtype == SUBTYPE_BOOMERANG)
+            if(newchar->subtype == SUBTYPE_ARROW ||
+               ((obor_profile_build < 4283 || obor_profile_build >= 4407) &&
+                newchar->subtype == SUBTYPE_BOOMERANG))
             {
                 newchar->candamage |= TYPE_OBSTACLE;
             }
@@ -11923,7 +12338,7 @@ void load_model_constants()
     ptrdiff_t pos;
     char *command;
     int line = 0;
-    int maxanim = MAX_ANIS; // temporary counter
+    int maxanim = obor_profile_animation_base();
     ArgList arglist;
     char argbuf[MAX_ARG_LEN + 1] = "";
     modelstxtCommands cmd;
@@ -11938,7 +12353,7 @@ void load_model_constants()
     max_freespecials = MAX_SPECIALS;
     max_follows      = MAX_FOLLOWS;
     max_attacks      = MAX_ATTACKS;
-    max_animations   = MAX_ANIS;
+    max_animations   = maxanim;
 
     max_collisons    = MAX_COLLISIONS;
 
@@ -12668,7 +13083,7 @@ s_level_entry *load_skipselect(char *buf, s_set_entry *set)
     return add_skipselect(arglist, set);
 }
 
-void save_skipselect(char *buf, char skipselect[MAX_PLAYERS][MAX_NAME_LEN])
+void save_skipselect(char *buf, char skipselect[MAX_PLAYERS][MAX_NAME_LEN + 1])
 {
     int i = 0;
 
@@ -12984,7 +13399,7 @@ void load_levelorder()
         case CMD_LEVELORDER_BRANCH:
             //    2007-2-22 level branch name
             CHKDEF;
-            strncpy(branch_name, GET_ARG(1), MAX_NAME_LEN);
+            obor_profile_copy_name(branch_name, GET_ARG(1));
             break;
         case CMD_LEVELORDER_P1LIFE:
         case CMD_LEVELORDER_P2LIFE:
@@ -13649,10 +14064,10 @@ void load_levelorder()
         case CMD_LEVELORDER_RUSH:
             rush[0] = GET_INT_ARG(1);
             rush[1] = GET_INT_ARG(2);
-            strncpy(rush_names[0], GET_ARG(3), MAX_NAME_LEN);
+            obor_profile_copy_name(rush_names[0], GET_ARG(3));
             rush[2] = GET_INT_ARG(4);
             rush[3] = GET_INT_ARG(5);
-            strncpy(rush_names[1], GET_ARG(6), MAX_NAME_LEN);
+            obor_profile_copy_name(rush_names[1], GET_ARG(6));
             rush[4] = GET_INT_ARG(7);
             rush[5] = GET_INT_ARG(8);
             break;
@@ -14135,7 +14550,7 @@ void unload_level()
             }
         }
         while(temp);
-        printf("RAM Status:\n");
+        printf("%s", obor_profile_build >= 4283 && obor_profile_build < 4368 ? "Done.\n" : "RAM Status:\n");
         getRamStatus(BYTES);
 
 
@@ -14210,72 +14625,131 @@ static void addbasemap(float rx, float rz, float x_size, float z_size, float min
     generate_basemap(level->numbasemaps-1, rx, rz, x_size, z_size, min_y, max_y, x_cont);
 }
 
-void generate_basemap(int map_index, float rx, float rz, float x_size, float z_size, float min_y, float max_y, int x_cont) {
-    float x, z;
-	float delta, y, tmp;
-	int dir = 0;
+static int obor_basemap_int_coordinate(float value)
+{
+    return (double)value >= INT_MIN && (double)value < (double)INT_MAX + 1.0;
+}
+
+void generate_basemap(int map_index, float rx, float rz, float x_size, float z_size, float min_y, float max_y, int x_cont)
+{
+    const int historical = obor_profile_build >= 4283;
+    const int legacy_grid = historical && obor_profile_build < 4390;
+    const int legacy_join = historical && obor_profile_build < 4389;
+    const float position_z = historical && obor_profile_build < 4388 ? rz : rz - z_size;
+    int width, depth, last_x, last_z;
+    size_t required_cells = 0;
+    s_basemap *map;
+    float delta, x, z;
+    int ascending;
+
+    if(!level || map_index < 0 || map_index == INT_MAX ||
+       !obor_basemap_int_coordinate(rx) || !obor_basemap_int_coordinate(position_z) ||
+       !obor_basemap_int_coordinate(x_size) || !obor_basemap_int_coordinate(z_size))
+        return;
+    width = (int)x_size;
+    depth = (int)z_size;
+    last_x = legacy_grid ? width : x_size <= 0 ? -1 : width - ((float)width == x_size);
+    last_z = legacy_grid ? depth : z_size <= 0 ? -1 : depth - ((float)depth == z_size);
+
+    /* Beyond this point the original float counter cannot advance by one. */
+    if(last_x >= 16777216 || (last_x >= 0 && last_z >= 16777216))
+        return;
+    if(last_x >= 0 && last_z >= 0)
+    {
+        uint64_t last_cell;
+        if(legacy_grid)
+            last_cell = (uint64_t)last_z * width + last_x;
+        else
+        {
+            const float flat = (float)last_x + (float)last_z * x_size;
+            if(!obor_basemap_int_coordinate(flat))
+                return;
+            last_cell = (int)flat;
+        }
+        if(last_cell > INT_MAX || last_cell >= SIZE_MAX / sizeof(float))
+            return;
+        required_cells = (size_t)last_cell + 1;
+    }
 
     if(map_index >= level->numbasemaps)
     {
-        __reallocto(level->basemaps, level->numbasemaps, map_index + 1);
+        s_basemap *grown;
+        const size_t count = (size_t)map_index + 1;
+        if(count > SIZE_MAX / sizeof(*grown))
+            return;
+        grown = realloc(level->basemaps, count * sizeof(*grown));
+        if(!grown)
+            return;
+        memset(grown + level->numbasemaps, 0, (count - level->numbasemaps) * sizeof(*grown));
+        level->basemaps = grown;
         level->numbasemaps = map_index + 1;
     }
-
-    level->basemaps[map_index].position.x = rx;
-    level->basemaps[map_index].position.z = rz-z_size;
-    level->basemaps[map_index].size.x = x_size;
-    level->basemaps[map_index].size.z = z_size;
-
-    if(!level->basemaps[map_index].map)
+    map = level->basemaps + map_index;
+    if(!map->map)
     {
-        level->basemaps[map_index].map = calloc( 1, (int)(sizeof(*(level->basemaps[map_index].map)) * (x_size+1)*(z_size+1)) );
+        size_t bytes;
+        if(legacy_grid)
+        {
+            const float padded_x = x_size + 1;
+            const float padded_z = z_size + 1;
+            int64_t cells;
+            if(!obor_basemap_int_coordinate(padded_x) || !obor_basemap_int_coordinate(padded_z))
+                return;
+            cells = (int64_t)(int)padded_x * (int)padded_z;
+            if(cells < 0 || (uint64_t)cells > SIZE_MAX / sizeof(*map->map))
+                return;
+            bytes = (size_t)cells * sizeof(*map->map);
+        }
+        else
+        {
+            const float request = sizeof(*map->map) * (x_size + 1) * (z_size + 1);
+            if(request < 0 || !obor_basemap_int_coordinate(request))
+                return;
+            bytes = (int)request;
+        }
+        if(required_cells > bytes / sizeof(*map->map))
+            return;
+        map->map = calloc(1, bytes);
+        if(bytes && !map->map)
+            return;
     }
-
-    if (min_y <= max_y) dir = 1;
-    else
+    else if(required_cells > obor_allocation_size(map->map) / sizeof(*map->map))
     {
-        dir = 0;
-        tmp = min_y;
+        return;
+    }
+    map->position.x = (int)rx;
+    map->position.z = (int)position_z;
+    map->size.x = width;
+    map->size.z = depth;
+
+    ascending = min_y <= max_y;
+    if(legacy_grid ? min_y > max_y : !ascending)
+    {
+        const float temp = min_y;
         min_y = max_y;
-        max_y = tmp;
+        max_y = temp;
     }
-
-	delta = (max_y - min_y) / ( (x_size <= 0) ? 1 : (x_size-1) );
-
-	for( x = 0; x < x_size; x++)
+    delta = (max_y - min_y) / (legacy_grid ? x_size : (x_size <= 0 ? 1 : x_size - 1));
+    for(x = 0; x <= last_x; ++x)
     {
-		if ( dir )
+        float y;
+        if(ascending)
+            y = !legacy_grid && x == x_size - 1 ? max_y : x * delta + min_y;
+        else
+            y = max_y - x * delta;
+        if(x_cont != 0)
         {
-            if ( x == x_size-1 ) y = max_y;
-            else y = x*delta + min_y;
+            if(ascending ? (legacy_join ? x + rx > x_cont : x + rx >= x_cont) :
+                           (legacy_join ? x < x_cont : x + rx <= x_cont))
+                y = max_y;
         }
-		else
+        for(z = 0; z <= last_z; ++z)
         {
-            y = max_y - (x*delta);
+            const size_t cell = legacy_grid ? (size_t)((int)x + (int)z * width) :
+                                              (size_t)(int)(x + z * x_size);
+            map->map[cell] = y;
         }
-
-		if ( x_cont != 0 )
-        {
-            if ( dir > 0 )
-            {
-                if ( x+rx >= x_cont ) y = max_y; // connect with the wall more smoothly
-            }
-            else
-            {
-                if ( x+rx <= x_cont ) y = max_y;
-            }
-		}
-
-		for ( z = 0; z < z_size; z++)
-        {
-			level->basemaps[map_index].map[(int)(x + z*x_size)] = y;
-			//printf("map[%d] = %f\n",(int)(x + z*x_size),y);
-		}
-		//printf("x:%f y:%f delta:%f\n",x,y,delta);
-		//printf("y: %f\n",y);
-	}
-
-	return;
+    }
 }
 
 void load_level(char *filename)
@@ -15149,7 +15623,7 @@ void load_level(char *filename)
             break;
         case CMD_LEVEL_ALIAS:
             // Alias (name displayed) of entry to be spawned
-            strncpy(next.alias, GET_ARG(1), MAX_NAME_LEN);
+            obor_profile_copy_name(next.alias, GET_ARG(1));
             break;
         case CMD_LEVEL_MAP:
             // Colourmap for new entry
@@ -15168,7 +15642,10 @@ void load_level(char *filename)
             next.dying = GET_INT_ARG(1);
             next.per1 = GET_INT_ARG(2);
             next.per2 = GET_INT_ARG(3);
-            next.dying2 = GET_INT_ARG(4);
+            if(obor_profile_build < 4283 || obor_profile_build >= 4404)
+            {
+                next.dying2 = GET_INT_ARG(4);
+            }
             break;
         case CMD_LEVEL_ITEM:
         case CMD_LEVEL_2PITEM:
@@ -15215,7 +15692,7 @@ void load_level(char *filename)
             next.itemhealth = GET_INT_ARG(1);
             break;
         case CMD_LEVEL_ITEMALIAS:
-            strncpy(next.itemalias, GET_ARG(1), MAX_NAME_LEN);
+            obor_profile_copy_name(next.itemalias, GET_ARG(1));
             break;
         case CMD_LEVEL_WEAPON:
             //spawn with a weapon 2007-2-12 by UTunnels
@@ -15675,7 +16152,9 @@ void bar(int x, int y, int value, int maxvalue, s_barstatus *pstatus)
 
 void goto_mainmenu(int flag)
 {
-    goto_mainmenu_flag = 1|(flag<<1);
+    uint32_t encoded = UINT32_C(1) | ((uint32_t)flag << 1);
+    goto_mainmenu_flag = encoded <= INT32_MAX ? (int)encoded
+                        : -1 - (int)(UINT32_MAX - encoded);
 }
 
 void static backto_mainmenu()
@@ -15693,15 +16172,19 @@ void static backto_mainmenu()
     sound_pause_sample(1);
     pause = 2;
 
-    if ( (goto_mainmenu_flag&1) ) goto_mainmenu_flag -= 1;
-
-    update(1, 0);
+    if(obor_profile_build < 4283 || obor_profile_build >= 4303)
+    {
+        if(goto_mainmenu_flag&1) goto_mainmenu_flag -= 1;
+        update(1, 0);
+    }
 
     for(i = 0; i < MAX_PLAYERS; i++)
     {
         player[i].lives = 0;
     }
     endgame = 2;
+    if(obor_profile_build >= 4283 && obor_profile_build < 4303 &&
+       (goto_mainmenu_flag&1)) goto_mainmenu_flag -= 1;
     //sound_pause_music(0);
     //sound_pause_sample(0);
 
@@ -15742,9 +16225,18 @@ void pausemenu()
     bothnewkeys = 0;
     while(!quit)
     {
-        _menutextmshift(pauseoffset[4], -2, 0, pauseoffset[5], pauseoffset[6], Tr("Pause"));
-        _menutextmshift((pauselector == 0)?pauseoffset[1]:pauseoffset[0], -1, 0, pauseoffset[2], pauseoffset[3], Tr("Continue"));
-        _menutextmshift((pauselector == 1)?pauseoffset[1]:pauseoffset[0],  0, 0, pauseoffset[2], pauseoffset[3], Tr("End Game"));
+        if(obor_profile_build >= 4283 && obor_profile_build < 4356)
+        {
+            _menutextm(3, -2, 0, Tr("Pause"));
+            _menutextm((pauselector == 0), -1, 0, Tr("Continue"));
+            _menutextm((pauselector == 1), 0, 0, Tr("End Game"));
+        }
+        else
+        {
+            _menutextmshift(pauseoffset[4], -2, 0, pauseoffset[5], pauseoffset[6], Tr("Pause"));
+            _menutextmshift((pauselector == 0)?pauseoffset[1]:pauseoffset[0], -1, 0, pauseoffset[2], pauseoffset[3], Tr("Continue"));
+            _menutextmshift((pauselector == 1)?pauseoffset[1]:pauseoffset[0],  0, 0, pauseoffset[2], pauseoffset[3], Tr("End Game"));
+        }
 
         update(1, 0);
 
@@ -15864,7 +16356,7 @@ void updatestatus()
                 model = ((player[i].playkeys & FLAG_MOVELEFT) ? prevplayermodeln : nextplayermodeln)(model, i);
                 /* AnyBOR: keep unresolved selections outside model storage. */
                 if(!model) continue;
-                strcpy(player[i].name, model->name);
+                obor_profile_copy_name(player[i].name, model->name);
 
                 //player[i].colourmap = (colourselect && (set->nosame & 2)) ? nextcolourmap(model, i - 1) : 0;
                 // NOSAME X 2 // By White Dragon
@@ -15921,7 +16413,8 @@ void updatestatus()
                 player[i].playkeys = 0;
             }
         }
-        else if( !nojoin && (player[i].credits || credits || (!player[i].hasplayed && noshare)) )
+        else if((!nojoin || (obor_profile_build >= 4283 && obor_profile_build < 4403)) &&
+                (player[i].credits || credits || (!player[i].hasplayed && noshare)))
         {
             if(player[i].playkeys & FLAG_START)
             {
@@ -15929,7 +16422,7 @@ void updatestatus()
                 model = skipselect[i][0] ? findmodel(skipselect[i]) : nextplayermodeln(NULL, i);
                 /* AnyBOR: keep unresolved selections outside model storage. */
                 if(!model) continue;
-                strncpy(player[i].name, model->name, MAX_NAME_LEN);
+                obor_profile_copy_name(player[i].name, model->name);
 
                 //player[i].colourmap = (colourselect && (set->nosame & 2)) ? nextcolourmap(model, i - 1) : 0;
                 // NOSAME X 2 // By White Dragon
@@ -16055,130 +16548,56 @@ void updatestatus()
 // with text readout of Base, X, Y, and Z coordinates directly below.
 void draw_position_entity(entity *entity, int offset_z, int color, s_drawmethod *drawmethod)
 {
-    #define FONT                0
-    #define TEXT_MARGIN_Y       1
-    #define OFFSET_LAYER       -2
+    const int screen_x = screenx - ((entity->modeldata.noquake & NO_QUAKEN) ? 0 : gfx_x_offset);
+    const int screen_y = screeny - ((entity->modeldata.noquake & NO_QUAKEN) ? 0 : gfx_y_offset);
+    const int x = entity->position.x - screen_x;
+    const int y = (entity->position.z - offset_z) - entity->position.y - screen_y;
+    const int z = entity->position.z + offset_z;
 
-    // Position array keys
-    // and size constants.
-    enum
+    if(obor_profile_build >= 4283 && obor_profile_build < 4321)
     {
-        KEY_BASE,
-        KEY_X,
-        KEY_Y,
-        KEY_Z,
-        POS_ARRAY_SIZE
-    };
-
-    typedef struct
-    {
-        s_axis_i    position;
-        s_axis_i_2d size;
-    } draw_coords;
-
-    s_axis_i_2d screen_offset;          // Base location calculated from screen offsets.
-    s_axis_i    base_pos;               // Entity position with screen offsets applied.
-    draw_coords box;                    // On screen coords for display elements.
-
-    int pos_value[POS_ARRAY_SIZE];      // Entity position for display - truncated to int.
-    int i;                              // Counter.
-    int str_offset_x;                   // Calculated offset of text for centering.
-    int str_width_max;                  // largest string width.
-    int str_height_max;                 // Largest string height.
-    size_t str_size;                    // Memory size of string.
-
-    const char  *pos_label[POS_ARRAY_SIZE];  // Labels for string position values.
-    char        *pos_final[POS_ARRAY_SIZE];  // Final string to display position.
-
-    // Initialize box.
-    box.position.x = 0;
-    box.position.y = 0;
-    box.position.z = 0;
-
-    // Populate position labels.
-    pos_label[KEY_BASE]          = "B: %d";
-    pos_label[KEY_X]             = "X: %d";
-    pos_label[KEY_Y]             = "Y: %d";
-    pos_label[KEY_Z]             = "Z: %d";
-
-    // Populate position values - truncated to int.
-    pos_value[KEY_BASE]         = (int)entity->base;
-    pos_value[KEY_X]            = (int)entity->position.x;
-    pos_value[KEY_Y]            = (int)entity->position.y;
-    pos_value[KEY_Z]            = (int)entity->position.z;
-
-    // Allocate memory and create finished strings.
-    for(i = 0; i < POS_ARRAY_SIZE; i++)
-    {
-        // Get the total memory size we will need.
-        str_size  = sizeof(char) * (strlen(pos_label[i]) + 1);
-        str_size += sizeof(char) * (sizeof(pos_value[i]) + 1);
-
-        // Allocate memory.
-        pos_final[i] = malloc(str_size);
-
-        // If allocation was successful, concatenate
-        // position label and position value.
-        if(pos_final[i])
-        {
-            sprintf(pos_final[i], pos_label[i], pos_value[i]);
-        }
+        const int text_x = x - font_string_width(0, Tr("X: %f"), entity->position.x) / 2;
+        spriteq_add_dot(x, y, obor_profile_build < 4316 ? offset_z : z, color, drawmethod);
+        font_printf(text_x, y + 5, 0, 0, Tr("X: %f"), entity->position.x);
+        font_printf(text_x, y + 14, 0, 0, Tr("Y: %f"), entity->position.y);
+        font_printf(text_x, y + 23, 0, 0, Tr("Z: %f"), entity->position.z);
+        return;
     }
 
-    // Get the largest string X and Y space.
-    str_width_max   = font_string_width_max(*pos_final, FONT);
-    str_height_max  = fontheight(FONT);
-
-    // Get our base offsets from screen vs. location.
-    screen_offset.x = screenx - ((entity->modeldata.noquake & NO_QUAKEN) ? 0 : gfx_x_offset);
-    screen_offset.y = screeny - ((entity->modeldata.noquake & NO_QUAKEN) ? 0 : gfx_y_offset);
-
-    // Get entity position with screen offsets.
-    base_pos.x = entity->position.x - screen_offset.x;
-    base_pos.y = (entity->position.z - offset_z) - entity->position.y - screen_offset.y;
-
-    // Get a value of half the text width.
-    // We can use this to center our text
-    // on the entity.
-    str_offset_x = str_width_max / 2;
-
-    // Apply text offset.
-    box.position.x = base_pos.x - str_offset_x;
-
-    box.position.y = base_pos.y;
-    box.position.z = entity->position.z + offset_z;
-
-    // Draw position dot.
-    // The +1 to Z is a quick fix - offset_z
-    // distorts the dot's vertical position
-    // instead of just adjusting Z.
-    spriteq_add_dot(base_pos.x, base_pos.y, box.position.z+1, color, drawmethod);
-
-    // Print each position text.
-    for(i = 0; i < POS_ARRAY_SIZE; i++)
+    const int values[] = {(int)entity->base, (int)entity->position.x,
+                          (int)entity->position.y, (int)entity->position.z};
+    const char keys[] = "BXYZ";
+    char text[4][32];
+    for(size_t i = 0; i < sizeof(values) / sizeof(*values); ++i)
     {
-        // If the position string exists then
-        // we can find a position, print it to
-        // the screen, and free up allocated memory.
-        if(pos_final[i])
-        {
-           // Add font height and margin to Y position.
-            base_pos.y += (str_height_max + TEXT_MARGIN_Y);
-
-            // Print position text.
-            font_printf(box.position.x, base_pos.y, FONT, OFFSET_LAYER, pos_final[i]);
-
-            // Release memory allocated for the string.
-            free(pos_final[i]);
-        }
+        snprintf(text[i], sizeof(text[i]), "%c: %d", keys[i], values[i]);
     }
 
-    return;
+    int width = 0;
+    if(obor_profile_build >= 4283 && obor_profile_build < 4342)
+    {
+        for(size_t i = 0; i < sizeof(text) / sizeof(*text); ++i)
+        {
+            const int line_width = font_string_width(0, "%s", text[i]);
+            if(line_width > width)
+            {
+                width = line_width;
+            }
+        }
+    }
+    else
+    {
+        // This historical route measures suffixes of the first coordinate label.
+        width = font_string_width_max(text[0], 0);
+    }
 
-    // Remove local constants.
-    #undef FONT
-    #undef TEXT_MARGIN_Y
-    #undef OFFSET_LAYER
+    const int line_step = fontheight(0) + 1;
+    const int layer = obor_profile_build >= 4283 && obor_profile_build < 4328 ? 0 : -2;
+    spriteq_add_dot(x, y, z + 1, color, drawmethod);
+    for(int i = 0; i < (int)(sizeof(text) / sizeof(*text)); ++i)
+    {
+        font_printf(x - width / 2, y + (i + 1) * line_step, 0, layer, "%s", text[i]);
+    }
 }
 
 // White Dragon
@@ -16357,116 +16776,115 @@ void draw_box_on_entity(entity *entity, int pos_x, int pos_y, int pos_z, int siz
     spriteq_add_box(box.position.x, box.position.y, box.size.x, box.size.y, box.position.z, color, drawmethod);
 }
 
+static const s_collision_attack_list *obor_collision_attack_frame(const entity *character);
+
 void draw_visual_debug()
 {
-    #define LOCAL_COLOR_BLUE  _makecolour(0, 0, 255)
-    #define LOCAL_COLOR_GREEN _makecolour(0, 255, 0)
-    #define LOCAL_COLOR_RED   _makecolour(255, 0, 255)
-    #define LOCAL_COLOR_WHITE _makecolour(255, 255, 255)
+    const int blue = _makecolour(0, 0, 255);
+    const int green = _makecolour(0, 255, 0);
+    const int red = _makecolour(255, 0, 255);
+    const int white = _makecolour(255, 255, 255);
+    const int single_body = obor_profile_build >= 4283 && obor_profile_build < 4355;
+    const int depth_offset = obor_profile_build >= 4283 && obor_profile_build < 4387 ? 0 : 1;
 
-    int i;
-    int instance;
-    s_hitbox            *coords;
-    s_collision_attack  *collision_attack;
-    s_collision_body    *collision_body;
-    s_drawmethod        drawmethod = plainmethod;
-    entity              *entity;
-
+    s_drawmethod drawmethod = plainmethod;
     drawmethod.alpha = 1;
 
-    for(i=0; i<ent_max; i++)
+    for(int i = 0; i < ent_max; ++i)
     {
-        entity = ent_list[i];
-
-        // Entity must exist.
-        if(!entity)
+        entity *actor = ent_list[i];
+        if(!actor || actor->dead)
         {
             continue;
         }
 
-        // Entity must be alive.
-        if(entity->dead)
-        {
-            continue;
-        }
-
-        // Show offset and position.
         if(savedata.debug_position)
         {
-            draw_position_entity(entity, 0, LOCAL_COLOR_WHITE, NULL);
+            draw_position_entity(actor, 0, white, NULL);
         }
-
-        // Show features.
-        if(savedata.debug_features)
+        if(savedata.debug_features && (obor_profile_build < 4283 || obor_profile_build >= 4364))
         {
-            draw_features_entity(entity, 0, LOCAL_COLOR_WHITE, NULL);
+            draw_features_entity(actor, 0, white, NULL);
         }
 
-        // Collision body debug requested?
+        const s_anim *animation = actor->animation;
+        if(!animation)
+        {
+            continue;
+        }
+
+        const float depth = actor->position.z + depth_offset;
         if(savedata.debug_collision_range)
         {
-            draw_box_on_entity(entity, entity->animation->range.min.x, entity->animation->range.min.y, entity->position.z+1, entity->animation->range.max.x, entity->animation->range.max.y, -1, LOCAL_COLOR_GREEN, &drawmethod);
+            draw_box_on_entity(actor, animation->range.min.x, animation->range.min.y, depth,
+                animation->range.max.x, animation->range.max.y, -1, green, &drawmethod);
         }
 
-        // Collision body debug requested?
-        if(savedata.debug_collision_body)
+        const int frame = actor->animpos;
+        if(savedata.debug_collision_body && animation->collision_body && frame >= 0 &&
+           (size_t)frame < animation->obor_frame_capacity)
         {
-            // Animation has collision?
-            if(entity->animation->collision_body)
+            const s_collision_body_list *bodies = animation->collision_body[frame];
+            const int count = single_body ? 1 : max_collisons;
+            if(bodies && bodies->instance)
             {
-                // Frame has collision?
-                if(entity->animation->collision_body[entity->animpos])
+                for(int instance = 0; instance < count && (size_t)instance < bodies->obor_instance_capacity; ++instance)
                 {
-                    // Loop instances of collision.
-                    for(instance = 0; instance < max_collisons; instance++)
+                    const s_collision_body *body = bodies->instance[instance];
+                    if(body && body->coords)
                     {
-                        // Get collision instance pointer.
-                        collision_body = entity->animation->collision_body[entity->animpos]->instance[instance];
-
-                        // Valid collision instance pointer found?
-                        if(collision_body)
-                        {
-                            coords = collision_body->coords;
-                            draw_box_on_entity(entity, coords->x, coords->y, entity->position.z+1, coords->width, coords->height, 2, LOCAL_COLOR_BLUE, &drawmethod);
-                        }
+                        const s_hitbox *coords = body->coords;
+                        draw_box_on_entity(actor, coords->x, coords->y, depth, coords->width, coords->height,
+                            single_body ? 1 : 2, blue, &drawmethod);
                     }
                 }
             }
         }
 
-        // Collision attack requested?
         if(savedata.debug_collision_attack)
         {
-            // Animation has collision?
-            if(entity->animation->collision_attack)
+            const s_collision_attack_list *attacks = obor_collision_attack_frame(actor);
+            if(attacks && attacks->instance)
             {
-                // Frame has collision?
-                if(entity->animation->collision_attack[entity->animpos])
+                for(int instance = 0; instance < max_collisons && (size_t)instance < attacks->obor_instance_capacity; ++instance)
                 {
-                    // Loop instances of collision.
-                    for(instance = 0; instance < max_collisons; instance++)
+                    const s_collision_attack *attack = attacks->instance[instance];
+                    if(attack && attack->coords)
                     {
-                        // Get collision instance pointer.
-                        collision_attack = entity->animation->collision_attack[entity->animpos]->instance[instance];
-
-                        // Valid collision instance pointer found?
-                        if(collision_attack)
-                        {
-                            coords = collision_attack->coords;
-                            draw_box_on_entity(entity, coords->x, coords->y, entity->position.z+1, coords->width, coords->height, 2, LOCAL_COLOR_RED, &drawmethod);
-                        }
+                        const s_hitbox *coords = attack->coords;
+                        draw_box_on_entity(actor, coords->x, coords->y, depth, coords->width, coords->height, 2, red, &drawmethod);
                     }
                 }
             }
         }
     }
-
-    #undef LOCAL_COLOR_BLUE
-    #undef LOCAL_COLOR_GREEN
-    #undef LOCAL_COLOR_RED
-    #undef LOCAL_COLOR_WHITE
 }
 
+
+static void obor_draw_status_performance(void)
+{
+    if(!savedata.debuginfo)
+    {
+        return;
+    }
+    const int long_units = obor_profile_build >= 4283 && obor_profile_build < 4327;
+
+    spriteq_add_box(0, videomodes.dOffset - 12, videomodes.hRes, videomodes.dOffset + 12, 0x0FFFFFFE, 0, NULL);
+    font_printf(2, videomodes.dOffset - 10, 0, 0, Tr("FPS: %03d"), getFPS());
+    font_printf(videomodes.hRes / 2, videomodes.dOffset - 10, 0, 0,
+                long_units ? Tr("Free Ram: %s KBytes") : Tr("Free Ram: %s KB"), commaprint(freeram / 1000));
+    if(obor_profile_build >= 4283 && obor_profile_build < 4334)
+    {
+        font_printf(2, videomodes.dOffset, 0, 0,
+                    long_units ? Tr("Total Ram: %s KBytes") : Tr("Total Ram: %s KB"), commaprint(totalram / 1000));
+    }
+    else
+    {
+        font_printf(2, videomodes.dOffset, 0, 0, Tr("Sprites: %d / %d"), spriteq_get_sprite_count(), spriteq_get_sprite_max());
+    }
+    font_printf(videomodes.hRes / 2, videomodes.dOffset, 0, 0,
+                long_units ? Tr("Used Ram: %s KBytes") : Tr("Used Ram: %s KB"), commaprint(usedram / 1000));
+}
 
 void predrawstatus()
 {
@@ -16660,13 +17078,17 @@ void predrawstatus()
         }
     }// end of for
 
-    if(savedata.debug_position
-       || savedata.debug_features
-       || savedata.debug_collision_attack
-       || savedata.debug_collision_body
-       || savedata.debug_collision_range)
+    if(obor_profile_build >= 4283 && obor_profile_build < 4336)
     {
-        // Collision boxes
+        obor_draw_status_performance();
+    }
+
+    if((obor_profile_build < 4283 || obor_profile_build >= 4315) &&
+       (savedata.debug_collision_attack || savedata.debug_collision_body || savedata.debug_collision_range ||
+        (savedata.debug_position && (obor_profile_build < 4283 || obor_profile_build >= 4336)) ||
+        (savedata.debuginfo && obor_profile_build >= 4283 && obor_profile_build < 4336) ||
+        (savedata.debug_features && (obor_profile_build < 4283 || obor_profile_build >= 4364))))
+    {
         draw_visual_debug();
     }
 
@@ -16705,14 +17127,9 @@ void predrawstatus()
         }
     }
 
-    // Performance info.
-    if(savedata.debuginfo)
+    if(obor_profile_build < 4283 || obor_profile_build >= 4336)
     {
-        spriteq_add_box(0, videomodes.dOffset - 12, videomodes.hRes, videomodes.dOffset + 12, 0x0FFFFFFE, 0, NULL);
-        font_printf(2,                   videomodes.dOffset - 10, 0, 0, Tr("FPS: %03d"), getFPS());
-        font_printf(videomodes.hRes / 2, videomodes.dOffset - 10, 0, 0, Tr("Free Ram: %s KB"), commaprint(freeram / 1000));
-        font_printf(2,                   videomodes.dOffset,    0, 0, Tr("Sprites: %d / %d"), spriteq_get_sprite_count(), spriteq_get_sprite_max());
-        font_printf(videomodes.hRes / 2, videomodes.dOffset,    0, 0, Tr("Used Ram: %s KB"), commaprint(usedram / 1000));
+        obor_draw_status_performance();
     }
 }
 
@@ -17283,7 +17700,9 @@ void ent_default_init(entity *e)
             break;
         }
         // define new subtypes
-        else if(e->modeldata.subtype == SUBTYPE_ARROW || e->modeldata.subtype == SUBTYPE_BOOMERANG)
+        else if(e->modeldata.subtype == SUBTYPE_ARROW ||
+                ((obor_profile_build < 4283 || obor_profile_build >= 4407) &&
+                 e->modeldata.subtype == SUBTYPE_BOOMERANG))
         {
             e->health = 1;
             if(!e->modeldata.speed && !e->modeldata.nomove)
@@ -17340,7 +17759,10 @@ void ent_default_init(entity *e)
         }
         else
         {
-            dodrop = (e->modeldata.subtype != SUBTYPE_ARROW && e->modeldata.subtype != SUBTYPE_BOOMERANG && level && (level->scrolldir == SCROLL_UP || level->scrolldir == SCROLL_DOWN));
+            dodrop = e->modeldata.subtype != SUBTYPE_ARROW &&
+                     (e->modeldata.subtype != SUBTYPE_BOOMERANG ||
+                      (obor_profile_build >= 4283 && obor_profile_build < 4407)) &&
+                     level && (level->scrolldir == SCROLL_UP || level->scrolldir == SCROLL_DOWN);
 
             if(!nodropspawn && (dodrop || (e->position.x > advancex - 30 && e->position.x < advancex + videomodes.hRes + 30 && e->position.y == 0)) )
             {
@@ -17439,7 +17861,10 @@ void ent_default_init(entity *e)
         {
             e->speedmul = 2;
         }
-        e->trymove = common_trymove;
+        if(obor_profile_build < 4283 || obor_profile_build >= 4414)
+        {
+            e->trymove = common_trymove;
+        }
         break;
     case TYPE_PANEL:
         e->nograb = 1;
@@ -17509,7 +17934,9 @@ void ent_spawn_ent(entity *ent)
         {
             s_ent->playerindex = ent->playerindex;
         }
-        if(s_ent->modeldata.subtype == SUBTYPE_ARROW || s_ent->modeldata.subtype == SUBTYPE_BOOMERANG)
+        if(s_ent->modeldata.subtype == SUBTYPE_ARROW ||
+           ((obor_profile_build < 4283 || obor_profile_build >= 4407) &&
+            s_ent->modeldata.subtype == SUBTYPE_BOOMERANG))
         {
             s_ent->owner = ent;
         }
@@ -17557,7 +17984,9 @@ void ent_summon_ent(entity *ent)
         {
             s_ent->playerindex = ent->playerindex;
         }
-        if(s_ent->modeldata.subtype == SUBTYPE_ARROW || s_ent->modeldata.subtype == SUBTYPE_BOOMERANG)
+        if(s_ent->modeldata.subtype == SUBTYPE_ARROW ||
+           ((obor_profile_build < 4283 || obor_profile_build >= 4407) &&
+            s_ent->modeldata.subtype == SUBTYPE_BOOMERANG))
         {
             s_ent->owner = ent;
         }
@@ -18196,7 +18625,7 @@ entity *spawn(float x, float z, float a, int direction, char *name, int index, s
                 textbox = e;
             }
 
-            strncpy(e->name, e->modeldata.name, MAX_NAME_LEN);
+            obor_profile_copy_name(e->name, e->modeldata.name);
             // copy back the value
             e->sortid = id;
             e->defense = dfs;
@@ -18243,12 +18672,19 @@ void kill(entity *victim)
     s_collision_attack attack;
     entity *tempent = self;
 
-    if(victim == NULL || !victim->exists)
+    /* The original callback preceded the live-entity guard through 4426.
+     * Keep a null pointer outside the callback for every profile. */
+    int callback_before_guard = obor_profile_build >= 4283 && obor_profile_build < 4427;
+    if(victim == NULL)
     {
         return;
     }
-
-    execute_onkill_script(victim);
+    if(callback_before_guard && victim->scripts) execute_onkill_script(victim);
+    if(!victim->exists)
+    {
+        return;
+    }
+    if(!callback_before_guard && victim->scripts) execute_onkill_script(victim);
 
     if((victim->modeldata.type & TYPE_SHOT) && victim->owner && (victim->owner->modeldata.type & TYPE_PLAYER))
     {
@@ -18392,6 +18828,18 @@ void kill_all()
     }
 }
 
+static const s_collision_attack_list *obor_collision_attack_frame(const entity *character)
+{
+    const s_anim *animation = character->animation;
+
+    if(!animation || !animation->collision_attack || character->animpos < 0 ||
+       (size_t)character->animpos >= animation->obor_attack_frame_capacity)
+    {
+        return NULL;
+    }
+    return animation->collision_attack[character->animpos];
+}
+
 int checkhit(entity *attacker, entity *target)
 {
     #define KEY_ATTACKER    0
@@ -18428,50 +18876,91 @@ int checkhit(entity *attacker, entity *target)
         z1 = 0,
         z2 = 0;
 
-    if(attacker == target
-       || !target->animation->collision_body
-       || !attacker->animation->collision_attack
-       || !target->animation->vulnerable[target->animpos]
-       )
+    const int single_attack = obor_profile_build >= 4283 && obor_profile_build < 4298;
+    const int single_body = obor_profile_build >= 4283 && obor_profile_build < 4355;
+    const int require_all_attacks = single_body && !single_attack;
+    const int attack_count = single_attack ? 1 : max_collisons;
+    const s_collision_attack_list *attacks = obor_collision_attack_frame(attacker);
+    const s_anim *target_animation = target->animation;
+    const s_collision_body_list *bodies;
+    int collision_found = 0;
+    int detect_instance;
+
+    if(attacker == target || !attacks || !attacks->instance || !target_animation ||
+       !target_animation->collision_body || !target_animation->vulnerable ||
+       target->animpos < 0 || (size_t)target->animpos >= target_animation->obor_frame_capacity ||
+       !target_animation->vulnerable[target->animpos])
     {
         return 0;
     }
+    bodies = target_animation->collision_body[target->animpos];
+    z1 = attacker->position.z;
+    z2 = target->position.z;
 
-    int detect_instance = 0;
-    int collision_found = 0;
-
-    for(attack_instance = 0; attack_instance < max_collisons; attack_instance++)
+    for(attack_instance = 0; attack_instance < attack_count &&
+        (size_t)attack_instance < attacks->obor_instance_capacity; ++attack_instance)
     {
-        attack          = attacker->animation->collision_attack[attacker->animpos]->instance[attack_instance];
-        coords_attack   = attack->coords;
+        int detect_count;
 
-        for(detect_instance = 0; detect_instance < max_collisons; detect_instance++)
+        attack = attacks->instance[attack_instance];
+        if(!attack || !(coords_attack = attack->coords))
         {
-            // Z calculations use increments in,
-            // each loop, so we need to reset them here.
-            z1      = attacker->position.z;
-            z2      = target->position.z;
-            zdist   = 0;
+            if(single_body)
+            {
+                return 0;
+            }
+            continue;
+        }
+        detect_count = single_body ? 1 : max_collisons;
+        if(single_attack && attack->counterattack)
+        {
+            detect_count = 2;
+        }
 
-            //if(!attack->counterattack)
-            //{
-                detect          = target->animation->collision_body[target->animpos]->instance[detect_instance];
-                coords_detect   = detect->coords;
+        for(detect_instance = 0; detect_instance < detect_count; ++detect_instance)
+        {
+            const int counter = single_attack && detect_instance == 1;
+            const int body_index = counter ? 0 : detect_instance;
 
-            //}
-            //else if((target->animation->collision_attack && target->animation->collision_attack[target->animpos]) && target->animation->collision_attack[target->animpos]->counterattack <= attacker->animation->collision_attack[attacker->animpos]->counterattack)
-            //{
-                //coords_detect = target->animation->collision_attack[target->animpos]->coords;
-            //}
-            //else
-            //{
-            //    return 0;
-            //}
+            detect = bodies && bodies->instance && (size_t)body_index < bodies->obor_instance_capacity ?
+                     bodies->instance[body_index] : NULL;
+
+            if(counter)
+            {
+                const s_collision_attack_list *counters = obor_collision_attack_frame(target);
+                const s_collision_attack *opposing = counters && counters->instance && counters->obor_instance_capacity ?
+                                                     counters->instance[0] : NULL;
+                if(!opposing || opposing->counterattack > attack->counterattack)
+                {
+                    continue;
+                }
+                coords_detect = opposing->coords;
+            }
+            else
+            {
+                coords_detect = detect ? detect->coords : NULL;
+            }
+            if(!coords_detect)
+            {
+                if(require_all_attacks)
+                {
+                    return 0;
+                }
+                continue;
+            }
+
+            // The intermediate releases keep all three depth values between attacks.
+            if(!single_body || single_attack)
+            {
+                z1 = attacker->position.z;
+                z2 = target->position.z;
+                zdist = 0;
+            }
 
             if(coords_attack->z2 > coords_attack->z1)
             {
                 z1 += coords_attack->z1 + (coords_attack->z2 - coords_attack->z1) / 2;
-                zdist = (coords_attack->z2 - coords_attack->z1) / 2;
+                zdist += (coords_attack->z2 - coords_attack->z1) / 2;
             }
             else if(coords_attack->z1)
             {
@@ -18496,6 +18985,10 @@ int checkhit(entity *attacker, entity *target)
 
             if(diff(z1, z2) > zdist)
             {
+                if(require_all_attacks)
+                {
+                    return 0;
+                }
                 continue;
             }
 
@@ -18534,38 +19027,27 @@ int checkhit(entity *attacker, entity *target)
                 detect_size_y   = y2 + coords_detect->height;
             }
 
-            if(attack_pos_x > detect_size_x)
+            if(attack_pos_x > detect_size_x || detect_pos_x > attack_size_x ||
+               attack_pos_y > detect_size_y || detect_pos_y > attack_size_y)
             {
-                continue;
-            }
-            if(detect_pos_x > attack_size_x)
-            {
-                continue;
-            }
-            if(attack_pos_y > detect_size_y)
-            {
-                continue;
-            }
-            if(detect_pos_y > attack_size_y)
-            {
+                if(require_all_attacks)
+                {
+                    return 0;
+                }
                 continue;
             }
 
-            // If we got this far, set collision flag
-            // and break this loop.
             collision_found = 1;
             break;
         }
 
-        // If a collision was found
-        // break out of loop.
-        if(collision_found)
+        if(collision_found && (!single_body || single_attack))
         {
             break;
         }
     }
 
-    if(!collision_found)
+    if(!collision_found || (require_all_attacks && attack_instance < attack_count))
     {
         return 0;
     }
@@ -18615,6 +19097,12 @@ int checkhit(entity *attacker, entity *target)
     }
 
     lasthit.attack      = attack;
+    if(obor_profile_build >= 4283 && obor_profile_build < 4292 &&
+       attacker->animation->collision_attack[attacker->animpos]->instance[0])
+    {
+        /* Earlier records snapshot the frame's first attack type. */
+        lasthit.type = attacker->animation->collision_attack[attacker->animpos]->instance[0]->attack_type;
+    }
     lasthit.body        = detect;
     lasthit.position.y  = lasthit.position.z - medy;
     lasthit.confirm     = 1;
@@ -18637,14 +19125,21 @@ the bottom of the platform and multiplying the result by the difference of the b
 left point divided by depth of the platform. The same is done for the right side, and checks to see if they are
 within the bottom/top and the left/right area.
 */
+/* Original geometry alternates between open and closed edges. */
+static int obor_terrain_between(float value, float low, float high, int inclusive)
+{
+    return inclusive ? value >= low && value <= high : value > low && value < high;
+}
+
 int testhole(int hole, float x, float z)
 {
     float coef1, coef2;
-    if(z <= level->holes[hole].z && z >= level->holes[hole].z - level->holes[hole].depth)
+    int inclusive = obor_profile_build < 4283 || obor_profile_build >= 4340;
+    if(obor_terrain_between(z, level->holes[hole].z - level->holes[hole].depth, level->holes[hole].z, inclusive))
     {
         coef1 = (level->holes[hole].z - z) * ((level->holes[hole].upperleft - level->holes[hole].lowerleft) / level->holes[hole].depth);
         coef2 = (level->holes[hole].z - z) * ((level->holes[hole].upperright - level->holes[hole].lowerright) / level->holes[hole].depth);
-        if(x >= level->holes[hole].x + level->holes[hole].lowerleft + coef1 && x <= level->holes[hole].x + level->holes[hole].lowerright + coef2)
+        if(obor_terrain_between(x, level->holes[hole].x + level->holes[hole].lowerleft + coef1, level->holes[hole].x + level->holes[hole].lowerright + coef2, inclusive))
         {
             return 1;
         }
@@ -18704,17 +19199,18 @@ int checkhole_in(float x, float z, float a)
 {
     float maxa;
     int i, ind;
+    int legacy = obor_profile_build >= 4283 && obor_profile_build < 4336;
 
     if(level == NULL)
     {
         return -1;
     }
 
-    maxa = -1;
+    maxa = legacy ? 0 : -1;
     ind = -1;
     for(i = 0; i < level->numholes; i++)
     {
-        if(testhole(i, x, z) && level->holes[i].height+T_WALKOFF >= a && level->holes[i].height > maxa) // && level->holes[i].height+T_WALKOFF >= a
+        if(testhole(i, x, z) && level->holes[i].height+T_WALKOFF >= a && (legacy ? level->holes[i].height >= maxa : level->holes[i].height > maxa)) // && level->holes[i].height+T_WALKOFF >= a
         {
             maxa = level->holes[i].height;
             ind = i;
@@ -18722,7 +19218,7 @@ int checkhole_in(float x, float z, float a)
     }
 
     if ( ind >= 0 ) {
-        holez = ind;
+        if(!legacy) holez = ind;
         return 1;
     } else return 0;
 }
@@ -18732,17 +19228,18 @@ int checkholeindex_in(float x, float z, float a)
 {
     float maxa;
     int i, ind;
+    int legacy = obor_profile_build >= 4283 && obor_profile_build < 4336;
 
     if(level == NULL)
     {
         return -1;
     }
 
-    maxa = -1;
+    maxa = legacy ? 0 : -1;
     ind = -1;
     for(i = 0; i < level->numholes; i++)
     {
-        if(testhole(i, x, z) && level->holes[i].height+T_WALKOFF >= a && level->holes[i].height > maxa) // && level->holes[i].height+T_WALKOFF >= a
+        if(testhole(i, x, z) && level->holes[i].height+T_WALKOFF >= a && (legacy ? level->holes[i].height >= maxa : level->holes[i].height > maxa)) // && level->holes[i].height+T_WALKOFF >= a
         {
             maxa = level->holes[i].height;
             ind = i;
@@ -18782,13 +19279,14 @@ within the bottom/top and the left/right area.
 int testwall(int wall, float x, float z)
 {
     float coef1, coef2;
+    int inclusive = obor_profile_build < 4329 || obor_profile_build >= 4340;
 
     //if(wall >= level->numwalls || wall < 0) return 0;
-    if(z <= level->walls[wall].z && z >= level->walls[wall].z - level->walls[wall].depth)
+    if(obor_terrain_between(z, level->walls[wall].z - level->walls[wall].depth, level->walls[wall].z, inclusive))
     {
         coef1 = (level->walls[wall].z - z) * ((level->walls[wall].upperleft - level->walls[wall].lowerleft) / level->walls[wall].depth);
         coef2 = (level->walls[wall].z - z) * ((level->walls[wall].upperright - level->walls[wall].lowerright) / level->walls[wall].depth);
-        if(x >= level->walls[wall].x + level->walls[wall].lowerleft + coef1 && x <= level->walls[wall].x + level->walls[wall].lowerright + coef2)
+        if(obor_terrain_between(x, level->walls[wall].x + level->walls[wall].lowerleft + coef1, level->walls[wall].x + level->walls[wall].lowerright + coef2, inclusive))
         {
             return 1;
         }
@@ -18863,6 +19361,7 @@ int testplatform(entity *plat, float x, float z, entity *exclude)
 {
     float coef1, coef2;
     float offz, offx;
+    int inclusive = obor_profile_build < 4329 || obor_profile_build >= 4340;
     if(plat == exclude)
     {
         return 0;
@@ -18873,15 +19372,15 @@ int testplatform(entity *plat, float x, float z, entity *exclude)
     }
     offz = plat->position.z + plat->animation->platform[plat->animpos][1];
     offx = plat->position.x + plat->animation->platform[plat->animpos][0];
-    if(z <= offz && z >= offz - plat->animation->platform[plat->animpos][6])
+    if(obor_terrain_between(z, offz - plat->animation->platform[plat->animpos][6], offz, inclusive))
     {
         coef1 = (offz - z) * ((plat->animation->platform[plat->animpos][2] -
                                plat->animation->platform[plat->animpos][3]) / plat->animation->platform[plat->animpos][6]);
         coef2 = (offz - z) * ((plat->animation->platform[plat->animpos][4] -
                                plat->animation->platform[plat->animpos][5]) / plat->animation->platform[plat->animpos][6]);
 
-        if(x >= offx + plat->animation->platform[plat->animpos][3] + coef1 &&
-                x <= offx + plat->animation->platform[plat->animpos][5] + coef2)
+        if(obor_terrain_between(x, offx + plat->animation->platform[plat->animpos][3] + coef1,
+                                offx + plat->animation->platform[plat->animpos][5] + coef2, inclusive))
         {
             return 1;
         }
@@ -19143,7 +19642,7 @@ int testmove(entity *ent, float sx, float sz, float x, float z)
     //-------------hole checking ---------------------
     if(ent->modeldata.subject_to_hole > 0)
     {
-        if(checkhole(x, z) && checkwall(x, z) < 0 && !check_platform_below(x, z, ent->position.y, ent))
+        if((obor_profile_build >= 4283 && obor_profile_build < 4350 ? checkhole_in(x, z, ent->position.y) : checkhole(x, z)) && checkwall(x, z) < 0 && !check_platform_below(x, z, ent->position.y, ent))
         {
             return -2;
         }
@@ -19236,8 +19735,44 @@ void set_opponent(entity *ent, entity *other)
 }
 
 
+static int counter_matches_hit(const entity *defender, const entity *attacker,
+                               const s_collision_attack *attack, int hostile_types, int force)
+{
+    const s_counterrange *range = defender->animation->counterrange;
+    const unsigned int revision = obor_profile_build;
+
+    if(defender->animpos < range->frame.min || defender->animpos > range->frame.max)
+    {
+        return 0;
+    }
+    if(revision >= 4283 && revision < 4378)
+    {
+        return 1;
+    }
+    if(revision >= 4378 && revision < 4381 && defender->health <= force)
+    {
+        return 0;
+    }
+
+    /* From 4381 the nonzero rage constant makes the health gate unconditional. */
+    return range->condition == COUNTERACTION_CONDITION_ALWAYS ||
+           ((revision < 4283 || revision >= 4381) &&
+            range->condition == COUNTERACTION_CONDITION_ALWAYS_RAGE) ||
+           (range->condition == COUNTERACTION_CONDITION_HOSTILE &&
+            (attacker->modeldata.type & hostile_types)) ||
+           (range->condition == COUNTERACTION_CONDITION_HOSTILE_FRONT_NOFREEZE &&
+            !attack->no_block && defender->direction != attacker->direction && !attack->freeze);
+}
+
+static int attack_follow_animation(const entity *actor)
+{
+    const int follow = actor->animation->followup.animation;
+    return animfollows && follow > 0 && follow <= max_follows ? animfollows[follow - 1] : -1;
+}
+
 void do_attack(entity *e)
 {
+    const int early_collision = obor_profile_build >= 4283 && obor_profile_build < 4298;
     int them;
     int i, t;
     int force = 0;
@@ -19265,6 +19800,17 @@ void do_attack(entity *e)
     if(level_completed)
     {
         return;
+    }
+
+    if(early_collision)
+    {
+        const s_collision_attack_list *frame = obor_collision_attack_frame(e);
+        if(!frame || !frame->instance || !frame->obor_instance_capacity || !(attack = frame->instance[0]))
+        {
+            return;
+        }
+        force = attack->attack_force;
+        fdefense_blockthreshold = (int)self->defense[attack->attack_type].blockthreshold;
     }
 
     topowner = e; // trace the top owner, for projectile combo checking :)
@@ -19303,116 +19849,138 @@ void do_attack(entity *e)
     {
         target = ent_list[i];
 
-        if(!target->exists)
+        if(early_collision)
         {
-            continue;
-        }
-
-        // Check collision. If a collision
-        // is found, lasthit the impacting
-        // collision pointers are also
-        // populated into lasthit, which
-        // we will use below.
-        if(!checkhit(e, target))
-        {
-            continue;
-        }
-
-        attack = lasthit.attack;
-        fdefense_blockthreshold = (int)self->defense[attack->attack_type].blockthreshold; //max damage that can be blocked for attack type.
-        force = attack->attack_force;
-
-        // Verify target is alive.
-        if(target->dead)
-        {
-            continue;
-        }
-
-        // Verify target is invincible,
-        // or attack type is an item.
-        // This is too allow item collection
-        // even while invincible.
-        if(target->invincible)
-        {
-            if(attack->attack_type != ATK_ITEM)
+            if(!target->exists || target->dead ||
+               (target->invincible == 1 && attack->attack_type != ATK_ITEM) ||
+               (current_anim->attackone > 0 && e->lasthit && target != e->lasthit) ||
+               !(target->modeldata.type & them) || target->pain_time >= time ||
+               !target->takedamage || target->hit_by_attack_id == current_attack_id ||
+               !((target->takeaction != common_lie && attack->otg < OTG_GROUND_ONLY) ||
+                 (target->takeaction == common_lie && attack->otg >= OTG_BOTH)) ||
+               !((target->falling == 0 && attack->jugglecost >= 0) ||
+                 (target->falling == 1 && attack->jugglecost <= target->modeldata.jugglepoints.current)) ||
+               !checkhit(e, target))
             {
                 continue;
             }
         }
-
-        // If attack is set to only hit
-        // one entity at a time (attackone),
-        // we verify last hit (lasthit) is
-        // set. If last hit is set and
-        // differs from current target,
-        // then we are trying to hit
-        // another entity and should exit.
-        if(current_anim->attackone > 0)
+        else
         {
-            if(e->lasthit)
+            if(!target->exists)
             {
-                if(target != e->lasthit)
+                continue;
+            }
+
+            // Check collision. If a collision
+            // is found, lasthit the impacting
+            // collision pointers are also
+            // populated into lasthit, which
+            // we will use below.
+            if(!checkhit(e, target))
+            {
+                continue;
+            }
+
+            attack = lasthit.attack;
+            fdefense_blockthreshold = (int)self->defense[attack->attack_type].blockthreshold; //max damage that can be blocked for attack type.
+            force = attack->attack_force;
+
+            // Verify target is alive.
+            if(target->dead)
+            {
+                continue;
+            }
+
+            // Verify target is invincible,
+            // or attack type is an item.
+            // This is too allow item collection
+            // even while invincible.
+            if(target->invincible)
+            {
+                if(attack->attack_type != ATK_ITEM)
                 {
                     continue;
                 }
             }
-        }
 
-        // Verify target has a match to
-        // projectile hit or can damage.
-        if(!(target->modeldata.type & them))
-        {
-            continue;
-        }
+            // If attack is set to only hit
+            // one entity at a time (attackone),
+            // we verify last hit (lasthit) is
+            // set. If last hit is set and
+            // differs from current target,
+            // then we are trying to hit
+            // another entity and should exit.
+            if(current_anim->attackone > 0)
+            {
+                if(e->lasthit)
+                {
+                    if(target != e->lasthit)
+                    {
+                        continue;
+                    }
+                }
+            }
 
-        // Pain time must have expired.
-        // This is to allow reasonable delay
-        // between hits so engine will not
-        // run hit on every update.
-        if(target->pain_time >= time)
-        {
-            continue;
-        }
-
-        // Target takedamage flag
-        // must be set.
-        if(!target->takedamage)
-        {
-            continue;
-        }
-
-        // Attack IDs must be different.
-        if(target->hit_by_attack_id == current_attack_id && !attack->ignore_attack_id)
-        {
-            continue;
-        }
-
-        // Target laying down? Exit if
-        // attack only hits standing targets.
-        if(target->takeaction == common_lie)
-        {
-            if(attack->otg == OTG_NONE)
+            // Verify target has a match to
+            // projectile hit or can damage.
+            if(!(target->modeldata.type & them))
             {
                 continue;
             }
-        }
 
-        // Target NOT laying down? Exit if
-        // attack only hits grounded targets.
-        if(target->takeaction != common_lie)
-        {
-            if(attack->otg == OTG_GROUND_ONLY)
+            // Pain time must have expired.
+            // This is to allow reasonable delay
+            // between hits so engine will not
+            // run hit on every update.
+            if(target->pain_time >= time)
             {
                 continue;
             }
-        }
 
-        // If falling, then check the juggle cost.
-        if(target->falling == 1)
-        {
-            if(attack->jugglecost > target->modeldata.jugglepoints.current)
+            // Target takedamage flag
+            // must be set.
+            if(!target->takedamage)
             {
                 continue;
+            }
+
+            // Attack IDs must be different.
+            if(target->hit_by_attack_id == current_attack_id &&
+                    ((obor_profile_build >= 4283 && obor_profile_build < 4380) || !attack->ignore_attack_id))
+            {
+                continue;
+            }
+
+            // Target laying down? Exit if
+            // attack only hits standing targets.
+            if(target->takeaction == common_lie)
+            {
+                if(attack->otg == OTG_NONE)
+                {
+                    continue;
+                }
+            }
+
+            // Target NOT laying down? Exit if
+            // attack only hits grounded targets.
+            if(target->takeaction != common_lie)
+            {
+                if(attack->otg == OTG_GROUND_ONLY)
+                {
+                    continue;
+                }
+            }
+
+            // If falling, then check the juggle cost.
+            if(target->falling == 1)
+            {
+                if(attack->jugglecost > target->modeldata.jugglepoints.current ||
+                   (obor_profile_build >= 4298 && obor_profile_build < 4379 &&
+                    attack->jugglecost == target->modeldata.jugglepoints.current))
+                {
+                    continue;
+                }
             }
         }
 
@@ -19596,49 +20164,28 @@ void do_attack(entity *e)
                     }
                 }
             }
-            else if(self->animation->counterrange &&	// Has counter range?
-                    (self->animpos >= self->animation->counterrange->frame.min && self->animpos <= self->animation->counterrange->frame.max) &&  // Current frame within counter range frames?
-                    !self->frozen &&
-                    (self->health > force || (self->health-force <= 0 && COUNTERACTION_CONDITION_ALWAYS_RAGE != 0)) &&   // Rage or not?
-                    // counterrange conditions
-                    ( (self->animation->counterrange->condition == COUNTERACTION_CONDITION_ALWAYS) || (self->animation->counterrange->condition == COUNTERACTION_CONDITION_ALWAYS_RAGE) ||
-                    (self->animation->counterrange->condition == COUNTERACTION_CONDITION_HOSTILE && e->modeldata.type & them) ||
-                    (self->animation->counterrange->condition == COUNTERACTION_CONDITION_HOSTILE_FRONT_NOFREEZE && !attack->no_block && !(self->direction == e->direction) && !attack->freeze ) )
-
-                    ) {
-
-                    // Take damage from attack?
+            else if(self->animation->counterrange && !self->frozen &&
+                    counter_matches_hit(self, e, attack, them, force))
+            {
                     if(self->animation->counterrange->damaged == COUNTERACTION_DAMAGE_NORMAL)
                     {
-                        if (self->health-force <= 0)
+                        int64_t health = (int64_t)self->health - force;
+                        if((obor_profile_build < 4283 || obor_profile_build >= 4381) && health <= 0)
                         {
-                            // White Dragon: commented the alternative method
-                            /*s_collision_attack atk;
-
-                            atk = emptyattack;
-                            atk.attack_force = force;
-                            atk.attack_drop = attack->attack_drop;
-                            atk.attack_type = attack->attack_type;
-
-                            atk.dropv.y = (float)DEFAULT_ATK_DROPV_Y;
-                            atk.dropv.x = (float)DEFAULT_ATK_DROPV_X;
-                            atk.dropv.z = (float)DEFAULT_ATK_DROPV_Z;
-
-                            if (e) self->takedamage(e, &atk);
-                            else self->takedamage(self, &atk);
-
-                            self = temp;
-                            return;*/
-
-                            self->health = 1; // rage
+                            health = 1;
                         }
-                        else
+                        if(health < INT_MIN)
                         {
-                            self->health -= force;
+                            health = INT_MIN;
                         }
+                        else if(health > INT_MAX)
+                        {
+                            health = INT_MAX;
+                        }
+                        self->health = (int)health;
                     }
 
-                    current_follow_id = animfollows[self->animation->followup.animation - 1];
+                    current_follow_id = attack_follow_animation(self);
                     if(validanim(self, current_follow_id))
                     {
                         if(self->modeldata.animation[current_follow_id]->attackone == -1)
@@ -19673,7 +20220,8 @@ void do_attack(entity *e)
                         }
                     }
             }
-            else if(self->takedamage(e, attack))
+            else if((obor_profile_build < 4283 || obor_profile_build >= 4385 ||
+                     !self->animation->counterrange || self->frozen) && self->takedamage(e, attack))
             {
                 // Didn't block so go ahead and take the damage
                 execute_didhit_script(e, self, force, attack->attack_drop, attack->attack_type, attack->no_block, attack->guardcost, attack->jugglecost, attack->pause_add, 0, attack->tag);
@@ -19752,10 +20300,12 @@ void do_attack(entity *e)
                     ((e->animation->followup.condition < FOLLOW_CONDITION_HOSTILE) || (self->modeldata.type & e->modeldata.hostile)) &&                                // Does type matter?
                     ((e->animation->followup.condition < FOLLOW_CONDITION_HOSTILE_NOKILL_NOBLOCK) || ((self->health > 0) && !didblock)) &&                             // check if health or not blocking matters
                     ((e->animation->followup.condition < FOLLOW_CONDITION_HOSTILE_NOKILL_NOBLOCK_NOGRAB) || ((self->health > 0) && !didblock && cangrab(e, self)) ) && // check if nograb matters
-                    ((e->animation->followup.condition < FOLLOW_CONDITION_HOSTILE_NOKILL_BLOCK) || ((self->health > 0) && didblock))                                   // check if health or blocking matters
+                    ((obor_profile_build >= 4283 && obor_profile_build < 4425) ||
+                     (e->animation->followup.condition < FOLLOW_CONDITION_HOSTILE_NOKILL_BLOCK) ||
+                     ((self->health > 0) && didblock))
               )
             {
-                current_follow_id = animfollows[e->animation->followup.animation - 1];
+                current_follow_id = attack_follow_animation(e);
                 if(validanim(e, current_follow_id))
                 {
                     if(e->modeldata.animation[current_follow_id]->attackone == -1)
@@ -20142,7 +20692,11 @@ void check_gravity(entity *e)
                 else if((!self->animation->move[self->animpos]->base || self->animation->move[self->animpos]->base < 0) &&
                         (!self->animation->move[self->animpos]->y || self->animation->move[self->animpos]->y <= 0))
                 {
-                    if( !(self->modeldata.aimove & AIMOVE1_BOOMERANG) ) self->velocity.x = self->velocity.z = self->velocity.y = 0;
+                    if(!(self->modeldata.aimove & AIMOVE1_BOOMERANG) ||
+                       (obor_profile_build >= 4283 && obor_profile_build < 4408))
+                    {
+                        self->velocity.x = self->velocity.z = self->velocity.y = 0;
+                    }
                 }
                 else
                 {
@@ -20463,7 +21017,9 @@ void adjust_base(entity *e, entity **pla)
         }
 
         //printf("stb:%d\n",self->modeldata.subject_to_basemap);
-        if(self->modeldata.subject_to_basemap > 0) maxbase = check_basemap(self->position.x, self->position.z);
+        if((obor_profile_build >= 4283 && obor_profile_build < 4311) ||
+                self->modeldata.subject_to_basemap > 0)
+            maxbase = check_basemap(self->position.x, self->position.z);
 
         if(maxbase == -1000 && self->modeldata.subject_to_hole > 0)
         {
@@ -20973,7 +21529,10 @@ void adjust_bind(entity *e)
         }
         if (e->binding.offset_flag.z) e->position.z = e->binding.ent->position.z + e->binding.offset.z;
         if (e->binding.offset_flag.y) e->position.y = e->binding.ent->position.y + e->binding.offset.y;
-        e->sortid = e->binding.ent->sortid + e->binding.sortid;
+        if(obor_profile_build < 4283 || obor_profile_build >= 4396)
+        {
+            e->sortid = e->binding.ent->sortid + e->binding.sortid;
+        }
 
         switch(e->binding.direction)
         {
@@ -21227,6 +21786,15 @@ void update_ents()
 }
 
 
+static int obor_shadow_in_hole(float x, float z, float height)
+{
+    if(obor_profile_build >= 4283 && obor_profile_build < 4350)
+    {
+        return checkhole_in(x, z, height);
+    }
+    return checkhole(x, z);
+}
+
 void display_ents()
 {
     unsigned f;
@@ -21244,6 +21812,7 @@ void display_ents()
     s_drawmethod commonmethod;
     s_drawmethod shadowmethod;
     int use_mirror = (level && level->mirror);
+    const int legacy_shadowbase = obor_profile_build >= 4283 && obor_profile_build < 4287;
 
     int o_scrx = screenx, o_scry = screeny, scrx, scry;
 
@@ -21281,6 +21850,8 @@ void display_ents()
             if(freezeall || !(e->blink && (time % (GAME_SPEED / 10)) < (GAME_SPEED / 20)))
             {
                 float eheight = T_WALKOFF, eplatheight = 0;
+                const int use_shadow_surface = legacy_shadowbase ?
+                    !e->modeldata.shadowbase : !(e->modeldata.shadowbase & 1);
 
                 // get the height of the entity
                 if ( e->animation->platform )
@@ -21302,7 +21873,11 @@ void display_ents()
                 other = check_platform_below(e->position.x, e->position.z, e->position.y+eheight, e);
                 wall = checkwall(e->position.x, e->position.z);
 
-                if(e->modeldata.subject_to_basemap > 0) basemap = check_basemap(e->position.x, e->position.z);
+                if(e->modeldata.subject_to_basemap > 0 ||
+                   (obor_profile_build >= 4283 && obor_profile_build < 4314))
+                {
+                    basemap = check_basemap(e->position.x, e->position.z);
+                }
 
                 if(f < sprites_loaded)
                 {
@@ -21312,10 +21887,10 @@ void display_ents()
 
                     z = (int)e->position.z;    // Set the layer offset
 
-                    /*if(e->binding.ent)
+                    if(obor_profile_build >= 4283 && obor_profile_build < 4396 && e->binding.ent)
                     {
-                        sortid = e->binding.ent->sortid + e->binding.sortid;
-                    }*/
+                        sortid = e->binding.ent->sortid - 1;
+                    }
 
                     if(e->grabbing && e->modeldata.grabback)
                     {
@@ -21364,9 +21939,11 @@ void display_ents()
 
                     }
 
-                    if(e->owner)
+                    if(e->owner &&
+                       ((obor_profile_build >= 4283 && obor_profile_build < 4408) ||
+                        !self || !(self->modeldata.aimove & AIMOVE1_BOOMERANG)))
                     {
-                        if ( !(self->modeldata.aimove & AIMOVE1_BOOMERANG) ) sortid = e->owner->sortid + 1;    // Always in front
+                        sortid = e->owner->sortid + 1;
                     }
 
                     if(e->modeldata.setlayer)
@@ -21439,7 +22016,7 @@ void display_ents()
                         {
                             if(e->health > 0 )
                             {
-                                if(e->dying2 > 0)
+                                if(e->dying2 > 0 && (obor_profile_build < 4283 || obor_profile_build >= 4404))
                                 {
                                     if(e->health <= e->per1 && e->health > e->per2)
                                     {
@@ -21509,7 +22086,7 @@ void display_ents()
 
                         wall2 = checkwall_below(e->position.x + temp1, e->position.z + temp2, e->position.y); // check if the shadow drop into a hole or fall on another wall
 
-                        if(other && other != e && e->position.y >= other->position.y + other->animation->platform[other->animpos][7] && !(e->modeldata.shadowbase&1) )
+                        if(other && other != e && e->position.y >= other->position.y + other->animation->platform[other->animpos][7] && use_shadow_surface )
                         {
                             alty = (int)(e->position.y - (other->position.y + other->animation->platform[other->animpos][7]));
                             temp1 = -1 * (e->position.y - (other->position.y + other->animation->platform[other->animpos][7])) * light.x / 256; // xshift
@@ -21520,7 +22097,7 @@ void display_ents()
                             //qy = (int)( e->position.z - e->position.y - scry + (e->position.y-e->base) );
                         }
 
-                        if(basemap > 0 && !(e->modeldata.shadowbase&1))
+                        if(basemap > 0 && use_shadow_surface)
                         {
                             alty = (int)(e->position.y - basemap);
                             temp1 = -1 * (e->position.y - basemap) * light.x / 256; // xshift
@@ -21530,7 +22107,7 @@ void display_ents()
                         }
 
                         //TODO check platforms, don't want to go through the entity list again right now // && !other after wall2
-                        if(!(checkhole(e->position.x + temp1, e->position.z + temp2) && wall2 < 0 && !other) ) //&& !(wall>=0 && level->walls[wall].height>e->position.y))
+                        if(!(obor_shadow_in_hole(e->position.x + temp1, e->position.z + temp2, e->position.y) && wall2 < 0 && !other) ) //&& !(wall>=0 && level->walls[wall].height>e->position.y))
                         {
                             if(wall >= 0 && wall2 >= 0)
                             {
@@ -21557,11 +22134,14 @@ void display_ents()
                             }*/
 
                             // set 2D-LIKE shadow
-                            if ( (e->modeldata.shadowbase&2) ) alty = temp1 = temp2 = 0;
+                            if(!legacy_shadowbase && (e->modeldata.shadowbase & 2))
+                            {
+                                alty = temp1 = temp2 = 0;
+                            }
 
                             sy = (2 * MIRROR_Z - qy) - 2 * scry;
 
-                            if ( other && !(e->modeldata.shadowbase&1) ) z = other->position.z + 1;
+                            if ( other && use_shadow_surface ) z = other->position.z + 1;
                             else z = shadowz;
 
                             sz = PANEL_Z - HUD_Z;
@@ -21582,7 +22162,8 @@ void display_ents()
                             shadowmethod = plainmethod;
                             shadowmethod.fillcolor = (shadowcolor > 0 ? shadowcolor : 0);
                             shadowmethod.alpha = shadowalpha;
-                            shadowmethod.channelb = shadowmethod.channelg = shadowmethod.channelr = shadowopacity;
+                            if(obor_profile_build < 4283 || obor_profile_build >= 4432)
+                                shadowmethod.channelb = shadowmethod.channelg = shadowmethod.channelr = shadowopacity;
                             shadowmethod.table = drawmethod->table;
                             shadowmethod.scalex = drawmethod->scalex;
                             shadowmethod.flipx = drawmethod->flipx;
@@ -21618,9 +22199,9 @@ void display_ents()
                     {
                         useshadow = e->modeldata.shadow;
                     }
-                    if(useshadow && e->position.y >= 0 && !(checkhole(e->position.x, e->position.z) && checkwall_below(e->position.x, e->position.z, e->position.y) < 0) && (!e->modeldata.aironly || (e->modeldata.aironly && inair(e))))
+                    if(useshadow && e->position.y >= 0 && !(obor_shadow_in_hole(e->position.x, e->position.z, e->position.y) && checkwall_below(e->position.x, e->position.z, e->position.y) < 0) && (!e->modeldata.aironly || (e->modeldata.aironly && inair(e))))
                     {
-                        if(other && other != e && e->position.y >= other->position.y + other->animation->platform[other->animpos][7] && !(e->modeldata.shadowbase&1))
+                        if(other && other != e && e->position.y >= other->position.y + other->animation->platform[other->animpos][7] && use_shadow_surface)
                         {
                             qx = (int)(e->position.x - scrx);
                             qy =                 (int)(e->position.z  - other->position.y - other->animation->platform[other->animpos][7] - scry);
@@ -21637,7 +22218,7 @@ void display_ents()
                             z = shadowz;
                             sz = PANEL_Z - HUD_Z;
                         }
-                        else if(level && basemap > 0 && !(e->modeldata.shadowbase&1))
+                        else if(level && basemap > 0 && use_shadow_surface)
                         {
                             qx = (int)(e->position.x - scrx);
                             qy = (int)(e->position.z - basemap - scry);
@@ -22403,9 +22984,30 @@ entity *long_find_target()
     return NULL;
 }
 
+static int obor_blockable_attack(const entity *attacker, int slot, int single_attack)
+{
+    const s_collision_attack_list *frame = obor_collision_attack_frame(attacker);
+    if(!frame)
+    {
+        /* The single-record route admits an empty entry in an existing table. */
+        const s_anim *animation = attacker->animation;
+        return single_attack && animation && animation->collision_attack &&
+               attacker->animpos >= 0 &&
+               (size_t)attacker->animpos < animation->obor_attack_frame_capacity;
+    }
+    if(!frame->instance || (size_t)slot >= frame->obor_instance_capacity)
+    {
+        return 0;
+    }
+    const s_collision_attack *attack = frame->instance[slot];
+    return !attack || !attack->no_block;
+}
+
 entity *block_find_target(int anim, int detect_adj)
 {
     int i , min, max, instance, detect;
+    const int single_attack = obor_profile_build >= 4283 && obor_profile_build < 4298;
+    const int attack_slots = single_attack ? 1 : max_collisons;
     int index = -1;
     min = 0;
     max = 9999;
@@ -22419,14 +23021,13 @@ entity *block_find_target(int anim, int detect_adj)
     {
         attacker = ent_list[i];
 
-        for(instance = 0; instance < max_collisons; instance++)
+        for(instance = 0; instance < attack_slots; instance++)
         {
             if( attacker && attacker->exists && attacker != self //cant target self
                 && (attacker->modeldata.candamage & self->modeldata.type)
                 && (anim < 0 || (anim >= 0 && check_range(self, attacker, anim)))
                 && !attacker->dead && attacker->attacking//must be alive
-                && attacker->animation->collision_attack && attacker->animation->collision_attack[attacker->animpos] && attacker->animation->collision_attack[attacker->animpos]->instance
-                && ( !attacker->animation->collision_attack[attacker->animpos]->instance[instance] || (attacker->animation->collision_attack[attacker->animpos]->instance[instance] && attacker->animation->collision_attack[attacker->animpos]->instance[instance]->no_block == 0) )
+                && obor_blockable_attack(attacker, instance, single_attack)
                 && (diffd = (diffx = diff(attacker->position.x, self->position.x)) + (diffz = diff(attacker->position.z, self->position.z))) >= min
                 && diffd <= max
                 && (attacker->modeldata.stealth.hide <= detect) //Stealth factor less then perception factor (allows invisibility).
@@ -23065,7 +23666,9 @@ void dograbattack(int which)
     if(which < 5 && which >= 0)
     {
         ++self->combostep[which];
-        if(self->combostep[which] < 3 && validanim(self, grab_attacks[which][0]))
+        if(self->combostep[which] < 3 &&
+                ((obor_profile_build >= 4283 && obor_profile_build < 4387) ||
+                 validanim(self, grab_attacks[which][0])))
         {
             ent_set_anim(self, grab_attacks[which][0], 0);
         }
@@ -23699,7 +24302,11 @@ int checkgrab(entity *other, s_collision_attack *attack)
 int arrow_takedamage(entity *other, s_collision_attack *attack)
 {
     self->modeldata.no_adjust_base = 0;
-    self->modeldata.subject_to_wall = self->modeldata.subject_to_platform = self->modeldata.subject_to_hole = self->modeldata.subject_to_basemap = self->modeldata.subject_to_gravity = 1;
+    self->modeldata.subject_to_wall = self->modeldata.subject_to_platform = self->modeldata.subject_to_hole = self->modeldata.subject_to_gravity = 1;
+    if(obor_profile_build < 4283 || obor_profile_build >= 4407)
+    {
+        self->modeldata.subject_to_basemap = 1;
+    }
     if( common_takedamage(other, attack) && self->dead)
     {
         return 1;
@@ -24060,8 +24667,15 @@ int check_attack_chance(entity *target, float min, float max)
 
     if(self->position.x < screenx - 10 || self->position.x > screenx + videomodes.hRes + 10)
     {
-        if (self->modeldata.offscreen_noatk_factor != 0) chance *= (1.0 - self->modeldata.offscreen_noatk_factor);
-        else chance *= (1.0 - offscreen_noatk_factor);
+        if ((obor_profile_build < 4283 || obor_profile_build >= 4404) &&
+            self->modeldata.offscreen_noatk_factor != 0)
+        {
+            chance *= (1.0 - self->modeldata.offscreen_noatk_factor);
+        }
+        else
+        {
+            chance *= (1.0 - offscreen_noatk_factor);
+        }
     }
 
     return (randf(1) <= chance);
@@ -24652,14 +25266,14 @@ int common_trymove(float xdir, float zdir)
 
         needcheckhole = 1;
         // checkhole or checkhole_in() ???
-        if(zdir && checkhole(self->position.x, z) && checkwall(self->position.x, z) < 0 && !check_platform_below(self->position.x, z, self->position.y, self))
+        if(zdir && (obor_profile_build >= 4283 && obor_profile_build < 4336 ? checkhole_in(self->position.x, z, self->position.y) : checkhole(self->position.x, z)) && checkwall(self->position.x, z) < 0 && !check_platform_below(self->position.x, z, self->position.y, self))
         {
             //int holeind = checkholeindex_in(self->position.x, z, self->position.y);
 
             zdir = 0;
             //execute_inhole_script(self, 2, (double)level->holes[holeind].height, holeind);
         }
-        if(xdir && checkhole(x, self->position.z) && checkwall(x, self->position.z) < 0 && !check_platform_below(x, self->position.z, self->position.y, self))
+        if(xdir && (obor_profile_build >= 4283 && obor_profile_build < 4336 ? checkhole_in(x, self->position.z, self->position.y) : checkhole(x, self->position.z)) && checkwall(x, self->position.z) < 0 && !check_platform_below(x, self->position.z, self->position.y, self))
         {
             //int holeind = checkholeindex_in(x, self->position.z, self->position.y);
 
@@ -24763,7 +25377,8 @@ int common_trymove(float xdir, float zdir)
     //-----------end of platform checking------------------
 
     // ------------------ wall checking ---------------------
-    if(self->modeldata.subject_to_wall > 0)
+    if(self->modeldata.subject_to_wall > 0 ||
+       (obor_profile_build >= 4283 && obor_profile_build < 4419 && self->modeldata.subject_to_wall < 0))
     {
         int hit = 0;
 
@@ -25200,7 +25815,7 @@ void adjust_walk_animation(entity *other)
     int dir = 0;
     if(self->running)
     {
-        if (validanim(self, ANI_BACKRUN))
+        if(obor_profile_animation_base() > ANI_BACKRUN && validanim(self, ANI_BACKRUN))
         {
             if(is_in_backrun(self)) ent_set_anim(self, ANI_BACKRUN, 0);
             else ent_set_anim(self, ANI_RUN, 0);
@@ -26224,7 +26839,14 @@ int common_try_wander(entity *target, int dox, int doz)
     mindz = grabd / 4;
 
     //mod = ((int)(time / (videomodes.hRes / self->modeldata.speed)) + self->sortid / 100 + self->health / 3 + self->pathblocked + self->modeldata.aggression / 10) % 4;
-    mod = ((int)(time / (videomodes.hRes / self->modeldata.speed)) + 1000 + self->health / 3 + self->pathblocked + self->modeldata.aggression / 10) % 4;
+    if(obor_profile_build >= 4283 && obor_profile_build < 4332)
+    {
+        mod = ((int)(time / (videomodes.hRes / self->modeldata.speed)) + rand32() + self->health / 3 + self->pathblocked + self->modeldata.aggression / 10) % 4;
+    }
+    else
+    {
+        mod = ((int)(time / (videomodes.hRes / self->modeldata.speed)) + 1000 + self->health / 3 + self->pathblocked + self->modeldata.aggression / 10) % 4;
+    }
     if(mod < 0)
     {
         mod = -mod;
@@ -26541,9 +27163,157 @@ int arrow_move()
 }
 
 // for common boomerang types
+static void obor_boomerang_oscillate(void)
+{
+    float acc;
+    if(self->modeldata.boomerang_acc != 0) acc = self->modeldata.boomerang_acc;
+    else acc = self->modeldata.speed/(GAME_SPEED*0.5); // acceleration
+
+    if(self->velocity.x == 0 && self->boomerang_dest_vel == 0)
+    {
+        if(self->direction == DIRECTION_LEFT)
+        {
+            self->velocity.x = -self->modeldata.speed;
+            self->boomerang_dest_vel = self->modeldata.speed;
+        }
+        else if(self->direction == DIRECTION_RIGHT)
+        {
+            self->velocity.x = self->modeldata.speed;
+            self->boomerang_dest_vel = -self->modeldata.speed;
+        }
+    }
+    if(self->velocity.z != 0) self->velocity.z = 0;
+
+    if (self->velocity.x <= self->boomerang_dest_vel && self->boomerang_dest_vel > 0)
+    {
+        self->velocity.x += acc;
+        if (self->velocity.x > self->modeldata.speed) self->velocity.x = self->modeldata.speed;
+        if (self->velocity.x >= self->boomerang_dest_vel) self->boomerang_dest_vel = -self->modeldata.speed;
+    }
+    else if (self->velocity.x >= self->boomerang_dest_vel && self->boomerang_dest_vel < 0)
+    {
+        self->velocity.x -= acc;
+        if (self->velocity.x < -self->modeldata.speed) self->velocity.x = -self->modeldata.speed;
+        if (self->velocity.x <= self->boomerang_dest_vel) self->boomerang_dest_vel = self->modeldata.speed;
+    }
+}
+
+static int obor_boomerang_turn_by_distance(void)
+{
+    float acc, distx, current_distx;
+
+    if(self->modeldata.boomerang_acc != 0) acc = self->modeldata.boomerang_acc;
+    else acc = self->modeldata.speed/(4); // acceleration
+    if(self->modeldata.boomerang_distx > 0) distx = self->modeldata.boomerang_distx;
+    else distx = videomodes.hRes/(3); // horizontal distance
+
+    if(self->velocity.x == 0 && !self->boomerang_loop)
+    {
+        self->modeldata.noflip = 1;
+
+        if(self->parent)
+        {
+            self->modeldata.hostile &= ~(self->parent->modeldata.type);
+            if (self->parent->modeldata.type == TYPE_PLAYER) self->modeldata.hostile |= TYPE_ENEMY;
+            else if(self->parent->modeldata.type == TYPE_ENEMY) self->modeldata.hostile |= (TYPE_PLAYER | TYPE_NPC);
+
+            self->direction = self->parent->direction;
+        }
+
+        if(self->direction == DIRECTION_LEFT)
+        {
+            self->velocity.x = -self->modeldata.speed;
+        }
+        else if(self->direction == DIRECTION_RIGHT)
+        {
+            self->velocity.x = self->modeldata.speed;
+        }
+
+        self->modeldata.antigrab = 1;
+        self->modeldata.grabforce = -999999;
+
+        ++self->boomerang_loop;
+    }
+    if(self->velocity.z != 0) self->velocity.z = 0;
+
+    if( (!self->parent && (self->position.x < advancex - 80 || self->position.x > advancex + (videomodes.hRes + 80))) )
+    {
+        kill(self);
+        return 0;
+    }
+
+    if(self->parent)
+    {
+        current_distx = diff(self->position.x,self->parent->position.x);
+        self->position.z = self->parent->position.z;
+
+        if (self->position.x > self->parent->position.x)
+        {
+            if ( current_distx > distx )
+            {
+                if(self->velocity.x - acc <= 0) ++self->boomerang_loop;
+                self->velocity.x -= acc;
+                if (self->velocity.x < -self->modeldata.speed) self->velocity.x = -self->modeldata.speed;
+            }
+        }
+        else if (self->position.x < self->parent->position.x)
+        {
+            if ( current_distx > distx )
+            {
+                if(self->velocity.x + acc >= 0) ++self->boomerang_loop;
+                self->velocity.x += acc;
+                if (self->velocity.x > self->modeldata.speed) self->velocity.x = self->modeldata.speed;
+            }
+        }
+        debug_printf("cur_distx:%f velx:%f",current_distx,self->velocity.x);
+    }
+    return 1;
+}
+
+static int obor_boomerang_catch(int animation)
+{
+    if(obor_profile_build == 4408)
+    {
+        if(animation == ANI_GETBOOMERANG)
+        {
+            debug_printf("range:%d", (int)self->parent->modeldata.animation[animation]->range.max.x);
+        }
+    }
+    else
+    {
+        self->parent->takeaction = common_animation_normal;
+        self->parent->attacking = 0;
+        self->parent->idling = 0;
+    }
+    ent_set_anim(self->parent, animation, 0);
+    kill(self);
+    return obor_profile_build != 4408;
+}
+
 int boomerang_move()
 {
-    if(!self->modeldata.nomove)
+    const int oscillating = obor_profile_build == 4405 || obor_profile_build == 4406;
+
+    if(obor_profile_build == 4404)
+    {
+        return 1;
+    }
+
+    if(oscillating)
+    {
+        if(!self->modeldata.nomove)
+        {
+            obor_boomerang_oscillate();
+        }
+    }
+    else if(obor_profile_build == 4407)
+    {
+        if(!self->modeldata.nomove && !obor_boomerang_turn_by_distance())
+        {
+            return 0;
+        }
+    }
+    else if(!self->modeldata.nomove)
     {
         float acc, distx, current_distx;
 
@@ -26565,6 +27335,8 @@ int boomerang_move()
 
                 self->direction = self->parent->direction;
                 self->sortid = self->parent->sortid + 1;
+                self->position.z = self->parent->position.z;
+                self->position.y = self->parent->position.y;
             }
 
             if(self->direction == DIRECTION_LEFT)
@@ -26575,8 +27347,6 @@ int boomerang_move()
             {
                 self->velocity.x = self->modeldata.speed;
             }
-            self->position.z = self->parent->position.z;
-            self->position.y = self->parent->position.y;
 
             self->modeldata.antigrab = 1;
             self->modeldata.grabforce = -999999;
@@ -26628,8 +27398,9 @@ int boomerang_move()
             }
 
             // grab the boomerang
-            if( (self->position.x >= self->parent->position.x && self->parent->direction == DIRECTION_RIGHT && self->velocity.x <= 0) ||
-                (self->position.x <= self->parent->position.x && self->parent->direction == DIRECTION_LEFT  && self->velocity.x >= 0) )
+            if(obor_profile_animation_base() > ANI_GETBOOMERANGINAIR &&
+                    ((self->position.x >= self->parent->position.x && self->parent->direction == DIRECTION_RIGHT && self->velocity.x <= 0) ||
+                (self->position.x <= self->parent->position.x && self->parent->direction == DIRECTION_LEFT  && self->velocity.x >= 0)))
             {
                if( !self->parent->inpain && !self->parent->falling && !self->parent->dead && self->boomerang_loop > 1 )
                {
@@ -26637,24 +27408,14 @@ int boomerang_move()
                     {
                         if( current_distx >= self->parent->modeldata.animation[ANI_GETBOOMERANG]->range.min.x && current_distx <= self->parent->modeldata.animation[ANI_GETBOOMERANG]->range.max.x )
                         {
-                            self->parent->takeaction = common_animation_normal;
-                            self->parent->attacking = 0;
-                            self->parent->idling = 0;
-                            ent_set_anim(self->parent, ANI_GETBOOMERANG, 0);
-                            kill(self);
-                            return 1;
+                            return obor_boomerang_catch(ANI_GETBOOMERANG);
                         }
                     }
                     else if(inair(self->parent) && validanim(self->parent, ANI_GETBOOMERANGINAIR))
                     {
                         if( current_distx >= self->parent->modeldata.animation[ANI_GETBOOMERANGINAIR]->range.min.x && current_distx <= self->parent->modeldata.animation[ANI_GETBOOMERANGINAIR]->range.max.x )
                         {
-                            self->parent->takeaction = common_animation_normal;
-                            self->parent->attacking = 0;
-                            self->parent->idling = 0;
-                            ent_set_anim(self->parent, ANI_GETBOOMERANGINAIR, 0);
-                            kill(self);
-                            return 1;
+                            return obor_boomerang_catch(ANI_GETBOOMERANGINAIR);
                         }
                     }
                 }
@@ -26668,11 +27429,13 @@ int boomerang_move()
         }
     }
 
-    if(self->modeldata.subject_to_wall && validanim(self, ANI_FALL))   // Added so projectiles bounce off blocked exits
+    if((self->modeldata.subject_to_wall || (obor_profile_build >= 4405 && obor_profile_build < 4412)) &&
+       validanim(self, ANI_FALL))
     {
         int wall;
 
-        if((wall = checkwall(self->position.x, self->position.z)) > 0 && self->position.y < level->walls[wall].height)
+        if((wall = checkwall(self->position.x, self->position.z)) >= (oscillating ? 0 : 1) &&
+           self->position.y < level->walls[wall].height)
         {
             self->takeaction = common_fall;
             self->attacking = 0;
@@ -26817,7 +27580,7 @@ int common_move()
         // for a bomb, travel in a arc
         return bomb_move();
     }
-    else if(aimove & AIMOVE1_BOOMERANG)
+    else if((obor_profile_build < 4283 || obor_profile_build >= 4404) && (aimove & AIMOVE1_BOOMERANG))
     {
         // for a boomerang, boomerang move
         return boomerang_move();
@@ -26843,11 +27606,25 @@ int common_move()
 
         // find all possible entities for target
         // bad for optimization, but makes better sense
-        if(self->custom_target == NULL || !self->custom_target->exists ) target = normal_find_target(-1, 0); // confirm the target again
-        else target = self->custom_target;
+        if((obor_profile_build < 4283 || obor_profile_build >= 4414) &&
+           self->custom_target && self->custom_target->exists)
+        {
+            target = self->custom_target;
+        }
+        else
+        {
+            target = normal_find_target(-1, 0); // confirm the target again
+        }
 
         //other = ((time / GAME_SPEED + self->health / 3 + self->sortid) % 15 < 10) ? normal_find_item() : NULL; // find an item
-        other = ( (time / GAME_SPEED + self->health / 3 + 1000) % 15 < 10) ? normal_find_item() : NULL; // find an item
+        if(obor_profile_build >= 4283 && obor_profile_build < 4332)
+        {
+            other = ( (time / GAME_SPEED + self->health / 3 + rand32()) % 15 < 10) ? normal_find_item() : NULL;
+        }
+        else
+        {
+            other = ( (time / GAME_SPEED + self->health / 3 + 1000) % 15 < 10) ? normal_find_item() : NULL;
+        } // find an item
         owner = self->parent;
 
         // temporary solution to turn off running if xdir is not set
@@ -26959,7 +27736,9 @@ int common_move()
                     common_try_wander(target, 1, 1);
                     ent = target;
                 }
-                else if ( target && (!(self->modeldata.aimove&AIMOVE2_NOTARGETIDLE) || ((self->modeldata.aimove&AIMOVE2_NOTARGETIDLE) && target->animnum != ANI_IDLE)) )
+                else if(target &&
+                        ((obor_profile_build >= 4283 && obor_profile_build < 4407) ||
+                         !(self->modeldata.aimove & AIMOVE2_NOTARGETIDLE) || target->animnum != ANI_IDLE))
                 {
                     ent = target;
                     pxc = pzc = 0;
@@ -27321,20 +28100,24 @@ int checkplanned()
 
 int ai_check_warp()
 {
-    if(self->link)
+    if(self->link || self->modeldata.subtype != SUBTYPE_FOLLOW || !self->parent ||
+            !self->modeldata.animation || ANI_IDLE >= self->modeldata.animation_capacity)
     {
         return 0;
     }
 
-    if(self->modeldata.subtype == SUBTYPE_FOLLOW && self->parent && validanim(self, ANI_IDLE) &&
-            (diff(self->position.z, self->parent->position.z) > self->modeldata.animation[ANI_IDLE]->range.max.x ||
-             diff(self->position.x, self->parent->position.x) > self->modeldata.animation[ANI_IDLE]->range.max.x) )
+    const s_anim *idle = self->modeldata.animation[ANI_IDLE];
+    if(idle &&
+            ((obor_profile_build >= 4283 && obor_profile_build < 4409) || idle->numframes) &&
+            (diff(self->position.z, self->parent->position.z) > idle->range.max.x ||
+             diff(self->position.x, self->parent->position.x) > idle->range.max.x))
     {
         self->takeaction = npc_warp;
         return 1;
     }
     return 0;
 }
+
 
 int ai_check_lie()
 {
@@ -27546,16 +28329,19 @@ int check_energy(e_cost_check which, int ani)
     energycost.disable  = 0;
     energycost.mponly   = COST_TYPE_MP_THEN_HP;
 
-    // Get animation's energycost if available.
-    if(self->modeldata.animation[ani]->energycost)
+    if(ani >= 0 && ani < self->modeldata.animation_capacity && self->modeldata.animation[ani])
     {
-        energycost = *self->modeldata.animation[ani]->energycost;
-    }
+        const s_energycost *declared_cost = self->modeldata.animation[ani]->energycost;
 
-    //if (!self->modeldata.animation[ani]->energycost) return TRUE;
+        if(declared_cost)
+        {
+            energycost = *declared_cost;
+        }
+        else if(obor_profile_build >= 4376 && obor_profile_build < 4384)
+        {
+            return TRUE;
+        }
 
-    if(self->modeldata.animation[ani])
-    {
         // Get entity type.
         type	   = self->modeldata.type;
 
@@ -27607,7 +28393,8 @@ int check_special()
 {
     entity *e;
     if((!level->nospecial || level->nospecial == 3) &&
-            !self->cantfire && validanim(self, ANI_SPECIAL) &&
+            !self->cantfire &&
+            ((obor_profile_build >= 4283 && obor_profile_build < 4387) || validanim(self, ANI_SPECIAL)) &&
             (check_energy(COST_CHECK_HP, ANI_SPECIAL) || check_energy(COST_CHECK_MP, ANI_SPECIAL))
        )
     {
@@ -28460,19 +29247,23 @@ void player_jump_check()
 
             if(validanim(self, ANI_JUMPSPECIAL))
             {
-                if(self->modeldata.animation[ANI_JUMPSPECIAL]->energycost && check_energy(COST_CHECK_MP, ANI_JUMPSPECIAL))
+                const s_energycost *energycost = self->modeldata.animation[ANI_JUMPSPECIAL]->energycost;
+                const int check_cost = energycost || (obor_profile_build >= 4283 && obor_profile_build < 4376);
+                const int cost = energycost ? energycost->cost : 0;
+
+                if(check_cost && check_energy(COST_CHECK_MP, ANI_JUMPSPECIAL))
                 {
                     if(!healthcheat)
                     {
-                        self->mp -= self->modeldata.animation[ANI_JUMPSPECIAL]->energycost->cost;
+                        self->mp -= cost;
                     }
                     candospecial = 1;
                 }
-                else if(self->modeldata.animation[ANI_JUMPSPECIAL]->energycost && check_energy(COST_CHECK_HP, ANI_JUMPSPECIAL))
+                else if(check_cost && check_energy(COST_CHECK_HP, ANI_JUMPSPECIAL))
                 {
                     if(!healthcheat)
                     {
-                        self->health -= self->modeldata.animation[ANI_JUMPSPECIAL]->energycost->cost;
+                        self->health -= cost;
                     }
                     candospecial = 1;
                 }
@@ -28757,6 +29548,39 @@ int player_preinput()
     return 0;
 }
 
+static int charge_release_animation(const entity *actor)
+{
+    if(validanim(actor, ANI_CHARGEATTACK))
+    {
+        return ANI_CHARGEATTACK;
+    }
+
+    const int length = actor->modeldata.chainlength;
+    if(length <= 0 || length > MAX_ATCHAIN || !animattacks)
+    {
+        return -1;
+    }
+
+    const int attack = actor->modeldata.atchain[length - 1];
+    if(attack <= 0 || attack > max_attacks)
+    {
+        return -1;
+    }
+
+    const int animation = animattacks[attack - 1];
+    if(animation < 0 || animation >= actor->modeldata.animation_capacity ||
+            !actor->modeldata.animation[animation])
+    {
+        return -1;
+    }
+
+    if((obor_profile_build < 4283 || obor_profile_build >= 4387) && !validanim(actor, animation))
+    {
+        return -1;
+    }
+    return animation;
+}
+
 void player_think()
 {
     int action = 0;		// 1=walking, 2=up, 3=down, 4=running
@@ -28799,7 +29623,7 @@ void player_think()
 
             if(other->modeldata.branch)
             {
-                strncpy( branch_name, other->modeldata.branch, MAX_NAME_LEN);    //now, you can branch to another level
+                obor_profile_copy_name(branch_name, other->modeldata.branch);    //now, you can branch to another level
             }
             return;
         }
@@ -28959,7 +29783,9 @@ void player_think()
         int t3;
 
         t = (notinair && ((self->direction == DIRECTION_RIGHT && match_combo(rr, pl, 2)) || (self->direction == DIRECTION_LEFT && match_combo(ll, pl, 2))));
-        t3 = (notinair && self->modeldata.facing && ((self->direction == DIRECTION_RIGHT && match_combo(ll, pl, 2)) || (self->direction == DIRECTION_LEFT && match_combo(rr, pl, 2))));
+        t3 = (obor_profile_animation_base() > ANI_BACKRUN && notinair && self->modeldata.facing &&
+              ((self->direction == DIRECTION_RIGHT && match_combo(ll, pl, 2)) ||
+               (self->direction == DIRECTION_LEFT && match_combo(rr, pl, 2))));
 
         if(t && validanim(self, ANI_RUN))
         {
@@ -29049,10 +29875,9 @@ void player_think()
 
     if((pl->releasekeys & FLAG_ATTACK))
     {
-        if(self->stalltime && notinair &&
-                ((validanim(self, ANI_CHARGEATTACK) && self->stalltime + (GAME_SPEED * self->modeldata.animation[ANI_CHARGEATTACK]->chargetime) < time) ||
-                 (!validanim(self, ANI_CHARGEATTACK) && validanim(self, animattacks[self->modeldata.atchain[self->modeldata.chainlength - 1] - 1])
-                  && self->modeldata.chainlength > 0 && self->stalltime + (GAME_SPEED * self->modeldata.animation[animattacks[self->modeldata.atchain[self->modeldata.chainlength - 1] - 1]]->chargetime) < time)))
+        const int animation = self->stalltime && notinair ? charge_release_animation(self) : -1;
+        if(animation >= 0 &&
+                self->stalltime + (GAME_SPEED * self->modeldata.animation[animation]->chargetime) < time)
         {
             self->takeaction = common_attack_proc;
             set_attacking(self);
@@ -29066,14 +29891,7 @@ void player_think()
                 sound_play_sample(SAMPLE_PUNCH, 0, savedata.effectvol, savedata.effectvol, 100);
             }
 
-            if(validanim(self, ANI_CHARGEATTACK))
-            {
-                ent_set_anim(self, ANI_CHARGEATTACK, 0);
-            }
-            else if(validanim(self, animattacks[self->modeldata.atchain[self->modeldata.chainlength - 1] - 1]))
-            {
-                ent_set_anim(self, animattacks[self->modeldata.atchain[self->modeldata.chainlength - 1] - 1], 0);
-            }
+            ent_set_anim(self, animation, 0);
             goto endthinkcheck;
         }
         self->stalltime = 0;
@@ -29542,7 +30360,7 @@ void player_think()
         common_down_anim(self); //ent_set_anim(self, ANI_DOWN, 0);    // Set to down animation if exists
         break;
     case 4:
-        if (validanim(self, ANI_BACKRUN))
+        if(obor_profile_animation_base() > ANI_BACKRUN && validanim(self, ANI_BACKRUN))
         {
             if (is_in_backrun(self)) ent_set_anim(self, ANI_BACKRUN, 0);
             else ent_set_anim(self, ANI_RUN, 0);
@@ -30437,12 +31255,7 @@ entity *smartspawn(s_spawn_entry *props)      // 7-1-2005 Entire section replace
     entity *wp = NULL;
     int playercount;
 
-    if( props == NULL /*||
-        (level == NULL &&
-         (!selectScreen && !titleScreen && !hallOfFame && !gameOver && !showComplete && !currentScene && !enginecreditsScreen && !menuScreen && !startgameMenu && !newgameMenu && !loadgameMenu &&
-          !optionsMenu && !controloptionsMenu && !soundoptionsMenu && !videooptionsMenu && !systemoptionsMenu)
-        )*/
-      )
+    if(!props || (!level && obor_profile_build >= 4283 && obor_profile_build < 4331))
     {
         return NULL;
     }
@@ -30476,7 +31289,7 @@ entity *smartspawn(s_spawn_entry *props)      // 7-1-2005 Entire section replace
     // Alias?
     if(props->alias[0])
     {
-        strncpy(e->name, props->alias, MAX_NAME_LEN);
+        obor_profile_copy_name(e->name, props->alias);
     }
     if(props->item)
     {
@@ -30484,7 +31297,7 @@ entity *smartspawn(s_spawn_entry *props)      // 7-1-2005 Entire section replace
     }
     if(props->itemalias[0])
     {
-        strncpy(e->itemalias, props->itemalias, MAX_NAME_LEN);
+        obor_profile_copy_name(e->itemalias, props->itemalias);
     }
     if(props->itemmap)
     {
@@ -30544,7 +31357,10 @@ entity *smartspawn(s_spawn_entry *props)      // 7-1-2005 Entire section replace
         e->dying = props->dying;    // Feb 26, 2005 - Used to define which colourmap is used for the dying flash
         e->per1 = props->per1;    // Mar 21, 2005 - Used to store custom percentages
         e->per2 = props->per2;    // Mar 21, 2005 - Used to store custom percentages
-        e->dying2 = props->dying2;    // Dec 15, 2016 - Used to define which colourmap is used for the dying flash for per2 By White Dragon
+        if(obor_profile_build < 4283 || obor_profile_build >= 4404)
+        {
+            e->dying2 = props->dying2;
+        }
     }
 
     if(props->nolife)
@@ -30689,7 +31505,9 @@ void spawnplayer(int index)
             {
                 break;    //found
             }
-            if(checkhole_in(advancex + p.position.x, p.position.z, p.position.y) || (wall >= 0 && level->walls[wall].height >= MAX_WALL_HEIGHT))
+            if((obor_profile_build >= 4283 && obor_profile_build < 4357 ?
+                    checkhole(advancex + p.position.x, p.position.z) :
+                    checkhole_in(advancex + p.position.x, p.position.z, p.position.y)) || (wall >= 0 && level->walls[wall].height >= MAX_WALL_HEIGHT))
             {
                 find = 0;
             }
@@ -30718,7 +31536,9 @@ void spawnplayer(int index)
                 {
                     continue;
                 }
-                if(checkhole_in(advancex + p.position.x, p.position.z, p.position.y))
+                if((obor_profile_build >= 4283 && obor_profile_build < 4357 ?
+                    checkhole(advancex + p.position.x, p.position.z) :
+                    checkhole_in(advancex + p.position.x, p.position.z, p.position.y)))
                 {
                     continue;
                 }
@@ -30955,7 +31775,8 @@ void update_scroller()
                     shadowalpha = 0;
                 }
             }
-            else if(level->spawnpoints[current_spawn].shadowopacity)  // change color for gfxshadow
+            else if((obor_profile_build < 4283 || obor_profile_build >= 4432) &&
+                    level->spawnpoints[current_spawn].shadowopacity)  // change color for gfxshadow
             {
                 shadowopacity = level->spawnpoints[current_spawn].shadowopacity;
                 if(shadowopacity == -1)
@@ -31731,7 +32552,9 @@ void execute_keyscripts()
     int p;
     for(p = 0; p < levelsets[current_set].maxplayers; p++)
     {
-        if(!pause && (level || inScreen) && (player[p].newkeys || (keyscriptrate && player[p].keys) || player[p].releasekeys))
+        if(!pause &&
+           (level || ((obor_profile_build >= 4283 && obor_profile_build < 4351) ? selectScreen : inScreen)) &&
+           (player[p].newkeys || (keyscriptrate && player[p].keys) || player[p].releasekeys))
         {
             if(level)
             {
@@ -31797,7 +32620,23 @@ void draw_textobjs()
         {
             if(textobj->text)
             {
-                font_printf(textobj->position.x, textobj->position.y, textobj->font, textobj->position.z, "%s", textobj->text);
+                const char *text = textobj->text;
+                char display[MAX_STR_VAR_LEN + 1];
+
+                if(obor_profile_build >= 4283 && obor_profile_build < 4430)
+                {
+                    /* Earlier builds displayed each escaped percent pair as one glyph. */
+                    size_t written = 0;
+                    while(*text && written < sizeof(display) - 1)
+                    {
+                        if(text[0] == '%' && text[1] == '%') ++text;
+                        display[written++] = *text++;
+                    }
+                    display[written] = 0;
+                    text = display;
+                }
+
+                font_printf(textobj->position.x, textobj->position.y, textobj->font, textobj->position.z, "%s", text);
             }
         }
     }
@@ -32128,7 +32967,9 @@ void update(int ingame, int usevwait)
     newtime = 0;
     if(!pause)
     {
-        if(ingame == 1 || inScreen)
+        if(ingame == 1 ||
+           ((obor_profile_build >= 4283 && obor_profile_build < 4351)
+               ? selectScreen : inScreen))
         {
             execute_keyscripts();
         }
@@ -32187,7 +33028,9 @@ void update(int ingame, int usevwait)
                     updatestatus();
                 }
             }
-            if(ingame == 1 || inScreen)
+            if(ingame == 1 ||
+           ((obor_profile_build >= 4283 && obor_profile_build < 4343)
+               ? selectScreen : inScreen))
             {
                 update_ents();
             }
@@ -32223,7 +33066,9 @@ void update(int ingame, int usevwait)
     }
 
     // entity sprites queueing
-    if(ingame == 1 || inScreen)
+    if(ingame == 1 ||
+           ((obor_profile_build >= 4283 && obor_profile_build < 4343)
+               ? selectScreen : inScreen))
         if(!pause)
         {
             display_ents();
@@ -32243,7 +33088,8 @@ void update(int ingame, int usevwait)
              (player[3].ent && (player[3].newkeys & FLAG_START)))
       )
     {
-        if ( !(goto_mainmenu_flag&1) )
+        if((obor_profile_build >= 4283 && obor_profile_build < 4293) ||
+           !(goto_mainmenu_flag&1))
         {
             sound_pause_music(1);
             sound_pause_sample(1);
@@ -32252,7 +33098,8 @@ void update(int ingame, int usevwait)
             return;
         }
     }
-    if( ingame == 1 && (goto_mainmenu_flag&1) )
+    if((obor_profile_build < 4283 || obor_profile_build >= 4293) &&
+       ingame == 1 && (goto_mainmenu_flag&1))
     {
         backto_mainmenu();
         return;
@@ -32597,7 +33444,7 @@ void shutdown(int status, char *msg, ...)
     }
     if(!disablelog)
     {
-        printf("Done!\n\n");
+        printf("%s", obor_profile_build >= 4283 && obor_profile_build < 4368 ? "\tDone!\n" : "Done!\n\n");
     }
 
     if(!disablelog)
@@ -33517,6 +34364,7 @@ void showcomplete(int num)
 
 void savelevelinfo()
 {
+    int stored_bytes = (obor_profile_build >= 4283 && obor_profile_build < 4429) ? 512 : (int)sizeof(allowselect_args);
     int i;
     s_set_entry *set = levelsets + current_set;
     s_savelevel *save = savelevel + current_set;
@@ -33532,15 +34380,17 @@ void savelevelinfo()
         save->pSpawnmp[i] = player[i].spawnmp;
         save->pWeapnum[i] = player[i].weapnum;
         save->pColourmap[i] = player[i].colourmap;
-        strncpy(save->pName[i], player[i].name, MAX_NAME_LEN);
+        strncpy(save->pName[i], player[i].name, obor_profile_name_limit());
     }
     save->credits = credits;
     save->level = current_level;
     save->stage = current_stage;
     save->which_set = current_set;
-    strncpy(save->dName, set->name, MAX_NAME_LEN);
-    for(i = 0; i < sizeof(allowselect_args); i++) save->allowSelectArgs[i] = '\0'; // clear
-    for(i = 0; i < sizeof(allowselect_args); i++) save->allowSelectArgs[i] = allowselect_args[i];
+    strncpy(save->dName, set->name, obor_profile_name_limit());
+    for(i = 0; i < stored_bytes; i++) save->allowSelectArgs[i] = '\0'; // clear
+    for(i = 0; i < stored_bytes; i++) save->allowSelectArgs[i] = allowselect_args[i];
+    if(obor_profile_build >= 4283 && obor_profile_build < 4391)
+        allowselect_args[stored_bytes - 1] = '\0';
 }
 
 
@@ -33652,7 +34502,7 @@ static entity *spawnexample(int i)
     s_model *model = NULL;
     s_set_entry *set = levelsets + current_set;
     example = spawn((float)psmenu[i][0], (float)psmenu[i][1], 0, spdirection[i], NULL, -1, nextplayermodeln(NULL, i));
-    strcpy(player[i].name, example->model->name);
+    obor_profile_copy_name(player[i].name, example->model->name);
     model = example->model;
 
     //player[i].colourmap = (colourselect && (set->nosame & 2)) ? nextcolourmap(example->model, i - 1) : 0;
@@ -33687,19 +34537,27 @@ static entity *spawnexample(int i)
 static void load_select_screen_info(s_savelevel *save)
 {
     int i = 0;
-    ArgList arglist;
+    ArgList arglist = {0};
     char argbuf[MAX_ARG_LEN + 1] = "";
     char *filename = ""; // not used, just fused into GET_INT_ARG()
     char *command = ""; // not used, just fused into GET_INT_ARG()
 
-    // load model_loads
+    if(save->selectLoadCount > MAX_SELECT_LOADS)
+    {
+        shutdown(1, "Too many saved selection model commands.\n");
+        return;
+    }
+
+    // Restore model flags before the selection music and background.
     for(i = 0; i < save->selectLoadCount; i++)
     {
         s_model *tempmodel;
-        command = GET_ARG(0);
-
-        if(!command || !command[0]) continue;
         ParseArgs(&arglist, save->selectLoad[i], argbuf);
+        command = GET_ARG(0);
+        if(!command || !command[0])
+        {
+            continue;
+        }
 
         tempmodel = findmodel(GET_ARG(1));
         if (tempmodel)
@@ -33731,31 +34589,32 @@ int selectplayer(int *players, char *filename, int useSavedGame)
     unsigned exitdelay = 0;
     int players_busy = 0;
     int players_ready = 0;
-    char string[128] = {""};
+    char string[MAX_ARG_LEN + 1] = {""};
     char *buf, *command;
     size_t size = 0;
     ptrdiff_t pos = 0;
     ArgList arglist;
     char argbuf[MAX_ARG_LEN + 1] = "";
     s_set_entry *set = levelsets + current_set;
-    s_savelevel *save = savelevel + current_set;
+    const int saved_selection = obor_profile_build < 4283 || obor_profile_build >= 4391;
+    s_savelevel *save = saved_selection && savelevel ? savelevel + current_set : NULL;
     int load_count = 0, saved_select_screen = 0;
 
     savelevelinfo();
 
     selectScreen = 1;
     kill_all();
-    if(allowselect_args[0] != 'a') reset_playable_list(1); // 'a' is the first char of allowselect, if there's 'a' then there is allowselect
+    if(!saved_selection || allowselect_args[0] != 'a')
+    {
+        reset_playable_list(1);
+    }
     memset(player, 0, sizeof(*player) * 4);
 
-    if(useSavedGame && save)
+    if(useSavedGame && save && save->selectFlag)
     {
-        if (save->selectFlag)
-        {
-            load_select_screen_info(save);
-            load_playable_list(save->allowSelectArgs);
-            saved_select_screen = 1;
-        }
+        load_select_screen_info(save);
+        load_playable_list(save->allowSelectArgs);
+        saved_select_screen = 1;
     }
 
     //loadGameFile();
@@ -33780,19 +34639,30 @@ int selectplayer(int *players, char *filename, int useSavedGame)
                 if(stricmp(command, "music") == 0)
                 {
                     music(GET_ARG(1), GET_INT_ARG(2), atol(GET_ARG(3)));
-                    // SAVE
-                    multistrcatsp(save->selectMusic, command,GET_ARG(1),GET_ARG(2),GET_ARG(3),NULL);
+                    if(save)
+                    {
+                        snprintf(save->selectMusic, sizeof(save->selectMusic), "%s %s %s %s",
+                                 command, GET_ARG(1), GET_ARG(2), GET_ARG(3));
+                    }
                 }
                 else if(stricmp(command, "allowselect") == 0)
                 {
                     load_playable_list(buf + pos);
-                    memcpy(&save->allowSelectArgs, &allowselect_args, sizeof(allowselect_args)); // SAVE
+                    if(save)
+                    {
+                        const size_t length = obor_profile_build >= 4283 && obor_profile_build < 4429 ?
+                            512 : sizeof(allowselect_args);
+                        memcpy(save->allowSelectArgs, allowselect_args, length);
+                    }
                 }
                 else if(stricmp(command, "background") == 0)
                 {
                     load_background(GET_ARG(1), 1);
-                    // SAVE
-                    multistrcatsp(save->selectBackground, command,GET_ARG(1),NULL);
+                    if(save)
+                    {
+                        snprintf(save->selectBackground, sizeof(save->selectBackground), "%s %s",
+                                 command, GET_ARG(1));
+                    }
                 }
                 else if(stricmp(command, "load") == 0)
                 {
@@ -33805,11 +34675,11 @@ int selectplayer(int *players, char *filename, int useSavedGame)
                     {
                         update_model_loadflag(tempmodel, GET_INT_ARG(2));
                     }
-                    // SAVE
-                    if(load_count < MAX_SELECT_LOADS)
+                    if(save && load_count < MAX_SELECT_LOADS)
                     {
-                        multistrcatsp(save->selectLoad[load_count], command,GET_ARG(1),GET_ARG(2),NULL);
-                        load_count++;
+                        snprintf(save->selectLoad[load_count], sizeof(save->selectLoad[load_count]),
+                                 "%s %s %s", command, GET_ARG(1), GET_ARG(2));
+                        ++load_count;
                     }
                 }
                 else if(command && command[0])
@@ -33820,8 +34690,11 @@ int selectplayer(int *players, char *filename, int useSavedGame)
 
             pos += getNewLineStart(buf + pos);
         }
-        save->selectLoadCount = load_count; // SAVE number of LOAD command
-        save->selectFlag = 1;
+        if(save)
+        {
+            save->selectLoadCount = load_count;
+            save->selectFlag = 1;
+        }
 
         if(buf != NULL)
         {
@@ -33852,7 +34725,7 @@ int selectplayer(int *players, char *filename, int useSavedGame)
                 {
                     continue;
                 }
-                strncpy(player[i].name, skipselect[i], MAX_NAME_LEN);
+                obor_profile_copy_name(player[i].name, skipselect[i]);
                 if(!creditscheat)
                 {
                     if(noshare)
@@ -33877,8 +34750,7 @@ int selectplayer(int *players, char *filename, int useSavedGame)
                 // New alternative background path for PSP
                 if(custBkgrds != NULL)
                 {
-                    strcpy(string, custBkgrds);
-                    strncat(string, "unlockbg", 8);
+                    snprintf(string, sizeof(string), "%sunlockbg", custBkgrds);
                     load_background(string, 1);
                 }
                 else
@@ -33891,8 +34763,7 @@ int selectplayer(int *players, char *filename, int useSavedGame)
                 // New alternative background path for PSP
                 if(custBkgrds != NULL)
                 {
-                    strncpy(string, custBkgrds, 128);
-                    strncat(string, "select", 6);
+                    snprintf(string, sizeof(string), "%sselect", custBkgrds);
                     load_background(string, 1);
                 }
                 else
@@ -33983,7 +34854,7 @@ int selectplayer(int *players, char *filename, int useSavedGame)
                         sound_play_sample(SAMPLE_BEEP, 0, savedata.effectvol, savedata.effectvol, 100);
                     }
                     ent_set_model(example[i], ((player[i].newkeys & FLAG_MOVELEFT) ? prevplayermodeln : nextplayermodeln)(example[i]->model, i)->name, 0);
-                    strcpy(player[i].name, example[i]->model->name);
+                    obor_profile_copy_name(player[i].name, example[i]->model->name);
                     player[i].colourmap = nextcolourmap(example[i]->model, i - 1);
                     ent_set_colourmap(example[i], player[i].colourmap);
                 }
@@ -34060,6 +34931,8 @@ void playgame(int *players,  unsigned which_set, int useSavedGame)
     s_set_entry *set = levelsets + current_set;
     s_savelevel *save = savelevel + current_set;
     s_level_entry *le;
+    const int saved_selection = obor_profile_build < 4283 || obor_profile_build >= 4391;
+    const int saved_skipselect = obor_profile_build < 4283 || obor_profile_build >= 4393;
 
     useSave = 0;
     useSet = -1;
@@ -34110,14 +34983,14 @@ void playgame(int *players,  unsigned which_set, int useSavedGame)
                 player[i].weapnum = save->pWeapnum[i];
                 player[i].spawnhealth = save->pSpawnhealth[i];
                 player[i].spawnmp = save->pSpawnmp[i];
-                strncpy(player[i].name, save->pName[i], MAX_NAME_LEN);
-                if(!memchr(player[i].name, 0, sizeof(player[i].name)))
-                    player[i].name[sizeof(player[i].name) - 1] = 0;
+                obor_profile_copy_name(player[i].name, save->pName[i]);
             }
             credits = save->credits;
         }
-        load_playable_list(save->allowSelectArgs); //TODO: change sav format to support dynamic allowselect list.
-        //reset_playable_list(1); // add this because there's no select screen, temporary solution
+        if(save->flag == 2 || saved_selection)
+        {
+            load_playable_list(save->allowSelectArgs);
+        }
     }
 
     nosave = 1;
@@ -34130,12 +35003,15 @@ void playgame(int *players,  unsigned which_set, int useSavedGame)
 
     le = set->levelorder + current_level;
     set->noselect = le->noselect;
-    if (save->selectSkipSelect[0]) le = load_skipselect(save->selectSkipSelect, set); // LOAD skipselect
+    if(saved_skipselect && save->selectSkipSelect[0])
+    {
+        le = load_skipselect(save->selectSkipSelect, set);
+    }
     for(i = 0; i < MAX_PLAYERS; i++)
     {
         if(le->skipselect[i])
         {
-            strcpy(skipselect[i], le->skipselect[i]);
+            obor_profile_copy_name(skipselect[i], le->skipselect[i]);
         }
         else
         {
@@ -34172,7 +35048,10 @@ void playgame(int *players,  unsigned which_set, int useSavedGame)
             }
             else if(le->type == LE_TYPE_SELECT_SCREEN)
             {
-                memset(save->selectSkipSelect,0,sizeof(save->selectSkipSelect)); // RESET skipselect
+                if(saved_skipselect)
+                {
+                    memset(save->selectSkipSelect, 0, sizeof(save->selectSkipSelect));
+                }
                 set->noselect = 0;
                 for(i = 0; i < set->maxplayers; i++) // reset skipselect
                 {
@@ -34197,22 +35076,29 @@ void playgame(int *players,  unsigned which_set, int useSavedGame)
                 {
                     if(le->skipselect[i])
                     {
-                        strcpy(skipselect[i], le->skipselect[i]);
+                        obor_profile_copy_name(skipselect[i], le->skipselect[i]);
                     }
                     else
                     {
                         skipselect[i][0] = 0;
                     }
                 }
-                save_skipselect(save->selectSkipSelect, skipselect); // TO SAVE FILE
+                if(saved_skipselect)
+                {
+                    save_skipselect(save->selectSkipSelect, skipselect);
+                }
                 selectplayer(players, NULL, useSavedGame); // re-select a player
             }
             else if(!playlevel(le->filename))
             {
                 if(player[0].lives <= 0 && player[1].lives <= 0 && player[2].lives <= 0 && player[3].lives <= 0)
                 {
-                    if(!set->noshowgameover && !(goto_mainmenu_flag&2)) gameover();
-                    if(!set->noshowhof && !(goto_mainmenu_flag&4))
+                    if(!set->noshowgameover &&
+                       ((obor_profile_build >= 4283 && obor_profile_build < 4293) ||
+                        !(goto_mainmenu_flag&2))) gameover();
+                    if(!set->noshowhof &&
+                       ((obor_profile_build >= 4283 && obor_profile_build < 4293) ||
+                        !(goto_mainmenu_flag&4)))
                     {
                         hallfame(1);
                     }
@@ -34221,12 +35107,14 @@ void playgame(int *players,  unsigned which_set, int useSavedGame)
                         player[i].hasplayed = 0;
                         player[i].weapnum = 0;
                     }
+                    if(obor_profile_build == 4293) goto_mainmenu_flag = 0;
                 }
                 break;
             }
             if(le->gonext == 1)
             {
-                if (!set->noshowcomplete) showcomplete(current_stage);
+                if ((obor_profile_build >= 4283 && obor_profile_build < 4394) ||
+                    !set->noshowcomplete) showcomplete(current_stage);
                 for(i = 0; i < set->maxplayers; i++)
                 {
                     player[i].spawnhealth = 0;
@@ -34346,7 +35234,7 @@ int menu_difficulty()
             else if(bonus >= levelsets[selector].ifcomplete)
             {
                 saveslot = selector;
-                strncpy(savelevel[saveslot].dName, levelsets[saveslot].name, MAX_NAME_LEN + 1);
+                strncpy(savelevel[saveslot].dName, levelsets[saveslot].name, obor_profile_name_limit() + 1);
                 newgameMenu = 0;
                 return saveslot;
             }
@@ -34397,7 +35285,7 @@ int menu_difficulty()
             else if(bonus >= levelsets[selector].ifcomplete)
             {
                 saveslot = selector;
-                strncpy(savelevel[saveslot].dName, levelsets[saveslot].name, MAX_NAME_LEN + 1);
+                strncpy(savelevel[saveslot].dName, levelsets[saveslot].name, obor_profile_name_limit() + 1);
                 newgameMenu = 0;
                 return saveslot;
             }
@@ -34455,7 +35343,7 @@ int load_saved_game()
             if(savedStatus)
             {
                 _menutext((selector == 0), col1, -1, Tr("Mode:"));
-                _menutext((selector == 0), col2, -1, "%.*s", (int)sizeof(savelevel[saveslot].dName), savelevel[saveslot].dName);
+                _menutext((selector == 0), col2, -1, "%.*s", obor_profile_name_limit() + 1, savelevel[saveslot].dName);
                 _menutext(0, col1, 0, Tr("Stage:"));
                 _menutext(0, col2, 0, "%d", savelevel[saveslot].stage);
                 _menutext(0, col1, 1, Tr("Level:"));
@@ -35218,7 +36106,7 @@ void menu_options_input()
 {
     int quit = 0;
     int selector = 1; // 0
-    int x_pos = -6;
+    int x_pos = (obor_profile_build >= 4283 && obor_profile_build < 4324) ? -4 : -6;
 
     controloptionsMenu = 1;
     bothnewkeys = 0;
@@ -35264,7 +36152,7 @@ void menu_options_input()
         _menutext((selector == 2), x_pos, 0, Tr("Setup Player 2..."));
         _menutext((selector == 3), x_pos, 1, Tr("Setup Player 3..."));
         _menutext((selector == 4), x_pos, 2, Tr("Setup Player 4..."));
-        _menutextm((selector == 5), 5, 0, Tr("Back"));
+        _menutextm((selector == 5), (obor_profile_build >= 4283 && obor_profile_build < 4324) ? 6 : 5, 0, Tr("Back"));
         update((level != NULL), 0);
 
         if(bothnewkeys & FLAG_ESC)
@@ -35607,10 +36495,10 @@ void menu_options_config()     //  OX. Load from / save to default.cfg. Restore 
 
 void menu_options_debug()
 {
-    #define MENU_POS_Y              -4
+    #define MENU_POS_Y              ((obor_profile_build >= 4283 && obor_profile_build < 4353) ? -5 : -4)
     #define MENU_ITEMS_MARGIN_Y     2
-    #define COLUMN_1_POS_X          -11
-    #define COLUMN_2_POS_X          COLUMN_1_POS_X + 14
+    #define COLUMN_1_POS_X          ((obor_profile_build >= 4283 && obor_profile_build < 4353) ? -12 : -11)
+    #define COLUMN_2_POS_X          ((obor_profile_build >= 4283 && obor_profile_build < 4353) ? 4 : COLUMN_1_POS_X + 14)
     #define MENU_ITEM_FIRST_INDEX   0
 
     // Selections enumerator. All
@@ -35670,9 +36558,12 @@ void menu_options_debug()
         _menutext((selector == ITEM_POSITION),       COLUMN_2_POS_X, pos_y, (savedata.debug_position ? Tr("Enabled") : Tr("Disabled")));
         pos_y++;
 
+        if(!(obor_profile_build >= 4283 && obor_profile_build < 4364))
+        {
         _menutext((selector == ITEM_FEATURES),       COLUMN_1_POS_X, pos_y, Tr("Features:"));
         _menutext((selector == ITEM_FEATURES),       COLUMN_2_POS_X, pos_y, (savedata.debug_features ? Tr("Enabled") : Tr("Disabled")));
         pos_y++;
+        }
 
         _menutext((selector == ITEM_COL_ATTACK),     COLUMN_1_POS_X, pos_y, Tr("Collision Attack:"));
         _menutext((selector == ITEM_COL_ATTACK),     COLUMN_2_POS_X, pos_y, (savedata.debug_collision_attack ? Tr("Enabled") : Tr("Disabled")));
@@ -35687,13 +36578,44 @@ void menu_options_debug()
         pos_y++;
 
         // Display exit title
-        _menutextm((selector == ITEM_EXIT), pos_y + (MENU_ITEMS_MARGIN_Y), 0, Tr("Back"));
+        _menutextm((selector == ITEM_EXIT), (obor_profile_build >= 4283 && obor_profile_build < 4321) ? 6 :
+            pos_y + MENU_ITEMS_MARGIN_Y - ((obor_profile_build >= 4283 && obor_profile_build < 4327) ? 1 : 0), 0, Tr("Back"));
 
         // Run an engine update.
         update((level != NULL), 0);
 
+        if(obor_profile_build >= 4283 && obor_profile_build < 4321)
+        {
+            /* Earlier menus process both movement keys before clamping.
+             * Map their original item order around the later Features item. */
+            unsigned native_selector = selector >= ITEM_FEATURES ? selector - 1 : selector;
+            unsigned native_last = ITEM_EXIT - 1;
+
+            if(bothnewkeys & FLAG_ESC) quit = 1;
+            if(bothnewkeys & FLAG_MOVEUP)
+            {
+                --native_selector;
+                if(SAMPLE_BEEP >= 0)
+                    sound_play_sample(SAMPLE_BEEP, 0, savedata.effectvol, savedata.effectvol, 100);
+            }
+            if(bothnewkeys & FLAG_MOVEDOWN)
+            {
+                ++native_selector;
+                if(SAMPLE_BEEP >= 0)
+                    sound_play_sample(SAMPLE_BEEP, 0, savedata.effectvol, savedata.effectvol, 100);
+            }
+
+            /* The original enum keeps its unsigned result through 4319;
+             * the 4320 signed selector maps its negative step to Back. */
+            if(obor_profile_build >= 4320 && native_selector == (unsigned)-1)
+                native_selector = native_last;
+            else if(native_selector > native_last)
+                native_selector = MENU_ITEM_FIRST_INDEX;
+
+            selector = (e_selections)(native_selector >= ITEM_FEATURES ? native_selector + 1 : native_selector);
+        }
         // If user presses up/down or esc, let's act accordingly.
-        if(bothnewkeys & (FLAG_MOVEUP | FLAG_MOVEDOWN | FLAG_ESC))
+        else if(bothnewkeys & (FLAG_MOVEUP | FLAG_MOVEDOWN | FLAG_ESC))
         {
             // Play beep if available.
             if(SAMPLE_BEEP >= 0)
@@ -35741,6 +36663,12 @@ void menu_options_debug()
 
         // Toggle selection value on left/right or
         // trigger button press.
+        if(obor_profile_build >= 4321 && obor_profile_build < 4364 && selector == ITEM_FEATURES)
+        {
+            if(bothnewkeys & FLAG_MOVEUP) selector = ITEM_POSITION;
+            else if(bothnewkeys & FLAG_MOVEDOWN) selector = ITEM_COL_ATTACK;
+        }
+
         if(bothnewkeys & (FLAG_MOVELEFT | FLAG_MOVERIGHT | FLAG_ANYBUTTON))
         {
             if(SAMPLE_BEEP2 >= 0)
@@ -35785,8 +36713,656 @@ void menu_options_debug()
 }
 
 
+static void obor_legacy_system_early()
+{
+
+    int quit = 0;
+    int selector = 0;
+    int ret = 6;
+    int col1 = -8;
+    int col2 = 5;
+
+#if PSP
+    int dir = 0;
+    int batteryPercentage = 0;
+    int batteryLifeTime = 0;
+    int externalPower = 0;
+#endif
+
+    systemoptionsMenu = 1;
+
+    bothnewkeys = 0;
+
+    while(!quit)
+    {
+        _menutextm(2, -6, 0, Tr("System Options"));
+
+        _menutext(0, col1, -4, Tr("Total RAM:"));
+        _menutext(0, col2, -4, Tr("%s KBytes"), commaprint(getSystemRam(KBYTES)));
+
+        _menutext(0, col1, -3, Tr("Used RAM:"));
+        _menutext(0, col2, -3, Tr("%s KBytes"), commaprint(getUsedRam(KBYTES)));
+
+        _menutext((selector == 0), col1, -2, Tr("Debug Info:"));
+        _menutext((selector == 0), col2, -2, (savedata.debuginfo ? Tr("Enabled") : Tr("Disabled")));
+
+        _menutext((selector == 1), col1, -1, Tr("File Logging:"));
+        _menutext((selector == 1), col2, -1, (savedata.uselog ? Tr("Enabled") : Tr("Disabled")));
+
+        _menutext((selector == 2), col1, 0, Tr("Players:"));
+        _menutext((selector == 2), col2, 0, Tr("%i by Mod"), levelsets[current_set].maxplayers);
+
+        _menutext((selector == 3), col1, 1, Tr("Versus Damage:"), 0);
+        if(versusdamage == 0)
+        {
+            _menutext((selector == 3), col2, 1, Tr("Disabled by Mod"));
+        }
+        else if(versusdamage == 1)
+        {
+            _menutext((selector == 3), col2, 1, Tr("Enabled by Mod"));
+        }
+        else
+        {
+            if(savedata.mode)
+            {
+                _menutext((selector == 3), col2, 1, Tr("Disabled"));    //Mode 1 - Players CAN'T attack each other
+            }
+            else
+            {
+                _menutext((selector == 3), col2, 1, Tr("Enabled"));    //Mode 2 - Players CAN attack each other
+            }
+        }
+
+        _menutext((selector == 4), col1, 2, Tr("Cheats:"));
+        _menutext((selector == 4), col2, 2, forcecheatsoff ? Tr("Disabled by Mod") : (cheats ? Tr("On") : Tr("Off")));
+
+#ifndef DC
+
+        _menutext((selector == 5), col1, 3, Tr("Config Settings"));
+
+#endif
+
+#if PSP
+        externalPower = scePowerIsPowerOnline();
+        _menutext((selector == 6), col1, 4, Tr("CPU Speed:"));
+        _menutext((selector == 6), col2, 4, "%d MHz", scePowerGetCpuClockFrequency());
+        if(!externalPower)
+        {
+            batteryPercentage = scePowerGetBatteryLifePercent();
+            batteryLifeTime = scePowerGetBatteryLifeTime();
+            _menutext(0, col1, 5, Tr("Battery:"));
+            if(batteryPercentage < 0 || batteryLifeTime < 0)
+            {
+                _menutext(0, col2, 5, Tr("Calculating..."));
+            }
+            else
+            {
+                _menutext(0, col2, 5, "%d%% - %02d:%02d", batteryPercentage, batteryLifeTime / 60, batteryLifeTime - (batteryLifeTime / 60 * 60));
+            }
+        }
+        else
+        {
+            _menutext(0, col1, 5, Tr("Charging:"));
+            _menutext(0, col2, 5, Tr("%d%% AC Power"), scePowerGetBatteryLifePercent());
+        }
+        ret = 7;
+#endif
+
+        _menutextm((selector == ret), 6, 0, Tr("Back"));
+
+        update((level != NULL), 0);
+
+        if(bothnewkeys & FLAG_ESC)
+        {
+            quit = 1;
+        }
+        if(bothnewkeys & FLAG_MOVEUP)
+        {
+            --selector;
+            sound_play_sample(SAMPLE_BEEP, 0, savedata.effectvol, savedata.effectvol, 100);
+        }
+        if(bothnewkeys & FLAG_MOVEDOWN)
+        {
+            ++selector;
+            sound_play_sample(SAMPLE_BEEP, 0, savedata.effectvol, savedata.effectvol, 100);
+        }
+
+        if(selector < 0)
+        {
+            selector = ret;
+        }
+        if(selector > ret)
+        {
+            selector = 0;
+        }
+
+        if(bothnewkeys & (FLAG_MOVELEFT | FLAG_MOVERIGHT | FLAG_ANYBUTTON))
+        {
+
+#if PSP
+            dir = 0;
+            if(bothnewkeys & FLAG_MOVELEFT)
+            {
+                dir = -1;
+            }
+            else if(bothnewkeys & FLAG_MOVERIGHT)
+            {
+                dir = 1;
+            }
+#endif
+
+            sound_play_sample(SAMPLE_BEEP2, 0, savedata.effectvol, savedata.effectvol, 100);
+
+            switch(selector)
+            {
+            case 0:
+                savedata.debuginfo = !savedata.debuginfo;
+                break;
+
+            case 1:
+                savedata.uselog =  !savedata.uselog;
+                break;
+
+            case 2:
+
+                break;
+
+            case 3:
+                if(versusdamage > 1)
+                {
+                    if(savedata.mode)
+                    {
+                        savedata.mode = 0;
+                    }
+                    else
+                    {
+                        savedata.mode = 1;
+                    }
+                }
+                break;
+
+            case 4:
+                cheats = !cheats;
+                break;
+
+#ifndef DC
+
+            case 5:
+                menu_options_config();
+                break;
+
+#endif
+
+#ifdef PSP
+            case 6:
+                savedata.pspcpuspeed += dir;
+                if(savedata.pspcpuspeed < 0)
+                {
+                    savedata.pspcpuspeed = 2;
+                }
+                if(savedata.pspcpuspeed > 2)
+                {
+                    savedata.pspcpuspeed = 0;
+                }
+                switch(savedata.pspcpuspeed)
+                {
+                case 0:
+                    scePowerSetClockFrequency(222, 222, 111);
+                    break;
+                case 1:
+                    scePowerSetClockFrequency(266, 266, 133);
+                    break;
+                case 2:
+                    scePowerSetClockFrequency(333, 333, 166);
+                    break;
+                }
+                break;
+#endif
+
+            default:
+                quit = 1;
+                break;
+            }
+        }
+    }
+    savesettings();
+    bothnewkeys = 0;
+    systemoptionsMenu = 0;
+}
+
+static void obor_legacy_system_debug()
+{
+
+    int quit = 0;
+    int selector = 0;
+    int ret = 5;
+    int col1 = -15;
+    int col2 = 1;
+
+#if PSP
+    int dir = 0;
+    int batteryPercentage = 0;
+    int batteryLifeTime = 0;
+    int externalPower = 0;
+#endif
+
+    systemoptionsMenu = 1;
+
+    bothnewkeys = 0;
+
+    while(!quit)
+    {
+        _menutextm(2, -6, 0, Tr("System Options"));
+
+        _menutext(0, col1, -4, Tr("Total RAM:"));
+        _menutext(0, col2, -4, Tr("%s KBytes"), commaprint(getSystemRam(KBYTES)));
+
+        _menutext(0, col1, -3, Tr("Used RAM:"));
+        _menutext(0, col2, -3, Tr("%s KBytes"), commaprint(getUsedRam(KBYTES)));
+
+        _menutext(0, col1, -2, Tr("Max Players:"));
+        _menutext(0, col2, -2, Tr("%i"), levelsets[current_set].maxplayers);
+
+        _menutext((selector == 0), col1, -1, Tr("File Logging:"));
+        _menutext((selector == 0), col2, -1, (savedata.uselog ? Tr("Enabled") : Tr("Disabled")));
+
+        _menutext((selector == 1), col1, 0, Tr("Versus Damage:"), 0);
+        if(versusdamage == 0)
+        {
+            _menutext((selector == 1), col2, 0, Tr("Disabled by Module"));
+        }
+        else if(versusdamage == 1)
+        {
+            _menutext((selector == 1), col2, 0, Tr("Enabled by Module"));
+        }
+        else
+        {
+            if(savedata.mode)
+            {
+                _menutext((selector == 1), col2, 0, Tr("Disabled"));    //Mode 1 - Players CAN'T attack each other
+            }
+            else
+            {
+                _menutext((selector == 1), col2, 0, Tr("Enabled"));    //Mode 2 - Players CAN attack each other
+            }
+        }
+
+        _menutext((selector == 2), col1, 1, Tr("Cheats:"));
+        _menutext((selector == 2), col2, 1, forcecheatsoff ? Tr("Disabled by Module") : (cheats ? Tr("On") : Tr("Off")));
+        _menutext((selector == 3), col1, 2, Tr("Debug Settings..."));
+
+#ifndef DC
+
+        _menutext((selector == 4), col1, 3, Tr("Config Settings..."));
+
+#endif
+
+#if PSP
+        externalPower = scePowerIsPowerOnline();
+        _menutext((selector == 5), col1, 4, Tr("CPU Speed:"));
+        _menutext((selector == 5), col2, 4, "%d MHz", scePowerGetCpuClockFrequency());
+        if(!externalPower)
+        {
+            batteryPercentage = scePowerGetBatteryLifePercent();
+            batteryLifeTime = scePowerGetBatteryLifeTime();
+            _menutext(0, col1, 5, Tr("Battery:"));
+            if(batteryPercentage < 0 || batteryLifeTime < 0)
+            {
+                _menutext(0, col2, 5, Tr("Calculating..."));
+            }
+            else
+            {
+                _menutext(0, col2, 5, "%d%% - %02d:%02d", batteryPercentage, batteryLifeTime / 60, batteryLifeTime - (batteryLifeTime / 60 * 60));
+            }
+        }
+        else
+        {
+            _menutext(0, col1, 5, Tr("Charging:"));
+            _menutext(0, col2, 5, Tr("%d%% AC Power"), scePowerGetBatteryLifePercent());
+        }
+        ret = 6;
+#endif
+
+        _menutextm((selector == ret), 6, 0, Tr("Back"));
+
+        update((level != NULL), 0);
+
+        if(bothnewkeys & FLAG_ESC)
+        {
+            quit = 1;
+        }
+        if(bothnewkeys & FLAG_MOVEUP)
+        {
+            --selector;
+            sound_play_sample(SAMPLE_BEEP, 0, savedata.effectvol, savedata.effectvol, 100);
+        }
+        if(bothnewkeys & FLAG_MOVEDOWN)
+        {
+            ++selector;
+            sound_play_sample(SAMPLE_BEEP, 0, savedata.effectvol, savedata.effectvol, 100);
+        }
+
+        if(selector < 0)
+        {
+            selector = ret;
+        }
+        if(selector > ret)
+        {
+            selector = 0;
+        }
+
+        if(bothnewkeys & (FLAG_MOVELEFT | FLAG_MOVERIGHT | FLAG_ANYBUTTON))
+        {
+
+#if PSP
+            dir = 0;
+            if(bothnewkeys & FLAG_MOVELEFT)
+            {
+                dir = -1;
+            }
+            else if(bothnewkeys & FLAG_MOVERIGHT)
+            {
+                dir = 1;
+            }
+#endif
+
+            sound_play_sample(SAMPLE_BEEP2, 0, savedata.effectvol, savedata.effectvol, 100);
+
+            switch(selector)
+            {
+            case 0:
+                savedata.uselog =  !savedata.uselog;
+                break;
+
+            case 1:
+                if(versusdamage > 1)
+                {
+                    if(savedata.mode)
+                    {
+                        savedata.mode = 0;
+                    }
+                    else
+                    {
+                        savedata.mode = 1;
+                    }
+                }
+                break;
+
+            case 2:
+                cheats = !cheats;
+                break;
+
+            case 3:
+                menu_options_debug();
+                break;
+
+#ifndef DC
+
+            case 4:
+                menu_options_config();
+                break;
+
+#endif
+
+#ifdef PSP
+            case 5:
+                savedata.pspcpuspeed += dir;
+                if(savedata.pspcpuspeed < 0)
+                {
+                    savedata.pspcpuspeed = 2;
+                }
+                if(savedata.pspcpuspeed > 2)
+                {
+                    savedata.pspcpuspeed = 0;
+                }
+                switch(savedata.pspcpuspeed)
+                {
+                case 0:
+                    scePowerSetClockFrequency(222, 222, 111);
+                    break;
+                case 1:
+                    scePowerSetClockFrequency(266, 266, 133);
+                    break;
+                case 2:
+                    scePowerSetClockFrequency(333, 333, 166);
+                    break;
+                }
+                break;
+#endif
+
+            default:
+                quit = 1;
+                break;
+            }
+        }
+    }
+    savesettings();
+    bothnewkeys = 0;
+    systemoptionsMenu = 0;
+}
+
+static void obor_legacy_system_labels()
+{
+    #define SYS_OPT_Y_POS -4
+
+    int quit = 0;
+    int selector = 0;
+    int ret = 5;
+    int col1 = -15;
+    int col2 = 1;
+
+#if PSP
+    int dir = 0;
+    int batteryPercentage = 0;
+    int batteryLifeTime = 0;
+    int externalPower = 0;
+#endif
+
+    systemoptionsMenu = 1;
+
+    bothnewkeys = 0;
+
+    while(!quit)
+    {
+        _menutextm(2, SYS_OPT_Y_POS-2, 0, Tr("System Options"));
+
+        _menutext(0, col1, SYS_OPT_Y_POS, Tr("Total RAM:"));
+        _menutext(0, col2, SYS_OPT_Y_POS, Tr("%s KB"), commaprint(getSystemRam(KBYTES)));
+
+        _menutext(0, col1, SYS_OPT_Y_POS+1, Tr("Used RAM:"));
+        _menutext(0, col2, SYS_OPT_Y_POS+1, Tr("%s KB"), commaprint(getUsedRam(KBYTES)));
+
+        _menutext(0, col1, SYS_OPT_Y_POS+2, Tr("Max Players:"));
+        _menutext(0, col2, SYS_OPT_Y_POS+2, Tr("%i"), levelsets[current_set].maxplayers);
+
+        _menutext((selector == 0), col1, SYS_OPT_Y_POS+4, Tr("File Logging:"));
+        _menutext((selector == 0), col2, SYS_OPT_Y_POS+4, (savedata.uselog ? Tr("Enabled") : Tr("Disabled")));
+
+        _menutext((selector == 1), col1, SYS_OPT_Y_POS+5, Tr("Versus Damage:"), 0);
+        if(versusdamage == 0)
+        {
+            _menutext((selector == 1), col2, SYS_OPT_Y_POS+5, Tr("Disabled by Module"));
+        }
+        else if(versusdamage == 1)
+        {
+            _menutext((selector == 1), col2, SYS_OPT_Y_POS+5, Tr("Enabled by Module"));
+        }
+        else
+        {
+            if(savedata.mode)
+            {
+                _menutext((selector == 1), col2, SYS_OPT_Y_POS+5, Tr("Disabled"));    //Mode 1 - Players CAN'T attack each other
+            }
+            else
+            {
+                _menutext((selector == 1), col2, SYS_OPT_Y_POS+5, Tr("Enabled"));    //Mode 2 - Players CAN attack each other
+            }
+        }
+
+        _menutext((selector == 2), col1, SYS_OPT_Y_POS+6, Tr("Cheats:"));
+        _menutext((selector == 2), col2, SYS_OPT_Y_POS+6, forcecheatsoff ? Tr("Disabled by Module") : (cheats ? Tr("On") : Tr("Off")));
+        _menutext((selector == 3), col1, SYS_OPT_Y_POS+7, Tr("Debug Settings..."));
+
+#ifndef DC
+
+        _menutext((selector == 4), col1, SYS_OPT_Y_POS+8, Tr("Config Settings..."));
+
+#endif
+
+#if PSP
+        externalPower = scePowerIsPowerOnline();
+        _menutext((selector == 5), col1, 4, Tr("CPU Speed:"));
+        _menutext((selector == 5), col2, 4, "%d MHz", scePowerGetCpuClockFrequency());
+        if(!externalPower)
+        {
+            batteryPercentage = scePowerGetBatteryLifePercent();
+            batteryLifeTime = scePowerGetBatteryLifeTime();
+            _menutext(0, col1, 5, Tr("Battery:"));
+            if(batteryPercentage < 0 || batteryLifeTime < 0)
+            {
+                _menutext(0, col2, 5, Tr("Calculating..."));
+            }
+            else
+            {
+                _menutext(0, col2, 5, "%d%% - %02d:%02d", batteryPercentage, batteryLifeTime / 60, batteryLifeTime - (batteryLifeTime / 60 * 60));
+            }
+        }
+        else
+        {
+            _menutext(0, col1, 5, Tr("Charging:"));
+            _menutext(0, col2, 5, Tr("%d%% AC Power"), scePowerGetBatteryLifePercent());
+        }
+        ret = 6;
+#endif
+
+        _menutextm((selector == ret), SYS_OPT_Y_POS+11, 0, Tr("Back"));
+
+        update((level != NULL), 0);
+
+        if(bothnewkeys & FLAG_ESC)
+        {
+            quit = 1;
+        }
+        if(bothnewkeys & FLAG_MOVEUP)
+        {
+            --selector;
+            sound_play_sample(SAMPLE_BEEP, 0, savedata.effectvol, savedata.effectvol, 100);
+        }
+        if(bothnewkeys & FLAG_MOVEDOWN)
+        {
+            ++selector;
+            sound_play_sample(SAMPLE_BEEP, 0, savedata.effectvol, savedata.effectvol, 100);
+        }
+
+        if(selector < 0)
+        {
+            selector = ret;
+        }
+        if(selector > ret)
+        {
+            selector = 0;
+        }
+
+        if(bothnewkeys & (FLAG_MOVELEFT | FLAG_MOVERIGHT | FLAG_ANYBUTTON))
+        {
+
+#if PSP
+            dir = 0;
+            if(bothnewkeys & FLAG_MOVELEFT)
+            {
+                dir = -1;
+            }
+            else if(bothnewkeys & FLAG_MOVERIGHT)
+            {
+                dir = 1;
+            }
+#endif
+
+            sound_play_sample(SAMPLE_BEEP2, 0, savedata.effectvol, savedata.effectvol, 100);
+
+            switch(selector)
+            {
+            case 0:
+                savedata.uselog =  !savedata.uselog;
+                break;
+
+            case 1:
+                if(versusdamage > 1)
+                {
+                    if(savedata.mode)
+                    {
+                        savedata.mode = 0;
+                    }
+                    else
+                    {
+                        savedata.mode = 1;
+                    }
+                }
+                break;
+
+            case 2:
+                cheats = !cheats;
+                break;
+
+            case 3:
+                menu_options_debug();
+                break;
+
+#ifndef DC
+
+            case 4:
+                menu_options_config();
+                break;
+
+#endif
+
+#ifdef PSP
+            case 5:
+                savedata.pspcpuspeed += dir;
+                if(savedata.pspcpuspeed < 0)
+                {
+                    savedata.pspcpuspeed = 2;
+                }
+                if(savedata.pspcpuspeed > 2)
+                {
+                    savedata.pspcpuspeed = 0;
+                }
+                switch(savedata.pspcpuspeed)
+                {
+                case 0:
+                    scePowerSetClockFrequency(222, 222, 111);
+                    break;
+                case 1:
+                    scePowerSetClockFrequency(266, 266, 133);
+                    break;
+                case 2:
+                    scePowerSetClockFrequency(333, 333, 166);
+                    break;
+                }
+                break;
+#endif
+
+            default:
+                quit = 1;
+                break;
+            }
+        }
+    }
+    savesettings();
+    bothnewkeys = 0;
+    systemoptionsMenu = 0;
+}
+#undef SYS_OPT_Y_POS
+
 void menu_options_system()
 {
+    if((obor_profile_build >= 4283 && obor_profile_build < 4328))
+    {
+        if(obor_profile_build < 4315) obor_legacy_system_early();
+        else if(obor_profile_build < 4327) obor_legacy_system_debug();
+        else obor_legacy_system_labels();
+        return;
+    }
     #define SYS_OPT_Y_POS -4
 
     enum {
@@ -35801,8 +37377,8 @@ void menu_options_system()
 
     int quit = 0;
     int selector = 0;
-    int col1 = -11;
-    int col2 = col1+14;
+    int col1 = (obor_profile_build >= 4283 && obor_profile_build < 4353) ? -12 : -11;
+    int col2 = col1 + ((obor_profile_build >= 4283 && obor_profile_build < 4353) ? 15 : 14);
     int ex_labels = 0;
     int RET = SYS_OPT_BACK-1;
 
@@ -36001,7 +37577,8 @@ void menu_options_video()
     int quit = 0;
     int selector = 0;
     int dir;
-    int col1 = -15, col2 = 1;
+    int col1 = (obor_profile_build >= 4283 && obor_profile_build < 4315) ? -8 : -15;
+    int col2 = (obor_profile_build >= 4283 && obor_profile_build < 4315) ? 6 : 1;
 
     videooptionsMenu = 1;
     bothnewkeys = 0;
@@ -36394,8 +37971,279 @@ void menu_options_video()
 }
 
 
+static void obor_legacy_options()
+{
+    int quit = 0;
+    int selector = 0;
+
+    optionsMenu = 1;
+    bothnewkeys = 0;
+
+    while(!quit)
+    {
+        _menutextm(2, -1, 0, Tr("Options"));
+        _menutextm((selector == 0), 1, 0, Tr("Video Options..."));
+        _menutextm((selector == 1), 2, 0, Tr("Sound Options..."));
+        _menutextm((selector == 2), 3, 0, Tr("Control Options..."));
+        _menutextm((selector == 3), 4, 0, Tr("System Options..."));
+        _menutextm((selector == 4), 6, 0, Tr("Back"));
+
+        if(selector < 0)
+        {
+            selector = 4;
+        }
+        if(selector > 4)
+        {
+            selector = 0;
+        }
+
+        update((level != NULL), 0);
+
+        if(bothnewkeys & FLAG_ESC)
+        {
+            quit = 1;
+        }
+        if(bothnewkeys & FLAG_MOVEUP)
+        {
+            --selector;
+
+            if(SAMPLE_BEEP >= 0)
+            {
+                sound_play_sample(SAMPLE_BEEP, 0, savedata.effectvol, savedata.effectvol, 100);
+            }
+        }
+        if(bothnewkeys & FLAG_MOVEDOWN)
+        {
+            ++selector;
+
+            if(SAMPLE_BEEP >= 0)
+            {
+                sound_play_sample(SAMPLE_BEEP, 0, savedata.effectvol, savedata.effectvol, 100);
+            }
+        }
+        if(bothnewkeys & (FLAG_MOVELEFT | FLAG_MOVERIGHT | FLAG_ANYBUTTON))
+        {
+
+            if(SAMPLE_BEEP2 >= 0)
+            {
+                sound_play_sample(SAMPLE_BEEP2, 0, savedata.effectvol, savedata.effectvol, 100);
+            }
+
+            switch(selector)
+            {
+            case 0:
+                menu_options_video();
+                break;
+            case 1:
+                menu_options_sound();
+                break;
+            case 2:
+                menu_options_input();
+                break;
+            case 3:
+                menu_options_system();
+                break;
+            default:
+                quit = 1;
+            }
+        }
+    }
+    savesettings();
+    if(pause == 1)
+    {
+        pause = 2;
+    }
+    bothnewkeys = 0;
+    optionsMenu = 0;
+}
+
+static void obor_legacy_cheatoptions()     //  LTB 1-13-05 took out sameplayer option
+{
+    int quit = 0;
+    int selector = 0;
+    int dir;
+    int col1 = -8;
+    int col2 = 6;
+
+    cheatoptionsMenu = 1;
+    bothnewkeys = 0;
+
+    while(!quit)
+    {
+        _menutextm(2, -5, 0, Tr("Cheat Options"));
+        _menutext((selector == 0), col1, -3, Tr("Brightness:"));
+        _menutext((selector == 0), col2, -3, "%i", savedata.brightness);
+        _menutext((selector == 1), col1, -2, Tr("Gamma:"));
+        _menutext((selector == 1), col2, -2, "%i", savedata.gamma);
+        _menutext((selector == 2), col1, -1, Tr("Control Options..."));
+        _menutext((selector == 3), col1, 0, Tr("Sound Options..."));
+        _menutext((selector == 4), col1, 1, Tr("System Options..."));
+
+        if(livescheat)
+        {
+            _menutext((selector == 5), col1, 2, Tr("Infinite Lives On"));
+        }
+        else if(!livescheat)
+        {
+            _menutext((selector == 5), col1, 2, Tr("Infinite Lives Off"));
+        }
+        if(creditscheat)
+        {
+            _menutext((selector == 6), col1, 3, Tr("Infinite Credits On"));    // Enemies fall down when you respawn
+        }
+        else if(!creditscheat)
+        {
+            _menutext((selector == 6), col1, 3, Tr("Infinite Credits Off"));    //Enemies don't fall down when you respawn
+        }
+        if(healthcheat)
+        {
+            _menutext((selector == 7), col1, 4, Tr("Infinite Health On"));    // Enemies fall down when you respawn
+        }
+        else if(!healthcheat)
+        {
+            _menutext((selector == 7), col1, 4, Tr("Infinite Health Off"));    //Enemies don't fall down when you respawn
+        }
+
+        _menutextm((selector == 8), 6, 0, Tr("Back"));
+
+        update((level != NULL), 0);
+
+        if(bothnewkeys & FLAG_ESC)
+        {
+            quit = 1;
+        }
+        if(bothnewkeys & FLAG_MOVEUP)
+        {
+            --selector;
+
+            if(SAMPLE_BEEP >= 0)
+            {
+                sound_play_sample(SAMPLE_BEEP, 0, savedata.effectvol, savedata.effectvol, 100);
+            }
+        }
+        if(bothnewkeys & FLAG_MOVEDOWN)
+        {
+            ++selector;
+
+            if(SAMPLE_BEEP >= 0)
+            {
+                sound_play_sample(SAMPLE_BEEP, 0, savedata.effectvol, savedata.effectvol, 100);
+            }
+        }
+
+        if(selector < 0)
+        {
+            selector = 8;    // 7-1-2005 //13-1-2005 changed to 11
+        }
+        if(selector > 8)
+        {
+            selector = 0;    //    7-1-2005 6 changed to 10 //13-1-2005 changed to 11
+        }
+
+        if(bothnewkeys & (FLAG_MOVELEFT | FLAG_MOVERIGHT | FLAG_ANYBUTTON))
+        {
+            dir = 0;
+
+            if(bothnewkeys & FLAG_MOVELEFT)
+            {
+                dir = -1;
+            }
+            else if(bothnewkeys & FLAG_MOVERIGHT)
+            {
+                dir = 1;
+            }
+
+            if(SAMPLE_BEEP2 >= 0)
+            {
+                sound_play_sample(SAMPLE_BEEP2, 0, savedata.effectvol, savedata.effectvol, 100);
+            }
+
+            switch(selector)
+            {
+            case 0:
+                savedata.brightness += 8 * dir;
+                if(savedata.brightness < -256)
+                {
+                    savedata.brightness = -256;
+                }
+                if(savedata.brightness > 256)
+                {
+                    savedata.brightness = 256;
+                }
+                vga_vwait();
+                palette_set_corrected(pal, savedata.gamma, savedata.gamma, savedata.gamma, savedata.brightness, savedata.brightness, savedata.brightness);
+                break;
+            case 1:
+                savedata.gamma += 8 * dir;
+                if(savedata.gamma < -256)
+                {
+                    savedata.gamma = -256;
+                }
+                if(savedata.gamma > 256)
+                {
+                    savedata.gamma = 256;
+                }
+                vga_vwait();
+                palette_set_corrected(pal, savedata.gamma, savedata.gamma, savedata.gamma, savedata.brightness, savedata.brightness, savedata.brightness);
+                break;
+            case 2:
+                menu_options_input();
+                break;
+            case 3:
+                menu_options_sound();
+                break;
+            case 4:
+                menu_options_system();
+                break;
+            case 5:
+                if(!livescheat)
+                {
+                    livescheat = 1;
+                }
+                else if(livescheat)
+                {
+                    livescheat = 0;
+                }
+                break;
+            case 6:
+                if(!creditscheat)
+                {
+                    creditscheat = 1;
+                }
+                else if(creditscheat)
+                {
+                    creditscheat = 0;
+                }
+                break;
+            case 7:
+                if(!healthcheat)
+                {
+                    healthcheat = 1;
+                }
+                else if(healthcheat)
+                {
+                    healthcheat = 0;
+                }
+                break;
+
+            default:
+                quit = 1;
+            }
+        }
+    }
+    savesettings();
+    bothnewkeys = 0;
+    cheatoptionsMenu = 0;
+}
+
 void menu_options()
 {
+    if((obor_profile_build >= 4283 && obor_profile_build < 4324))
+    {
+        if(is_cheat_actived()) obor_legacy_cheatoptions();
+        else obor_legacy_options();
+        return;
+    }
     #define TOT_CHEATS          3
     #define OPT_Y_POS          -1
     #define OPT_X_POS          -7
@@ -36425,9 +38273,9 @@ void menu_options()
 
     if (cheats && !forcecheatsoff)
     {
-        if(level != NULL && pause > 0) y_offset += CHEAT_PAUSE_POSY;
+        if(!(obor_profile_build >= 4283 && obor_profile_build < 4330) && level != NULL && pause > 0) y_offset += CHEAT_PAUSE_POSY;
         y_offset -= TOT_CHEATS;
-        cheat_opt_offset += 1;
+        if(!(obor_profile_build >= 4283 && obor_profile_build < 4327)) cheat_opt_offset += 1;
         BACK_OPTION += TOT_CHEATS;
     }
 
@@ -36496,10 +38344,20 @@ void menu_options()
            else if(selector==SYSTEM_OPTION)
            {
                 menu_options_system();
+                if((obor_profile_build >= 4283 && obor_profile_build < 4327))
+                {
+                    if(cheats && !forcecheatsoff)
+                    {
+                        y_offset -= TOT_CHEATS;
+                        BACK_OPTION += TOT_CHEATS;
+                    }
+                }
+                else
+                {
                 if (cheats && !forcecheatsoff)
                 {
                     y_offset = OPT_Y_POS-TOT_CHEATS;
-                    if(level != NULL && pause > 0) y_offset += CHEAT_PAUSE_POSY;
+                    if(!(obor_profile_build >= 4283 && obor_profile_build < 4330) && level != NULL && pause > 0) y_offset += CHEAT_PAUSE_POSY;
                     cheat_opt_offset = 1;
                     BACK_OPTION = END_OPTION-TOT_CHEATS+TOT_CHEATS;
                 }
@@ -36508,6 +38366,7 @@ void menu_options()
                     y_offset = OPT_Y_POS;
                     cheat_opt_offset = 0;
                     BACK_OPTION = END_OPTION-TOT_CHEATS;
+                }
                 }
            }
            else if(selector==LIVES_CHEAT) livescheat = !livescheat;
@@ -36713,7 +38572,11 @@ void openborMain(int argc, char **argv)
 
     while(!quit)
     {
-        if(skiptoset < 0 && !(goto_mainmenu_flag&8))
+        if((obor_profile_build >= 4283 && obor_profile_build < 4294)
+               ? skiptoset < 0
+               : (obor_profile_build == 4294)
+                   ? (skiptoset < 0 || (goto_mainmenu_flag&8))
+                   : (skiptoset < 0 && !(goto_mainmenu_flag&8)))
         {
             if(time >= introtime)
             {
@@ -36743,9 +38606,12 @@ void openborMain(int argc, char **argv)
         {
             started = 1;
             relback = 0;
+            if(obor_profile_build == 4294 || obor_profile_build == 4295)
+                goto_mainmenu_flag = 0;
         }
 
-        if (goto_mainmenu_flag != 0) goto_mainmenu_flag = 0;
+        if((obor_profile_build < 4283 || obor_profile_build >= 4296) &&
+           goto_mainmenu_flag != 0) goto_mainmenu_flag = 0;
         if(!started)
         {
             if((time % GAME_SPEED) < (GAME_SPEED / 2))

@@ -1,0 +1,146 @@
+/* SPDX-License-Identifier: BSD-3-Clause
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me>
+ */
+#include <limits.h>
+#include <stdarg.h>
+#include <stdint.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <strings.h>
+#include "openbor.h"
+#include <assert.h>
+#undef printf
+#undef malloc
+#undef realloc
+#undef free
+#ifndef stricmp
+#define stricmp strcasecmp
+#endif
+
+uint32_t obor_profile_build;
+static s_level fixture_level;
+static s_textobj object;
+s_level *level = &fixture_level;
+static unsigned fixture_time;
+static char strings[3][MAX_STR_VAR_LEN + 1];
+static const char *expected_display;
+static unsigned draws;
+
+CHAR *StrCache_GetIfPresent(int index)
+{
+    assert(index >= 0 && index < 3);
+    return strings[index];
+}
+
+void StrCache_Copy(int index, CHAR *text)
+{
+    snprintf(StrCache_GetIfPresent(index), sizeof(strings[0]), "%s", text);
+}
+
+void ScriptVariant_ChangeType(ScriptVariant *value, VARTYPE type)
+{
+    value->vt = type;
+    if(type == VT_STR) value->strVal = 2;
+}
+
+HRESULT ScriptVariant_IntegerValue(ScriptVariant *value, LONG *number)
+{
+    if(value->vt != VT_INTEGER) return E_FAIL;
+    *number = value->lVal;
+    return S_OK;
+}
+
+void font_printf(int x, int y, int font, int z, char *format, ...)
+{
+    va_list values;
+    assert(x == 11 && y == 22 && font == 7 && z == 33);
+    assert(!strcmp(format, "%s"));
+    va_start(values, format);
+    assert(!strcmp(va_arg(values, const char *), expected_display));
+    va_end(values);
+    ++draws;
+}
+
+@PROPERTIES@
+
+@DRAW@
+
+enum text_field { FIELD_FONT, FIELD_TEXT, FIELD_TIME, FIELD_X, FIELD_Y, FIELD_Z };
+
+static void check_property(int number, enum text_field field, const char *name)
+{
+    const int initial[] = {7, 0, 40, 11, 22, 33};
+    ScriptVariant index = {.vt = VT_INTEGER, .lVal = 0};
+    ScriptVariant property = {.vt = VT_INTEGER, .lVal = number};
+    ScriptVariant value = {.vt = VT_INTEGER, .lVal = 51};
+    ScriptVariant result = {0}, *out = &result;
+    ScriptVariant *arguments[] = {&index, &property, &value};
+    object.font = initial[FIELD_FONT];
+    object.time = initial[FIELD_TIME];
+    object.position.x = initial[FIELD_X];
+    object.position.y = initial[FIELD_Y];
+    object.position.z = initial[FIELD_Z];
+    assert(obor_textobj_store(&object, "First"));
+    if(name)
+    {
+        snprintf(strings[0], sizeof(strings[0]), "%s", name);
+        property.vt = VT_STR;
+        property.strVal = 0;
+    }
+    assert(openbor_gettextobjproperty(arguments, &out, 2) == S_OK && out == &result);
+    assert(property.vt == VT_INTEGER && property.lVal == number);
+    if(field == FIELD_TEXT)
+    {
+        assert(result.vt == VT_STR && !strcmp(StrCache_GetIfPresent(result.strVal), "First"));
+        StrCache_Copy(1, "Second");
+        value.vt = VT_STR;
+        value.strVal = 1;
+    }
+    else
+    {
+        assert(result.vt == VT_INTEGER && result.lVal == initial[field]);
+    }
+    assert(openbor_changetextobjproperty(arguments, &out, 3) == S_OK);
+    assert(!out && property.lVal == number);
+    const int after[] = {object.font, 0, object.time, object.position.x,
+                         object.position.y, object.position.z};
+    for(unsigned i = 0; i < sizeof(after) / sizeof(*after); ++i)
+        assert(after[i] == (i == field && field != FIELD_TEXT ? 51 : initial[i]));
+    assert(!strcmp(object.text, field == FIELD_TEXT ? "Second" : "First"));
+}
+
+static void check_drawing(const char *input, const char *expected)
+{
+    assert(obor_textobj_store(&object, input));
+    expected_display = expected;
+    unsigned previous = draws;
+    draw_textobjs();
+    assert(draws == previous + 1 && !strcmp(object.text, input));
+}
+
+static void check_display(int escaped_pairs)
+{
+    object.font = 7;
+    object.time = 40;
+    object.position.x = 11;
+    object.position.y = 22;
+    object.position.z = 33;
+    fixture_time = 39;
+    check_drawing("Plain text", "Plain text");
+    check_drawing("100%% ready", escaped_pairs ? "100% ready" : "100%% ready");
+    check_drawing("%%%%", escaped_pairs ? "%%" : "%%%%");
+    fixture_time = 40;
+    unsigned previous = draws;
+    draw_textobjs();
+    assert(draws == previous && !object.text && !object.time && !object.font);
+    assert(!object.position.x && !object.position.y && !object.position.z);
+}
+
+int main(void)
+{
+    fixture_level.textobjs = &object;
+    fixture_level.numtextobjs = 1;
+    @CHECKS@
+    printf("Text object access and drawing passed for %u contexts.\n", draws / 3);
+}

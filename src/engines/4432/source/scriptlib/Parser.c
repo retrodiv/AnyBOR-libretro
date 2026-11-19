@@ -5,7 +5,10 @@
  * Upstream code retains its original license and notices.
  * Check constant-token prefix capacity and resolve instruction labels before
  * recording control targets. Stop terminal lexer failures and EOF recovery
- * without changing finite historical recovery.
+ * without changing finite historical recovery. Preserve native bitwise
+ * forms, constant logical-not and chained-assignment instruction order by
+ * profile, with bounded token prefixes. Propagate rejected recursive
+ * operands before consuming instruction results.
  * Existing changes recorded here; this is not their implementation date.
  * See MODIFICATIONS.md and docs/modifications/4432.md
  * at the source repository root. Original notices follow below.
@@ -25,6 +28,13 @@
 #endif
 
 Parser *pcurParser = NULL;
+
+extern unsigned int obor_profile_build;
+
+static int obor_parser_legacy_bitwise(void)
+{
+    return obor_profile_build >= 4283 && obor_profile_build < 4313;
+}
 
 void Parser_Init(Parser *pparser)
 {
@@ -1273,27 +1283,27 @@ OpCode Parser_Assignment_op(Parser *pparser )
         Parser_Match(pparser);
         return MOD;
     }
-    else if (Parser_Check(pparser, TOKEN_LEFT_ASSIGN ))
+    else if (!obor_parser_legacy_bitwise() && Parser_Check(pparser, TOKEN_LEFT_ASSIGN ))
     {
         Parser_Match(pparser);
         return SHL;
     }
-    else if (Parser_Check(pparser, TOKEN_RIGHT_ASSIGN ))
+    else if (!obor_parser_legacy_bitwise() && Parser_Check(pparser, TOKEN_RIGHT_ASSIGN ))
     {
         Parser_Match(pparser);
         return SHR;
     }
-    else if (Parser_Check(pparser, TOKEN_AND_ASSIGN ))
+    else if (!obor_parser_legacy_bitwise() && Parser_Check(pparser, TOKEN_AND_ASSIGN ))
     {
         Parser_Match(pparser);
         return BIT_AND;
     }
-    else if (Parser_Check(pparser, TOKEN_XOR_ASSIGN ))
+    else if (!obor_parser_legacy_bitwise() && Parser_Check(pparser, TOKEN_XOR_ASSIGN ))
     {
         Parser_Match(pparser);
         return XOR;
     }
-    else if (Parser_Check(pparser, TOKEN_OR_ASSIGN ))
+    else if (!obor_parser_legacy_bitwise() && Parser_Check(pparser, TOKEN_OR_ASSIGN ))
     {
         Parser_Match(pparser);
         return BIT_OR;
@@ -1340,7 +1350,8 @@ void Parser_Assignment_expr2(Parser *pparser )
         {
             Parser_AddInstructionViaToken(pparser, code, (Token *)NULL, NULL );
         }
-        else Parser_Assignment_expr2(pparser );
+        else if(obor_profile_build < 4283 || obor_profile_build >= 4403)
+            Parser_Assignment_expr2(pparser );
 
         if (token.theType != END_OF_TOKENS)
         {
@@ -1879,6 +1890,7 @@ void Parser_Unary_expr(Parser *pparser )
     {
         Parser_Match(pparser);
         Parser_Unary_expr(pparser );
+        if(pparser->errorFound) return;
         pInstruction = (Instruction *)List_Retrieve(pparser->pIList);
         Parser_AddInstructionViaToken(pparser, INC, (Token *)NULL, NULL );
         Parser_AddInstructionViaToken(pparser, SAVE, pInstruction->theToken, NULL );
@@ -1888,15 +1900,17 @@ void Parser_Unary_expr(Parser *pparser )
     {
         Parser_Match(pparser);
         Parser_Unary_expr( pparser);
+        if(pparser->errorFound) return;
         pInstruction = (Instruction *)List_Retrieve(pparser->pIList);
         Parser_AddInstructionViaToken(pparser, DEC, (Token *)NULL, NULL );
         Parser_AddInstructionViaToken(pparser, SAVE, pInstruction->theToken, NULL );
         Parser_AddInstructionViaToken(pparser, LOAD, pInstruction->theToken, NULL );
     }
-    else if (Parser_Check(pparser, TOKEN_BITWISE_NOT ))
+    else if (!obor_parser_legacy_bitwise() && Parser_Check(pparser, TOKEN_BITWISE_NOT ))
     {
         Parser_Match(pparser);
         Parser_Unary_expr( pparser);
+        if(pparser->errorFound) return;
         pInstruction = (Instruction *)List_Retrieve(pparser->pIList);
         Parser_AddInstructionViaToken(pparser, NEG, (Token *)NULL, NULL );
         Parser_AddInstructionViaToken(pparser, SAVE, pInstruction->theToken, NULL );
@@ -1911,6 +1925,7 @@ void Parser_Unary_expr(Parser *pparser )
     {
         Parser_Match(pparser);
         Parser_Unary_expr(pparser );
+        if(pparser->errorFound) return;
         pInstruction = (Instruction *)List_Retrieve(pparser->pIList);
         if(pInstruction->OpCode == CONSTINT ||
                 pInstruction->OpCode == CONSTDBL )
@@ -1932,14 +1947,16 @@ void Parser_Unary_expr(Parser *pparser )
     {
         Parser_Match(pparser);
         Parser_Unary_expr(pparser );
+        if(pparser->errorFound) return;
         pInstruction = (Instruction *)List_Retrieve(pparser->pIList);
-        if(pInstruction->OpCode == CONSTINT || pInstruction->OpCode == CONSTDBL)
+        if((pInstruction->OpCode == CONSTINT && (obor_profile_build < 4283 || obor_profile_build >= 4340)) ||
+           (pInstruction->OpCode == CONSTDBL && (obor_profile_build < 4283 || obor_profile_build >= 4342)))
         {
             int constvar = !(atoi(pInstruction->theToken->theSource));
             sprintf(buf, "%d", constvar);
             strcpy(pInstruction->theToken->theSource, buf);
         }
-        else if(pInstruction->OpCode == CONSTSTR)
+        else if(pInstruction->OpCode == CONSTSTR || pInstruction->OpCode == CONSTINT || pInstruction->OpCode == CONSTDBL)
         {
             //convert to negative constant
             if(!obor_parser_prefix_token(pparser, pInstruction->theToken, '!')) return;
@@ -2029,10 +2046,11 @@ void Parser_Postfix_expr2(Parser *pparser )
         Parser_AddInstructionViaToken(pparser, SAVE, pInstruction->theToken, NULL );
         Parser_Postfix_expr2(pparser );
     }
-    else if (Parser_Check(pparser, TOKEN_BITWISE_NOT ))
+    else if (!obor_parser_legacy_bitwise() && Parser_Check(pparser, TOKEN_BITWISE_NOT ))
     {
         Parser_Match(pparser);
         Parser_Unary_expr(pparser );
+        if(pparser->errorFound) return;
         pInstruction = (Instruction *)List_Retrieve(pparser->pIList);
         Parser_AddInstructionViaToken(pparser, NEG, (Token *)NULL, NULL );
         Parser_AddInstructionViaToken(pparser, SAVE, pInstruction->theToken, NULL );

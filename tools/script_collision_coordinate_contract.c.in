@@ -1,0 +1,98 @@
+/* SPDX-License-Identifier: BSD-3-Clause
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me>
+ */
+#include <assert.h>
+#include <stdio.h>
+
+typedef int LONG;
+typedef double DOUBLE;
+typedef int HRESULT;
+enum { S_OK = 0, E_FAIL = -1 };
+#define SUCCEEDED(value) ((value) >= 0)
+
+typedef enum { VT_EMPTY = 0, VT_INTEGER = 1, VT_DECIMAL = 2, VT_PTR = 5, VT_STR = 6 } VARTYPE;
+typedef struct {
+    union { LONG lVal; DOUBLE dblVal; void *ptrVal; int strVal; };
+    VARTYPE vt;
+} ScriptVariant;
+
+static void StrCache_Collect(int index) { assert(0); }
+static int StrCache_Pop(void) { assert(0); return 0; }
+
+@COORDINATES@
+@ENUMS@
+
+typedef struct { @COORDINATE_FIELD@ coords; } s_collision_attack, s_collision_body, s_collision, s_body;
+static unsigned int obor_profile_build;
+
+void ScriptVariant_ChangeType(ScriptVariant *var, VARTYPE cvt);
+@VARIANTS@
+
+@HELPERS@
+@METHODS@
+
+typedef HRESULT (*accessor)(ScriptVariant **, ScriptVariant **, int);
+static const struct {
+    accessor get, set;
+    int properties[6];
+} families[] = {
+    {openbor_get_attack_property, openbor_set_attack_property, {@ATTACK_PROPERTIES@}},
+    {openbor_get_body_collision_property, openbor_set_body_collision_property, {@BODY_PROPERTIES@}},
+};
+
+static const struct {
+    VARTYPE type;
+    DOUBLE value;
+    int backed;
+} inputs[] = {
+@CASES@
+};
+
+static void observe(unsigned int family, unsigned int coord, unsigned int input)
+{
+    s_hitbox box = {.x = -19, .y = 7, .width = 91, .height = 110, .z1 = -13, .z2 = 24};
+    s_hitbox peer_box = {.x = 102, .y = 32, .width = 12, .height = 65, .z1 = -21, .z2 = 49};
+    s_collision_attack attack = {.coords = @ASSIGN_BOX@};
+    s_collision_body body = {.coords = @ASSIGN_BOX@};
+    s_collision_attack peer = {.coords = @ASSIGN_PEER@};
+    s_hitbox *selected = @SELECT_BOX@;
+    const s_hitbox *peer_coordinates = @SELECT_PEER@;
+    ScriptVariant handle = {.vt = VT_PTR, .ptrVal = family ? (void *)&body : (void *)&attack};
+    ScriptVariant selector = {.vt = VT_INTEGER, .lVal = families[family].properties[coord]};
+    ScriptVariant value = {.vt = inputs[input].type, .ptrVal = NULL};
+    ScriptVariant get_before = {.vt = VT_DECIMAL, .dblVal = 327.25};
+    ScriptVariant set_result = {.vt = VT_INTEGER, .lVal = -127};
+    ScriptVariant get_after = {.vt = VT_INTEGER, .lVal = -431};
+    ScriptVariant *before = &get_before, *after = &get_after, *updated = &set_result;
+    ScriptVariant *args[] = {&handle, &selector, &value};
+
+    if(value.vt == VT_INTEGER)
+    {
+        value.lVal = (LONG)inputs[input].value;
+    }
+    else if(value.vt == VT_DECIMAL)
+    {
+        value.dblVal = inputs[input].value;
+    }
+
+    int get_status = families[family].get(args, &before, 2);
+    int set_status = families[family].set(args, &updated, 3);
+    int next_status = families[family].get(args, &after, 2);
+    assert(before == &get_before && after == &get_after && updated == &set_result);
+    assert((void *)peer_coordinates != selected);
+    printf("[%u,%u,%u,%u,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,"
+           "[%d,%d,%d,%d,%d,%d],[%d,%d,%d,%d,%d,%d]]\n",
+           obor_profile_build, family, coord, input, selector.lVal,
+           get_status, get_before.vt, get_before.lVal,
+           set_status, set_result.vt, set_result.lVal,
+           next_status, get_after.vt, get_after.lVal,
+           selected->x, selected->y, selected->width, selected->height, selected->z1, selected->z2,
+           peer_coordinates->x, peer_coordinates->y, peer_coordinates->width, peer_coordinates->height,
+           peer_coordinates->z1, peer_coordinates->z2);
+}
+
+int main(void)
+{
+@CHECKS@
+    return 0;
+}

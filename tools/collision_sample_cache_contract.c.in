@@ -1,0 +1,125 @@
+/* SPDX-License-Identifier: BSD-3-Clause
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me>
+ */
+#include <stdint.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include "openbor.h"
+#include <assert.h>
+#undef printf
+
+uint32_t obor_profile_build;
+int max_collisons;
+static struct { int sprite, id, load; } observed[32], expected[32];
+static size_t observed_count, expected_count;
+
+void cachesprite(int id, int load)
+{
+    assert(observed_count < sizeof(observed) / sizeof(*observed));
+    observed[observed_count++] = (__typeof__(*observed)){1, id, load};
+}
+
+void cachesound(int id, int load)
+{
+    assert(observed_count < sizeof(observed) / sizeof(*observed));
+    observed[observed_count++] = (__typeof__(*observed)){0, id, load};
+}
+
+@FUNCTION@
+
+static const struct { int slots, capacity, mask, list, frame_sounds; } cases[] = {
+    {2, 2, 3, 1, 1},
+    {2, 2, 1, 1, 0},
+    {2, 2, 2, 1, 1},
+    {2, 1, 3, 1, 1},
+    {1, 2, 3, 1, 1},
+    {0, 2, 3, 1, 0},
+    {2, 2, 3, 0, 1},
+    {2, 2, 3, -1, 1},
+};
+
+static void expect(int sprite, int id, int load)
+{
+    assert(expected_count < sizeof(expected) / sizeof(*expected));
+    expected[expected_count++] = (__typeof__(*expected)){sprite, id, load};
+}
+
+static void check(size_t scenario, int load, int multiple)
+{
+    const __typeof__(*cases) *test = &cases[scenario];
+    s_collision_attack attack[] = { {.hitsound = 31, .blocksound = 32},
+                                    {.hitsound = 41, .blocksound = 42} };
+    s_collision_attack *slots[] = {test->mask & 1 ? &attack[0] : NULL,
+                                   test->mask & 2 ? &attack[1] : NULL};
+    s_collision_attack_list list = {
+        .instance = slots, .obor_instance_capacity = (size_t)test->capacity
+    };
+    s_collision_attack_list *frames[] = { test->list == 1 ? &list : NULL, NULL };
+    int sprites[] = {71, 72}, frame_sounds[] = {11, 12};
+    s_anim anim = {
+        .numframes = 2, .sprite = sprites,
+        .soundtoplay = test->frame_sounds ? frame_sounds : NULL,
+        .collision_attack = test->list >= 0 ? frames : NULL
+    };
+    s_anim *animations[] = { &anim };
+    s_model model = {
+        .icon = {.def = 1, .die = 2, .get = 3, .mphigh = 4, .mplow = 5, .mpmed = 6, .pain = 7, .weapon = 8},
+        .diesound = 9, .animation = animations, .animation_capacity = 1
+    };
+    for(int slot = 0; slot < MAX_PLAYERS; slot++)
+        model.parrow[slot][0] = 60 + slot;
+    max_collisons = test->slots;
+    observed_count = expected_count = 0;
+    cache_model_sprites(&model, load);
+
+    for(int icon = 1; icon <= 8; icon++)
+        expect(1, icon, load);
+    expect(0, model.diesound, load);
+    for(int slot = 0; slot < MAX_PLAYERS; slot++)
+        expect(1, 60 + slot, load);
+    expect(1, 71, load);
+    if(test->frame_sounds)
+        expect(0, 11, load);
+    int count = multiple ? test->slots : 1;
+    for(int slot = 0; test->list == 1 && slot < count && slot < test->capacity; slot++)
+    {
+        if(test->mask & (1 << slot))
+        {
+            expect(0, 31 + 10 * slot, load);
+            expect(0, 32 + 10 * slot, load);
+        }
+    }
+    expect(1, 72, load);
+    if(test->frame_sounds)
+        expect(0, 12, load);
+    if(observed_count != expected_count)
+    {
+        fprintf(stderr, "Profile %u collision sample trace at case %zu: %zu calls, expected %zu\n",
+                obor_profile_build, scenario, observed_count, expected_count);
+        abort();
+    }
+    for(size_t i = 0; i < expected_count; i++)
+    {
+        assert(observed[i].sprite == expected[i].sprite);
+        assert(observed[i].id == expected[i].id);
+        assert(observed[i].load == expected[i].load);
+    }
+}
+
+int main(void)
+{
+    static const struct { unsigned revision; int multiple; } contexts[] = { @CONTEXTS@ };
+    size_t checks = 0;
+    for(size_t r = 0; r < sizeof(contexts) / sizeof(*contexts); r++)
+    {
+        obor_profile_build = contexts[r].revision;
+        for(size_t c = 0; c < sizeof(cases) / sizeof(*cases); c++)
+        for(int load = 0; load <= 1; load++)
+        {
+            check(c, load, contexts[r].multiple);
+            ++checks;
+        }
+    }
+    printf("{\"contexts\":%zu,\"cases\":%zu}\n", sizeof(contexts) / sizeof(*contexts), checks);
+    return 0;
+}

@@ -1,0 +1,84 @@
+/* SPDX-License-Identifier: BSD-3-Clause
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me> */
+#include <stdint.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+@PRIMITIVES@
+@VARIANT_TYPES@
+@TYPES@
+static struct {int numbasemaps;s_basemap *basemaps;} level_data,*level;
+static uint32_t obor_profile_build;
+static volatile unsigned stub_calls;
+static unsigned entry_count,resets,collected;
+static const char *backend;
+static int observed_x,observed_z,unknown;
+#define CHECK(c) do{if(!(c)){fprintf(stderr,"BASEMAP_BINDING revision=%u line=%d\n",obor_profile_build,__LINE__);abort();}}while(0)
+typedef struct {int cursor;} List;
+static List theFunctionList;
+static struct {void *function;const char *name;} entries[512];
+static void List_Reset(List *p){CHECK(p==&theFunctionList&&entry_count==0);p->cursor=0;++resets;}
+static void List_InsertAfter(List *p,void *function,const char *name)
+{CHECK(p==&theFunctionList&&entry_count<512);entries[entry_count].function=function;entries[entry_count++].name=name;}
+static void StrCache_Collect(int index){CHECK(index==17);++collected;}
+static int StrCache_Pop(void){CHECK(0);return 0;}
+@CORE@
+static float observe_height(int x,int z){backend="height";observed_x=x;observed_z=z;return check_basemap(x,z);}
+static int observe_index(int x,int z){backend="index";observed_x=x;observed_z=z;return check_basemap_index(x,z);}
+@VARIANTS@
+@STUBS@
+@CALLBACKS@
+@REGISTRY@
+static const struct {unsigned revision;int available;} contexts[]={@CONTEXTS@};
+static const struct {int level,count;struct{int x,z;float data[4];}maps[2];} scenes[]={@SCENES@};
+static const struct {int scene,count,types[2];double values[2];} cases[]={@CASES@};
+static void *find(const char *name,unsigned *count)
+{void *p=NULL;*count=0;for(unsigned i=0;i<entry_count;++i)if(!strcmp(entries[i].name,name)){p=entries[i].function;++*count;}return p;}
+int main(void)
+{
+    for(unsigned r=0;r<sizeof(contexts)/sizeof(*contexts);++r){
+        obor_profile_build=contexts[r].revision;entry_count=resets=stub_calls=0;Script_LoadSystemFunctions();
+        unsigned found[2],empty_count,finish_count;
+        void *selected[]={find("checkbasemap",&found[0]),find("checkbasemapindex",&found[1])};
+        void *empty=find("isempty",&empty_count),*finish=find("finishlevel",&finish_count);
+        int controls=empty_count==1&&finish_count==1&&!strcmp(Script_GetFunctionName(empty),"isempty")&&!strcmp(Script_GetFunctionName(finish),"finishlevel");
+        printf("{\"revision\":%u,\"registered\":[%u,%u],\"reverse\":[\"%s\",\"%s\"],\"index_name_uses_height\":%s,\"control_names\":%s,\"resets\":%u}\n",
+               obor_profile_build,found[0],found[1],Script_GetFunctionName((void *)openbor_checkbasemap),
+               Script_GetFunctionName((void *)openbor_checkbasemapindex),selected[1]==(void *)openbor_checkbasemap?"true":"false",controls?"true":"false",resets);
+        for(unsigned entry=0;entry<3;++entry){
+            if(entry&&!contexts[r].available)continue;
+            CHECK(found[entry==0?0:1]==1);
+            HRESULT(*callback)(ScriptVariant**,ScriptVariant**,int)=entry==2?(void *)openbor_checkbasemapindex:selected[entry];
+            for(unsigned c=0;c<sizeof(cases)/sizeof(*cases);++c){
+                const unsigned s=cases[c].scene;s_basemap maps[2];float cells[2][4];
+                memset(maps,0,sizeof(maps));
+                for(int i=0;i<scenes[s].count;++i){maps[i].position.x=scenes[s].maps[i].x;maps[i].position.z=scenes[s].maps[i].z;
+                    maps[i].size.x=maps[i].size.z=2;memcpy(cells[i],scenes[s].maps[i].data,sizeof(cells[i]));maps[i].map=cells[i];}
+                level_data.numbasemaps=scenes[s].count;level_data.basemaps=maps;level=scenes[s].level?&level_data:NULL;
+                for(unsigned marker_kind=0;marker_kind<2;++marker_kind){
+                    ScriptVariant args_data[2],marker,*out,*args[3];memset(args_data,0,sizeof(args_data));
+                    for(unsigned i=0;i<2;++i){
+                        switch(cases[c].types[i]){
+                        case 0:args_data[i].vt=VT_INTEGER;args_data[i].lVal=(LONG)cases[c].values[i];break;
+                        case 1:args_data[i].vt=VT_DECIMAL;args_data[i].dblVal=cases[c].values[i];break;
+                        case 2:args_data[i].vt=VT_STR;args_data[i].strVal=0;break;
+                        case 3:args_data[i].vt=VT_EMPTY;break;
+                        case 4:args_data[i].vt=VT_PTR;args_data[i].ptrVal=&unknown;break;
+                        default:CHECK(0);
+                        }args[i]=&args_data[i];
+                    }
+                    args[2]=NULL;unsigned char before[sizeof(args_data)];memcpy(before,args_data,sizeof(before));
+                    memset(&marker,0,sizeof(marker));marker.vt=marker_kind?VT_INTEGER:VT_STR;marker.lVal=marker_kind?-77:17;
+                    out=&marker;collected=0;backend="";observed_x=observed_z=0;
+                    HRESULT status=callback(cases[c].count<2?NULL:args,&out,cases[c].count);
+                    printf("{\"revision\":%u,\"entry\":%u,\"case\":%u,\"marker\":%u,\"status\":%d,\"out_null\":%s,\"marker_type\":%d,\"value\":\"",
+                           obor_profile_build,entry,c,marker_kind,(int)status,out==NULL?"true":"false",marker.vt);
+                    if(marker.vt==VT_DECIMAL)printf("%a",marker.dblVal);else printf("%d",(int)marker.lVal);
+                    printf("\",\"collected\":%u,\"backend\":\"%s\",\"x\":%d,\"z\":%d,\"arguments_unchanged\":%s}\n",
+                           collected,backend,observed_x,observed_z,!memcmp(before,args_data,sizeof(before))?"true":"false");CHECK(stub_calls==0);
+                }
+            }
+        }
+    }
+    return 0;
+}

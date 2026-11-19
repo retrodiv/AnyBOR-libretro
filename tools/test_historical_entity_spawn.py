@@ -27,6 +27,49 @@ CONTRACT_PATH = Path(__file__).parent / 'fixtures/profile-entity-spawn-contracts
 
 
 class MusicSpawnContracts(unittest.TestCase):
+    def test_4432_screen_spawning_key_dispatch_and_dying_remaps(self):
+        fixture = CONTRACT_PATH.with_name('profile-4432-screen-spawn-and-keys-contracts.json')
+        data = load_contract_fixture(fixture)
+        rows = data['sources']
+        revisions = [row['revision'] for row in rows]
+        self.assertEqual(revisions, sorted(set(revisions)))
+        self.assertEqual(set(revisions), contract_revisions(data, data['expected_revisions']))
+        self.assertTrue(set(data['boundary_controls']) <= set(revisions))
+        pin = json.loads((SOURCE / 'src/pin.json').read_text())
+        for profile in contract_profiles(data, pin['profiles'], source_range=data['range']):
+            if profile['engine'] == data['engine']:
+                self.assertIn(int(profile.get('revision', profile['build'])), revisions)
+        engine = SOURCE / 'src/engines' / data['engine']
+        core = (engine / 'openbor.c').read_text()
+        arms = re.findall(r'(?m)^        case CMD_LEVEL_DYING:[\s\S]{1,900}?^            break;',
+                          function(core, 'load_level'))
+        self.assertEqual(len(arms), 1)
+        flags = data['screen_flags']
+        self.assertEqual(len(flags), 16)
+        self.assertEqual(len(set(flags)), len(flags))
+        self.assertEqual(flags[0], 'selectScreen')
+        self.assertIn('currentScene', flags)
+        for flag in flags:
+            self.assertRegex(flag, r'^[A-Za-z_]\w*$')
+        values = dict(
+            DECLARATIONS='\n'.join('static char *currentScene;' if flag == 'currentScene' else
+                                   f'static int {flag};' for flag in flags),
+            FLAGS='\n'.join(f'    {flag} = screen == {index}' +
+                           (' ? "scene" : NULL;' if flag == 'currentScene' else ';')
+                           for index, flag in enumerate(flags)),
+            METHODS='\n'.join(function(core, name) for name in (
+                'obor_profile_name_limit', 'obor_profile_copy_name', 'smartspawn', 'execute_keyscripts')),
+            COMMAND=arms[0],
+            PROFILES=',\n'.join('{%du,%d,%d,%d}' % (
+                row['revision'], row['require_level'], row['all_screens'], row['second_remap'])
+                for row in rows))
+        source = Path(__file__).with_name('screen_spawn_and_keys_contract.c.in').read_text()
+        source = re.sub(r'@([A-Z_]+)@', lambda item: values[item[1]], source)
+        actual = json.loads(native_output(source, data, extra_cflags=('-fgnu89-inline',)))
+        total = len(rows)
+        self.assertEqual(actual, {'contexts': total, 'spawn': 32 * total,
+                                  'keys': 340 * total, 'remap': 4 * total})
+
     def test_native_music_volume_order_and_player_count_eligibility(self):
         data = load_contract_fixture(Path(__file__).parent / 'fixtures/profile-music-spawn-contracts.json')
         rows = data['sources']

@@ -1,0 +1,116 @@
+/* SPDX-License-Identifier: BSD-3-Clause
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me> */
+#include <stdint.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <limits.h>
+#include <math.h>
+#include <stdarg.h>
+@WEBM@
+@PRIMITIVES@
+@VARIANT_TYPES@
+static uint32_t obor_profile_build;
+static volatile unsigned stub_calls;
+static unsigned entry_count,resets,collected,path_gets,backend_calls;
+static int backend_skip,backend_result;
+static char backend_path[64],diagnostic[512];
+static char paths[][16]={"clip.webm",""};
+static const char *events[8];
+static unsigned event_count;
+#define CHECK(c) do{if(!(c)){fprintf(stderr,"NATIVE_SCRIPT_CALL revision=%u line=%d\n",obor_profile_build,__LINE__);abort();}}while(0)
+static void event(const char *name){CHECK(event_count<8);events[event_count++]=name;}
+typedef struct {int cursor;} List;
+static List theFunctionList;
+static struct {void *function;const char *name;} entries[512];
+static void List_Reset(List *list){CHECK(list==&theFunctionList&&entry_count==0);list->cursor=0;++resets;}
+static void List_InsertAfter(List *list,void *function,const char *name)
+{CHECK(list==&theFunctionList&&entry_count<512);entries[entry_count].function=function;entries[entry_count++].name=name;}
+static void StrCache_Collect(int index){CHECK(index==17);++collected;event("collect");}
+static int StrCache_Pop(void){CHECK(0);return 0;}
+static char *StrCache_Get(int index){CHECK(index==0||index==1);++path_gets;event("path");return paths[index];}
+static int probe_printf(const char *format,...)
+{
+    va_list arguments;va_start(arguments,format);
+    int count=vsnprintf(diagnostic,sizeof(diagnostic),format,arguments);
+    va_end(arguments);CHECK(count>=0&&(unsigned)count<sizeof(diagnostic));event("diagnostic");return count;
+}
+int playwebm(char *filename,int noskip)
+{CHECK(filename==paths[0]||filename==paths[1]);++backend_calls;strcpy(backend_path,filename);backend_skip=noskip;event("play");return backend_result;}
+@SEED@
+@SEED_METHODS@
+@VARIANTS@
+@STUBS@
+@CALLBACKS@
+@REGISTRY@
+static const char *const names[]={@NAMES@};
+static void *const pointers[]={@POINTERS@};
+static const struct {unsigned revision;int available[4];} contexts[]={@CONTEXTS@};
+struct argument {int kind;LONG integer;double decimal;};
+static const struct {int function,count,null_list,backend_result;struct argument args[2];} cases[]={@CASES@};
+static int unknown;
+static void *find(const char *name,unsigned *count)
+{void *p=NULL;*count=0;for(unsigned i=0;i<entry_count;++i)if(!strcmp(entries[i].name,name)){p=entries[i].function;++*count;}return p;}
+static void json_string(const char *s)
+{
+    putchar('"');
+    for(;*s;++s){if(*s=='\n')fputs("\\n",stdout);else{if(*s=='"'||*s=='\\')putchar('\\');putchar(*s);}}
+    putchar('"');
+}
+static void initialize(ScriptVariant *v,const struct argument *a)
+{
+    memset(v,0,sizeof(*v));
+    switch(a->kind){
+    case 0:v->vt=VT_INTEGER;v->lVal=a->integer;break;
+    case 1:v->vt=VT_DECIMAL;v->dblVal=a->decimal;break;
+    case 2:v->vt=VT_STR;v->strVal=a->integer;break;
+    case 3:v->vt=VT_EMPTY;break;
+    case 4:v->vt=VT_PTR;v->ptrVal=&unknown;break;
+    case 5:v->vt=VT_EMPTY;break;
+    default:CHECK(0);
+    }
+}
+int main(void)
+{
+    for(unsigned r=0;r<sizeof(contexts)/sizeof(*contexts);++r){
+        obor_profile_build=contexts[r].revision;entry_count=resets=stub_calls=0;Script_LoadSystemFunctions();
+        unsigned found[4];void *selected[4];
+        for(unsigned f=0;f<4;++f)selected[f]=find(names[f],&found[f]);
+        unsigned empty_count,finish_count;
+        void *empty=find("isempty",&empty_count),*finish=find("finishlevel",&finish_count);
+        int controls=empty_count==1&&finish_count==1&&
+            !strcmp(Script_GetFunctionName(empty),"isempty")&&!strcmp(Script_GetFunctionName(finish),"finishlevel");
+        printf("{\"revision\":%u,\"registered\":[%u,%u,%u,%u],\"reverse\":[",obor_profile_build,found[0],found[1],found[2],found[3]);
+        for(unsigned f=0;f<4;++f){if(f)putchar(',');json_string(Script_GetFunctionName(pointers[f]));}
+        printf("],\"control_names\":%s,\"resets\":%u}\n",controls?"true":"false",resets);
+        CHECK(stub_calls==0);
+        for(unsigned c=0;c<sizeof(cases)/sizeof(*cases);++c){
+            unsigned f=cases[c].function;if(!contexts[r].available[f])continue;
+            CHECK(found[f]==1&&selected[f]==pointers[f]);
+            HRESULT(*callback)(ScriptVariant**,ScriptVariant**,int)=selected[f];
+            for(unsigned m=0;m<2;++m){
+                ScriptVariant arg[2],extra,marker,*out;
+                for(unsigned i=0;i<2;++i)initialize(&arg[i],&cases[c].args[i]);
+                memset(&extra,0,sizeof(extra));extra.vt=VT_PTR;extra.ptrVal=&unknown;
+                memset(&marker,0,sizeof(marker));marker.vt=m?VT_INTEGER:VT_STR;marker.lVal=m?-77:17;
+                ScriptVariant *args[]={cases[c].args[0].kind==5?NULL:&arg[0],cases[c].args[1].kind==5?NULL:&arg[1],&extra};
+                unsigned char args_before[sizeof(arg)],extra_before[sizeof(extra)];
+                memcpy(args_before,arg,sizeof(arg));memcpy(extra_before,&extra,sizeof(extra));
+                ScriptVariant *pointers_before[3];memcpy(pointers_before,args,sizeof(args));
+                out=&marker;collected=path_gets=backend_calls=event_count=0;backend_skip=0;backend_result=cases[c].backend_result;
+                backend_path[0]=diagnostic[0]=0;srand32(UINT64_C(0x0102030405060708));
+                HRESULT status=callback(cases[c].null_list?NULL:args,&out,cases[c].count);
+                int unchanged=!memcmp(args_before,arg,sizeof(arg))&&!memcmp(extra_before,&extra,sizeof(extra))&&!memcmp(pointers_before,args,sizeof(args));
+                printf("{\"revision\":%u,\"case\":%u,\"marker\":%u,\"status\":%d,\"out_null\":%s,\"marker_type\":%d,\"marker_value\":\"",
+                       obor_profile_build,c,m,(int)status,out==NULL?"true":"false",marker.vt);
+                if(marker.vt==VT_DECIMAL)printf("%a",marker.dblVal);else printf("%d",(int)marker.lVal);
+                printf("\",\"collected\":%u,\"path_gets\":%u,\"backend_calls\":%u,\"backend_path\":",collected,path_gets,backend_calls);
+                json_string(backend_path);printf(",\"backend_skip\":%d,\"seed\":\"%016llx\",\"diagnostic\":",backend_skip,(unsigned long long)getseed());
+                json_string(diagnostic);fputs(",\"events\":[",stdout);
+                for(unsigned i=0;i<event_count;++i){if(i)putchar(',');json_string(events[i]);}
+                printf("],\"arguments_unchanged\":%s}\n",unchanged?"true":"false");CHECK(stub_calls==0);
+            }
+        }
+    }
+    return 0;
+}

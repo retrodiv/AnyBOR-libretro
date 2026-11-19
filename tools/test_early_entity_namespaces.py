@@ -38,8 +38,12 @@ def namespace_descriptor(source, name):
 
 
 def selected_dispatch(source, name, labels):
+    """Extract property bodies for probes that pass physical property selectors."""
     method, cases = switch_cases(source, name, 'propind')
     prefix = re.split(r'\bswitch\s*\(propind\)', method, maxsplit=1)[0]
+    # The reduced probes define local property selectors and enter downstream of
+    # the 4432 ordinal mapping. The entity namespace contract tests that mapping.
+    prefix = re.sub(r'\bobor_resolve_entity_property\((arg->lVal|varlist\[1\]->lVal)\)', r'\1', prefix)
     body = '\n'.join('case ' + label + ':' + cases[label]['body'] for label in labels)
     if name == 'openbor_getentityproperty':
         return prefix + 'switch(propind){\n' + body + '\ndefault:*pretvar=NULL;return E_FAIL;}return S_OK;}\n'

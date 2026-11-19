@@ -1,0 +1,137 @@
+/* SPDX-License-Identifier: BSD-3-Clause
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me>
+ */
+#include <ctype.h>
+#include <stdint.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <strings.h>
+#include "openbor.h"
+#include "globals.h"
+#undef printf
+#ifndef stricmp
+#define stricmp strcasecmp
+#endif
+#ifndef strnicmp
+#define strnicmp strncasecmp
+#endif
+
+uint32_t obor_profile_build;
+int max_attack_types = 16;
+static char query[64];
+static unsigned contexts, checks;
+
+#define CHECK(test) do { if(!(test)) { \
+    fprintf(stderr, "Script constant revision %u name %s: %s\n", obor_profile_build, query, #test); \
+    abort(); \
+} } while(0)
+
+CHAR *StrCache_Get(int index)
+{
+    CHECK(index == 7);
+    return query;
+}
+
+void ScriptVariant_Init(ScriptVariant *value) { memset(value, 0, sizeof(*value)); }
+void ScriptVariant_Clear(ScriptVariant *value) { ScriptVariant_Init(value); }
+void ScriptVariant_ChangeType(ScriptVariant *value, VARTYPE type)
+{
+    ScriptVariant_Init(value);
+    value->vt = type;
+}
+void ScriptVariant_Copy(ScriptVariant *left, ScriptVariant *right) { *left = *right; }
+
+void ScriptVariant_ToString(ScriptVariant *value, LPSTR output)
+{
+    CHECK(value->vt == VT_STR);
+    snprintf(output, 128, "%s", StrCache_Get(value->strVal));
+}
+
+static int discard_diagnostic(const char *format, ...)
+{
+    CHECK(format && *format);
+    return 0;
+}
+
+@ARRAYS@
+@VARIABLES@
+@SUPPORT@
+#define printf discard_diagnostic
+@MAPPER@
+#undef printf
+@EXTRA_CODE@
+
+typedef struct
+{
+    const char *name;
+    int known;
+    int value;
+} Expectation;
+
+@TABLES@
+
+static void populate(int base)
+{
+    for(int i = 0; i < max_attack_types; ++i)
+    {
+        @POPULATE@
+    }
+}
+
+static void check_lookup(const Expectation *expected, ScriptVariant **args)
+{
+    ScriptVariant result = {0}, *out = &result;
+    HRESULT status = openbor_transconst(args, &out, 1);
+    if(expected->known)
+    {
+        CHECK(status == S_OK && out == &result);
+        CHECK(result.vt == VT_INTEGER && result.lVal == expected->value);
+    }
+    else
+    {
+        CHECK(status == E_FAIL && !out);
+    }
+    ++checks;
+}
+
+static void check(unsigned revision, const Expectation *entries, size_t count)
+{
+    obor_profile_build = revision;
+    for(size_t i = 0; i < count; ++i)
+    {
+        const Expectation *expected = entries + i;
+        ScriptVariant input = {.vt = VT_STR, .strVal = 7};
+        ScriptVariant *args[] = {&input};
+        size_t length = strlen(expected->name);
+        CHECK(length < sizeof(query));
+        memcpy(query, expected->name, length + 1);
+        populate(1000);
+        check_lookup(expected, args);
+
+        input.vt = VT_STR;
+        input.strVal = 7;
+        for(size_t j = 0; j < length; ++j)
+            query[j] = (char)tolower((unsigned char)query[j]);
+        CHECK(mapstrings_transconst(args, 1) == expected->known);
+        if(expected->known)
+            CHECK(input.vt == VT_INTEGER && input.lVal == expected->value);
+        else
+            CHECK(input.vt == VT_STR && input.strVal == 7);
+        ++checks;
+
+        populate(5000);
+        check_lookup(expected, args);
+    }
+    ScriptVariant value = {.vt = VT_INTEGER, .lVal = -17};
+    ScriptVariant *args[] = {&value};
+    const Expectation numeric = {"", 1, -17};
+    check_lookup(&numeric, args);
+    ++contexts;
+}
+
+int main(void)
+{
+    @CHECKS@
+    printf("{\"contexts\":%u,\"checks\":%u}\n", contexts, checks);
+}

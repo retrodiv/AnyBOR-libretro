@@ -1,0 +1,77 @@
+/* SPDX-License-Identifier: BSD-3-Clause
+ * Copyright (c)2026 retrodiv <retrodiv@proton.me> */
+#include <assert.h>
+#include <stdint.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wignored-qualifiers"
+#include "types.h"
+#include "globals.h"
+#include "spriteq.h"
+#undef printf
+uint32_t obor_profile_build;
+#define CHECK(c) do{if(!(c)){fprintf(stderr,"QUEUE_LIMIT revision=%u line=%d\n",obor_profile_build,__LINE__);abort();}}while(0)
+static s_sprite frame;
+static s_screen screen;
+static s_sprite_list node;
+static s_sprite_map map_record;
+s_sprite_map *sprite_map=&map_record;
+s_sprite *loadsprite2(char *filename,int *width,int *height)
+{(void)filename;(void)width;(void)height;return NULL;}
+@STORAGE@
+@FUNCTIONS@
+#pragma GCC diagnostic pop
+static void add(unsigned route,int index)
+{
+    switch(route) {
+    case 0:spriteq_add_frame(index,2,3,&frame,NULL,4);break;
+    case 1:spriteq_add_sprite(index,2,3,0,NULL,4);break;
+    case 2:spriteq_add_screen(index,2,3,&screen,NULL,4);break;
+    case 3:spriteq_add_dot(index,2,3,4,NULL);break;
+    case 4:spriteq_add_line(index,2,3,4,5,6,NULL);break;
+    case 5:spriteq_add_box(index,2,3,4,5,6,NULL);break;
+    default:abort();
+    }
+}
+int main(void)
+{
+    static const struct {uint32_t revision;unsigned limit;} profiles[]={@PROFILES@};
+    CHECK(MAXQSPRITES==5000);
+    node.sprite=&frame;map_record.node=&node;
+    for(unsigned p=0;p<sizeof(profiles)/sizeof(*profiles);p++) {
+        obor_profile_build=profiles[p].revision;
+        unsigned limit=profiles[p].limit;
+        CHECK(spriteq_get_sprite_max()==(int)limit);
+        for(unsigned route=0;route<7;route++) {
+            unsigned char last[sizeof(qstruct)],first[sizeof(qstruct)];
+            spriteq_unlock();spriteq_clear();
+            CHECK(spriteq_get_sprite_count()==0);
+            for(unsigned i=0;i<limit;i++) {
+                add(route==6?i%6:route,(int)i);
+                CHECK(spriteq_get_sprite_count()==(int)(i+1));
+                CHECK(order[i]==&queue[i] && queue[i].x==(int)i);
+            }
+            memcpy(first,queue,sizeof(first));memcpy(last,queue+limit-1,sizeof(last));
+            for(unsigned i=0;i<6;i++) add(i,9000+(int)i);
+            CHECK(spriteq_get_sprite_count()==(int)limit);
+            CHECK(!memcmp(first,queue,sizeof(first)) && !memcmp(last,queue+limit-1,sizeof(last)));
+            CHECK(order[limit-1]==queue+limit-1);
+            spriteq_lock();CHECK(spriteq_islocked());spriteq_clear();
+            CHECK(spriteq_get_sprite_count()==(int)limit);
+            spriteq_unlock();spriteq_clear();CHECK(spriteq_get_sprite_count()==0);
+            add(3,17);spriteq_lock();add(4,18);spriteq_clear();
+            CHECK(spriteq_get_sprite_count()==1 && queue[0].x==17 && order[0]==queue);
+            spriteq_unlock();spriteq_clear();CHECK(spriteq_get_sprite_count()==0);
+        }
+        spriteq_add_frame(0,0,0,NULL,NULL,0);
+        spriteq_add_screen(0,0,0,NULL,NULL,0);
+        node.sprite=NULL;spriteq_add_sprite(0,0,0,0,NULL,0);node.sprite=&frame;
+        CHECK(spriteq_get_sprite_count()==0);
+    }
+    printf("{\"status\":\"PASS\",\"contexts\":%u,\"routes\":%u}\n",
+           (unsigned)(sizeof(profiles)/sizeof(*profiles)),
+           (unsigned)(7*sizeof(profiles)/sizeof(*profiles)));
+    return 0;
+}

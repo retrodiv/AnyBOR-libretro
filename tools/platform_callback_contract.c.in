@@ -1,0 +1,77 @@
+/* SPDX-License-Identifier: BSD-3-Clause
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me> */
+#include <stdint.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include "openbor.h"
+#undef printf
+#undef assert
+uint32_t obor_profile_build;
+static unsigned active_case;
+#define assert(c) do{if(!(c)){fprintf(stderr,"PLATFORM_CALLBACK revision=%u case=%u line=%d: %s\n",obor_profile_build,active_case,__LINE__,#c);abort();}}while(0)
+HRESULT Interpreter_Call(Interpreter *p){(void)p;abort();}
+HRESULT Interpreter_EvalInstruction(Interpreter *p){(void)p;abort();}
+void StrCache_Collect(int index){(void)index;abort();}
+int StrCache_Pop(void){abort();}
+void StrCache_Grab(int index){(void)index;abort();}
+@VARIANTS@
+@INITIALIZED@
+static entity actor,platform;
+static s_scripts scripts;
+static Script script;
+static ScriptVariant locals[3];
+static unsigned writes,executions;
+static int plane,decimal;
+static entity *selected_platform;
+static const char *names[]={"self","plane","platform"};
+static void probe_local(Script *target,const char *name,ScriptVariant *value)
+{
+    assert(target==&script && writes<6 && !strcmp(name,names[writes%3]));
+    unsigned slot=writes%3;
+    if(writes<3){
+        if(slot==0)assert(value->vt==VT_PTR && value->ptrVal==&actor);
+        else if(slot==1)assert(value->vt==VT_INTEGER && value->lVal==plane);
+        else assert(value->vt==(decimal?VT_DECIMAL:VT_PTR) && value->ptrVal==selected_platform);
+    }else assert(value->vt==VT_EMPTY);
+    ScriptVariant_Copy(&locals[slot],value);
+    if(writes<3){
+        assert(locals[slot].vt==value->vt);
+        if(slot==1)assert(locals[slot].lVal==plane);
+        else assert(locals[slot].ptrVal==value->ptrVal);
+    }else assert(locals[slot].vt==VT_EMPTY && locals[slot].ptrVal==NULL);
+    writes++;
+}
+int Script_Execute(Script *target)
+{
+    assert(target==&script && target->initialized && writes==3 && executions++==0);
+    assert(locals[0].vt==VT_PTR && locals[0].ptrVal==&actor);
+    assert(locals[1].vt==VT_INTEGER && locals[1].lVal==plane);
+    assert(locals[2].vt==(decimal?VT_DECIMAL:VT_PTR) && locals[2].ptrVal==selected_platform);
+    return 1;
+}
+#undef Script_Set_Local_Variant
+#define Script_Set_Local_Variant probe_local
+@CALLBACK@
+static const struct {unsigned revision;int decimal;} contexts[]={@CONTEXTS@};
+static const struct {int plane,present,initialized;} cases[]={@CASES@};
+int main(void)
+{
+    memset(&actor,0,sizeof(actor));memset(&platform,0,sizeof(platform));
+    memset(&scripts,0,sizeof(scripts));memset(&script,0,sizeof(script));
+    actor.scripts=&scripts;scripts.onblockp_script=&script;
+    for(unsigned context=0;context<sizeof(contexts)/sizeof(*contexts);context++){
+        obor_profile_build=contexts[context].revision;decimal=contexts[context].decimal;
+        for(active_case=0;active_case<sizeof(cases)/sizeof(*cases);active_case++){
+            plane=cases[active_case].plane;selected_platform=cases[active_case].present?&platform:NULL;
+            script.initialized=cases[active_case].initialized;writes=executions=0;
+            memset(locals,0,sizeof(locals));for(unsigned i=0;i<3;i++)ScriptVariant_Init(&locals[i]);
+            execute_onblockp_script(&actor,plane,selected_platform);
+            assert(writes==(script.initialized?6u:0u) && executions==(script.initialized?1u:0u));
+            for(unsigned i=0;i<3;i++)assert(locals[i].vt==VT_EMPTY && locals[i].ptrVal==NULL);
+            assert(actor.scripts==&scripts && scripts.onblockp_script==&script);
+        }
+        printf("{\"revision\":%u,\"status\":\"PASS\"}\n",obor_profile_build);
+    }
+    return 0;
+}

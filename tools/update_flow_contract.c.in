@@ -1,0 +1,151 @@
+/* SPDX-License-Identifier: BSD-3-Clause
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me> */
+#include <stdint.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <limits.h>
+@FLAGS@
+@GAME_SPEED@
+@PIXEL_FORMAT@
+@PLAYERS@
+@SLOW_SWITCH@
+#define MIN_INT INT_MIN
+#define MAX_INT INT_MAX
+#define SAMPLE_PAUSE 7
+#define A_REC_PLAY 1
+#define A_REC_REC 2
+#undef DEBUG_MODE
+static uint32_t obor_profile_build;
+static unsigned case_index,event_count;
+static uint64_t event_hash;
+#define CHECK(c) do{if(!(c)){fprintf(stderr,"UPDATE_FLOW revision=%u case=%u line=%d\n",obor_profile_build,case_index,__LINE__);abort();}}while(0)
+static int goto_mainmenu_flag,pause,bothnewkeys,endgame,screenformat;
+static uint32_t time,newtime,interval;
+static int alwaysupdate,nopause,level_completed,tospeedup;
+static int freezeall=1,timeleft,noshare,credits,noscreenshot;
+static unsigned debug_time;
+static char debug_msg[8];
+static struct {int x,y,font_index;} debug_xy_msg;
+static struct {int toggle,duration,counter;} slowmotion;
+static struct {int status;} playback,*playrecstatus=&playback;
+static struct {int noslow,settime,type,pos,width,quake;} level_data,*level=&level_data;
+static struct {void *ent;int newkeys,lives,joining,credits;} player[MAX_PLAYERS];
+static struct {int effectvol;} savedata={37};
+static struct {int hRes,vRes;} videomodes={320,240};
+typedef struct {int id;} s_screen;
+static s_screen frame_screen={0},pause_screen={1},bg_screen={2};
+static s_screen *vscreen=&frame_screen,*background;
+static void *getpal;
+@SCREEN_DECLARATIONS@
+@SCREEN_UNION@
+static const int scenes[][16]={@CASES@};
+static const int *scene;
+static int remaining_requests;
+static void byte_hash(unsigned byte){event_hash^=byte;event_hash*=UINT64_C(1099511628211);}
+static void event(const char *name,int a,int b)
+{
+    ++event_count;
+    for(const char *p=name;*p;++p)byte_hash((unsigned char)*p);
+    byte_hash(0);
+    int values[]={a,b,pause,goto_mainmenu_flag,(int)time,endgame,!!(bothnewkeys&FLAG_SCREENSHOT),
+                  player[0].lives,player[1].lives,player[2].lives,player[3].lives};
+    for(unsigned i=0;i<sizeof(values)/sizeof(*values);++i){
+        uint32_t value=(uint32_t)values[i];
+        for(unsigned shift=0;shift<32;shift+=8)byte_hash((value>>shift)&255u);
+    }
+}
+static void goto_mainmenu(int flag);
+static void update(int ingame,int wait);
+static void service(const char *name,int stage)
+{
+    event(name,0,0);
+    if(stage && scene[11]==stage && remaining_requests){
+        --remaining_requests;goto_mainmenu(scene[13]);event("request",scene[13],0);
+    }
+}
+static void getinterval(void){interval=scene[14];event("interval",0,0);}
+static void inputrefresh(int status){CHECK(status==0);service("input",1);}
+static void execute_updatescripts(void){service("pre",2);}
+static void execute_keyscripts(void){service("keys",3);}
+static void execute_updatedscripts(void){service("post",4);}
+#define PROVIDER(n,label) static void n(void){event(label,0,0);}
+PROVIDER(update_scroller,"scroll")
+PROVIDER(update_scrolled_bg,"background_update")
+PROVIDER(update_ents,"entities")
+PROVIDER(draw_scrolled_bg,"background_draw")
+PROVIDER(draw_textobjs,"text")
+PROVIDER(display_ents,"display")
+PROVIDER(pausemenu,"pause_menu")
+PROVIDER(spriteq_clear,"queue_clear")
+PROVIDER(spriteq_lock,"lock")
+PROVIDER(spriteq_unlock,"unlock")
+PROVIDER(vga_vwait,"wait")
+PROVIDER(check_music,"music")
+PROVIDER(sound_update_music,"music_update")
+static void time_over(void){CHECK(0);}
+static void updatestatus(void){CHECK(0);}
+static void predrawstatus(void){CHECK(0);}
+static void drawstatus(void){CHECK(0);}
+static int playRecordedInputs(void){CHECK(0);return 0;}
+static int recordInputs(void){CHECK(0);return 0;}
+static void stopRecordInputs(void){CHECK(0);}
+static s_screen *allocscreen(int w,int h,int format)
+{CHECK(w==320&&h==240);event("allocate",w,format);return &pause_screen;}
+static void copyscreen(s_screen *a,s_screen *b)
+{CHECK(a==&pause_screen&&b==vscreen);event("copy",a->id,b->id);}
+static void freescreen(s_screen **p)
+{CHECK(*p==&pause_screen);event("free",(*p)->id,0);*p=NULL;}
+static void clearscreen(s_screen *p){CHECK(p==vscreen);event("clear",0,0);}
+static void spriteq_draw(s_screen *p,int a,int b,int c,int d,int e)
+{CHECK((p==vscreen||p==&pause_screen)&&a==0&&b==MIN_INT&&c==MAX_INT&&d==0&&e==0);event("queue_draw",p->id,0);}
+static void spriteq_add_screen(int a,int b,int z,s_screen *p,void *method,int c)
+{CHECK(a==0&&b==0&&z==MIN_INT&&method==NULL&&c==0);event("queue_screen",p->id,0);}
+static void sound_pause_music(int value){CHECK(value==1);event("music_pause",value,0);}
+static void sound_pause_sample(int value){CHECK(value==1);event("sample_pause",value,0);}
+static void sound_play_sample(int sample,int channel,int left,int right,int speed)
+{CHECK(sample==7&&channel==0&&left==37&&right==37&&speed==100);event("pause_sample",sample,left);}
+static void screenshot(s_screen *p,void *palette,int value)
+{CHECK(p==vscreen&&palette==getpal&&value==1);event("screenshot",0,0);}
+static void video_copy_screen(s_screen *p){CHECK(p==vscreen);event("video",0,0);}
+static int fontheight(int font){CHECK(0);return 0;}
+static void screen_printf(s_screen *p,int x,int y,int font,const char *format,...){CHECK(0);}
+@METHODS@
+static void initialize(const int *c,int fixed_format)
+{
+    @SCREEN_RESET@
+    @SCREEN_SET@
+    scene=c;remaining_requests=c[12];pause=c[2];alwaysupdate=c[3];nopause=c[4];
+    goto_mainmenu_flag=c[7];bothnewkeys=c[9]?FLAG_SCREENSHOT:0;
+    background=c[10]?&bg_screen:NULL;screenformat=fixed_format?PIXEL_32:c[15];
+    time=newtime=endgame=0;level_data.type=2;
+    memset(&slowmotion,0,sizeof(slowmotion));
+    debug_time=0;memset(debug_msg,0,sizeof(debug_msg));
+    for(int i=0;i<MAX_PLAYERS;++i){
+        player[i].ent=(c[5]&(1<<i))?vscreen:NULL;
+        player[i].newkeys=(c[6]&(1<<i))?FLAG_START:0;player[i].lives=7+i;
+    }
+    event_count=0;event_hash=UINT64_C(14695981039346656037);
+}
+int main(void)
+{
+    static const struct {unsigned revision;int available,fixed_format;} contexts[]={@CONTEXTS@};
+    static const int setters[]={@SETTERS@};
+    for(unsigned r=0;r<sizeof(contexts)/sizeof(*contexts);++r){
+        obor_profile_build=contexts[r].revision;
+        if(contexts[r].available)for(unsigned i=0;i<sizeof(setters)/sizeof(*setters);++i){
+            goto_mainmenu_flag=0;goto_mainmenu(setters[i]);
+            printf("{\"revision\":%u,\"setter\":%u,\"flag\":%d}\n",obor_profile_build,i,goto_mainmenu_flag);
+        }
+        for(case_index=0;case_index<sizeof(scenes)/sizeof(*scenes);++case_index){
+            initialize(scenes[case_index],contexts[r].fixed_format);
+            update(scene[0],scene[8]);
+            printf("{\"revision\":%u,\"case\":%u,\"events\":%u,\"digest\":\"%016llx\",\"state\":[%d,%d,%d,%d,%d",
+                   obor_profile_build,case_index,event_count,(unsigned long long)event_hash,
+                   pause,goto_mainmenu_flag,(int)time,endgame,!!(bothnewkeys&FLAG_SCREENSHOT));
+            for(int i=0;i<MAX_PLAYERS;++i)printf(",%d",player[i].lives);
+            printf(",%d]}\n",remaining_requests);
+        }
+    }
+    return 0;
+}

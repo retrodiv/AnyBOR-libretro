@@ -4,7 +4,9 @@
  * These contributions are licensed under BSD-3-Clause; see LICENSE at the root.
  * Upstream code retains its original license and notices.
  * Keep unavailable sprite images out of the drawing queue while retaining
- * native requests, ordering and copied draw methods.
+ * native requests, ordering and copied draw methods. Preserve each
+ * historical profile's queue admission and maximum query with unchanged
+ * physical backing.
  * Existing changes recorded here; this is not their implementation date.
  * See MODIFICATIONS.md and docs/modifications/4432.md
  * at the source repository root. Original notices follow below.
@@ -30,6 +32,18 @@
 // This should be enough for most games...
 // But bear in mind that text is also composed of sprites!
 #define			MAXQSPRITES		5000 // DEFAULT 5000
+
+/* Retain the largest backing store and each original profile's admission limit. */
+static int obor_spriteq_limit(void)
+{
+    if(obor_profile_build >= 4283 && obor_profile_build < 4333)
+    {
+        if(obor_profile_build < 4328) return 600;
+        if(obor_profile_build < 4329) return 1000;
+        return 2000;
+    }
+    return MAXQSPRITES;
+}
 
 #define         SQT_SPRITE      0
 #define         SQT_DOT         1
@@ -69,7 +83,7 @@ int spriteq_get_sprite_count()
 // Return the current sprite .
 int spriteq_get_sprite_max()
 {
-    return MAXQSPRITES;
+    return obor_spriteq_limit();
 }
 
 void spriteq_add_frame(int x, int y, int z, s_sprite *frame, s_drawmethod *pdrawmethod, int sortid)
@@ -78,7 +92,7 @@ void spriteq_add_frame(int x, int y, int z, s_sprite *frame, s_drawmethod *pdraw
     {
         return;
     }
-    if(spritequeue_len >= MAXQSPRITES)
+    if(spritequeue_len >= obor_spriteq_limit())
     {
         return;
     }
@@ -114,7 +128,7 @@ void spriteq_add_sprite(int x, int y, int z, int id, s_drawmethod *pdrawmethod, 
     {
         return;
     }
-    if(spritequeue_len >= MAXQSPRITES)
+    if(spritequeue_len >= obor_spriteq_limit())
     {
         return;
     }
@@ -141,7 +155,7 @@ void spriteq_add_sprite(int x, int y, int z, int id, s_drawmethod *pdrawmethod, 
 
 void spriteq_add_screen(int x, int y, int z, s_screen *ps, s_drawmethod *pdrawmethod, int sortid)
 {
-    if(spritequeue_len >= MAXQSPRITES)
+    if(spritequeue_len >= obor_spriteq_limit())
     {
         return;
     }
@@ -169,7 +183,7 @@ void spriteq_add_screen(int x, int y, int z, s_screen *ps, s_drawmethod *pdrawme
 
 void spriteq_add_dot(int sx, int sy, int z, int colour, s_drawmethod *pdrawmethod)
 {
-    if(spritequeue_len >= MAXQSPRITES)
+    if(spritequeue_len >= obor_spriteq_limit())
     {
         return;
     }
@@ -194,7 +208,7 @@ void spriteq_add_dot(int sx, int sy, int z, int colour, s_drawmethod *pdrawmetho
 
 void spriteq_add_line(int sx, int sy, int ex, int ey, int z, int colour, s_drawmethod *pdrawmethod)
 {
-    if(spritequeue_len >= MAXQSPRITES)
+    if(spritequeue_len >= obor_spriteq_limit())
     {
         return;
     }
@@ -221,7 +235,7 @@ void spriteq_add_line(int sx, int sy, int ex, int ey, int z, int colour, s_drawm
 
 void spriteq_add_box(int x, int y, int width, int height, int z, int colour, s_drawmethod *pdrawmethod)
 {
-    if(spritequeue_len >= MAXQSPRITES)
+    if(spritequeue_len >= obor_spriteq_limit())
     {
         return;
     }

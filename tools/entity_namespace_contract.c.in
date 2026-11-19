@@ -1,0 +1,101 @@
+/* SPDX-License-Identifier: BSD-3-Clause
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me> */
+#include <stdint.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <strings.h>
+#include "source/scriptlib/depends.h"
+#include "source/scriptlib/ScriptVariant.h"
+#undef printf
+
+uint32_t obor_profile_build;
+typedef struct { int present; } entity;
+typedef struct s_model s_model;
+static int observed;
+static unsigned diagnostics, collections;
+static const char *property;
+
+CHAR *StrCache_Get(int index)
+{
+    if(index != 0) abort();
+    return (CHAR *)property;
+}
+CHAR *StrCache_GetIfPresent(int index) { return StrCache_Get(index); }
+void StrCache_Collect(int index)
+{
+    if(index < 0 || index > 1) abort();
+    collections |= 1u << index;
+}
+int StrCache_Pop(void) { abort(); }
+static int observe_diagnostic(const char *format, ...)
+{
+    ++diagnostics;
+    return 0;
+}
+
+@VARIANTS@
+#define stricmp strcasecmp
+@SEARCH@
+#define printf observe_diagnostic
+@NAMESPACE@
+@MAPPER@
+@GETTER@
+@SETTER@
+#undef printf
+
+static const unsigned revisions[] = { @REVISIONS@ };
+static const struct { int missing, ordinal; const char *name; } queries[] = { @QUERIES@ };
+
+static void query(unsigned index, int mode)
+{
+    entity actor = {1};
+    ScriptVariant args[3] = {0}, result = {0}, *out = &result;
+    ScriptVariant *slots[] = {&args[0], &args[1], queries[index].missing ? NULL : &args[2]};
+    args[0].vt = VT_PTR;
+    args[0].ptrVal = &actor;
+    property = queries[index].name;
+    args[1].vt = property ? VT_STR : VT_INTEGER;
+    if(property) args[1].strVal = 0;
+    else args[1].lVal = queries[index].ordinal;
+    args[2].vt = VT_INTEGER;
+    result.vt = VT_STR;
+    result.strVal = 1;
+    observed = -1;
+    diagnostics = collections = 0;
+    int status;
+    if(mode == 0)
+    {
+        status = mapstrings_entityproperty(slots, 3);
+    }
+    else if(mode == 1)
+    {
+        status = openbor_getentityproperty(slots, &out, queries[index].missing ? 3 : 2);
+    }
+    else
+    {
+        status = openbor_changeentityproperty(slots, &out, 3);
+    }
+    printf(",[%d,%d,%d,%d,%u,%u,%d]", status, args[1].vt == VT_INTEGER,
+           (int)args[1].lVal, observed, diagnostics, collections, out == NULL);
+}
+
+int main(void)
+{
+    for(unsigned r = 0; r < sizeof(revisions) / sizeof(*revisions); ++r)
+    {
+        obor_profile_build = revisions[r];
+        for(unsigned i = 0; i < sizeof(queries) / sizeof(*queries); ++i)
+        {
+            printf("[%u,%u", obor_profile_build, i);
+            if(queries[i].missing)
+            {
+                query(i, 1);
+            }
+            else
+            {
+                for(int mode = 0; mode < 3; ++mode) query(i, mode);
+            }
+            printf("]\n");
+        }
+    }
+}

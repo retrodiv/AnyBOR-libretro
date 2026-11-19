@@ -1,0 +1,81 @@
+/* SPDX-License-Identifier: BSD-3-Clause
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me> */
+#include <stdint.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include "source/scriptlib/depends.h"
+#include "source/scriptlib/ScriptVariant.h"
+#undef printf
+
+uint32_t obor_profile_build;
+@WALLS@
+static s_terrain walls[5];
+static struct { int numwalls; s_terrain *walls; } scene = {5, walls}, *level;
+static float altitude;
+static unsigned queries;
+void StrCache_Collect(int index) { abort(); }
+void StrCache_Grab(int index) { abort(); }
+int StrCache_Pop(void) { abort(); }
+
+@VARIANTS@
+@GEOMETRY@
+@CORE@
+static int observe_wall(float x, float z, float y)
+{
+    altitude = y;
+    ++queries;
+    return checkwall_below(x, z, y);
+}
+@SCRIPT@
+
+static const unsigned revisions[] = { @REVISIONS@ };
+static const struct { int argc, kind, present; double x, z, y, seed; } cases[] = { @CASES@ };
+int main(void)
+{
+    static const float heights[] = {0, 4, 12, 18, 52};
+    if(sizeof(DOUBLE) != 8 || sizeof(LONG) != 4) abort();
+    for(unsigned i = 0; i < sizeof(walls) / sizeof(*walls); ++i)
+    {
+        walls[i] = (s_terrain){.x = 0, .z = 10, .depth = 20, .upperleft = -10, .lowerleft = -10,
+                               .upperright = 10, .lowerright = 10, .height = heights[i]};
+    }
+    for(unsigned r = 0; r < sizeof(revisions) / sizeof(*revisions); ++r)
+    {
+        obor_profile_build = revisions[r];
+        for(unsigned i = 0; i < sizeof(cases) / sizeof(*cases); ++i)
+        {
+            ScriptVariant args[3] = {0}, result = {0}, incoming = {0}, *out = &result;
+            ScriptVariant *slots[] = {&args[0], &args[1], &args[2]};
+            for(unsigned k = 0; k < 3; ++k) ScriptVariant_Init(&args[k]);
+            args[0].vt = args[1].vt = VT_DECIMAL;
+            args[0].dblVal = cases[i].x;
+            args[1].dblVal = cases[i].z;
+            if(cases[i].kind == 1 || cases[i].kind == 3)
+            {
+                if(cases[i].kind == 3)
+                {
+                    args[2].vt = VT_DECIMAL;
+                    args[2].dblVal = cases[i].seed;
+                }
+                incoming.vt = VT_INTEGER;
+                incoming.lVal = (LONG)cases[i].y;
+                ScriptVariant_Copy(&args[2], &incoming);
+            }
+            else if(cases[i].kind == 2)
+            {
+                args[2].vt = VT_DECIMAL;
+                args[2].dblVal = cases[i].y;
+            }
+            result.vt = VT_INTEGER;
+            result.lVal = -77;
+            altitude = 0;
+            queries = 0;
+            level = cases[i].present ? &scene : NULL;
+            int status = openbor_checkwall(slots, &out, cases[i].argc);
+            double value = result.vt == VT_DECIMAL ? result.dblVal : result.lVal;
+            printf("[%u,%u,%d,%d,%d,%.9g,%u,%.17g]\n", obor_profile_build, i, status,
+                   out == NULL, result.vt, value, queries, (double)altitude);
+        }
+    }
+}

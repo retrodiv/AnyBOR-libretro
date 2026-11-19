@@ -755,12 +755,16 @@ int sound_query_channel(int playid)
 
 int sound_id(int channel)
 {
+    if(channel < 0 || channel >= MAX_CHANNELS) return -1;
+
     if(vchannel[channel].active) return vchannel[channel].playid;
     else return -1;
 }
 
 int sound_is_active(int channel)
 {
+    if(channel < 0 || channel >= MAX_CHANNELS) return 0;
+
     if( vchannel[channel].active ) return 1;
     return 0;
 }
@@ -794,6 +798,8 @@ void sound_pause_sample(int toggle)
 
 void sound_pause_single_sample(int toggle, int channel)
 {
+    if(channel < 0 || channel >= MAX_CHANNELS) return;
+
     vchannel[channel].paused = toggle;
 }
 

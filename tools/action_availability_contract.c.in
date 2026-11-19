@@ -1,0 +1,213 @@
+/* SPDX-License-Identifier: BSD-3-Clause
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me>
+ */
+#include <stdint.h>
+#include <stdio.h>
+#include "openbor.h"
+#undef printf
+
+uint32_t obor_profile_build;
+static unsigned int fixture_time = 100;
+#undef time
+#define time fixture_time
+static int max_animations = MAX_ANIS, combodelay = 12;
+static int attack_ids[] = {ANI_ATTACK1};
+static int *animattacks = attack_ids;
+static int no_target, selected, sounds, bomb_calls;
+static int healthcheat, nocost;
+s_savedata savedata;
+static s_level level_value, *level = &level_value;
+static entity actor, other, *self = &actor, *smartbomber;
+static s_anim clips[MAX_ANIS], *animations[MAX_ANIS];
+static s_energycost cost = {.cost = 3, .mponly = COST_TYPE_MP_THEN_HP};
+static s_collision_attack bomb_effect;
+
+HRESULT Interpreter_Call(Interpreter *p) { (void)p; abort(); }
+HRESULT Interpreter_EvalInstruction(Interpreter *p) { (void)p; abort(); }
+void common_attack_proc(void) {}
+void common_grabattack(void) {}
+void bomb_explode(void) {}
+void npc_warp(void) {}
+
+int set_idle(entity *ent) { ent->idling = 1; return 1; }
+void smart_bomb(entity *e, s_collision_attack *attack) { ++bomb_calls; }
+int sound_play_sample(int sample, unsigned int priority, int left, int right, unsigned int speed)
+{
+    ++sounds;
+    return 0;
+}
+
+void ent_unlink(entity *e)
+{
+    e->link->link = NULL;
+    e->link = NULL;
+}
+
+entity *normal_find_target(int animation, int detect)
+{
+    return no_target ? NULL : &other;
+}
+
+void ent_set_anim(entity *ent, int aninum, int resetable)
+{
+    @ANIMATION_GATE@
+    selected = aninum;
+}
+
+@GRAB_TABLE@
+@NATIVE@
+
+static void reset(void)
+{
+    actor = (entity){0};
+    other = (entity){0};
+    level_value = (s_level){0};
+    memset(animations, 0, sizeof(animations));
+    actor.modeldata.animation = animations;
+    actor.modeldata.animation_capacity = MAX_ANIS;
+    selected = -1;
+    sounds = bomb_calls = healthcheat = nocost = no_target = 0;
+    smartbomber = NULL;
+}
+
+static void define_clip(int id, int frames)
+{
+    clips[id] = (s_anim){0};
+    clips[id].numframes = frames;
+    animations[id] = frames < 0 ? NULL : &clips[id];
+}
+
+static void chain_cases(void)
+{
+    static const struct {int frames, player, target;} cases[] = {@CHAIN@};
+    for(size_t i = 0; i < sizeof(cases) / sizeof(cases[0]); ++i)
+    {
+        reset();
+        define_clip(ANI_ATTACK1, cases[i].frames);
+        actor.modeldata.chainlength = 1;
+        actor.modeldata.atchain[0] = 1;
+        actor.modeldata.type = cases[i].player ? TYPE_PLAYER : TYPE_ENEMY;
+        no_target = !cases[i].target;
+        int result = perform_atchain();
+        printf("%s[%d,%d,%d,%d]", i ? "," : "", result, selected == ANI_ATTACK1,
+               actor.attacking, actor.combostep[0]);
+    }
+}
+
+static void grab_cases(void)
+{
+    static const struct {int which, step, first, finisher, fallback;} cases[] = {@GRAB@};
+    for(size_t i = 0; i < sizeof(cases) / sizeof(cases[0]); ++i)
+    {
+        reset();
+        int direction = cases[i].which < 0 ? 0 : cases[i].which;
+        int first = grab_attacks[direction][0], finisher = grab_attacks[direction][1];
+        define_clip(first, cases[i].first);
+        define_clip(finisher, cases[i].finisher);
+        define_clip(ANI_ATTACK3, cases[i].fallback);
+        actor.combostep[direction] = cases[i].step;
+        actor.link = &other;
+        actor.velocity.x = actor.velocity.z = other.velocity.x = other.velocity.z = 2;
+        dograbattack(cases[i].which);
+        int played = selected == first ? 1 : selected == finisher ? 2 : selected == ANI_ATTACK3 ? 3 : 0;
+        printf("%s[%d,%d,%d,%d,%d]", i ? "," : "", played, actor.combostep[direction],
+               actor.attacking, actor.takeaction == common_grabattack,
+               actor.velocity.x == 0 && actor.velocity.z == 0 && other.velocity.x == 0 && other.velocity.z == 0);
+    }
+}
+
+static void bomb_cases(void)
+{
+    static const struct {int air, explode, already, first, second, audible;} cases[] = {@BOMB@};
+    for(size_t i = 0; i < sizeof(cases) / sizeof(cases[0]); ++i)
+    {
+        reset();
+        define_clip(ANI_ATTACK1, cases[i].first);
+        define_clip(ANI_ATTACK2, cases[i].second);
+        actor.takeaction = cases[i].already ? bomb_explode : NULL;
+        actor.position.y = cases[i].air ? 2 : 0;
+        actor.toexplode = cases[i].explode;
+        actor.direction = DIRECTION_RIGHT;
+        actor.modeldata.speed = 6;
+        actor.velocity.x = 3;
+        actor.velocity.y = actor.velocity.z = 1;
+        actor.modeldata.diesound = cases[i].audible ? 4 : -1;
+        actor.modeldata.subject_to_wall = actor.modeldata.subject_to_hole = 1;
+        int result = bomb_move();
+        int played = selected == ANI_ATTACK1 ? 1 : selected == ANI_ATTACK2 ? 2 : 0;
+        printf("%s[%d,%d,%d,%d,%d,%d,%d]", i ? "," : "", result, played,
+               actor.takeaction == bomb_explode, (int)actor.velocity.x,
+               actor.velocity.y == 0 && actor.velocity.z == 0,
+               !actor.modeldata.subject_to_wall && actor.modeldata.subject_to_platform &&
+               !actor.modeldata.subject_to_hole, sounds);
+    }
+}
+
+static void warp_cases(void)
+{
+    static const struct {int follow, parent, linked, frames, x, z;} cases[] = {@WARP@};
+    for(size_t i = 0; i < sizeof(cases) / sizeof(cases[0]); ++i)
+    {
+        reset();
+        define_clip(ANI_IDLE, cases[i].frames);
+        clips[ANI_IDLE].range.max.x = 10;
+        actor.modeldata.subtype = cases[i].follow ? SUBTYPE_FOLLOW : 0;
+        actor.parent = cases[i].parent ? &other : NULL;
+        actor.link = cases[i].linked ? &other : NULL;
+        actor.position.x = cases[i].x;
+        actor.position.z = cases[i].z;
+        int result = ai_check_warp();
+        printf("%s[%d,%d]", i ? "," : "", result, actor.takeaction == npc_warp);
+    }
+}
+
+static void special_cases(void)
+{
+    static const struct {int frames, cost_present, rule, cantfire, mp, hp, link, effect, freeze;} cases[] = {
+        @SPECIAL@
+    };
+    for(size_t i = 0; i < sizeof(cases) / sizeof(cases[0]); ++i)
+    {
+        reset();
+        define_clip(ANI_SPECIAL, cases[i].frames);
+        clips[ANI_SPECIAL].energycost = cases[i].cost_present ? &cost : NULL;
+        level->nospecial = cases[i].rule;
+        actor.cantfire = cases[i].cantfire;
+        actor.modeldata.type = TYPE_PLAYER;
+        actor.mp = cases[i].mp;
+        actor.health = cases[i].hp;
+        actor.running = 1;
+        actor.modeldata.smartbomb = cases[i].effect ? &bomb_effect : NULL;
+        actor.modeldata.dofreeze = cases[i].freeze;
+        if(cases[i].link)
+        {
+            actor.link = &other;
+            other.link = &actor;
+        }
+        int result = check_special();
+        printf("%s[%d,%d,%d,%d,%d,%d,%d,%d,%d]", i ? "," : "", result, selected == ANI_SPECIAL,
+               actor.attacking, actor.running, actor.mp, actor.health, actor.link != NULL,
+               bomb_calls, smartbomber == &actor);
+    }
+}
+
+int main(void)
+{
+    static const unsigned profiles[] = {@PROFILES@};
+    for(size_t p = 0; p < sizeof(profiles) / sizeof(profiles[0]); ++p)
+    {
+        obor_profile_build = profiles[p];
+        printf("[%u,[[", profiles[p]);
+        chain_cases();
+        printf("],[");
+        grab_cases();
+        printf("],[");
+        bomb_cases();
+        printf("],[");
+        warp_cases();
+        printf("],[");
+        special_cases();
+        puts("]]]");
+    }
+    return 0;
+}

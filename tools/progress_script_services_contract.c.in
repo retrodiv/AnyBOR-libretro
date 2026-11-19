@@ -1,0 +1,227 @@
+/* SPDX-License-Identifier: BSD-3-Clause
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me>
+ */
+#include <limits.h>
+#include <stdarg.h>
+#include <stdint.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include "openbor.h"
+#include "globals.h"
+#include "ram.h"
+#undef printf
+#undef malloc
+#undef calloc
+#undef realloc
+#undef free
+
+uint32_t obor_profile_build;
+static unsigned checks;
+#define CHECK(test) do { if(!(test)) { \
+    fprintf(stderr, "Script services revision %u check %u: %s\n", obor_profile_build, checks, #test); \
+    abort(); \
+} } while(0)
+
+void *checkAlloc(void *p, size_t bytes, const char *function, const char *file, int line)
+{
+    (void)function;
+    (void)file;
+    (void)line;
+    CHECK(!bytes || p);
+    return p;
+}
+void borExit(int status) { (void)status; abort(); }
+#include "List.c"
+
+static char log_text[256];
+static unsigned released_level, ram_updates, played, corrected;
+static int actual_x, actual_y, actual_skip;
+unsigned char pal[1024];
+s_savedata savedata;
+
+static int record_message(const char *format, ...)
+{
+    va_list args;
+    va_start(args, format);
+    int length = vsnprintf(log_text, sizeof(log_text), format, args);
+    va_end(args);
+    CHECK(length >= 0 && (size_t)length < sizeof(log_text));
+    return length;
+}
+
+void unload_level(void) { ++released_level; }
+void getRamStatus(int unit) { CHECK(unit == BYTES); ++ram_updates; }
+
+enum {PATH, SAVED_RESULT, NAME, EMPTY_NAME};
+static char strings[][32] = {"fixture.gif", "saved result", "0", ""};
+static unsigned references[sizeof(strings) / sizeof(*strings)];
+
+CHAR *StrCache_GetIfPresent(int index)
+{
+    CHECK(index >= 0 && (unsigned)index < sizeof(references) / sizeof(*references));
+    return references[index] ? strings[index] : NULL;
+}
+CHAR *StrCache_Get(int index)
+{
+    CHAR *name = StrCache_GetIfPresent(index);
+    CHECK(name);
+    return name;
+}
+void StrCache_Collect(int index)
+{
+    CHECK(StrCache_GetIfPresent(index));
+    --references[index];
+}
+void StrCache_Grab(int index)
+{
+    CHECK(StrCache_GetIfPresent(index));
+    ++references[index];
+}
+int StrCache_Pop(void) { abort(); }
+
+int playgif(char *name, int x, int y, int noskip)
+{
+    CHECK(!strcmp(name, "fixture.gif"));
+    ++played;
+    actual_x = x;
+    actual_y = y;
+    actual_skip = noskip;
+    return 39;
+}
+
+void palette_set_corrected(unsigned char *palette, int gr, int gg, int gb, int br, int bg, int bb)
+{
+    CHECK(palette == pal && played == 1);
+    CHECK(gr == 7 && gg == 7 && gb == 7 && br == 3 && bg == 3 && bb == 3);
+    ++corrected;
+}
+
+@VARIANTS@
+@CONTAINERS@
+#define printf record_message
+@APIS@
+static void free_model_message(void) { @MODEL@ }
+static void level_message(void) { @LEVEL@ }
+static void shutdown_message(int startup_done, int disablelog) { @SHUTDOWN@ }
+#undef printf
+
+static void check_messages(const char *model, const char *level, const char *shutdown)
+{
+    free_model_message();
+    CHECK(!strcmp(log_text, model));
+    ++checks;
+    ram_updates = 0;
+    level_message();
+    CHECK(!strcmp(log_text, level) && ram_updates == 1);
+    ++checks;
+    for(int started = 0; started < 2; ++started)
+    for(int quiet = 0; quiet < 2; ++quiet)
+    {
+        released_level = 0;
+        log_text[0] = 0;
+        shutdown_message(started, quiet);
+        CHECK(released_level == (unsigned)started);
+        CHECK(!strcmp(log_text, quiet ? "" : shutdown));
+        ++checks;
+    }
+}
+
+static void check_gif(int early)
+{
+    savedata.gamma = 7;
+    savedata.brightness = 3;
+    for(int scenario = 0; scenario < 4; ++scenario)
+    {
+        played = corrected = 0;
+        log_text[0] = 0;
+        references[SAVED_RESULT] = references[PATH] = 1;
+        ScriptVariant path = {.vt = VT_STR, .strVal = PATH};
+        ScriptVariant x = {.vt = VT_DECIMAL, .dblVal = 3.75};
+        ScriptVariant y = {.vt = VT_INTEGER, .lVal = 2};
+        ScriptVariant skip = {.vt = VT_INTEGER, .lVal = 1};
+        ScriptVariant result = {.vt = VT_STR, .strVal = SAVED_RESULT}, *out = &result;
+        ScriptVariant *args[] = {&path, &x, &y, &skip};
+        if(scenario == 2) x.vt = VT_EMPTY;
+        if(scenario == 3) path.vt = VT_INTEGER;
+        int count = scenario == 1 ? 4 : (scenario == 2 ? 2 : 1);
+        HRESULT status = openbor_playgif(args, &out, count);
+        if(scenario < 2)
+        {
+            CHECK(status == S_OK && out == &result);
+            CHECK(result.vt == VT_INTEGER && result.lVal == 39);
+            CHECK(played == 1 && corrected == 1 && !references[SAVED_RESULT]);
+            CHECK(actual_x == (scenario ? 3 : 0) && actual_y == (scenario ? 2 : 0));
+            CHECK(actual_skip == scenario && !log_text[0]);
+        }
+        else
+        {
+            CHECK(status == E_FAIL && !out && !played && !corrected);
+            CHECK(result.vt == (scenario == 2 && early ? VT_INTEGER : VT_STR));
+            CHECK(references[SAVED_RESULT] == (unsigned)(scenario != 2 || !early));
+            CHECK(!strcmp(log_text, "Function need a string parameter, other parameters are optional: playgif(path, int x, int y, int noskip)\n"));
+        }
+        CHECK(references[PATH] == 1);
+        ++checks;
+    }
+}
+
+static void check_add(int named)
+{
+    const char *error = "Function requires 1 array handle and 1 int value (index): add(array, index)\n";
+    Varlist array = {0};
+    Varlist_Init(&array, 1);
+    array.vars[1] = (ScriptVariant){.vt = VT_INTEGER, .lVal = 11};
+    ScriptVariant handle = {.vt = VT_PTR, .ptrVal = &array};
+    ScriptVariant key = {.vt = VT_DECIMAL, .dblVal = 0.75};
+    ScriptVariant value = {.vt = VT_INTEGER, .lVal = 42};
+    ScriptVariant result = {0}, *out = &result;
+    ScriptVariant *args[] = {&handle, &key, &value};
+    log_text[0] = 0;
+    CHECK(openbor_add(args, &out, 3) == S_OK && !out && !log_text[0]);
+    CHECK(array.vars->lVal == 2 && array.vars[1].lVal == 42 && array.vars[2].lVal == 11);
+    ++checks;
+
+    references[NAME] = references[EMPTY_NAME] = 1;
+    for(int scenario = 0; scenario < 3; ++scenario)
+    {
+        key.vt = VT_STR;
+        key.strVal = scenario == 2 ? EMPTY_NAME : NAME;
+        value.lVal = 50 + scenario;
+        out = &result;
+        log_text[0] = 0;
+        CHECK(openbor_add(args, &out, 3) == (named ? S_OK : E_FAIL) && !out);
+        CHECK(!strcmp(log_text, named ? "" : error));
+        CHECK(array.vars->lVal == 2 && array.vars[1].lVal == 42 && array.vars[2].lVal == 11);
+        ScriptVariant *stored = Varlist_GetByName(&array, "0");
+        if(named)
+        {
+            CHECK(stored && stored->vt == VT_INTEGER && stored->lVal == (scenario ? 51 : 50));
+            CHECK(List_GetSize(array.list) == 1);
+        }
+        else
+            CHECK(!stored && List_GetSize(array.list) == 0);
+        ++checks;
+    }
+    Varlist_Clear(&array);
+}
+
+static const struct
+{
+    unsigned revision;
+    const char *model, *level, *shutdown;
+    int gif_early, named_add;
+} contexts[] = {@CONTEXTS@};
+
+int main(void)
+{
+    size_t count = sizeof(contexts) / sizeof(*contexts);
+    for(size_t i = 0; i < count; ++i)
+    {
+        obor_profile_build = contexts[i].revision;
+        check_messages(contexts[i].model, contexts[i].level, contexts[i].shutdown);
+        check_gif(contexts[i].gif_early);
+        check_add(contexts[i].named_add);
+    }
+    printf("{\"contexts\":%zu,\"checks\":%u}\n", count, checks);
+}

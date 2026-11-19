@@ -1,0 +1,172 @@
+/* SPDX-License-Identifier: BSD-3-Clause
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me>
+ */
+#include <stdarg.h>
+#include <stdint.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include "openbor.h"
+#include "translation.h"
+#undef printf
+
+uint32_t obor_profile_build;
+const s_drawmethod plainmethod = {0};
+s_savedata savedata;
+static s_level room = {.scrolldir = SCROLL_RIGHT};
+s_level *level = &room;
+float advancex = 40, advancey = 30;
+int gfx_x_offset = 5, gfx_y_offset = 6;
+static s_model model = {.name = "Scout 2"};
+static entity actor, deceased = {.dead = 1};
+static entity *entities[] = {NULL, &deceased, &actor};
+entity **ent_list = entities;
+int ent_max = 3, max_collisons = 2;
+
+static s_hitbox body_shapes[] = {
+    {.x = -8, .y = -12, .width = 5, .height = 9},
+    {.x = 6, .y = -2, .width = 13, .height = 4},
+};
+static s_hitbox attack_shapes[] = {
+    {.x = 7, .y = -7, .width = 21, .height = 12},
+    {.x = 12, .y = 1, .width = 16, .height = 11},
+};
+static s_collision_body body[] = {
+    {.coords = &body_shapes[0]}, {.coords = &body_shapes[1]},
+};
+static s_collision_attack attack[] = {
+    {.coords = &attack_shapes[0]}, {.coords = &attack_shapes[1]},
+};
+static s_collision_body *body_slots[] = {&body[0], &body[1]};
+static s_collision_attack *attack_slots[] = {&attack[0], &attack[1]};
+static s_collision_body_list bodies = {.instance = body_slots, .obor_instance_capacity = 2};
+static s_collision_attack_list attacks = {.instance = attack_slots, .obor_instance_capacity = 2};
+static s_collision_body_list *body_frames[] = {&bodies};
+static s_collision_attack_list *attack_frames[] = {&attacks};
+static s_anim anim = {
+    .range = {.min = {.x = -4, .y = -5}, .max = {.x = 18, .y = 17}},
+    .collision_body = body_frames, .collision_attack = attack_frames,
+    .numframes = 1, .obor_frame_capacity = 1, .obor_attack_frame_capacity = 1,
+};
+
+HRESULT Interpreter_Call(Interpreter *interpreter) { abort(); }
+HRESULT Interpreter_EvalInstruction(Interpreter *interpreter) { abort(); }
+void *checkAlloc(void *ptr, size_t size, const char *func, const char *file, int line)
+{
+    if(size && !ptr) abort();
+    return ptr;
+}
+char *ob_gettrans(char *message) { return message; }
+int _makecolour(int r, int g, int b) { return (r << 16) | (g << 8) | b; }
+int fontheight(int font) { return 8; }
+
+static void measure_text(char *result, size_t size, const char *format, va_list args)
+{
+    const int length = vsnprintf(result, size, format, args);
+    if(length < 0 || (size_t)length >= size || strpbrk(result, "\"\\\n"))
+    {
+        abort();
+    }
+}
+
+int font_string_width(int font, char *format, ...)
+{
+    char text[80];
+    va_list args;
+    va_start(args, format);
+    measure_text(text, sizeof(text), format, args);
+    va_end(args);
+    int width = 0;
+    for(const char *c = text; *c; ++c)
+    {
+        width += *c == 'X' ? 4 : *c == 'B' ? 1 : 2;
+    }
+    return width;
+}
+
+static int calls;
+static void separator(void)
+{
+    if(calls++) putchar(',');
+}
+
+void font_printf(int x, int y, int font, int layer, char *format, ...)
+{
+    char text[80];
+    va_list args;
+    va_start(args, format);
+    measure_text(text, sizeof(text), format, args);
+    va_end(args);
+    separator();
+    printf("[\"text\",%d,%d,%d,%d,\"%s\"]", x, y, font, layer, text);
+}
+
+void spriteq_add_dot(int x, int y, int z, int colour, s_drawmethod *method)
+{
+    separator();
+    printf("[\"dot\",%d,%d,%d,%d]", x, y, z, colour);
+}
+
+void spriteq_add_box(int x, int y, int width, int height, int z, int colour, s_drawmethod *method)
+{
+    separator();
+    printf("[\"box\",%d,%d,%d,%d,%d,%d,%d]", x, y, width, height, z, colour, method ? method->alpha : 0);
+}
+
+@NATIVE@
+
+static void initialize_actor(int alternate, int left, int noquake)
+{
+    actor = (entity){0};
+    actor.model = &model;
+    actor.animation = &anim;
+    actor.modeldata.noquake = noquake ? NO_QUAKEN : 0;
+    actor.direction = left ? DIRECTION_LEFT : DIRECTION_RIGHT;
+    actor.base = alternate ? 0.5f : -2.75f;
+    actor.position.x = alternate ? -8.75f : 12345.75f;
+    actor.position.y = alternate ? 6.5f : -18.25f;
+    actor.position.z = alternate ? -9.25f : 149.5f;
+}
+
+static void geometry_cases(void)
+{
+    for(int i = 0; i < 2; ++i)
+    {
+        initialize_actor(i, i, i);
+        calls = 0;
+        printf("%s[", i ? "," : "");
+        draw_position_entity(&actor, i ? -2 : 3, 19, NULL);
+        putchar(']');
+    }
+
+    static const struct { int flags, left, noquake, dead; } cases[] = {
+        {1, 0, 0, 0}, {2, 0, 0, 0}, {3, 0, 0, 0}, {28, 0, 0, 0}, {28, 1, 1, 0}, {31, 0, 0, 1},
+    };
+    for(size_t i = 0; i < sizeof(cases) / sizeof(*cases); ++i)
+    {
+        initialize_actor(0, cases[i].left, cases[i].noquake);
+        actor.dead = cases[i].dead;
+        const int flags = cases[i].flags;
+        savedata.debug_position = !!(flags & 1);
+        savedata.debug_features = !!(flags & 2);
+        savedata.debug_collision_range = !!(flags & 4);
+        savedata.debug_collision_body = !!(flags & 8);
+        savedata.debug_collision_attack = !!(flags & 16);
+        calls = 0;
+        printf(",[");
+        draw_visual_debug();
+        putchar(']');
+    }
+}
+
+int main(void)
+{
+    const unsigned profiles[] = {@PROFILES@};
+    for(size_t i = 0; i < sizeof(profiles) / sizeof(*profiles); ++i)
+    {
+        obor_profile_build = profiles[i];
+        printf("{\"revision\":%u,\"cases\":[", profiles[i]);
+        geometry_cases();
+        puts("]}");
+    }
+}

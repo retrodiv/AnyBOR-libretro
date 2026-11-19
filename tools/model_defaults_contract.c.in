@@ -1,0 +1,129 @@
+/* SPDX-License-Identifier: BSD-3-Clause
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me> */
+#include <stdint.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <strings.h>
+#include <stdarg.h>
+#include <setjmp.h>
+#include <ctype.h>
+#include "openbor.h"
+#include "commands.h"
+#undef printf
+#undef assert
+uint32_t obor_profile_build;
+static unsigned active_case;
+#define assert(c) do{if(!(c)){fprintf(stderr,"MODEL_DEFAULTS revision=%u case=%u line=%d: %s\n",obor_profile_build,active_case,__LINE__,#c);abort();}}while(0)
+void *checkAlloc(void *p,size_t n,const char *fn,const char *file,int line){(void)fn;(void)file;(void)line;assert(!n || p);return p;}
+#undef malloc
+#undef free
+HRESULT Interpreter_Call(Interpreter *p){(void)p;abort();}
+HRESULT Interpreter_EvalInstruction(Interpreter *p){(void)p;abort();}
+void borExit(int status){(void)status;abort();}
+#include "List.c"
+#ifndef stricmp
+#define stricmp strcasecmp
+#endif
+static char diagnostic[4096];
+static jmp_buf stopped;
+static int message(const char *format,...)
+{
+    size_t used=strlen(diagnostic);va_list args;va_start(args,format);
+    int result=vsnprintf(diagnostic+used,sizeof(diagnostic)-used,format,args);va_end(args);
+    assert(result>=0 && (size_t)result<sizeof(diagnostic)-used);return result;
+}
+void shutdown(int status,char *format,...)
+{
+    assert(status==1);va_list args;va_start(args,format);
+    int count=vsnprintf(diagnostic,sizeof(diagnostic),format,args);va_end(args);
+    assert(count>=0 && (size_t)count<sizeof(diagnostic));longjmp(stopped,1);
+}
+static s_model model,parent;
+static entity actor;
+static s_defense defense[4];
+const s_defense default_defense={.factor=1.f};
+int max_attack_types=3,max_animations=4,magic_type;
+float default_model_jumpspeed=7,default_model_jumpheight=8,default_model_grabdistance=9,noatk_duration=.75f;
+static unsigned script_alloc_calls,cache_calls;
+void alloc_all_scripts(void *slot){assert(slot);s_scripts *scripts=NULL;memcpy(slot,&scripts,sizeof(scripts));script_alloc_calls++;}
+int get_cached_model_index(char *name)
+{
+    assert(!strcmp(name,"K'") || !strcmp(name,"flash") || !strcmp(name,"2.25"));
+    cache_calls++;
+    return 2;
+}
+static int handle_txt_include(char *command,ArgList *args,char **file,char *name,char **buf,ptrdiff_t *pos,size_t *len)
+{
+    (void)args;(void)name;(void)buf;(void)pos;(void)len;assert(command && !strcmp(*file,"unit-model"));return 0;
+}
+static List *modelcmdlist;
+@CONSTANTS@
+#define printf message
+@NUMBERS@
+@COMMANDS@
+@FUNCTIONS@
+static void dispatch(char *input)
+{
+    ArgList arglist={0};char argbuf[MAX_ARG_LEN]={0};char *buf=input,*filename="unit-model",*command=NULL,*value;
+    char fnbuf[512]={0};size_t size=strlen(input);ptrdiff_t pos=0;modelCommands cmd=0;s_model *newchar=&model;
+    @PREFIX@
+    switch(cmd){@ARMS@ default:@DEFAULT@}
+    }
+}
+static int run_command(char *input){if(setjmp(stopped))return 0;dispatch(input);return 1;}
+#undef printf
+static const unsigned contexts[]={@CONTEXTS@};
+static const struct {const char *kind,*text;int seed,sentinel,old;} cases[]={@CASES@};
+static void setup(int seed,int sentinel)
+{
+    memset(&model,0,sizeof(model));memset(defense,0,sizeof(defense));model.defense=defense;
+    @SEED@
+    if(sentinel)model.aimove=model.aiattack=(unsigned)-1;
+    diagnostic[0]=0;
+}
+static void json_string(const char *text)
+{
+    putchar('"');for(const unsigned char *p=(const unsigned char *)text;*p;p++){
+        if(*p=='"' || *p=='\\'){putchar('\\');putchar(*p);}
+        else if(*p=='\n')fputs("\\n",stdout);else if(*p=='\r')fputs("\\r",stdout);
+        else if(*p=='\t')fputs("\\t",stdout);else{assert(*p>=32);putchar(*p);}
+    }putchar('"');
+}
+int main(void)
+{
+    static s_modelcache cache;cache.name="unit-model";cache.path="unit-path";model_cache=&cache;
+    for(unsigned context=0;context<sizeof(contexts)/sizeof(*contexts);context++){
+        obor_profile_build=contexts[context];modelcmdlist=createModelCommandList();assert(modelcmdlist);
+        for(active_case=0;active_case<sizeof(cases)/sizeof(*cases);active_case++){
+            int seed=cases[active_case].seed,old=cases[active_case].old;
+            setup(!strcmp(cases[active_case].kind,"inherit")?37:seed,cases[active_case].sentinel);
+            s_model *observed=&model;
+            if(!strcmp(cases[active_case].kind,"constructor")){
+                script_alloc_calls=cache_calls=0;observed=init_model(0,1);
+                assert(observed && observed->name==cache.name && observed->path==cache.path);
+                assert(script_alloc_calls==1 && cache_calls==2 && observed->defense && observed->offense_factors);
+                assert(observed->special && observed->animation && observed->animation_capacity==4);
+            }else if(!strcmp(cases[active_case].kind,"inherit")){
+                memset(&actor,0,sizeof(actor));memset(&parent,0,sizeof(parent));actor.modeldata=model;
+                @INHERIT_SEED@
+                @CONSTRAINTS@
+                parent.aimove=44;parent.aiattack=55;ent_copy_uninit(&actor,&parent);observed=&actor.modeldata;
+            }else{
+                char input[256];int n=snprintf(input,sizeof(input),"%s\n",cases[active_case].text);
+                assert(n>0 && (size_t)n<sizeof(input));
+                char *begin=input,*end;
+                do{end=strchr(begin,'|');if(end)*end=0;if(!run_command(begin))break;begin=end?end+1:NULL;}while(begin);
+            }
+            double values[]={@SNAPSHOT@};
+            printf("{\"revision\":%u,\"diagnostic\":",obor_profile_build);json_string(diagnostic);fputs(",\"values\":[",stdout);
+            for(unsigned i=0;i<sizeof(values)/sizeof(*values);i++)printf("%s%.17g",i?",":"",values[i]);
+            puts("]}");
+            if(!strcmp(cases[active_case].kind,"constructor")){
+                free(observed->defense);free(observed->offense_factors);free(observed->special);free(observed->animation);free(observed);
+            }
+        }
+        freeCommandList(modelcmdlist);
+    }
+    return 0;
+}

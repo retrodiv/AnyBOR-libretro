@@ -1,0 +1,77 @@
+/* SPDX-License-Identifier: BSD-3-Clause
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me>
+ */
+#include <stdint.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include "openbor.h"
+#include <assert.h>
+#undef printf
+
+uint32_t obor_profile_build;
+char branch_name[MAX_NAME_LEN + 1];
+int endgame;
+static char text[MAX_STR_VAR_LEN + 1];
+static unsigned contexts, checks;
+
+CHAR *StrCache_Get(int slot)
+{
+    assert(slot == 0);
+    return text;
+}
+
+@HELPERS@
+@BRANCH@
+
+static void compare_name(const char *result, size_t requested, size_t limit)
+{
+    size_t expected = requested < limit ? requested : limit;
+    size_t actual = strlen(result);
+    if (actual != expected)
+        fprintf(stderr, "Profile %u kept %zu of %zu name bytes, expected %zu\n",
+                obor_profile_build, actual, requested, expected);
+    assert(actual == expected);
+    assert(memcmp(result, text, expected) == 0);
+    ++checks;
+}
+
+static void check_names(unsigned revision, size_t limit)
+{
+    const size_t lengths[] = { 0, 46, 47, 48, 49, 50, 51 };
+    assert(lengths[6] < sizeof(text));
+    obor_profile_build = revision;
+    for (size_t i = 0; i < sizeof(lengths) / sizeof(lengths[0]); i++)
+    {
+        size_t length = lengths[i];
+        for (size_t k = 0; k < length; k++)
+            text[k] = 'a' + k % 26;
+        text[length] = '\0';
+
+        ScriptVariant branch = { .vt = VT_STR, .strVal = 0 };
+        ScriptVariant immediate = { .vt = VT_INTEGER, .lVal = 1 };
+        ScriptVariant *args[] = { &branch, &immediate };
+        ScriptVariant *returned = &immediate;
+        endgame = 0;
+        assert(openbor_jumptobranch(args, &returned, 2) == S_OK);
+        assert(returned == NULL && endgame == 1);
+        compare_name(branch_name, length, limit);
+
+#ifdef PROFILE_NAME_COPY
+        char name[MAX_NAME_LEN + 1];
+        memset(name, 'X', sizeof(name));
+        obor_profile_copy_name(name, text);
+        compare_name(name, length, limit);
+        for (size_t k = length; k <= limit; k++)
+            assert(name[k] == '\0');
+#endif
+    }
+    ++contexts;
+}
+
+int main(void)
+{
+@CHECKS@
+    printf("{\"contexts\":%u,\"checks\":%u}\n", contexts, checks);
+    return 0;
+}

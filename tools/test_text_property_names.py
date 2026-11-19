@@ -15,16 +15,25 @@ import unittest
 from test_historical_player import function
 from native_sanitizers import sanitizer_environment
 from historical_stringmap_dispatch import render_dispatch
+from test_historical_common_think import native_output
 
 ROOT=Path(__file__).resolve().parents[1]
 SOURCE=Path(os.environ.get('OBOR_TEST_SOURCE',ROOT))
 class TextPropertyNameTests(unittest.TestCase):
     def test_every_engine_names_numeric_ids_unknowns_and_repeated_lowering(self):
+        self.check_name_matrix(exclude='4432')
+
+    def test_4432_names_numeric_ids_unknowns_and_repeated_lowering(self):
+        self.check_name_matrix(only='4432')
+
+    def check_name_matrix(self, *, only=None, exclude=None):
         pin=json.loads((SOURCE/'src/pin.json').read_text())
         fixture=load_contract_fixture(Path(__file__).with_name('fixtures').joinpath('text-property-contracts.json'))
         self.assertEqual(fixture['schema'],1)
         for engine_spec in pin['engines']:
             engine=engine_spec['build']
+            if (only is not None and engine != only) or engine == exclude:
+                continue
             with self.subTest(engine=engine),tempfile.TemporaryDirectory(prefix='text-property-names-') as temporary:
                 source=SOURCE/f'src/engines/{engine}/openborscript.c'
                 if 'OBOR_TOLERANCE_DRAFT'in os.environ:source=Path(os.environ['OBOR_TOLERANCE_DRAFT'])/'text-maps'/engine/'openborscript.c'
@@ -97,5 +106,44 @@ int main(void){
                 p=subprocess.run(cmd,text=True,capture_output=True,timeout=30);self.assertEqual(p.returncode,0,p.stdout+p.stderr)
                 p=subprocess.run([str(binary)],text=True,capture_output=True,timeout=10,env=sanitizer_environment());self.assertEqual(p.returncode,0,p.stdout+p.stderr)
                 self.assertRegex(p.stdout,r'(?m)^text_names=1 native_ids=1 unknown_refused=1 cached_ids=1 native_mapper_entry=1 contexts='+str(len(contexts))+r'$')
-                print(engine,p.stdout.strip(),flush=True)
+                print(engine,p.stdout.strip().splitlines()[-1],flush=True)
+
+    def test_4432_numbered_properties_and_drawn_text(self):
+        fixture = load_contract_fixture(Path(__file__).with_name('fixtures') / 'text-property-contracts.json')
+        family = fixture['engines']['4432']
+        source = SOURCE / 'src/engines/4432'
+        script = (source / 'openborscript.c').read_text()
+        game = (source / 'openbor.c').read_text()
+        utilities = (source / 'source/utils.c').read_text()
+        declarations = re.search(r'enum gtop_enum\s*\{[^}]*\};', script)[0]
+        definitions = [function(utilities, 'searchList')]
+        for name in ('obor_textobj_property', 'mapstrings_textobjproperty', 'obor_textobj_index',
+                     'obor_textobj_store', 'obor_textobj_format', 'openbor_gettextobjproperty',
+                     'openbor_changetextobjproperty'):
+            if name != 'obor_textobj_property' or name + '(' in script:
+                definitions.append(function(script, name))
+        checks = []
+        for revision in family['extra_contexts']:
+            selected = [rule for rule in family['rules'] if rule['first'] <= revision <= rule['last']]
+            self.assertEqual(len(selected), 1)
+            rule = selected[0]
+            fields = rule['numbered_fields']
+            self.assertEqual(sorted(fields), ['font', 'text', 'time', 'x', 'y', 'y', 'z'])
+            self.assertIn(rule['display'], ('escaped-pairs', 'literal'))
+            checks.append(f'obor_profile_build = {int(revision)}u;')
+            for number, field in enumerate(fields):
+                checks.append(f'check_property({number}, FIELD_{field.upper()}, NULL);')
+            for name, number in rule['methods']['mapstrings_textobjproperty'].items():
+                checks.append(f'check_property({number}, FIELD_{fields[number].upper()}, {json.dumps(name)});')
+            checks.append(f'check_display({int(rule["display"] == "escaped-pairs")});')
+        template = Path(__file__).with_name('text_object_profile_contract.c.in').read_text()
+        draw = function(game, 'draw_textobjs').replace('<= time)', '<= fixture_time)')
+        replacements = dict(PROPERTIES=declarations + '\n' + '\n'.join(definitions),
+                            DRAW=draw, CHECKS='\n'.join(checks))
+        for name, value in replacements.items():
+            template = template.replace('@' + name + '@', value)
+        output = native_output(template, {'engine': '4432'}, extra_cflags=('-fgnu89-inline',))
+        self.assertEqual(output, f'Text object access and drawing passed for {len(family["extra_contexts"])} contexts.\n')
+        print(output.strip(), flush=True)
+
 if __name__=='__main__':unittest.main()

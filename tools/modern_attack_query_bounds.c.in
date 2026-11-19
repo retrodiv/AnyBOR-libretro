@@ -35,6 +35,10 @@ typedef __typeof__(**((s_anim *)0)->collision_attack) frame_record;
 static frame_record *backing[5];
 static frame_record frame_a,frame_b;
 static @ATTACK_TYPE@ attack;
+#if OBOR_ENGINE_BUILD == 4432
+static s_collision_attack legacy_frame_record;
+static s_collision_attack *legacy_slots[] = {&attack};
+#endif
 static s_anim animation,copy;
 static s_anim_list owners[3];
 static void *table_malloc(size_t bytes) {
@@ -51,6 +55,7 @@ static void allocate_table(s_anim *a,int framecount) {
 @COLLECTION@
 @INSTANCE@
 @BODY_INSTANCE@
+@COORDINATE_PROFILE@
 @PROPERTY@
 
 typedef HRESULT (*getter)(ScriptVariant **,ScriptVariant **,int);
@@ -66,6 +71,10 @@ static void empty_collection(void *table,int frame) {
  CHECK(out==&result && result.vt==VT_EMPTY);
 }
 static void pointer_collection(void *table,int frame,void *expected) {
+#if OBOR_ENGINE_BUILD == 4432
+ if(obor_profile_build>=4283 && obor_profile_build<4301)
+  expected=obor_profile_build<4298 ? &attack : &legacy_frame_record;
+#endif
  reset(table,frame);CHECK(openbor_get_attack_collection(args,&out,2)==S_OK);
  CHECK(out==&result && result.vt==VT_PTR && result.ptrVal==expected);
 }
@@ -95,6 +104,12 @@ static void setup(void) {
  allocate_table(&animation,99);
  CHECK(allocations==1 && animation.obor_attack_frame_capacity==3);
  CHECK(!backing[0] && !backing[1] && !backing[2]);
+#if OBOR_ENGINE_BUILD == 4432
+ frame_a.instance=frame_b.instance=legacy_slots;
+ frame_a.obor_instance_capacity=frame_b.obor_instance_capacity=1;
+ frame_a.obor_frame_record=frame_b.obor_frame_record=
+  obor_profile_build>=4298 && obor_profile_build<4301 ? &legacy_frame_record : NULL;
+#endif
  backing[0]=&frame_a;backing[1]=NULL;backing[2]=&frame_b;backing[3]=&frame_a;
 }
 static void collections(void) {

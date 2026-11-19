@@ -1,0 +1,71 @@
+/* SPDX-License-Identifier: BSD-3-Clause
+ * Copyright (c)2026 retrodiv <retrodiv@proton.me> */
+#include <stdint.h>
+#include "savedata.h"
+@FLAGS@
+#include <assert.h>
+#include <limits.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <stdarg.h>
+uint32_t bothnewkeys,obor_profile_build;
+s_savedata savedata;
+void *level;
+int SAMPLE_BEEP=1,SAMPLE_BEEP2=2;
+static unsigned updates,saves,sounds,interior;
+static int history[6];
+static int rendered,second;
+static uint32_t first_key;
+const char *Tr(const char *s) {return s;}
+static void observe_label(int active,const char *s) {
+    static const char *labels[]={"Performance:","Position:","Collision Attack:","Collision Body:","Range:","Back"};
+    if(active) for(unsigned i=0;i<6;i++) if(strcmp(s,labels[i])==0) rendered=(int)i;
+}
+void _menutext(int active,int x,int y,const char *s,...) {(void)x;(void)y;observe_label(active,s);}
+void _menutextm(int active,int y,int font,const char *s,...) {(void)y;(void)font;observe_label(active,s);}
+void update(int ingame,int wait) {
+    (void)ingame;(void)wait;
+    assert(updates<6);history[updates]=rendered;
+    if(updates==1) second=rendered;
+    ++updates;assert(updates<=6);
+    rendered=-1;
+    bothnewkeys=updates==1?first_key:(interior && updates==2)?FLAG_MOVEDOWN:(interior && updates==3)?FLAG_MOVELEFT:FLAG_ESC;
+}
+int sound_play_sample(int a,int b,int c,int d,int e) {
+    (void)a;(void)b;(void)c;(void)d;(void)e;++sounds;return 0;
+}
+void savesettings(void) {++saves;}
+@FUNCTION@
+
+static const struct {unsigned revision,contract,legacy;} profiles[]={@PROFILES@};
+static const unsigned keys[]={@KEYS@};
+static const struct result {unsigned updates;int second;unsigned saves,sounds;int performance;} expected[3][4]={@EXPECTED@};
+static void reset(void) {
+    updates=saves=sounds=0;rendered=second=-1;interior=0;
+    memset(history,0,sizeof(history));memset(&savedata,0,sizeof(savedata));
+}
+int main(void) {
+    unsigned checks=0;
+    assert(sizeof(unsigned)==4);
+    for(unsigned p=0;p<sizeof(profiles)/sizeof(*profiles);p++) {
+        obor_profile_build=profiles[p].revision;
+        for(unsigned k=0;k<4;k++) {
+            reset();first_key=keys[k];menu_options_debug();
+            const struct result *e=&expected[profiles[p].contract][k];
+            assert(updates==e->updates && second==e->second && saves==e->saves);
+            assert(sounds==e->sounds && savedata.debuginfo==e->performance);
+            assert(bothnewkeys==0);++checks;
+        }
+        if(profiles[p].legacy) {
+            reset();interior=1;first_key=FLAG_MOVEDOWN;menu_options_debug();
+            assert(updates==4 && saves==1 && sounds==3 && bothnewkeys==0);
+            assert(history[0]==0 && history[1]==1 && history[2]==2 && history[3]==2);
+            assert(savedata.debug_collision_attack==1 && savedata.debug_features==0);
+            ++checks;
+        }
+    }
+    printf("{\"status\":\"PASS\",\"contexts\":%u,\"cases\":%u}\n",
+           (unsigned)(sizeof(profiles)/sizeof(*profiles)),checks);
+    return 0;
+}

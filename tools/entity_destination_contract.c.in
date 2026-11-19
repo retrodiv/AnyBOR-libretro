@@ -1,0 +1,90 @@
+/* SPDX-License-Identifier: BSD-3-Clause
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me>
+ */
+
+static const struct {
+    unsigned revision;
+    int fractional;
+    int ordinals[2];
+} contexts[] = {
+@DESTINATION_CONTEXTS@
+};
+
+static void select_axis(ScriptVariant *property, int named, int ordinal)
+{
+    if(named)
+    {
+        property->vt = VT_STR;
+        property->strVal = 0;
+    }
+    else
+    {
+        property->vt = VT_INTEGER;
+        property->lVal = ordinal;
+    }
+}
+
+int main(void)
+{
+    static const char *const names[] = { "destx", "destz" };
+    static const struct { VARTYPE type; double number; } inputs[] = {
+        { VT_DECIMAL, 13.75 }, { VT_DECIMAL, -13.75 }, { VT_DECIMAL, 0.0 },
+        { VT_INTEGER, 6.0 }, { VT_INTEGER, -6.0 },
+        { VT_STR, 0.0 }, { VT_EMPTY, 0.0 },
+    };
+    unsigned checks = 0;
+    for(size_t r = 0; r < sizeof(contexts) / sizeof(*contexts); r++)
+    {
+        obor_profile_build = contexts[r].revision;
+        for(size_t axis = 0; axis < 2; axis++)
+        for(int named = 0; named <= 1; named++)
+        for(size_t i = 0; i < sizeof(inputs) / sizeof(*inputs); i++)
+        {
+            entity actor = { .destx = 25.5f, .destz = -25.5f };
+            float *fields[] = { &actor.destx, &actor.destz };
+            const float other = *fields[1 - axis];
+            float expected = *fields[axis];
+            ScriptVariant target = { .vt = VT_PTR, .ptrVal = &actor };
+            ScriptVariant property = {0};
+            ScriptVariant value = { .vt = inputs[i].type };
+            ScriptVariant result = { .vt = VT_INTEGER, .lVal = 91 };
+            ScriptVariant *slots[] = { &target, &property, &value };
+            ScriptVariant *out = &result;
+            strings[0] = names[axis];
+            strings[1] = "3.5";
+            if(value.vt == VT_INTEGER)
+                value.lVal = (LONG)inputs[i].number;
+            if(value.vt == VT_DECIMAL)
+                value.dblVal = inputs[i].number;
+            if(value.vt == VT_STR)
+                value.strVal = 1;
+            if(value.vt == VT_INTEGER || value.vt == VT_DECIMAL)
+                expected = contexts[r].fractional ? (float)inputs[i].number :
+                                                    (float)(int)inputs[i].number;
+
+            select_axis(&property, named, contexts[r].ordinals[axis]);
+            int status = openbor_changeentityproperty(slots, &out, 3);
+            if(status != S_OK || out || *fields[axis] != expected || *fields[1 - axis] != other)
+            {
+                fprintf(stderr, "Profile %u destination setter %s stored %.9g, expected %.9g\n",
+                        obor_profile_build, names[axis], (double)*fields[axis], (double)expected);
+                abort();
+            }
+            ++checks;
+
+            select_axis(&property, named, contexts[r].ordinals[axis]);
+            out = &result;
+            const VARTYPE result_type = contexts[r].fractional ? VT_DECIMAL : VT_EMPTY;
+            status = openbor_getentityproperty(slots, &out, 2);
+            if(status != S_OK || out != &result || result.vt != result_type || result.dblVal != expected)
+            {
+                fprintf(stderr, "Profile %u destination getter %s returned type %d, expected %d\n",
+                        obor_profile_build, names[axis], result.vt, result_type);
+                abort();
+            }
+            ++checks;
+        }
+    }
+    printf("{\"contexts\":%zu,\"checks\":%u}\n", sizeof(contexts) / sizeof(*contexts), checks);
+    return 0;
+}

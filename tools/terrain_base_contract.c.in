@@ -1,0 +1,107 @@
+/* SPDX-License-Identifier: BSD-3-Clause
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me> */
+#include <stdint.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include "openbor.h"
+#undef printf
+uint32_t obor_profile_build;
+static unsigned active_case;
+#define CHECK(c) do{if(!(c)){fprintf(stderr,"TERRAIN_BASE revision=%u case=%u line=%d\n",obor_profile_build,active_case,__LINE__);abort();}}while(0)
+HRESULT Interpreter_Call(Interpreter *p){(void)p;abort();}
+HRESULT Interpreter_EvalInstruction(Interpreter *p){(void)p;abort();}
+static entity actor,partner,sentinel;
+entity *self=&sentinel;
+static s_level world;
+s_level *level=&world;
+static __typeof__(*world.holes) holes[2],walls[1];
+static s_basemap basemap;
+static float cells[4];
+static s_anim animation;
+static s_axis_i movement;
+static s_axis_i *movement_rows[]={&movement};
+int holez;
+static int basemap_calls,callback_count,expected_hole;
+entity *check_platform_below_entity(entity *e){(void)e;abort();}
+void check_gravity(entity *e){(void)e;abort();}
+void execute_inhole_script(entity *e,int plane,float height,int index)
+{
+    CHECK(e==&actor && self==&actor && plane==0 && height==7 && index==expected_hole);
+    CHECK(actor.base==3 && actor.link==&partner && partner.link==&actor);
+    callback_count++;
+}
+@BASEMAP@
+float check_basemap(int x,int z)
+{
+    CHECK(self==&actor && x==2 && z==3);
+    basemap_calls++;
+    return probe_native_check_basemap(x,z);
+}
+@FUNCTIONS@
+static const struct {unsigned revision;int gated,selected_hole,writes_holez;} contexts[]={@CONTEXTS@};
+static unsigned context;
+static void rectangle(__typeof__(*world.holes) *r,float height)
+{
+    memset(r,0,sizeof(*r));r->x=2;r->z=4;r->depth=2;r->height=height;
+    r->upperleft=r->lowerleft=-1;r->upperright=r->lowerright=1;
+}
+static void setup(void)
+{
+    memset(&actor,0,sizeof(actor));memset(&partner,0,sizeof(partner));memset(&world,0,sizeof(world));
+    memset(&animation,0,sizeof(animation));memset(&movement,0,sizeof(movement));memset(&basemap,0,sizeof(basemap));
+    level=&world;self=&sentinel;world.holes=holes;world.walls=walls;world.basemaps=&basemap;
+    actor.animation=&animation;animation.move=movement_rows;actor.position.x=2.75f;actor.position.z=3.25f;
+    actor.position.y=1;actor.base=3;holez=-91;basemap_calls=callback_count=0;
+    basemap.position.x=2;basemap.position.z=3;basemap.size.x=basemap.size.z=2;basemap.map=cells;
+    for(unsigned i=0;i<4;i++)cells[i]=5;
+    rectangle(&holes[0],7);holes[1]=holes[0];rectangle(&walls[0],7);
+}
+static void base_cells(void)
+{
+    const float values[]={-2,0,5};
+    for(int flag=-1;flag<=1;flag++)for(int present=0;present<2;present++)
+    for(unsigned value=0;value<3;value++)for(int rising=0;rising<2;rising++)for(int disabled=0;disabled<2;disabled++){
+        active_case++;setup();actor.modeldata.subject_to_basemap=flag;actor.modeldata.no_adjust_base=disabled;
+        actor.velocity.y=rising;world.numbasemaps=present;cells[0]=values[value];
+        entity *out=&sentinel;adjust_base(&actor,&out);
+        int called=!disabled && (!contexts[context].gated || flag>0);
+        float result=disabled?3:called && present && value==2?5:0;
+        CHECK(self==&sentinel && !out && basemap_calls==called && !callback_count && holez==-91);
+        CHECK(actor.base==result && actor.position.y==(!disabled && result==5 && !rising?5:1));
+    }
+}
+static void falling(void)
+{
+    for(int flag=-1;flag<=1;flag++)for(int fixed=0;fixed<2;fixed++){
+        active_case++;setup();actor.modeldata.subject_to_basemap=flag;actor.modeldata.subject_to_hole=1;
+        actor.link=actor.grabbing=&partner;partner.link=partner.grabbing=&actor;
+        world.numholes=2;movement.base=fixed?5:0;expected_hole=contexts[context].selected_hole;
+        int queried=!contexts[context].gated || flag>0;
+        entity *out=&sentinel;adjust_base(&actor,&out);
+        CHECK(self==&sentinel && !out && basemap_calls==queried && callback_count==queried);
+        CHECK(actor.base==(fixed?5:queried?-1000:0) && actor.position.y==1);
+        CHECK(holez==(queried && contexts[context].writes_holez?expected_hole:-91));
+        int unlinked=queried && !fixed;
+        CHECK(actor.link==(unlinked?NULL:&partner) && actor.grabbing==(unlinked?NULL:&partner));
+        CHECK(partner.link==(unlinked?NULL:&actor) && partner.grabbing==(unlinked?NULL:&actor));
+    }
+}
+static void probe_wall_cases(void)
+{
+    for(int flag=-1;flag<=1;flag++)for(int disabled=0;disabled<2;disabled++){
+        active_case++;setup();actor.modeldata.subject_to_basemap=flag;actor.modeldata.no_adjust_base=disabled;
+        actor.modeldata.subject_to_wall=1;actor.modeldata.subject_to_hole=1;world.numwalls=1;world.numholes=2;
+        entity *out=&sentinel;adjust_base(&actor,&out);
+        CHECK(self==&sentinel && !out && actor.base==(disabled?3:7) && !callback_count && holez==-91);
+        CHECK(basemap_calls==(!disabled && (!contexts[context].gated || flag>0)));
+    }
+}
+int main(void)
+{
+    for(context=0;context<sizeof(contexts)/sizeof(*contexts);context++){
+        obor_profile_build=contexts[context].revision;active_case=0;base_cells();falling();probe_wall_cases();
+        printf("{\"revision\":%u,\"status\":\"PASS\"}\n",obor_profile_build);
+    }
+    return 0;
+}

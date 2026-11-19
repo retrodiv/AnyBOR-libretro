@@ -34,7 +34,14 @@ v3.0 3837, v3.0 3839, v3.0 3842, v3.0 3846, v3.0 3847-dev, v3.0 3849, v3.0 3854,
 v3.0 3968-dev, v3.0 3970-dev, v3.0 3978, v3.0 3984, v3.0 3993, v3.0 3994, v3.0
 4011, v3.0 4046, v3.0 4051, v3.0 4054, v3.0 4055, v3.0 4079, v3.0 4080, v3.0
 4082, v3.0 4085, v3.0 4086, v3.0 4088-dev, v3.0 4107, v3.0 4111, v3.0 4129, v3.0
-4153, v3.0 4161-dev, v3.0 4183-dev, v3.0 4213, v3.0 4432, v3.0 4453, v3.0 6330, v3.0 6330-lns-010g, v3.0 6391, v3.0 6391-mod, v3.0 6392-dev,
+4153, v3.0 4161-dev, v3.0 4183-dev, v3.0 4213, v3.0 4283-dev, v3.0 4287, v3.0 4316, v3.0 4317,
+v3.0 4320, v3.0 4321, v3.0 4328, v3.0 4330, v3.0 4332, v3.0 4334, v3.0 4336, v3.0 4342, v3.0 4343,
+v3.0 4344, v3.0 4346, v3.0 4349, v3.0 4352, v3.0 4366, v3.0 4367-dev, v3.0 4377, v3.0 4379,
+v3.0 4383, v3.0 4385, v3.0 4387, v3.0 4389, v3.0 4390, v3.0 4393, v3.0 4394, v3.0 4396, v3.0 4400,
+v3.0 4401, v3.0 4403, v3.0 4404-dev, v3.0 4406, v3.0 4411, v3.0 4412, v3.0 4413, v3.0 4414,
+v3.0 4417, v3.0 4419, v3.0 4420, v3.0 4421-dev, v3.0 4423, v3.0 4424, v3.0 4426, v3.0 4429,
+v3.0 4430, v3.0 4431,
+v3.0 4432, v3.0 4453, v3.0 6330, v3.0 6330-lns-010g, v3.0 6391, v3.0 6391-mod, v3.0 6392-dev,
 v3.0 6412-dev, v3.0 6510-dev, v3.0 7086-dev, v3.0 7123-dev, v4.0 7142-alpha,
 v4.0 7530, v4.0 7533, v4.0 7555, v4.0 7556, v4.0 7735 and v4.0 8023-dev.
 
@@ -382,6 +389,75 @@ and family endpoints. Selected functions run with controlled platform and
 script services; these contracts do not certify every original platform or
 complete gameplay. Defined native output and return behavior is reproduced;
 undefined consumed values are refused safely.
+
+## Historical profiles from 4283 to 4431
+
+These profiles use engine 4432 with source-defined behavior for each selected build.
+Automatic selection uses the first official profile at or above the declared
+build through 4432. The four development profiles use exact tags or manual
+selection.
+
+The source revisions and dates identify the original code used for the contracts.
+Each build has two upstream histories with identical complete source trees.
+Both commit identities are listed in [provenance](../PROVENANCE.md#profiles-from-4283-to-4431).
+
+| Profile | Original source | Source date | Selection |
+|---|---|---|---|
+| v3.0 4283-dev | [`d138a14a304f`](https://github.com/DCurrent/openbor/tree/d138a14a304f83c48fbe0aded4edf483b15ff64e/engine) | 2016-11-07 | Exact tag or manual |
+| v3.0 4287 | [`5d5c4d22a0ef`](https://github.com/DCurrent/openbor/tree/5d5c4d22a0ef7e4913fa5540263421aa8ecba5a8/engine) | 2016-11-09 | Automatic, exact tag or manual |
+| v3.0 4316 | [`ba7bbb797f2e`](https://github.com/DCurrent/openbor/tree/ba7bbb797f2e016dc496ee2c1154740907301894/engine) | 2016-11-17 | Automatic, exact tag or manual |
+| v3.0 4317 | [`2a0c6096356e`](https://github.com/DCurrent/openbor/tree/2a0c6096356e7f2231a298799bcc51d36ffde899/engine) | 2016-11-17 | Automatic, exact tag or manual |
+| v3.0 4320 | [`f2d878dbedd7`](https://github.com/DCurrent/openbor/tree/f2d878dbedd740cbee36fa509a8a40d00f0834b7/engine) | 2016-11-17 | Automatic, exact tag or manual |
+| v3.0 4321 | [`6e452af0c56d`](https://github.com/DCurrent/openbor/tree/6e452af0c56d7639f75f39c776c6c36c9fcf97fc/engine) | 2016-11-18 | Automatic, exact tag or manual |
+| v3.0 4328 | [`7dc955cb343c`](https://github.com/DCurrent/openbor/tree/7dc955cb343c1e543be01da7d7544117831aacb1/engine) | 2016-11-19 | Automatic, exact tag or manual |
+| v3.0 4330 | [`13b5f3941555`](https://github.com/DCurrent/openbor/tree/13b5f3941555a3b2175726912e0697d1bd1965c5/engine) | 2016-11-20 | Automatic, exact tag or manual |
+| v3.0 4332 | [`b4b7b358836b`](https://github.com/DCurrent/openbor/tree/b4b7b358836bfa6c8f654b4a6c8ec2391a8e1de3/engine) | 2016-11-20 | Automatic, exact tag or manual |
+| v3.0 4334 | [`1791420e7f7b`](https://github.com/DCurrent/openbor/tree/1791420e7f7b336e75ea2e101210c72040199260/engine) | 2016-11-20 | Automatic, exact tag or manual |
+| v3.0 4336 | [`09b33973a311`](https://github.com/DCurrent/openbor/tree/09b33973a311c6b9d1bf51f0c1bb02ea7552a594/engine) | 2016-11-21 | Automatic, exact tag or manual |
+| v3.0 4342 | [`7d7859b2936a`](https://github.com/DCurrent/openbor/tree/7d7859b2936a89800cc0643aa8604dffe973e5ad/engine) | 2016-11-21 | Automatic, exact tag or manual |
+| v3.0 4343 | [`1216fa3ddab5`](https://github.com/DCurrent/openbor/tree/1216fa3ddab599af2ae58dc5af5c8b8acac39099/engine) | 2016-11-22 | Automatic, exact tag or manual |
+| v3.0 4344 | [`fa53ebb66d8f`](https://github.com/DCurrent/openbor/tree/fa53ebb66d8f366303727414982b40187639a19e/engine) | 2016-11-22 | Automatic, exact tag or manual |
+| v3.0 4346 | [`5234311c7899`](https://github.com/DCurrent/openbor/tree/5234311c7899617eb64844f61e6ed72c17c074fb/engine) | 2016-11-23 | Automatic, exact tag or manual |
+| v3.0 4349 | [`2df760d73101`](https://github.com/DCurrent/openbor/tree/2df760d73101928088bf40987207472f0c4e86e6/engine) | 2016-11-23 | Automatic, exact tag or manual |
+| v3.0 4352 | [`dbc6f6aadea0`](https://github.com/DCurrent/openbor/tree/dbc6f6aadea001a2c4518eca11fccb2f191d7117/engine) | 2016-11-24 | Automatic, exact tag or manual |
+| v3.0 4366 | [`c9933b364a07`](https://github.com/DCurrent/openbor/tree/c9933b364a07ace66bf83b4c175b8e4fac402d83/engine) | 2016-11-28 | Automatic, exact tag or manual |
+| v3.0 4367-dev | [`34b50501f3a7`](https://github.com/DCurrent/openbor/tree/34b50501f3a7809b89397c64b6a87ad951e30c44/engine) | 2016-11-28 | Exact tag or manual |
+| v3.0 4377 | [`fcb58c55802d`](https://github.com/DCurrent/openbor/tree/fcb58c55802df1403f0ae2071b0cbd7eb4b593d7/engine) | 2016-12-03 | Automatic, exact tag or manual |
+| v3.0 4379 | [`8a1f6ebd6649`](https://github.com/DCurrent/openbor/tree/8a1f6ebd6649e8cccb236df00dff568f840e32c2/engine) | 2016-12-04 | Automatic, exact tag or manual |
+| v3.0 4383 | [`3e3c5215dd22`](https://github.com/DCurrent/openbor/tree/3e3c5215dd223fc02408f046bd46108594a47505/engine) | 2016-12-04 | Automatic, exact tag or manual |
+| v3.0 4385 | [`ff2d6d2b2723`](https://github.com/DCurrent/openbor/tree/ff2d6d2b272317e3a8bc5ab6f3aba11064093b12/engine) | 2016-12-04 | Automatic, exact tag or manual |
+| v3.0 4387 | [`a3ba57902e7a`](https://github.com/DCurrent/openbor/tree/a3ba57902e7af0eec23c714ff5f2036c869c198b/engine) | 2016-12-05 | Automatic, exact tag or manual |
+| v3.0 4389 | [`e3d50a51ae0a`](https://github.com/DCurrent/openbor/tree/e3d50a51ae0a4af78a080acc013c7e400db0938c/engine) | 2016-12-05 | Automatic, exact tag or manual |
+| v3.0 4390 | [`c3e6fafef9a7`](https://github.com/DCurrent/openbor/tree/c3e6fafef9a7857a66b4205e5f51523f112191b6/engine) | 2016-12-06 | Automatic, exact tag or manual |
+| v3.0 4393 | [`1854f84851e3`](https://github.com/DCurrent/openbor/tree/1854f84851e3b9ba8c4f4c01b0124673b2dd3ee6/engine) | 2016-12-09 | Automatic, exact tag or manual |
+| v3.0 4394 | [`28cec6d4467f`](https://github.com/DCurrent/openbor/tree/28cec6d4467f06293b2990f15beb5707c4cfb6eb/engine) | 2016-12-10 | Automatic, exact tag or manual |
+| v3.0 4396 | [`3b5f7aaf8c42`](https://github.com/DCurrent/openbor/tree/3b5f7aaf8c42b5e15623c01222d70f4dc0e9d8fb/engine) | 2016-12-12 | Automatic, exact tag or manual |
+| v3.0 4400 | [`6d1a0e85ba6a`](https://github.com/DCurrent/openbor/tree/6d1a0e85ba6abba3010b1a8bb0847f8f66ed087c/engine) | 2016-12-14 | Automatic, exact tag or manual |
+| v3.0 4401 | [`b09f9f80522c`](https://github.com/DCurrent/openbor/tree/b09f9f80522c05e988c385e2deeb7c58638c0c6a/engine) | 2016-12-14 | Automatic, exact tag or manual |
+| v3.0 4403 | [`40cc7b440cad`](https://github.com/DCurrent/openbor/tree/40cc7b440cadcaf80b4098ae9974e1299052d02a/engine) | 2016-12-15 | Automatic, exact tag or manual |
+| v3.0 4404-dev | [`1b34823401b4`](https://github.com/DCurrent/openbor/tree/1b34823401b491dee519d0e52649a17bc3c8bf8a/engine) | 2016-12-15 | Exact tag or manual |
+| v3.0 4406 | [`0fb4dcc40339`](https://github.com/DCurrent/openbor/tree/0fb4dcc40339339b940e28d2efef1a33aa726f64/engine) | 2016-12-16 | Automatic, exact tag or manual |
+| v3.0 4411 | [`6ee2a2c01b6b`](https://github.com/DCurrent/openbor/tree/6ee2a2c01b6b859724ea4766767a49338915a786/engine) | 2016-12-16 | Automatic, exact tag or manual |
+| v3.0 4412 | [`216efbaede24`](https://github.com/DCurrent/openbor/tree/216efbaede246f11f449510fd47c344241814a2e/engine) | 2016-12-17 | Automatic, exact tag or manual |
+| v3.0 4413 | [`c63e07e02ba0`](https://github.com/DCurrent/openbor/tree/c63e07e02ba065a9dbb4dee040a59e1fa8c87a74/engine) | 2016-12-18 | Automatic, exact tag or manual |
+| v3.0 4414 | [`dffd708be7c8`](https://github.com/DCurrent/openbor/tree/dffd708be7c8583116f72c5677a8b46d9aa62031/engine) | 2016-12-19 | Automatic, exact tag or manual |
+| v3.0 4417 | [`4c7f7728f14d`](https://github.com/DCurrent/openbor/tree/4c7f7728f14d8f85cc0248432716633abeed72fc/engine) | 2016-12-20 | Automatic, exact tag or manual |
+| v3.0 4419 | [`f1e88cb51e63`](https://github.com/DCurrent/openbor/tree/f1e88cb51e634a1658ba00478a6c934fa7263666/engine) | 2016-12-22 | Automatic, exact tag or manual |
+| v3.0 4420 | [`2e5668a4811a`](https://github.com/DCurrent/openbor/tree/2e5668a4811af62c0c79cbb6d624bc121ba2210c/engine) | 2016-12-22 | Automatic, exact tag or manual |
+| v3.0 4421-dev | [`b34a35d7e0d7`](https://github.com/DCurrent/openbor/tree/b34a35d7e0d740865f955da8effbf9872447ac86/engine) | 2016-12-26 | Exact tag or manual |
+| v3.0 4423 | [`dd4b6b8390ec`](https://github.com/DCurrent/openbor/tree/dd4b6b8390ec8a8ec6bd17adee07b8d1ca163635/engine) | 2016-12-28 | Automatic, exact tag or manual |
+| v3.0 4424 | [`a474558c1e4b`](https://github.com/DCurrent/openbor/tree/a474558c1e4b5872a87b89763808842990f788bb/engine) | 2016-12-28 | Automatic, exact tag or manual |
+| v3.0 4426 | [`deaa7dd15e3e`](https://github.com/DCurrent/openbor/tree/deaa7dd15e3ef7c0e2b90925311aa68c9c501b1a/engine) | 2016-12-29 | Automatic, exact tag or manual |
+| v3.0 4429 | [`133af494330b`](https://github.com/DCurrent/openbor/tree/133af494330ba0bdea991311dfea4edc518f2641/engine) | 2017-01-20 | Automatic, exact tag or manual |
+| v3.0 4430 | [`40b29e34d584`](https://github.com/DCurrent/openbor/tree/40b29e34d584bdf4bacd4440dd6948c130c559f2/engine) | 2017-01-21 | Automatic, exact tag or manual |
+| v3.0 4431 | [`21ba2305dc68`](https://github.com/DCurrent/openbor/tree/21ba2305dc68764f47c7297e7bb3e78cb2547d62/engine) | 2017-01-24 | Automatic, exact tag or manual |
+
+
+Settings and saved-game records use the original field layouts. Script functions,
+properties and constants retain native names, numeric identifiers, arguments and
+return values. Collision slots, hit selection, attack sounds, movement, menu screens,
+key-script dispatch and spawn conditions use the selected profile's source behavior.
+The focused contracts exercise native routines with controlled platform and script services.
 
 ## Early profile contracts
 

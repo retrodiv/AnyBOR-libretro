@@ -92,7 +92,7 @@ def ogg_configuration(template):
     return template
 
 
-def native_output(code, data, *, extra_includes=(), configure_ogg=False, libraries=(), engine_source=None):
+def native_output(code, data, *, extra_includes=(), extra_cflags=(), configure_ogg=False, libraries=(), engine_source=None):
     engine = Path(engine_source) if engine_source is not None else ROOT / 'src/engines' / data['engine']
     if not (engine/'openbor.h').is_file() or not (engine/'source/gamelib/types.h').is_file():
         raise ValueError('Selected native engine headers are unavailable')
@@ -121,7 +121,7 @@ def native_output(code, data, *, extra_includes=(), configure_ogg=False, librari
             '-Wno-unused-parameter',
             '-Wno-error=deprecated-declarations', '-Wno-error=sign-compare',
             '-DOBOR_ENGINE_BUILD=' + data['engine'],
-            '-DLIBRETRO=1', '-fsanitize=address,undefined', '-fno-sanitize-recover=all', '-g',
+            '-DLIBRETRO=1', '-fsanitize=address,undefined', '-fno-sanitize-recover=all', '-g', *extra_cflags,
             *('-I' + str(p) for p in includes), str(source), '-o', str(binary),
             *('-l' + library for library in libraries)],
             check=True, timeout=60)

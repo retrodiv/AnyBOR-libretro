@@ -1,0 +1,116 @@
+/* SPDX-License-Identifier: BSD-3-Clause
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me>
+ */
+s_anim_list *anim_list;
+void StrCache_Collect(int index) { abort(); }
+int StrCache_Pop(void) { abort(); }
+
+#include "anybor_attack_query.h"
+@READERS@
+
+typedef HRESULT (*native_query)(ScriptVariant **, ScriptVariant **, int);
+
+static ScriptVariant get(native_query query, void *handle, int selector)
+{
+    ScriptVariant object = {.vt = VT_PTR, .ptrVal = handle};
+    ScriptVariant property = {.vt = VT_INTEGER, .lVal = selector};
+    ScriptVariant result = {.vt = VT_EMPTY};
+    ScriptVariant *arguments[] = {&object, &property}, *out = &result;
+    CHECK(query(arguments, &out, 2) == S_OK && out == &result);
+    return result;
+}
+
+static void set_tag(native_query change, void *handle, int selector, int tag)
+{
+    ScriptVariant object = {.vt = VT_PTR, .ptrVal = handle};
+    ScriptVariant property = {.vt = VT_INTEGER, .lVal = selector};
+    ScriptVariant value = {.vt = VT_INTEGER, .lVal = tag};
+    ScriptVariant result = {.vt = VT_EMPTY};
+    ScriptVariant *arguments[] = {&object, &property, &value}, *out = &result;
+    CHECK(change(arguments, &out, 3) == S_OK);
+}
+
+static void observe(void)
+{
+    s_anim anim = {0};
+    s_anim_list owner = {.anim = &anim};
+    s_collision_attack attack = {.attack_type = 3, .attack_force = 71, .tag = 29};
+    s_collision_body body = {.tag = 127};
+    s_hitbox box = {.x = -9, .y = -8, .width = 7, .height = 11, .z1 = 1, .z2 = 4}, empty = {0};
+    s_damage_recursive recursive = {0};
+    s_drawmethod draw = {0};
+    s_axis_i_2d offset = {0};
+    float platform[8] = {0};
+    int shadow[2] = {0};
+
+    max_collisons = 2;
+    anim_list = &owner;
+    CHECK(addframe(&anim, 0, 2, 1, 0, &body, &attack, NULL, platform, -1,
+                   shadow, -1, &draw, &offset, &recursive, &empty, &empty) == 1);
+    CHECK(addframe(&anim, 1, -2, 1, 0, &body, &attack, NULL, platform, -1,
+                   shadow, -1, &draw, &offset, &recursive, &box, &box) == 2);
+
+    ScriptVariant attacks = get(openbor_get_animation_property, &anim, ANI_PROP_ATTACK);
+    ScriptVariant bodies = get(openbor_get_animation_property, &anim, ANI_PROP_BODY_COLLISION);
+    CHECK(attacks.vt == VT_PTR && attacks.ptrVal == anim.collision_attack);
+    CHECK(bodies.vt == VT_PTR && bodies.ptrVal == anim.collision_body);
+    CHECK(get(openbor_get_attack_collection, attacks.ptrVal, 0).vt == VT_EMPTY);
+    CHECK(get(openbor_get_body_collision_collection, bodies.ptrVal, 0).vt == VT_EMPTY);
+
+    s_collision_attack_list *first_attack = anim.collision_attack[1];
+    s_collision_body_list *first_body = anim.collision_body[1];
+    ScriptVariant attack_handle = get(openbor_get_attack_collection, attacks.ptrVal, 1);
+    ScriptVariant body_handle = get(openbor_get_body_collision_collection, bodies.ptrVal, 1);
+    CHECK(attack_handle.vt == VT_PTR && body_handle.vt == VT_PTR);
+
+    // The native placeholder does not select an instance. Both valid indices
+    // retain the same pointer identity and pointer variant tag.
+    ScriptVariant attack_alias = get(openbor_get_attack_instance, attack_handle.ptrVal, 1);
+    ScriptVariant body_alias = get(openbor_get_body_collision_instance, body_handle.ptrVal, 1);
+    CHECK(attack_alias.vt == VT_PTR && attack_alias.ptrVal == attack_handle.ptrVal);
+    CHECK(body_alias.vt == VT_PTR && body_alias.ptrVal == body_handle.ptrVal);
+
+    int attack_route = attack_handle.ptrVal == first_attack ? 3 :
+                       attack_handle.ptrVal == first_attack->instance[0] ? 1 :
+                       attack_handle.ptrVal == first_attack->obor_frame_record ? 2 : 0;
+    int body_route = body_handle.ptrVal == first_body ? 2 :
+                     body_handle.ptrVal == first_body->instance[0] ? 1 : 0;
+    CHECK(attack_route && body_route);
+
+    int attack_tag = -1, body_tag = -1;
+    if(attack_route != 3)
+    {
+        ScriptVariant tag = get(openbor_get_attack_property, attack_alias.ptrVal, ATTACK_PROP_TAG);
+        CHECK(tag.vt == VT_INTEGER && tag.lVal == 29);
+        set_tag(openbor_set_attack_property, attack_alias.ptrVal, ATTACK_PROP_TAG, 63);
+        tag = get(openbor_get_attack_property, attack_handle.ptrVal, ATTACK_PROP_TAG);
+        CHECK(tag.vt == VT_INTEGER);
+        attack_tag = tag.lVal;
+    }
+    if(body_route == 1)
+    {
+        ScriptVariant tag = get(openbor_get_body_collision_property, body_alias.ptrVal, BODY_COLLISION_PROP_TAG);
+        CHECK(tag.vt == VT_INTEGER && tag.lVal == 127);
+        set_tag(openbor_set_body_collision_property, body_alias.ptrVal, BODY_COLLISION_PROP_TAG, 51);
+        tag = get(openbor_get_body_collision_property, body_handle.ptrVal, BODY_COLLISION_PROP_TAG);
+        CHECK(tag.vt == VT_INTEGER);
+        body_tag = tag.lVal;
+    }
+
+    printf("[%u,%d,%d,%d,%d,%d,%d]\n", obor_profile_build, attack_route, body_route,
+           attack_tag, body_tag, first_attack->instance[0]->tag, first_body->instance[0]->tag);
+    free_frames(&anim);
+    CHECK(!anim.collision_attack && !anim.collision_body);
+    anim_list = NULL;
+}
+
+int main(void)
+{
+    const unsigned revisions[] = {@REVISIONS@};
+    for(size_t i = 0; i < sizeof(revisions) / sizeof(revisions[0]); ++i)
+    {
+        obor_profile_build = revisions[i];
+        observe();
+    }
+    return 0;
+}

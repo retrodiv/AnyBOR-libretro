@@ -1,0 +1,73 @@
+/* SPDX-License-Identifier: BSD-3-Clause
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me> */
+#include <stdint.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <strings.h>
+#include <stddef.h>
+#include <assert.h>
+#include <stdarg.h>
+#include <setjmp.h>
+@CONSTANTS@
+@RECORD@
+static uint32_t obor_profile_build;
+static unsigned active_case,reset_count;
+#define CHECK(c) do{if(!(c)){fprintf(stderr,"ALLOWED_BYTES revision=%u case=%u line=%d\n",obor_profile_build,active_case,__LINE__);abort();}}while(0)
+#define stricmp strcasecmp
+typedef struct {char name[2];} s_model;
+static s_model models[3]={{{'A',0}},{{'B',0}},{{'U',0}}};
+static struct {int selectable;} model_cache[2];
+static char allowselect_args[MAX_ALLOWSELECT_LEN],calls[64],diagnostic[256];
+static jmp_buf stopped;
+static void reset_playable_list(int value)
+{CHECK(value==0);reset_count++;for(unsigned i=0;i<2;i++)model_cache[i].selectable=0;}
+static s_model *findmodel(char *name)
+{
+    size_t n=strlen(calls);CHECK(n+1<sizeof(calls));
+    if(!strcmp(name,"A")){calls[n]='A';return models;}
+    if(!strcmp(name,"B")){calls[n]='B';return models+1;}
+    if(!strcmp(name,"U")){calls[n]='U';return models+2;}
+    calls[n]='?';return NULL;
+}
+static int get_cached_model_index(char *name)
+{return !strcmp(name,"A")?0:!strcmp(name,"B")?1:-1;}
+static void shutdown(int status,char *format,...)
+{
+    CHECK(status==1);va_list args;va_start(args,format);
+    int count=vsnprintf(diagnostic,sizeof(diagnostic),format,args);va_end(args);
+    CHECK(count>=0&&(size_t)count<sizeof(diagnostic));longjmp(stopped,1);
+}
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wimplicit-fallthrough"
+@FUNCTIONS@
+#pragma GCC diagnostic pop
+static int run(char *text)
+{if(setjmp(stopped))return 0;load_playable_list(text);return 1;}
+static void json_string(const char *p)
+{
+    putchar('"');
+    for(;*p;p++){
+        if(*p=='\n')fputs("\\n",stdout);
+        else{if(*p=='"'||*p=='\\')putchar('\\');CHECK((unsigned char)*p>=32);putchar(*p);}
+    }
+    putchar('"');
+}
+int main(void)
+{
+    const unsigned contexts[]={@CONTEXTS@};const char *cases[]={@CASES@};
+    for(unsigned p=0;p<sizeof(contexts)/sizeof(*contexts);p++){
+        obor_profile_build=contexts[p];
+        for(active_case=0;active_case<sizeof(cases)/sizeof(*cases);active_case++){
+            memset(allowselect_args,'Z',sizeof(allowselect_args));memset(calls,0,sizeof(calls));diagnostic[0]=0;reset_count=0;
+            for(unsigned i=0;i<2;i++)model_cache[i].selectable=5;
+            int status=run((char*)cases[active_case]);
+            printf("{\"revision\":%u,\"case\":%u,\"status\":%d,\"reset\":%u,\"selected\":[%d,%d],\"calls\":",
+                   obor_profile_build,active_case,status,reset_count,model_cache[0].selectable,model_cache[1].selectable);
+            json_string(calls);fputs(",\"diagnostic\":",stdout);json_string(diagnostic);fputs(",\"bytes\":\"",stdout);
+            for(unsigned i=0;i<sizeof(allowselect_args);i++)printf("%02x",(unsigned char)allowselect_args[i]);
+            puts("\"}");
+        }
+    }
+    return 0;
+}

@@ -1,0 +1,151 @@
+/* SPDX-License-Identifier: BSD-3-Clause
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me>
+ */
+#include <stddef.h>
+#include <stdint.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include "openbor.h"
+#undef printf
+
+#define CHECK(condition) do { if(!(condition)) { fprintf(stderr, "%s\n", #condition); abort(); } } while(0)
+uint32_t obor_profile_build;
+entity *self;
+s_videomodes videomodes;
+s_level *level;
+float advancex;
+static int wall, wall_result, wall_calls, kills, falls, debug_calls, animation, debug_calls;
+static float lift;
+
+HRESULT Interpreter_Call(Interpreter *p) { abort(); }
+HRESULT Interpreter_EvalInstruction(Interpreter *p) { abort(); }
+
+float diff(float a, float b) { return a > b ? a-b : b-a; }
+int inair(entity *actor) { return diff(actor->position.y, actor->base) >= 0.1; }
+int checkwall(float x, float z) { ++wall_calls; return wall_result; }
+void common_fall(void) {}
+void common_animation_normal(void) {}
+static void idle_action(void) {}
+void kill(entity *victim) { CHECK(victim == self); ++kills; }
+void ent_set_anim(entity *actor, int anim, int reset)
+{
+    CHECK(actor == self->parent && reset == 0);
+    animation = anim == ANI_GETBOOMERANG ? 1 : anim == ANI_GETBOOMERANGINAIR ? 2 : -1;
+}
+float randf(float range) { return range / 4; }
+void toss(entity *actor, float value) { CHECK(actor == self); lift = value; }
+int set_fall(entity *actor, int type, int reset, entity *other, int force, int drop,
+             int noblock, int guardcost, int jugglecost, int pauseadd, int tag)
+{
+    CHECK(actor == self && other == self && type == ATK_NORMAL && force == 100000);
+    CHECK(!reset && !drop && !noblock && !guardcost && !jugglecost && !pauseadd && !tag);
+    return ++falls;
+}
+void debug_printf(char *format, ...) { ++debug_calls; }
+static int biker_move(void) { return 11; }
+int arrow_move(void) { return 12; }
+static int star_move(void) { return 13; }
+int bomb_move(void) { return 14; }
+
+@MOVEMENT@
+
+static const struct {
+    int aimove, parent, direction, parent_direction, parent_type;
+    float x, y, z, vx, vz, dest, accel, distance, speed;
+    int count, sortid, nomove, wall_toggle, wall_index, wall_animation;
+    int catch_ground, catch_air, min, max, parent_y, parent_pain, parent_falling, parent_dead;
+} cases[] = {
+@CASES@
+};
+
+static void observe(unsigned index)
+{
+    const __typeof__(cases[0]) *input = &cases[index];
+    entity source = {0}, parent = {0};
+    s_anim fall = {.numframes = 1};
+    s_anim catch = {.numframes = 1};
+    s_anim *movement[ANI_GETBOOMERANGINAIR+1] = {[ANI_FALL] = input->wall_animation ? &fall : NULL};
+    s_anim *owner[ANI_GETBOOMERANGINAIR+1] = {
+        [ANI_GETBOOMERANG] = input->catch_ground ? &catch : NULL,
+        [ANI_GETBOOMERANGINAIR] = input->catch_air ? &catch : NULL,
+    };
+    s_level area = {0};
+    // checkwall only returns one of these two declared level entries.
+    __typeof__(*area.walls) walls[2] = {{0}};
+    walls[0].height = walls[1].height = 15;
+    area.walls = walls;
+    level = &area;
+    self = &source;
+
+    catch.range.min.x = input->min;
+    catch.range.max.x = input->max;
+    parent.modeldata.animation = owner;
+    parent.modeldata.animation_capacity = sizeof(owner) / sizeof(*owner);
+    parent.modeldata.type = input->parent_type;
+    parent.sortid = 7;
+    parent.direction = input->parent_direction;
+    parent.position.x = 100;
+    parent.position.z = 21;
+    parent.position.y = input->parent_y;
+    parent.inpain = input->parent_pain;
+    parent.falling = input->parent_falling;
+    parent.dead = input->parent_dead;
+    parent.attacking = parent.idling = 1;
+    parent.takeaction = idle_action;
+
+    source.parent = input->parent ? &parent : NULL;
+    source.modeldata.aimove = input->aimove;
+    source.modeldata.animation = movement;
+    source.modeldata.animation_capacity = sizeof(movement) / sizeof(*movement);
+    source.modeldata.speed = input->speed;
+    source.modeldata.boomerang_acc = input->accel;
+    source.modeldata.boomerang_distx = input->distance;
+    source.modeldata.hostile = TYPE_PLAYER | TYPE_ENEMY | TYPE_NPC;
+    source.modeldata.nomove = input->nomove;
+    source.modeldata.subject_to_wall = input->wall_toggle;
+    source.direction = input->direction;
+    source.sortid = input->sortid;
+    source.position.x = input->x;
+    source.position.y = input->y;
+    source.position.z = input->z;
+    source.velocity.x = input->vx;
+    source.velocity.z = input->vz;
+    source.boomerang_loop = input->count;
+    source.boomerang_dest_vel = input->dest;
+    source.attacking = source.projectile = source.damage_on_landing = 1;
+    source.health = 40;
+    source.takeaction = idle_action;
+
+    wall_result = input->wall_index;
+    wall_calls = kills = falls = animation = debug_calls = 0;
+    lift = 0;
+    videomodes.hRes = 320;
+    advancex = 0;
+    int result = common_move();
+    printf("[%u,%u,%d,[%.9g,%.9g,%.9g],[%.9g,%.9g,%.9g],"
+           "%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,"
+           "[%d,%d,%d,%d],%.9g]\n",
+           obor_profile_build, index, result,
+           (double)source.position.x, (double)source.position.y, (double)source.position.z,
+           (double)source.velocity.x, (double)source.velocity.z, (double)source.boomerang_dest_vel,
+           source.boomerang_loop, source.direction, source.sortid, source.modeldata.hostile,
+           source.modeldata.noflip, source.modeldata.antigrab, source.modeldata.grabforce,
+           source.attacking, source.projectile, source.health, source.damage_on_landing,
+           source.takeaction == common_fall, wall_calls, kills, falls, debug_calls,
+           animation, parent.takeaction == common_animation_normal, parent.attacking, parent.idling,
+           (double)lift);
+}
+
+int main(void)
+{
+    const unsigned revisions[] = {@REVISIONS@};
+    for(size_t i = 0; i < sizeof(revisions) / sizeof(*revisions); ++i)
+    {
+        obor_profile_build = revisions[i];
+        for(unsigned j = 0; j < sizeof(cases) / sizeof(*cases); ++j)
+        {
+            observe(j);
+        }
+    }
+    return 0;
+}

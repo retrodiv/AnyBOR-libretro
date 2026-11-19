@@ -1,0 +1,102 @@
+/* SPDX-License-Identifier: BSD-3-Clause
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me> */
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <strings.h>
+#include "source/scriptlib/depends.h"
+#include "source/scriptlib/ScriptVariant.h"
+#undef printf
+
+uint32_t obor_profile_build;
+typedef struct { int animating; void (*takeaction)(void); } entity;
+typedef struct s_model s_model;
+static entity *self;
+static const char *action_text;
+static unsigned collections, diagnostics, idle_calls;
+static volatile int observed;
+CHAR *StrCache_Get(int index)
+{
+    if(index == 0) return (CHAR *)action_text;
+    if(index == 1) return (CHAR *)"takeaction";
+    abort();
+}
+void StrCache_Collect(int index)
+{
+    if(index < 0 || index > 1) abort();
+    collections |= 1u << index;
+}
+int StrCache_Pop(void) { abort(); }
+static int observe_diagnostic(const char *format, ...)
+{
+    if(strstr(format, "not supported by")) diagnostics |= 1;
+    else if(strstr(format, "string value for action")) diagnostics |= 2;
+    else diagnostics |= 4;
+    return 0;
+}
+static void old_action(void) { observed = -1; }
+static void set_idle(entity *actor)
+{
+    if(actor != self || actor->takeaction) abort();
+    ++idle_calls;
+}
+@SIMPLE_ACTION@
+@STUBS@
+@ENUMS@
+@BOUNDARY@
+@VARIANT@
+#define stricmp strcasecmp
+@SEARCH@
+@MACRO@
+#define printf observe_diagnostic
+@NAMESPACE@
+@MAPPER@
+@SETTER@
+#undef printf
+
+static const struct { const char *name; void (*callback)(void); } choices[] = { @ACTIONS@ };
+static const unsigned revisions[] = { @REVISIONS@ };
+static const struct { int argc, handle, kind, number, tick; const char *text; } cases[] = { @CASES@ };
+
+int main(void)
+{
+    for(size_t r = 0; r < sizeof(revisions) / sizeof(*revisions); ++r)
+    {
+        obor_profile_build = revisions[r];
+        for(size_t i = 0; i < sizeof(cases) / sizeof(*cases); ++i)
+        {
+            entity actor = {.takeaction = old_action};
+            ScriptVariant args[3] = {0}, marker = {0}, *out = &marker;
+            ScriptVariant *slots[] = {&args[0], &args[1], &args[2]};
+            args[0].vt = cases[i].handle == 2 ? VT_INTEGER : VT_PTR;
+            args[0].ptrVal = cases[i].handle == 1 ? NULL : &actor;
+            args[1].vt = VT_STR;
+            args[1].strVal = 1;
+            args[2].vt = cases[i].kind == 0 ? VT_STR : cases[i].kind == 1 ? VT_INTEGER :
+                         cases[i].kind == 2 ? VT_EMPTY : VT_DECIMAL;
+            if(args[2].vt == VT_STR) args[2].strVal = 0;
+            else if(args[2].vt == VT_INTEGER) args[2].lVal = cases[i].number;
+            else if(args[2].vt == VT_DECIMAL) args[2].dblVal = 1.25;
+            action_text = cases[i].text;
+            marker.vt = VT_INTEGER;
+            marker.lVal = -23;
+            collections = diagnostics = idle_calls = 0;
+            int status = openbor_changeentityproperty(slots, &out, cases[i].argc);
+            const char *action = actor.takeaction == old_action ? "keep" : actor.takeaction ? "unexpected" : "clear";
+            for(size_t n = 0; n < sizeof(choices) / sizeof(*choices); ++n)
+                if(actor.takeaction == choices[n].callback) action = choices[n].name;
+            const char *type = args[2].vt == VT_INTEGER ? "integer" : args[2].vt == VT_STR ? "string" :
+                               args[2].vt == VT_EMPTY ? "empty" : "decimal";
+            if(cases[i].tick && actor.takeaction == common_animation_normal)
+            {
+                self = &actor;
+                actor.animating = cases[i].tick == 1;
+                actor.takeaction();
+                self = NULL;
+            }
+            printf("[%u,%zu,%d,%d,%d,%u,%u,\"%s\",\"%s\",%d,%u,%d]\n", obor_profile_build, i, status,
+                   out == NULL, (int)marker.lVal, collections, diagnostics, action, type,
+                   args[2].vt == VT_INTEGER ? (int)args[2].lVal : 0, idle_calls, actor.takeaction != NULL);
+        }
+    }
+}

@@ -1,0 +1,167 @@
+/* SPDX-License-Identifier: BSD-3-Clause
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me>
+ */
+#include <assert.h>
+#include <ctype.h>
+#include <stddef.h>
+#include <stdint.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <strings.h>
+
+#define starts_with(a, b) (strncasecmp((a), (b), strlen(b)) == 0)
+#define strclen(s) (sizeof(s) - 1)
+
+typedef struct { int initialized; } Script;
+typedef struct { Script *animation_script; } Scripts;
+typedef enum { CMD_MODEL_ANIMATIONSCRIPT } Command;
+
+static unsigned int obor_profile_build;
+static char trace[64], appended[4096], log_text[4096];
+
+static void append(char *target, size_t capacity, const char *text)
+{
+    size_t length = strlen(target);
+    assert(strlen(text) < capacity - length);
+    memcpy(target + length, text, strlen(text) + 1);
+}
+
+static void event(const char *value)
+{
+    append(trace, sizeof(trace), value);
+}
+
+static void writeToScriptLog(const char *text)
+{
+    if(text[0] == '\n' && text[1] == '#' && strstr(text, "animationscript function main"))
+    {
+        event("L");
+    }
+    append(log_text, sizeof(log_text), text);
+}
+
+static int Script_IsInitialized(Script *script)
+{
+    return script->initialized;
+}
+
+static void Script_Init(Script *script, char *name, char *filename, int first)
+{
+    assert(name && filename && !first);
+    event("I");
+    script->initialized = 1;
+}
+
+static int Script_AppendText(Script *script, const char *text, char *filename)
+{
+    assert(script->initialized && filename);
+    event("A");
+    append(appended, sizeof(appended), text);
+    return 1;
+}
+
+static void Script_Compile(Script *script)
+{
+    event("C");
+}
+
+static size_t lcmHandleCommandScripts(const char **argument, char *text, Script *script,
+                                      char *name, char *filename, int compile, int first)
+{
+    assert(!compile && text);
+    event("D");
+    Script_Init(script, name, filename, first);
+    Script_AppendText(script, *argument, filename);
+    return 1;
+}
+
+static size_t lcmScriptCopyBuffer(const char **argument, char *text, char **output)
+{
+    assert(text && !*output);
+    event("S");
+    *output = strdup(*argument);
+    assert(*output);
+    return 1;
+}
+
+@HELPERS@
+
+static const struct {
+    const char *directive;
+    const char *body;
+    int subclassed;
+} cases[] = {
+@CASES@
+};
+
+static void write_hex(const char *text)
+{
+    for(; *text; ++text)
+    {
+        printf("%02x", (unsigned char)*text);
+    }
+}
+
+static void observe(size_t index)
+{
+    char model[] = "model", path[] = "model.txt", buf[] = "model line";
+    char *filename = path;
+    const char *arglist = cases[index].directive;
+    char *scriptbuf = strdup(cases[index].body), *animscriptbuf = NULL;
+    char *shutdownmessage = NULL;
+    Script animation = {0};
+    Scripts scripts = {&animation};
+    struct {
+        char *name;
+        Scripts *scripts;
+        int isSubclassed;
+    } character = {model, &scripts, cases[index].subclassed}, *newchar = &character;
+    size_t pos = 0;
+    int tempInt;
+    assert(scriptbuf);
+
+    @MODE@
+    trace[0] = appended[0] = log_text[0] = '\0';
+    if(arglist)
+    {
+        switch((Command)CMD_MODEL_ANIMATIONSCRIPT)
+        {
+@COMMAND@
+        }
+    }
+@FINALIZE@
+
+lCleanup:
+    printf("%u\t%zu\t%s\t%zu\t%d\t", obor_profile_build, index, trace, pos,
+           shutdownmessage == NULL);
+    write_hex(appended);
+    putchar('\t');
+    write_hex(log_text);
+    putchar('\n');
+    free(scriptbuf);
+    free(animscriptbuf);
+}
+
+static const struct {
+    const char *text;
+    int comment_at;
+} scan_cases[] = {
+@SCAN_CASES@
+};
+
+static void observe_scan(size_t index)
+{
+    const char *text = scan_cases[index].text;
+    int comment_at = scan_cases[index].comment_at;
+    size_t length = strlen(text);
+    ptrdiff_t begin = -1, body = -1;
+    @SCAN@
+    printf("%u\ts\t%zu\t%td\t%td\n", obor_profile_build, index, begin, body);
+}
+
+int main(void)
+{
+@CHECKS@
+    return 0;
+}

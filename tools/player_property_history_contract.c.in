@@ -1,0 +1,138 @@
+/* SPDX-License-Identifier: BSD-3-Clause
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me>
+ */
+typedef struct
+{
+    unsigned count;
+    int weapons;
+    const char *names[25];
+    const char *diagnostics[4];
+} PlayerPropertyContract;
+
+static const PlayerPropertyContract player_contracts[] = {
+    @PLAYER_CONTRACTS@
+};
+static const unsigned player_contract_ids[] = {@PLAYER_CONTRACT_IDS@};
+
+static void check_numbered_player_names(const PlayerPropertyContract *contract)
+{
+    for(unsigned number = 0; number < contract->count; ++number)
+    {
+        reset(0);
+        char upper[32];
+        const char *name = contract->names[number];
+        size_t length = strlen(name);
+        assert(length < sizeof(upper));
+        for(size_t i = 0; i <= length; ++i)
+            upper[i] = (char)toupper((unsigned char)name[i]);
+        ScriptVariant index = integer(0), property = text(upper);
+        ScriptVariant *args[] = {&index, &property};
+        for(unsigned phase = 0; phase < 2; ++phase)
+        {
+            assert(mapstrings_playerproperty(args, 2) == 1);
+            assert(property.vt == VT_INTEGER && property.lVal == (LONG)number);
+            assert(!diagnostic[0]);
+            ++cases;
+        }
+    }
+}
+
+static void check_numbered_player_calls(unsigned count)
+{
+    reset(1);
+    ScriptVariant index = integer(0), property = text("score"), value = integer(51);
+    ScriptVariant result = {0}, *out = &result;
+    ScriptVariant *args[] = {&index, &property, &value};
+    assert(openbor_getplayerproperty(args, &out, 2) == S_OK);
+    assert(out == &result && result.vt == VT_INTEGER && result.lVal == 30);
+    ++cases;
+    assert(openbor_changeplayerproperty(args, &out, 3) == S_OK && !out);
+    assert(player[0].score == 51);
+    ++cases;
+    out = &result;
+    assert(openbor_getplayerproperty(args, &out, 2) == S_OK);
+    assert(out == &result && result.vt == VT_INTEGER && result.lVal == 51);
+    ++cases;
+
+    property = integer(count);
+    assert(openbor_changeplayerproperty(args, &out, 3) == E_FAIL);
+    assert(!weapon_calls);
+    ++cases;
+}
+
+static void check_weapon_count(int available)
+{
+    const char *names[] = {"", "Missing", "Cached", "Unloaded"};
+    s_model loaded = {.numweapons = 9};
+    s_modelcache cached[] = {{.model = &loaded}, {0}};
+    model_cache = cached;
+    models_cached = 2;
+    for(unsigned i = 0; i < sizeof(names) / sizeof(*names); ++i)
+    {
+        reset(0);
+        strcpy(player[0].name, names[i]);
+        ScriptVariant index = integer(0), property = text("NumWeapons"), result = {0};
+        ScriptVariant *args[] = {&index, &property}, *out = &result;
+        HRESULT status = openbor_getplayerproperty(args, &out, 2);
+        if(available)
+        {
+            assert(status == S_OK && out == &result);
+            assert(result.vt == VT_INTEGER && result.lVal == (i == 2 ? 9 : 0));
+            assert(property.vt == VT_INTEGER && property.lVal == 17);
+        }
+        else
+        {
+            assert(status == E_FAIL && !out && property.vt == VT_STR);
+            assert(!strcmp(diagnostic, "Player property name 'NumWeapons' is not supported yet.\n"));
+        }
+        ++cases;
+    }
+    reset(1);
+    ScriptVariant index = integer(0), property = text("numweapons"), value = integer(2);
+    ScriptVariant result = {0}, *out = &result;
+    ScriptVariant *args[] = {&index, &property, &value};
+    assert(openbor_changeplayerproperty(args, &out, 3) == E_FAIL && !out);
+    assert(loaded.numweapons == 9);
+    ++cases;
+    model_cache = NULL;
+    models_cached = 0;
+}
+
+static void check_combo_messages(const PlayerPropertyContract *contract)
+{
+    for(unsigned i = 0; i < 2; ++i)
+    {
+        reset(0);
+        ScriptVariant index = integer(0), property = text(i ? "inputtime" : "combokey");
+        ScriptVariant frame = {.vt = VT_DECIMAL, .dblVal = 1.25};
+        ScriptVariant value = frame, result = {0}, *out = &result;
+        ScriptVariant *args[] = {&index, &property, &frame, &value};
+        assert(openbor_getplayerproperty(args, &out, 3) == E_FAIL && !out);
+        assert(!strcmp(diagnostic, contract->diagnostics[i]));
+        ++cases;
+
+        diagnostic[0] = 0;
+        frame = integer(1);
+        assert(openbor_changeplayerproperty(args, &out, 4) == E_FAIL && !out);
+        assert(!strcmp(diagnostic, contract->diagnostics[i + 2]));
+        ++cases;
+        diagnostic[0] = 0;
+        value = integer(70 + i);
+        assert(openbor_changeplayerproperty(args, &out, 4) == S_OK && !out);
+        assert(!diagnostic[0]);
+        ++cases;
+        out = &result;
+        assert(openbor_getplayerproperty(args, &out, 3) == S_OK && out == &result);
+        assert(result.vt == VT_INTEGER && result.lVal == 70 + (LONG)i);
+        ++cases;
+    }
+}
+
+static void check_history(unsigned context)
+{
+    const PlayerPropertyContract *contract = &player_contracts[player_contract_ids[context]];
+    check_numbered_player_names(contract);
+    check_numbered_player_calls(contract->count);
+    check_weapon_count(contract->weapons);
+    check_combo_messages(contract);
+}

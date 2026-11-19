@@ -1,0 +1,89 @@
+/* SPDX-License-Identifier: BSD-3-Clause
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me> */
+#include <stdint.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include "openbor.h"
+#undef printf
+HRESULT Interpreter_Call(Interpreter *p){(void)p;abort();}
+HRESULT Interpreter_EvalInstruction(Interpreter *p){(void)p;abort();}
+uint32_t obor_profile_build;
+static unsigned active_case;
+#define CHECK(c) do{if(!(c)){fprintf(stderr,"TERRAIN_GEOMETRY revision=%u case=%u line=%d\n",obor_profile_build,active_case,__LINE__);abort();}}while(0)
+static s_level level_record;
+s_level *level=&level_record;
+int holez;
+static __typeof__(*level_record.holes) holes[4],walls[1];
+static entity platform;
+static s_anim animation;
+static float box[1][8];
+@FUNCTIONS@
+static const struct {unsigned revision;int hole_inclusive,wall_inclusive,platform_inclusive,writes_holez;int selection[@CASE_COUNT@];} contexts[]={@CONTEXTS@};
+static const struct {unsigned count;float heights[4],altitude;} cases[]={@CASES@};
+static unsigned context;
+static void setup(void)
+{
+    memset(&level_record,0,sizeof(level_record));memset(holes,0,sizeof(holes));memset(walls,0,sizeof(walls));
+    memset(&platform,0,sizeof(platform));memset(&animation,0,sizeof(animation));memset(box,0,sizeof(box));
+    level=&level_record;level->holes=holes;level->walls=walls;level->numholes=4;level->numwalls=1;holez=-91;
+    for(unsigned i=0;i<4;i++){
+        holes[i].z=10;holes[i].depth=20;holes[i].lowerleft=holes[i].upperleft=-10;
+        holes[i].lowerright=holes[i].upperright=10;holes[i].height=5;
+    }
+    walls[0]=holes[0];platform.animation=&animation;animation.platform=box;
+    box[0][1]=10;box[0][2]=box[0][3]=-10;box[0][4]=box[0][5]=10;box[0][6]=20;box[0][7]=5;
+}
+static void geometry(void)
+{
+    const float grid[]={-11,-10,-9,0,9,10,11};
+    for(unsigned x=0;x<7;x++)for(unsigned z=0;z<7;z++){
+        active_case++;setup();
+        int open=grid[x]>-10 && grid[x]<10 && grid[z]>-10 && grid[z]<10;
+        int closed=grid[x]>=-10 && grid[x]<=10 && grid[z]>=-10 && grid[z]<=10;
+        CHECK(testhole(0,grid[x],grid[z])==(contexts[context].hole_inclusive?closed:open));
+        CHECK(testwall(0,grid[x],grid[z])==(contexts[context].wall_inclusive?closed:open));
+        CHECK(testplatform(&platform,grid[x],grid[z],NULL)==(contexts[context].platform_inclusive?closed:open));
+    }
+    /* At z=0 the trapezoid edges are exactly -7.5 and +7.5. */
+    setup();holes[0].upperleft=walls[0].upperleft=box[0][2]=-5;
+    holes[0].upperright=walls[0].upperright=box[0][4]=5;
+    for(unsigned side=0;side<2;side++){
+        float edge=side?7.5f:-7.5f;
+        active_case++;
+        CHECK(testhole(0,edge,0)==contexts[context].hole_inclusive);
+        CHECK(testwall(0,edge,0)==contexts[context].wall_inclusive);
+        CHECK(testplatform(&platform,edge,0,NULL)==contexts[context].platform_inclusive);
+        CHECK(testhole(0,edge*0.5f,0) && testwall(0,edge*0.5f,0) && testplatform(&platform,edge*0.5f,0,NULL));
+        CHECK(!testhole(0,edge*2,0) && !testwall(0,edge*2,0) && !testplatform(&platform,edge*2,0,NULL));
+    }
+    setup();platform.position.x=100;platform.position.z=200;
+    CHECK(testplatform(&platform,100,200,NULL));CHECK(!testplatform(&platform,0,0,NULL));
+    CHECK(!testplatform(&platform,100,200,&platform));
+    box[0][7]=0;CHECK(!testplatform(&platform,100,200,NULL));
+    box[0][7]=5;animation.platform=NULL;CHECK(!testplatform(&platform,100,200,NULL));
+    platform.animation=NULL;CHECK(!testplatform(&platform,100,200,NULL));
+}
+static void selection(void)
+{
+    for(unsigned i=0;i<sizeof(cases)/sizeof(*cases);i++){
+        active_case++;setup();level->numholes=cases[i].count;
+        for(unsigned j=0;j<cases[i].count;j++)holes[j].height=cases[i].heights[j];
+        int expected=contexts[context].selection[i];
+        CHECK(checkholeindex_in(0,0,cases[i].altitude)==expected && holez==-91);
+        CHECK(checkhole_in(0,0,cases[i].altitude)==(expected>=0));
+        CHECK(holez==(expected>=0 && contexts[context].writes_holez?expected:-91));
+        holez=-91;CHECK(checkholeindex_in(100,0,cases[i].altitude)==-1 && holez==-91);
+        CHECK(!checkhole_in(100,0,cases[i].altitude) && holez==-91);
+    }
+    level=NULL;holez=-91;
+    CHECK(checkhole_in(0,0,0)==-1 && checkholeindex_in(0,0,0)==-1 && holez==-91);
+}
+int main(void)
+{
+    for(context=0;context<sizeof(contexts)/sizeof(*contexts);context++){
+        obor_profile_build=contexts[context].revision;active_case=0;
+        geometry();selection();printf("{\"revision\":%u,\"status\":\"PASS\"}\n",obor_profile_build);
+    }
+    return 0;
+}

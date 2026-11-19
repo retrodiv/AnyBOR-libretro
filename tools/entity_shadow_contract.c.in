@@ -1,0 +1,168 @@
+/* SPDX-License-Identifier: BSD-3-Clause
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me>
+ */
+#include <stdint.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include "openbor.h"
+#undef printf
+
+uint32_t obor_profile_build;
+@PLAIN@
+static s_level room = {.scrolldir = SCROLL_RIGHT};
+s_level *level = &room;
+float advancex, advancey;
+int gfx_x_offset, gfx_y_offset;
+int PLAYER_MIN_Z = 150, PLAYER_MAX_Z = 200;
+s_axis_i_2d light = {.x = 128, .y = 128};
+int shadowcolor = 8, shadowalpha = BLEND_MULTIPLY + 1, shadowopacity = 255;
+int shadowsprites[6] = {60, 61, 62, 63, 64, 65};
+unsigned sprites_loaded = 100;
+int current_palette;
+unsigned char pal[MAX_PAL_SIZE];
+u32 time;
+
+static s_scripts scripts;
+static int sprite[] = {20};
+static s_anim animation = {.sprite = sprite, .numframes = 1};
+static float platform_frame[1][8] = {{[7] = 4}};
+static s_anim platform_animation = {.platform = platform_frame, .numframes = 1};
+static entity platform = {.position = {.y = 5, .z = 85}, .animation = &platform_animation,
+                          .modeldata = {.setlayer = 1}};
+static entity owner = {.sortid = 70}, binding = {.sortid = 50}, grabbed = {.sortid = 60};
+static entity actor, second, context;
+entity *self = &context;
+entity *smartbomber, *textbox;
+static entity *actors[] = {&actor, &second};
+entity **ent_list = actors;
+entity **ent_stack;
+int ent_max, ent_stack_size, ent_list_size = 100;
+static unsigned char palette[4];
+static int on_platform, old_hole, new_hole, tile_height, output_count;
+
+HRESULT Interpreter_Call(Interpreter *interpreter) { abort(); }
+HRESULT Interpreter_EvalInstruction(Interpreter *interpreter) { abort(); }
+int Script_IsInitialized(Script *script) { return 0; }
+void execute_ondraw_script(entity *ent) { abort(); }
+void drawenemystatus(entity *ent) { abort(); }
+s_drawmethod *getDrawMethod(s_anim *anim, ptrdiff_t index) { abort(); }
+int inair(entity *ent) { return ent->position.y > ent->base; }
+int checkwall(float x, float z) { return -1; }
+int checkwall_below(float x, float z, float height) { return -1; }
+
+entity *check_platform_below(float x, float z, float height, entity *exclude)
+{
+    return on_platform ? &platform : NULL;
+}
+
+static void separate(void)
+{
+    if(output_count++) putchar(',');
+}
+
+float check_basemap(int x, int z)
+{
+    separate();
+    printf("[\"basemap\",%d,%d]", x, z);
+    return tile_height;
+}
+
+int checkhole(float x, float z)
+{
+    separate();
+    printf("[\"hole\",%d,%d]", (int)x, (int)z);
+    return new_hole;
+}
+
+int checkhole_in(float x, float z, float height)
+{
+    separate();
+    printf("[\"height-hole\",%d,%d,%d]", (int)x, (int)z, (int)height);
+    return old_hole;
+}
+
+unsigned char *model_get_colourmap(s_model *model, unsigned map)
+{
+    if(map != 1 && map != 2) abort();
+    return &palette[map];
+}
+
+void spriteq_add_sprite(int x, int y, int z, int id, s_drawmethod *method, int sort)
+{
+    if(!method) abort();
+    separate();
+    const int map = method->table ? (int)((unsigned char *)method->table - palette) : 0;
+    printf("[\"sprite\",%d,%d,%d,%d,%d,%d,%d]", id, x, y, z, sort, method->centery, map);
+}
+
+@NATIVE@
+
+static const struct {
+    int route, shadowbase, subject, platform, tile_height, old_hole, new_hole;
+    int pair, bound, owner, grab, context_move, actor_move, dying, health, late_flash;
+} cases[] = {@CASES@};
+
+static void sample(size_t i)
+{
+    const __typeof__(cases[0]) *input = &cases[i];
+    actor = (entity){0};
+    actor.scripts = &scripts;
+    actor.exists = 1;
+    actor.animation = &animation;
+    actor.sortid = 25;
+    actor.position.x = 110;
+    actor.position.y = 20;
+    actor.position.z = 90;
+    actor.direction = DIRECTION_RIGHT;
+    actor.modeldata.palette = &palette[3];
+    actor.modeldata.gfxshadow = input->route == 1;
+    actor.modeldata.shadow = input->route == 2;
+    actor.modeldata.shadowbase = input->shadowbase;
+    actor.modeldata.subject_to_basemap = input->subject;
+    actor.modeldata.aimove = input->actor_move ? AIMOVE1_BOOMERANG : 0;
+    actor.binding.ent = input->bound ? &binding : NULL;
+    actor.owner = input->owner ? &owner : NULL;
+    if(input->grab)
+    {
+        actor.grabbing = &grabbed;
+        actor.link = &grabbed;
+        actor.modeldata.grabback = 1;
+    }
+    actor.dying = input->dying;
+    actor.dying2 = input->dying ? 2 : 0;
+    actor.per1 = 10;
+    actor.per2 = 3;
+    actor.health = input->health;
+    context.modeldata.aimove = input->context_move ? AIMOVE1_BOOMERANG : 0;
+    time = input->late_flash ? GAME_SPEED / 20 : 0;
+    on_platform = input->platform;
+    tile_height = input->tile_height;
+    old_hole = input->old_hole;
+    new_hole = input->new_hole;
+    ent_max = input->pair ? 2 : 1;
+    second = actor;
+    second.modeldata.subject_to_basemap = 0;
+    second.position.x = 120;
+    second.sortid = 26;
+
+    output_count = 0;
+    putchar('[');
+    display_ents();
+    putchar(']');
+}
+
+int main(void)
+{
+    const unsigned profiles[] = {@PROFILES@};
+    for(size_t i = 0; i < sizeof(profiles) / sizeof(*profiles); ++i)
+    {
+        obor_profile_build = profiles[i];
+        printf("{\"revision\":%u,\"cases\":[", profiles[i]);
+        for(size_t j = 0; j < sizeof(cases) / sizeof(*cases); ++j)
+        {
+            if(j) putchar(',');
+            sample(j);
+        }
+        puts("]}");
+    }
+}

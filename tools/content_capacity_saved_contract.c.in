@@ -1,0 +1,76 @@
+/* SPDX-License-Identifier: BSD-3-Clause
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me> */
+#include <stdint.h>
+#include <stddef.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include "openbor.h"
+#undef printf
+#undef malloc
+#undef free
+#undef calloc
+#undef realloc
+HRESULT Interpreter_Call(Interpreter *p){(void)p;abort();}
+HRESULT Interpreter_EvalInstruction(Interpreter *p){(void)p;abort();}
+uint32_t obor_profile_build;
+int num_difficulties;
+s_savelevel *savelevel;
+static size_t partial_cases;
+#define CHECK(c) do{if(!(c)){fprintf(stderr,"SAVED_BYTES revision=%u line=%d\n",obor_profile_build,__LINE__);abort();}}while(0)
+@HELPERS@
+struct contract {unsigned revision,record;size_t line,allowed,name;int extended,skip,partial;};
+static unsigned number(unsigned seed,unsigned field){return seed*0x01010101u+field;}
+static void fill_ascii(char *text,size_t bytes,unsigned seed)
+{CHECK(bytes);for(size_t i=0;i<bytes;i++)text[i]=(char)(33+(seed+i)%80);text[bytes-1]=0;}
+static void native_fill(s_savelevel *v,unsigned seed,const struct contract *c)
+{
+    memset(v,0x6d,sizeof(*v));
+    @NATIVE_FILL@
+}
+#define JOIN2(a,b) a##b
+#define JOIN(a,b) JOIN2(a,b)
+#define RUN_RECORD(type,index) do { \
+    const size_t bytes=sizeof(type),total=2*bytes; \
+    CHECK(obor_saved_level_record_size()==bytes); \
+    type *reference=malloc(total);unsigned char *image=malloc(total+17); \
+    unsigned char *before=malloc(2*sizeof(s_savelevel)); \
+    CHECK(reference&&image&&before);num_difficulties=2; \
+    for(unsigned row=0;row<2;row++){native_fill(savelevel+row,10+row,c);JOIN(oracle_fill_,index)(reference+row,10+row);} \
+    memcpy(image,reference,total);memset(image+total,0x7b,17); \
+    FILE *written=tmpfile();CHECK(written);CHECK(obor_profile_write_saved_game(written)==2); \
+    CHECK(ftell(written)==(long)total);rewind(written); \
+    unsigned char *actual=malloc(total);CHECK(actual);CHECK(fread(actual,1,total,written)==total); \
+    CHECK(!memcmp(actual,image,total));free(actual);fclose(written); \
+    size_t samples=c->partial?sizeof(JOIN(offsets_,index))/sizeof(size_t):1; \
+    for(size_t sample=0;sample<samples;sample++)for(unsigned second=0;second<(c->partial?2u:1u);second++){ \
+        size_t prefix=c->partial?JOIN(offsets_,index)[sample]+second*bytes:total; \
+        if(prefix>total+17)continue; \
+        for(unsigned row=0;row<2;row++){native_fill(savelevel+row,30+row,c);JOIN(oracle_fill_,index)(reference+row,30+row);} \
+        memcpy(before,savelevel,2*sizeof(s_savelevel)); \
+        FILE *input=tmpfile();CHECK(input);CHECK(fwrite(image,1,prefix,input)==prefix);rewind(input); \
+        size_t received=obor_profile_read_saved_game(input); \
+        size_t changed=prefix<total?prefix:total; \
+        memcpy(reference,image,changed);CHECK(received==(changed/bytes));CHECK(ftell(input)==(long)changed); \
+        for(unsigned row=0;row<2;row++)JOIN(oracle_check_,index)(reference+row,savelevel+row,before+row*sizeof(s_savelevel)); \
+        fclose(input);partial_cases++; \
+    } \
+    free(reference);free(image);free(before); \
+} while(0)
+@DEFINITIONS@
+int main(void)
+{
+    const struct contract contexts[]={@CONTEXTS@};
+    void (*runners[])(const struct contract*)={@RUNNERS@};
+    const size_t sizes[]={@SIZES@};
+    savelevel=malloc(2*sizeof(*savelevel));CHECK(savelevel);
+    for(unsigned i=0;i<sizeof(contexts)/sizeof(*contexts);i++){
+        obor_profile_build=contexts[i].revision;runners[contexts[i].record](contexts+i);
+    }
+    free(savelevel);
+    printf("{\"status\":\"PASS\",\"contexts\":%u,\"partial_cases\":%zu,\"record_sizes\":[",
+           (unsigned)(sizeof(contexts)/sizeof(*contexts)),partial_cases);
+    for(unsigned i=0;i<sizeof(sizes)/sizeof(*sizes);i++){if(i)putchar(',');printf("%zu",sizes[i]);}
+    puts("]}");
+    return 0;
+}

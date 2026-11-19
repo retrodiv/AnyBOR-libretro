@@ -1,0 +1,112 @@
+/* SPDX-License-Identifier: BSD-3-Clause
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me> */
+#include <stdint.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include "openbor.h"
+#undef printf
+uint32_t obor_profile_build;
+static unsigned active_case;
+#define CHECK(c) do{if(!(c)){fprintf(stderr,"TERRAIN_MOVEMENT revision=%u case=%u line=%d\n",obor_profile_build,active_case,__LINE__);abort();}}while(0)
+HRESULT Interpreter_Call(Interpreter *p){(void)p;abort();}
+HRESULT Interpreter_EvalInstruction(Interpreter *p){(void)p;abort();}
+static entity actor,cover;
+entity *self=&actor;
+static s_level world;
+s_level *level=&world;
+static __typeof__(*world.holes) hole;
+static s_anim animation;
+static s_axis_i movement;
+static s_axis_i *movement_rows[]={&movement};
+static int moved[2];
+static unsigned random_words[2], random_used, random_limit;
+static int wall_probe_active, wall_queries, wall_callbacks;
+int holez,PLAYER_MIN_Z=-100,PLAYER_MAX_Z=100;
+float advancex;
+s_videomodes videomodes;
+unsigned int rand32(void){CHECK(random_used<random_limit);return random_words[random_used++];}
+int trygrab(entity *e){(void)e;abort();}
+entity *find_ent_here(entity *e,float x,float z,int types,int(*test)(entity*,entity*))
+{(void)e;(void)x;(void)z;(void)types;(void)test;abort();}
+void ent_set_anim(entity *e,int animation_number,int reset){(void)e;(void)animation_number;(void)reset;abort();}
+float get_platform_base(entity *e){(void)e;abort();}
+int checkwall(float x,float z){(void)x;(void)z;return -1;}
+int checkwall_below(float x,float z,float a)
+{(void)x;(void)z;(void)a;CHECK(wall_probe_active);++wall_queries;return 0;}
+entity *check_platform_below(float x,float z,float a,entity *exclude)
+{(void)x;(void)z;CHECK(a==actor.position.y && exclude==&actor);return NULL;}
+entity *check_platform_between(float x,float z,float low,float high,entity *exclude)
+{(void)x;(void)z;(void)low;(void)high;(void)exclude;abort();}
+void execute_onblockz_script(entity *e){(void)e;abort();}
+void execute_onblocks_script(entity *e){(void)e;abort();}
+void execute_onblocko_script(entity *e,entity *other){(void)e;(void)other;abort();}
+void execute_onblockp_script(entity *e,int plane,entity *other){(void)e;(void)plane;(void)other;abort();}
+void execute_onblockw_script(entity *e,int plane,float height,int index)
+{
+    CHECK(wall_probe_active && e==&actor && plane==1 && index==0);
+    CHECK(height==(float)world.walls[0].height);
+    ++wall_callbacks;
+}
+void execute_onmovex_script(entity *e){CHECK(e==&actor);moved[0]++;}
+void execute_onmovez_script(entity *e){CHECK(e==&actor);moved[1]++;}
+@FUNCTIONS@
+static const struct {unsigned revision;int testmove_height,trymove_height,height_writes_holez;int height_hits[4];} contexts[]={@CONTEXTS@};
+static const float heights[]={-5,20,20,-0.5f},altitudes[]={0,22.5f,12,0};
+static unsigned context;
+static void setup(unsigned axis,unsigned n)
+{
+    memset(&actor,0,sizeof(actor));memset(&cover,0,sizeof(cover));memset(&world,0,sizeof(world));
+    memset(&hole,0,sizeof(hole));memset(&animation,0,sizeof(animation));memset(&movement,0,sizeof(movement));
+    memset(moved,0,sizeof(moved));level=&world;self=&actor;world.holes=&hole;world.numholes=1;holez=-91;
+    actor.animation=&animation;animation.move=movement_rows;actor.modeldata.type=TYPE_ENEMY;
+    actor.modeldata.subject_to_hole=1;actor.idling=1;actor.position.y=actor.base=altitudes[n];
+    hole.x=axis?0:2;hole.z=axis?2.5f:0.5f;hole.depth=1;
+    hole.upperleft=hole.lowerleft=-0.5f;hole.upperright=hole.lowerright=0.5f;hole.height=heights[n];
+}
+static void direct(void)
+{
+    for(unsigned axis=0;axis<2;axis++)for(unsigned n=0;n<4;n++){
+        active_case++;setup(axis,n);float x=axis?0:2,z=axis?2:0;
+        int height_hit=contexts[context].height_hits[n];
+        int hit=contexts[context].testmove_height?height_hit:1;
+        CHECK(testmove(&actor,0,0,x,z)==(hit?-2:1));
+        CHECK(!actor.position.x && !actor.position.z && !moved[0] && !moved[1]);
+        CHECK(holez==(hit && (!contexts[context].testmove_height || contexts[context].height_writes_holez)?0:-91));
+        setup(axis,n);actor.modeldata.subject_to_hole=0;CHECK(testmove(&actor,0,0,x,z)==1 && holez==-91);
+    }
+}
+static void moving(void)
+{
+    for(unsigned axis=0;axis<2;axis++)for(unsigned n=0;n<4;n++)for(int mixed=0;mixed<2;mixed++){
+        active_case++;setup(axis,n);float dx=axis?(mixed?3:0):2,dz=axis?2:(mixed?3:0);
+        int hit=contexts[context].trymove_height?contexts[context].height_hits[n]:1;
+        CHECK(common_trymove(dx,dz)==(hit?(mixed?2:0):1));
+        CHECK(actor.position.x==(hit && !axis?0:dx) && actor.position.z==(hit && axis?0:dz));
+        CHECK(moved[0]==(actor.position.x!=0) && moved[1]==(actor.position.z!=0));
+        CHECK(holez==(hit && (!contexts[context].trymove_height || contexts[context].height_writes_holez)?0:-91));
+    }
+    for(unsigned mode=0;mode<4;mode++){
+        active_case++;setup(0,2);
+        if(mode==0)actor.idling=0;
+        if(mode==1)actor.position.y+=10;
+        if(mode==2)actor.modeldata.aimove|=AIMOVE2_IGNOREHOLES;
+        if(mode==3)movement.base=5;
+        CHECK(common_trymove(2,0)==1 && actor.position.x==2 && moved[0]==1 && !moved[1]);
+    }
+    setup(0,2);CHECK(common_trymove(0,0)==0 && !moved[0] && !moved[1]);
+}
+@MOVEMENT_DECISIONS@
+int main(void)
+{
+    for(context=0;context<sizeof(contexts)/sizeof(*contexts);context++){
+        obor_profile_build=contexts[context].revision;active_case=0;
+#ifdef MOVEMENT_DECISION_CONTRACT
+        check_decisions(context);
+#else
+        direct();moving();
+#endif
+        printf("{\"revision\":%u,\"status\":\"PASS\"}\n",obor_profile_build);
+    }
+    return 0;
+}

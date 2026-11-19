@@ -1,0 +1,123 @@
+/* SPDX-License-Identifier: BSD-3-Clause
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me>
+ */
+#include <assert.h>
+#include <stddef.h>
+#include <stdint.h>
+#include <stdio.h>
+#include <string.h>
+
+#define SDL 0
+#define PSP 0
+
+@DEFINITIONS@
+
+static s_savedata savedata;
+static uint32_t obor_profile_build;
+
+@HELPER@
+
+enum { ORIGINAL_SEED = 100, DEFAULT_SEED = 300 };
+
+#define FILL(record) do {                                                    \
+    memset(&(record), 0, sizeof(record));                                    \
+    (record).compatibleversion = 0x11223300u + seed;                          \
+    (record).gamma = -seed;                                                   \
+    (record).brightness = seed + 1;                                           \
+    (record).usesound = seed + 2;                                             \
+    (record).soundrate = 44100u + seed;                                        \
+    (record).soundvol = seed + 3;                                             \
+    (record).usemusic = seed + 4;                                             \
+    (record).musicvol = seed + 5;                                             \
+    (record).effectvol = seed + 6;                                            \
+    (record).soundbits = seed + 7;                                            \
+    (record).usejoy = seed + 8;                                               \
+    (record).mode = seed + 9;                                                 \
+    (record).windowpos = seed + 10;                                           \
+    for (size_t player = 0; player < MAX_PLAYERS; player++)                   \
+        for (size_t key = 0; key < sizeof((record).keys[0]) / sizeof(int); key++) \
+            (record).keys[player][key] = seed + 100 * player + key;            \
+    (record).showtitles = seed + 11;                                          \
+    (record).videoNTSC = seed + 12;                                            \
+    (record).swfilter = seed + 13;                                             \
+    (record).logo = seed + 14;                                                 \
+    (record).uselog = seed + 15;                                               \
+    (record).debuginfo = seed + 16;                                            \
+    (record).fullscreen = seed + 17;                                          \
+    (record).stretch = seed + 18;                                             \
+    (record).screen[0][0] = seed + 31;                                        \
+    (record).screen[0][1] = seed + 32;                                        \
+} while (0)
+
+static void initialize(int seed)
+{
+    FILL(savedata);
+    savedata.debug_collision_attack = seed + 20;
+    savedata.debug_collision_body = seed + 21;
+    savedata.debug_collision_range = seed + 22;
+    savedata.debug_position = seed + 23;
+    savedata.debug_features = seed + 24;
+}
+
+static void compare(const void *expected, size_t bytes)
+{
+    unsigned char actual[sizeof(savedata)];
+    FILE *stream = tmpfile();
+    assert(stream);
+    obor_write_settings(stream);
+    long written = ftell(stream);
+    if (written != (long)bytes)
+        fprintf(stderr, "Profile %u wrote %ld bytes, expected %zu\n",
+                obor_profile_build, written, bytes);
+    assert(written == (long)bytes);
+    rewind(stream);
+    assert(fread(actual, 1, sizeof(actual), stream) == bytes);
+    assert(memcmp(actual, expected, bytes) == 0);
+    assert(fclose(stream) == 0);
+}
+
+static void check_record(unsigned revision, const void *original, const void *initial,
+                         size_t bytes, unsigned key_count)
+{
+    unsigned char expected[sizeof(savedata)];
+    assert(bytes <= sizeof(expected));
+    obor_profile_build = revision;
+    initialize(ORIGINAL_SEED);
+    compare(original, bytes);
+
+    for (size_t prefix = 0; prefix <= bytes; prefix++)
+    {
+        FILE *stream = tmpfile();
+        assert(stream);
+        assert(fwrite(original, 1, prefix, stream) == prefix);
+        rewind(stream);
+        initialize(DEFAULT_SEED);
+        obor_read_settings(stream);
+        assert(ftell(stream) == (long)prefix && fclose(stream) == 0);
+        memcpy(expected, initial, bytes);
+        memcpy(expected, original, prefix);
+        compare(expected, bytes);
+        if (key_count < MAX_BTN_NUM)
+            for (size_t player = 0; player < MAX_PLAYERS; player++)
+                assert(savedata.keys[player][key_count] == 0);
+    }
+
+    FILE *stream = tmpfile();
+    assert(stream);
+    assert(fwrite(original, 1, bytes, stream) == bytes);
+    assert(fputc(73, stream) == 73);
+    rewind(stream);
+    initialize(DEFAULT_SEED);
+    obor_read_settings(stream);
+    assert(fgetc(stream) == 73 && fclose(stream) == 0);
+    compare(original, bytes);
+}
+
+@CHECKS@
+
+int main(void)
+{
+@CALLS@
+    puts("@MARKER@");
+    return 0;
+}

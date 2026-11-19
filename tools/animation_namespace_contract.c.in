@@ -1,0 +1,92 @@
+/* SPDX-License-Identifier: BSD-3-Clause
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me>
+ */
+#include <stdint.h>
+#include <stdio.h>
+#include <strings.h>
+#include "openbor.h"
+#undef printf
+
+#ifndef stricmp
+#define stricmp strcasecmp
+#endif
+
+uint32_t obor_profile_build;
+static int max_animations;
+
+HRESULT Interpreter_Call(Interpreter *interpreter) { (void)interpreter; abort(); }
+HRESULT Interpreter_EvalInstruction(Interpreter *interpreter) { (void)interpreter; abort(); }
+
+void *checkAlloc(void *pointer, size_t bytes, const char *function, const char *file, int line)
+{
+    if (!pointer && bytes) abort();
+    return pointer;
+}
+
+@HELPER@
+
+static int animation_name(const char *value)
+{
+    int ani_id = -1;
+    @NAMES@
+    return ani_id;
+}
+
+static int animation_constant(const char *constname)
+{
+    ScriptVariant v = {0};
+#define ICMPCONST(x) else if(stricmp(#x, constname) == 0) { v.lVal = x; }
+    if(stricmp("ANI_IDLE", constname) == 0)
+    {
+        v.lVal = ANI_IDLE;
+    }
+    @CONSTANTS@
+    else
+    {
+        return -1;
+    }
+#undef ICMPCONST
+    return (int)v.lVal;
+}
+
+@COUNTERS@
+@POINTERS@
+@DEFAULTS@
+
+static void allocate_animations(int extra)
+{
+    s_model model = {0}, *newchar = &model;
+    int i;
+    @FIRST_DYNAMIC@
+    @RESET_BASE@
+    @RESET_COUNTS@
+    @ALLOCATE@
+    @CAPACITY@
+    printf("[%d,%d,%d", max_animations, maxanim, newchar->animation_capacity);
+    @OBSERVE@
+    putchar(']');
+    @CLEANUP@
+}
+
+int main(void)
+{
+    static const unsigned profiles[] = {@PROFILE_ROWS@};
+    static const char *const names[] = {@MODEL_NAMES@};
+    static const char *const constants[] = {@CONSTANT_NAMES@};
+    for(size_t p = 0; p < sizeof(profiles) / sizeof(profiles[0]); ++p)
+    {
+        obor_profile_build = profiles[p];
+        printf("[%u,[[", profiles[p]);
+        for(size_t n = 0; n < sizeof(names) / sizeof(names[0]); ++n)
+            printf("%s%d", n ? "," : "", animation_name(names[n]));
+        printf("],[");
+        for(size_t n = 0; n < sizeof(constants) / sizeof(constants[0]); ++n)
+            printf("%s%d", n ? "," : "", animation_constant(constants[n]));
+        printf("],");
+        allocate_animations(0);
+        putchar(',');
+        allocate_animations(1);
+        puts("]]");
+    }
+    return 0;
+}

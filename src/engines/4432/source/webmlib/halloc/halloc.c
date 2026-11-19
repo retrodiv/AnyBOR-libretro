@@ -1,3 +1,15 @@
+/* AnyBOR modification record: 2026-09-30.
+ * Port maintained by retrodiv <retrodiv@proton.me>.
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me> (original contributions).
+ * These contributions are licensed under BSD-3-Clause; see LICENSE at the root.
+ * Upstream code retains its original license and notices.
+ * Rebuild sibling links when reallocating attached storage, preserving child
+ * links and data.
+ * Existing changes recorded here; this is not their implementation date.
+ * See MODIFICATIONS.md and docs/modifications/4432.md
+ * at the source repository root. Original notices follow below.
+ */
+
 /*
  *	Copyright (c) 2004i-2010 Alex Pankratov. All rights reserved.
  *
@@ -95,11 +107,14 @@ void * halloc(void * ptr, size_t len)
 	/* realloc */
 	if (len)
 	{
+        int detached = p->siblings.prev == &p->siblings.next;
 		p = allocator(p, len + sizeof_hblock);
 		if (! p)
 			return NULL;
 
-		hlist_relink(&p->siblings);
+        /* Detached prev points inside the old allocation, so rebuild it. */
+        if(detached) hlist_init_item(&p->siblings);
+        else hlist_relink(&p->siblings);
 		hlist_relink_head(&p->children);
 		
 		return p->data;

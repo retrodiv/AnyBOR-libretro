@@ -1,0 +1,129 @@
+/* SPDX-License-Identifier: BSD-3-Clause
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me> */
+#include <stdint.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <stdarg.h>
+#include "Parser.h"
+#include "anybor_content_error.h"
+#undef malloc
+#undef calloc
+#undef realloc
+#undef strdup
+#undef printf
+uint32_t obor_profile_build;
+#include "ParserSet.c"
+static Parser parser;
+static List list;
+static unsigned active_case,input_count,input_at,instruction_count;
+static const char *active_name;
+#define CHECK(c) do{if(!(c)){fprintf(stderr,"GRAMMAR revision=%u case=%u name=%s line=%d\n",obor_profile_build,active_case,active_name?active_name:"tables",__LINE__);abort();}}while(0)
+static Token input[16];
+static Instruction *instructions[64],*owned[128];
+static unsigned owned_count,messages;
+static char diagnostic[1024];
+void *checkAlloc(void *p,size_t size,const char *f,const char *file,int line)
+{(void)f;(void)file;(void)line;if(size && !p)abort();return p;}
+void exitIfFalse(int value,const char *expression,const char *f,const char *file,int line)
+{(void)expression;(void)f;(void)file;(void)line;if(!value)abort();}
+void obor_content_error(const char *path,unsigned long row,unsigned long column,const char *reason)
+{(void)path;(void)row;(void)column;(void)reason;abort();}
+HRESULT pp_error(pp_parser *p,char *format,...)
+{
+    CHECK(p==&parser.theLexer.preprocessor && messages++==0);
+    va_list args;va_start(args,format);int count=vsnprintf(diagnostic,sizeof(diagnostic),format,args);va_end(args);
+    CHECK(count>=0 && (size_t)count<sizeof(diagnostic));return E_FAIL;
+}
+HRESULT Lexer_GetNextToken(Lexer *p,Token *next)
+{
+    CHECK(p==&parser.theLexer && input_at<input_count);
+    *next=input[input_at++];return S_OK;
+}
+void *List_Retrieve(const List *p)
+{CHECK(p==&list);return instruction_count?instructions[instruction_count-1]:NULL;}
+void *List_GetLast(const List *p){return List_Retrieve(p);}
+void List_Remove(List *p){CHECK(p==&list && instruction_count);instruction_count--;}
+int List_GotoPrevious(List *p){(void)p;abort();}
+void List_InsertAfter(List *p,void *value,const char *name){(void)p;(void)value;(void)name;abort();}
+void Parser_AddInstructionViaToken(Parser *p,OpCode code,Token *token,Label label)
+{
+    CHECK(p==&parser && !label && instruction_count<64 && owned_count<128);
+    Instruction *node=calloc(1,sizeof(*node));CHECK(node);node->OpCode=code;
+    if(token){node->theToken=malloc(sizeof(*token));CHECK(node->theToken);*node->theToken=*token;}
+    instructions[instruction_count++]=node;owned[owned_count++]=node;
+}
+void Instruction_Clear(Instruction *node)
+{
+    unsigned i=0;for(;i<owned_count;i++)if(owned[i]==node)break;
+    CHECK(i<owned_count);free(node->theToken);node->theToken=NULL;owned[i]=NULL;
+}
+void Parser_Log_or_expr(Parser *p){Parser_Unary_expr(p);}
+void Parser_Expr(Parser *p){(void)p;abort();}
+void Parser_Arg_expr_list(Parser *p){(void)p;abort();}
+Label Parser_CreateLabel(Parser *p){(void)p;abort();}
+void Parser_AddInstructionViaLabel(Parser *p,OpCode code,Label label,Label list_label)
+{(void)p;(void)code;(void)label;(void)list_label;abort();}
+@FUNCTIONS@
+struct members{unsigned count;MY_TOKEN_TYPE tokens[END_OF_TOKENS];};
+static const struct members tables[][2][67]={@TABLES@};
+struct instruction{OpCode code;const char *text;};
+struct outcome{const char *diagnostic;MY_TOKEN_TYPE next;OpCode op;unsigned count;struct instruction instructions[24];};
+static const struct sample{const char *name;unsigned method,count;struct{MY_TOKEN_TYPE type;const char *text;}tokens[16];struct outcome outcome[2];}cases[]={@CASES@};
+static const struct{unsigned revision,table,choice[@CASE_COUNT@];}contexts[]={@CONTEXTS@};
+static void release(void)
+{
+    for(unsigned i=0;i<owned_count;i++)if(owned[i]){free(owned[i]->theToken);free(owned[i]);owned[i]=NULL;}
+    owned_count=instruction_count=0;
+}
+static void verify_tables(unsigned table)
+{
+    CHECK(NUMPRODUCTIONS==67);ParserSet_Buildup(&parser.theParserSet);
+    for(unsigned family=0;family<2;family++)for(unsigned production=0;production<67;production++){
+        const struct members *expected=&tables[table][family][production];
+        MY_TOKEN_TYPE *actual=family?parser.theParserSet.FollowSet[production]:parser.theParserSet.FirstSet[production];
+        for(unsigned i=0;i<expected->count;i++)CHECK(actual[i]==expected->tokens[i]);
+        CHECK(actual[expected->count]==END_OF_TOKENS);
+        for(int token=-1;token<END_OF_TOKENS;token++){
+            int found=0;for(unsigned i=0;i<expected->count;i++)if((int)expected->tokens[i]==token)found=1;
+            BOOL membership=family?ParserSet_Follow(&parser.theParserSet,production,token):ParserSet_First(&parser.theParserSet,production,token);
+            CHECK((membership!=FALSE)==found);
+        }
+    }
+}
+static void run_case(const struct sample *sample,const struct outcome *expected)
+{
+    release();memset(&parser,0,sizeof(parser));memset(&list,0,sizeof(list));
+    active_name=sample->name;ParserSet_Buildup(&parser.theParserSet);
+    parser.pIList=&list;parser.theFieldToken.theType=END_OF_TOKENS;
+    messages=0;diagnostic[0]=0;input_count=sample->count;input_at=1;
+    for(unsigned i=0;i<input_count;i++){
+        TEXTPOS position={1,i+1};Token_Init(&input[i],sample->tokens[i].type,sample->tokens[i].text,position,i);
+    }
+    parser.theNextToken=input[0];OpCode code=ERR;
+    if(sample->method==0)Parser_Assignment_expr(&parser);
+    else if(sample->method==1)code=Parser_Assignment_op(&parser);
+    else Parser_Error(&parser,unary_expr);
+    CHECK(parser.theNextToken.theType==expected->next && instruction_count==expected->count);
+    CHECK(parser.errorFound==(expected->diagnostic!=NULL) && messages==(expected->diagnostic!=NULL));
+    if(expected->diagnostic)CHECK(!strcmp(diagnostic,expected->diagnostic));else CHECK(!diagnostic[0]);
+    if(sample->method==1)CHECK(code==expected->op);
+    for(unsigned i=0;i<instruction_count;i++){
+        Instruction *node=instructions[i];CHECK(node->OpCode==expected->instructions[i].code);
+        if(expected->instructions[i].text)CHECK(node->theToken && !strcmp(node->theToken->theSource,expected->instructions[i].text));
+        else CHECK(!node->theToken);
+    }
+    release();
+}
+int main(void)
+{
+    for(unsigned p=0;p<sizeof(contexts)/sizeof(*contexts);p++){
+        obor_profile_build=contexts[p].revision;active_case=0;active_name=NULL;verify_tables(contexts[p].table);
+        for(unsigned c=0;c<sizeof(cases)/sizeof(*cases);c++){
+            active_case=c;run_case(&cases[c],&cases[c].outcome[contexts[p].choice[c]]);
+        }
+        ParserSet_Clear(&parser.theParserSet);
+        printf("{\"revision\":%u,\"status\":\"PASS\",\"tables\":2,\"productions\":67,\"cases\":%u}\n",obor_profile_build,(unsigned)(sizeof(cases)/sizeof(*cases)));
+    }
+    return 0;
+}

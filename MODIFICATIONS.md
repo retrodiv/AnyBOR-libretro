@@ -659,6 +659,56 @@ enabled for every profile.
 
 ## Logical profile compatibility
 
+Main-menu introductions retain each profile's condition and request-reset order.
+Failed-level game-over and score displays follow the profile's request flags.
+Screen scripts and entity updates use the profile's active-screen conditions.
+Return-to-menu requests preserve the profile's pause routing and final-frame order.
+Request bits use defined 32-bit integer operations.
+The main-menu request script name and reverse lookup follow profile availability.
+Seed, video and rounding script names follow each profile's availability.
+Sample controls retain profile-specific names, return conventions and channel effects.
+Basemap script names retain profile-specific availability, registered aliases and native helper results.
+Basemap cell edits follow each profile's coordinate conversion and initial grid size, with writes checked against the owned storage.
+Basemap generation follows each profile's position, slope, grid and script argument rules.
+Platform query aliases and animation and array script names follow each profile's original registry. The platform range query checks for its fourth argument, and moving backward on an empty array returns false.
+Entity actions retain the names and numeric identifiers used by each profile.
+Entity property lookup preserves each profile's names and numeric identifiers, including ordinals cached by scripts.
+Entity property access retains each profile's field selection, argument rules and updates.
+Script wall-height queries retain each profile's original altitude handling.
+Script reads and writes of collision coordinates follow the original profile rules for attack and body records.
+Hit selection retains the original profile rules for counter boxes, attack and body pairs, target eligibility and juggle points.
+Frame construction preserves profile-specific collision counts, record indices and recursive damage defaults.
+Collision queries return the frame records or instance collections exposed by each profile.
+Boomerangs follow the original ownership, movement, landing, return, catch and wall rules for each profile.
+Projectile damage and AI target selection follow the original rules for each profile.
+Projectile model commands, spawn defaults and script-visible subtype values follow the original rules for each profile.
+Start-to-selection controls and the status display follow each profile's original debug flags, labels and draw order.
+Visual debug overlays preserve profile-specific coordinate text, collision boxes and drawing depths.
+Entity shadows, dying palettes and sprite order follow each profile's original rendering rules.
+Character selection follows each profile's rules for saving and restoring the roster, music, background and preset characters.
+Model animation scripts retain the profile-specific directive order, main recognition and composition rules.
+Generated animation and frame guards use each profile's native local variable lookup.
+Animation energy checks preserve each profile's rules for costs declared on the animation and for omitted costs.
+Animation property scripts preserve profile-specific writes to undeclared costs and reads of undeclared drop frames.
+Animation names, script constants and dynamic animation identifiers follow their original profile definitions.
+Double-tap direction and charge release use the action rules of the selected profile.
+Grab attacks, specials and follower warp preserve the profile's animation requirements.
+Counter windows, repeated hits and follow-up attacks use the original profile rules.
+Text object scripts and drawing preserve each profile's property names, numeric selectors and displayed percent pairs.
+Script stream output follows each profile's save arguments and byte append rules.
+Model movement keywords and offscreen attack chance follow each profile's original rules.
+Script platform, movement and animation constants resolve according to the selected profile.
+Animation property numbers and frame-count updates follow the selected profile's script API.
+Player property numbers, weapon-count queries and combo diagnostics follow the selected profile's script API.
+Native progress text, GIF result conversion and named script additions follow the selected profile.
+AI movement and item search use the selected profile's random draws and wall participation rules.
+Settings files use the selected profile's native control and debug fields.
+Names and high-score files use the selected profile's native limits and record layouts.
+Script destination coordinates retain the selected profile's precision and result type.
+Entity binding uses the selected profile's relative sort rules and script arguments.
+Entity spawning uses the selected profile's level requirements and remap arguments. Key scripts use its screen and input rules.
+Blocker selection and attack sample caching use the selected profile's collision slots.
+
 Screen centering and indexed palette transparency follow each profile's native drawing rules.
 Indexed transformations follow each profile's remap, fill and blend order.
 Transparency tests the source index before fill replacement; fill indices use their low eight bits.
@@ -687,7 +737,7 @@ in their respective files.
 
 | Capability or change | Behaviour and current implementation |
 |---|---|
-| Selectable engine profiles | Core Options offers v3.0 3020-dev, v3.0 3057, v3.0 3062, v3.0 3073, v3.0 3081, v3.0 3109, v3.0 3117, v3.0 3143, v3.0 3160, v3.0 3173, v3.0 3192, v3.0 3208, v3.0 3273, v3.0 3288, v3.0 3303, v3.0 3307, v3.0 3310, v3.0 3311, v3.0 3316, v3.0 3317, v3.0 3318, v3.0 3327, v3.0 3328, v3.0 3330, v3.0 3332, v3.0 3335, v3.0 3337, v3.0 3340, v3.0 3341, v3.0 3342, v3.0 3350, v3.0 3351, v3.0 3352, v3.0 3353, v3.0 3354, v3.0 3355, v3.0 3356, v3.0 3357, v3.0 3360, v3.0 3361, v3.0 3362, v3.0 3365, v3.0 3366, v3.0 3367, v3.0 3371, v3.0 3372, v3.0 3373, v3.0 3375, v3.0 3379, v3.0 3380, v3.0 3381, v3.0 3383, v3.0 3385, v3.0 3388, v3.0 3391, v3.0 3394, v3.0 3397, v3.0 3400, v3.0 3406, v3.0 3411, v3.0 3415, v3.0 3416, v3.0 3420, v3.0 3422, v3.0 3427, v3.0 3428, v3.0 3431, v3.0 3434, v3.0 3436, v3.0 3441, v3.0 3445, v3.0 3446, v3.0 3449, v3.0 3454, v3.0 3458, v3.0 3461, v3.0 3463, v3.0 3465, v3.0 3467, v3.0 3469, v3.0 3472, v3.0 3477, v3.0 3482, v3.0 3500, v3.0 3509, v3.0 3511, v3.0 3515, v3.0 3517, v3.0 3520, v3.0 3526, v3.0 3549, v3.0 3550, v3.0 3551, v3.0 3552, v3.0 3553, v3.0 3554, v3.0 3557, v3.0 3559, v3.0 3562, v3.0 3565, v3.0 3567, v3.0 3568, v3.0 3581, v3.0 3583, v3.0 3585, v3.0 3586, v3.0 3587, v3.0 3591, v3.0 3594, v3.0 3596, v3.0 3597, v3.0 3602, v3.0 3604, v3.0 3605, v3.0 3608, v3.0 3609, v3.0 3611, v3.0 3614, v3.0 3618, v3.0 3619, v3.0 3623, v3.0 3624, v3.0 3626, v3.0 3629, v3.0 3631, v3.0 3633, v3.0 3635, v3.0 3638, v3.0 3639, v3.0 3640, v3.0 3644, v3.0 3646, v3.0 3647, v3.0 3649, v3.0 3650, v3.0 3651, v3.0 3655, v3.0 3656, v3.0 3657, v3.0 3660, v3.0 3661, v3.0 3663, v3.0 3664, v3.0 3665, v3.0 3666, v3.0 3667, v3.0 3669, v3.0 3670, v3.0 3671, v3.0 3672, v3.0 3673, v3.0 3674, v3.0 3675, v3.0 3677, v3.0 3678, v3.0 3679, v3.0 3680, v3.0 3682, v3.0 3685, v3.0 3686, v3.0 3689, v3.0 3690, v3.0 3691, v3.0 3692, v3.0 3693, v3.0 3694, v3.0 3697, v3.0 3699, v3.0 3701, v3.0 3703, v3.0 3704, v3.0 3707, v3.0 3708, v3.0 3709, v3.0 3710, v3.0 3711, v3.0 3713, v3.0 3714, v3.0 3715, v3.0 3716, v3.0 3722, v3.0 3725, v3.0 3726, v3.0 3727, v3.0 3728, v3.0 3729, v3.0 3730, v3.0 3732, v3.0 3738, v3.0 3740, v3.0 3741, v3.0 3742-dev, v3.0 3761-dev, v3.0 3769, v3.0 3773, v3.0 3780, v3.0 3783, v3.0 3789, v3.0 3793, v3.0 3797, v3.0 3805, v3.0 3814, v3.0 3818, v3.0 3822, v3.0 3824, v3.0 3829, v3.0 3831, v3.0 3837, v3.0 3839, v3.0 3842, v3.0 3846, v3.0 3847-dev, v3.0 3849, v3.0 3854, v3.0 3968-dev, v3.0 3970-dev, v3.0 3978, v3.0 3984, v3.0 3993, v3.0 3994, v3.0 4011, v3.0 4046, v3.0 4051, v3.0 4054, v3.0 4055, v3.0 4079, v3.0 4080, v3.0 4082, v3.0 4085, v3.0 4086, v3.0 4088-dev, v3.0 4107, v3.0 4111, v3.0 4129, v3.0 4153, v3.0 4161-dev, v3.0 4183-dev, v3.0 4213, v3.0 4432, v3.0 4453, v3.0 6330, v3.0 6330-lns-010g, v3.0 6391, v3.0 6391-mod, v3.0 6392-dev, v3.0 6412-dev, v3.0 6510-dev, v3.0 7086-dev, v3.0 7123-dev, v4.0 7142-alpha, v4.0 7530, v4.0 7533, v4.0 7555, v4.0 7556, v4.0 7735 and v4.0 8023-dev. Auto uses build tags and content clues. Each profile retains its compatibility behavior and save directory. [`anybor_abi.h`](src/glue/anybor_abi.h), [`anybor_engines.h`](src/glue/anybor_engines.h), [`tools/build.py`](tools/build.py). |
+| Selectable engine profiles | Core Options offers v3.0 3020-dev, v3.0 3057, v3.0 3062, v3.0 3073, v3.0 3081, v3.0 3109, v3.0 3117, v3.0 3143, v3.0 3160, v3.0 3173, v3.0 3192, v3.0 3208, v3.0 3273, v3.0 3288, v3.0 3303, v3.0 3307, v3.0 3310, v3.0 3311, v3.0 3316, v3.0 3317, v3.0 3318, v3.0 3327, v3.0 3328, v3.0 3330, v3.0 3332, v3.0 3335, v3.0 3337, v3.0 3340, v3.0 3341, v3.0 3342, v3.0 3350, v3.0 3351, v3.0 3352, v3.0 3353, v3.0 3354, v3.0 3355, v3.0 3356, v3.0 3357, v3.0 3360, v3.0 3361, v3.0 3362, v3.0 3365, v3.0 3366, v3.0 3367, v3.0 3371, v3.0 3372, v3.0 3373, v3.0 3375, v3.0 3379, v3.0 3380, v3.0 3381, v3.0 3383, v3.0 3385, v3.0 3388, v3.0 3391, v3.0 3394, v3.0 3397, v3.0 3400, v3.0 3406, v3.0 3411, v3.0 3415, v3.0 3416, v3.0 3420, v3.0 3422, v3.0 3427, v3.0 3428, v3.0 3431, v3.0 3434, v3.0 3436, v3.0 3441, v3.0 3445, v3.0 3446, v3.0 3449, v3.0 3454, v3.0 3458, v3.0 3461, v3.0 3463, v3.0 3465, v3.0 3467, v3.0 3469, v3.0 3472, v3.0 3477, v3.0 3482, v3.0 3500, v3.0 3509, v3.0 3511, v3.0 3515, v3.0 3517, v3.0 3520, v3.0 3526, v3.0 3549, v3.0 3550, v3.0 3551, v3.0 3552, v3.0 3553, v3.0 3554, v3.0 3557, v3.0 3559, v3.0 3562, v3.0 3565, v3.0 3567, v3.0 3568, v3.0 3581, v3.0 3583, v3.0 3585, v3.0 3586, v3.0 3587, v3.0 3591, v3.0 3594, v3.0 3596, v3.0 3597, v3.0 3602, v3.0 3604, v3.0 3605, v3.0 3608, v3.0 3609, v3.0 3611, v3.0 3614, v3.0 3618, v3.0 3619, v3.0 3623, v3.0 3624, v3.0 3626, v3.0 3629, v3.0 3631, v3.0 3633, v3.0 3635, v3.0 3638, v3.0 3639, v3.0 3640, v3.0 3644, v3.0 3646, v3.0 3647, v3.0 3649, v3.0 3650, v3.0 3651, v3.0 3655, v3.0 3656, v3.0 3657, v3.0 3660, v3.0 3661, v3.0 3663, v3.0 3664, v3.0 3665, v3.0 3666, v3.0 3667, v3.0 3669, v3.0 3670, v3.0 3671, v3.0 3672, v3.0 3673, v3.0 3674, v3.0 3675, v3.0 3677, v3.0 3678, v3.0 3679, v3.0 3680, v3.0 3682, v3.0 3685, v3.0 3686, v3.0 3689, v3.0 3690, v3.0 3691, v3.0 3692, v3.0 3693, v3.0 3694, v3.0 3697, v3.0 3699, v3.0 3701, v3.0 3703, v3.0 3704, v3.0 3707, v3.0 3708, v3.0 3709, v3.0 3710, v3.0 3711, v3.0 3713, v3.0 3714, v3.0 3715, v3.0 3716, v3.0 3722, v3.0 3725, v3.0 3726, v3.0 3727, v3.0 3728, v3.0 3729, v3.0 3730, v3.0 3732, v3.0 3738, v3.0 3740, v3.0 3741, v3.0 3742-dev, v3.0 3761-dev, v3.0 3769, v3.0 3773, v3.0 3780, v3.0 3783, v3.0 3789, v3.0 3793, v3.0 3797, v3.0 3805, v3.0 3814, v3.0 3818, v3.0 3822, v3.0 3824, v3.0 3829, v3.0 3831, v3.0 3837, v3.0 3839, v3.0 3842, v3.0 3846, v3.0 3847-dev, v3.0 3849, v3.0 3854, v3.0 3968-dev, v3.0 3970-dev, v3.0 3978, v3.0 3984, v3.0 3993, v3.0 3994, v3.0 4011, v3.0 4046, v3.0 4051, v3.0 4054, v3.0 4055, v3.0 4079, v3.0 4080, v3.0 4082, v3.0 4085, v3.0 4086, v3.0 4088-dev, v3.0 4107, v3.0 4111, v3.0 4129, v3.0 4153, v3.0 4161-dev, v3.0 4183-dev, v3.0 4213, v3.0 4283-dev, v3.0 4287, v3.0 4316, v3.0 4317, v3.0 4320, v3.0 4321, v3.0 4328, v3.0 4330, v3.0 4332, v3.0 4334, v3.0 4336, v3.0 4342, v3.0 4343, v3.0 4344, v3.0 4346, v3.0 4349, v3.0 4352, v3.0 4366, v3.0 4367-dev, v3.0 4377, v3.0 4379, v3.0 4383, v3.0 4385, v3.0 4387, v3.0 4389, v3.0 4390, v3.0 4393, v3.0 4394, v3.0 4396, v3.0 4400, v3.0 4401, v3.0 4403, v3.0 4404-dev, v3.0 4406, v3.0 4411, v3.0 4412, v3.0 4413, v3.0 4414, v3.0 4417, v3.0 4419, v3.0 4420, v3.0 4421-dev, v3.0 4423, v3.0 4424, v3.0 4426, v3.0 4429, v3.0 4430, v3.0 4431, v3.0 4432, v3.0 4453, v3.0 6330, v3.0 6330-lns-010g, v3.0 6391, v3.0 6391-mod, v3.0 6392-dev, v3.0 6412-dev, v3.0 6510-dev, v3.0 7086-dev, v3.0 7123-dev, v4.0 7142-alpha, v4.0 7530, v4.0 7533, v4.0 7555, v4.0 7556, v4.0 7735 and v4.0 8023-dev. Auto uses build tags and content clues. Each profile retains its compatibility behavior and save directory. [`anybor_abi.h`](src/glue/anybor_abi.h), [`anybor_engines.h`](src/glue/anybor_engines.h), [`tools/build.py`](tools/build.py). |
 | Automatic engine selection | An explicit core option takes precedence; otherwise inspect legacy script API requirements, filename tags, nearby executables as data, and PAK content tokens, then use the pinned fallback. Selection is rerun on Reset. [`libretro.cpp`](src/glue/libretro.cpp), `decide_engine`, `pick_anchor`, `build_from_content`; [`anybor_markers.h`](src/glue/anybor_markers.h). |
 | Frontend-owned frame delivery | Run the engine main loop on a libco coroutine, yield at video submission, and advance an emulated microsecond clock. Sleep/input-wait paths also yield so frontend input remains live. [`libretroport.c`](src/port/libretro/libretroport.c), [`libretroport.h`](src/port/libretro/libretroport.h), [`timer.c`](src/port/libretro/timer.c). |
 | Video and audio backends | Convert engine video to XRGB8888, publish geometry, and pull engine audio through the frontend. [`video.c`](src/port/libretro/video.c), [`video.h`](src/port/libretro/video.h), [`vga.h`](src/port/libretro/vga.h), [`sblaster.c`](src/port/libretro/sblaster.c), [`sblaster.h`](src/port/libretro/sblaster.h). |
@@ -1274,6 +1324,8 @@ before recording them; valid label instructions retain their native behavior.
 Constant-token prefixes validate room for the added operator and terminator.
 Fitting literals retain their exact bytes; a token that cannot hold its prefix
 uses the parser's normal error path.
+The affected parser propagates a recursive operand's rejection before consuming
+its instruction result.
 
 ## Script preprocessor safety
 
@@ -1391,6 +1443,24 @@ bytes; padding and mutable mixer state remain ordinary state data.
 Additive grammar remains available, and memory-safety and lifecycle corrections
 remain active for every profile. The boundary table and limits are recorded in
 [choosing a profile](docs/HISTORICAL_PROFILES.md).
+
+Model loading retains source-defined type defaults, subtype spellings and
+basemap command admission by profile.
+Entity retirement preserves callback placement around the live-entity guard
+by profile, with null pointers excluded from the callback.
+Platform callbacks retain source-defined local variant tags and initialize
+complete variant storage before copying the historical decimal-tagged pointer.
+System variables retain source-defined identifiers, field availability, menu
+context, platform result types and scalar or live last-hit values by profile.
+Shadow-opacity commands, level-event selection and drawing channels follow
+each profile's original availability.
+Stage-completion display commands and their consumers retain native profile
+availability and defaults.
+Options and system menus retain native layouts, item availability, selection
+order and menu context flags by profile.
+Pause-menu fonts and logical offsets follow the selected profile.
+Module debug and pause-offset commands retain profile-specific availability
+and native argument behavior.
 
 ### Reconstructed variants
 
@@ -1794,3 +1864,27 @@ the destination capacity.
 ## Hierarchical allocation links
 
 Detached multimedia allocation records rebuild their internal sibling links after reallocation. Attached records retain their external links and child ownership.
+
+
+## Historical argument and selection data
+
+Argument reading and constant values retain profile-specific extents.
+Selection text and saved-game records retain their native byte widths and
+partial-read behavior.
+
+
+## Native script call inputs
+
+Seed, video and rounding calls reject missing argument slots before use.
+Defined conversions, seed values, callback results and result ownership are
+preserved. Integer truncation rejects values outside its signed 32-bit result.
+Video calls retain native path and optional-flag forwarding; builds without
+video playback report the supplied path with a defined diagnostic.
+
+
+## Sample channel inputs
+
+Sample script calls check missing argument slots before use. Per-channel pause
+and query helpers retain access to every allocated channel slot and reject
+indices outside that storage. Global pause changes the configured channels.
+Native truth conversion, result writes and return conventions are preserved.

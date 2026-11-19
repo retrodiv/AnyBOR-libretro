@@ -1,0 +1,97 @@
+/* SPDX-License-Identifier: BSD-3-Clause
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me>
+ */
+#define MOVEMENT_DECISION_CONTRACT 1
+
+static const struct {int wander_draw, item_draw, negative_wall;} decisions[] = {
+    @DECISION_ROWS@
+};
+u32 borTime;
+static int item_lookups;
+
+entity *normal_find_item(void)
+{
+    ++item_lookups;
+    return &cover;
+}
+
+static int choose_wander(void)
+{
+    int mod;
+    @WANDER@
+    return mod;
+}
+
+static entity *choose_item(void)
+{
+    entity *other;
+    @ITEM@
+    return other;
+}
+
+static void seed_random(unsigned first, unsigned second)
+{
+    random_words[0] = first;
+    random_words[1] = second;
+    random_used = 0;
+    random_limit = 2;
+}
+
+static void check_decisions(unsigned row)
+{
+    const int wander_draw = decisions[row].wander_draw;
+    const int item_draw = decisions[row].item_draw;
+    const int negative_wall = decisions[row].negative_wall;
+
+    setup(0, 2);
+    borTime = 0;
+    videomodes.hRes = 100;
+    actor.modeldata.speed = 10;
+    actor.health = 3;
+    seed_random(5, 1);
+    ++active_case;
+    CHECK(choose_wander() == (wander_draw ? 1 : 2));
+    CHECK(random_used == 1u + (unsigned)wander_draw);
+
+    actor.modeldata.aggression = -10020;
+    seed_random(0, 0);
+    ++active_case;
+    /* The native unsigned pathblocked field keeps this remainder at three. */
+    CHECK(choose_wander() == 3);
+    CHECK(random_used == 1u + (unsigned)wander_draw);
+
+    seed_random(0, 0);
+    item_lookups = 0;
+    ++active_case;
+    CHECK(choose_item() == (item_draw ? &cover : NULL));
+    CHECK(item_lookups == item_draw && random_used == (unsigned)item_draw);
+
+    borTime = 5 * GAME_SPEED;
+    actor.health = 0;
+    seed_random(5, 0);
+    item_lookups = 0;
+    ++active_case;
+    CHECK(choose_item() == (item_draw ? NULL : &cover));
+    CHECK(item_lookups == !item_draw && random_used == (unsigned)item_draw);
+    random_used = random_limit = 0;
+
+    for(int setting = -1; setting <= 1; ++setting)
+    {
+        static __typeof__(*world.walls) wall;
+        setup(0, 2);
+        actor.modeldata.subject_to_hole = 0;
+        actor.modeldata.subject_to_wall = setting;
+        actor.modeldata.hitwalltype = -1;
+        actor.falling = 1;
+        world.walls = &wall;
+        wall.height = actor.position.y + 10;
+        wall_probe_active = 1;
+        wall_queries = wall_callbacks = 0;
+        const int blocked = setting > 0 || (setting < 0 && negative_wall);
+        ++active_case;
+        CHECK(common_trymove(2, 0) == !blocked);
+        CHECK(wall_queries == blocked && wall_callbacks == blocked);
+        CHECK(actor.position.x == (blocked ? 0 : 2) && moved[0] == !blocked);
+        wall_probe_active = 0;
+    }
+}

@@ -1,0 +1,103 @@
+/* SPDX-License-Identifier: BSD-3-Clause
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me> */
+#include <stdint.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <stdarg.h>
+@DEFINES@
+#include "savedata.h"
+@FLAGS@
+static uint32_t obor_profile_build,bothnewkeys;
+static unsigned case_index,menu_index,draw_count;
+#define CHECK(c) do{if(!(c)){fprintf(stderr,"NATIVE_MENU_LAYOUT revision=%u case=%u menu=%u line=%d\n",obor_profile_build,case_index,menu_index,__LINE__);abort();}}while(0)
+s_savedata savedata;
+static int cheats,forcecheatsoff,livescheat,creditscheat,healthcheat,nodebugoptions,pause;
+static int optionsMenu,cheatoptionsMenu,controloptionsMenu,videooptionsMenu,systemoptionsMenu;
+static int current_set,versusdamage,opengl=1,displayMode;
+static void *level;
+static struct {int maxplayers;} levelsets[1];
+static struct {int hRes,vRes,mode,filter;} videomodes={320,240,0,0};
+static const char *GfxBlitterNames[]={"Nearest","Filter"};
+static const struct {const char *name;} displayFormat[]={{"Window"},{"Wide"}};
+static const char *filterName[]={"Filter0","Filter1"},*displayName[]={"Display0","Display1"};
+struct scene {int usejoy,joy,cheats,force,level,pause,nodebug,debug,infinite,versus,mode;
+    int fullscreen,stretch,filter,swfilter,power,battery,life;double scale;};
+static const struct scene scenes[]={@CASES@};
+static const struct scene *scene;
+static const char *Tr(const char *text){return text;}
+static int control_getjoyenabled(void){return scene->joy;}
+#define KBYTES 1024
+static unsigned getSystemRam(int unit){CHECK(unit==KBYTES);return 123;}
+static unsigned getUsedRam(int unit){CHECK(unit==KBYTES);return 45;}
+static char *commaprint(unsigned value){static char out[32];snprintf(out,sizeof(out),"%u",value);return out;}
+static int scePowerIsPowerOnline(void){return scene->power;}
+static int scePowerGetCpuClockFrequency(void){return 222;}
+static int scePowerGetBatteryLifePercent(void){return scene->battery;}
+static int scePowerGetBatteryLifeTime(void){return scene->life;}
+static struct {int kind,font;double x,y;char text[256];} draws[64];
+static void draw(int kind,int font,double x,double y,const char *format,va_list args)
+{
+    CHECK(draw_count<64);unsigned index=draw_count++;
+    draws[index].kind=kind;draws[index].font=font;draws[index].x=x;draws[index].y=y;
+    int count=vsnprintf(draws[index].text,sizeof(draws[index].text),format,args);
+    CHECK(count>=0 && (size_t)count<sizeof(draws[index].text));
+}
+static void _menutext(int font,double x,double y,const char *format,...)
+{va_list args;va_start(args,format);draw(1,font,x,y,format,args);va_end(args);}
+static void _menutextm(int font,double y,double shift,const char *format,...)
+{va_list args;va_start(args,format);draw(0,font,shift,y,format,args);va_end(args);}
+@CHEATS@
+@PROTOTYPES@
+@FUNCTIONS@
+static void (*frames[])(void)={@CALLS@};
+static const struct {unsigned revision;int debug;} contexts[]={@CONTEXTS@};
+static void initialize(void)
+{
+    memset(&savedata,0,sizeof(savedata));memset(draws,0,sizeof(draws));draw_count=0;
+    optionsMenu=cheatoptionsMenu=controloptionsMenu=videooptionsMenu=systemoptionsMenu=0;
+    cheats=scene->cheats;forcecheatsoff=scene->force;nodebugoptions=scene->nodebug;pause=scene->pause;
+    livescheat=scene->infinite&1;creditscheat=scene->infinite&2;healthcheat=scene->infinite&4;
+    level=scene->level?(void*)levelsets:NULL;levelsets[0].maxplayers=4;versusdamage=scene->versus;
+    savedata.usejoy=scene->usejoy;savedata.mode=savedata.uselog=scene->mode;
+    savedata.brightness=3;savedata.gamma=4;savedata.windowpos=5;
+    savedata.debuginfo=scene->debug&1;savedata.debug_position=scene->debug&2;savedata.debug_features=scene->debug&4;
+    savedata.debug_collision_attack=scene->debug&8;savedata.debug_collision_body=scene->debug&16;savedata.debug_collision_range=scene->debug&32;
+    savedata.fullscreen=scene->fullscreen;savedata.stretch=scene->stretch;savedata.swfilter=scene->swfilter;
+#if SDL
+    savedata.glscale=(float)scene->scale;savedata.glfilter[0]=savedata.glfilter[1]=scene->filter;
+#endif
+#if PSP
+    for(int i=0;i<4;i++)savedata.overscan[i]=i+1;
+#endif
+    videomodes.mode=0;videomodes.filter=scene->filter;displayMode=scene->stretch;
+}
+static void json_string(const char *text)
+{
+    putchar('"');for(const unsigned char *p=(const unsigned char*)text;*p;p++){
+        if(*p=='"'||*p=='\\'){putchar('\\');putchar(*p);}else{CHECK(*p>=32);putchar(*p);}
+    }putchar('"');
+}
+static void emit(void)
+{
+    printf("{\"revision\":%u,\"case\":%u,\"menu\":%u,\"flags\":[%d,%d,%d,%d,%d],\"draws\":[",
+        obor_profile_build,case_index,menu_index,optionsMenu,cheatoptionsMenu,controloptionsMenu,videooptionsMenu,systemoptionsMenu);
+    for(unsigned i=0;i<draw_count;i++){
+        if(i){putchar(',');}printf("[%d,%d,%.17g,%.17g,",draws[i].kind,draws[i].font,draws[i].x,draws[i].y);
+        json_string(draws[i].text);putchar(']');
+    }puts("]}");
+}
+int main(void)
+{
+    for(unsigned p=0;p<sizeof(contexts)/sizeof(*contexts);p++){
+        obor_profile_build=contexts[p].revision;
+        for(case_index=0;case_index<sizeof(scenes)/sizeof(*scenes);case_index++){
+            scene=scenes+case_index;
+            for(menu_index=0;menu_index<sizeof(frames)/sizeof(*frames);menu_index++){
+                if(menu_index==2 && !contexts[p].debug)continue;
+                initialize();frames[menu_index]();emit();
+            }
+        }
+    }
+    return 0;
+}

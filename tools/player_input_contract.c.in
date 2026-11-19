@@ -1,0 +1,163 @@
+/* SPDX-License-Identifier: BSD-3-Clause
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me>
+ */
+#include <stdint.h>
+#include <stdio.h>
+#include "openbor.h"
+#undef printf
+
+uint32_t obor_profile_build;
+static unsigned int fixture_time;
+#undef time
+#define time fixture_time
+static int max_animations = MAX_ANIS;
+static int max_attacks = 1;
+static int attack_ids[] = {ANI_ATTACK1};
+static int *animattacks = attack_ids;
+static int SAMPLE_PUNCH = 4, selected, sounds;
+s_savedata savedata;
+static s_level level_value, *level = &level_value;
+static entity actor, *self = &actor;
+static s_anim run, backrun, forward, charge, fallback;
+static s_anim *animations[MAX_ANIS];
+static s_player player;
+
+HRESULT Interpreter_Call(Interpreter *p) { (void)p; abort(); }
+HRESULT Interpreter_EvalInstruction(Interpreter *p) { (void)p; abort(); }
+void common_attack_proc(void) {}
+
+int sound_play_sample(int sample, unsigned int priority, int left, int right, unsigned int speed)
+{
+    ++sounds;
+    return 0;
+}
+
+void ent_set_anim(entity *ent, int aninum, int resetable)
+{
+    @ANIMATION_GATE@
+    if(aninum == ANI_RUN) selected = 1;
+    if(aninum == ANI_BACKRUN) selected = 2;
+    if(aninum == ANI_ATTACKFORWARD) selected = 3;
+    if(aninum == ANI_CHARGEATTACK) selected = 4;
+    if(aninum == ANI_ATTACK1) selected = 5;
+}
+
+@HELPERS@
+
+static void double_tap(s_player *pl, int notinair)
+{
+    static int ll[] = {FLAG_MOVELEFT, FLAG_MOVELEFT};
+    static int rr[] = {FLAG_MOVERIGHT, FLAG_MOVERIGHT};
+    int t;
+    @MOVE_INPUT@
+endthinkcheck:
+    return;
+}
+
+static void adjust_running(void)
+{
+    @WALK_SELECTION@
+}
+
+static void select_running(int action)
+{
+    switch(action)
+    {
+        @THINK_SELECTION@
+        default: return;
+    }
+}
+
+static void release_attack(s_player *pl, int notinair)
+{
+    @RELEASE_INPUT@
+endthinkcheck:
+    return;
+}
+
+static void reset(void)
+{
+    actor = (entity){0};
+    player = (s_player){0};
+    level_value = (s_level){0};
+    memset(animations, 0, sizeof(animations));
+    actor.modeldata.animation = animations;
+    actor.modeldata.animation_capacity = MAX_ANIS;
+    selected = sounds = 0;
+}
+
+int main(void)
+{
+    static const unsigned profiles[] = {@PROFILES@};
+    static const int modes[] = {FACING_ADJUST_NONE, FACING_ADJUST_RIGHT, FACING_ADJUST_LEFT, FACING_ADJUST_LEVEL};
+    static const struct {int right, tap_right, facing, grounded, run, backrun, forward;} movement[] = {
+        @MOVEMENT@
+    };
+    static const struct {int backrun, model_facing, level_facing, scroll_right, speed;} running[] = {
+        @RUNNING@
+    };
+    static const struct {int explicit_frames, fallback_frames, elapsed, grounded, released, stalled;} charges[] = {
+        @CHARGE@
+    };
+    run.numframes = backrun.numframes = forward.numframes = 1;
+    for(size_t p = 0; p < sizeof(profiles) / sizeof(profiles[0]); ++p)
+    {
+        obor_profile_build = profiles[p];
+        printf("[%u,[[", profiles[p]);
+        for(size_t i = 0; i < sizeof(movement) / sizeof(movement[0]); ++i)
+        {
+            reset();
+            const unsigned direction = movement[i].tap_right ? FLAG_MOVERIGHT : FLAG_MOVELEFT;
+            player.playkeys = direction;
+            player.combostep = 2;
+            player.combokey[0] = player.combokey[1] = direction;
+            actor.direction = movement[i].right ? DIRECTION_RIGHT : DIRECTION_LEFT;
+            actor.modeldata.facing = modes[movement[i].facing];
+            animations[ANI_RUN] = movement[i].run ? &run : NULL;
+            animations[ANI_BACKRUN] = movement[i].backrun ? &backrun : NULL;
+            animations[ANI_ATTACKFORWARD] = movement[i].forward ? &forward : NULL;
+            double_tap(&player, movement[i].grounded);
+            printf("%s[%d,%d,%d,%d]", i ? "," : "", actor.running, player.combostep, !!player.playkeys, selected);
+        }
+        printf("],[");
+        for(size_t i = 0; i < sizeof(running) / sizeof(running[0]); ++i)
+        {
+            reset();
+            animations[ANI_RUN] = &run;
+            animations[ANI_BACKRUN] = running[i].backrun ? &backrun : NULL;
+            actor.running = 1;
+            actor.modeldata.facing = modes[running[i].model_facing];
+            level_value.facing = modes[running[i].level_facing];
+            level_value.scrolldir = running[i].scroll_right ? SCROLL_RIGHT : SCROLL_LEFT;
+            actor.velocity.x = running[i].speed;
+            adjust_running();
+            int adjusted = selected;
+            selected = 0;
+            select_running(4);
+            printf("%s[%d,%d]", i ? "," : "", adjusted, selected);
+        }
+        printf("],[");
+        for(size_t i = 0; i < sizeof(charges) / sizeof(charges[0]); ++i)
+        {
+            reset();
+            charge.chargetime = fallback.chargetime = 2;
+            charge.numframes = charges[i].explicit_frames;
+            fallback.numframes = charges[i].fallback_frames;
+            animations[ANI_CHARGEATTACK] = charge.numframes < 0 ? NULL : &charge;
+            animations[ANI_ATTACK1] = fallback.numframes < 0 ? NULL : &fallback;
+            actor.modeldata.chainlength = 1;
+            actor.modeldata.atchain[0] = 1;
+            actor.stalltime = charges[i].stalled ? 10 : 0;
+            fixture_time = 10 + 2 * GAME_SPEED + charges[i].elapsed;
+            actor.velocity.x = actor.velocity.z = 1;
+            actor.combostep[0] = 1;
+            player.releasekeys = charges[i].released ? FLAG_ATTACK : 0;
+            release_attack(&player, charges[i].grounded);
+            printf("%s[%d,%d,%d,%d,%d,%d]", i ? "," : "", selected, actor.attacking,
+                   actor.velocity.x == 0 && actor.velocity.z == 0, actor.stalltime == 0,
+                   actor.combostep[0] == 0, sounds);
+        }
+        puts("]]]");
+    }
+    return 0;
+}

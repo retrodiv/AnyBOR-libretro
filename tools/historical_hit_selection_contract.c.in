@@ -1,0 +1,188 @@
+/* SPDX-License-Identifier: BSD-3-Clause
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me>
+ */
+#include <stddef.h>
+#include <stdio.h>
+#include <assert.h>
+
+typedef struct { int x, y, width, height, z1, z2; } s_hitbox;
+typedef struct { float x, y, z; } position;
+typedef int e_blocktype;
+enum { DIRECTION_LEFT, DIRECTION_RIGHT };
+enum { OTG_NONE, OTG_BOTH, OTG_GROUND_ONLY, ATK_ITEM = 12 };
+
+typedef struct {
+    @COORDINATES@ coords;
+    int attack_type, attack_force, counterattack, otg, jugglecost, ignore_attack_id;
+} s_collision_attack, s_collision;
+typedef struct { @COORDINATES@ coords; } s_collision_body, s_body;
+typedef struct { s_collision_attack **instance; size_t obor_instance_capacity; } s_collision_attack_list;
+typedef struct { s_collision_body **instance; size_t obor_instance_capacity; } s_collision_body_list;
+typedef struct {
+    @ATTACK_TABLE@
+    @BODY_TABLE@
+    int *vulnerable;
+    size_t obor_frame_capacity, obor_attack_frame_capacity;
+    int attackone;
+} s_anim;
+typedef struct entity {
+    s_anim *animation;
+    position position;
+    int animpos, direction, attack_id, projectile, exists, dead, invincible;
+    struct entity *owner, *lasthit;
+    struct { int blockthreshold; } defense[16];
+    struct {
+        int grabdistance, projectilehit, candamage, type;
+        struct { int current; } jugglepoints;
+    } modeldata;
+    int pain_time, hit_by_attack_id, falling;
+    int (*takedamage)(struct entity *, s_collision_attack *);
+    void (*takeaction)(void);
+} entity;
+
+static struct {
+    position position;
+    int type, confirm;
+    s_collision_attack *attack;
+    s_collision_body *body;
+} lasthit;
+static int level_completed, ent_max, time = 100, max_collisons;
+static unsigned int obor_profile_build;
+static entity *self, **ent_list;
+static unsigned int callbacks;
+static s_collision_attack *selected;
+static int force_out;
+
+static float diff(float a, float b) { return a < b ? b-a : a-b; }
+static void common_lie(void) {}
+static int damage(entity *ent, s_collision_attack *attack) { return 1; }
+static int ignored_diagnostic(const char *format, ...) { return 0; }
+
+@HELPERS@
+@HIT@
+@CALLER@
+
+static const struct {
+    s_hitbox attack[2], body[2], opposition;
+    int attacker_z, target_z, attacker_direction, target_direction;
+    int counter_level, opposing_level, slots;
+    int vulnerable, exists, dead, invincible, falling, juggle, points, otg, grounded, same_id;
+} cases[] = {
+@INPUTS@
+};
+
+#ifdef COLLISION_ENTRY_GATE_PROBE
+static void observe_entry_gates(entity attacker, entity target)
+{
+    for(unsigned gate = 0; gate < 5; gate++)
+    {
+        s_anim attack_animation = *attacker.animation;
+        s_anim target_animation = *target.animation;
+        entity from = attacker, to = target;
+        int vulnerable = 1;
+        from.animation = &attack_animation;
+        to.animation = &target_animation;
+        target_animation.vulnerable = &vulnerable;
+        if(gate == 2)
+            attack_animation.collision_attack = NULL;
+        if(gate == 3)
+            target_animation.collision_body = NULL;
+        if(gate == 4)
+            vulnerable = 0;
+        lasthit.position = (position){101, 202, 303};
+        lasthit.attack = NULL;
+        lasthit.body = NULL;
+        lasthit.type = -19;
+        lasthit.confirm = 7;
+        int hit = checkhit(&from, gate == 1 ? &from : &to);
+        if(hit != (gate == 0))
+            fprintf(stderr, "Profile %u entry case %u returned %d\n", obor_profile_build, gate, hit);
+        assert(hit == (gate == 0));
+        if(gate)
+        {
+            assert(lasthit.position.x == 101 && lasthit.position.y == 202 && lasthit.position.z == 303);
+            assert(!lasthit.attack && !lasthit.body && lasthit.type == -19 && lasthit.confirm == 7);
+        }
+    }
+    printf("[%u,5]\n", obor_profile_build);
+}
+#endif
+
+static void observe(unsigned int index)
+{
+    const __typeof__(cases[0]) *input = &cases[index];
+    s_hitbox attack_boxes[2] = {input->attack[0], input->attack[1]};
+    s_hitbox body_boxes[2] = {input->body[0], input->body[1]}, opposing_box = input->opposition;
+    s_collision_attack a0 = {.coords = @A0@, .attack_type = 3, .attack_force = 23,
+                             .counterattack = input->counter_level, .otg = input->otg, .jugglecost = input->juggle};
+    s_collision_attack a1 = {.coords = @A1@, .attack_type = 7, .attack_force = 71,
+                             .otg = input->otg, .jugglecost = input->juggle};
+    s_collision_attack opposition = {.coords = @AP@, .attack_type = 11, .counterattack = input->opposing_level};
+    s_collision_body b0 = {.coords = @B0@}, b1 = {.coords = @B1@};
+    s_collision_attack *attack_instances[] = {&a0, &a1}, *opposing_instances[] = {&opposition};
+    s_collision_body *body_instances[] = {&b0, &b1};
+    s_collision_attack_list attack_frame = {attack_instances, 2}, opposing_frame = {opposing_instances, 1};
+    s_collision_body_list body_frame = {body_instances, 2};
+    @TABLES@
+    int vulnerable = input->vulnerable;
+    s_anim a = {.obor_frame_capacity = 1, .obor_attack_frame_capacity = 1, @ATTACKER_INIT@};
+    s_anim b = {.obor_frame_capacity = 1, .obor_attack_frame_capacity = 1, .vulnerable = &vulnerable,
+                @TARGET_INIT@};
+    entity attacker = {.animation = &a, .position = {50, 0, input->attacker_z},
+                       .direction = input->attacker_direction, .attack_id = 91};
+    entity target = {.animation = &b, .position = {50, 0, input->target_z},
+                     .direction = input->target_direction, .exists = input->exists,
+                     .dead = input->dead, .invincible = input->invincible, .falling = input->falling,
+                     .hit_by_attack_id = input->same_id ? 91 : 0, .takedamage = damage,
+                     .takeaction = input->grounded ? common_lie : NULL};
+    target.modeldata.type = attacker.modeldata.candamage = 1;
+    target.modeldata.jugglepoints.current = input->points;
+    attacker.modeldata.grabdistance = 15;
+    entity *targets[] = {&target};
+    ent_max = 1;
+    ent_list = targets;
+    self = &attacker;
+    max_collisons = input->slots;
+#ifdef COLLISION_ENTRY_GATE_PROBE
+    observe_entry_gates(attacker, target);
+    return;
+#endif
+    callbacks = force_out = 0;
+    selected = NULL;
+    lasthit.position = (position){101, 202, 303};
+    lasthit.attack = NULL;
+    lasthit.body = NULL;
+    lasthit.type = -19;
+    lasthit.confirm = 7;
+    do_attack(&attacker);
+    int selected_index = selected == &a0 ? 0 : selected == &a1 ? 1 : -1;
+    int published_attack = lasthit.attack == &a0 ? 0 : lasthit.attack == &a1 ? 1 : -1;
+    int published_body = lasthit.body == &b0 ? 0 : lasthit.body == &b1 ? 1 : -1;
+    if(obor_profile_build >= 4283 && obor_profile_build < 4292)
+    {
+        // This source era publishes a scalar rather than collision handles.
+        published_attack = published_body = -1;
+    }
+    printf("[%u,%u,%u,%d,%d,%d,%d,%d,%d,%.9g,%.9g,%.9g]\n",
+           obor_profile_build, index, callbacks, selected_index, force_out, lasthit.confirm,
+           published_attack, published_body, lasthit.type,
+           (double)lasthit.position.x, (double)lasthit.position.y, (double)lasthit.position.z);
+}
+
+int main(void)
+{
+    const unsigned int revisions[] = {@REVISIONS@};
+    for(unsigned int p = 0; p < sizeof(revisions) / sizeof(revisions[0]); ++p)
+    {
+        obor_profile_build = revisions[p];
+#ifdef COLLISION_ENTRY_GATE_PROBE
+        observe(0);
+#else
+        for(unsigned int i = 0; i < sizeof(cases) / sizeof(cases[0]); ++i)
+        {
+            observe(i);
+        }
+#endif
+    }
+    return 0;
+}

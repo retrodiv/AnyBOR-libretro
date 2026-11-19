@@ -1,0 +1,238 @@
+/* SPDX-License-Identifier: BSD-3-Clause
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me>
+ */
+#include <stdint.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include "openbor.h"
+#include "commands.h"
+#undef printf
+
+uint32_t obor_profile_build;
+s_player player[MAX_PLAYERS];
+static s_level instance;
+s_level *level;
+static s_set_entry difficulty;
+s_set_entry *levelsets = &difficulty;
+int current_set, pause, keyscriptrate;
+float advancex = 4.0f, advancey = 6.0f;
+@DECLARATIONS@
+
+static entity actor, other_actor;
+static unsigned count_calls, spawn_calls, spawn_script_marker, music_calls;
+static unsigned key_count, args_read;
+static int key_events[4], active_player, accept_spawn;
+static float spawn_x, spawn_z;
+static const char *stage;
+
+#define CHECK(condition) do {                                                \
+    if(!(condition))                                                        \
+    {                                                                       \
+        fprintf(stderr, "Profile %u %s: %s\n", obor_profile_build, stage, #condition); \
+        abort();                                                            \
+    }                                                                       \
+} while(0)
+
+int count_ents(int types)
+{
+    CHECK(types == TYPE_PLAYER);
+    ++count_calls;
+    return 2;
+}
+
+entity *spawn(float x, float z, float a, int direction, char *name, int index, s_model *model)
+{
+    CHECK(a == 30 && direction == 1 && index == -1 && name != NULL && model == NULL);
+    ++spawn_calls;
+    spawn_x = x;
+    spawn_z = z;
+    memset(&actor, 0, sizeof(actor));
+    return accept_spawn ? &actor : NULL;
+}
+
+int music(char *name, int loop, long offset)
+{
+    CHECK(!strcmp(name, "boss.ogg") && loop == 1 && offset == 19);
+    ++music_calls;
+    return 1;
+}
+
+void ent_set_colourmap(entity *ent, unsigned which) { abort(); }
+void set_weapon(entity *ent, int number, int flag) { abort(); }
+void execute_onspawn_script(entity *ent)
+{
+    CHECK(ent == &actor && spawn_script_marker == 0);
+    spawn_script_marker = 1;
+}
+void execute_spawn_script(s_spawn_entry *props, entity *ent)
+{
+    CHECK(props && ent == &actor && spawn_script_marker == 1);
+    spawn_script_marker = 2;
+}
+
+static void key_event(int event)
+{
+    CHECK(key_count < sizeof(key_events) / sizeof(key_events[0]));
+    key_events[key_count++] = event;
+}
+void execute_level_key_script(int slot) { CHECK(slot == active_player); key_event(1); }
+void execute_entity_key_script(entity *ent) { CHECK(ent == player[active_player].ent); key_event(2); }
+void execute_key_script(int slot) { CHECK(slot == active_player); key_event(3); }
+void execute_key_script_all(int slot) { CHECK(slot == active_player); key_event(4); }
+
+@METHODS@
+
+static void set_screen(int screen)
+{
+@FLAGS@
+}
+
+static void configure_spawn(s_spawn_entry *props)
+{
+    props->name = "unit";
+    props->position.x = 10;
+    props->position.z = 20;
+    props->position.y = 30;
+    props->index = -1;
+    props->flip = 1;
+    count_calls = spawn_calls = spawn_script_marker = music_calls = 0;
+}
+
+static unsigned check_spawning(int require_level)
+{
+    unsigned cases = 0;
+    stage = "spawn context";
+    static const int scrolls[] = { 0, SCROLL_RIGHT, SCROLL_INWARD, SCROLL_OUTWARD };
+    for(unsigned view = 0; view < sizeof(scrolls) / sizeof(scrolls[0]); view++)
+    for(int present = 0; present <= 1; present++)
+    for(int blocked = 0; blocked <= 1; blocked++)
+    for(int backend = 0; backend <= 1; backend++)
+    {
+        level = view == 0 ? NULL : &instance;
+        instance.scrolldir = scrolls[view];
+        instance.bosses = 3;
+        strcpy(instance.bossmusic, "boss.ogg");
+        instance.bossmusic_offset = 19;
+        s_spawn_entry props = {.boss = 1, .spawnplayer_count = blocked ? 2 : 1};
+        configure_spawn(&props);
+        accept_spawn = backend;
+        const int counted = present && (level || !require_level);
+        const int called = counted && !blocked;
+        const int live = called && backend;
+        entity *result = smartspawn(present ? &props : NULL);
+        CHECK((count_calls > 0) == counted);
+        CHECK(spawn_calls == (unsigned)called);
+        CHECK(instance.bosses == 3 - (counted && blocked && level));
+        CHECK((result == &actor) == live);
+        if(called)
+        {
+            CHECK(spawn_x == (view < 2 ? 14.0f : 10.0f));
+            CHECK(spawn_z == (view < 2 ? 20.0f : 26.0f));
+        }
+        CHECK(music_calls == (unsigned)(live && level));
+        CHECK(spawn_script_marker == (live ? 2u : 0u));
+        ++cases;
+    }
+    return cases;
+}
+
+static unsigned check_keys(int all_screens)
+{
+    unsigned cases = 0;
+    stage = "key scripts";
+    difficulty.maxplayers = 2;
+    for(int screen = -1; screen < 16; screen++)
+    for(int gameplay = 0; gameplay <= 1; gameplay++)
+    for(int paused = 0; paused <= 1; paused++)
+    for(int input = 0; input < 5; input++)
+    {
+        memset(player, 0, sizeof(player));
+        active_player = (input + screen + 1) % 2;
+        player[0].ent = &actor;
+        player[1].ent = &other_actor;
+        set_screen(screen);
+        level = gameplay ? &instance : NULL;
+        pause = paused;
+        keyscriptrate = input == 3;
+        s_player *p = &player[active_player];
+        p->newkeys = input == 1;
+        p->keys = input == 2 || input == 3;
+        p->releasekeys = input == 4;
+        key_count = 0;
+        execute_keyscripts();
+        const int dispatch = !paused && (gameplay || screen == 0 || (all_screens && screen > 0)) &&
+                             (input == 1 || input == 3 || input == 4);
+        CHECK(key_count == (unsigned)(dispatch ? (gameplay ? 4 : 2) : 0));
+        for(unsigned i = 0; i < key_count; i++)
+            CHECK(key_events[i] == (int)i + (gameplay ? 1 : 3));
+        ++cases;
+    }
+    return cases;
+}
+
+static int dying_arg(const int *values, int count, int index)
+{
+    CHECK(index >= 1 && index <= 4);
+    args_read |= 1u << (index - 1);
+    return index <= count ? values[index - 1] : 0;
+}
+
+static s_spawn_entry parse_dying(const int *values, int count)
+{
+    s_spawn_entry next = {0};
+    #undef GET_INT_ARG
+    #define GET_INT_ARG(index) dying_arg(values, count, index)
+    switch(CMD_LEVEL_DYING)
+    {
+@COMMAND@
+    }
+    #undef GET_INT_ARG
+    return next;
+}
+
+static unsigned check_remaps(int second_remap)
+{
+    unsigned cases = 0;
+    stage = "spawn dying remaps";
+    for(int first = 0; first <= 1; first++)
+    for(int fourth = 0; fourth <= 1; fourth++)
+    {
+        args_read = 0;
+        const int values[] = { first ? 3 : 0, 30, 15, 7 };
+        s_spawn_entry props = parse_dying(values, 3 + fourth);
+        const int alternate = second_remap && fourth ? 7 : 0;
+        CHECK(args_read == (second_remap ? 15u : 7u));
+        CHECK(props.dying == values[0] && props.per1 == 30 && props.per2 == 15 && props.dying2 == alternate);
+        level = &instance;
+        configure_spawn(&props);
+        accept_spawn = 1;
+        /* Script-created entries can also carry a value in the shared record. */
+        props.dying2 = fourth ? 7 : 0;
+        entity *spawned = smartspawn(&props);
+        CHECK(spawned == &actor);
+        CHECK(spawned->dying == values[0]);
+        CHECK(spawned->per1 == (first ? 30 : 0) && spawned->per2 == (first ? 15 : 0));
+        CHECK(spawned->dying2 == (first ? alternate : 0));
+        ++cases;
+    }
+    return cases;
+}
+
+int main(void)
+{
+    static const struct { unsigned revision; int require_level, all_screens, second_remap; } contexts[] = {
+@PROFILES@
+    };
+    unsigned spawn_cases = 0, key_cases = 0, remap_cases = 0;
+    for(unsigned i = 0; i < sizeof(contexts) / sizeof(contexts[0]); i++)
+    {
+        obor_profile_build = contexts[i].revision;
+        spawn_cases += check_spawning(contexts[i].require_level);
+        key_cases += check_keys(contexts[i].all_screens);
+        remap_cases += check_remaps(contexts[i].second_remap);
+    }
+    printf("{\"contexts\":%zu,\"spawn\":%u,\"keys\":%u,\"remap\":%u}\n",
+           sizeof(contexts) / sizeof(contexts[0]), spawn_cases, key_cases, remap_cases);
+    return 0;
+}

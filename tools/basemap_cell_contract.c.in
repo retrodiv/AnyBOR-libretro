@@ -1,0 +1,157 @@
+/* SPDX-License-Identifier: BSD-3-Clause
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me> */
+#include <limits.h>
+#include <stdint.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <strings.h>
+#include "source/scriptlib/depends.h"
+#undef calloc
+#undef realloc
+#undef free
+#undef printf
+
+@VARIANT_TYPES@
+@TYPES@
+@ENUMS@
+static struct {
+    int rocking, type, cameraxoffset, camerazoffset, quake;
+    int numbasemaps, numholes, numwalls;
+    float bgspeed, vbgspeed, scrollspeed, gravity, maxfallspeed, maxtossspeed;
+    s_basemap *basemaps;
+    s_terrain *holes, *walls;
+} level_data, *level = &level_data;
+
+uint32_t obor_profile_build;
+static const char *strings[] = {"basemap", "map", "text"};
+static unsigned collected, diagnostics;
+static void *owned;
+static size_t bytes;
+
+static const char *StrCache_Get(int index)
+{
+    if(index < 0 || index >= 3) abort();
+    return strings[index];
+}
+
+static void StrCache_Collect(int index)
+{
+    if(index < 0 || index >= 3) abort();
+    ++collected;
+}
+
+static int StrCache_Pop(void)
+{
+    abort();
+}
+
+static void *allocate_cells(size_t count, size_t width)
+{
+    if(owned || count * width > 128 * sizeof(float)) abort();
+    bytes = count * width;
+    return owned = calloc(count, width);
+}
+
+static size_t obor_allocation_size(const void *pointer)
+{
+    if(pointer != owned) abort();
+    return bytes;
+}
+
+static int observe_diagnostic(const char *format, ...)
+{
+    ++diagnostics;
+    return 0;
+}
+
+@VARIANTS@
+#define stricmp strcasecmp
+@SEARCH@
+@MAPPING@
+#define calloc allocate_cells
+#define printf observe_diagnostic
+/* Preserve the native unbraced conditionals in unrelated terrain cases. */
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wmisleading-indentation"
+@FUNCTIONS@
+#pragma GCC diagnostic pop
+#undef calloc
+#undef printf
+
+static const struct {
+    int width, depth, existing, argc, named;
+    int x_type, z_type, height_type;
+    double x, z, height;
+} cases[] = { @CASES@ };
+static const unsigned revisions[] = { @REVISIONS@ };
+
+static void value(ScriptVariant *out, int type, double number)
+{
+    switch(type)
+    {
+    case 0: out->vt = VT_INTEGER; out->lVal = (LONG)number; break;
+    case 1: out->vt = VT_DECIMAL; out->dblVal = number; break;
+    case 2: out->vt = VT_STR; out->strVal = 2; break;
+    default: abort();
+    }
+}
+
+int main(void)
+{
+    for(size_t r = 0; r < sizeof(revisions) / sizeof(*revisions); ++r)
+    {
+        obor_profile_build = revisions[r];
+        for(size_t i = 0; i < sizeof(cases) / sizeof(*cases); ++i)
+        {
+            s_basemap map = {0};
+            ScriptVariant args[6] = {0}, result = {0}, *out = &result;
+            ScriptVariant *slots[] = {&args[0], &args[1], &args[2], &args[3], &args[4], &args[5]};
+            map.size.x = cases[i].width;
+            map.size.z = cases[i].depth;
+            owned = NULL;
+            bytes = collected = diagnostics = 0;
+            if(cases[i].existing)
+            {
+                map.map = allocate_cells(cases[i].existing, sizeof(float));
+                for(int k = 0; k < cases[i].existing; ++k) map.map[k] = -7.0f;
+            }
+            level->basemaps = &map;
+            level->numbasemaps = 1;
+            if(cases[i].named)
+            {
+                args[0].vt = args[2].vt = VT_STR;
+                args[0].strVal = 0;
+                args[2].strVal = 1;
+            }
+            else
+            {
+                value(&args[0], 0, _lp_basemap);
+                value(&args[2], 0, _lp_bm_map);
+            }
+            value(&args[1], 0, 0);
+            value(&args[3], cases[i].x_type, cases[i].x);
+            value(&args[4], cases[i].z_type, cases[i].z);
+            value(&args[5], cases[i].height_type, cases[i].height);
+            value(&result, 0, -23);
+            int status = openbor_changelevelproperty(slots, &out, cases[i].argc);
+            int written = -1, writes = 0;
+            double height = 0;
+            for(size_t k = 0; k < bytes / sizeof(float); ++k)
+            {
+                if(map.map[k] != (cases[i].existing ? -7.0f : 0.0f))
+                {
+                    ++writes;
+                    written = k;
+                    height = map.map[k];
+                }
+            }
+            printf("{\"revision\":%u,\"status\":%d,\"null_result\":%d,\"result_marker\":%d,"
+                   "\"subproperty\":%d,\"collected\":%u,\"diagnostics\":%u,"
+                   "\"cells\":%zu,\"index\":%d,\"writes\":%d,\"height\":%.9g}\n",
+                   obor_profile_build, status, out == NULL, (int)result.lVal, (int)args[2].lVal,
+                   collected, diagnostics, bytes / sizeof(float), written, writes, height);
+            free(owned);
+        }
+    }
+}

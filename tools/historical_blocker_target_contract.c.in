@@ -1,0 +1,128 @@
+/* SPDX-License-Identifier: BSD-3-Clause
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me>
+ */
+#include <stdint.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include "openbor.h"
+#include <assert.h>
+#undef printf
+#undef check_range
+
+uint32_t obor_profile_build;
+int max_collisons, ent_max;
+entity **ent_list, *self;
+static entity blocker, near_actor, far_actor;
+static const entity *range_rejected;
+static unsigned ranges;
+
+static int check_range(entity *defender, entity *attacker, int animation)
+{
+    assert(defender == &blocker && animation == 0);
+    assert(attacker == &near_actor || attacker == &far_actor);
+    ++ranges;
+    return attacker != range_rejected;
+}
+
+@METHODS@
+
+static const struct { int earlier, later; unsigned range_candidates; } cases[] = {
+    { 1, 0, 2 },   /* First attack cannot be blocked. */
+    { 1, 1, 2 },   /* Neither attack can be blocked. */
+    { 0, 1, 2 },   /* Existing table with no frame record. */
+    { 1, 1, 2 },   /* No collision table. */
+    { 0, 0, 2 },   /* Empty slot in an existing frame. */
+    { 1, 1, 2 },   /* Dead attacker. */
+    { 1, 1, 2 },   /* Attacker is idle. */
+    { 1, 1, 1 },   /* Attacker cannot damage the defender. */
+    { 1, 1, 2 },   /* Stealth exceeds detection. */
+    { 1, 1, 2 },   /* Range check excludes the closer attacker. */
+    { 1, 1, 2 },   /* Candidate exceeds the distance limit. */
+    { 0, 0, 2 },   /* Equal distance keeps the first candidate. */
+    { 0, 0, 0 },   /* Negative animation skips range checks. */
+    { 0, 0, 2 },   /* Self and empty entries are skipped. */
+    { 1, 1, 2 },   /* Configured limit admits only one slot. */
+    { 1, 1, 2 },   /* Allocated frame stores only one slot. */
+    {-1,-1, 0 },   /* No available attacker. */
+    { 0, 0, 1 },   /* Distance exactly at the inclusive limit. */
+};
+
+static void check(size_t index, int multiple)
+{
+    s_collision_attack first = {0}, second = {0};
+    s_collision_attack *near_slots[] = { &first, &second };
+    s_collision_attack *far_slots[] = { &second, &second };
+    s_collision_attack_list near_frame = { .instance = near_slots, .obor_instance_capacity = 2 };
+    s_collision_attack_list far_frame = { .instance = far_slots, .obor_instance_capacity = 2 };
+    s_collision_attack_list *near_table[] = { &near_frame }, *far_table[] = { &far_frame };
+    s_anim near_animation = { .numframes = 1, .obor_attack_frame_capacity = 1, .collision_attack = near_table };
+    s_anim far_animation = { .numframes = 1, .obor_attack_frame_capacity = 1, .collision_attack = far_table };
+    entity *targets[] = { &near_actor, &far_actor, &blocker, NULL };
+    memset(&blocker, 0, sizeof(blocker));
+    memset(&near_actor, 0, sizeof(near_actor));
+    memset(&far_actor, 0, sizeof(far_actor));
+    blocker.modeldata.type = TYPE_PLAYER;
+    blocker.modeldata.stealth.detect = 1;
+    near_actor.modeldata.candamage = far_actor.modeldata.candamage = TYPE_PLAYER;
+    near_actor.modeldata.stealth.hide = 2;
+    near_actor.exists = far_actor.exists = near_actor.attacking = far_actor.attacking = 1;
+    near_actor.animation = &near_animation;
+    far_actor.animation = &far_animation;
+    near_actor.position.x = 3;
+    far_actor.position.x = 10;
+    self = &blocker;
+    ent_list = targets;
+    ent_max = 2;
+    max_collisons = 2;
+    range_rejected = NULL;
+    int animation = 0;
+    switch(index)
+    {
+    case 0: first.no_block = 1; break;
+    case 1: first.no_block = 1; near_slots[1] = &first; break;
+    case 2: near_table[0] = NULL; break;
+    case 3: near_animation.collision_attack = NULL; break;
+    case 4: near_slots[0] = NULL; break;
+    case 5: near_actor.dead = 1; break;
+    case 6: near_actor.attacking = 0; break;
+    case 7: near_actor.modeldata.candamage = 0; break;
+    case 8: near_actor.modeldata.stealth.hide = 3; break;
+    case 9: range_rejected = &near_actor; break;
+    case 10: near_actor.position.x = 10000; break;
+    case 11: far_actor.position.x = 0; far_actor.position.z = -3; break;
+    case 12: range_rejected = &near_actor; animation = -1; break;
+    case 13: ent_max = 4; blocker.exists = 1; break;
+    case 14: first.no_block = 1; max_collisons = 1; break;
+    case 15: first.no_block = 1; near_frame.obor_instance_capacity = 1; break;
+    case 16: near_actor.exists = far_actor.exists = 0; break;
+    case 17: near_actor.position.x = 9999; far_actor.exists = 0; break;
+    }
+    ranges = 0;
+    entity *target = block_find_target(animation, 1);
+    assert(!target || target == &near_actor || target == &far_actor);
+    const int actual = !target ? -1 : target == &near_actor ? 0 : 1;
+    const int expected = multiple ? cases[index].later : cases[index].earlier;
+    if(actual != expected)
+        fprintf(stderr, "Profile %u blocker case %zu chose %d, expected %d\n",
+                obor_profile_build, index, actual, expected);
+    assert(actual == expected);
+    assert(ranges == cases[index].range_candidates * (multiple ? (unsigned)max_collisons : 1));
+}
+
+int main(void)
+{
+    static const struct { unsigned revision; int multiple; } profiles[] = { @PROFILES@ };
+    size_t checks = 0;
+    for(size_t i = 0; i < sizeof(profiles) / sizeof(*profiles); i++)
+    {
+        obor_profile_build = profiles[i].revision;
+        for(size_t c = 0; c < sizeof(cases) / sizeof(*cases); c++)
+        {
+            check(c, profiles[i].multiple);
+            ++checks;
+        }
+    }
+    printf("{\"contexts\":%zu,\"cases\":%zu}\n", sizeof(profiles) / sizeof(*profiles), checks);
+    return 0;
+}

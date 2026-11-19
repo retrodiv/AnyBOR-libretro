@@ -1,0 +1,128 @@
+/* SPDX-License-Identifier: BSD-3-Clause
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me> */
+#include <stdint.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <limits.h>
+#include <math.h>
+@PRIMITIVES@
+@VARIANT_TYPES@
+@CHANNEL_EXTENT@
+@CHANNEL_TYPE@
+static channelstruct vchannel[MAX_CHANNELS],before_channels[MAX_CHANNELS];
+static int max_channels;
+static uint32_t obor_profile_build;
+static volatile unsigned stub_calls;
+static unsigned entry_count,resets,collected,cache_reads,event_count;
+static const char *events[4],*backend;
+static int observed_channel,observed_toggle,helper_result;
+static char strings[][4]={"","0","x"};
+static int unknown;
+#define CHECK(c) do{if(!(c)){fprintf(stderr,"SCRIPT_SAMPLES revision=%u line=%d\n",obor_profile_build,__LINE__);abort();}}while(0)
+static void event(const char *s){CHECK(event_count<4);events[event_count++]=s;}
+typedef struct {int cursor;} List;
+static List theFunctionList;
+static struct {void *function;const char *name;} entries[512];
+static void List_Reset(List *list){CHECK(list==&theFunctionList&&entry_count==0);list->cursor=0;++resets;}
+static void List_InsertAfter(List *list,void *function,const char *name)
+{CHECK(list==&theFunctionList&&entry_count<512);entries[entry_count].function=function;entries[entry_count++].name=name;}
+static void StrCache_Collect(int index){CHECK(index==17);++collected;event("collect");}
+static int StrCache_Pop(void){CHECK(0);return 0;}
+static char *StrCache_Get(int index){CHECK(index>=0&&index<3);++cache_reads;event("string");return strings[index];}
+@SOUND_METHODS@
+static void observe_all(int toggle){backend="all";observed_toggle=toggle;event("all");sound_pause_sample(toggle);}
+static void observe_single(int toggle,int channel)
+{backend="single";observed_channel=channel;observed_toggle=toggle;event("single");sound_pause_single_sample(toggle,channel);}
+static int observe_active(int channel)
+{backend="active";observed_channel=channel;event("active");helper_result=sound_is_active(channel);return helper_result;}
+static int observe_id(int channel)
+{backend="id";observed_channel=channel;event("id");helper_result=sound_id(channel);return helper_result;}
+@VARIANTS@
+@STUBS@
+@CALLBACKS@
+@REGISTRY@
+static const char *const names[]={@NAMES@};
+static void *const pointers[]={@POINTERS@};
+static const struct {unsigned revision;int limit_available,available[4];} contexts[]={@CONTEXTS@};
+struct argument {int kind;LONG integer;double decimal;};
+static const struct {int function,count,null_list,configured,pattern;struct argument args[2];} cases[]={@CASES@};
+static void *find(const char *name,unsigned *count)
+{void *p=NULL;*count=0;for(unsigned i=0;i<entry_count;++i)if(!strcmp(entries[i].name,name)){p=entries[i].function;++*count;}return p;}
+static void initialize(ScriptVariant *v,const struct argument *a)
+{
+    memset(v,0,sizeof(*v));
+    switch(a->kind){
+    case 0:v->vt=VT_INTEGER;v->lVal=a->integer;break;
+    case 1:v->vt=VT_DECIMAL;v->dblVal=a->decimal;break;
+    case 2:v->vt=VT_STR;v->strVal=a->integer;break;
+    case 3:v->vt=VT_EMPTY;break;
+    case 4:v->vt=VT_PTR;v->ptrVal=&unknown;break;
+    case 5:v->vt=VT_EMPTY;break;
+    case 6:v->vt=VT_PTR;v->ptrVal=NULL;break;
+    default:CHECK(0);
+    }
+}
+static uint64_t paused_digest(void)
+{
+    uint64_t hash=UINT64_C(14695981039346656037);
+    const char *label="paused";
+    do{hash^=(unsigned char)*label;hash*=UINT64_C(1099511628211);}while(*label++);
+    for(unsigned i=0;i<MAX_CHANNELS;++i){
+        uint32_t value=(uint32_t)vchannel[i].paused;
+        for(unsigned shift=0;shift<32;shift+=8){hash^=(value>>shift)&255u;hash*=UINT64_C(1099511628211);}
+    }
+    return hash;
+}
+int main(void)
+{
+    CHECK(MAX_CHANNELS==64);
+    for(unsigned r=0;r<sizeof(contexts)/sizeof(*contexts);++r){
+        obor_profile_build=contexts[r].revision;entry_count=resets=stub_calls=0;Script_LoadSystemFunctions();
+        unsigned found[4];void *selected[4];
+        for(unsigned f=0;f<4;++f)selected[f]=find(names[f],&found[f]);
+        unsigned empty_count,finish_count;
+        void *empty=find("isempty",&empty_count),*finish=find("finishlevel",&finish_count);
+        int controls=empty_count==1&&finish_count==1&&!strcmp(Script_GetFunctionName(empty),"isempty")&&
+            !strcmp(Script_GetFunctionName(finish),"finishlevel");
+        printf("{\"revision\":%u,\"registered\":[%u,%u,%u,%u],\"reverse\":[",obor_profile_build,found[0],found[1],found[2],found[3]);
+        for(unsigned f=0;f<4;++f){if(f)putchar(',');printf("\"%s\"",Script_GetFunctionName(pointers[f]));}
+        printf("],\"native_limit\":%d,\"control_names\":%s,\"resets\":%u}\n",contexts[r].limit_available?maxchannels():0,controls?"true":"false",resets);
+        CHECK(stub_calls==0);
+        for(unsigned c=0;c<sizeof(cases)/sizeof(*cases);++c){
+            unsigned f=cases[c].function;if(!contexts[r].available[f])continue;
+            CHECK(found[f]==1&&selected[f]==pointers[f]);
+            HRESULT(*callback)(ScriptVariant**,ScriptVariant**,int)=selected[f];
+            for(unsigned m=0;m<2;++m){
+                memset(vchannel,0,sizeof(vchannel));max_channels=cases[c].configured;
+                for(int i=0;i<MAX_CHANNELS;++i){
+                    vchannel[i].active=(i+cases[c].pattern)%3;vchannel[i].paused=(i+cases[c].pattern)%2;
+                    vchannel[i].playid=1000+13*i;vchannel[i].samplenum=200+i;vchannel[i].priority=900+i;
+                    vchannel[i].volume[0]=3+i*2;vchannel[i].volume[1]=4+i*2;vchannel[i].channels=1+i%2;
+                    vchannel[i].fp_samplepos=128*i;vchannel[i].fp_period=64+i;
+                }
+                memcpy(before_channels,vchannel,sizeof(vchannel));
+                ScriptVariant arg[2],extra,marker,*out;
+                for(unsigned i=0;i<2;++i)initialize(&arg[i],&cases[c].args[i]);
+                memset(&extra,0,sizeof(extra));extra.vt=VT_PTR;extra.ptrVal=&unknown;
+                memset(&marker,0,sizeof(marker));marker.vt=m?VT_INTEGER:VT_STR;marker.lVal=m?-77:17;
+                ScriptVariant *args[]={cases[c].args[0].kind==5?NULL:&arg[0],cases[c].args[1].kind==5?NULL:&arg[1],&extra};
+                unsigned char arg_before[sizeof(arg)],extra_before[sizeof(extra)];
+                memcpy(arg_before,arg,sizeof(arg));memcpy(extra_before,&extra,sizeof(extra));
+                ScriptVariant *ptr_before[3];memcpy(ptr_before,args,sizeof(args));
+                collected=cache_reads=event_count=0;backend="";observed_channel=observed_toggle=-999;helper_result=INT_MIN;out=&marker;
+                HRESULT status=callback(cases[c].null_list?NULL:args,&out,cases[c].count);
+                int unchanged=!memcmp(arg_before,arg,sizeof(arg))&&!memcmp(extra_before,&extra,sizeof(extra))&&!memcmp(ptr_before,args,sizeof(args));
+                int stable=1;
+                for(int i=0;i<MAX_CHANNELS;++i){before_channels[i].paused=vchannel[i].paused;if(memcmp(&before_channels[i],&vchannel[i],sizeof(channelstruct)))stable=0;}
+                printf("{\"revision\":%u,\"case\":%u,\"marker\":%u,\"status\":%d,\"out_null\":%s,\"marker_type\":%d,\"marker_value\":%d,\"collected\":%u,\"cache_reads\":%u,\"backend\":\"%s\",\"channel\":%d,\"toggle\":%d,\"helper_result\":%d,\"events\":[",
+                       obor_profile_build,c,m,(int)status,out==NULL?"true":"false",marker.vt,(int)marker.lVal,
+                       collected,cache_reads,backend,observed_channel,observed_toggle,helper_result);
+                for(unsigned i=0;i<event_count;++i){if(i)putchar(',');printf("\"%s\"",events[i]);}
+                printf("],\"arguments_unchanged\":%s,\"other_fields_unchanged\":%s,\"channel_digest\":\"%016llx\"}\n",
+                       unchanged?"true":"false",stable?"true":"false",(unsigned long long)paused_digest());CHECK(stub_calls==0);
+            }
+        }
+    }
+    return 0;
+}

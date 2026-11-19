@@ -1,0 +1,244 @@
+/* SPDX-License-Identifier: BSD-3-Clause
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me> */
+#include <stdint.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include "source/scriptlib/depends.h"
+#include "source/scriptlib/List.h"
+#include "source/scriptlib/ScriptVariant.h"
+#undef printf
+
+@TYPES@
+uint32_t obor_profile_build;
+typedef struct { float (*platform)[8]; } s_anim;
+typedef struct entity {
+    int exists, animpos, animating;
+    int attacking, idling, drop, falling, inpain, inbackpain, blocking;
+    struct { float x, y, z; } position;
+    s_anim *animation;
+    void (*takeaction)(void);
+} entity;
+static int active_level;
+static int *level;
+static entity actors[5], *ent_list[5], *self;
+static int ent_max;
+static unsigned collections, calls, idle_calls, diagnostics;
+static int argument_anim, argument_reset, state_at_set;
+static volatile unsigned stub_calls;
+static const char *last_diagnostic;
+
+void StrCache_Collect(int index)
+{
+    if(index != 17) abort();
+    ++collections;
+}
+int StrCache_Pop(void) { abort(); }
+static int observe_diagnostic(const char *format, ...)
+{
+    last_diagnostic = format;
+    ++diagnostics;
+    return 0;
+}
+static unsigned flags(const entity *e)
+{
+    return (e->attacking != 0) | ((e->idling != 0) << 1) | ((e->drop != 0) << 2) |
+           ((e->falling != 0) << 3) | ((e->inpain != 0) << 4) |
+           ((e->inbackpain != 0) << 5) | ((e->blocking != 0) << 6);
+}
+static void set_idle(entity *e)
+{
+    if(e != self) abort();
+    ++idle_calls;
+}
+@ACTION@
+static void ent_set_anim(entity *e, int anim, int reset)
+{
+    if(e != self) abort();
+    ++calls;
+    argument_anim = anim;
+    argument_reset = reset;
+    state_at_set = flags(e) | ((e->takeaction == common_animation_normal) << 7);
+}
+@VARIANTS@
+@CURSORS@
+@PLATFORMS@
+#define printf observe_diagnostic
+@CALLBACKS@
+#undef printf
+
+static List theFunctionList;
+static unsigned entries_count;
+static struct { const char *name; void *callback; } entries[512];
+static void registry_reset(List *list)
+{
+    if(list != &theFunctionList) abort();
+    entries_count = 0;
+}
+static void registry_insert(List *list, void *callback, const char *name)
+{
+    if(list != &theFunctionList || entries_count == 512) abort();
+    entries[entries_count].name = name;
+    entries[entries_count++].callback = callback;
+}
+@STUBS@
+@REGISTRY@
+
+typedef HRESULT (*Callback)(ScriptVariant **, ScriptVariant **, int);
+static const struct { const char *name; Callback callback; } selected[] = { @NAMES@ };
+static const unsigned revisions[] = { @REVISIONS@ };
+static const struct { int scene, argc, bad, x, z, a, b; } platform_cases[] = { @PLATFORM_CASES@ };
+static const struct { int size, cursor, kind, argc; } array_cases[] = { @ARRAY_CASES@ };
+static const struct { int kind, argc, anim_type, reset_type, anim, reset, tick; } animation_cases[] = { @ANIMATION_CASES@ };
+
+static void setup_platforms(int scene)
+{
+    static float boxes[5][1][8];
+    static s_anim animations[5];
+    static const int heights[] = {10, -4, 10, 4, 0};
+    static const int depths[] = {2, 2, 3, 4, 1};
+    level = scene == 1 ? NULL : &active_level;
+    ent_max = scene == 2 ? 0 : 5;
+    memset(actors, 0, sizeof(actors));
+    for(int i = 0; i < 5; ++i)
+    {
+        entity *e = ent_list[i] = &actors[i];
+        e->exists = i != 4;
+        e->position.y = heights[i];
+        e->position.x = scene == 3 && i == 1 ? 20 : 0;
+        e->animation = &animations[i];
+        e->animation->platform = boxes[i];
+        float *box = boxes[i][0];
+        box[1] = 10;
+        box[2] = box[3] = -10;
+        box[4] = box[5] = 10;
+        box[6] = 20;
+        box[7] = depths[i];
+    }
+}
+
+static void platform_case(Callback call, const char *name, unsigned i)
+{
+    ScriptVariant args[4] = {0}, marker = {0}, *out = &marker;
+    ScriptVariant *slots[] = {&args[0], &args[1], &args[2], &args[3]};
+    int numbers[] = {platform_cases[i].x, platform_cases[i].z, platform_cases[i].a, platform_cases[i].b};
+    int argc = platform_cases[i].argc;
+    setup_platforms(platform_cases[i].scene);
+    for(int j = 0; j < 4; ++j)
+    {
+        args[j].vt = j == platform_cases[i].bad ? VT_EMPTY : j % 2 ? VT_DECIMAL : VT_INTEGER;
+        if(args[j].vt == VT_INTEGER) args[j].lVal = numbers[j];
+        if(args[j].vt == VT_DECIMAL) args[j].dblVal = numbers[j];
+    }
+    marker.vt = VT_STR;
+    marker.strVal = 17;
+    collections = 0;
+    int status = call(argc >= 3 ? slots : NULL, &out, argc);
+    int identity = -1;
+    if(marker.vt == VT_PTR && marker.ptrVal)
+    {
+        identity = -2;
+        for(int n = 0; n < 5; ++n) if(marker.ptrVal == &actors[n]) identity = n;
+    }
+    printf("[%u,\"%s\",%u,%d,%d,%d,%u,%d]\n", obor_profile_build, name, i, status,
+           out == NULL, marker.vt == VT_PTR, collections, identity);
+}
+
+static void array_case(Callback call, const char *name, unsigned i)
+{
+    Node nodes[4] = {0};
+    List list = {0};
+    Varlist array = {.magic = varlist_magic, .list = &list};
+    ScriptVariant arg = {0}, marker = {0}, *out = &marker;
+    ScriptVariant *slots[] = {&arg};
+    int keys[2];
+    void *payloads[] = {&keys[0], &keys[0], &keys[1], NULL};
+    int size = array_cases[i].size, cursor = array_cases[i].cursor;
+    for(int n = 0; n < size; ++n)
+    {
+        nodes[n].prev = n ? &nodes[n - 1] : NULL;
+        nodes[n].next = n + 1 < size ? &nodes[n + 1] : NULL;
+        nodes[n].value = payloads[n];
+    }
+    list.size = size;
+    list.first = size ? &nodes[0] : NULL;
+    list.last = size ? &nodes[size - 1] : NULL;
+    list.current = cursor >= 0 ? &nodes[cursor] : NULL;
+    arg.vt = array_cases[i].kind == 1 ? VT_EMPTY : VT_PTR;
+    arg.ptrVal = array_cases[i].kind == 2 ? NULL : &array;
+    marker.vt = VT_STR;
+    marker.strVal = 17;
+    collections = diagnostics = 0;
+    int status = call(array_cases[i].argc ? slots : NULL, &out, array_cases[i].argc);
+    int after = list.current ? (int)(list.current - nodes) : -1;
+    printf("[%u,\"%s\",%u,%d,%d,%d,%u,%d,%u]\n", obor_profile_build, name, i, status, out == NULL,
+           (int)marker.lVal, collections, after, diagnostics);
+}
+
+static void animation_case(Callback call, const char *name, unsigned i)
+{
+    ScriptVariant args[3] = {0}, marker = {0}, *out = &marker;
+    ScriptVariant *slots[] = {&args[0], &args[1], &args[2]};
+    entity actor = {.attacking = 1, .idling = 1, .drop = 1, .falling = 1, .inpain = 1,
+                    .inbackpain = 1, .blocking = 1};
+    self = &actor;
+    args[0].vt = animation_cases[i].kind == 1 ? VT_EMPTY : animation_cases[i].kind == 3 ? VT_INTEGER : VT_PTR;
+    args[0].ptrVal = animation_cases[i].kind == 2 ? NULL : &actor;
+    int types[] = {animation_cases[i].anim_type, animation_cases[i].reset_type};
+    int values[] = {animation_cases[i].anim, animation_cases[i].reset};
+    for(int n = 0; n < 2; ++n)
+    {
+        args[n + 1].vt = types[n] == 2 ? VT_EMPTY : types[n] == 1 ? VT_DECIMAL : VT_INTEGER;
+        if(types[n] == 0) args[n + 1].lVal = values[n];
+        if(types[n] == 1) args[n + 1].dblVal = values[n] + 0.25;
+    }
+    marker.vt = VT_INTEGER;
+    marker.lVal = -23;
+    diagnostics = calls = idle_calls = 0;
+    state_at_set = argument_anim = argument_reset = 0;
+    last_diagnostic = NULL;
+    int status = call(animation_cases[i].argc ? slots : NULL, &out, animation_cases[i].argc);
+    int installed = actor.takeaction == common_animation_normal;
+    if(actor.takeaction && animation_cases[i].tick)
+    {
+        actor.animating = animation_cases[i].tick == 1;
+        actor.takeaction();
+    }
+    printf("[%u,\"%s\",%u,%d,%d,%d,%u,%d,%u,%d,%d,%d,%u,%d,%u,%d]\n", obor_profile_build,
+           name, i, status, out == NULL, (int)marker.lVal, flags(&actor), installed, calls,
+           argument_anim, argument_reset, state_at_set, idle_calls, actor.takeaction != NULL,
+           diagnostics, last_diagnostic && strstr(last_diagnostic, "performattack(") != NULL);
+}
+
+int main(void)
+{
+    for(size_t r = 0; r < sizeof(revisions) / sizeof(*revisions); ++r)
+    {
+        obor_profile_build = revisions[r];
+        Script_LoadSystemFunctions();
+        for(size_t n = 0; n < sizeof(selected) / sizeof(*selected); ++n)
+        {
+            const char *name = selected[n].name, *target = "";
+            Callback call = NULL;
+            unsigned found = 0;
+            for(unsigned i = 0; i < entries_count; ++i)
+            {
+                if(strcmp(entries[i].name, name)) continue;
+                ++found;
+                call = (Callback)entries[i].callback;
+            }
+            for(size_t i = 0; i < sizeof(selected) / sizeof(*selected); ++i)
+                if(call == selected[i].callback) target = selected[i].name;
+            printf("[%u,\"%s\",%u,\"%s\",\"%s\"]\n", obor_profile_build, name, found, target,
+                   Script_GetFunctionName((void *)selected[n].callback));
+            if(!call || !*target) continue;
+            if(n < 3)
+                for(unsigned i = 0; i < sizeof(platform_cases) / sizeof(*platform_cases); ++i) platform_case(call, name, i);
+            else if(n < 7)
+                for(unsigned i = 0; i < sizeof(array_cases) / sizeof(*array_cases); ++i) array_case(call, name, i);
+            else
+                for(unsigned i = 0; i < sizeof(animation_cases) / sizeof(*animation_cases); ++i) animation_case(call, name, i);
+        }
+    }
+    return stub_calls != 0;
+}

@@ -1,0 +1,188 @@
+/* SPDX-License-Identifier: BSD-3-Clause
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me>
+ */
+#include <ctype.h>
+#include <setjmp.h>
+#include <stdint.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <strings.h>
+#include "openbor.h"
+#include "commands.h"
+#undef assert
+#undef printf
+#undef malloc
+#undef free
+#undef screenx
+#ifndef stricmp
+#define stricmp strcasecmp
+#endif
+
+uint32_t obor_profile_build;
+static unsigned contexts, checks;
+static jmp_buf rejected_keyword;
+static entity actor, opponent;
+entity *self = &actor;
+s_videomodes videomodes = {.hRes = 320, .vRes = 240};
+static int screenx;
+float move_noatk_factor = 3.f, group_noatk_factor = .01f, offscreen_noatk_factor = .5f;
+static float sample;
+static unsigned samples;
+
+#define CHECK_MODEL(test) do { if(!(test)) { \
+    fprintf(stderr, "Model controls revision %u check %u: %s\n", obor_profile_build, checks, #test); \
+    abort(); \
+} } while(0)
+
+void *checkAlloc(void *p, size_t n, const char *fn, const char *file, int line)
+{
+    (void)fn;
+    (void)file;
+    (void)line;
+    CHECK_MODEL(!n || p);
+    return p;
+}
+
+void borExit(int status) { (void)status; abort(); }
+#include "List.c"
+
+void shutdown(int status, char *format, ...)
+{
+    CHECK_MODEL(status == 1 && strstr(format, "invalid A.I. move switch"));
+    longjmp(rejected_keyword, 1);
+}
+
+int get_cached_model_index(char *name)
+{
+    CHECK_MODEL(!strcmp(name, "0.25"));
+    return 2;
+}
+
+float diff(float a, float b)
+{
+    CHECK_MODEL(a == b);
+    return 0.f;
+}
+
+int count_ents(int types)
+{
+    CHECK_MODEL(types == TYPE_ENEMY);
+    return 1;
+}
+
+float randf(float maximum)
+{
+    CHECK_MODEL(maximum == 1.f);
+    ++samples;
+    return sample;
+}
+
+@NUMBERS@
+@COMMANDS@
+@CONSUMERS@
+
+static void check_model_keyword(List *list, const char *input, modelCommands expected, int distant)
+{
+    char command[32], number[] = "0.25", distance[] = "37.5", enable[] = "1";
+    char *filename = "unit-model", *value;
+    s_model model = {0}, *newchar = &model;
+    model.bomb = -1;
+    model.boomerang_acc = 7.f;
+    model.boomerang_distx = 8.f;
+    model.offscreen_noatk_factor = 9.f;
+    CHECK_MODEL(strlen(input) < sizeof(command));
+    strcpy(command, input);
+    modelCommands cmd = getModelCommand(list, command);
+    CHECK_MODEL(cmd == expected);
+    ArgList arglist = {.count = 3, .args = {
+        command, cmd == CMD_MODEL_SUBJECT_TO_BASEMAP ? enable : number, distance
+    }};
+    switch(cmd)
+    {
+        @ARMS@
+        default: break;
+    }
+    CHECK_MODEL(model.subject_to_basemap == (cmd == CMD_MODEL_SUBJECT_TO_BASEMAP));
+    CHECK_MODEL(model.offscreen_noatk_factor == (cmd == CMD_MODEL_ONAF ? .25f : 9.f));
+    CHECK_MODEL(model.boomerang_acc == (cmd == CMD_MODEL_BOOMERANG ? .25f : 7.f));
+    CHECK_MODEL(model.boomerang_distx == (distant ? 37.5f : 8.f));
+    CHECK_MODEL(model.bomb == ((cmd == CMD_MODEL_BOOMERANG || cmd == CMD_MODEL_BOMB) ? 2 : -1));
+    ++checks;
+}
+
+static int apply_aimove(ArgList *args, s_model *model, int *set)
+{
+    if(setjmp(rejected_keyword)) return 0;
+    lcmHandleCommandAimove(args, model, set, "unit-model");
+    return 1;
+}
+
+static void check_aimove(char *name, int accepted, unsigned movement)
+{
+    s_model model = {.aimove = AIMOVE1_CHASE};
+    ArgList args = {.count = 2, .args = {"aimove", name}};
+    int set = 0;
+    CHECK_MODEL(apply_aimove(&args, &model, &set) == accepted);
+    CHECK_MODEL(set && model.aimove == movement);
+    ++checks;
+}
+
+static void check_chance(float x, float local_factor, float global_factor,
+                         float draw, int expected)
+{
+    actor.position.x = actor.destx = x;
+    actor.modeldata.type = TYPE_ENEMY;
+    actor.modeldata.offscreen_noatk_factor = local_factor;
+    offscreen_noatk_factor = global_factor;
+    sample = draw;
+    unsigned before = samples;
+    CHECK_MODEL(check_attack_chance(&opponent, .6f, .75f) == expected);
+    CHECK_MODEL(samples == before + 1);
+    ++checks;
+}
+
+static void check_context(unsigned revision, int basemap, int per_model_factor,
+                          const char *boomerang_command, const char *aimove)
+{
+    obor_profile_build = revision;
+    List *list = createModelCommandList();
+    CHECK_MODEL(list);
+    check_model_keyword(list, "SUBJECT_TO_BASEMAP", basemap ? CMD_MODEL_SUBJECT_TO_BASEMAP : 0, 0);
+    check_model_keyword(list, "OFFSCREEN_NOATK_FACTOR", per_model_factor ? CMD_MODEL_ONAF : 0, 0);
+    check_model_keyword(list, "BOOMRANGACC", !strcmp(boomerang_command, "boomrangacc") ? CMD_MODEL_BOOMERANG : 0, 0);
+    int short_name = !strcmp(boomerang_command, "boomrang");
+    int long_name = !strcmp(boomerang_command, "boomerang");
+    check_model_keyword(list, "BOOMRANG", short_name ? CMD_MODEL_BOOMERANG : 0, short_name);
+    check_model_keyword(list, "BOOMERANG", long_name ? CMD_MODEL_BOOMERANG : 0, long_name);
+    check_model_keyword(list, "BOMB", CMD_MODEL_BOMB, 0);
+    freeCommandList(list);
+
+    check_aimove("Normal", 1, AIMOVE1_NORMAL);
+    int short_move = !strcmp(aimove, "boomrang");
+    int long_move = !strcmp(aimove, "boomerang");
+    check_aimove("Boomrang", short_move, short_move ? AIMOVE1_BOOMERANG : 0);
+    check_aimove("Boomerang", long_move, long_move ? AIMOVE1_BOOMERANG : 0);
+    check_aimove("Boomrangacc", 0, 0);
+
+    check_chance(-11.f, .25f, .5f, .45f, per_model_factor);
+    check_chance(331.f, .25f, .5f, .45f, per_model_factor);
+    check_chance(-11.f, 0.f, .5f, .45f, 0);
+    check_chance(-11.f, -.25f, .5f, .85f, per_model_factor);
+    check_chance(-11.f, 1.25f, .5f, .10f, !per_model_factor);
+    check_chance(-10.f, 1.25f, .5f, .70f, 1);
+    check_chance(330.f, 1.25f, .5f, .70f, 1);
+    check_chance(-11.f, 0.f, .25f, .50f, 1);
+    unsigned before = samples;
+    actor.modeldata.aiattack = AIATTACK1_ALWAYS;
+    CHECK_MODEL(check_attack_chance(&opponent, .6f, .75f) == 1 && samples == before);
+    actor.modeldata.aiattack = 0;
+    ++checks;
+    ++contexts;
+}
+
+int main(void)
+{
+    @CHECKS@
+    printf("{\"contexts\":%u,\"checks\":%u}\n", contexts, checks);
+}

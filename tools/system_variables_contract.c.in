@@ -1,0 +1,331 @@
+/* SPDX-License-Identifier: BSD-3-Clause
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me> */
+#include <stdint.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <strings.h>
+#include <ctype.h>
+#include <stdarg.h>
+#include <limits.h>
+#include "openbor.h"
+#undef printf
+#undef assert
+uint32_t obor_profile_build;
+static unsigned active_case,row;
+static const char *active_name;
+#define assert(c) do{if(!(c)){fprintf(stderr,"SYSTEM_VARIABLES revision=%u case=%u name=%s line=%d: %s\n",obor_profile_build,active_case,active_name?active_name:"?",__LINE__,#c);abort();}}while(0)
+HRESULT Interpreter_Call(Interpreter *p){(void)p;abort();}
+HRESULT Interpreter_EvalInstruction(Interpreter *p){(void)p;abort();}
+static char strings[32][256],diagnostic[4096];
+static unsigned references[32];
+int StrCache_Pop(void){for(int i=0;i<32;i++)if(!references[i]){references[i]=1;strings[i][0]=0;return i;}abort();}
+void StrCache_Collect(int i){assert(i>=0 && i<32 && references[i]);--references[i];}
+void StrCache_Grab(int i){assert(i>=0 && i<32 && references[i]);++references[i];}
+CHAR *StrCache_Get(int i){assert(i>=0 && i<32 && references[i]);return strings[i];}
+CHAR *StrCache_GetIfPresent(int i){return i>=0 && i<32 && references[i]?strings[i]:NULL;}
+void StrCache_Copy(int i,CHAR *text){assert(strlen(text)<sizeof(strings[i]));strcpy(StrCache_Get(i),text);}
+static int message(const char *format,...){size_t used=strlen(diagnostic);va_list args;va_start(args,format);int n=vsnprintf(diagnostic+used,sizeof(diagnostic)-used,format,args);va_end(args);assert(n>=0 && (size_t)n<sizeof(diagnostic)-used);return n;}
+@VARIANTS@
+static s_level world;
+s_level *level=&world;
+static s_set_entry set_record;
+static s_level_entry level_entry;
+s_set_entry *levelsets=&set_record;
+int current_set,current_level,pause,goto_mainmenu_flag,optionsMenu,cheatoptionsMenu,cheats,forcecheatsoff,shadowopacity;
+s_lasthit lasthit;
+static s_collision_attack first_attack,live_attack;
+static s_collision_body body;
+static entity actor,other_actor;
+entity *textbox;
+static s_screen screen_a,screen_b;
+s_screen *background,*vscreen;
+int maxchannels(void){return 23;}
+static int field_mode,delegate_calls,observed_index,unused_calls;
+#define printf message
+#ifndef stricmp
+#define stricmp strcasecmp
+#endif
+@CHEATS@
+@PORTING@
+@FIELDS@
+int getsyspropertybyindex(ScriptVariant *value,int index){
+    ++delegate_calls;observed_index=index;
+    if(field_mode || index==_sv_the_end)return probe_getsyspropertybyindex(value,index);
+    assert(index>=0 && index<_sv_the_end);ScriptVariant_ChangeType(value,VT_INTEGER);value->lVal=index;return 1;
+}
+int changesyspropertybyindex(int index,ScriptVariant *value){
+    ++delegate_calls;observed_index=index;
+    if(field_mode || index==_sv_the_end)return probe_changesyspropertybyindex(index,value);
+    assert(index>=0 && index<_sv_the_end);return 1;
+}
+@SEARCH@
+@DECLARATION@
+@METHODS@
+@STUBS@
+@DISPATCH@
+@PUBLICATION@
+#undef printf
+enum {@FEATURE_ENUM@};
+static const struct{unsigned revision;int count;int physical[_sv_the_end];const char *names[_sv_the_end];int features[@FEATURE_COUNT@];} contexts[]={@CONTEXTS@};
+#define F(name) contexts[row].features[FEATURE_##name]
+static int (*porting_functions[])(ScriptVariant *)={@PORTING_FUNCTIONS@};
+static const struct{const char *string;int integer;} porting_expected[]={@PORTING_EXPECTED@};
+static const struct{int tag;double value;int converted,accepted;} numbers[]={@NUMBERS@};
+static const int pause_values[]={@PAUSE_VALUES@},menu_flags[]={@MENU_FLAGS@};
+static const char *getter_unknown=@GETTER_UNKNOWN@;
+typedef int (*map_function)(ScriptVariant **,int);
+static int logical_index(const char *name){for(int i=0;i<contexts[row].count;i++)if(!strcmp(name,contexts[row].names[i]))return i;return -1;}
+static void named(ScriptVariant *v,const char *name,int uppercase){
+    memset(v,0,sizeof(*v));ScriptVariant_Init(v);ScriptVariant_ChangeType(v,VT_STR);StrCache_Copy(v->strVal,(CHAR *)name);
+    if(uppercase){char *p=StrCache_Get(v->strVal);for(;*p;p++)*p=(char)toupper((unsigned char)*p);}
+}
+static void seed_result(ScriptVariant *v){memset(v,0,sizeof(*v));v->vt=VT_INTEGER;v->lVal=777;}
+static void warning_for(const char *name,char *out){snprintf(out,256,"openborvariant: System variable name not found: '%s'\n",name);}
+static void namespace_checks(void)
+{
+    field_mode=0;
+    for(int q=0;q<_sv_the_end+2;q++)for(int setter=0;setter<2;setter++)
+    for(int uppercase=0;uppercase<2;uppercase++)for(int premap=0;premap<2;premap++){
+        active_case++;active_name=q<_sv_the_end?svlist[q]:q==_sv_the_end?"unknown_system_field":"";
+        int logical=logical_index(active_name);ScriptVariant property,value={.vt=VT_INTEGER},result,*out;
+        ScriptVariant *args[]={&property,&value};value.lVal=91;named(&property,active_name,uppercase);
+        char original[128],wanted[256];strcpy(original,StrCache_Get(property.strVal));warning_for(original,wanted);
+        map_function mapper=(map_function)Script_GetStringMapFunction(setter?(void*)openbor_changesystemvariant:(void*)openbor_systemvariant);
+        assert(mapper==mapstrings_systemvariant);
+        if(premap){diagnostic[0]=0;assert(mapper(args,setter?2:1)==(logical>=0));assert(!strcmp(diagnostic,logical>=0?"":wanted));}
+        for(int repeat=0;repeat<2;repeat++){
+            seed_result(&result);out=&result;diagnostic[0]=0;delegate_calls=0;
+            HRESULT status=setter?openbor_changesystemvariant(args,&out,2):openbor_systemvariant(args,&out,1);
+            if(logical>=0){
+                assert(status==S_OK && out==&result && result.vt==VT_INTEGER && !diagnostic[0]);
+                assert(result.lVal==(setter?777:contexts[row].physical[logical]));
+                assert(property.vt==VT_INTEGER && property.lVal==logical && delegate_calls==1);
+                assert(observed_index==contexts[row].physical[logical]);
+                assert(obor_systemvariant_native(logical)==contexts[row].physical[logical]);
+            }else{
+                assert(status==E_FAIL && !out && !delegate_calls && result.vt==VT_INTEGER && result.lVal==777);
+                assert(property.vt==VT_STR && !strcmp(diagnostic,wanted));
+            }
+        }
+        ScriptVariant_Clear(&property);
+    }
+    for(int logical=0;logical<contexts[row].count;logical++)for(int setter=0;setter<2;setter++){
+        active_case++;active_name="numeric";ScriptVariant p={.vt=VT_INTEGER},v={.vt=VT_INTEGER},result,*out=&result,*args[]={&p,&v};
+        p.lVal=logical;seed_result(&result);delegate_calls=0;diagnostic[0]=0;
+        assert((setter?openbor_changesystemvariant(args,&out,2):openbor_systemvariant(args,&out,1))==S_OK);
+        assert(out==&result && observed_index==contexts[row].physical[logical] && delegate_calls==1 && !diagnostic[0]);
+    }
+    const int invalid[]={-1,contexts[row].count,_sv_the_end,INT_MAX};
+    for(unsigned i=0;i<sizeof(invalid)/sizeof(*invalid);i++)for(int setter=0;setter<2;setter++){
+        active_case++;active_name="invalid numeric";ScriptVariant p={.vt=VT_INTEGER},v={.vt=VT_INTEGER},result,*out=&result,*args[]={&p,&v};
+        p.lVal=invalid[i];seed_result(&result);diagnostic[0]=0;
+        assert((setter?openbor_changesystemvariant(args,&out,2):openbor_systemvariant(args,&out,1))==E_FAIL && !out);
+        assert(!strcmp(diagnostic,setter?"":getter_unknown));
+        assert(result.vt==(setter?VT_INTEGER:VT_EMPTY));
+    }
+    const VARTYPE invalid_types[]={VT_EMPTY,VT_PTR,VT_DECIMAL};
+    for(unsigned i=0;i<sizeof(invalid_types)/sizeof(*invalid_types);i++)for(int setter=0;setter<2;setter++){
+        active_case++;active_name="argument type";ScriptVariant p={0},v={.vt=VT_INTEGER},result,*out=&result,*args[]={&p,&v};
+        p.vt=invalid_types[i];seed_result(&result);delegate_calls=0;diagnostic[0]=0;
+        assert((setter?openbor_changesystemvariant(args,&out,2):openbor_systemvariant(args,&out,1))==E_FAIL && !out && !delegate_calls);
+        assert(result.vt==VT_INTEGER && result.lVal==777 && !diagnostic[0]);
+    }
+    for(int count=0;count<4;count++)for(int setter=0;setter<2;setter++)if(count!=(setter?2:1)){
+        active_case++;active_name="argument count";ScriptVariant p={.vt=VT_INTEGER},v={.vt=VT_INTEGER},result,*out=&result,*args[]={&p,&v};
+        seed_result(&result);delegate_calls=0;diagnostic[0]=0;
+        assert((setter?openbor_changesystemvariant(args,&out,count):openbor_systemvariant(args,&out,count))==E_FAIL && !out && !delegate_calls);
+        assert(result.vt==VT_INTEGER && result.lVal==777 && !diagnostic[0]);
+    }
+}
+static void reset_fields(void)
+{
+    memset(&lasthit,0,sizeof(lasthit));memset(&live_attack,0,sizeof(live_attack));memset(&first_attack,0,sizeof(first_attack));
+    memset(&world,0,sizeof(world));memset(&set_record,0,sizeof(set_record));memset(&level_entry,0,sizeof(level_entry));
+    lasthit.type=3;live_attack.attack_type=7;first_attack.attack_type=11;lasthit.attack=&live_attack;
+    lasthit.position.x=1.5f;lasthit.position.y=2.5f;lasthit.position.z=3.5f;lasthit.confirm=1;
+    pause=2;goto_mainmenu_flag=0;optionsMenu=cheats=1;forcecheatsoff=cheatoptionsMenu=0;
+    level=&world;levelsets=&set_record;current_set=current_level=0;set_record.levelorder=&level_entry;
+    level_entry.branchname="branch";set_record.noshowcomplete=37;shadowopacity=77;
+    textbox=&actor;background=&screen_a;vscreen=&screen_b;diagnostic[0]=0;field_mode=1;
+}
+static void value_check(ScriptVariant *v,VARTYPE tag,double number,void *pointer,const char *text)
+{
+    assert(v->vt==tag);
+    if(tag==VT_INTEGER)assert(v->lVal==number);
+    else if(tag==VT_DECIMAL)assert(v->dblVal==number);
+    else if(tag==VT_PTR)assert(v->ptrVal==pointer);
+    else if(tag==VT_STR)assert(text && !strcmp(StrCache_Get(v->strVal),text));
+}
+static void read_check(int symbol,const char *name,int handled,VARTYPE tag,double direct_number,double script_number,void *pointer,const char *text)
+{
+    active_case++;active_name=name;ScriptVariant result;seed_result(&result);diagnostic[0]=0;
+    assert(probe_getsyspropertybyindex(&result,symbol)==handled);
+    if(handled)value_check(&result,tag,direct_number,pointer,text);
+    else assert(result.vt==VT_INTEGER && result.lVal==777 && !strcmp(diagnostic,getter_unknown));
+    ScriptVariant_Clear(&result);
+    for(int numeric=0;numeric<2;numeric++){
+        int logical=logical_index(name);if(numeric && logical<0)continue;
+        ScriptVariant property,*out=&result,*args[]={&property};named(&property,name,0);
+        if(numeric){ScriptVariant_ChangeType(&property,VT_INTEGER);property.lVal=logical;}
+        seed_result(&result);diagnostic[0]=0;delegate_calls=0;HRESULT status=openbor_systemvariant(args,&out,1);
+        assert(status==(handled?S_OK:E_FAIL));
+        if(handled){assert(out==&result);value_check(&result,tag,script_number,pointer,text);}
+        else if(logical>=0){assert(!out && result.vt==VT_EMPTY);}
+        else{char wanted[256];warning_for(name,wanted);assert(!out && result.vt==VT_INTEGER && result.lVal==777 && !strcmp(diagnostic,wanted));}
+        if(logical>=0)assert(property.vt==VT_INTEGER && property.lVal==logical && !strcmp(diagnostic,handled?"":getter_unknown) && delegate_calls==1);
+        ScriptVariant_Clear(&property);ScriptVariant_Clear(&result);
+    }
+}
+static void read_fields(void)
+{
+    for(unsigned i=0;i<sizeof(pause_values)/sizeof(*pause_values);i++)for(unsigned j=0;j<sizeof(menu_flags)/sizeof(*menu_flags);j++){
+        reset_fields();pause=pause_values[i];goto_mainmenu_flag=menu_flags[j];
+        int value=F(pause_mode)==1?0:F(pause_mode)==2 && (goto_mainmenu_flag&1)?0:pause;
+        read_check(_sv_pause,"pause",1,VT_INTEGER,value,value,NULL,NULL);
+        read_check(_sv_game_paused,"game_paused",1,VT_INTEGER,value,value,NULL,NULL);
+    }
+    for(int legacy=0;legacy<2;legacy++)for(int menu=0;menu<2;menu++)for(int enabled=0;enabled<2;enabled++)for(int disabled=0;disabled<2;disabled++){
+        reset_fields();cheatoptionsMenu=legacy;optionsMenu=menu;cheats=enabled;forcecheatsoff=disabled;
+        int value=F(cheat_menu_filtered)?menu && enabled && !disabled:legacy;
+        read_check(_sv_in_cheat_options,"in_cheat_options",1,VT_INTEGER,value,value,NULL,NULL);
+        read_check(_sv_cheats,"cheats",1,VT_INTEGER,enabled && !disabled,enabled && !disabled,NULL,NULL);
+    }
+    for(int live=0;live<2;live++){
+        reset_fields();lasthit.attack=live?&live_attack:NULL;
+        read_check(_sv_lasthitt,"lasthitt",1,VT_INTEGER,F(last_hit_getter)==1?3:live?7:777,F(last_hit_getter)==1?3:live?7:0,NULL,NULL);
+        if(live){live_attack.attack_type=19;read_check(_sv_lasthitt,"lasthitt",1,VT_INTEGER,F(last_hit_getter)==1?3:19,F(last_hit_getter)==1?3:19,NULL,NULL);}
+    }
+    for(int present=0;present<2;present++)for(int branch=0;branch<2;branch++){
+        reset_fields();level=present?&world:NULL;level_entry.branchname=branch?"branch":NULL;
+        int visible=branch && (present || !F(current_branch_requires_level));
+        read_check(_sv_current_branch,"current_branch",1,visible?VT_STR:VT_EMPTY,0,0,NULL,visible?"branch":NULL);
+    }
+    reset_fields();read_check(_sv_maxsoundchannels,"maxsoundchannels",F(maxsoundchannels_getter),VT_INTEGER,23,23,NULL,NULL);
+    read_check(_sv_noshowcomplete,"noshowcomplete",F(noshowcomplete_getter),VT_INTEGER,37,37,NULL,NULL);
+    read_check(_sv_shadowopacity,"shadowopacity",F(shadowopacity_getter),VT_INTEGER,77,77,NULL,NULL);
+    if(F(porting_getter)==1){const char *text=F(porting_string_default)==1?"unknown":"";
+        read_check(_sv_porting,"porting",1,VT_STR,0,0,NULL,text);
+    }else read_check(_sv_porting,"porting",F(porting_getter)!=0,VT_INTEGER,PORTING_UNKNOWN,PORTING_UNKNOWN,NULL,NULL);
+    for(int present=0;present<2;present++){
+        textbox=present?&actor:NULL;read_check(_sv_textbox,"textbox",F(textbox_getter),VT_PTR,0,0,textbox,NULL);
+        background=present?&screen_a:NULL;read_check(_sv_background,"background",1,VT_PTR,0,0,background,NULL);
+        vscreen=present?&screen_b:NULL;read_check(_sv_vscreen,"vscreen",1,VT_PTR,0,0,vscreen,NULL);
+    }
+}
+typedef struct{int type,live,first,confirm,pause,completion,shadow;float x,y,z;s_screen *back,*video;s_collision_attack *attack;entity *text;} observed_state;
+static observed_state state(void){return (observed_state){lasthit.type,live_attack.attack_type,first_attack.attack_type,lasthit.confirm,pause,set_record.noshowcomplete,shadowopacity,lasthit.position.x,lasthit.position.y,lasthit.position.z,background,vscreen,lasthit.attack,textbox};}
+static void compare_state(observed_state expected)
+{
+    observed_state actual=state();
+    assert(actual.type==expected.type && actual.live==expected.live && actual.first==expected.first && actual.confirm==expected.confirm);
+    assert(actual.pause==expected.pause && actual.completion==expected.completion && actual.shadow==expected.shadow);
+    assert(actual.x==expected.x && actual.y==expected.y && actual.z==expected.z && actual.back==expected.back && actual.video==expected.video && actual.attack==expected.attack && actual.text==expected.text);
+}
+static void write_check(int symbol,const char *name,int handled,ScriptVariant *value,observed_state expected,int null_attack)
+{
+    for(int mode=0;mode<3;mode++){
+        active_case++;active_name=name;reset_fields();if(null_attack)lasthit.attack=NULL;
+        int result;
+        if(!mode)result=probe_changesyspropertybyindex(symbol,value);
+        else{
+            ScriptVariant property,ret,*out=&ret,*args[]={&property,value};int logical=logical_index(name);
+            named(&property,name,0);if(mode==2 && logical>=0){ScriptVariant_ChangeType(&property,VT_INTEGER);property.lVal=logical;}
+            seed_result(&ret);diagnostic[0]=0;HRESULT status=openbor_changesystemvariant(args,&out,2);result=status==S_OK;
+            assert(status==(handled?S_OK:E_FAIL) && out==(handled?&ret:NULL) && ret.vt==VT_INTEGER && ret.lVal==777);
+            if(logical>=0)assert(property.vt==VT_INTEGER && property.lVal==logical && !diagnostic[0]);
+            else{char wanted[256];warning_for(name,wanted);assert(property.vt==VT_STR && !strcmp(diagnostic,wanted));}
+            ScriptVariant_Clear(&property);
+        }
+        assert(result==handled);compare_state(expected);
+    }
+}
+static void write_fields(void)
+{
+    const struct{int symbol;const char *name;} fields[]={
+        {_sv_lasthitt,"lasthitt"},{_sv_lasthitc,"lasthitc"},{_sv_lasthitx,"lasthitx"},
+        {_sv_lasthita,"lasthita"},{_sv_lasthity,"lasthity"},{_sv_lasthitz,"lasthitz"},
+        {_sv_pause,"pause"},{_sv_noshowcomplete,"noshowcomplete"},{_sv_shadowopacity,"shadowopacity"}};
+    for(unsigned i=0;i<sizeof(numbers)/sizeof(*numbers);i++)for(unsigned field=0;field<sizeof(fields)/sizeof(*fields);field++){
+        reset_fields();ScriptVariant value={0};value.vt=numbers[i].tag;
+        if(value.vt==VT_DECIMAL)value.dblVal=numbers[i].value;else if(value.vt==VT_INTEGER)value.lVal=(LONG)numbers[i].value;
+        else if(value.vt==VT_PTR)value.ptrVal=&actor;else if(value.vt==VT_STR){ScriptVariant_Init(&value);ScriptVariant_ChangeType(&value,VT_STR);StrCache_Copy(value.strVal,"2");}
+        observed_state expected=state();int handled=1,n=numbers[i].converted,ok=numbers[i].accepted;
+        switch(fields[field].symbol){
+        case _sv_lasthitt:handled=F(last_hit_setter)!=0;if(handled && ok){if(F(last_hit_setter)==1)expected.type=n;else expected.live=n;}break;
+        case _sv_lasthitc:if(ok)expected.confirm=n;break;
+        case _sv_lasthitx:if(ok)expected.x=(float)n;break;
+        case _sv_lasthita:case _sv_lasthity:if(ok)expected.y=(float)n;break;
+        case _sv_lasthitz:if(ok)expected.z=(float)n;break;
+        case _sv_pause:handled=0;break;
+        case _sv_noshowcomplete:handled=F(noshowcomplete_setter);if(handled && ok)expected.completion=n;break;
+        case _sv_shadowopacity:handled=F(shadowopacity_setter);if(handled && ok)expected.shadow=n;break;
+        }
+        write_check(fields[field].symbol,fields[field].name,handled,&value,expected,0);ScriptVariant_Clear(&value);
+    }
+    /* Null live attack is a separate safe-continuation control. */
+    reset_fields();observed_state expected=state();ScriptVariant value={.vt=VT_INTEGER};value.lVal=42;
+    if(F(last_hit_setter)==1)expected.type=42;
+    expected.attack=NULL;
+    write_check(_sv_lasthitt,"lasthitt",F(last_hit_setter)!=0,&value,expected,1);
+    const struct{int symbol;const char *name;int feature;} pointers[]={
+        {_sv_background,"background",FEATURE_background_setter},{_sv_vscreen,"vscreen",FEATURE_vscreen_setter},
+        {_sv_textbox,"textbox",-1}};
+    for(unsigned i=0;i<sizeof(pointers)/sizeof(*pointers);i++)for(int null=0;null<2;null++){
+        reset_fields();expected=state();value.vt=null?VT_INTEGER:VT_PTR;
+        value.ptrVal=null?NULL:i==2?(void *)&other_actor:(void *)&screen_b;
+        int handled=pointers[i].feature<0?1:contexts[row].features[pointers[i].feature];
+        if(handled){if(i==0)expected.back=value.ptrVal;else if(i==1)expected.video=value.ptrVal;else expected.text=value.ptrVal;}
+        write_check(pointers[i].symbol,pointers[i].name,handled,&value,expected,0);
+    }
+    const struct{int symbol;const char *name;} readonly[]={
+        {_sv_porting,"porting"},{_sv_maxsoundchannels,"maxsoundchannels"},
+        {_sv_current_branch,"current_branch"}};
+    for(unsigned i=0;i<sizeof(readonly)/sizeof(*readonly);i++){
+        reset_fields();expected=state();value.vt=VT_INTEGER;value.lVal=42;
+        write_check(readonly[i].symbol,readonly[i].name,0,&value,expected,0);
+    }
+}
+static void publication_checks(void)
+{
+    static s_anim animation;static s_collision_attack_list frame;static s_collision_attack_list *frames[]={&frame};
+    static s_collision_attack *instances[]={&first_attack,&live_attack};
+    memset(&animation,0,sizeof(animation));animation.collision_attack=frames;frame.instance=instances;actor.animation=&animation;actor.animpos=0;
+    for(int selected=0;selected<2;selected++){
+        active_case++;active_name="native publication";reset_fields();lasthit.type=29;lasthit.position.z=5;
+        assert(probe_publish(&actor,instances[selected],&body,2)==1);
+        assert(lasthit.attack==instances[selected] && lasthit.body==&body && lasthit.confirm==1 && lasthit.position.y==3);
+        assert(lasthit.type==(F(last_hit_getter)==1?11:29));
+        int number=F(last_hit_getter)==1?11:instances[selected]->attack_type;
+        read_check(_sv_lasthitt,"lasthitt",1,VT_INTEGER,number,number,NULL,NULL);
+    }
+}
+static void target_checks(void)
+{
+    for(unsigned target=0;target<sizeof(porting_functions)/sizeof(*porting_functions);target++){
+        active_case++;active_name="compiler condition";ScriptVariant result;seed_result(&result);diagnostic[0]=0;
+        assert(porting_functions[target](&result)==(F(porting_getter)!=0));
+        if(F(porting_getter)==0)assert(result.vt==VT_INTEGER && result.lVal==777);
+        else if(F(porting_getter)==1){const char *expected=porting_expected[target].string;
+            if(!expected)expected=F(porting_string_default)==1?"unknown":"";
+            value_check(&result,VT_STR,0,NULL,expected);
+        }else{
+            int expected=porting_expected[target].integer;
+            if(expected==PORTING_XBOX && !F(porting_xbox))expected=PORTING_UNKNOWN;
+            value_check(&result,VT_INTEGER,expected,NULL,NULL);
+        }
+        assert(!strcmp(diagnostic,F(porting_getter)?"":getter_unknown));
+        ScriptVariant_Clear(&result);
+    }
+}
+int main(void)
+{
+    @ENUM_CHECKS@
+    assert(sizeof(svlist)/sizeof(*svlist)==_sv_the_end);
+    for(row=0;row<sizeof(contexts)/sizeof(*contexts);row++){
+        obor_profile_build=contexts[row].revision;active_case=0;namespace_checks();read_fields();write_fields();publication_checks();target_checks();
+        assert(!unused_calls);for(unsigned i=0;i<32;i++)assert(!references[i]);
+        printf("{\"revision\":%u,\"status\":\"PASS\"}\n",obor_profile_build);
+    }
+    return 0;
+}

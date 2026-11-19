@@ -45,6 +45,78 @@ def check_constants_continuation(log, profile, restarts=0):
 
 
 class UnknownConstantsTests(unittest.TestCase):
+    def test_4432_historical_script_constant_lookups(self):
+        self._check_4432_constants('profile-script-constant-lookup-contracts.json')
+
+    def test_4432_historical_animation_property_numbers(self):
+        self._check_4432_constants('profile-animation-property-number-contracts.json', frame_properties=True)
+
+    def _check_4432_constants(self, name, *, frame_properties=False):
+        from test_historical_common_think import ROOT, native_output
+        fixture = load_contract_fixture(Path(__file__).parent / 'fixtures' / name)
+        engine = ROOT / 'src/engines' / fixture['engine']
+        script = (engine / 'openborscript.c').read_text()
+        core = (engine / 'openbor.c').read_text()
+        rows = fixture['sources']
+        revisions = {row['revision'] for row in rows}
+        self.assertEqual(fixture['engine'], '4432')
+        self.assertEqual(len(revisions), len(rows))
+        self.assertEqual(revisions, contract_revisions(fixture, fixture['expected_revisions']))
+
+        mapper = function(script, 'mapstrings_transconst')
+        macros = script[script.index('#define IICMPCONST('):script.index('int mapstrings_transconst(')]
+        arrays = sorted(set(re.findall(r'ICMPS(?:CONST[AB]|BACKCONST)\(\w+, (\w+)\)', mapper)))
+        mapped = set(re.findall(r'\b(?:I?ICMPCONST|ICMPCONST_FROM)\((\w+)', mapper))
+        variables = mapped & set(re.findall(r'(?m)^extern\s+int\s+(\w+)\s*;', script))
+        backwards = ('animbackpains', 'animbackfalls', 'animbackdies')
+        self.assertTrue(set(backwards) <= set(arrays))
+        tables = []
+        for index, contract in enumerate(fixture['contracts']):
+            self.assertEqual(len(contract), len(fixture['names']))
+            self.assertTrue(all(v is None or type(v) is int for v in contract))
+            entries = ['{%s,%d,%d}' % (json.dumps(name), value is not None, value or 0)
+                       for name, value in zip(fixture['names'], contract)]
+            tables.append('static const Expectation table_%d[]={%s};' % (index, ','.join(entries)))
+        support = function(script, 'obor_profile_subtype_value') + function(core, 'obor_profile_animation_base')
+        if 'obor_profile_name_limit(' in mapper:
+            support += function(core, 'obor_profile_name_limit')
+        if 'obor_uses_early_animation_properties(' in script:
+            support += function(script, 'obor_uses_early_animation_properties')
+            if frame_properties:
+                support += function(script, 'obor_native_animation_property')
+        native = macros + mapper + function(script, 'openbor_transconst')
+        extra_checks = ''
+        if frame_properties:
+            variant = (engine / 'source/scriptlib/ScriptVariant.c').read_text()
+            native += function(variant, 'ScriptVariant_IntegerValue')
+            native += '\n'.join(function(script, method) for method in
+                                ('openbor_get_animation_property', 'openbor_set_animation_property'))
+            extra_checks = Path(__file__).with_name('animation_property_number_contract.c.in').read_text()
+            frames_index = fixture['names'].index('ANI_PROP_NUMFRAMES')
+        checks = []
+        for row in rows:
+            checks.append('check(%du, table_%d, %d);' %
+                          (row['revision'], row['contract'], len(fixture['names'])))
+            if frame_properties:
+                self.assertIs(type(row['frame_setter']), bool)
+                number = fixture['contracts'][row['contract']][frames_index]
+                checks.append('check_frame_property(%d, %d);' % (number, row['frame_setter']))
+        parts = dict(
+            TABLES='\n'.join(tables),
+            CHECKS='\n'.join(checks),
+            ARRAYS='\n'.join(f'static int {name}_storage[16]; int *{name} = {name}_storage;'
+                             for name in arrays),
+            VARIABLES='\n'.join(f'int {name};' for name in sorted(variables)),
+            POPULATE='\n'.join(f'{name}[i] = base + {32 * index} + i;'
+                               for index, name in enumerate(backwards)),
+            SUPPORT=support, MAPPER=native, EXTRA_CODE=extra_checks)
+        template = Path(__file__).with_name('script_constant_lookup_contract.c.in').read_text()
+        code = re.sub(r'@([A-Z_]+)@', lambda item: parts[item[1]], template)
+        actual = json.loads(native_output(code, fixture, extra_cflags=('-fgnu89-inline',)))
+        total_per_context = 3 * len(fixture['names']) + 1 + (14 if frame_properties else 0)
+        self.assertEqual(actual, {'contexts': len(rows), 'checks': len(rows) * total_per_context})
+        print(json.dumps(actual, separators=(',', ':')), flush=True)
+
     def test_mapper_names_values_and_mapping_phase_per_profile(self):
         from historical_constant_mapper import render_constant_mapper
         from test_historical_behavior import native

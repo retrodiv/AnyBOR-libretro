@@ -8,6 +8,7 @@
 #include <string.h>
 #include <strings.h>
 #include <stdarg.h>
+#include <ctype.h>
 #include <limits.h>
 #include <float.h>
 @CONFIG@
@@ -57,8 +58,18 @@ static int record_printf(const char *format,...)
     int result=vsnprintf(diagnostic+n,sizeof(diagnostic)-n,format,args);
     va_end(args);assert(result>=0 && (size_t)result<sizeof(diagnostic)-n);return result;
 }
-/* Model and input-device paths are deliberately not exercised here. */
+@HISTORY_FLAG@
+#ifdef PLAYER_PROPERTY_HISTORY
+static int history_model_index(const char *name)
+{
+    if(!strcmp(name, "Cached")) return 0;
+    if(!strcmp(name, "Unloaded")) return 1;
+    return -1;
+}
+#define get_cached_model_index(name) history_model_index(name)
+#else
 #define get_cached_model_index(name) (-1)
+#endif
 @CONTROL_UNDEF@#define control_getmappedkeyname(...) ""
 #define control_getdevicename(...) ""
 @VARIANTS@
@@ -171,7 +182,12 @@ static void invalid_inputs(void)
     for(int oversized=0;oversized<2;++oversized)
     {
         reset(1);ScriptVariant i=integer(0),p=text("name"),v=text("valid"),r={0},*out=&r;
-        if(oversized){memset(strings[v.strVal],'x',sizeof(player[0].name));strings[v.strVal][sizeof(player[0].name)]=0;}
+        if(oversized)
+        {
+            size_t length = @NAME_LIMIT@ + 1;
+            memset(strings[v.strVal], 'x', length);
+            strings[v.strVal][length] = 0;
+        }
         else v.strVal=-1;
         ScriptVariant *args[]={&i,&p,&v};refusal(openbor_changeplayerproperty,args,&out,3);
     }
@@ -226,6 +242,34 @@ static void invalid_inputs(void)
     }
 #endif
 }
+@HISTORICAL_CASES@
+#ifdef NAME_CAPACITY_CONTRACT
+static void check_name_capacity(size_t limit)
+{
+    for(size_t length = limit - 1; length <= limit + 1; length++)
+    {
+        reset(1);
+        char spelling[sizeof(player[0].name) + 1];
+        assert(length < sizeof(spelling));
+        memset(spelling, 'n', length);
+        spelling[length] = '\0';
+        ScriptVariant i = integer(0), property = text("name"), value = text(spelling);
+        ScriptVariant result = {0}, *returned = &result;
+        ScriptVariant *args[] = { &i, &property, &value };
+        if(length > limit)
+        {
+            refusal(openbor_changeplayerproperty, args, &returned, 3);
+            assert(returned == NULL);
+        }
+        else
+        {
+            assert(openbor_changeplayerproperty(args, &returned, 3) == S_OK);
+            assert(strcmp(player[0].name, spelling) == 0);
+            ++cases;
+        }
+    }
+}
+#endif
 int main(void)
 {
     for(unsigned c=0;c<sizeof(contexts)/sizeof(*contexts);++c)
@@ -234,6 +278,10 @@ int main(void)
         own_requires_actor=contexts[c].requires_actor;own_integer_result=contexts[c].integer_result;
 #ifdef ENDPOINT_ONLY
         compare_valid("score",MAX_PLAYERS-1,0,1,0,0,0);
+#elif defined(PLAYER_PROPERTY_HISTORY)
+        check_history(c);
+#elif defined(NAME_CAPACITY_CONTRACT)
+        check_name_capacity(expected_name_limits[c]);
 #else
         const char *properties[]={"score","lives","name","playkeys","credits","weapon"};
         for(unsigned p=0;p<sizeof(properties)/sizeof(*properties);++p)
@@ -242,7 +290,7 @@ int main(void)
         for(int spawned=0;spawned<2;++spawned)
         for(int setter=0;setter<2;++setter)
         for(int extra=0;extra<2;++extra)
-            compare_valid(properties[p],index,kind,spawned,setter,extra?(int)sizeof(player[0].name)-1:0,extra);
+            compare_valid(properties[p],index,kind,spawned,setter,extra?(int)@NAME_LIMIT@:0,extra);
         invalid_inputs();
 #endif
     }

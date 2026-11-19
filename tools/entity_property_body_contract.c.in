@@ -1,0 +1,154 @@
+/* SPDX-License-Identifier: BSD-3-Clause
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me> */
+#include <stdarg.h>
+#include <stdint.h>
+#include <limits.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <strings.h>
+#include "source/scriptlib/depends.h"
+#include "source/scriptlib/ScriptVariant.h"
+#undef printf
+
+uint32_t obor_profile_build;
+typedef struct {
+    int facing, subject_to_basemap, jumpmovex, jumpmovez, walkoffmovex, walkoffmovez;
+    int numweapons, weapnum, weaploss[2], subtype, blockback, blockpain, maps_loaded;
+    unsigned offscreenkill;
+    float jumpspeed, offscreen_noatk_factor, boomerang_acc, boomerang_distx;
+    unsigned char **colourmap;
+    struct { int frozen, hide_end, hide_start, ko, kotype; } maps;
+} s_model;
+typedef struct entity {
+    s_model modeldata;
+    float destx, destz;
+    struct entity *custom_target;
+    int dying, dying2, maptime;
+    unsigned per1, per2;
+    unsigned char *colourmap;
+} entity;
+static entity other[2];
+static unsigned char palette;
+static unsigned char *palettes[] = {&palette};
+static const char *strings[2];
+static char message[160];
+
+CHAR *StrCache_Get(int index)
+{
+    if(index < 0 || index > 1 || !strings[index]) abort();
+    return (CHAR *)strings[index];
+}
+CHAR *StrCache_GetIfPresent(int index) { return StrCache_Get(index); }
+void StrCache_Collect(int index) { if(index < 0 || index > 1) abort(); }
+int StrCache_Pop(void) { abort(); }
+static int observe_diagnostic(const char *format, ...)
+{
+    va_list args;
+    va_start(args, format);
+    int n = vsnprintf(message, sizeof(message), format, args);
+    va_end(args);
+    if(n < 0 || n >= (int)sizeof(message)) abort();
+    return n;
+}
+
+@VARIANTS@
+#define stricmp strcasecmp
+@SEARCH@
+#define printf observe_diagnostic
+@NAMESPACE@
+@MAPS_ENUM@
+@MACROS@
+@MAPPER@
+@GETTER@
+@SETTER@
+#undef printf
+
+/* Property observations */
+static const struct { unsigned revision; int ordinal[@PROPERTY_COUNT@]; const char *names[@PROPERTY_COUNT@]; } contexts[] = { @CONTEXTS@ };
+static const struct {
+    unsigned property, setter, named, argc, target;
+    int t3;
+    double v3;
+    int t4;
+    double v4;
+    const char *text;
+} cases[] = { @CASES@ };
+
+static void variant(ScriptVariant *value, int type, double number)
+{
+    switch(type)
+    {
+    case 0: value->vt = VT_EMPTY; break;
+    case 1: value->vt = VT_INTEGER; value->lVal = (LONG)number; break;
+    case 2: value->vt = VT_DECIMAL; value->dblVal = number; break;
+    case 3: value->vt = VT_PTR; value->ptrVal = number ? &other[(int)number - 1] : NULL; break;
+    case 4: value->vt = VT_STR; value->strVal = 1; break;
+    default: abort();
+    }
+}
+
+static int pointer_id(const void *pointer)
+{
+    if(!pointer) return 0;
+    if(pointer == &other[0]) return 1;
+    if(pointer == &other[1]) return 2;
+    if(pointer == &palette) return 3;
+    abort();
+}
+
+int main(void)
+{
+    for(size_t r = 0; r < sizeof(contexts) / sizeof(*contexts); ++r)
+    {
+        obor_profile_build = contexts[r].revision;
+        for(size_t i = 0; i < sizeof(cases) / sizeof(*cases); ++i)
+        {
+            entity actor = {.modeldata = {.facing = 17, .subject_to_basemap = 18, .jumpmovex = 19, .jumpmovez = 20,
+                            .walkoffmovex = 21, .walkoffmovez = 22, .numweapons = 23, .weapnum = 24, .weaploss = {25, 26},
+                            .subtype = 27, .blockback = 28, .blockpain = 29, .offscreenkill = 30, .jumpspeed = 31.25f,
+                            .offscreen_noatk_factor = 32.5f, .boomerang_acc = 33.75f, .boomerang_distx = 34.25f,
+                            .maps_loaded = 1, .colourmap = palettes},
+                            .custom_target = cases[i].target ? &other[0] : NULL,
+                            .dying = 35, .dying2 = 36, .colourmap = &palette};
+            ScriptVariant args[4] = {0}, result = {0}, *out = &result;
+            ScriptVariant *slots[] = {&args[0], &args[1], &args[2], &args[3]};
+            const unsigned p = cases[i].property;
+            args[0].vt = VT_PTR;
+            args[0].ptrVal = &actor;
+            if(cases[i].named && contexts[r].names[p])
+            {
+                args[1].vt = VT_STR;
+                args[1].strVal = 0;
+            }
+            else
+            {
+                args[1].vt = VT_INTEGER;
+                args[1].lVal = contexts[r].ordinal[p];
+            }
+            variant(&args[2], cases[i].t3, cases[i].v3);
+            variant(&args[3], cases[i].t4, cases[i].v4);
+            strings[0] = contexts[r].names[p];
+            strings[1] = cases[i].text;
+            result.vt = VT_INTEGER;
+            result.lVal = -77;
+            message[0] = '\0';
+            int status = cases[i].setter ? openbor_changeentityproperty(slots, &out, cases[i].argc) :
+                                          openbor_getentityproperty(slots, &out, cases[i].argc);
+            if(message[0])
+            {
+                size_t size = strlen(message);
+                if(message[size - 1] == '\n') message[size - 1] = '\0';
+            }
+            double value = result.vt == VT_INTEGER ? result.lVal : result.vt == VT_DECIMAL ? result.dblVal :
+                           result.vt == VT_PTR ? pointer_id(result.ptrVal) : 0;
+            s_model *m = &actor.modeldata;
+            printf("[%u,%zu,%d,%d,%d,%.9g,\"%s\",[%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%u,%.9g,%.9g,%.9g,%.9g,%d]]\n",
+                   obor_profile_build, i, status, out == NULL, result.vt, value, message,
+                   m->facing, m->subject_to_basemap, m->jumpmovex, m->jumpmovez, m->walkoffmovex, m->walkoffmovez,
+                   m->numweapons, m->weapnum, m->weaploss[0], m->weaploss[1], m->subtype, m->blockback, m->blockpain,
+                   m->offscreenkill, (double)m->jumpspeed, (double)m->offscreen_noatk_factor, (double)m->boomerang_acc,
+                   (double)m->boomerang_distx, pointer_id(actor.custom_target));
+        }
+    }
+}

@@ -1,0 +1,87 @@
+/* SPDX-License-Identifier: BSD-3-Clause
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me> */
+#include <stdint.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <limits.h>
+@FLAGS@
+static uint32_t obor_profile_build;
+static unsigned scene_index,frame,draw_count;
+#define CHECK(c) do{if(!(c)){fprintf(stderr,"PAUSE_MENU revision=%u case=%u line=%d\n",obor_profile_build,scene_index,__LINE__);abort();}}while(0)
+#define MAX_PLAYERS 4
+#define MIN_INT INT_MIN
+#define MAX_INT INT_MAX
+#define PIXEL_32 4
+#define SAMPLE_BEEP 1
+#define SAMPLE_BEEP2 2
+typedef struct {int unused;} s_screen;
+typedef struct {int maxplayers;} s_set_entry;
+static s_set_entry levelsets[1];
+static int current_set,pause,bothnewkeys,endgame,pauseoffset[7],screenformat=PIXEL_32;
+static struct {void *ent;int newkeys,lives;} player[MAX_PLAYERS];
+static struct {int hRes,vRes;} videomodes={320,240};
+static struct {int effectvol;} savedata={37};
+static s_screen screen,*vscreen=&screen;
+struct scene {int actor,starters,entities,maxplayers,count,keys[8],offsets[7];};
+static const struct scene scenes[]={@CASES@};
+static const struct scene *scene;
+static struct {int font,y,shift,xoffset,yoffset;const char *text;} draws[24];
+static s_screen *allocscreen(int w,int h,int format){CHECK(w==320&&h==240);return &screen;}
+static void copyscreen(s_screen *a,s_screen *b){CHECK(a==&screen&&b==&screen);}
+static void spriteq_draw(s_screen *s,int a,int b,int c,int d,int e){CHECK(s==&screen);}
+static void spriteq_add_screen(int a,int b,int c,s_screen *s,void *v,int d){CHECK(s==&screen);}
+static void spriteq_clear(void){}
+static void spriteq_lock(void){}
+static void spriteq_unlock(void){}
+static void freescreen(s_screen **p){CHECK(*p==&screen);*p=NULL;}
+static const char *Tr(const char *text){return text;}
+static void _menutextmshift(int font,int y,int shift,int xoffset,int yoffset,const char *text)
+{
+    CHECK(draw_count<24);
+    draws[draw_count].font=font;draws[draw_count].y=y;draws[draw_count].shift=shift;
+    draws[draw_count].xoffset=xoffset;draws[draw_count].yoffset=yoffset;
+    draws[draw_count++].text=text;
+}
+static void _menutextm(int font,int y,int shift,const char *text)
+{_menutextmshift(font,y,shift,0,0,text);}
+static void sound_play_sample(int sample,int channel,int left,int right,int speed){}
+static void sound_pause_music(int value){}
+static void sound_pause_sample(int value){}
+static void menu_options(void){pause=2;}
+static void update(int ingame,int wait)
+{
+    CHECK(ingame==1&&wait==0&&frame<(unsigned)scene->count);
+    for(int i=0;i<MAX_PLAYERS;i++)player[i].newkeys=FLAG_START|FLAG_MOVEDOWN;
+    player[scene->actor].newkeys=scene->keys[frame++];
+}
+@FUNCTION@
+static void emit(void)
+{
+    printf("{\"revision\":%u,\"case\":%u,\"draws\":[",obor_profile_build,scene_index);
+    for(unsigned i=0;i<draw_count;i++){
+        if(i)putchar(',');
+        printf("[%d,%d,%d,%d,%d,\"%s\"]",draws[i].font,draws[i].y,draws[i].shift,
+               draws[i].xoffset,draws[i].yoffset,draws[i].text);
+    }
+    puts("]}");
+}
+int main(void)
+{
+    const uint32_t contexts[]={@CONTEXTS@};
+    for(unsigned p=0;p<sizeof(contexts)/sizeof(*contexts);p++){
+        obor_profile_build=contexts[p];
+        for(scene_index=0;scene_index<sizeof(scenes)/sizeof(*scenes);scene_index++){
+            scene=scenes+scene_index;frame=draw_count=0;pause=1;bothnewkeys=123;endgame=0;
+            memcpy(pauseoffset,scene->offsets,sizeof(pauseoffset));
+            levelsets[0].maxplayers=scene->maxplayers;
+            for(int i=0;i<MAX_PLAYERS;i++){
+                player[i].ent=(scene->entities&(1<<i))?&screen:NULL;
+                player[i].newkeys=(scene->starters&(1<<i))?FLAG_START:0;
+                player[i].lives=7+i;
+            }
+            pausemenu();CHECK(pause==0&&bothnewkeys==0);emit();
+        }
+    }
+    return 0;
+}

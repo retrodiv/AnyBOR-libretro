@@ -1,0 +1,109 @@
+/* SPDX-License-Identifier: BSD-3-Clause
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me>
+ */
+#include <stdint.h>
+#include <stdio.h>
+#include <string.h>
+#include <strings.h>
+#include "openbor.h"
+#include <assert.h>
+#undef printf
+#ifndef stricmp
+#define stricmp strcasecmp
+#endif
+
+uint32_t obor_profile_build;
+s_savescore savescore;
+
+@RECORDS@
+@PHYSICAL@
+@HELPERS@
+
+static unsigned contexts, partial_records;
+
+static LONG script_name_limit(const char *constname)
+{
+    ScriptVariant v;
+    v.lVal = -1;
+    if (!constname) return -1;
+    @CONSTANT@
+    return v.lVal;
+}
+
+#define FILL(record, seed, limit) do {                                         \
+    memset(&(record), seed, sizeof(record));                                   \
+    (record).compatibleversion = CV_HIGH_SCORE;                                \
+    for (size_t row = 0; row < sizeof((record).highsc) / sizeof(unsigned); row++) \
+    {                                                                        \
+        (record).highsc[row] = 123456u + 17 * (seed) + 3 * row;                 \
+        for (size_t column = 0; column < (limit); column++)                   \
+            (record).hscoren[row][column] = 'A' + ((seed) + row + column) % 26; \
+        (record).hscoren[row][(limit)] = '\0';                                 \
+    }                                                                        \
+} while (0)
+
+static void compare(const void *expected, size_t bytes)
+{
+    unsigned char result[sizeof(savescore)];
+    FILE *stream = tmpfile();
+    assert(stream);
+    size_t written = obor_profile_write_saved_scores(stream);
+    if (written != bytes)
+        fprintf(stderr, "Profile %u high-score width %zu, expected %zu\n",
+                obor_profile_build, written, bytes);
+    assert(written == bytes);
+    rewind(stream);
+    assert(fread(result, 1, sizeof(result), stream) == bytes);
+    assert(memcmp(result, expected, bytes) == 0);
+    assert(fclose(stream) == 0);
+}
+
+static void check(const void *original, const void *defaults, size_t bytes,
+                  unsigned limit)
+{
+    assert(obor_profile_name_limit() == (int)limit);
+    assert(script_name_limit("MAX_NAME_LEN") == (LONG)limit);
+    assert(script_name_limit("max_name_len") == (LONG)limit);
+    FILL(savescore, 13, limit);
+    compare(original, bytes);
+    for (size_t prefix = 0; prefix <= bytes; prefix++)
+    {
+        unsigned char expected[sizeof(savescore)];
+        FILE *stream = tmpfile();
+        assert(stream);
+        assert(fwrite(original, 1, prefix, stream) == prefix);
+        rewind(stream);
+        FILL(savescore, 27, limit);
+        assert(obor_profile_read_saved_scores(stream) == prefix);
+        assert(fclose(stream) == 0);
+        memcpy(expected, defaults, bytes);
+        memcpy(expected, original, prefix);
+        compare(expected, bytes);
+        partial_records++;
+    }
+    FILE *stream = tmpfile();
+    assert(stream);
+    assert(fwrite(original, 1, bytes, stream) == bytes && fputc(95, stream) == 95);
+    rewind(stream);
+    assert(obor_profile_read_saved_scores(stream) == bytes);
+    assert(fgetc(stream) == 95 && fclose(stream) == 0);
+    compare(original, bytes);
+    contexts++;
+}
+
+#define DEFINE_CHECKER(limit) static void check_ ## limit(unsigned revision) { \
+    native_score_ ## limit original, defaults;                              \
+    FILL(original, 13, limit);                                               \
+    FILL(defaults, 27, limit);                                               \
+    obor_profile_build = revision;                                          \
+    check(&original, &defaults, sizeof(original), limit);                   \
+}
+
+@CHECKERS@
+
+int main(void)
+{
+@CHECKS@
+    printf("{\"contexts\":%u,\"partial_records\":%u}\n", contexts, partial_records);
+    return 0;
+}

@@ -1,0 +1,85 @@
+/* SPDX-License-Identifier: BSD-3-Clause
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me> */
+#include <stdint.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <limits.h>
+#include <math.h>
+@PRIMITIVES@
+@VARIANT_TYPES@
+static uint32_t obor_profile_build;
+static int goto_mainmenu_flag;
+static volatile unsigned stub_calls;
+static unsigned entry_count,resets;
+typedef struct {int cursor;} List;
+static List theFunctionList;
+static struct {void *function;const char *name;} entries[512];
+#define CHECK(c) do{if(!(c)){fprintf(stderr,"MAIN_MENU_SCRIPT revision=%u line=%d\n",obor_profile_build,__LINE__);abort();}}while(0)
+static void List_Reset(List *list){CHECK(list==&theFunctionList&&entry_count==0);list->cursor=0;++resets;}
+static void List_InsertAfter(List *list,void *function,const char *name)
+{CHECK(list==&theFunctionList&&entry_count<512);entries[entry_count].function=function;entries[entry_count++].name=name;}
+@STUBS@
+@GETTER@
+@SETTER@
+@CALLBACK@
+@REGISTRY@
+static const struct {unsigned revision;int available;} contexts[]={@CONTEXTS@};
+static const struct {int kind;LONG integer;double decimal;} samples[]={@SAMPLES@};
+static const int counts[]={@COUNTS@};
+static int unknown;
+static void *find(const char *name,unsigned *count)
+{
+    void *result=NULL;*count=0;
+    for(unsigned i=0;i<entry_count;++i)if(strcmp(entries[i].name,name)==0){++*count;result=entries[i].function;}
+    return result;
+}
+int main(void)
+{
+    for(unsigned r=0;r<sizeof(contexts)/sizeof(*contexts);++r){
+        obor_profile_build=contexts[r].revision;entry_count=resets=stub_calls=0;
+        Script_LoadSystemFunctions();
+        unsigned matches,empty_count,finish_count;
+        void *selected=find("gotomainmenu",&matches);
+        void *empty=find("isempty",&empty_count),*finish=find("finishlevel",&finish_count);
+        int controls=empty_count==1&&finish_count==1&&
+            strcmp(Script_GetFunctionName(empty),"isempty")==0&&
+            strcmp(Script_GetFunctionName(finish),"finishlevel")==0;
+        CHECK(stub_calls==0);
+        printf("{\"revision\":%u,\"registered\":%u,\"reverse\":\"%s\",\"control_names\":%s,\"resets\":%u,\"unknown\":\"%s\"}\n",
+               obor_profile_build,matches,Script_GetFunctionName((void *)openbor_gotomainmenu),
+               controls?"true":"false",resets,Script_GetFunctionName(&unknown));
+        if(!contexts[r].available)continue;
+        CHECK(matches==1&&selected==(void *)openbor_gotomainmenu);
+        HRESULT (*callback)(ScriptVariant **,ScriptVariant **,int)=selected;
+        for(unsigned c=0;c<sizeof(samples)/sizeof(*samples);++c){
+            for(unsigned n=0;n<sizeof(counts)/sizeof(*counts);++n){
+                ScriptVariant arg,extra,marker,*out;
+                memset(&arg,0,sizeof(arg));memset(&extra,0,sizeof(extra));memset(&marker,0,sizeof(marker));
+                switch(samples[c].kind){
+                case 0:arg.vt=VT_INTEGER;arg.lVal=samples[c].integer;break;
+                case 1:arg.vt=VT_DECIMAL;arg.dblVal=samples[c].decimal;break;
+                case 2:arg.vt=VT_EMPTY;break;
+                case 3:arg.vt=VT_STR;arg.strVal=0;break;
+                case 4:arg.vt=VT_PTR;arg.ptrVal=&unknown;break;
+                case 5:arg.vt=VT_EMPTY;break;
+                default:CHECK(0);
+                }
+                extra.vt=VT_PTR;extra.ptrVal=&unknown;marker.vt=VT_INTEGER;marker.lVal=123;
+                unsigned char arg_before[sizeof(arg)],extra_before[sizeof(extra)],marker_before[sizeof(marker)];
+                memcpy(arg_before,&arg,sizeof(arg));memcpy(extra_before,&extra,sizeof(extra));memcpy(marker_before,&marker,sizeof(marker));
+                ScriptVariant *args[]={samples[c].kind==5?NULL:&arg,&extra,NULL};
+                ScriptVariant *before_args[3];memcpy(before_args,args,sizeof(args));
+                out=&marker;goto_mainmenu_flag=77;
+                HRESULT status=callback(counts[n]<=0?NULL:args,&out,counts[n]);
+                int same=memcmp(arg_before,&arg,sizeof(arg))==0&&memcmp(extra_before,&extra,sizeof(extra))==0&&
+                    memcmp(before_args,args,sizeof(args))==0;
+                printf("{\"revision\":%u,\"case\":%u,\"count\":%d,\"status\":%d,\"flag\":%d,\"result_null\":%s,\"arguments_unchanged\":%s,\"marker_unchanged\":%s}\n",
+                       obor_profile_build,c,counts[n],(int)status,goto_mainmenu_flag,out==NULL?"true":"false",
+                       same?"true":"false",memcmp(marker_before,&marker,sizeof(marker))==0?"true":"false");
+                CHECK(stub_calls==0);
+            }
+        }
+    }
+    return 0;
+}

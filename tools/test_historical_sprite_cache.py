@@ -8,7 +8,7 @@ from pathlib import Path
 import re
 import unittest
 
-from contract_fixtures import load_contract_fixture, contract_revisions
+from contract_fixtures import contract_profiles, load_contract_fixture, contract_revisions
 from test_historical_common_think import ROOT, native_output
 from test_historical_player import function
 
@@ -43,6 +43,33 @@ def program(data):
 
 
 class SpriteCacheContracts(unittest.TestCase):
+    def test_4432_model_cache_selects_historical_attack_samples(self):
+        data = load_contract_fixture(FIXTURE.with_name('profile-4432-collision-samples-contracts.json'))
+        rows = data['sources']
+        revisions = [row['revision'] for row in rows]
+        self.assertEqual(revisions, sorted(set(revisions)))
+        self.assertEqual(set(revisions), contract_revisions(data, data['expected_revisions']))
+        self.assertTrue(set(data['boundary_controls']) <= set(revisions))
+        pin = json.loads((ROOT / 'src/pin.json').read_text())
+        for profile in contract_profiles(data, pin['profiles'], source_range=data['range']):
+            if profile['engine'] == data['engine']:
+                self.assertIn(int(profile.get('revision', profile['build'])), revisions)
+        for row in rows:
+            self.assertIs(type(row['multiple_instances']), bool)
+            if '_contract_boundaries' not in data:
+                self.assertRegex(row['commit'], r'^[0-9a-f]{40}$')
+                self.assertRegex(row['source_sha256'], r'^[0-9a-f]{64}$')
+        core = (ROOT / 'src/engines' / data['engine'] / 'openbor.c').read_text()
+        values = {
+            'FUNCTION': function(core, 'cache_model_sprites'),
+            'CONTEXTS': ',\n'.join('{%du,%d}' % (row['revision'], row['multiple_instances'])
+                                  for row in rows),
+        }
+        template = Path(__file__).with_name('collision_sample_cache_contract.c.in').read_text()
+        probe = re.sub(r'@([A-Z_]+)@', lambda item: values[item[1]], template)
+        result = json.loads(native_output(probe, data, extra_cflags=('-fgnu89-inline',)))
+        self.assertEqual(result, {'contexts': len(rows), 'cases': len(rows) * 16})
+
     def test_model_cache_respects_allocated_animation_tables(self):
         data = load_contract_fixture(MODEL_FIXTURE)
         core = (ROOT / 'src/engines' / data['engine'] / 'openbor.c').read_text()

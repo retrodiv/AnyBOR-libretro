@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.2.39
+
+- Add 48 selectable OpenBOR v3.0 profiles from 4283-dev through 4431.
+- Preserve build-specific scripts, settings and save records, collision selection,
+  controls, display behavior and gameplay defaults.
+
 ## 0.2.38
 
 - Add selectable profiles v3.0 4161-dev, v3.0 4183-dev and v3.0 4213 with

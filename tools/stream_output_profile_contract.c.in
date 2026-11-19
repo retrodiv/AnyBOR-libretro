@@ -1,0 +1,172 @@
+/* SPDX-License-Identifier: BSD-3-Clause
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me>
+ */
+#include <stdint.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <strings.h>
+#include "openbor.h"
+#include "anybor_pak_name.h"
+#include <assert.h>
+#undef printf
+#undef malloc
+#undef realloc
+#undef free
+#ifndef stricmp
+#define stricmp strcasecmp
+#endif
+
+uint32_t obor_profile_build;
+static s_filestream slot;
+s_filestream *filestreams = &slot;
+int numfilestreams = 1;
+static char names[][24] = {"out.txt", "custom/", "bYtE", "folder/", "byte"};
+static char saved_path[256];
+static char saved_output[24];
+static unsigned cases, contexts;
+
+CHAR *StrCache_Get(int index)
+{
+    assert(index >= 0 && (size_t)index < sizeof(names) / sizeof(names[0]));
+    return names[index];
+}
+
+CHAR *StrCache_GetIfPresent(int index)
+{
+    return StrCache_Get(index);
+}
+
+HRESULT ScriptVariant_IntegerValue(ScriptVariant *value, LONG *number)
+{
+    if(value->vt != VT_INTEGER) return E_FAIL;
+    *number = value->lVal;
+    return S_OK;
+}
+
+void ScriptVariant_ToString(ScriptVariant *value, LPSTR buffer)
+{
+    assert(value->vt == VT_STR);
+    strcpy(buffer, StrCache_Get(value->strVal));
+}
+
+void getBasePath(char *out, char *kind, int create)
+{
+    assert(!strcmp(kind, "Saves") && !create);
+    strcpy(out, "/saves/");
+}
+
+void getPakName(char *out, size_t capacity, int index)
+{
+    assert(index == -1 && capacity > sizeof("module"));
+    strcpy(out, "module");
+}
+
+int dirExists(char *path, int create)
+{
+    assert(*path && create == 1);
+    return 1;
+}
+
+static FILE *open_file(const char *path, const char *mode)
+{
+    assert(!saved_path[0] && strlen(path) < sizeof(saved_path) && !strcmp(mode, "wb"));
+    strcpy(saved_path, path);
+    FILE *file = tmpfile();
+    assert(file);
+    return file;
+}
+
+static int close_file(FILE *file)
+{
+    assert(!fflush(file) && !fseek(file, 0, SEEK_SET));
+    size_t count = fread(saved_output, 1, sizeof(saved_output) - 1, file);
+    assert(!ferror(file) && feof(file));
+    saved_output[count] = 0;
+    return fclose(file);
+}
+
+static int record_diagnostic(const char *format, ...)
+{
+    assert(format && *format);
+    return 0;
+}
+
+#define fopen open_file
+#define fclose close_file
+#define printf record_diagnostic
+@CALLBACKS@
+#undef printf
+#undef fclose
+#undef fopen
+
+static void check_append(size_t size, int mode, int end_byte)
+{
+    ScriptVariant stream = {.vt = VT_INTEGER, .lVal = 0};
+    ScriptVariant value = {.vt = VT_INTEGER, .lVal = 'R'};
+    ScriptVariant append = {.vt = VT_INTEGER, .lVal = mode};
+    ScriptVariant kind = {.vt = VT_STR, .strVal = 2};
+    ScriptVariant result = {0}, *out = &result;
+    ScriptVariant *arguments[] = {&stream, &value, &append, &kind};
+    slot.buf = malloc(8);
+    assert(slot.buf);
+    memset(slot.buf, 'Q', 8);
+    slot.size = size;
+    size_t position = size ? size - 1 : 0;
+    slot.buf[position] = 0;
+    assert(openbor_filestreamappend(arguments, &out, 4) == S_OK && !out);
+    assert(slot.size == size + 2 && slot.buf[position] == 'R');
+    assert(slot.buf[position + 1] == (end_byte ? 0 : 'Q'));
+    if(position) assert(slot.buf[0] == 'Q');
+    free(slot.buf);
+    slot.buf = NULL;
+    ++cases;
+}
+
+static void check_save(int count, int fourth, const char *path, const char *output)
+{
+    ScriptVariant stream = {.vt = VT_INTEGER, .lVal = 0};
+    ScriptVariant filename = {.vt = VT_STR, .strVal = 0};
+    ScriptVariant third = {.vt = VT_STR, .strVal = 1};
+    ScriptVariant path_or_mode = {.vt = VT_STR, .strVal = fourth};
+    ScriptVariant mode = {.vt = VT_STR, .strVal = 4};
+    ScriptVariant result = {0}, *out = &result;
+    ScriptVariant *arguments[] = {&stream, &filename, &third, &path_or_mode, &mode};
+    char data[] = "Saved text";
+    slot.buf = data;
+    slot.size = sizeof(data) - 1;
+    saved_path[0] = saved_output[0] = 0;
+    HRESULT status = openbor_savefilestream(arguments, &out, count);
+    assert(!out && status == (path ? S_OK : E_FAIL));
+    assert(!strcmp(saved_path, path ? path : "") &&
+           !strcmp(saved_output, output ? output : ""));
+    slot.buf = NULL;
+    ++cases;
+}
+
+static void check_profile(unsigned revision, int path_index, int always_end_byte)
+{
+    obor_profile_build = revision;
+    for(int mode = -1; mode <= 2; ++mode)
+    {
+        check_append(0, mode, always_end_byte || mode <= 1);
+        check_append(2, mode, always_end_byte || mode <= 1);
+    }
+    const char *standard = "/saves/module/out.txt";
+    const char *custom = "./custom/out.txt";
+    const char *plain = "Saved text";
+    const char *line = "Saved text\r\n";
+    int early = path_index == 3;
+    check_save(2, 2, standard, line);
+    check_save(3, 2, early ? standard : custom, line);
+    check_save(4, 2, early ? "./bYtEout.txt" : custom, early ? line : plain);
+    check_save(5, 2, early ? "./bYtEout.txt" : custom, plain);
+    check_save(5, 3, early ? "./folder/out.txt" : NULL, early ? plain : NULL);
+    ++contexts;
+}
+
+int main(void)
+{
+    @CHECKS@
+    printf("{\"contexts\":%u,\"cases\":%u}\n", contexts, cases);
+}

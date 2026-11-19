@@ -1,0 +1,77 @@
+/* SPDX-License-Identifier: BSD-3-Clause
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me> */
+#include <stdint.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include "openbor.h"
+#undef printf
+uint32_t obor_profile_build;
+static unsigned active_case;
+#define CHECK(c) do{if(!(c)){fprintf(stderr,"TERRAIN_SPAWN revision=%u case=%u line=%d\n",obor_profile_build,active_case,__LINE__);abort();}}while(0)
+HRESULT Interpreter_Call(Interpreter *p){(void)p;abort();}
+HRESULT Interpreter_EvalInstruction(Interpreter *p){(void)p;abort();}
+static s_level world;
+s_level *level=&world;
+static __typeof__(*world.holes) holes[1],walls[1];
+s_player player[4];
+int nomaxrushreset[5],currentspawnplayer,holez,PLAYER_MIN_Z,PLAYER_MAX_Z;
+int MAX_WALL_HEIGHT=1000;
+float advancex;
+s_videomodes videomodes;
+static entity actor;
+static s_spawn_entry observed;
+static unsigned spawns,weapons;
+entity *smartspawn(s_spawn_entry *entry)
+{
+    CHECK(currentspawnplayer==0 && !spawns);
+    CHECK(entry->name==player[0].name && entry->index==-1 && entry->itemindex==-1 && entry->weaponindex==-1);
+    CHECK(entry->spawnplayer_count==-1 && entry->position.y==0);
+    observed=*entry;spawns++;return &actor;
+}
+void set_weapon(entity *e,int weapon,int animation_flag)
+{CHECK(e==&actor && weapon==31 && !animation_flag);weapons++;}
+void shutdown(int status,char *message,...){(void)status;(void)message;abort();}
+@FUNCTIONS@
+static const struct {unsigned revision;int height_query,height_hits[4];} contexts[]={@CONTEXTS@};
+static const float heights[]={-5,-1,-0.5f,7};
+static unsigned context;
+static void rectangle(__typeof__(*world.holes) *r,float x,float z,float height)
+{
+    memset(r,0,sizeof(*r));r->x=x;r->z=z+1;r->depth=2;r->height=height;
+    r->upperleft=r->lowerleft=-1;r->upperright=r->lowerright=1;
+}
+static void setup(int lane,int left,unsigned height,int wall_mode,int present)
+{
+    memset(&world,0,sizeof(world));memset(player,0,sizeof(player));memset(&actor,0,sizeof(actor));
+    memset(&observed,0,sizeof(observed));memset(nomaxrushreset,0,sizeof(nomaxrushreset));
+    memset(&videomodes,0,sizeof(videomodes));
+    level=&world;world.holes=holes;world.walls=walls;world.numholes=present;world.numwalls=wall_mode!=0;
+    videomodes.hRes=80;PLAYER_MIN_Z=10;PLAYER_MAX_Z=lane?10:22;advancex=100;
+    world.scrolldir=left?SCROLL_LEFT:0;world.setweap=31;
+    float x=left?60:20,z=lane?10:15;
+    rectangle(&holes[0],advancex+x,z,heights[height]);
+    rectangle(&walls[0],advancex+x,z,wall_mode==1?1:MAX_WALL_HEIGHT);
+    strcpy(player[0].name,"unit");actor.modeldata.health=actor.modeldata.mp=10;actor.health=actor.mp=1;
+    spawns=weapons=0;currentspawnplayer=-1;holez=-91;
+}
+int main(void)
+{
+    for(context=0;context<sizeof(contexts)/sizeof(*contexts);context++){
+        obor_profile_build=contexts[context].revision;active_case=0;
+        for(int lane=0;lane<2;lane++)for(int left=0;left<2;left++)for(unsigned height=0;height<4;height++)
+        for(int wall_mode=0;wall_mode<3;wall_mode++)for(int present=0;present<2;present++){
+            active_case++;setup(lane,left,height,wall_mode,present);spawnplayer(4);
+            int hit=present && (!contexts[context].height_query || contexts[context].height_hits[height]);
+            int blocked=wall_mode==1?0:wall_mode==2?1:hit;
+            float expected_x=(left?60:20)+(lane && blocked?(left?-4:4):0);
+            float expected_z=(lane?10:15)+(!lane && blocked?3:0);
+            CHECK(spawns==1 && weapons==1 && player[0].ent==&actor && actor.playerindex==0);
+            CHECK(observed.position.x==expected_x && observed.position.z==expected_z);
+            CHECK(observed.flip==!left && observed.position.y==0);
+            CHECK(holez==(hit && wall_mode!=1 && !(wall_mode==2 && !lane)?0:-91));
+        }
+        printf("{\"revision\":%u,\"status\":\"PASS\"}\n",obor_profile_build);
+    }
+    return 0;
+}

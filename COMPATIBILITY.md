@@ -34,7 +34,14 @@ v3.0 3837, v3.0 3839, v3.0 3842, v3.0 3846, v3.0 3847-dev, v3.0 3849, v3.0 3854,
 v3.0 3968-dev, v3.0 3970-dev, v3.0 3978, v3.0 3984, v3.0 3993, v3.0 3994, v3.0
 4011, v3.0 4046, v3.0 4051, v3.0 4054, v3.0 4055, v3.0 4079, v3.0 4080, v3.0
 4082, v3.0 4085, v3.0 4086, v3.0 4088-dev, v3.0 4107, v3.0 4111, v3.0 4129, v3.0
-4153, v3.0 4161-dev, v3.0 4183-dev, v3.0 4213, v3.0 4432, v3.0 4453, v3.0 6330, v3.0 6330-lns-010g, v3.0 6391, v3.0 6391-mod, v3.0 6392-dev,
+4153, v3.0 4161-dev, v3.0 4183-dev, v3.0 4213, v3.0 4283-dev, v3.0 4287, v3.0 4316, v3.0 4317,
+v3.0 4320, v3.0 4321, v3.0 4328, v3.0 4330, v3.0 4332, v3.0 4334, v3.0 4336, v3.0 4342, v3.0 4343,
+v3.0 4344, v3.0 4346, v3.0 4349, v3.0 4352, v3.0 4366, v3.0 4367-dev, v3.0 4377, v3.0 4379,
+v3.0 4383, v3.0 4385, v3.0 4387, v3.0 4389, v3.0 4390, v3.0 4393, v3.0 4394, v3.0 4396, v3.0 4400,
+v3.0 4401, v3.0 4403, v3.0 4404-dev, v3.0 4406, v3.0 4411, v3.0 4412, v3.0 4413, v3.0 4414,
+v3.0 4417, v3.0 4419, v3.0 4420, v3.0 4421-dev, v3.0 4423, v3.0 4424, v3.0 4426, v3.0 4429,
+v3.0 4430, v3.0 4431,
+v3.0 4432, v3.0 4453, v3.0 6330, v3.0 6330-lns-010g, v3.0 6391, v3.0 6391-mod, v3.0 6392-dev,
 v3.0 6412-dev, v3.0 6510-dev, v3.0 7086-dev, v3.0 7123-dev, v4.0 7142-alpha,
 v4.0 7530, v4.0 7533, v4.0 7555, v4.0 7556, v4.0 7735 and v4.0 8023-dev.
 
@@ -55,10 +62,10 @@ Player spawn coordinates use the earlier vertical limit before 3800. Before
 same per-file script locals across entries. Later profiles retain the engine's
 combined per-entry script behavior. See [manual selection and historical
 limits](docs/HISTORICAL_PROFILES.md).
-Declared revisions from 4087 through 4213 use the first official automatic
-profile at or above the declaration, except that exact unofficial Build
-4088, 4161 and 4183 tags select their development profiles. These development
-profiles are excluded from imprecise-tag and content-based replacement choices.
+Declared revisions from 4087 through 4432 use the first official automatic
+profile at or above the declaration. Exact Build 4088, 4161, 4183, 4283,
+4367, 4404 and 4421 tags select their development profiles. Imprecise numeric tags
+and content-based replacement use the automatic profiles.
 Automatic routing includes v3.0 4453 for declared builds 4433–4453 and
 v3.0 6330 for 4454–6330. Profile v3.0 6391 covers 6331–6412, except that an
 exact filename Build 6392 or Build 6412 tag selects the corresponding test

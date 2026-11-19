@@ -1,0 +1,142 @@
+/* SPDX-License-Identifier: BSD-3-Clause
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me> */
+#include <stdint.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <strings.h>
+#include <stdarg.h>
+#include <setjmp.h>
+#include <ctype.h>
+#include "openbor.h"
+#include "commands.h"
+#undef printf
+uint32_t obor_profile_build;
+void *checkAlloc(void *p,size_t n,const char *fn,const char *file,int line)
+{if(n&&!p)abort();return p;}
+#undef malloc
+#undef free
+HRESULT Interpreter_Call(Interpreter *p){abort();}
+HRESULT Interpreter_EvalInstruction(Interpreter *p){abort();}
+void borExit(int status){abort();}
+#include "List.c"
+static unsigned active_case,observed_line;
+#define CHECK(c) do{if(!(c)){fprintf(stderr,"MENU_COMMAND revision=%u case=%u line=%d\n",obor_profile_build,active_case,__LINE__);abort();}}while(0)
+#ifndef stricmp
+#define stricmp strcasecmp
+#endif
+#undef NAME
+#define NAME(s) strdup(s)
+@GLOBALS@
+int forcecheatsoff;
+s_set_entry *levelsets;
+s_savelevel *savelevel;
+int num_difficulties,defaultmaxplayers=2;
+char branch_name[MAX_NAME_LEN+1];
+static List *modelstxtcmdlist,*ordercmdlist;
+static char diagnostic[4096];
+static jmp_buf stopped;
+static int message(const char *format,...)
+{
+    size_t used=strlen(diagnostic);va_list args;va_start(args,format);
+    int count=vsnprintf(diagnostic+used,sizeof(diagnostic)-used,format,args);va_end(args);
+    CHECK(count>=0&&(size_t)count<sizeof(diagnostic)-used);return count;
+}
+void shutdown(int status,char *format,...)
+{
+    CHECK(status==1);size_t used=strlen(diagnostic);va_list args;va_start(args,format);
+    int count=vsnprintf(diagnostic+used,sizeof(diagnostic)-used,format,args);va_end(args);
+    CHECK(count>=0&&(size_t)count<sizeof(diagnostic)-used);longjmp(stopped,1);
+}
+#define printf message
+@PARSER@
+@METHODS@
+static void models_sequence(const char *input)
+{
+    char filename[128]="data/models.txt",*buf=strdup(input),*command;
+    size_t pos=0,size=strlen(input);int line=0;
+    ArgList arglist;char argbuf[MAX_ARG_LEN+1]={0};modelstxtCommands cmd;
+    CHECK(buf);
+    while(pos<size){
+        line++;observed_line=line;
+        if(ParseArgs(&arglist,buf+pos,argbuf)){
+            command=GET_ARG(0);
+            cmd=(modelstxtCommands)getModelCommand(modelstxtcmdlist,command);
+            switch(cmd){@MODEL_ARMS@ default:@MODEL_DEFAULT@}
+        }
+        pos+=getNewLineStart(buf+pos);
+    }
+    free(buf);
+}
+static void order_sequence(const char *input)
+{
+    @DEFAULT_ERROR@
+    @CHKDEF@
+    char filename[128]="data/levels.txt",*buf=strdup(input),*command,*arg,*errormessage=NULL;
+    int line=0,pos=0,i=0;size_t size=strlen(input);
+    s_set_entry *set=NULL;s_level_entry *le=NULL;
+    ArgList arglist;char argbuf[MAX_ARG_LEN+1]={0};levelOrderCommands cmd;
+    CHECK(buf);
+    while(pos<size){
+        line++;observed_line=line;ParseArgs(&arglist,buf+pos,argbuf);command=GET_ARG(0);
+        cmd=getLevelOrderCommand(ordercmdlist,command);
+        switch(cmd){@ORDER_ARMS@ default:@ORDER_DEFAULT@}
+        CHECK(le==NULL);
+        pos+=getNewLineStart(buf+pos);
+    }
+    @NO_SET@
+    goto lCleanup;
+    @CLEANUP@
+#undef CHKDEF
+static int run_order(const char *input)
+{
+    if(setjmp(stopped))return 0;
+    order_sequence(input);return 1;
+}
+#undef printf
+static const struct {unsigned revision;int nodebug,pauseoffset;} contexts[]={@CONTEXTS@};
+static const struct {int levels;const char *text;int nodebug,nocheats,offsets[7];} cases[]={@CASES@};
+static void retire(void)
+{
+    for(int i=0;i<num_difficulties;i++)free(levelsets[i].name);
+    free(levelsets);free(savelevel);levelsets=NULL;savelevel=NULL;num_difficulties=0;
+}
+static void emit(int status)
+{
+    printf("{\"revision\":%u,\"case\":%u,\"values\":[%d,%d",obor_profile_build,active_case,nodebugoptions,forcecheatsoff);
+    for(unsigned i=0;i<7;i++)printf(",%d",pauseoffset[i]);
+    printf(",%d,%u,%d],\"diagnostic\":\"",num_difficulties,observed_line,status);
+    for(const unsigned char *p=(const unsigned char*)diagnostic;*p;p++){
+        if(*p=='\n')fputs("\\n",stdout);
+        else if(*p=='\r')fputs("\\r",stdout);
+        else if(*p=='\t')fputs("\\t",stdout);
+        else{if(*p=='"'||*p=='\\')putchar('\\');CHECK(*p>=32);putchar(*p);}
+    }
+    puts("\"}");
+}
+int main(void)
+{
+    const int default_offsets[]={0,1,0,0,3,0,0};
+    CHECK(nodebugoptions==0&&!memcmp(pauseoffset,default_offsets,sizeof(pauseoffset)));
+    for(unsigned context=0;context<sizeof(contexts)/sizeof(*contexts);context++){
+        obor_profile_build=contexts[context].revision;
+        modelstxtcmdlist=createModelstxtCommandList();ordercmdlist=createLevelOrderCommandList();
+        CHECK(modelstxtcmdlist&&ordercmdlist);
+        char nodebug_name[]="NoDeBuG",pause_name[]="PaUsEoFfSeT";
+        CHECK(getModelCommand(modelstxtcmdlist,nodebug_name)==
+              (contexts[context].nodebug?(modelCommands)CMD_MODELSTXT_NODEBUG:0));
+        CHECK(getLevelOrderCommand(ordercmdlist,pause_name)==
+              (contexts[context].pauseoffset?CMD_LEVELORDER_PAUSEOFFSET:0));
+        for(active_case=0;active_case<sizeof(cases)/sizeof(*cases);active_case++){
+            nodebugoptions=cases[active_case].nodebug;forcecheatsoff=cases[active_case].nocheats;
+            memcpy(pauseoffset,cases[active_case].offsets,sizeof(pauseoffset));
+            diagnostic[0]=0;observed_line=0;
+            int status=1;
+            if(cases[active_case].levels)status=run_order(cases[active_case].text);
+            else models_sequence(cases[active_case].text);
+            emit(status);retire();
+        }
+        freeCommandList(modelstxtcmdlist);freeCommandList(ordercmdlist);
+    }
+    return 0;
+}

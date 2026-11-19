@@ -14,7 +14,7 @@ import sys
 import tempfile
 import unittest
 
-from contract_fixtures import contract_profiles, load_contract_fixture
+from contract_fixtures import contract_profiles, contract_revisions, load_contract_fixture
 from native_sanitizers import sanitizer_environment
 from test_historical_player import function
 
@@ -43,7 +43,7 @@ class ForwardSettingsRecordTests(unittest.TestCase):
                                      ROOT / 'src/engines' / fixture['engine']))
         return rows, engine
 
-    def run_native(self, program):
+    def run_native(self, program, *, marker='forward_settings=1'):
         with tempfile.TemporaryDirectory(prefix='forward-settings-') as directory:
             work = Path(directory)
             source, binary = work / 'probe.c', work / 'probe'
@@ -58,7 +58,80 @@ class ForwardSettingsRecordTests(unittest.TestCase):
             run = subprocess.run([str(binary)], capture_output=True, text=True,
                                  timeout=30, env=sanitizer_environment())
             self.assertEqual(run.returncode, 0, run.stdout + run.stderr)
-            self.assertIn('forward_settings=1', run.stdout)
+            self.assertIn(marker, run.stdout.splitlines())
+
+    def test_4432_native_settings_layouts_and_partial_reads(self):
+        fixture = load_contract_fixture(FIXTURE.with_name('profile-4432-settings-record-contracts.json'))
+        rows = fixture['sources']
+        revisions = [row['revision'] for row in rows]
+        self.assertEqual(revisions, sorted(set(revisions)))
+        self.assertEqual(set(revisions), contract_revisions(fixture, fixture['expected_revisions']))
+        self.assertTrue(set(fixture['boundary_controls']) <= set(revisions))
+        pin = json.loads((ROOT / 'src/pin.json').read_text())
+        for profile in contract_profiles(fixture, pin['profiles'], source_range=fixture['range']):
+            if profile['engine'] == fixture['engine']:
+                self.assertIn(int(profile.get('revision', profile['build'])), revisions)
+        if '_contract_boundaries' not in fixture:
+            for row in rows:
+                self.assertRegex(row['commit'], r'^[0-9a-f]{40}$')
+                self.assertRegex(row['source_sha256'], r'^[0-9a-f]{64}$')
+
+        engine = ROOT / 'src/engines' / fixture['engine']
+        source = (engine / 'openbor.c').read_text()
+        header = (engine / 'source/savedata.h').read_text()
+        definitions = [re.search(r'^#define\s+' + field + r'\s+\d+', header, re.M)[0]
+                       for field in ('MAX_PLAYERS', 'MAX_BTN_NUM')]
+        definitions.append(re.search(r'typedef struct\s*\{[^{}]*\}\s*s_savedata;', header)[0])
+        start = source.index('#define OBOR_SETTINGS_4432_SIZE')
+        helper = source[start:source.index('void savesettings()', start)]
+        for name, call in [('savesettings', 'obor_write_settings'),
+                           ('saveasdefault', 'obor_write_settings'),
+                           ('loadsettings', 'obor_read_settings'),
+                           ('loadfromdefault', 'obor_read_settings')]:
+            self.assertIn(call + '(handle)', function(source, name))
+
+        debug_fields = ('debug_collision_attack', 'debug_collision_body', 'debug_collision_range',
+                        'debug_position', 'debug_features')
+        checks = []
+        for index, record in enumerate(fixture['records']):
+            declaration = record['record']
+            self.assertEqual(hashlib.sha256(declaration.encode()).hexdigest(), record['record_sha256'])
+            declaration = re.sub(r'\bMAX_BTN_NUM\b', str(record['keys']), declaration)
+            definitions.append(re.sub(r'\bs_savedata\b', f'native_{index}', declaration))
+            assignments, retained = [], []
+            for offset, field in enumerate(debug_fields, 20):
+                if re.search(r'\bint\s+' + field + r'\s*;', declaration):
+                    assignments.append(f'    value.{field} = seed + {offset};')
+                else:
+                    retained.append(f'    assert(savedata.{field} == DEFAULT_SEED + {offset});')
+            original_fields = '\n'.join(assignments)
+            initial_fields = original_fields.replace('value.', 'initial.')
+            retained_fields = '\n'.join(retained)
+            checks.append(f'''static void check_{index}(unsigned revision)
+{{
+    native_{index} value, initial;
+    int seed = ORIGINAL_SEED;
+    FILL(value);
+{original_fields}
+    seed = DEFAULT_SEED;
+    FILL(initial);
+{initial_fields}
+    check_record(revision, &value, &initial, sizeof(value), {record['keys']});
+{retained_fields}
+}}''')
+
+        calls = []
+        for row in rows:
+            self.assertEqual(row['engine'], fixture['engine'])
+            self.assertIn(row['record'], range(len(checks)))
+            calls.append(f"    check_{row['record']}({row['revision']}u);")
+        marker = f'settings_4432={len(rows)}'
+        program = Path(__file__).with_name('settings_record_4432_contract.c.in').read_text()
+        values = dict(DEFINITIONS='\n'.join(definitions), HELPER=helper, CHECKS='\n\n'.join(checks),
+                      CALLS='\n'.join(calls), MARKER=marker)
+        for key, value in values.items():
+            program = program.replace('@' + key + '@', value)
+        self.run_native(program, marker=marker)
 
     def test_native_record_bytes_and_every_partial_prefix(self):
         rows, engine = self.sources()

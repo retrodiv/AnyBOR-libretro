@@ -1,0 +1,153 @@
+/* SPDX-License-Identifier: BSD-3-Clause
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me>
+ */
+#include <stdint.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <strings.h>
+#include "openbor.h"
+#undef printf
+#ifndef stricmp
+#define stricmp strcasecmp
+#endif
+
+uint32_t obor_profile_build;
+s_level *level;
+s_videomodes videomodes;
+int selectScreen, nodropspawn, MAX_WALL_HEIGHT = 1000;
+float advancex;
+u32 time;
+
+HRESULT Interpreter_Call(Interpreter *interpreter) { abort(); }
+HRESULT Interpreter_EvalInstruction(Interpreter *interpreter) { abort(); }
+void ent_set_anim(entity *ent, int animation, int reset) { abort(); }
+int set_idle(entity *ent) { abort(); }
+void player_think(void) { abort(); }
+void common_spawn(void) { abort(); }
+void common_drop(void) { abort(); }
+void common_think(void) { abort(); }
+void trap_think(void) { abort(); }
+void steamer_think(void) { abort(); }
+void text_think(void) { abort(); }
+void anything_walk(void) { abort(); }
+static void common_walk_anim(entity *ent) { abort(); }
+int player_trymove(float x, float z) { abort(); }
+int common_trymove(float x, float z) { abort(); }
+int player_takedamage(entity *other, s_collision_attack *attack) { abort(); }
+int arrow_takedamage(entity *other, s_collision_attack *attack) { abort(); }
+int biker_takedamage(entity *other, s_collision_attack *attack) { abort(); }
+int common_takedamage(entity *other, s_collision_attack *attack) { abort(); }
+int obstacle_takedamage(entity *other, s_collision_attack *attack) { abort(); }
+float randf(float range) { return 3; }
+int inair(entity *ent) { return ent->position.y > ent->base; }
+entity *check_platform_below(float x, float z, float y, entity *exclude) { abort(); }
+int checkwall_below(float x, float z, float y) { abort(); }
+static float find_nearest_wall_x(int wall, float x, float z) { abort(); }
+
+static char query[40];
+static int diagnostics;
+CHAR *StrCache_Get(int index) { return query; }
+void ScriptVariant_Init(ScriptVariant *var) { *var = (ScriptVariant){0}; }
+void ScriptVariant_ChangeType(ScriptVariant *var, VARTYPE type) { var->vt = type; }
+void ScriptVariant_Clear(ScriptVariant *var) { *var = (ScriptVariant){0}; }
+void ScriptVariant_Copy(ScriptVariant *dest, ScriptVariant *source) { *dest = *source; }
+void ScriptVariant_ToString(ScriptVariant *var, LPSTR buffer)
+{
+    memcpy(buffer, query, strlen(query) + 1);
+}
+static int script_diagnostic(const char *format, ...) { return ++diagnostics; }
+
+#define printf script_diagnostic
+@FUNCTIONS@
+#undef printf
+
+static const struct {
+    const char *name;
+    int subtype;
+} subtypes[] = {
+    {"SUBTYPE_NONE", SUBTYPE_NONE},
+    {"SUBTYPE_BIKER", SUBTYPE_BIKER},
+    {"SUBTYPE_NOTGRAB", SUBTYPE_NOTGRAB},
+    {"SUBTYPE_ARROW", SUBTYPE_ARROW},
+    {"SUBTYPE_BOOMERANG", SUBTYPE_BOOMERANG},
+    {"SUBTYPE_TOUCH", SUBTYPE_TOUCH},
+    {"SUBTYPE_WEAPON", SUBTYPE_WEAPON},
+    {"SUBTYPE_NOSKIP", SUBTYPE_NOSKIP},
+    {"SUBTYPE_FLYDIE", SUBTYPE_FLYDIE},
+    {"SUBTYPE_BOTH", SUBTYPE_BOTH},
+    {"SUBTYPE_PROJECTILE", SUBTYPE_PROJECTILE},
+    {"SUBTYPE_FOLLOW", SUBTYPE_FOLLOW},
+    {"SUBTYPE_CHASE", SUBTYPE_CHASE},
+    {"SUBTYPE_BOOMRANG", SUBTYPE_BOOMERANG},
+    {"subtype_chase", SUBTYPE_CHASE},
+};
+
+static void script_cases(void)
+{
+    for(size_t i = 0; i < sizeof(subtypes) / sizeof(*subtypes); ++i)
+    {
+        entity actor = {0};
+        ScriptVariant arg = {.vt = VT_STR}, result = {0};
+        ScriptVariant *input = &arg, *output = &result;
+        actor.modeldata.subtype = subtypes[i].subtype;
+        strcpy(query, subtypes[i].name);
+        diagnostics = 0;
+        HRESULT status = openbor_transconst(&input, &output, 1);
+        if((output && (status != S_OK || output->vt != VT_INTEGER || diagnostics)) ||
+           (!output && (status != E_FAIL || diagnostics != 2)))
+        {
+            abort();
+        }
+        printf("%s[%d,%ld,%ld]", i ? "," : "", output != NULL, output ? (long)output->lVal : 0L,
+            (long)read_subtype(&actor));
+    }
+}
+
+static void entity_cases(void)
+{
+    static const struct {
+        int type, subtype, scroll;
+    } cases[] = {
+        {TYPE_ENEMY, SUBTYPE_ARROW, SCROLL_UP},
+        {TYPE_ENEMY, SUBTYPE_BOOMERANG, SCROLL_UP},
+        {TYPE_ENEMY, SUBTYPE_CHASE, SCROLL_UP},
+        {TYPE_ENEMY, SUBTYPE_CHASE, SCROLL_RIGHT},
+        {TYPE_NONE, SUBTYPE_NONE, SCROLL_UP},
+    };
+    static s_anim animation;
+    static s_level area;
+    level = &area;
+    videomodes.vRes = 200;
+    for(size_t i = 0; i < sizeof(cases) / sizeof(*cases); ++i)
+    {
+        entity actor = {0};
+        s_model model = {.type = TYPE_ENEMY, .subtype = cases[i].subtype, .candamage = -1};
+        area.scrolldir = cases[i].scroll;
+        actor.animation = &animation;
+        actor.health = 9;
+        actor.modeldata.type = cases[i].type;
+        actor.modeldata.subtype = cases[i].subtype;
+        actor.position.y = actor.base = 5;
+        default_enemy_damage(&model);
+        ent_default_init(&actor);
+        printf("%s[%d,%d,%d,%d,%d,%d,%d,%d]", i ? "," : "", !!(model.candamage & TYPE_OBSTACLE),
+            actor.health, (int)actor.modeldata.speed, actor.takedamage == arrow_takedamage,
+            (int)actor.position.y, actor.trymove == common_trymove, actor.nograb_default,
+            actor.takeaction == common_drop);
+    }
+}
+
+int main(void)
+{
+    const unsigned profiles[] = {@PROFILES@};
+    for(size_t i = 0; i < sizeof(profiles) / sizeof(*profiles); ++i)
+    {
+        obor_profile_build = profiles[i];
+        printf("{\"revision\":%u,\"script\":[", profiles[i]);
+        script_cases();
+        printf("],\"entities\":[");
+        entity_cases();
+        puts("]}");
+    }
+}

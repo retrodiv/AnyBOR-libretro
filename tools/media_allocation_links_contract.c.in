@@ -1,0 +1,80 @@
+/* SPDX-License-Identifier: BSD-3-Clause
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me> */
+#include <stdint.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include "halloc.c"
+#undef malloc
+#undef calloc
+#undef realloc
+#undef strdup
+#undef printf
+uint32_t obor_profile_build=@REVISION@;
+#define CHECK(c) do{if(!(c)){fprintf(stderr,"MEDIA_STORAGE line=%d\n",__LINE__);abort();}}while(0)
+void *checkAlloc(void *p,size_t size,const char *f,const char *file,int line)
+{(void)f;(void)file;(void)line;if(size && !p)abort();return p;}
+void exitIfFalse(int value,const char *expression,const char *f,const char *file,int line)
+{(void)expression;(void)f;(void)file;(void)line;if(!value)abort();}
+void obor_port_assert(int value,const char *expression,const char *f,const char *file,int line)
+{(void)expression;(void)f;(void)file;(void)line;if(!value)abort();}
+static struct {void *pointer;size_t size;} slots[8];
+static int live,refuse;
+static void *moving_storage(void *old,size_t size)
+{
+    int slot=-1;
+    for(int i=0;i<8;i++)if(old?slots[i].pointer==old:!slots[i].pointer){slot=i;break;}
+    CHECK(slot>=0);
+    if(!size){CHECK(old);free(old);slots[slot].pointer=NULL;slots[slot].size=0;live--;return NULL;}
+    if(refuse && old)return NULL;
+    void *next=malloc(size);CHECK(next);
+    if(old){memcpy(next,old,size<slots[slot].size?size:slots[slot].size);free(old);}
+    else live++;
+    slots[slot].pointer=next;slots[slot].size=size;return next;
+}
+static void begin(void)
+{
+    CHECK(!live);halloc_allocator=NULL;refuse=0;
+    CHECK(halloc_set_allocator(moving_storage)==1 && !live);
+}
+static void standalone(void)
+{
+    begin();char *p=h_strdup("native");CHECK(p);
+    p=h_realloc(p,32);CHECK(p && !strcmp(p,"native"));
+    CHECK(structof(p,hblock_t,data)->siblings.prev==&structof(p,hblock_t,data)->siblings.next);
+    p=h_realloc(p,8);CHECK(p && !strcmp(p,"native"));h_free(p);CHECK(!live);
+}
+static void hierarchy(void)
+{
+    begin();char *parent=h_calloc(2,8),*child=h_strdup("child"),*other=h_strdup("other"),*leaf=h_strdup("leaf");
+    CHECK(parent && child && other && leaf);
+    for(int i=0;i<16;i++)CHECK(!parent[i]);
+    hattach(child,parent);hattach(other,parent);hattach(leaf,child);
+    child=h_realloc(child,32);CHECK(child && !strcmp(child,"child") && !strcmp(leaf,"leaf"));
+    CHECK(_relate(structof(leaf,hblock_t,data),structof(parent,hblock_t,data)));
+    parent=h_realloc(parent,32);CHECK(parent && !strcmp(child,"child") && !strcmp(other,"other"));
+    h_free(parent);CHECK(!live);
+}
+static void detached(void)
+{
+    begin();void *parent=h_malloc(8);char *child=h_strdup("child");hattach(child,parent);hattach(child,NULL);
+    child=h_realloc(child,32);CHECK(child && !strcmp(child,"child"));
+    h_free(parent);CHECK(live==1);h_free(child);CHECK(!live);
+}
+static void refused(void)
+{
+    begin();char *parent=h_strdup("parent"),*child=h_strdup("child");hattach(child,parent);refuse=1;
+    CHECK(h_realloc(parent,32)==NULL && !strcmp(parent,"parent") && !strcmp(child,"child") && live==2);
+    CHECK(h_realloc(child,32)==NULL && !strcmp(child,"child") && live==2);
+    refuse=0;h_free(parent);CHECK(!live);
+}
+static void empty(void)
+{
+    begin();CHECK(!halloc(NULL,0));void *parent=h_malloc(8),*child=h_malloc(8);hattach(child,parent);
+    CHECK(halloc(parent,0)==NULL && !live);
+}
+int main(void)
+{
+    standalone();hierarchy();detached();refused();empty();
+    printf("{\"status\":\"PASS\",\"scenarios\":5}\n");return 0;
+}

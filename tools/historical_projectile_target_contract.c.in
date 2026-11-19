@@ -1,0 +1,258 @@
+/* SPDX-License-Identifier: BSD-3-Clause
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me>
+ */
+#include <stdint.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include "openbor.h"
+#undef printf
+
+uint32_t obor_profile_build;
+entity *self;
+s_level *level;
+s_savedata savedata;
+const s_collision_attack emptyattack = {0};
+float advancex, advancey;
+int PLAYER_MIN_Z = 160, PLAYER_MAX_Z = 232;
+int SAMPLE_FALL = -1, autoland;
+entity *textbox, *smartbomber;
+u32 time = 17;
+float default_level_gravity = -0.1f, default_level_maxfallspeed = -10, default_level_maxtossspeed = 10;
+
+static entity actor, child, ordinary_target, custom_target;
+static int spawn_calls, spawn_callbacks, damage_result, damage_calls;
+static int target_calls, target_exists, movement_target, follow_calls, wander_calls;
+
+float diff(float a, float b) { return a > b ? a - b : b - a; }
+int inair(entity *ent) { return ent->position.y > ent->base; }
+HRESULT Interpreter_Call(Interpreter *interpreter) { abort(); }
+HRESULT Interpreter_EvalInstruction(Interpreter *interpreter) { abort(); }
+void adjust_base(entity *ent, entity **platform) { *platform = NULL; }
+entity *check_platform_above_entity(entity *ent) { abort(); }
+entity *check_platform_below(float x, float z, float y, entity *exclude) { abort(); }
+float get_platform_base(entity *ent) { abort(); }
+void execute_onblocka_script(entity *ent, entity *other) { abort(); }
+void execute_onmovea_script(entity *ent) {}
+void common_walkoff(void) { abort(); }
+void common_turn(void) { abort(); }
+void ent_set_anim(entity *ent, int animation, int reset) { abort(); }
+void update_frame(entity *ent, int frame) { abort(); }
+void toss(entity *ent, float height) { abort(); }
+void kill(entity *ent) { abort(); }
+void control_rumble(int port, int ratio) { abort(); }
+int sound_play_sample(int sample, unsigned priority, int left, int right, unsigned speed) { abort(); }
+
+entity *spawn(float x, float z, float y, int direction, char *name, int index, s_model *model)
+{
+    if(x != 12 || z != 23 || y != 4 || direction != DIRECTION_RIGHT || name || index != 7 || model)
+    {
+        abort();
+    }
+    ++spawn_calls;
+    return &child;
+}
+
+void execute_onspawn_script(entity *ent)
+{
+    if(ent != &child || ent->parent != &actor || ent->playerindex != actor.playerindex)
+    {
+        abort();
+    }
+    ++spawn_callbacks;
+}
+
+int common_takedamage(entity *other, s_collision_attack *attack)
+{
+    if(self != &child || other != &actor || !attack || self->modeldata.no_adjust_base ||
+       self->modeldata.subject_to_wall != 1 || self->modeldata.subject_to_platform != 1 ||
+       self->modeldata.subject_to_hole != 1 || self->modeldata.subject_to_gravity != 1)
+    {
+        abort();
+    }
+    ++damage_calls;
+    return damage_result;
+}
+
+static int biker_move(void) { abort(); }
+int arrow_move(void) { abort(); }
+static int star_move(void) { abort(); }
+int bomb_move(void) { abort(); }
+static int boomerang_move(void) { abort(); }
+
+entity *normal_find_target(int animation, int detect)
+{
+    if(animation != -1 || detect != 0)
+    {
+        abort();
+    }
+    ++target_calls;
+    return target_exists ? &ordinary_target : NULL;
+}
+
+entity *normal_find_item(void) { return NULL; }
+int common_try_jump(void) { return 0; }
+int checkpathblocked(void) { return 0; }
+int common_try_pick(entity *ent) { abort(); }
+void common_pickupitem(entity *ent) { abort(); }
+int common_try_avoid(entity *ent, int x, int z) { abort(); }
+int common_try_wandercompletely(int x, int z) { abort(); }
+
+static int target_id(entity *ent)
+{
+    if(ent == &ordinary_target) return 1;
+    if(ent == &custom_target) return 2;
+    abort();
+}
+
+int common_try_chase(entity *ent, int x, int z)
+{
+    movement_target = target_id(ent);
+    return 1;
+}
+
+int common_try_wander(entity *ent, int x, int z)
+{
+    ++wander_calls;
+    movement_target = target_id(ent);
+    return 1;
+}
+
+int common_try_follow(entity *ent, int x, int z)
+{
+    if(ent) abort();
+    ++follow_calls;
+    return 0;
+}
+
+unsigned int rand32(void) { return 0; }
+int set_idle(entity *ent) { return 0; }
+void adjust_walk_animation(entity *ent) { abort(); }
+void adjustspeed(float speed, float x, float z, float dx, float dz, float *vx, float *vz)
+{
+    *vx = 0;
+    *vz = 0;
+}
+
+@FUNCTIONS@
+
+static void spawn_cases(void)
+{
+    const int subtypes[] = {SUBTYPE_ARROW, SUBTYPE_BOOMERANG, SUBTYPE_CHASE};
+    for(size_t i = 0; i < sizeof(subtypes) / sizeof(*subtypes); ++i)
+    {
+        float frame[5] = {0, 2, 3, 4, 0};
+        s_anim animation = {.subentity = 7};
+        for(int summon = 0; summon <= 1; ++summon)
+        {
+            actor = (entity){0};
+            child = (entity){0};
+            animation.spawnframe = animation.summonframe = frame;
+            actor.animation = &animation;
+            actor.position.x = 10;
+            actor.position.z = 20;
+            actor.direction = DIRECTION_RIGHT;
+            actor.playerindex = 2;
+            child.modeldata.subtype = subtypes[i];
+            child.modeldata.type = TYPE_SHOT;
+            spawn_calls = spawn_callbacks = 0;
+            if(summon) ent_summon_ent(&actor);
+            else ent_spawn_ent(&actor);
+            printf("%s[%d,%d,%d,%d]", i || summon ? "," : "", child.owner == &actor,
+                actor.subentity == &child, spawn_calls, spawn_callbacks);
+        }
+    }
+}
+
+static void arrow_cases(void)
+{
+    for(int i = 0; i < 3; ++i)
+    {
+        s_collision_attack attack = {0};
+        child = (entity){0};
+        self = &child;
+        child.modeldata.no_adjust_base = 1;
+        child.modeldata.subject_to_basemap = i - 1;
+        child.dead = i != 1;
+        damage_result = i != 2;
+        damage_calls = 0;
+        int result = arrow_takedamage(&actor, &attack);
+        printf("%s[%d,%d,%d]", i ? "," : "", child.modeldata.subject_to_basemap, result, damage_calls);
+    }
+}
+
+static void landing_cases(void)
+{
+    for(int i = 0; i < 3; ++i)
+    {
+        s_axis_i move = {.base = i == 2};
+        s_axis_i *moves[] = {&move};
+        s_anim animation = {.move = moves};
+        actor = (entity){0};
+        self = &child;
+        actor.animation = &animation;
+        actor.modeldata.aimove = i == 1 ? AIMOVE1_ARROW : AIMOVE1_BOOMERANG;
+        actor.modeldata.subtype = i == 1 ? SUBTYPE_BOOMERANG : SUBTYPE_ARROW;
+        actor.modeldata.dust.fall_land = -1;
+        actor.position.y = 0.5f;
+        actor.velocity.x = 2;
+        actor.velocity.z = 3;
+        actor.velocity.y = -4;
+        actor.falling = 1;
+        check_gravity(&actor);
+        printf("%s[%d,%d,%d,%d]", i ? "," : "", actor.velocity.x == 2 && actor.velocity.z == 3,
+            actor.velocity.y == -4, actor.position.y == actor.base && !actor.falling,
+            self == &child && (actor.update_mark & 8));
+    }
+}
+
+static void target_cases(void)
+{
+    static const struct { int aimove, ordinary_idle, custom_idle, custom, valid, detect; } cases[] = {
+        {AIMOVE1_CHASE|AIMOVE2_NOTARGETIDLE, 1,0,0,0,1},
+        {AIMOVE1_CHASE|AIMOVE2_NOTARGETIDLE, 0,0,0,0,1},
+        {AIMOVE1_CHASE,                     1,0,0,0,1},
+        {AIMOVE2_NOTARGETIDLE,              1,0,0,0,1},
+        {AIMOVE1_CHASE|AIMOVE2_NOTARGETIDLE, 0,1,1,1,1},
+        {AIMOVE1_CHASE|AIMOVE2_NOTARGETIDLE, 1,0,1,1,1},
+        {AIMOVE1_CHASE|AIMOVE2_NOTARGETIDLE, 0,1,1,0,1},
+        {AIMOVE1_CHASE|AIMOVE2_NOTARGETIDLE, 1,0,1,1,0},
+        {AIMOVE1_CHASE|AIMOVE2_NOTARGETIDLE, 0,0,1,0,0},
+    };
+    for(size_t i = 0; i < sizeof(cases) / sizeof(*cases); ++i)
+    {
+        actor = (entity){0};
+        ordinary_target = (entity){0};
+        custom_target = (entity){0};
+        self = &actor;
+        actor.modeldata.aimove = cases[i].aimove;
+        ordinary_target.position.x = 10;
+        ordinary_target.animnum = cases[i].ordinary_idle ? ANI_IDLE : ANI_WALK;
+        custom_target.position.x = -10;
+        custom_target.animnum = cases[i].custom_idle ? ANI_IDLE : ANI_WALK;
+        custom_target.exists = cases[i].valid;
+        actor.custom_target = cases[i].custom ? &custom_target : NULL;
+        target_exists = cases[i].detect;
+        target_calls = movement_target = follow_calls = wander_calls = 0;
+        int result = common_move();
+        printf("%s[%d,%d,%d,%d,%d,%d]", i ? "," : "", result, target_calls, movement_target,
+            follow_calls, wander_calls, actor.direction == DIRECTION_RIGHT);
+    }
+}
+
+int main(void)
+{
+    const unsigned profiles[] = {@PROFILES@};
+    for(size_t i = 0; i < sizeof(profiles) / sizeof(*profiles); ++i)
+    {
+        obor_profile_build = profiles[i];
+        printf("{\"revision\":%u,\"spawn\":[", profiles[i]);
+        spawn_cases();
+        printf("],\"arrow\":[");
+        arrow_cases();
+        printf("],\"landing\":[");
+        landing_cases();
+        printf("],\"targets\":[");
+        target_cases();
+        puts("]}");
+    }
+}

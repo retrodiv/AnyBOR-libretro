@@ -33,6 +33,8 @@ def program(engine, profiles, *, remove_frame_guard=False, remove_slot_guard=Fal
     handle = re.search(r'\b(s_\w+)\s*\*\s*handle\s*=\s*NULL', prop)
     if handle is None:
         raise ValueError('Native attack property handle type required')
+    coordinates = ('obor_script_collision_coordinates' if
+                   'static int obor_script_collision_coordinates(void)' in source else None)
     guarded, defined_null = [], []
     force = None
     for label, case in cases.items():
@@ -43,7 +45,8 @@ def program(engine, profiles, *, remove_frame_guard=False, remove_slot_guard=Fal
             force = label
         if 'OBOR_ATTACK_REQUIRE_HANDLE();' in body:
             guarded.append(label)
-        elif 'ScriptVariant_ChangeType(*pretvar, VT_INTEGER);' in body and 'handle->' not in body:
+        elif ('ScriptVariant_ChangeType(*pretvar, VT_INTEGER);' in body and
+              ('handle->' not in body or 'obor_script_collision_coordinates() && handle && handle->coords' in body)):
             defined_null.append(label)
     if not guarded or force is None:
         raise ValueError('Native guarded attack property cases required')
@@ -79,7 +82,8 @@ def program(engine, profiles, *, remove_frame_guard=False, remove_slot_guard=Fal
             (engine / 'source/scriptlib/ScriptVariant.h').read_text() else 'void',
         CONVERSIONS='\n'.join(function(variant, name) for name in
             ('ScriptVariant_ChangeType', 'ScriptVariant_Clear', 'ScriptVariant_IntegerValue')),
-        ALLOCATION=allocate, COLLECTION=collection, INSTANCE=instance, PROPERTY=prop,
+        ALLOCATION=allocate, COLLECTION=collection, INSTANCE=instance,
+        COORDINATE_PROFILE=function(source, coordinates) if coordinates else '', PROPERTY=prop,
         BODY_INSTANCE=function((engine / 'source/openborscript/collision_body.c').read_text(encoding='latin1'),
                                'openbor_get_body_collision_instance') if 'active_bit' in instance else '',
         ATTACK_TYPE=handle[1], FORCE=force, INDEXED='1' if 'active_bit' in instance else '0',

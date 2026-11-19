@@ -1,0 +1,52 @@
+/* SPDX-License-Identifier: BSD-3-Clause
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me>
+ */
+
+static void check_animation_get(s_anim *animation, LONG number, HRESULT expected, LONG value)
+{
+    ScriptVariant handle = {.vt = VT_PTR, .ptrVal = animation};
+    ScriptVariant property = {.vt = VT_INTEGER, .lVal = number};
+    ScriptVariant result = {0}, *output = &result;
+    ScriptVariant *args[] = {&handle, &property};
+    CHECK(openbor_get_animation_property(args, &output, 2) == expected);
+    if(expected == S_OK)
+        CHECK(output == &result && result.vt == VT_INTEGER && result.lVal == value);
+    ++checks;
+}
+
+static void check_animation_set(s_anim *animation, LONG number, ScriptVariant value, HRESULT expected)
+{
+    ScriptVariant handle = {.vt = VT_PTR, .ptrVal = animation};
+    ScriptVariant property = {.vt = VT_INTEGER, .lVal = number};
+    ScriptVariant result = {.vt = VT_INTEGER, .lVal = -17}, *output = &result;
+    ScriptVariant *args[] = {&handle, &property, &value};
+    CHECK(openbor_set_animation_property(args, &output, 3) == expected);
+    CHECK(output == &result && result.vt == VT_INTEGER && result.lVal == -17);
+    ++checks;
+}
+
+static void check_frame_property(LONG number, int writable)
+{
+    const ScriptVariant values[] = {
+        {.vt = VT_INTEGER, .lVal = 3},
+        {.vt = VT_DECIMAL, .dblVal = 4.75},
+        {.vt = VT_EMPTY},
+        {.vt = VT_INTEGER, .lVal = 9},
+        {.vt = VT_INTEGER, .lVal = 0},
+    };
+    const LONG changed[] = {3, 4, 4, 4, 4};
+    s_anim animation = {.numframes = 6, .obor_frame_capacity = 8};
+    strcpy(query, "ANI_PROP_NUMFRAMES");
+    check_animation_get(&animation, number, S_OK, 6);
+    for(size_t i = 0; i < sizeof(values) / sizeof(values[0]); ++i)
+    {
+        check_animation_set(&animation, number, values[i], writable ? S_OK : E_FAIL);
+        check_animation_get(&animation, number, S_OK, writable ? changed[i] : 6);
+    }
+    check_animation_get(&animation, writable ? number - 1 : number + 1, E_FAIL, 0);
+
+    strcpy(query, "ANI_PROP_ANIMHITS");
+    const ScriptVariant hits = {.vt = VT_INTEGER, .lVal = 5};
+    check_animation_set(&animation, ANI_PROP_ANIMHITS, hits, S_OK);
+    check_animation_get(&animation, ANI_PROP_ANIMHITS, S_OK, 5);
+}

@@ -1,0 +1,198 @@
+/* SPDX-License-Identifier: BSD-3-Clause
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me>
+ */
+#include <limits.h>
+#include <stdint.h>
+#include <stdio.h>
+#include "openbor.h"
+#include "commands.h"
+#undef printf
+
+uint32_t obor_profile_build;
+static int max_animations = MAX_ANIS, max_follows = 1;
+static int follows[] = {ANI_FOLLOW1}, *animfollows = follows;
+static entity defender, attacker, *self = &defender;
+static s_anim defending, attacking, counter_animation, follow_animation;
+static s_anim *defender_animations[MAX_ANIS], *attacker_animations[MAX_ANIS];
+static s_counterrange range;
+static s_collision_attack attack_record;
+static int counter_calls, damage_calls, def_animation, attacker_animation, can_grab;
+
+HRESULT Interpreter_Call(Interpreter *p) { (void)p; abort(); }
+HRESULT Interpreter_EvalInstruction(Interpreter *p) { (void)p; abort(); }
+
+#undef cangrab
+int cangrab(entity *attacking_entity, entity *target) { return can_grab; }
+
+static int normal_damage(entity *e, s_collision_attack *incoming)
+{
+    ++damage_calls;
+    return 1;
+}
+
+void ent_set_anim(entity *ent, int aninum, int resetable)
+{
+    @ANIMATION_GATE@
+    if(aninum == ANI_FOLLOW1)
+    {
+        if(ent == self) def_animation = 1;
+        else attacker_animation = 1;
+    }
+}
+
+@HELPERS@
+
+static void apply_counter(entity *e, s_collision_attack *attack, int force, int them, int current_attack_id)
+{
+    int current_follow_id;
+    if(0) {}
+    @COUNTER_BODY@
+        ++counter_calls;
+    }
+    @NORMAL_ROUTE@ {}
+}
+
+static void apply_follow(entity *e, int didblock)
+{
+    int current_follow_id;
+    @FOLLOW_BODY@
+}
+
+static int command_available(void)
+{
+    int found = 0;
+#undef LIST_ADD
+#define LIST_ADD(code, name) (found = (code) == CMD_MODEL_IGNOREATTACKID && !strcmp(name, "ignoreattackid"))
+    @REGISTRY@
+#undef LIST_ADD
+    return found;
+}
+
+static void read_command(s_collision_attack attack, int value, s_collision_attack *out)
+{
+#undef GET_INT_ARG
+#define GET_INT_ARG(index) (value)
+    switch(CMD_MODEL_IGNOREATTACKID)
+    {
+        @COMMAND@
+        default: break;
+    }
+#undef GET_INT_ARG
+    *out = attack;
+}
+
+static int skip_repeated_hit(entity *target, s_collision_attack *attack, int current_attack_id)
+{
+    @REPEAT_GATE@
+    {
+        return 1;
+    }
+    return 0;
+}
+
+static void reset(void)
+{
+    defender = (entity){0};
+    attacker = (entity){0};
+    defending = (s_anim){0};
+    attacking = (s_anim){0};
+    counter_animation = (s_anim){.attackone = -1};
+    follow_animation = (s_anim){.attackone = -1};
+    attack_record = (s_collision_attack){0};
+    range = (s_counterrange){0};
+    defender.animation = &defending;
+    attacker.animation = &attacking;
+    defender.takedamage = normal_damage;
+    defender.modeldata.animation = defender_animations;
+    attacker.modeldata.animation = attacker_animations;
+    defender.modeldata.animation_capacity = attacker.modeldata.animation_capacity = MAX_ANIS;
+    defender_animations[ANI_FOLLOW1] = &counter_animation;
+    attacker_animations[ANI_FOLLOW1] = &follow_animation;
+    defending.attackone = 7;
+    attacking.attackone = 9;
+    counter_calls = damage_calls = def_animation = attacker_animation = 0;
+}
+
+static void counter_cases(void)
+{
+    static const struct {
+        int has_range, frozen, frame, mode, hp, force, damage, hostile;
+        int same_direction, no_block, freezes, follow_frames;
+    } cases[] = {@COUNTER@};
+    for(size_t i = 0; i < sizeof(cases) / sizeof(cases[0]); ++i)
+    {
+        reset();
+        defending.counterrange = cases[i].has_range ? &range : NULL;
+        defending.followup.animation = 1;
+        defender.frozen = cases[i].frozen;
+        defender.animpos = cases[i].frame;
+        defender.health = cases[i].hp;
+        range.frame.min = 2;
+        range.frame.max = 5;
+        range.condition = cases[i].mode;
+        range.damaged = cases[i].damage ? COUNTERACTION_DAMAGE_NORMAL : COUNTERACTION_DAMAGE_NONE;
+        attacker.modeldata.type = TYPE_ENEMY;
+        attacker.direction = DIRECTION_LEFT;
+        defender.direction = cases[i].same_direction ? DIRECTION_LEFT : DIRECTION_RIGHT;
+        attack_record.no_block = cases[i].no_block;
+        attack_record.freeze = cases[i].freezes;
+        counter_animation.numframes = cases[i].follow_frames;
+        apply_counter(&attacker, &attack_record, cases[i].force,
+                      cases[i].hostile ? TYPE_ENEMY : TYPE_NPC, 123);
+        printf("%s[%d,%d,%d,%d,%d,%d]", i ? "," : "", counter_calls, damage_calls,
+               defender.health, def_animation, defender.hit_by_attack_id, counter_animation.attackone);
+    }
+}
+
+static void contact_cases(void)
+{
+    static const struct {int value, preset, repeated;} cases[] = {@CONTACT@};
+    for(size_t i = 0; i < sizeof(cases) / sizeof(cases[0]); ++i)
+    {
+        reset();
+        int available = command_available();
+        attack_record.ignore_attack_id = cases[i].preset;
+        if(available) read_command(attack_record, cases[i].value, &attack_record);
+        defender.hit_by_attack_id = cases[i].repeated ? 123 : 124;
+        printf("%s[%d,%d,%d]", i ? "," : "", available, attack_record.ignore_attack_id,
+               skip_repeated_hit(&defender, &attack_record, 123));
+    }
+}
+
+static void follow_cases(void)
+{
+    static const struct {
+        int has_follow, has_counter, mode, hostile, alive, blocked, grab, follow_frames;
+    } cases[] = {@FOLLOW@};
+    for(size_t i = 0; i < sizeof(cases) / sizeof(cases[0]); ++i)
+    {
+        reset();
+        attacking.followup.animation = cases[i].has_follow;
+        attacking.followup.condition = cases[i].mode;
+        attacking.counterrange = cases[i].has_counter ? &range : NULL;
+        attacker.modeldata.hostile = cases[i].hostile ? TYPE_NPC : TYPE_ENEMY;
+        defender.modeldata.type = TYPE_NPC;
+        defender.health = cases[i].alive ? 5 : 0;
+        can_grab = cases[i].grab;
+        follow_animation.numframes = cases[i].follow_frames;
+        apply_follow(&attacker, cases[i].blocked);
+        printf("%s[%d,%d]", i ? "," : "", attacker_animation, follow_animation.attackone);
+    }
+}
+
+int main(void)
+{
+    static const unsigned profiles[] = {@PROFILES@};
+    for(size_t p = 0; p < sizeof(profiles) / sizeof(profiles[0]); ++p)
+    {
+        obor_profile_build = profiles[p];
+        printf("[%u,[[", profiles[p]);
+        counter_cases();
+        printf("],[");
+        contact_cases();
+        printf("],[");
+        follow_cases();
+        puts("]]]");
+    }
+    return 0;
+}

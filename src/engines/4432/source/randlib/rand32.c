@@ -1,3 +1,16 @@
+/* AnyBOR modification record: 2026-09-30.
+ * Port maintained by retrodiv <retrodiv@proton.me>.
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me> (original contributions).
+ * These contributions are licensed under BSD-3-Clause; see LICENSE at the root.
+ * Upstream code retains its original license and notices.
+ * Preserve historical random-result magnitudes through build 4323 and raw
+ * results from 4324, with identical generator state and defined unsigned
+ * arithmetic.
+ * Existing changes recorded here; this is not their implementation date.
+ * See MODIFICATIONS.md and docs/modifications/4432.md
+ * at the source repository root. Original notices follow below.
+ */
+
 /*
  * OpenBOR - http://www.chronocrash.com
  * -----------------------------------------------------------------------
@@ -7,6 +20,9 @@
  */
 
 #include "rand32.h"
+#include <stdint.h>
+
+extern uint32_t obor_profile_build;
 
 u64 seed = 1234567890;
 
@@ -32,7 +48,16 @@ unsigned int rand32(void)
 
     seed = t;
 
-    return ( (t >> 16) & 0xFFFFFFFF );
+    /* Earlier profiles return the magnitude of the native 32-bit result.
+     * Keep the same generator state and calculate that magnitude unsigned. */
+    uint32_t result = (uint32_t)((t >> 16) & UINT32_C(0xffffffff));
+    if(obor_profile_build >= 4283 && obor_profile_build < 4324 &&
+       result > UINT32_C(0x7fffffff))
+    {
+        result = UINT32_C(0) - result;
+    }
+
+    return (unsigned int)result;
 }
 
 void srand32(u64 n)
