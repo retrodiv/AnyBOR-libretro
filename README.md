@@ -1,7 +1,6 @@
 # AnyBOR
 
-An independent libretro core for OpenBOR games, offering selectable engine
-profiles:
+An independent libretro core for OpenBOR games, offering 322 selectable engine profiles:
 
 |  |  |  |  |  |  |
 |---|---|---|---|---|---|
