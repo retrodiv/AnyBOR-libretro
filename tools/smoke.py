@@ -12,6 +12,7 @@ import sys
 import tempfile
 from pathlib import Path
 import make_fixture
+from profile_groups import select_profile_group
 import release
 
 DEFAULT_CORE = release.ROOT / ("anybor_libretro.dylib" if sys.platform == "darwin"
@@ -22,7 +23,9 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--core", default=str(DEFAULT_CORE))
     parser.add_argument("--frames", type=int, default=400)
-    parser.add_argument("--engine", action="append")
+    selection = parser.add_mutually_exclusive_group()
+    selection.add_argument("--engine", action="append")
+    selection.add_argument("--profile-group", help="INDEX/COUNT or measured POLICY:INDEX/COUNT")
     parser.add_argument("--host", help="use a precompiled test host")
     parser.add_argument("--runner", default="", help="optional emulator command, such as wine")
     parser.add_argument("--windows", action="store_true", help="use Windows host and Wine Z: paths")
@@ -61,7 +64,7 @@ def exercise(args, root, pin, work):
         path = str(Path(path).resolve())
         return "Z:" + path.replace("/", "\\") if args.windows and os.name != "nt" else path
 
-    selected = args.engine or [e["build"] for e in pin["profiles"]]
+    selected = args.engine or [e["build"] for e in select_profile_group(pin["profiles"], args.profile_group)]
     if set(selected) - set(e["build"] for e in pin["profiles"]):
         raise RuntimeError("Unknown engine requested")
     for engine in selected:

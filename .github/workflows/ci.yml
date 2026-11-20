@@ -117,14 +117,13 @@ jobs:
         if: matrix.target == 'linux-riscv64'
         run: |
           python3 tools/run_guarded.py --memory-mib 2048 --seconds 600 -- python3 tools/test_riscv64.py --core anybor_libretro.so
-      - name: Boot every Windows engine with fresh and existing saves
+      - name: Exercise Windows workers and geometry
         if: matrix.target == 'windows-x86_64'
         env:
           WINEPREFIX: ${{ runner.temp }}/anybor-wine
           WINEDEBUG: '-all'
         run: |
           python3 tools/run_guarded.py --memory-mib 1024 --seconds 180 -- python3 tools/test_windows_workers.py
-          python3 tools/run_guarded.py --memory-mib 2048 --seconds 900 -- python3 tools/smoke.py --core anybor_libretro.dll --windows --runner wine
           python3 tools/run_guarded.py --memory-mib 2048 --seconds 300 -- python3 tools/test_geometry.py --core anybor_libretro.dll --windows --runner wine
       - uses: actions/upload-artifact@v4
         with:
@@ -749,6 +748,11 @@ jobs:
         timeout-minutes: 16
         run: |
           python3 tools/run_guarded.py --memory-mib 1024 --seconds 900 -- python3 tools/ci_packages.py --role state-windows --install
+      - name: Exercise grouped Windows boot and saves
+        env:
+          WINEPREFIX: ${{ runner.temp }}/anybor-wine-smoke
+        run: |
+          python3 tools/run_guarded.py --memory-mib 2048 --seconds 900 -- python3 tools/smoke.py --core anybor_libretro.dll --windows --runner wine --profile-group '${{ matrix.profile_group }}'
       - name: Exercise grouped Windows rewind contracts
         run: |
           python3 tools/run_guarded.py --memory-mib 2048 --seconds 900 -- python3 tools/test_rewind.py --core anybor_libretro.dll --windows --runner wine --keep-wine-server --work-parent /var/tmp --profile-group '${{ matrix.profile_group }}'

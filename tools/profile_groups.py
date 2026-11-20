@@ -139,16 +139,20 @@ def check_workflow_groups(workflow, profiles):
     paths = {(script, platform): [] for script in scripts
              for platform in ('linux', 'windows', 'macos')
              if script != 'tools/regression.py' or platform != 'windows'}
+    windows_smoke = 'tools/smoke.py'
+    paths[windows_smoke, 'windows'] = []
     for line in expand_workflow_profile_groups(workflow).splitlines():
         if not line.strip().startswith('python3 '):
             continue
         words = shlex.split(line)
-        for script in scripts:
+        for script in (*scripts, windows_smoke):
             if script not in words:
                 continue
             if words.count(script) != 1:
                 raise ValueError('Ambiguous runtime script')
             args = words[words.index(script) + 1:]
+            if script == windows_smoke and '--windows' not in args:
+                continue
             if args.count('--profile-group') != 1:
                 raise ValueError('CI runtime scripts require one explicit profile group')
             offset = args.index('--profile-group') + 1
