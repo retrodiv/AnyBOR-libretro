@@ -7,13 +7,14 @@ import json
 
 
 def render_sprite_queue_loading(*,queue_source,revision,node_cache,
-                                profile_sprite=False,load_on_miss=None):
+                                profile_sprite=False,load_on_miss=None,capacity_query=False):
     load_on_miss=node_cache if load_on_miss is None else load_on_miss
     if (not isinstance(queue_source,str) or not queue_source.startswith('/') or
             not queue_source.endswith('.c') or len(queue_source)>4096 or
             any(c in queue_source for c in ('\0','\r','\n')) or
             type(revision) is not int or not 0<revision<=0xffffffff or type(node_cache) is not bool or
             type(profile_sprite) is not bool or type(load_on_miss) is not bool or
+            type(capacity_query) is not bool or
             profile_sprite and not node_cache):
         raise ValueError('Complete native queue source, revision and cache layout required')
     return r'''
@@ -61,10 +62,12 @@ int main(void){
  unsigned cold_ready=(unsigned)spritequeue_len,cold_requests=requests;
  assert(cold_ready==@COLD_READY@);
  prepare(NULL,NULL);
- for(int n=0;n<MAXQSPRITES;++n)spriteq_add_frame(0,0,0,&ready,NULL,0);
- assert(spritequeue_len==MAXQSPRITES);qstruct last=queue[MAXQSPRITES-1];
+ const int capacity=@CAPACITY@;
+ assert(capacity>0 && capacity<=MAXQSPRITES);
+ for(int n=0;n<capacity;++n)spriteq_add_frame(0,0,0,&ready,NULL,0);
+ assert(spritequeue_len==capacity);qstruct last=queue[capacity-1];
  spriteq_add_sprite(3,4,5,0,NULL,6);
- assert(spritequeue_len==MAXQSPRITES && !memcmp(&last,queue+MAXQSPRITES-1,sizeof(last)));
+ assert(spritequeue_len==capacity && !memcmp(&last,queue+capacity-1,sizeof(last)));
  unsigned full_missing_requests=requests;
  spriteq_unlock();spriteq_clear();
  printf("{\"status\":\"PASS\",\"unavailable_queued\":%u,\"missing_requests\":%u,\"cold_ready\":%u,\"cold_requests\":%u,\"full_missing_requests\":%u}\n",
@@ -72,6 +75,7 @@ int main(void){
  return 0;
 }
 '''.replace('@QUEUE@',json.dumps(queue_source)).replace('@REVISION@',str(revision)+'u').replace(
+        '@CAPACITY@','spriteq_get_sprite_max()' if capacity_query else 'MAXQSPRITES').replace(
         '@NODES@','static s_sprite_list node;'if node_cache else '').replace('@PREPARE@',
         'memset(&node,0,sizeof(node));node.sprite=cached;node.filename=image_name;entries[0].node=&node;'
         if node_cache else 'entries[0].sprite=cached;').replace('@COLD_READY@','1'if load_on_miss else'0').replace(

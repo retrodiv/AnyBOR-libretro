@@ -37,16 +37,17 @@ class ImageRowTests(unittest.TestCase):
                 for w, h in cls.fixture['targets']]
         cls.executables = {}
         for engine, context in cls.fixture['engines'].items():
+            root = SOURCE / 'src/engines' / engine
             compiler, flags, links = native_context(engine)
             objects = compile_image_units(engine, compiler, flags, work, include_loader=False)
             options = {key: context[key] for key in ('resource_hooks', 'magic_field',
                                                     'allocation_services', 'screen_format_variable')}
-            code = render_image_rows(image_source=str(SOURCE/'src/engines'/engine/'source/gamelib/loadimg.c'),
+            options['allocation_services'] |= 'checkAlloc(' in (root / 'source/utils.h').read_text()
+            code = render_image_rows(image_source=str(root / 'source/gamelib/loadimg.c'),
                 revision=int(engine), cases=cases, row_cases=rows,
                 palette=fixture_palette(context['palette_bytes']), **options)
             source = work/(engine+'.c')
-            source.write_text(bind_named_allocation_support(profile_program(code),
-                SOURCE/'src/engines'/engine))
+            source.write_text(bind_named_allocation_support(profile_program(code), root))
             executable = source.with_suffix('')
             compile_checked(compiler+flags+[str(source), *objects, *links, '-o', str(executable)])
             cls.executables[engine] = executable

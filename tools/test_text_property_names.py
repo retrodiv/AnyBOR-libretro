@@ -77,6 +77,7 @@ class TextPropertyNameTests(unittest.TestCase):
                     retained_references=['openbor_gettextobjproperty','openbor_changetextobjproperty',*methods])
                 program=r'''
 #include <assert.h>
+#include <stdbool.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>

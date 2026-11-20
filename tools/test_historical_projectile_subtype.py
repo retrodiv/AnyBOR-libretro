@@ -43,7 +43,7 @@ def native_program(data):
     macros_begin = script.index('#define IICMPCONST(')
     macros_end = script.index('#define ICMPSCONSTA(', macros_begin)
     functions = '\n'.join((
-        '#pragma GCC diagnostic push\n'
+        function(source, 'obor_level_spawn_count'),        '#pragma GCC diagnostic push\n'
         '#pragma GCC diagnostic ignored "-Wimplicit-fallthrough"\n' +
         function(source, 'ent_default_init') + '#pragma GCC diagnostic pop\n',
         function(script, 'obor_profile_subtype_value'),

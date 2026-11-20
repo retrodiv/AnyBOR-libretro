@@ -55,6 +55,11 @@ int main(void) {
   printf("]");
   assert(!Script_GetStringMapFunction((void *)unknown_function));
 #endif
+#ifdef CHECK_ATTACK_MAPPER
+  printf(",\"attack_mapper\":%d",
+         Script_GetStringMapFunction((void *)openbor_changeattackproperty) ==
+         (void *)mapstrings_attackproperty);
+#endif
   puts("}");
  }
  return 0;

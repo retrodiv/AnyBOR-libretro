@@ -20,7 +20,7 @@
  * through the last script reference while preserving independent variables,
  * replacement and native callbacks. Track diagnostic comments independently
  * so interpreter replacement can retain them. Resolve text-property names
- * within the actual table bounds while preserving native numeric selectors.
+ * within bounds, preserving native search midpoints and numeric selectors.
  * Reuse each text object's owned buffer when replacing its contents. Reject
  * missing colourtable indices and keep selector arithmetic and table reads
  * defined. Use the declared staydown name-table length for lookup. Transfer
@@ -19605,13 +19605,16 @@ int mapstrings_textobjproperty(ScriptVariant **varlist, int paramCount)
         "a",
         "y",
         "z",
+        "", /* Bounded stand-in for the original table's absent terminal slot. */
     };
 
     const char *early_proplist[] = { "font", "text", "timex", "y", "z" };
     const char **names = obor_profile_build < 4001 ? early_proplist : proplist;
-    int count = obor_profile_build < 4001 ?
-                (int)(sizeof(early_proplist) / sizeof(*early_proplist)) :
-                (int)(sizeof(proplist) / sizeof(*proplist));
+    const int native_count = (int)(sizeof(proplist) / sizeof(*proplist));
+    /* From 4171 the absent slot still determines the first binary-search midpoint. */
+    const int count = obor_profile_build < 4001 ?
+                      (int)(sizeof(early_proplist) / sizeof(*early_proplist)) :
+                      native_count - (obor_profile_build < 4171);
 
     if(paramCount < 2)
     {
@@ -19624,7 +19627,7 @@ int mapstrings_textobjproperty(ScriptVariant **varlist, int paramCount)
         propname = (char *)StrCache_GetIfPresent(varlist[1]->strVal);
         if(!propname) return 1;
         prop = searchList(names, propname, count);
-        if(prop >= 0)
+        if(prop >= 0 && prop < native_count - 1)
         {
             ScriptVariant_ChangeType(varlist[1], VT_INTEGER);
             varlist[1]->lVal = prop;

@@ -67,6 +67,17 @@ def saved_record_helpers(source, record, names):
             + '\n'.join(function(source, name) for name in names))
 
 
+def profile_id_support(code):
+    names = ('obor_profile_uses_5134_script_ids', 'obor_profile_has_animation_entity_collision')
+    selected = [name for name in names if name + '(' in code]
+    if not selected:
+        return code
+    header = (ENGINE / 'source/openborscript/profile_ids.h').read_text()
+    if selected[-1] == names[1]:
+        selected = names
+    return ''.join(function(header, name) for name in selected) + code
+
+
 def original_keys(context, code):
     data = json.loads((FIXTURE.parent / 'lns-6330-keys-original.json').read_text())
     row = data['contexts']['physical' if context == 'previous' else context]
@@ -260,6 +271,9 @@ int main(void) {
         header += '\n' + (ENGINE / 'source/globals.h').read_text()
         data = json.loads((FIXTURE.parent / 'lns-6330-loading-ui-original.json').read_text())
         code = function(source, 'playscene').replace('playscene(', 'candidate_scene(', 1)
+        if 'scene_media_path(' in code:
+            code = ('static uint32_t obor_profile_build = 6330;\n'
+                    + profile_id_support(function(source, 'scene_media_path') + code))
         for key, row in data['contexts'].items():
             code += original_keys(key, row['functions']['playscene'].replace('playscene(', key + '_scene(', 1))
         program = (FIXTURE.parent / 'lns-6330-scene-contract.c.in').read_text()
@@ -312,11 +326,15 @@ int main(void) {
             display.append('static int candidate_' + name + '(entity *e) { return ' + expression + '; }')
         candidate = rename_identifiers('\n'.join(function(source, name) for name in names),
             {name:'candidate_' + name for name in names})
+        display_code = '\n'.join(display)
+        if 'obor_profile_has_classic_boomerang(' in candidate + display_code:
+            candidate = function(source, 'obor_profile_has_classic_boomerang') + candidate
+        candidate = profile_id_support(candidate + display_code)
         program = (FIXTURE.parent / 'lns-6330-entity-actions-contract.c.in').read_text()
         includes = (ABI.parent, READER_HEADER.parent, ENGINE, ENGINE / 'source',
             *(p for p in sorted((ENGINE / 'source').iterdir()) if p.is_dir()))
         native(program.replace('@CANDIDATE@', candidate).replace('@ORIGINAL@', '\n'.join(originals))
-            .replace('@DISPLAY@', '\n'.join(display)), include_dirs=includes,
+            .replace('@DISPLAY@', ''), include_dirs=includes,
             extra_flags=('-DLINUX=1', '-DLIBRETRO=1', '-DOBOR_ENGINE_BUILD=6391', '-O1', '-fcommon',
                 '-Wno-unused-variable', '-Wno-unused-parameter', '-Wno-sign-compare'))
 
@@ -330,6 +348,8 @@ int main(void) {
                 {name:key + '_' + name for name in names}))
         code = rename_identifiers('\n'.join(function(source, name) for name in names),
             {name:'candidate_' + name for name in names})
+        if 'obor_spawn_excludes_player_targets(' in code:
+            code = profile_id_support(function(source, 'obor_spawn_excludes_player_targets') + code)
         program = (FIXTURE.parent / 'lns-6330-projectile-player-contract.c.in').read_text()
         includes = (ABI.parent, READER_HEADER.parent, ENGINE, ENGINE / 'source',
             *(p for p in sorted((ENGINE / 'source').iterdir()) if p.is_dir()))
@@ -343,6 +363,9 @@ int main(void) {
         original = '\n'.join(row['function'].replace('projectile_wall_deflect(', key + '_deflect(', 1)
             for key, row in data['contexts'].items())
         candidate = function(source, 'projectile_wall_deflect').replace('projectile_wall_deflect(', 'candidate_deflect(', 1)
+        if 'obor_profile_uses_legacy_ricochet(' in candidate:
+            candidate = ('static uint32_t obor_profile_build = 6330;\n'
+                         + function(source, 'obor_profile_uses_legacy_ricochet') + candidate)
         program = (FIXTURE.parent / 'lns-6330-deflect-contract.c.in').read_text()
         native(program.replace('@ABI@', json.dumps(str(ABI))).replace('@CANDIDATE@', candidate)
             .replace('@ORIGINAL@', original), extra_flags=('-Wno-unused-parameter',))
@@ -357,6 +380,9 @@ int main(void) {
         names = ('testmove', 'obor_lns_adjust_grabposition', 'adjust_grabposition')
         code = '\n'.join(function(source, name) for name in names)
         code = rename_identifiers(code, {name:'candidate_' + name for name in names})
+        if 'movement_wall_altitude(' in code:
+            code = ('static uint32_t obor_profile_build = 6330;\n'
+                    + function(source, 'movement_wall_altitude') + code)
         program = (FIXTURE.parent / 'lns-6330-movement-contract.c.in').read_text()
         native(program.replace('@ABI@', json.dumps(str(ABI))).replace('@CANDIDATE@', code)
             .replace('@ORIGINAL@', '\n'.join(originals)))
@@ -481,6 +507,7 @@ int main(void) {
         candidate += 'static void candidate_choose_title(void) {' + title + '}\n'
         limits = '\n'.join(re.search(r'^#define\s+' + name + r'[^\r\n]+', savedata, re.M).group()
             for name in ('MAX_PLAYERS', 'MAX_BTN_NUM'))
+        candidate = profile_id_support(candidate)
         program = (FIXTURE.parent / 'lns-6330-options-contract.c.in').read_text()
         native(program.replace('@ABI@', json.dumps(str(ABI))).replace('@LIMITS@', limits)
             .replace('@KEYS@', profile_keys(header)).replace('@RECORD@', re.search(r'typedef struct\s*\{[^{}]*\}\s*s_savedata;', savedata).group())
@@ -797,12 +824,16 @@ int main(void) {
             originals.append(original_keys(key, rename_identifiers('\n'.join(row['functions'].values()), names)))
         originals.append(original_keys('previous', rename_identifiers(data['previous_shared_menu']['function'],
             {'menu_options': 'previous_menu_options'})))
+        candidate = function(source, 'menu_difficulty') + function(source, 'menu_options')
+        if 'obor_profile_early_save_layout(' in candidate:
+            candidate = ('static uint32_t obor_profile_build = 6330;\n'
+                         + function(source, 'obor_profile_early_save_layout') + candidate)
         program = (FIXTURE.parent / 'lns-6330-menus-contract.c.in').read_text()
         native(program.replace('@ABI@', json.dumps(str(ABI)))
             .replace('@LIMITS@', re.search(r'^#define\s+MAX_NAME_LEN[^\r\n]*', header, re.M).group())
             .replace('@KEYS@', profile_keys(header))
             .replace('@MACROS@', '\n'.join(macros.values()))
-            .replace('@CANDIDATE@', function(source, 'menu_difficulty') + function(source, 'menu_options'))
+            .replace('@CANDIDATE@', candidate)
             .replace('@ORIGINALS@', '\n'.join(originals)), extra_flags=('-Wno-sign-compare',))
 
     def test_settings_record_suffix_partial_reads_and_defaults_match_originals(self):
@@ -873,6 +904,10 @@ int main(void) {
         declarations = '\n'.join(re.search(r'^#define\s+' + name + r'[^\r\n]*', header, re.M).group()
             for name in ('MAX_NAME_LEN', 'MAX_PLAYERS', 'MAX_BUFFER_LEN', 'NUM_INITIALS', 'MAX_DIFFICULTIES', 'CV_HIGH_SCORE', 'GAME_SPEED'))
         candidate = '\n'.join(function(source, name) for name in ('obor_lns_score_name', 'hallfame_add', 'hallfame_show', 'hallfame'))
+        if 'startup_asset_path(' in candidate:
+            candidate = ('static uint32_t obor_profile_build = 6330;\n'
+                         'static void borShutdown(int mode, const char *format, ...) { (void)mode; (void)format; abort(); }\n'
+                         + profile_id_support(function(source, 'startup_asset_path') + candidate))
         program = (FIXTURE.parent / 'lns-6330-hof-ui-contract.c.in').read_text()
         native(program.replace('@ABI@', json.dumps(str(ABI))).replace('@LIMITS@', declarations)
             .replace('@KEYS@', profile_keys(header))
@@ -1708,6 +1743,13 @@ int main(void) {
         mapper = function(source, 'mapstrings_entityproperty')
         first_level = mapper[mapper.index('    // map entity properties'):]
         first_level = first_level[:first_level.index('    if(paramCount < 3')]
+        mapper_args = ''
+        if 'varlist[1]->vt' in first_level:
+            mapper_args = 'ScriptVariant property = {.vt = VT_STR}, *varlist[] = {NULL, &property};'
+        mapping = function(source, 'obor_entityproperty')
+        if 'obor_entityproperty_5134_index(' in mapping:
+            declarations.append(re.search(r'enum\s*\{\s*OBOR_6330_ENTITY_EDGE_ORDINAL[^}]+\};', source).group())
+            mapping = profile_id_support(function(source, 'obor_entityproperty_5134_index') + mapping)
         getters = function(source, 'openbor_getentityproperty')
         setters = function(source, 'openbor_changeentityproperty')
         get_cases = ''.join(outer_case(getters, name) for name in metadata['new_properties'])
@@ -1722,7 +1764,7 @@ int main(void) {
 #include @ABI@
 typedef int64_t LONG;
 typedef int HRESULT;
-enum { S_OK=0,E_FAIL=-1,VT_INTEGER=1,VT_OTHER=2 };
+enum { S_OK=0,E_FAIL=-1,VT_INTEGER=1,VT_OTHER=2,VT_STR=3 };
 #define SUCCEEDED(x) ((x)>=0)
 typedef struct { int vt;LONG lVal; } ScriptVariant;
 typedef struct { int next_force_direction,override_next_force_direction;
@@ -1743,6 +1785,7 @@ static void ScriptVariant_ChangeType(ScriptVariant *v,int type) {v->vt=type;}
     return -1; \
 } while(0)
 static int map_name(const char *name) {
+@MAPPER_ARGS@
 @FIRST_LEVEL@
     return -1;
 }
@@ -1809,7 +1852,7 @@ int main(void) {
 }
 '''.replace('@ABI@', json.dumps(ABI.resolve().as_posix()))
            .replace('@ENUM@', enum).replace('@TABLES@', '\n'.join(declarations))
-           .replace('@MAPPING@', function(source, 'obor_entityproperty'))
+           .replace('@MAPPING@', mapping).replace('@MAPPER_ARGS@', mapper_args)
            .replace('@FIRST_LEVEL@', first_level).replace('@ORIGINAL@', original)
            .replace('@GET_CASES@', get_cases).replace('@SET_CASES@', set_cases)
            .replace('@EXPECTATIONS@', expectations))

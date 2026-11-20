@@ -22,7 +22,9 @@ def program(data, source=None):
     predraw = function(source, 'predrawstatus')
     start = predraw.index('    }// end of for\n') + len('    }// end of for\n')
     values = {
-        'UPDATE': function(source, 'updatestatus'),
+        'UPDATE': ('\n'.join(function(source, name) for name in
+                             ('obor_profile_name_limit', 'obor_profile_copy_name'))
+                   if 'obor_profile_copy_name(' in source else '') + function(source, 'updatestatus'),
         'STATUS_TAIL': predraw[start:predraw.rindex('}')],
         'VISUAL_DEBUG': function(source, 'obor_collision_attack_frame') + '\n' +
                         function(source, 'draw_visual_debug'),

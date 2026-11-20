@@ -308,7 +308,10 @@ class LooseCasePathTests(unittest.TestCase):
             for entry in pin['engines']:
                 engine = entry['build']
                 unit = ROOT / 'src/engines' / engine / 'source/gamelib/packfile.c'
-                body = function(unit.read_text(encoding='latin1'), 'casesearch')
+                packfile = unit.read_text(encoding='latin1')
+                body = function(packfile, 'casesearch')
+                if 'packfile_path_capacity()' in body:
+                    body = function(packfile, 'packfile_path_capacity') + '\n' + body
                 source, binary = work / (engine + '.c'), work / engine
                 source.write_text(r'''
 #include <assert.h>

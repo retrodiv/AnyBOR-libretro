@@ -58,6 +58,7 @@ def program(data):
                      (row['kind'] == 'levels', json.dumps(row['text']), row['nodebug'],
                       row['nocheats'], ','.join(map(str, row['offsets']))))
     values = dict(METHODS=methods, PARSER=parser,
+        LINE_DIAGNOSTICS=re.search(r'const int line_diagnostics = [^;]+;\s*int warned_unknown = 0;', order)[0],
         GLOBALS='\n'.join(re.search(pattern, core, re.M)[0] for pattern in
             (r'^int\s+nodebugoptions\s*=\s*[^;]+;', r'^int\s+pauseoffset\[7\]\s*=\s*[^;]+;')),
         MODEL_ARMS=''.join('case ' + n + ':' + model_arms[n]['body'] for n in

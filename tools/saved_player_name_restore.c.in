@@ -24,6 +24,7 @@ s_player player[MAX_PLAYERS];
 static int current_set;
 _Static_assert(sizeof(records[0].pName[0])>=MAX_NAME_LEN,"Native saved-field copy extent");
 _Static_assert(sizeof(player[0].name)>=MAX_NAME_LEN && sizeof(player[0].name)>0,"Native live-field copy extent");
+@NAME_HELPERS@
 static void before_restore(unsigned i)
 {
     s_savelevel *save=&savelevel[current_set];
@@ -45,7 +46,9 @@ static void check(unsigned i,size_t length,int previous_terminator,int pattern)
     if(previous_terminator)player[i].name[sizeof(player[i].name)-1]=0;
     memcpy(initial_players,player,sizeof(player));memcpy(saved_bytes,records,sizeof(records));
     before_restore(i);memcpy(expected_players,player,sizeof(player));
-    if(!memchr(expected_players[i].name,0,sizeof(expected_players[i].name)))
+    if(@EXPLICIT_TERMINATION@)
+        expected_players[i].name[@COPY_LIMIT@]=0;
+    else if(!memchr(expected_players[i].name,0,sizeof(expected_players[i].name)))
         expected_players[i].name[sizeof(expected_players[i].name)-1]=0;
     memcpy(player,initial_players,sizeof(player));restore(i);
     assert(memchr(player[i].name,0,sizeof(player[i].name)));
@@ -56,11 +59,11 @@ static void check(unsigned i,size_t length,int previous_terminator,int pattern)
 int main(void)
 {
     const uint32_t profiles[]={@PROFILES@};
-    const size_t lengths[]={0,1,MAX_NAME_LEN-1,MAX_NAME_LEN,sizeof(records[0].pName[0])};
     const int patterns[]={'%',0x80};
     for(unsigned p=0;p<sizeof(profiles)/sizeof(*profiles);++p)
     {
         obor_profile_build=profiles[p];
+        const size_t lengths[]={0,1,@COPY_LIMIT@-1,@COPY_LIMIT@,sizeof(records[0].pName[0])};
         for(unsigned i=0;i<MAX_PLAYERS;++i)
         for(unsigned n=0;n<sizeof(lengths)/sizeof(*lengths);++n)
         for(int previous=0;previous<2;++previous)

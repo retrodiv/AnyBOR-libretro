@@ -7,6 +7,7 @@ from contract_fixtures import load_contract_fixture, contract_profiles, contract
 import json
 import os
 from pathlib import Path
+import re
 import shlex
 import subprocess
 import sys
@@ -22,10 +23,12 @@ FIXTURE=Path(__file__).parent/'fixtures/sprite-queue-loading-contracts.json'
 
 
 def program(engine,context):
-    code=render_sprite_queue_loading(queue_source=str(SOURCE/'src/engines'/engine/'source/gamelib/spriteq.c'),
+    source = SOURCE / 'src/engines' / engine / 'source/gamelib/spriteq.c'
+    capacity_query = re.search(r'(?m)^int[ \t]+spriteq_get_sprite_max\(', source.read_text(encoding='latin1'))
+    code=render_sprite_queue_loading(queue_source=str(source),
         revision=int(engine),node_cache=context['node_cache'],
         profile_sprite=context.get('profile_sprite',False),
-        load_on_miss=context.get('load_on_miss'))
+        load_on_miss=context.get('load_on_miss'), capacity_query=bool(capacity_query))
     marker='int main(void){'
     if code.count(marker)!=1:raise ValueError('One native queue-loading entry point required')
     return code.replace(marker,'''int main(int argc,char **argv){

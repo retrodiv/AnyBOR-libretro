@@ -442,10 +442,14 @@ class NativeModernTextArgumentTests(NativeTextReturnTests):
     scope_marker='modern input validation'
 
     def test_profile_labels_and_candidate_only_cases_are_explicit(self):
+        ranges = {item['engine']: (item['first'], item['last'])
+                  for item in self.fixture['coverage']}
         for row in self.fixture['models']:
             with self.subTest(model=row['id']):
                 covered={v['profile']for v in row['original_sources']+row['reconstructed_profile_aliases']}
-                required={p['build']for p in contract_profiles(self.fixture, self.pin['profiles'])if p['engine']==row['engine']}
+                family = dict(self.fixture, engine=row['engine'])
+                profiles = contract_profiles(family, self.pin['profiles'], source_range=ranges[row['engine']])
+                required = {profile['build'] for profile in profiles if profile['engine'] == row['engine']}
                 self.assertTrue(required<=covered)
                 original=row['original_case_indices'];candidate=row['candidate_only_case_indices']
                 self.assertFalse(set(original)&set(candidate))

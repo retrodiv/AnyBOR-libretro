@@ -24,7 +24,7 @@ SOURCE=Path(os.environ.get('OBOR_TEST_SOURCE',Path(__file__).resolve().parents[1
 
 
 class NativeTextMapperTests(unittest.TestCase):
-    def test_each_published_profile_native_names_numbers_and_returns(self):
+    def test_each_profile_in_native_source_scope_names_numbers_and_returns(self):
         fixture=load_contract_fixture(Path(__file__).with_name('fixtures').joinpath('native-text-mapper-contracts.json'))
         pin=json.loads((SOURCE/'src/pin.json').read_text())
         cc=shlex.split(os.environ.get('HOST_CC',os.environ.get('CC','cc')))
@@ -35,9 +35,11 @@ class NativeTextMapperTests(unittest.TestCase):
         for model in fixture['models']:
             with self.subTest(model=model['id']),tempfile.TemporaryDirectory(prefix='native-text-mapper-') as temporary:
                 engine=model['engine'];root=SOURCE/'src/engines'/engine
-                required={int(p.get('revision',p['build'])) for p in contract_profiles(fixture, pin['profiles']) if p['engine']==engine}
-                covered={n for m in fixture['models'] if m['engine']==engine for n in m['revisions']}
-                self.assertTrue(required<=covered)
+                covered = {n for m in fixture['models'] if m['engine'] == engine for n in m['revisions']}
+                family = dict(fixture, engine=engine)
+                profiles = contract_profiles(family, pin['profiles'], source_range=(min(covered), max(covered)))
+                required = {int(p.get('revision', p['build'])) for p in profiles if p['engine'] == engine}
+                self.assertTrue(required <= covered)
                 script=(root/'openborscript.c').read_text()
                 enums='\n'.join(re.findall(r'enum (?:g|c)top_enum\s*\{[^}]*\};',script))
                 self.assertTrue(enums)

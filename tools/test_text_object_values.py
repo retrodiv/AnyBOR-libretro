@@ -7,6 +7,7 @@ import json
 from pathlib import Path
 import unittest
 
+from contract_fixtures import load_contract_fixture
 from test_historical_common_think import ROOT, native_output
 from test_historical_player import function
 
@@ -21,10 +22,15 @@ def program(engine, profiles):
     original = function(variant, 'ScriptVariant_ToString').replace(
         'ScriptVariant_ToString(', 'fixture_original_format(', 1)
     code = (HERE / 'text_object_values_contract.c.in').read_text()
+    limits = {}
+    if engine.name == '6391':
+        fixture = load_contract_fixture(HERE / 'fixtures/profile-6391-script-text-widths.json')
+        limits = {row['revision']: row['value_capacity'] for row in fixture['sources']}
+    revisions = [int(profile.get('revision', profile['build'].split('-')[0])) for profile in profiles]
+    profile_rows = ','.join('{%du,%s}' % (revision, limits.get(revision, 'MAX_STR_VAR_LEN'))
+                            for revision in revisions)
     parts = dict(STORE=function(script, 'obor_textobj_store'),
-                 FORMAT=function(script, 'obor_textobj_format'), ORIGINAL=original,
-                 PROFILES=','.join(str(int(p.get('revision', p['build'].split('-')[0]))) + 'u'
-                                   for p in profiles))
+                 FORMAT=function(script, 'obor_textobj_format'), ORIGINAL=original, PROFILES=profile_rows)
     for name, value in parts.items():
         code = code.replace('@' + name + '@', value)
     return code

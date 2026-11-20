@@ -60,6 +60,7 @@ void showcomplete(int num)
 static void order_sequence(const char *input)
 {
     @DEFAULT_ERROR@
+    @LINE_DIAGNOSTICS@
     @CHKDEF@
     char filename[128]="data/levels.txt",*buf=strdup(input),*command,*errormessage=NULL;
     int line=0,pos=0;size_t size=strlen(input);s_set_entry *set=NULL;s_level_entry *le=NULL;

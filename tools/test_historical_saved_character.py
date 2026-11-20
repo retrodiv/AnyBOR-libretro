@@ -32,12 +32,14 @@ def program(data, previous=None):
     if 'obor_profile_copy_name(' in source:
         base += '\n' + '\n'.join(function(source, name) for name in
                                  ('obor_profile_name_limit', 'obor_profile_copy_name'))
+    restore = (function(source, 'obor_restore_selection_player')
+               if 'obor_restore_selection_player(' in source else '')
     values = {
         'BASE': base,
         'NAME_STORAGE': storage[0],
         'RESET': function(source, 'reset_playable_list'),
         'ALLOW': function(source, 'load_playable_list'),
-        'NATIVE': '\n'.join(function(source, name) for name in (
+        'NATIVE': restore + '\n'.join(function(source, name) for name in (
             'add_skipselect', 'load_skipselect', 'save_skipselect',
             'load_select_screen_info', 'selectplayer', 'playgame')),
         'RECORD_WRITER': (

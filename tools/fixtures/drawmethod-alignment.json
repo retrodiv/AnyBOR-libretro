@@ -33,21 +33,21 @@
       "entity_embedded": true
     },
     "4086": {
-      "entity_size": 2448,
+      "entity_size": 2472,
       "entity_alignment": 4,
       "method_size": 144,
       "method_alignment": 4,
-      "entity_method_offset": 2296,
+      "entity_method_offset": 2320,
       "layer_size": 232,
       "layer_method_offset": 68,
       "entity_embedded": true
     },
     "4432": {
-      "entity_size": 2552,
+      "entity_size": 2564,
       "entity_alignment": 4,
       "method_size": 144,
       "method_alignment": 4,
-      "entity_method_offset": 2400,
+      "entity_method_offset": 2412,
       "layer_size": 232,
       "layer_method_offset": 68,
       "entity_embedded": true

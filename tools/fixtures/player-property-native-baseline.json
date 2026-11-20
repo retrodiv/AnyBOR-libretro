@@ -1920,6 +1920,414 @@
       "setter_integer_result": false,
       "getter_requires_actor": false
     },
+    "4161": {
+      "revision": 4161,
+      "engine": "4086",
+      "name_declaration": "char name[MAX_NAME_LEN + 1]",
+      "name_limit": 47,
+      "setter_integer_result": false,
+      "getter_requires_actor": false
+    },
+    "4183": {
+      "revision": 4183,
+      "engine": "4086",
+      "name_declaration": "char name[MAX_NAME_LEN + 1]",
+      "name_limit": 47,
+      "setter_integer_result": false,
+      "getter_requires_actor": false
+    },
+    "4213": {
+      "revision": 4213,
+      "engine": "4086",
+      "name_declaration": "char name[MAX_NAME_LEN + 1]",
+      "name_limit": 47,
+      "setter_integer_result": false,
+      "getter_requires_actor": false
+    },
+    "4283": {
+      "revision": 4283,
+      "engine": "4432",
+      "name_declaration": "char name[MAX_NAME_LEN + 1]",
+      "name_limit": 47,
+      "setter_integer_result": false,
+      "getter_requires_actor": false
+    },
+    "4287": {
+      "revision": 4287,
+      "engine": "4432",
+      "name_declaration": "char name[MAX_NAME_LEN + 1]",
+      "name_limit": 47,
+      "setter_integer_result": false,
+      "getter_requires_actor": false
+    },
+    "4316": {
+      "revision": 4316,
+      "engine": "4432",
+      "name_declaration": "char name[MAX_NAME_LEN + 1]",
+      "name_limit": 47,
+      "setter_integer_result": false,
+      "getter_requires_actor": false
+    },
+    "4317": {
+      "revision": 4317,
+      "engine": "4432",
+      "name_declaration": "char name[MAX_NAME_LEN + 1]",
+      "name_limit": 47,
+      "setter_integer_result": false,
+      "getter_requires_actor": false
+    },
+    "4320": {
+      "revision": 4320,
+      "engine": "4432",
+      "name_declaration": "char name[MAX_NAME_LEN + 1]",
+      "name_limit": 47,
+      "setter_integer_result": false,
+      "getter_requires_actor": false
+    },
+    "4321": {
+      "revision": 4321,
+      "engine": "4432",
+      "name_declaration": "char name[MAX_NAME_LEN + 1]",
+      "name_limit": 47,
+      "setter_integer_result": false,
+      "getter_requires_actor": false
+    },
+    "4328": {
+      "revision": 4328,
+      "engine": "4432",
+      "name_declaration": "char name[MAX_NAME_LEN + 1]",
+      "name_limit": 47,
+      "setter_integer_result": false,
+      "getter_requires_actor": false
+    },
+    "4330": {
+      "revision": 4330,
+      "engine": "4432",
+      "name_declaration": "char name[MAX_NAME_LEN + 1]",
+      "name_limit": 47,
+      "setter_integer_result": false,
+      "getter_requires_actor": false
+    },
+    "4332": {
+      "revision": 4332,
+      "engine": "4432",
+      "name_declaration": "char name[MAX_NAME_LEN + 1]",
+      "name_limit": 47,
+      "setter_integer_result": false,
+      "getter_requires_actor": false
+    },
+    "4334": {
+      "revision": 4334,
+      "engine": "4432",
+      "name_declaration": "char name[MAX_NAME_LEN + 1]",
+      "name_limit": 47,
+      "setter_integer_result": false,
+      "getter_requires_actor": false
+    },
+    "4336": {
+      "revision": 4336,
+      "engine": "4432",
+      "name_declaration": "char name[MAX_NAME_LEN + 1]",
+      "name_limit": 47,
+      "setter_integer_result": false,
+      "getter_requires_actor": false
+    },
+    "4342": {
+      "revision": 4342,
+      "engine": "4432",
+      "name_declaration": "char name[MAX_NAME_LEN + 1]",
+      "name_limit": 47,
+      "setter_integer_result": false,
+      "getter_requires_actor": false
+    },
+    "4343": {
+      "revision": 4343,
+      "engine": "4432",
+      "name_declaration": "char name[MAX_NAME_LEN + 1]",
+      "name_limit": 47,
+      "setter_integer_result": false,
+      "getter_requires_actor": false
+    },
+    "4344": {
+      "revision": 4344,
+      "engine": "4432",
+      "name_declaration": "char name[MAX_NAME_LEN + 1]",
+      "name_limit": 47,
+      "setter_integer_result": false,
+      "getter_requires_actor": false
+    },
+    "4346": {
+      "revision": 4346,
+      "engine": "4432",
+      "name_declaration": "char name[MAX_NAME_LEN + 1]",
+      "name_limit": 47,
+      "setter_integer_result": false,
+      "getter_requires_actor": false
+    },
+    "4349": {
+      "revision": 4349,
+      "engine": "4432",
+      "name_declaration": "char name[MAX_NAME_LEN + 1]",
+      "name_limit": 47,
+      "setter_integer_result": false,
+      "getter_requires_actor": false
+    },
+    "4352": {
+      "revision": 4352,
+      "engine": "4432",
+      "name_declaration": "char name[MAX_NAME_LEN + 1]",
+      "name_limit": 47,
+      "setter_integer_result": false,
+      "getter_requires_actor": false
+    },
+    "4366": {
+      "revision": 4366,
+      "engine": "4432",
+      "name_declaration": "char name[MAX_NAME_LEN + 1]",
+      "name_limit": 47,
+      "setter_integer_result": false,
+      "getter_requires_actor": false
+    },
+    "4367": {
+      "revision": 4367,
+      "engine": "4432",
+      "name_declaration": "char name[MAX_NAME_LEN + 1]",
+      "name_limit": 47,
+      "setter_integer_result": false,
+      "getter_requires_actor": false
+    },
+    "4377": {
+      "revision": 4377,
+      "engine": "4432",
+      "name_declaration": "char name[MAX_NAME_LEN + 1]",
+      "name_limit": 47,
+      "setter_integer_result": false,
+      "getter_requires_actor": false
+    },
+    "4379": {
+      "revision": 4379,
+      "engine": "4432",
+      "name_declaration": "char name[MAX_NAME_LEN + 1]",
+      "name_limit": 47,
+      "setter_integer_result": false,
+      "getter_requires_actor": false
+    },
+    "4383": {
+      "revision": 4383,
+      "engine": "4432",
+      "name_declaration": "char name[MAX_NAME_LEN + 1]",
+      "name_limit": 47,
+      "setter_integer_result": false,
+      "getter_requires_actor": false
+    },
+    "4385": {
+      "revision": 4385,
+      "engine": "4432",
+      "name_declaration": "char name[MAX_NAME_LEN + 1]",
+      "name_limit": 47,
+      "setter_integer_result": false,
+      "getter_requires_actor": false
+    },
+    "4387": {
+      "revision": 4387,
+      "engine": "4432",
+      "name_declaration": "char name[MAX_NAME_LEN + 1]",
+      "name_limit": 47,
+      "setter_integer_result": false,
+      "getter_requires_actor": false
+    },
+    "4389": {
+      "revision": 4389,
+      "engine": "4432",
+      "name_declaration": "char name[MAX_NAME_LEN + 1]",
+      "name_limit": 47,
+      "setter_integer_result": false,
+      "getter_requires_actor": false
+    },
+    "4390": {
+      "revision": 4390,
+      "engine": "4432",
+      "name_declaration": "char name[MAX_NAME_LEN + 1]",
+      "name_limit": 47,
+      "setter_integer_result": false,
+      "getter_requires_actor": false
+    },
+    "4393": {
+      "revision": 4393,
+      "engine": "4432",
+      "name_declaration": "char name[MAX_NAME_LEN + 1]",
+      "name_limit": 47,
+      "setter_integer_result": false,
+      "getter_requires_actor": false
+    },
+    "4394": {
+      "revision": 4394,
+      "engine": "4432",
+      "name_declaration": "char name[MAX_NAME_LEN + 1]",
+      "name_limit": 47,
+      "setter_integer_result": false,
+      "getter_requires_actor": false
+    },
+    "4396": {
+      "revision": 4396,
+      "engine": "4432",
+      "name_declaration": "char name[MAX_NAME_LEN + 1]",
+      "name_limit": 47,
+      "setter_integer_result": false,
+      "getter_requires_actor": false
+    },
+    "4400": {
+      "revision": 4400,
+      "engine": "4432",
+      "name_declaration": "char name[MAX_NAME_LEN + 1]",
+      "name_limit": 47,
+      "setter_integer_result": false,
+      "getter_requires_actor": false
+    },
+    "4401": {
+      "revision": 4401,
+      "engine": "4432",
+      "name_declaration": "char name[MAX_NAME_LEN + 1]",
+      "name_limit": 47,
+      "setter_integer_result": false,
+      "getter_requires_actor": false
+    },
+    "4403": {
+      "revision": 4403,
+      "engine": "4432",
+      "name_declaration": "char name[MAX_NAME_LEN + 1]",
+      "name_limit": 47,
+      "setter_integer_result": false,
+      "getter_requires_actor": false
+    },
+    "4404": {
+      "revision": 4404,
+      "engine": "4432",
+      "name_declaration": "char name[MAX_NAME_LEN + 1]",
+      "name_limit": 47,
+      "setter_integer_result": false,
+      "getter_requires_actor": false
+    },
+    "4406": {
+      "revision": 4406,
+      "engine": "4432",
+      "name_declaration": "char name[MAX_NAME_LEN + 1]",
+      "name_limit": 47,
+      "setter_integer_result": false,
+      "getter_requires_actor": false
+    },
+    "4411": {
+      "revision": 4411,
+      "engine": "4432",
+      "name_declaration": "char name[MAX_NAME_LEN + 1]",
+      "name_limit": 47,
+      "setter_integer_result": false,
+      "getter_requires_actor": false
+    },
+    "4412": {
+      "revision": 4412,
+      "engine": "4432",
+      "name_declaration": "char name[MAX_NAME_LEN + 1]",
+      "name_limit": 47,
+      "setter_integer_result": false,
+      "getter_requires_actor": false
+    },
+    "4413": {
+      "revision": 4413,
+      "engine": "4432",
+      "name_declaration": "char name[MAX_NAME_LEN + 1]",
+      "name_limit": 47,
+      "setter_integer_result": false,
+      "getter_requires_actor": false
+    },
+    "4414": {
+      "revision": 4414,
+      "engine": "4432",
+      "name_declaration": "char name[MAX_NAME_LEN + 1]",
+      "name_limit": 47,
+      "setter_integer_result": false,
+      "getter_requires_actor": false
+    },
+    "4417": {
+      "revision": 4417,
+      "engine": "4432",
+      "name_declaration": "char name[MAX_NAME_LEN + 1]",
+      "name_limit": 47,
+      "setter_integer_result": false,
+      "getter_requires_actor": false
+    },
+    "4419": {
+      "revision": 4419,
+      "engine": "4432",
+      "name_declaration": "char name[MAX_NAME_LEN + 1]",
+      "name_limit": 47,
+      "setter_integer_result": false,
+      "getter_requires_actor": false
+    },
+    "4420": {
+      "revision": 4420,
+      "engine": "4432",
+      "name_declaration": "char name[MAX_NAME_LEN + 1]",
+      "name_limit": 47,
+      "setter_integer_result": false,
+      "getter_requires_actor": false
+    },
+    "4421": {
+      "revision": 4421,
+      "engine": "4432",
+      "name_declaration": "char name[MAX_NAME_LEN + 1]",
+      "name_limit": 47,
+      "setter_integer_result": false,
+      "getter_requires_actor": false
+    },
+    "4423": {
+      "revision": 4423,
+      "engine": "4432",
+      "name_declaration": "char name[MAX_NAME_LEN + 1]",
+      "name_limit": 47,
+      "setter_integer_result": false,
+      "getter_requires_actor": false
+    },
+    "4424": {
+      "revision": 4424,
+      "engine": "4432",
+      "name_declaration": "char name[MAX_NAME_LEN + 1]",
+      "name_limit": 47,
+      "setter_integer_result": false,
+      "getter_requires_actor": false
+    },
+    "4426": {
+      "revision": 4426,
+      "engine": "4432",
+      "name_declaration": "char name[MAX_NAME_LEN + 1]",
+      "name_limit": 47,
+      "setter_integer_result": false,
+      "getter_requires_actor": false
+    },
+    "4429": {
+      "revision": 4429,
+      "engine": "4432",
+      "name_declaration": "char name[MAX_NAME_LEN + 1]",
+      "name_limit": 50,
+      "setter_integer_result": false,
+      "getter_requires_actor": false
+    },
+    "4430": {
+      "revision": 4430,
+      "engine": "4432",
+      "name_declaration": "char name[MAX_NAME_LEN + 1]",
+      "name_limit": 50,
+      "setter_integer_result": false,
+      "getter_requires_actor": false
+    },
+    "4431": {
+      "revision": 4431,
+      "engine": "4432",
+      "name_declaration": "char name[MAX_NAME_LEN + 1]",
+      "name_limit": 50,
+      "setter_integer_result": false,
+      "getter_requires_actor": false
+    },
     "4432": {
       "revision": 4432,
       "engine": "4432",
@@ -1936,7 +2344,159 @@
       "setter_integer_result": false,
       "getter_requires_actor": false
     },
+    "4454": {
+      "revision": 4454,
+      "engine": "4432",
+      "name_declaration": "char name[MAX_NAME_LEN + 1]",
+      "name_limit": 50,
+      "setter_integer_result": false,
+      "getter_requires_actor": false
+    },
+    "4456": {
+      "revision": 4456,
+      "engine": "4432",
+      "name_declaration": "char name[MAX_NAME_LEN + 1]",
+      "name_limit": 50,
+      "setter_integer_result": false,
+      "getter_requires_actor": false
+    },
+    "4510": {
+      "revision": 4510,
+      "engine": "4432",
+      "name_declaration": "char name[MAX_NAME_LEN + 1]",
+      "name_limit": 50,
+      "setter_integer_result": false,
+      "getter_requires_actor": false
+    },
+    "4574": {
+      "revision": 4574,
+      "engine": "4432",
+      "name_declaration": "char name[MAX_NAME_LEN + 1]",
+      "name_limit": 50,
+      "setter_integer_result": false,
+      "getter_requires_actor": false
+    },
+    "4580": {
+      "revision": 4580,
+      "engine": "4432",
+      "name_declaration": "char name[MAX_NAME_LEN + 1]",
+      "name_limit": 50,
+      "setter_integer_result": false,
+      "getter_requires_actor": false
+    },
+    "4583": {
+      "revision": 4583,
+      "engine": "4432",
+      "name_declaration": "char name[MAX_NAME_LEN + 1]",
+      "name_limit": 50,
+      "setter_integer_result": false,
+      "getter_requires_actor": false
+    },
+    "4596": {
+      "revision": 4596,
+      "engine": "4432",
+      "name_declaration": "char name[MAX_NAME_LEN + 1]",
+      "name_limit": 50,
+      "setter_integer_result": false,
+      "getter_requires_actor": false
+    },
+    "4624": {
+      "revision": 4624,
+      "engine": "4432",
+      "name_declaration": "char name[MAX_NAME_LEN + 1]",
+      "name_limit": 50,
+      "setter_integer_result": false,
+      "getter_requires_actor": false
+    },
+    "4626": {
+      "revision": 4626,
+      "engine": "4432",
+      "name_declaration": "char name[MAX_NAME_LEN + 1]",
+      "name_limit": 50,
+      "setter_integer_result": false,
+      "getter_requires_actor": false
+    },
+    "4642": {
+      "revision": 4642,
+      "engine": "4432",
+      "name_declaration": "char name[MAX_NAME_LEN + 1]",
+      "name_limit": 50,
+      "setter_integer_result": false,
+      "getter_requires_actor": false
+    },
+    "4665": {
+      "revision": 4665,
+      "engine": "4432",
+      "name_declaration": "char name[MAX_NAME_LEN + 1]",
+      "name_limit": 50,
+      "setter_integer_result": false,
+      "getter_requires_actor": false
+    },
+    "4682": {
+      "revision": 4682,
+      "engine": "4432",
+      "name_declaration": "char name[MAX_NAME_LEN + 1]",
+      "name_limit": 50,
+      "setter_integer_result": false,
+      "getter_requires_actor": false
+    },
+    "4701": {
+      "revision": 4701,
+      "engine": "4432",
+      "name_declaration": "char name[MAX_NAME_LEN + 1]",
+      "name_limit": 50,
+      "setter_integer_result": false,
+      "getter_requires_actor": false
+    },
+    "4742": {
+      "revision": 4742,
+      "engine": "4432",
+      "name_declaration": "char name[MAX_NAME_LEN + 1]",
+      "name_limit": 50,
+      "setter_integer_result": false,
+      "getter_requires_actor": false
+    },
+    "4750": {
+      "revision": 4750,
+      "engine": "4432",
+      "name_declaration": "char name[MAX_NAME_LEN + 1]",
+      "name_limit": 50,
+      "setter_integer_result": false,
+      "getter_requires_actor": false
+    },
+    "4905": {
+      "revision": 4905,
+      "engine": "4432",
+      "name_declaration": "char name[MAX_NAME_LEN + 1]",
+      "name_limit": 50,
+      "setter_integer_result": false,
+      "getter_requires_actor": false
+    },
+    "5134": {
+      "revision": 5134,
+      "engine": "6391",
+      "name_declaration": "char name[MAX_NAME_LEN + 1]",
+      "name_limit": 50,
+      "setter_integer_result": false,
+      "getter_requires_actor": false
+    },
+    "6119": {
+      "revision": 6119,
+      "engine": "6391",
+      "name_declaration": "char name[MAX_NAME_LEN + 1]",
+      "name_limit": 50,
+      "setter_integer_result": false,
+      "getter_requires_actor": false
+    },
     "6330": {
+      "revision": 6330,
+      "engine": "6391",
+      "name_declaration": "char name[MAX_NAME_LEN]",
+      "name_limit": 50,
+      "setter_integer_result": false,
+      "getter_requires_actor": false
+    },
+    "6330-lns-010g": {
       "revision": 6330,
       "engine": "6391",
       "name_declaration": "char name[MAX_NAME_LEN]",
@@ -2051,14 +2611,6 @@
     "8023": {
       "revision": 8023,
       "engine": "8023",
-      "name_declaration": "char name[MAX_NAME_LEN]",
-      "name_limit": 50,
-      "setter_integer_result": false,
-      "getter_requires_actor": false
-    },
-    "6330-lns-010g": {
-      "revision": 6330,
-      "engine": "6391",
       "name_declaration": "char name[MAX_NAME_LEN]",
       "name_limit": 50,
       "setter_integer_result": false,

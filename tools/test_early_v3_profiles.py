@@ -51,6 +51,13 @@ class EarlyV3ProfileTests(unittest.TestCase):
         required = {str(p['build']) for p in contract_profiles(earlier, family)} | set(forward)
         evidence = {str(p['revision']): p['commit'] for p in earlier['sources']}
         evidence.update(forward)
+        later = load_contract_fixture(SOURCE / 'tools/fixtures/profile-forward-registry-ui-contracts.json')
+        self.assertEqual(later['engine'], '4086')
+        for row in later['sources']:
+            label = str(row['revision'])
+            if label in evidence:
+                self.assertEqual(evidence[label], row['commit'])
+            evidence[label] = row['commit']
         self.assertTrue(set(forward) <= {str(p['build']) for p in family})
         base = next(p['commit'] for p in pins['engines'] if p['build'] == '4086')
         for profile in family:

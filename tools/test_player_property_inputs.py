@@ -37,6 +37,17 @@ def program(engine, profiles, *, reject_last_slot=False, history=None, name_capa
     baseline = rename_identifiers(data['getter'] + '\n' + data['setter'], {
         'openbor_getplayerproperty': 'original_get',
         'openbor_changeplayerproperty': 'original_set'})
+    if engine.name == '6391':
+        # The original 5134/6119 getter falls through on a known but
+        # unhandled property, leaving its cleared result available.
+        split = baseline.index('HRESULT original_set')
+        getter, setter = baseline[:split], baseline[split:]
+        getter, defaults = re.subn(r'(?m)(^    default:\r?\n    \{\n)(?=        //printf\("Property name)',
+                                   r'\g<1>        if(obor_profile_build == 5134 || obor_profile_build == 6119) break;\n',
+                                   getter)
+        if defaults != 1:
+            raise ValueError('One frozen getter default required')
+        baseline = getter + setter
     if engine.name == '4432' and 'obor_player_property_native(' in core:
         # This older fixture uses the native mapper with the physical enum in
         # its frozen baseline. Its valid calls predate the new numbered probe.
@@ -50,10 +61,17 @@ def program(engine, profiles, *, reject_last_slot=False, history=None, name_capa
         r'enum (?:get|change)?playerproperty_enum\s*\{.*?\};', core, re.S))
     if not enums:
         raise ValueError('Native player namespaces required')
+    if 'obor_playerproperty_order(' in core:
+        names_table = re.search(r'(?ms)^static const char \*const obor_playerproperty_names\[\] =.*?^\};', core)[0]
+        enums += '\n' + names_table
+        for assignment in ('prop = arg->lVal;', 'prop = varlist[1]->lVal;'):
+            if baseline.count(assignment) == 1:
+                baseline = baseline.replace(assignment, assignment + '\n    prop = obor_playerproperty_native(prop);')
     support = []
     names = ['obor_uses_early_player_properties', 'obor_player_property_native',
                  'obor_player_get_property_native', 'obor_player_set_property_native',
-                 'obor_playerproperty_native',
+                 'obor_playerproperty_order', 'obor_playerproperty_native',
+                 'obor_playerproperty_consumes_value',
                  'mapstrings_playerproperty', 'mapstrings_getplayerproperty',
                  'mapstrings_changeplayerproperty']
     selected = {}
@@ -107,6 +125,10 @@ def program(engine, profiles, *, reject_last_slot=False, history=None, name_capa
                        if 'obor_lns_players' in methods else '')
     if engine.name == '4432' and (history or 'models_cached' in methods):
         profile_support += 'int models_cached;\n'
+    if engine.name == '4086' and 'models_cached' in methods:
+        profile_support += 'unsigned int models_cached;\n'
+    if 'obor_profile_uses_5134_script_ids(' in methods:
+        profile_support += '#include "source/openborscript/profile_ids.h"\n'
     if name_capacity is not None:
         contexts = ['{%du,0,0}' % row['revision'] for row in name_capacity]
         limits = ','.join(str(row['name_bytes']) for row in name_capacity)

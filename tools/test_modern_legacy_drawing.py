@@ -59,7 +59,7 @@ def late_4432_program(data, engine=None):
     script = (engine / 'openborscript.c').read_text()
     variants = (engine / 'source/scriptlib/ScriptVariant.c').read_text()
     registry = '\n'.join(function(script, name) for name in
-                        ('Script_GetFunctionName', 'Script_LoadSystemFunctions'))
+                        ('obor_has_computed_damage', 'Script_GetFunctionName', 'Script_LoadSystemFunctions'))
     getter = 'openbor_getdrawmethod'
     stubs = sorted(set(re.findall(r'\(void\s*\*\)\s*((?:openbor|math|system)_\w+)', registry)) -
                    {getter, 'openbor_get_set_handle', 'openbor_get_layer_handle'})

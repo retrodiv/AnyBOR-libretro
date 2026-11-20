@@ -55,7 +55,11 @@ def program(engine,profiles,*,wrong_reset=False):
         COUNTER='slowmotion[2]' if array else 'slowmotion.counter',
         BYTE=str(int(current['kind']=='byte-array')),
         UNSIGNED='1' if array else ('obor_profile_build<%du'%current['unsigned_before'] if current['unsigned_before'] else '0'),
-        NO_SLOW='scene.boss_slow=noslow?BOSS_SLOW_OFF:BOSS_SLOW_ON;' if 'level->boss_slow' in native else 'scene.noslow=noslow;',
+        NO_SLOW=('if(obor_profile_build >= 4504) scene.boss_slow = noslow ? BOSS_SLOW_OFF : BOSS_SLOW_ON; '
+                 'else scene.noslow = noslow;' if engine.name == '4432' else
+                 'scene.boss_slow = noslow ? BOSS_SLOW_OFF : BOSS_SLOW_ON;' if 'level->boss_slow' in native else
+                 'scene.noslow = noslow;'),
+        ORIGINAL_NO_SLOW='scene.noslow = noslow;' if engine.name == '4432' else '',
         PROFILES=','.join(str(int(p.get('revision',p['build'].split('-')[0])))+'u' for p in profiles))
     text=(HERE/'slowmotion_counter_bounds.c.in').read_text()
     for key,value in values.items():text=text.replace('@'+key+'@',value)

@@ -55,7 +55,7 @@ def program(data):
         if found is None: raise ValueError('Native script result constant required')
         primitives.append(found[0])
     registry = '\n'.join(function(script, name) for name in
-                         ('Script_GetFunctionName', 'Script_LoadSystemFunctions'))
+                         ('obor_has_computed_damage', 'Script_GetFunctionName', 'Script_LoadSystemFunctions'))
     symbols = sorted(set(re.findall(r'\(void\s*\*\)\s*(\w+)', registry)))
     selected = 'openbor_gotomainmenu'
     if not 8 <= len(symbols) <= 512 or selected not in symbols:

@@ -133,6 +133,11 @@ void adjustspeed(float speed, float x, float z, float dx, float dz, float *vx, f
     *vz = 0;
 }
 
+/* The projectile motion cases have no pending landing damage or death. */
+static void obor_check_deferred_landing(void)
+{
+    if(!self || self->damage_on_landing || self->die_on_landing) abort();
+}
 @FUNCTIONS@
 
 static void spawn_cases(void)

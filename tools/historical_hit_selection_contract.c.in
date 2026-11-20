@@ -42,7 +42,7 @@ typedef struct entity {
 
 static struct {
     position position;
-    int type, confirm;
+    int type, confirm, landing_type_valid;
     s_collision_attack *attack;
     s_collision_body *body;
 } lasthit;

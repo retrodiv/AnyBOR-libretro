@@ -34,7 +34,9 @@ class StringCacheQueryTests(unittest.TestCase):
         for engine, options in fixture['engines'].items():
             with self.subTest(engine=engine), tempfile.TemporaryDirectory(prefix='native-string-cache-') as folder:
                 required = {int(p.get('revision', p['build'])) for p in contract_profiles(fixture, pin['profiles']) if p['engine'] == engine}
-                self.assertTrue(required <= set(options['revisions']))
+                # Run the physical cache/font contract at each selectable
+                # revision while retaining all authored source contexts.
+                options = dict(options, revisions=sorted(required | set(options['revisions'])))
                 root = SOURCE / 'src/engines' / engine
                 work = Path(folder)
                 src = work / 'probe.c'

@@ -158,7 +158,11 @@ int main(void)
                expected_join!=joined || expected_lookups!=lookup_count || expected_nav!=nav_count ||
                expected_time!=timeleft || expected_old!=oldtime || expected_show!=fixture_display_state ||
                expected_go!=gosound || expected_credits!=credits){
-                fprintf(stderr,"valid native HUD observations differ\n");return 1;
+                fprintf(stderr,"valid native HUD observations differ: profile=%u seed=%d key=%u frozen=%d "
+                        "blocked=%d same=%d player=%d trace=%d lookups=%u/%u navigation=%u/%u\n",
+                        obor_profile_build,seed,keys[k],frozen,blocked,same,memcmp(expected,player,sizeof(player)),
+                        expected_trace!=trace_hash,expected_lookups,lookup_count,expected_nav,nav_count);
+                return 1;
             }
         }
         for(unsigned k=0;k<8;++k)for(int empty=0;empty<2;++empty){

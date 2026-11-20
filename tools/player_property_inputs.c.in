@@ -139,6 +139,9 @@ static void compare_valid(const char *property,int index,int index_kind,int spaw
     observe(&native,setter?openbor_changeplayerproperty:openbor_getplayerproperty,property,index,index_kind,spawned,setter,length,optional);
     observe(&original,setter?original_set:original_get,property,index,index_kind,spawned,setter,length,optional);
     int native_result=native.status,original_result=original.status;
+    if(native_result!=original_result)
+        fprintf(stderr,"property=%s index=%d index_kind=%d spawned=%d setter=%d length=%d optional=%d results=%d/%d\n",
+                property,index,index_kind,spawned,setter,length,optional,native_result,original_result);
     assert(native_result == original_result);
     assert(native.has_result==original.has_result);
     if(setter && native_result==S_OK)assert(native.has_result==own_integer_result);

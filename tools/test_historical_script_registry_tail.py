@@ -30,7 +30,7 @@ def program(data):
     variants = (library / 'ScriptVariant.c').read_text()
     listing = (library / 'List.c').read_text()
     registry = '\n'.join(function(script, name) for name in
-                         ('Script_GetFunctionName', 'Script_LoadSystemFunctions'))
+                         ('obor_has_computed_damage', 'Script_GetFunctionName', 'Script_LoadSystemFunctions'))
     selected = {'openbor_' + name for name in NAMES}
     symbols = sorted(set(re.findall(r'\(void\s*\*\)\s*(\w+)', registry)))
     if not selected <= set(symbols) or len(symbols) > 512:

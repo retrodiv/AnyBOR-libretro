@@ -31,14 +31,7 @@ def registry_program(data):
     stubs = '\n'.join('static void ' + name + '(void) {}' for name in sorted(refs - set(symbols)))
     code = code.replace('static void unknown_function(void)', stubs + '\nstatic void unknown_function(void)')
     code = code.replace('int main(void) {', method + '\nint main(void) {')
-    previous = r'printf("],\"unknown\":\"%s\"}\n",Script_GetFunctionName((void*)unknown_function));'
-    updated = (r'printf("],\"unknown\":\"%s\",\"attack_mapper\":%d}\n",'
-               'Script_GetFunctionName((void*)unknown_function),'
-               'Script_GetStringMapFunction((void*)openbor_changeattackproperty)=='
-               '(void*)mapstrings_attackproperty);')
-    if code.count(previous) != 1:
-        raise ValueError('One registry observation boundary required')
-    return code.replace(previous, updated), symbols
+    return "#define CHECK_ATTACK_MAPPER\n" + code, symbols
 
 
 def attack_program(data):

@@ -66,6 +66,7 @@ def program(data):
                 ','.join(str(int(v is not None)) for v in row['values'])))
         expectations.append('{%s}' % ','.join(epochs))
     values = dict(METHODS=methods, PARSER=parser,
+        LINE_DIAGNOSTICS=re.search(r'const int line_diagnostics = [^;]+;\s*int warned_unknown = 0;', loader)[0],
         DEFAULT_ERROR=re.search(r'static const char \*defaulterr = [^\n]+;', loader)[0],
         CHKDEF=re.search(r'^#define CHKDEF[^\n]+', loader, re.M)[0],
         ARMS=''.join('case ' + name + ':' + arms[name]['body'] for name in

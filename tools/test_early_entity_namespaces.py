@@ -44,6 +44,11 @@ def selected_dispatch(source, name, labels):
     # The reduced probes define local property selectors and enter downstream of
     # the 4432 ordinal mapping. The entity namespace contract tests that mapping.
     prefix = re.sub(r'\bobor_resolve_entity_property\((arg->lVal|varlist\[1\]->lVal)\)', r'\1', prefix)
+    # This early admission belongs to the sprite-array arm only.
+    sprite_gate = re.search(r'(?ms)^    if\(obor_profile_build >= 4161 && propind == _ep_spritea\)\n'
+                            r'    \{.*?^    \}\n', prefix)
+    if sprite_gate and '_ep_spritea' not in labels:
+        prefix = prefix[:sprite_gate.start()] + prefix[sprite_gate.end():]
     body = '\n'.join('case ' + label + ':' + cases[label]['body'] for label in labels)
     if name == 'openbor_getentityproperty':
         return prefix + 'switch(propind){\n' + body + '\ndefault:*pretvar=NULL;return E_FAIL;}return S_OK;}\n'

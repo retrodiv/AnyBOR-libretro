@@ -54,6 +54,14 @@ void ent_set_anim(entity *ent, int aninum, int resetable)
     selected = aninum;
 }
 
+/* All warp cases use an empty terrain fixture. */
+int checkhole(float x, float z)
+{
+    (void)x;
+    (void)z;
+    if(level->numholes) abort();
+    return 0;
+}
 @GRAB_TABLE@
 @NATIVE@
 

@@ -12,7 +12,7 @@ import re
 import unittest
 
 from contract_fixtures import load_contract_fixture
-from test_historical_player import switch_cases
+from test_historical_player import function, switch_cases
 from test_model_constructor_ownership import run_native
 
 HERE = Path(__file__).resolve().parent
@@ -31,15 +31,31 @@ def program(engine, profiles, *, short_display=False, omit_release=False):
     focus = data.get('display_focus', ['selected'] * len(statements))
     if len(focus) != len(statements) or any(value not in (0, 'selected') for value in focus):
         raise ValueError('Explicit native display focus required for every statement')
+    display_limit = 'sizeof(records[0].dName)'
+    display_helpers = ''
+    if any('obor_profile_name_limit()' in statement for statement in statements):
+        display_helpers = function(source, 'obor_profile_name_limit')
+        display_limit = '(obor_profile_build >= 4283 && obor_profile_build < 4429 ? 48 : 51)'
+    if any('obor_profile_early_save_layout()' in statement for statement in statements):
+        display_helpers = function(source, 'obor_profile_early_save_layout')
+        display_limit = '(obor_profile_build == 5134 || obor_profile_build == 6119 ? 51 : 50)'
     if short_display:
         statements = [s.replace('(int)sizeof(savelevel[saveslot].dName)',
                                 '(int)sizeof(savelevel[saveslot].dName)-1') for s in statements]
     def display_switch(rows):
         return '\n'.join('case %d: %s break;' % (i, s) for i, s in enumerate(rows))
     selector = ''
+    selector_active = '1'
     if data['selector_kind'] != 'entries':
         _, cases = switch_cases(source, 'load_levelorder', 'cmd', outermost=True)
         case = cases['CMD_LEVELORDER_SKIPSELECT']['body']
+        entries = re.search(r'(?ms)^            if\(obor_profile_build >= (\d+)\)\n'
+                            r'            \{\s*le = add_skipselect\(arglist, set\);\s*break;\s*\}', case)
+        if entries:
+            # The new entry ownership uses the complete level-order contract.
+            # This probe retains the earlier per-set replacement cases.
+            selector_active = 'obor_profile_build < ' + entries[1]
+            case = case[:entries.start()] + case[entries.end():]
         if omit_release:
             if case.count('free(set->skipselect[i]);') != 1:
                 raise ValueError('One native replaced selector release required')
@@ -66,7 +82,8 @@ def program(engine, profiles, *, short_display=False, omit_release=False):
         AFTER_DISPLAY=display_switch(statements), DISPLAY_COUNT=str(len(statements)),
         DISPLAY_FOCUS='\n'.join('case %d: return %s;' %
             (i, '(selector == 0)' if value == 'selected' else '0') for i, value in enumerate(focus)),
-        SELECTOR=selector,
+        DISPLAY_LIMIT=display_limit, DISPLAY_HELPERS=display_helpers,
+        SELECTOR=selector, SELECTOR_ACTIVE=selector_active,
         SAVE_STORAGE='#define records savelevel' if re.search(r'^s_savelevel\s+savelevel\[', header, re.M) else
             'static s_savelevel records[2];\ns_savelevel *savelevel=records;',
         PROFILES=','.join(str(oracle['profiles'][p['build']]['revision'])+'u' for p in profiles))
@@ -99,7 +116,7 @@ class LevelConsumerStorageTests(unittest.TestCase):
         profile = next(p for p in pin['profiles'] if p['engine'] == engine.name)
         result = run_native(engine, program(engine, [profile], short_display=True))
         self.assertNotEqual(result.returncode, 0)
-        self.assertIn('strlen(rendered)==length', result.stderr)
+        self.assertIn('strlen(rendered)==visible', result.stderr)
         self.assertNotIn('runtime error:', result.stderr)
         self.assertNotIn('ERROR: AddressSanitizer', result.stderr)
 
@@ -108,8 +125,7 @@ class LevelConsumerStorageTests(unittest.TestCase):
         oracle = load_contract_fixture(FIXTURE)
         key = next(k for k, v in oracle['engines'].items() if v['selector_kind'] == 'set')
         engine = ROOT / 'src/engines' / key
-        profile = max((p for p in pin['profiles'] if p['engine'] == key),
-                      key=lambda p: int(p.get('revision', p['build'].split('-')[0])))
+        profile = next(p for p in pin['profiles'] if p['engine'] == key and p['build'] == key)
         result = run_native(engine, program(engine, [profile], omit_release=True))
         self.assertNotEqual(result.returncode, 0)
         self.assertIn('live_count()==owned_count()', result.stderr)

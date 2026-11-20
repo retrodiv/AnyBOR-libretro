@@ -144,6 +144,16 @@ def render_text_objects(*,revisions,callbacks,mapping,helpers,physical_fixed,
 #ifndef LEVEL_MAX_TEXTOBJS
 #define LEVEL_MAX_TEXTOBJS @SLOTS@
 #endif
+#ifdef OBOR_LEVEL_ARRAYS
+int obor_level_grow_array(s_level *owner, obor_level_array_id id, int count)
+{
+    (void)owner;
+    (void)id;
+    (void)count;
+    CHECK(0, "level-owned growth belongs to the level array contract");
+    return 0;
+}
+#endif
 uint32_t obor_profile_build;
 s_level *level;
 static unsigned observations,diagnostics,orphans;

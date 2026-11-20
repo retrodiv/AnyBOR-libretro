@@ -25,7 +25,14 @@ class Reconstructed6392Tests(unittest.TestCase):
     def test_airborne_juggle_contract_matches_official_and_both_variants(self):
         source = (ENGINE / 'openbor.c').read_text()
         attack = function(source, 'do_attack')
-        start = attack.index('        // If in the air, then check the juggle cost.')
+        anchor = '        const int juggle_on_fall ='
+        support = ''
+        if anchor in attack:
+            profile_ids = (ENGINE / 'source/openborscript/profile_ids.h').read_text()
+            support = function(profile_ids, 'obor_profile_uses_5134_script_ids')
+        else:
+            anchor = '        // If in the air, then check the juggle cost.'
+        start = attack.index(anchor)
         reject = attack[start:attack.index('        temp = self;', start)]
         debit = re.search(r'if\(inair\(self\)\)\s*\{\s*'
                           r'self->modeldata.jugglepoints.current = '
@@ -63,7 +70,7 @@ int main(void){
         }
     }
 }
-'''.replace('@AIR@', function(source, 'diff') + '\n' + function(source, 'inair'))
+'''.replace('@AIR@', support + function(source, 'diff') + '\n' + function(source, 'inair'))
            .replace('@REJECT@', reject).replace('@DEBIT@', debit))
 
     def test_four_incoming_ids_toggle_and_independent_history(self):

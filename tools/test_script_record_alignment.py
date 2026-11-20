@@ -70,19 +70,28 @@ def program(engine, profiles, *, wrong_query=False):
         # Script bytes remain frozen. These inline owners gain exactly one
         # separate text-table ownership pointer ahead of their Script members.
         text_owner = name == 's_level' and engine.name in ('6391','7142','7533','8023')
-        delta = 8 if text_owner else 0
+        position_delta = 8 if text_owner else 0
+        tail_delta = 0
+        if engine.name == '4086':
+            # Parent and entity type precede the spawn script. Vertical
+            # background speed precedes the inline level scripts.
+            position_delta = 12 if name == 's_spawn_entry' else 4 if name == 's_level' else 0
+        elif engine.name == '4432' and name == 's_level':
+            # Two level flags precede the scripts. Array ownership, spawn
+            # views and lifecycle flags follow the scripts.
+            position_delta, tail_delta = 8, 24
         if text_owner:
             checks += [
                 '_Static_assert(sizeof(((s_level*)0)->obor_text_tables)==8,"One text ownership pointer");',
                 '_Static_assert(offsetof(s_level,textobjs)==offsetof(%s,textobjs),"Visible text table offset");' % before,
                 '_Static_assert(offsetof(s_level,obor_text_tables)==offsetof(%s,textobjs)+sizeof(((%s*)0)->textobjs),"Text ownership pointer position");' % (before,before)]
-        checks += ['_Static_assert(sizeof(%s)==sizeof(%s)+%d,"Owner size");' % (name, before, delta),
+        checks += ['_Static_assert(sizeof(%s)==sizeof(%s)+%d,"Owner size");' % (name, before, position_delta + tail_delta),
                    '_Static_assert(_Alignof(%s)==_Alignof(%s),"Owner alignment");' % (name, before),
                    '_Static_assert(_Alignof(Script)<=_Alignof(%s),"Packed Script owner");' % name]
         for field in parent['script_members']:
             if text_owner:
                 checks += ['_Static_assert(offsetof(%s,%s)>=offsetof(%s,textobjs)+sizeof(((%s*)0)->textobjs),"Inline Script follows text ownership slot");' % (before,field,before,before)]
-            checks += ['_Static_assert(offsetof(%s,%s)==offsetof(%s,%s)+%d,"Owner field offset");' % (name, field, before, field, delta),
+            checks += ['_Static_assert(offsetof(%s,%s)==offsetof(%s,%s)+%d,"Owner field offset");' % (name, field, before, field, position_delta),
                        '_Static_assert(offsetof(%s,%s)%%_Alignof(Script)==0,"Inline Script alignment");' % (name, field)]
         offsets.append('static const size_t offsets_%d[]={%s};' %
                        (i, ','.join('offsetof(%s,%s)' % (name, f) for f in parent['script_members'])))

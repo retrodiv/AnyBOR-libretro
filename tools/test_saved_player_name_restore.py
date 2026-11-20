@@ -23,28 +23,44 @@ FIXTURE = HERE / 'fixtures/saved-player-name-native-baseline.json'
 def program(engine, profiles, *, mode='normal'):
     oracle = load_contract_fixture(FIXTURE)
     data = oracle['engines'][engine.name]
-    source = function((engine / 'openbor.c').read_text(encoding='latin1'), 'playgame')
-    copy = data['copy']
-    if source.count(copy) != 1:
-        raise ValueError('One native fixed player-name restore required')
-    tail = source[source.index(copy) + len(copy):]
-    match = re.match(r'\s*(if\(!memchr\(player\[i\]\.name, 0, sizeof\(player\[i\]\.name\)\)\)\s*'
-                     r'player\[i\]\.name\[sizeof\(player\[i\]\.name\) - 1\] = 0;)', tail)
-    if match is None:
-        raise ValueError('The native restore must supply its own termination check')
-    guard = match[1]
-    if mode == 'omit':
-        guard = ''
-    elif mode == 'unconditional':
-        guard = 'player[i].name[sizeof(player[i].name) - 1] = 0;'
-    elif mode != 'normal':
-        raise ValueError('Unknown name-restore control')
+    core = (engine / 'openbor.c').read_text(encoding='latin1')
+    source = function(core, 'playgame')
+    before = data['copy']
+    copy_limit = 'MAX_NAME_LEN'
+    name_helpers = ''
+    replacement = 'obor_profile_copy_name(player[i].name, save->pName[i]);'
+    if replacement in source:
+        if source.count(replacement) != 1 or mode != 'normal':
+            raise ValueError('One profile-aware native name restore required')
+        name_helpers = '\n'.join(function(core, method) for method in
+                                 ('obor_profile_name_limit', 'obor_profile_copy_name'))
+        # Original 4283–4426 use 47 name bytes. From 4429 they use 50.
+        copy_limit = '(obor_profile_build >= 4283 && obor_profile_build < 4429 ? 47 : 50)'
+        before = before.replace('MAX_NAME_LEN', copy_limit)
+        after = replacement
+    else:
+        if source.count(before) != 1:
+            raise ValueError('One native fixed player-name restore required')
+        tail = source[source.index(before) + len(before):]
+        match = re.match(r'\s*(if\(!memchr\(player\[i\]\.name, 0, sizeof\(player\[i\]\.name\)\)\)\s*'
+                         r'player\[i\]\.name\[sizeof\(player\[i\]\.name\) - 1\] = 0;)', tail)
+        if match is None:
+            raise ValueError('The native restore must supply its own termination check')
+        guard = match[1]
+        if mode == 'omit':
+            guard = ''
+        elif mode == 'unconditional':
+            guard = 'player[i].name[sizeof(player[i].name) - 1] = 0;'
+        elif mode != 'normal':
+            raise ValueError('Unknown name-restore control')
+        after = before + '\n' + guard
     header = (engine / 'openbor.h').read_text(encoding='latin1')
     storage = '#define records savelevel' if re.search(r'^s_savelevel\s+savelevel\[', header, re.M) else (
         'static s_savelevel records[2];\ns_savelevel *savelevel=records;')
     values = dict(CONFIG='#include "config.h"' if (engine / 'config.h').is_file() else '',
         SCRIPT_HEADER='openborscript.h' if (engine / 'openborscript.h').is_file() else 'scriptcommon.h',
-        SAVE_STORAGE=storage, BEFORE=copy, AFTER=copy+'\n'+guard,
+        SAVE_STORAGE=storage, BEFORE=before, AFTER=after, NAME_HELPERS=name_helpers,
+        COPY_LIMIT=copy_limit, EXPLICIT_TERMINATION=str(int(bool(name_helpers))),
         PROFILES=','.join(str(oracle['profiles'][p['build']]['revision'])+'u' for p in profiles))
     text = (HERE / 'saved_player_name_restore.c.in').read_text()
     for key, value in values.items():

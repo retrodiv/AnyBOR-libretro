@@ -60,6 +60,8 @@ s_modelcache *model_cache;
     diagnostic = re.findall(r'(?m)^(?:static\s+const\s+char\s*\*\s*E_OUT_OF_MEMORY|char\s+E_OUT_OF_MEMORY\[\])[^;]*;', game)
     if len(diagnostic) != 1:
         raise ValueError('One native constructor diagnostic required')
+    if 'obor_profile_animation_base()' in constructor:
+        constructor = function(game, 'obor_profile_animation_base') + '\n' + constructor
     values = dict(CONFIG='#include "config.h"' if (engine / 'config.h').is_file() else '',
                   SCRIPT_HEADER=header, GLOBALS=globals_, SCRIPT_ALLOCATOR=script_allocator,
                   MODERN_STORAGE=modern_storage, DIAGNOSTIC=diagnostic[0], CONSTRUCTOR=constructor,

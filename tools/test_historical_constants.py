@@ -44,12 +44,16 @@ def check_constants_continuation(log, profile, restarts=0):
         raise RuntimeError('Historical unknown-constant contract differs: ' + log)
 
 
+def script_property_registry(script):
+    return '\n'.join(function(script, name) for name in (
+        'obor_has_computed_damage', 'Script_GetFunctionName', 'Script_LoadSystemFunctions'))
+
+
 def render_set_property_checks(core, script, fixture):
     from test_historical_player import rename_identifiers
 
     api = ('openbor_get_set_property', 'openbor_set_set_property')
-    registry = '\n'.join(function(script, name) for name in
-                         ('Script_GetFunctionName', 'Script_LoadSystemFunctions'))
+    registry = script_property_registry(script)
     symbols = sorted(set(re.findall(r'\(void\s*\*\)\s*((?:openbor|math|system)_\w+)', registry)) - set(api))
     renamed = {name: 'probe_' + name for name in symbols}
     renamed.update(theFunctionList='probe_list', List_Reset='probe_reset', List_InsertAfter='probe_insert')
@@ -85,8 +89,7 @@ def render_level_getter_checks(script, fixture):
     from test_historical_player import rename_identifiers
 
     callback = 'openbor_get_level_property'
-    registry = '\n'.join(function(script, name) for name in
-                         ('Script_GetFunctionName', 'Script_LoadSystemFunctions'))
+    registry = script_property_registry(script)
     symbols = sorted(set(re.findall(r'\(void\s*\*\)\s*((?:openbor|math|system)_\w+)', registry)) - {callback})
     renamed = {name: 'probe_' + name for name in symbols}
     renamed.update(theFunctionList='probe_list', List_Reset='probe_reset', List_InsertAfter='probe_insert')

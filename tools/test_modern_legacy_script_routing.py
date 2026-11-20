@@ -70,12 +70,16 @@ class ModernLegacyScriptRoutingContracts(unittest.TestCase):
             core = (engine / 'openbor.c').read_text(encoding='latin-1')
             name_helpers = '\n'.join(function(core, name) for name in
                                      ('obor_profile_name_limit', 'obor_profile_copy_name'))
+        methods = '\n'.join(function(source, name) for name in methods)
+        if 'obor_profile_uses_5134_script_ids(' in setter + methods:
+            profile_ids = (engine / 'source/openborscript/profile_ids.h').read_text()
+            name_helpers += function(profile_ids, 'obor_profile_uses_5134_script_ids') + '\n'
         values = {
             'VARIANTS': '\n'.join(function(variant, name) for name in ('ScriptVariant_Clear',
                                       'ScriptVariant_ChangeType', 'ScriptVariant_IntegerValue', 'ScriptVariant_DecimalValue')),
             'SEARCH': function(utility, 'searchList'), 'MAP_MACRO': macro,
             'ENUM': re.search(r'enum setspawnentry_enum\s*\{[^}]*\};', source)[0],
-            'METHODS': name_helpers + '\n'.join(function(source, name) for name in methods),
+            'METHODS': name_helpers + methods,
             'SETTER': prefix + 'switch(prop){' + branches + 'default: abort();}\nreturn S_OK;\n' + error,
             'ROWS': ','.join('{%du,%d,%d}' % (row['revision'], row['zero_prime'], row['nonzero_prime'])
                              for row in rows),

@@ -43,7 +43,8 @@ def program(data):
         'VARIANTS': '\n'.join(function(variants, name) for name in names),
         'SEARCH': function((engine / 'source/utils.c').read_text(), 'searchList'),
         'FUNCTIONS': '\n'.join(function(script, name) for name in
-                              ('mapstrings_levelproperty', 'obor_basemap_set_cell',
+                              ('mapstrings_levelproperty', 'obor_terrain_query_selector',
+                               'obor_basemap_set_cell',
                                'openbor_changelevelproperty')),
         'REVISIONS': ','.join(str(row['revision']) for row in data['sources']),
         'CASES': ',\n'.join('{' + ','.join(map(str, [row['width'], row['depth'], row['existing'],

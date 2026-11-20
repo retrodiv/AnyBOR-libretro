@@ -35,7 +35,18 @@ def program(engine, profiles):
         [engine / 'openborscript.h', engine / 'source/openborscript/config.h'] if p.is_file())
     mapper = re.search(r'(void|int)\s+mapstrings_entityproperty\s*\(', headers)
     mapper_type = mapper[1] if mapper else 'void'
-    values = dict(MAPPER_TYPE=mapper_type, MAPPER_RETURN='return 1;' if mapper_type == 'int' else '', CONFIG='#include "config.h"' if (engine / 'config.h').is_file() else '',
+    forward_sprite = engine.name == '4086'
+    guards = '\n'.join(re.search(r'(?m)^#define ' + name + r'\([^\n]+(?:\n[^\n]*)*?\}\)\)', source)[0]
+                       for name in ('OBOR_ANIMATION_OBJECT', 'OBOR_ANIMATION_PIXELS')) if forward_sprite else ''
+    owner_methods = ''
+    if forward_sprite:
+        core = (engine / 'openbor.c').read_text(encoding='latin1')
+        scope = re.search(r'(?ms)^struct obor_animation_actor_scope\n\{[^{}]+^\};', core)[0]
+        owner_methods = scope + '\nstatic struct obor_animation_actor_scope *obor_animation_actors;\n'
+        owner_methods += '\n'.join(function(core, name) for name in
+                                  ('obor_script_animation_owner', 'obor_script_model_animation'))
+    values = dict(FORWARD_SPRITE=str(int(forward_sprite)), GUARDS=guards, OWNERS=owner_methods,
+        MAPPER_TYPE=mapper_type, MAPPER_RETURN='return 1;' if mapper_type == 'int' else '', CONFIG='#include "config.h"' if (engine / 'config.h').is_file() else '',
         SCRIPT_HEADER='openborscript.h' if (engine / 'openborscript.h').is_file() else 'scriptcommon.h',
         PROFILE_HEADER='#include "source/openborscript/profile_ids.h"' if engine.name == '6391' else '',
         ANIMATION_ZERO='obor_animation_public(0,obor_profile_build)' if engine.name == '4086' else 'obor_animation_to_native(0)' if engine.name == '6391' else '0',

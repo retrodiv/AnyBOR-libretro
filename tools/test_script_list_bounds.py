@@ -34,6 +34,10 @@ def mapper_program(script, lookup, *, type_definitions='', revision=3741):
     axis = re.search(r'(?m)^enum _axis_enum\s*\{', script[:start.start()])
     if axis:
         declarations = script[axis.start():start.start()] + declarations
+    forward_start = declarations.find('/* Checked native animation argument access')
+    if forward_start >= 0:
+        forward_end = declarations.index('/* Native entity namespaces', forward_start)
+        declarations = declarations[:forward_start] + declarations[forward_end:]
     # A distinct animation mapper can lie between the entity declarations and
     # entity mapper. It is outside this probe's calls and dependencies.
     animation = re.search(r'(?m)^int mapstrings_animationproperty\(', declarations)
@@ -127,12 +131,14 @@ def lookup_program(functions, cases, *, original=False):
     prefix = r'''
 #include <assert.h>
 #include <ctype.h>
+#include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <strings.h>
 #define stricmp strcasecmp
 static int invalid_index,actual_count;
+static uint32_t obor_profile_build;
 static const char *source_at(const char **list,int length,int index) {
  if(index<0 || index>=length || index>=actual_count) {invalid_index=1;return "";}
  return list[index];
@@ -146,6 +152,7 @@ static const struct engine engines[]={ @CALLS@ };
 int main(void) {
 @OPEN@
  for(unsigned e=0;e<sizeof(engines)/sizeof(*engines);++e) {
+  obor_profile_build=(uint32_t)strtoul(engines[e].name,NULL,10);
   for(unsigned q=0;q<sizeof(queries)/sizeof(*queries);++q) {
    const struct query *query=&queries[q];actual_count=query->count;invalid_index=0;
    int result=engines[e].search(query->names,query->value,query->count);
@@ -218,7 +225,8 @@ class ScriptListTests(unittest.TestCase):
                         '-std=c11', '-Wall', '-Wextra', '-Werror',
                         '-Wno-error=deprecated-declarations', '-Wno-unused-function',
                         '-Wno-unused-variable', '-Wno-unused-const-variable',
-                        '-g', '-fsanitize=address,undefined', str(source),
+                        '-g', '-fsanitize=address,undefined',
+                        '-I' + str(SOURCE / 'src/port/libretro'), str(source),
                         '-o', str(executable)], check=True, timeout=60)
                     subprocess.run([str(executable)], check=True, timeout=20,
                                    env=sanitizer_environment())

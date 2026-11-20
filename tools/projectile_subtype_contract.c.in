@@ -14,6 +14,8 @@
 
 uint32_t obor_profile_build;
 s_level *level;
+static s_set_entry *levelsets;
+static int current_set, num_difficulties;
 s_videomodes videomodes;
 int selectScreen, nodropspawn, MAX_WALL_HEIGHT = 1000;
 float advancex;

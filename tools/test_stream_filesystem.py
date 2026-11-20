@@ -44,9 +44,12 @@ class StreamFilesystemTests(unittest.TestCase):
             root=SOURCE/'src/engines'/engine
             script=(root/'openborscript.c').read_bytes().decode('utf-8','surrogateescape')
             helpers=extract_storage_helpers(script,function,level_table_provider=single_active_table_provider())
-            program=render_filesystem(revisions=[int(engine)],
-                opening=function(script,'openbor_openfilestream'),
-                saving=function(script,'openbor_savefilestream'),helpers=helpers,**options)
+            opening = function(script, 'openbor_openfilestream')
+            saving = function(script, 'openbor_savefilestream')
+            if 'obor_profile_uses_5134_script_ids(' in opening + saving:
+                helpers = '#include "openborscript/profile_ids.h"\n' + helpers
+            program=render_filesystem(revisions=[int(engine)], opening=opening,
+                saving=saving, helpers=helpers, **options)
             source=cls.work/(group+'.c')
             source.write_bytes(bind_named_allocation_support(
                 runtime_profile(program), root).encode('utf-8','surrogateescape'))

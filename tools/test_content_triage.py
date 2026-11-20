@@ -69,7 +69,7 @@ class ContentTriageTests(unittest.TestCase):
 
     def test_missing_exact_profile_checks_proved_model_requirements(self):
         profile, log = self.select('4444', {'data/chars/hero.txt': b'colourdepth 16bit\n'})
-        self.assertEqual(profile, 4432, log)
+        self.assertEqual(profile, 4456, log)
         self.assertIn('name=16bit bounds=', log)
 
     def test_missing_exact_historical_tag_checks_content_before_alias_priority(self):
@@ -87,7 +87,7 @@ class ContentTriageTests(unittest.TestCase):
     def test_missing_exact_profile_requires_one_candidate_to_satisfy_all_facts(self):
         profile, log = self.script('4199',
             'void main(){getentityproperty(self,"animation");movie_load("x");}')
-        self.assertEqual(profile, 4432, log)
+        self.assertEqual(profile, 4213, log)
         self.assertIn('no profile satisfies all proved requirements', log)
         self.assertIn('name=animation bounds=1-4201', log)
         self.assertIn('name=movie_load bounds=', log)
@@ -112,7 +112,7 @@ class ContentTriageTests(unittest.TestCase):
                    'data/scripts/first.c': b'void main(){getentityproperty(self,"animation");}'}
         members.update(('data/unused/%d.txt' % i, b'name unused\n') for i in range(805))
         profile, log = self.select('4444', members)
-        self.assertEqual(profile, 4432, log)
+        self.assertEqual(profile, 4456, log)
         self.assertIn('scan incomplete', log)
         self.assertIn('name=16bit bounds=', log)
         self.assertNotIn('name=animation bounds=', log)
@@ -136,7 +136,7 @@ class ContentTriageTests(unittest.TestCase):
                 'void main(){getentityproperty(self,"animation" + suffix);}',
                 'void getentityproperty(int a,int b){} void main(){getentityproperty(0,"animation");}',
                 '#define ALIAS 1\nvoid main(){getentityproperty(self,"animation");}'):
-            self.assertEqual(self.script('4199', source)[0], 4432, source)
+            self.assertEqual(self.script('4199', source)[0], 4213, source)
         profile, log = self.script('4199',
             'void main(){getentityproperty(getlocalvar("self"),"animation");}')
         self.assertEqual(profile, 4153, log)
@@ -171,11 +171,12 @@ class ContentTriageTests(unittest.TestCase):
                               ('4087',4107),('4088',4088),('4089',4107),
                               ('4107',4107),('4108',4111),('4111',4111),
                               ('4112',4129),('4129',4129),('4130',4153),
-                              ('4153',4153),('4154',4432),
+                              ('4153',4153),('4154',4213),
                               ('4433',4453),('4452',4453),('4453',4453),
-                              ('4454',6330),('6000',6330),('6330',6330),
+                              ('4454',4454),('6000',6119),('6330',6330),
                               ('6331',6391),('6393',6391),('6411',6391)):
-            self.assertEqual(self.select(tag)[0], expected)
+            with self.subTest(tag=tag):
+                self.assertEqual(self.select(tag)[0], expected)
 
     def test_early_api_requirements_match_each_own_source(self):
         fixture = load_contract_fixture(Path(__file__).parent / 'fixtures' /
@@ -363,7 +364,7 @@ class ContentTriageTests(unittest.TestCase):
                     self.assertEqual(profile, fallback, log)
             profile, log = self.select(tag,
                 {'data/chars/hero.txt': b'spdirection 1\ncounterframe 1 1 0\n'})
-            self.assertEqual(profile, 4153, log)
+            self.assertEqual(profile, 4213, log)
 
     def test_early_compatible_alias_retains_filename_priority_over_legacy_preflight(self):
         profile, log = self.script('4108',
@@ -387,10 +388,12 @@ class ContentTriageTests(unittest.TestCase):
     def test_palette_requirement_excludes_only_the_incompatible_revision(self):
         for text in (b'colourdepth 8bit\n', b'colourdepth 16bit\n', b'remap a.gif b.gif\n'):
             profile, log = self.select('44XX', {'data/chars/hero.txt': text})
-            self.assertEqual(profile,4432)
+            self.assertEqual(profile,4456)
             self.assertIn('content rule',log)
             self.assertEqual(self.select('6XXX', {'data/chars/hero.txt': text})[0],6391)
-        self.assertEqual(self.select('44XX', {'data/video.txt': b'colourdepth 32bit\n'})[0],4453)
+        video = {'data/video.txt': b'colourdepth 32bit\n'}
+        self.assertEqual(self.select('44XX', video)[0], 4456)
+        self.assertEqual(self.select('4453', video)[0], 4453)
 
     def test_model_and_binding_boundaries_choose_supported_stable_then_dev(self):
         for text, expected in ((b'boomerang 1\n',6330),(b'ebox 1 2 3 4\n',6391),
@@ -441,7 +444,7 @@ class ContentTriageTests(unittest.TestCase):
         self.assertIn('name=boomerang bounds=',log)
         self.assertEqual(self.select('',members)[0],6391)
         members['data/chars/first.txt']=b'remap first.gif second.gif\n'
-        self.assertEqual(self.select('44XX',members)[0],4432)
+        self.assertEqual(self.select('44XX',members)[0],4456)
 
     def test_incomplete_scan_cannot_prove_native_script_binding(self):
         members={'data/scripts/first.c':b'void main(){unload_model(0);}\n'}
@@ -456,7 +459,7 @@ class ContentTriageTests(unittest.TestCase):
         members={'data/chars/first.txt':b'colourdepth 16bit\n',
                  'data/oversized.txt':b' '*(2*1024*1024+1)}
         profile,log=self.select('44XX',members)
-        self.assertEqual(profile,4432)
+        self.assertEqual(profile,4456)
         self.assertIn('scan incomplete',log)
 
     def test_without_tag_retains_the_existing_content_scan(self):

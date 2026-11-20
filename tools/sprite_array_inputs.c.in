@@ -2,6 +2,7 @@
  * Copyright (c) 2026 retrodiv <retrodiv@proton.me> */
 #include <assert.h>
 #include <limits.h>
+#include <stddef.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -91,8 +92,6 @@ int sprite_map_max_items;
 @HELPERS@
 #undef malloc
 #undef free
-@GETTER@
-@SETTER@
 static entity actor;
 static s_anim animation,*animations[2];
 /* A physical spare slot makes the negative endpoint control an assertion,
@@ -101,6 +100,24 @@ static __typeof__(*animation.sprite) frame_ids[3];
 static s_sprite_map maps[2];
 static s_sprite images[2],replacement;
 @NODE_DECL@
+#if @FORWARD_SPRITE@
+static entity *actors[1] = {&actor};
+static entity **ent_list = actors;
+static int ent_list_size = 1;
+static s_anim_list live_animation = {.anim=&animation};
+size_t obor_allocation_size(const void *pointer) {
+ if(pointer==frame_ids) return (obor_profile_build>=4161 ? 2 : 3)*sizeof(*frame_ids);
+ if(pointer==maps) return sizeof(maps);
+ if(pointer==animations) return sizeof(animations);
+ if(pointer==&node) return sizeof(node);
+ if(pointer==&images[0] || pointer==&images[1] || pointer==&replacement) return sizeof(*images);
+ return 0;
+}
+#endif
+@GUARDS@
+@OWNERS@
+@GETTER@
+@SETTER@
 static char *name;
 static ScriptVariant values[6],*args[6],result,*out;
 static const unsigned profiles[]={@PROFILES@};
@@ -111,6 +128,9 @@ static void reset(void) {
  actor=(entity){0};animation=(s_anim){0};
  memset(maps,0,sizeof(maps));memset(images,0,sizeof(images));
  animation.numframes=2;animation.sprite=frame_ids;frame_ids[0]=0;frame_ids[1]=1;frame_ids[2]=0;
+#if @FORWARD_SPRITE@
+ animation.obor_frame_capacity=2;anim_list=&live_animation;
+#endif
  animations[0]=&animation;animations[1]=NULL;
  actor.modeldata.animation=animations;actor.modeldata.animation_capacity=1;
  actor.animation=&animation;actor.animpos=0;
@@ -168,7 +188,14 @@ static void check_profile(void) {
   reset();values[2].lVal=@SET_CENTER@;args[i]=NULL;
   if(i==2) CHECK(set(6)==E_FAIL);else unchanged_set(6);
  }
- for(int i=2;i<5;++i) { reset();values[i].vt=VT_DECIMAL;empty_get(); }
+ for(int i=2;i<5;++i) {
+  reset();values[i].vt=VT_DECIMAL;
+  /* From 4161 the original getter reads the numeric union member even
+   * when the variant tag differs. Keep the payload valid in this control. */
+  if(@FORWARD_SPRITE@ && obor_profile_build>=4161)
+   CHECK(get(5)==S_OK && out==&result && result.vt==VT_INTEGER && result.lVal==11);
+  else empty_get();
+ }
  for(int i=3;i<5;++i) { reset();values[2].lVal=@SET_CENTER@;values[i].vt=VT_DECIMAL;unchanged_set(6); }
  for(int index=-1;index<3;index+=3) {
   reset();values[3].lVal=index;empty_get();

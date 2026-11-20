@@ -64,7 +64,7 @@ def program(data, webm):
         primitives.append(found[0])
     if declaration is None: raise ValueError('Native variant declarations required')
     registry = '\n'.join(function(script, n) for n in
-                         ('Script_GetFunctionName', 'Script_LoadSystemFunctions'))
+                         ('obor_has_computed_damage', 'Script_GetFunctionName', 'Script_LoadSystemFunctions'))
     symbols = sorted(set(re.findall(r'\(void\s*\*\)\s*(\w+)', registry)))
     if not 8 <= len(symbols) <= 512 or not set(CALLBACKS) <= set(symbols):
         raise ValueError('Bounded native registry and selected symbols required')

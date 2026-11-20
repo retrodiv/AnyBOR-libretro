@@ -60,13 +60,11 @@ static void *store_malloc(size_t bytes)
 
 int main(void)
 {
-    static const unsigned profiles[] = {@PROFILES@};
+    static const struct { unsigned revision, capacity; } profiles[] = {@PROFILES@};
     char empty[] = "", short_text[] = "Native text";
     char edge[MAX_STR_VAR_LEN], over[MAX_STR_VAR_LEN + 1], long_text[513];
     ScriptVariant values[15];
     unsigned cases = 0;
-    memset(edge, 'e', sizeof(edge)); edge[sizeof(edge) - 1] = 0;
-    memset(over, 'o', sizeof(over)); over[sizeof(over) - 1] = 0;
     memset(long_text, 'x', sizeof(long_text)); long_text[sizeof(long_text) - 1] = 0;
     strings[0] = empty; strings[1] = short_text; strings[2] = edge;
     strings[3] = over; strings[4] = long_text;
@@ -84,7 +82,11 @@ int main(void)
     {
         s_textobj object = {0}, fresh = {0};
         allocations = 0; refusal = 0; destination = NULL; destination_bytes = 0;
-        obor_profile_build = profiles[p];
+        obor_profile_build = profiles[p].revision;
+        const unsigned capacity = profiles[p].capacity;
+        CHECK(capacity > 0 && capacity <= MAX_STR_VAR_LEN);
+        memset(edge, 'e', sizeof(edge)); edge[capacity - 1] = 0;
+        memset(over, 'o', sizeof(over)); over[capacity] = 0;
         for(unsigned i = 0; i < sizeof(values) / sizeof(*values); ++i)
         {
             char oracle[1024], previous[MAX_STR_VAR_LEN], expected[MAX_STR_VAR_LEN];
@@ -92,11 +94,12 @@ int main(void)
             memset(&bounded, 0x5a, sizeof(bounded));
             fixture_original_format(&values[i], oracle);
             size_t length = strlen(oracle);
-            int fits = length < MAX_STR_VAR_LEN;
+            int fits = length < capacity;
             char *owner = object.text;
             if(owner) memcpy(previous, owner, sizeof(previous));
             CHECK(obor_textobj_format(&values[i], bounded.data) == fits);
             for(unsigned g = 0; g < 16; ++g) CHECK(bounded.before[g] == 0x5a && bounded.after[g] == 0x5a);
+            for(unsigned g = capacity; g < MAX_STR_VAR_LEN; ++g) CHECK(bounded.data[g] == 0x5a);
             if(fits)
             {
                 CHECK(!strcmp(bounded.data, oracle));

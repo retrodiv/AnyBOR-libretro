@@ -2,6 +2,7 @@
  * Copyright (c) 2026 retrodiv <retrodiv@proton.me>
  */
 #include <stdint.h>
+#include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -26,6 +27,7 @@ static unsigned cases;
 HRESULT Interpreter_Call(Interpreter *p){(void)p;abort();}
 HRESULT Interpreter_EvalInstruction(Interpreter *p){(void)p;abort();}
 @SAVE_STORAGE@
+@DISPLAY_HELPERS@
 static int selector,col2=7,saveslot;
 static char rendered[256];
 static int focus_seen,column_seen,row_seen;
@@ -55,11 +57,12 @@ static void display_checks(void)
         memset(records[0].dName,'%',sizeof(records[0].dName));
         if(length<sizeof(records[0].dName))records[0].dName[length]=0;
         unsigned char before[sizeof(records)];memcpy(before,records,sizeof(records));
-        display(stmt,0);assert(strlen(rendered)==length);
-        for(size_t i=0;i<length;++i)assert(rendered[i]=='%');
+        size_t limit=@DISPLAY_LIMIT@,visible=length<limit?length:limit;
+        display(stmt,0);assert(strlen(rendered)==visible);
+        for(size_t i=0;i<visible;++i)assert(rendered[i]=='%');
         assert(!memcmp(before,records,sizeof(records)));
         assert(focus_seen==display_focus(stmt) && column_seen==col2);
-        if(length<sizeof(records[0].dName))
+        if(length<=limit && length<sizeof(records[0].dName))
         {
             char expected[sizeof(rendered)];memcpy(expected,rendered,sizeof(expected));int row=row_seen;
             display(stmt,1);assert(!strcmp(rendered,expected) && row_seen==row);
@@ -72,6 +75,6 @@ int main(void)
 {
     const uint32_t profiles[]={@PROFILES@};
     for(unsigned i=0;i<sizeof(profiles)/sizeof(*profiles);++i)
-    {obor_profile_build=profiles[i];display_checks();selector_checks();}
+    {obor_profile_build=profiles[i];display_checks();if(@SELECTOR_ACTIVE@)selector_checks();}
     printf("{\"status\":\"PASS\",\"profiles\":%zu,\"cases\":%u}\n",sizeof(profiles)/sizeof(*profiles),cases);return 0;
 }

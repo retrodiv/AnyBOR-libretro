@@ -189,7 +189,8 @@ def system_program(source, header, utilities):
     macro_start = source.index('#define MAPSTRINGS(')
     mapping_macro = source[macro_start:source.index('\n\n', macro_start)]
     helpers = ''
-    for name in ('obor_systemvariant_available', 'obor_systemvariant_native'):
+    for name in ('obor_profile_systemvariant_order', 'obor_systemvariant_available',
+                 'obor_systemvariant_native'):
         if re.search(r'\b' + name + r'\s*\(', source):
             helpers += function(source, name)
     methods = '\n'.join(function(source, name) for name in (
@@ -622,17 +623,24 @@ def frame_boxes_program(source, header):
     store = add[start:add.index('    if(drawmethod->flag)', start)]
     signature = 'hitbox *bbox' if structured else 'int *bbox'
     call = '&bbox_con' if structured else 'bbox_con'
+    allocation_support = ''
+    if 'obor_animation_alloc_table(' in store:
+        allocation_support = (function(source, 'obor_animation_alloc_table')
+                              + '#define E_OUT_OF_MEMORY "allocation error"\n'
+                                'static void shutdown(int code, char *message) { (void)code; (void)message; abort(); }\n')
     return r'''
+#include <stdint.h>
 #include <stddef.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-''' + shape + r'''
+''' + shape + allocation_support + r'''
 typedef struct {hitbox attack_coords;} s_attack;
 typedef struct {hitbox *bbox_coords;s_attack **attacks;int vulnerable[1];} s_anim;
-static void store_boxes(s_anim *a,SIGNATURE,s_attack *attack) {
+static int store_boxes(s_anim *a,SIGNATURE,s_attack *attack) {
     int currentframe=0,framecount=1;
 '''.replace('SIGNATURE', signature) + store + r'''
+    return 1;
 }
 int main(int argc,char **argv) {
     if(argc!=3)return 2;
@@ -643,7 +651,7 @@ int main(int argc,char **argv) {
     if(seed==3){b[2]=0;memcpy(&bbox,b,sizeof(b));}
     s_attack attack;memcpy(&attack.attack_coords,b,sizeof(b));
 ''' + frame + r'''
-    s_anim animation={0};store_boxes(&animation,CALL,&attack);
+    s_anim animation={0};if(store_boxes(&animation,CALL,&attack)!=1)return 3;
     int values[24];memcpy(values,&bbox,24);memcpy(values+6,&bbox_con,24);
     memcpy(values+12,&attack.attack_coords,24);
     if(animation.bbox_coords)memcpy(values+18,animation.bbox_coords,24);

@@ -4708,74 +4708,6 @@ Source: src/engines/7533/source/gamelib/transform.c, src/engines/7533/source/gam
  * Copyright (c)  OpenBOR Team
  */
 
-Source: src/engines/4086/openborscript.c
-/* AnyBOR modification record: 2026-11-17.
- * Port maintained by retrodiv <retrodiv@proton.me>.
- * Copyright (c) 2026 retrodiv <retrodiv@proton.me> (original contributions).
- * These contributions are licensed under BSD-3-Clause; see LICENSE at the root.
- * Upstream code retains its original license and notices.
- * Keep the dormant constant-lowering diagnostic compatible with the single-
- * value instruction layout. Preserve source-defined system, player, drawing,
- * entity and text namespaces, numeric/cached selectors, axis warnings,
- * terrain fields, removed constants and native animation argument/result
- * identities. Retain native antigravity, drop-velocity and height results,
- * shutdown arguments, duration conversions, rush and ground-hit values,
- * block-resource representation, attack staydown return types and script API
- * availability; bound cache and diagnostic access. Preserve spawn-callback
- * locals, grab-script output/validation epochs, takeaction table bounds and
- * seed-script conversion/advance behavior. Derive output names from the
- * content basename with explicit destination capacities, and reject
- * overflowing output path joins. Compact compiler-only instruction records
- * after resolving value ownership, preserving branch and export anchors, all
- * mutable values and exactly-once pool cleanup. Retain shared interpreters
- * through the last script reference while preserving independent variables,
- * replacement and native callbacks. Track diagnostic comments independently
- * so interpreter replacement can retain them. Resolve text-property names
- * within the actual table bounds while preserving native numeric selectors.
- * Reuse each text object's owned buffer when replacing its contents. Reject
- * missing colourtable indices and keep selector arithmetic and table reads
- * defined. Use the declared staydown name-table length for lookup. Transfer
- * loaded stream buffers through aligned local outputs while preserving
- * native record layout and results. Close owned input files after stream
- * loading and on buffer allocation failure. Preserve native mathematical API
- * availability, angle units and inverse-trigonometric branches, with bounded
- * argument access. Select native walking flag access and grab restoration;
- * retain absent versus empty binding axes and partial failure state with
- * bounded arguments. Preserve native indexed array edits, named deletion and
- * size selection; keep aliased values valid across growth and shifting and
- * release deleted list owners safely. Select native byte reads, stream
- * append offsets and counts, save paths and final-newline behavior; bound
- * conversions, allocations, paths and cursor access. Preserve the native
- * attack-property setter availability, reverse names and compiler mapping by
- * profile, with bounded arguments. Restore native animation property reads
- * and writes with profile-selected selectors and registry bindings. Select
- * native player reverse names and custom-menu option routing and hall-of-
- * fame registration by profile. Preserve native player-property ordinals,
- * input arrays, map queries and direction constant admission by profile.
- * Preserve native level-property names, ordinals, speed conversions and
- * integer-member results under decimal tags; refuse undefined integer
- * conversions. Retain native visible frame-count edits with checked integer
- * conversion and physical table growth. Check animation arguments when
- * consumed, retaining ignored trailing slots and source-defined diagnostic
- * order. Bound native per-frame accesses by owned table capacity and
- * validate referenced attack, movement and drawing records before use.
- * Preserve sparse fallbacks, logical-count searches and native reset
- * targets. Bound fixed animation records and sprite-map, node, header and
- * filename access while retaining native pointer assignments, centre updates
- * and accepted filename-value types. Preserve native spawn-property names,
- * numeric order, type conversion and raw parent-value admission by profile.
- * Preserve native integer or floating rotation storage by profile, with
- * unchanged slot size and typed script, parser, mirror, copy and raster
- * access. Bound integer rotation results and initial trigonometric table
- * indices. Preserve native system-variable names, numeric order, source-
- * defined name-search results and cached selectors by profile. Preserve
- * native terrain-query availability, aliases, defaults, consumed arguments
- * and altitude selection, with bounded missing-argument refusal.
- * Existing changes recorded here; this is not their implementation date.
- * See MODIFICATIONS.md and docs/modifications/4086.md
- * at the source repository root. Original notices follow below.
- */
-
 Source: src/engines/3400/source/gamelib/transform.c
 /* AnyBOR modification record: 2026-10-30.
  * Port maintained by retrodiv <retrodiv@proton.me>.
@@ -14222,6 +14154,74 @@ Source: src/deps/libvorbis/lib/lookup.c, src/deps/libvorbis/lib/lookup.h
   function: lookup based functions
 
  ********************************************************************/
+
+Source: src/engines/4086/openborscript.c
+/* AnyBOR modification record: 2026-11-17.
+ * Port maintained by retrodiv <retrodiv@proton.me>.
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me> (original contributions).
+ * These contributions are licensed under BSD-3-Clause; see LICENSE at the root.
+ * Upstream code retains its original license and notices.
+ * Keep the dormant constant-lowering diagnostic compatible with the single-
+ * value instruction layout. Preserve source-defined system, player, drawing,
+ * entity and text namespaces, numeric/cached selectors, axis warnings,
+ * terrain fields, removed constants and native animation argument/result
+ * identities. Retain native antigravity, drop-velocity and height results,
+ * shutdown arguments, duration conversions, rush and ground-hit values,
+ * block-resource representation, attack staydown return types and script API
+ * availability; bound cache and diagnostic access. Preserve spawn-callback
+ * locals, grab-script output/validation epochs, takeaction table bounds and
+ * seed-script conversion/advance behavior. Derive output names from the
+ * content basename with explicit destination capacities, and reject
+ * overflowing output path joins. Compact compiler-only instruction records
+ * after resolving value ownership, preserving branch and export anchors, all
+ * mutable values and exactly-once pool cleanup. Retain shared interpreters
+ * through the last script reference while preserving independent variables,
+ * replacement and native callbacks. Track diagnostic comments independently
+ * so interpreter replacement can retain them. Resolve text-property names
+ * within bounds, preserving native search midpoints and numeric selectors.
+ * Reuse each text object's owned buffer when replacing its contents. Reject
+ * missing colourtable indices and keep selector arithmetic and table reads
+ * defined. Use the declared staydown name-table length for lookup. Transfer
+ * loaded stream buffers through aligned local outputs while preserving
+ * native record layout and results. Close owned input files after stream
+ * loading and on buffer allocation failure. Preserve native mathematical API
+ * availability, angle units and inverse-trigonometric branches, with bounded
+ * argument access. Select native walking flag access and grab restoration;
+ * retain absent versus empty binding axes and partial failure state with
+ * bounded arguments. Preserve native indexed array edits, named deletion and
+ * size selection; keep aliased values valid across growth and shifting and
+ * release deleted list owners safely. Select native byte reads, stream
+ * append offsets and counts, save paths and final-newline behavior; bound
+ * conversions, allocations, paths and cursor access. Preserve the native
+ * attack-property setter availability, reverse names and compiler mapping by
+ * profile, with bounded arguments. Restore native animation property reads
+ * and writes with profile-selected selectors and registry bindings. Select
+ * native player reverse names and custom-menu option routing and hall-of-
+ * fame registration by profile. Preserve native player-property ordinals,
+ * input arrays, map queries and direction constant admission by profile.
+ * Preserve native level-property names, ordinals, speed conversions and
+ * integer-member results under decimal tags; refuse undefined integer
+ * conversions. Retain native visible frame-count edits with checked integer
+ * conversion and physical table growth. Check animation arguments when
+ * consumed, retaining ignored trailing slots and source-defined diagnostic
+ * order. Bound native per-frame accesses by owned table capacity and
+ * validate referenced attack, movement and drawing records before use.
+ * Preserve sparse fallbacks, logical-count searches and native reset
+ * targets. Bound fixed animation records and sprite-map, node, header and
+ * filename access while retaining native pointer assignments, centre updates
+ * and accepted filename-value types. Preserve native spawn-property names,
+ * numeric order, type conversion and raw parent-value admission by profile.
+ * Preserve native integer or floating rotation storage by profile, with
+ * unchanged slot size and typed script, parser, mirror, copy and raster
+ * access. Bound integer rotation results and initial trigonometric table
+ * indices. Preserve native system-variable names, numeric order, source-
+ * defined name-search results and cached selectors by profile. Preserve
+ * native terrain-query availability, aliases, defaults, consumed arguments
+ * and altitude selection, with bounded missing-argument refusal.
+ * Existing changes recorded here; this is not their implementation date.
+ * See MODIFICATIONS.md and docs/modifications/4086.md
+ * at the source repository root. Original notices follow below.
+ */
 
 Source: src/engines/3400/source/gamelib/types.h
 /* AnyBOR modification record: 2026-10-30.

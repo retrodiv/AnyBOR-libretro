@@ -83,7 +83,9 @@ class FontSelectionTests(unittest.TestCase):
         for engine, options in fixture['engines'].items():
             with self.subTest(engine=engine), tempfile.TemporaryDirectory(prefix='native-font-selection-') as folder:
                 required = {int(p.get('revision', p['build'])) for p in contract_profiles(fixture, pin['profiles']) if p['engine']==engine}
-                self.assertTrue(required <= set(options['revisions']))
+                # Run the physical cache/font contract at each selectable
+                # revision while retaining all authored source contexts.
+                options = dict(options, revisions=sorted(required | set(options['revisions'])))
                 root = SOURCE/'src/engines'/engine
                 if options.get('cache_dimension_setter') is not None:
                     function((root/'source/gamelib/font.c').read_text(),options['cache_dimension_setter'])

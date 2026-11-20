@@ -51,6 +51,9 @@ class TextObjectOwnershipTests(unittest.TestCase):
                     if 'obor_textobj_format(' in branch:
                         helper += function(source, 'obor_textobj_store')
                         helper += function(source, 'obor_textobj_format')
+                    if 'obor_script_text_limit(' in helper:
+                        depends = ROOT / 'src/engines' / build / 'source/scriptlib/depends.h'
+                        helper = function(depends.read_text(), 'obor_script_text_limit') + helper
                     profiles = [int(p.get('revision', p['build'])) for p in contract_profiles(fixture, pin['profiles'])
                                 if p['engine'] == build]
                     program = r'''
@@ -60,6 +63,7 @@ class TextObjectOwnershipTests(unittest.TestCase):
 #include <stdlib.h>
 #include <string.h>
 typedef int HRESULT,LONG;
+typedef uint32_t DWORD;
 #define S_OK 0
 #define E_FAIL (-1)
 #define FAILED(x) ((x)<0)
@@ -127,6 +131,7 @@ int main(void) {
                     cc = shlex.split(os.environ.get('HOST_CC', os.environ.get('CC', 'cc')))
                     compile_run = subprocess.run(cc + ['-std=gnu99', '-O1', '-g',
                         '-fsanitize=address,undefined', '-fno-omit-frame-pointer',
+                        '-DOBOR_ENGINE_BUILD=' + build,
                         str(src), '-o', str(exe)], capture_output=True, text=True, timeout=30)
                     self.assertEqual(compile_run.returncode, 0,
                                      compile_run.stdout + compile_run.stderr)

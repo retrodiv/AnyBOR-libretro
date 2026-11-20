@@ -54,8 +54,11 @@ class FilestreamTransferTests(unittest.TestCase):
         for engine,layout in cls.layouts.items():
             root=SOURCE/'src/engines'/engine;script=(root/'openborscript.c').read_text()
             helpers=extract_storage_helpers(script,function,level_table_provider=single_active_table_provider())
+            opening = function(script, 'openbor_openfilestream')
+            if 'obor_profile_uses_5134_script_ids(' in opening:
+                helpers = '#include "openborscript/profile_ids.h"\n' + helpers
             program=render_pak_open(revisions=[int(engine)],
-                opening=function(script,'openbor_openfilestream'),helpers=helpers,
+                opening=opening,helpers=helpers,
                 payload=[97,0,98,10],**{key:layout[key]for key in
                     ['header_includes','level_streams','provider_const_name','owned_extent']})
             source=work/(engine+'.c');source.write_bytes(

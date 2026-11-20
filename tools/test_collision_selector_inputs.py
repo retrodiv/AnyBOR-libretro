@@ -45,7 +45,7 @@ def program(engine, profiles, *, reject_last=False):
             return text
         setter = guard.sub(smaller, setter)
     enums = [m[0] for m in re.finditer(r'enum\s+\w+\s*\{[^{}]*\}\s*;', source)
-             if re.search(r'_(?:cep|ep)_hcd_ground\b', m[0])]
+             if re.search(r'\b_(?:cep|ep)_hcd_ground\b', m[0])]
     if len(enums) != 1:
         raise ValueError('One native collision subproperty enum required')
     macro = re.search(r'(?m)^#define MAPSTRINGS\([^\n]+(?:\n[^\n]*)*?\n}', source)

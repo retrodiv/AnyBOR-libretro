@@ -34,9 +34,13 @@ class TextCollectionPropertyTests(unittest.TestCase):
         for model in fixture['models']:
             with self.subTest(model=model['id']),tempfile.TemporaryDirectory(prefix='text-collection-') as temporary:
                 engine=model['engine'];root=SOURCE/'src/engines'/engine
-                covered={row['profile']for row in model['original_sources']}
-                self.assertTrue({p['build']for p in contract_profiles(fixture, pin['profiles'])if p['engine']==engine}<=covered)
-                self.assertEqual(model['revisions'],sorted({r['revision']for r in model['original_sources']}))
+                originals = model['original_sources']
+                covered = {row['profile'] for row in originals}
+                revisions = sorted({row['revision'] for row in originals})
+                self.assertEqual(model['revisions'], revisions)
+                family = dict(fixture, engine=engine)
+                profiles = contract_profiles(family, pin['profiles'], source_range=(revisions[0], revisions[-1]))
+                self.assertTrue({p['build'] for p in profiles if p['engine'] == engine} <= covered)
                 original=model['original_case_indices'];candidate=model['candidate_only_case_indices']
                 self.assertFalse(set(original)&set(candidate))
                 self.assertEqual(sorted(original+candidate),list(range(len(model['cases']))))
@@ -45,7 +49,10 @@ class TextCollectionPropertyTests(unittest.TestCase):
                     for digest in row['functions'].values():self.assertRegex(digest,r'^[0-9a-f]{64}$')
                 text=(root/'source/openborscript/level.c').read_text()
                 prefix='LEVEL_PROPERTY_' if 'LEVEL_PROPERTY_TEXT_OBJECT_COLLECTION'in text else 'LEVEL_PROP_'
-                code=render_text_collection(revisions=model['revisions'],header_includes=model['header_includes'],
+                headers = model['header_includes']
+                if 'obor_level_property_from_native(' in text:
+                    headers = [*headers, 'source/openborscript/profile_ids.h']
+                code=render_text_collection(revisions=model['revisions'],header_includes=headers,
                     getter=function(text,'openbor_get_level_property'),setter=function(text,'openbor_set_level_property'),
                     declarations=re.search(r'(?m)^#define invalid_pointer_input[^\n]+',text)[0],
                     properties=dict(collection=prefix+'TEXT_OBJECT_COLLECTION',count=prefix+'TEXT_OBJECT_COUNT'),

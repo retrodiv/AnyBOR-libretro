@@ -52,10 +52,25 @@ def program(engine, profiles, *, alter_lookup=False):
         'prevplayermodelcoln', 'selectrandomplayer', 'selectrandomcolourmap',
         'load_cached_model')}
     bodies = []
+    if 'static void obor_draw_status_performance(' in core:
+        performance = function(core, 'obor_draw_status_performance')
+        bodies.append(rename_identifiers(performance, providers))
+    if 'obor_profile_copy_name(' in core:
+        bodies.extend(function(core, name) for name in
+                      ('obor_profile_name_limit', 'obor_profile_copy_name'))
     for label in ('original', 'checked'):
         names = {name: label + '_' + name for name in original}
         for name, baseline in original.items():
             body = baseline if label == 'original' else function(core, name)
+            if label == 'original' and name == 'updatestatus' and engine.name == '4432':
+                # The 4283–4402 callers use nojoin for confirmation and
+                # prompts, without applying it to the inactive-player arm.
+                admission = 'else if( !nojoin && (player[i].credits || credits || (!player[i].hasplayed && noshare)) )'
+                if body.count(admission) != 1:
+                    raise ValueError('One frozen inactive-player branch required')
+                body = body.replace(admission, 'else if((!nojoin || (obor_profile_build >= 4283 && '
+                                   'obor_profile_build < 4403)) && '
+                                   '(player[i].credits || credits || (!player[i].hasplayed && noshare)))')
             if alter_lookup and label == 'checked' and name == 'updatestatus':
                 # A defined valid-input mutation: replace the historical
                 # carried-model choice at confirmation with an extra lookup.

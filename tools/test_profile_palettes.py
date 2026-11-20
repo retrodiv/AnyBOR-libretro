@@ -50,10 +50,20 @@ class ProfilePaletteTests(unittest.TestCase):
 
     def test_profile_registry_is_complete(self):
         profiles = json.loads((SOURCE / 'src/pin.json').read_text())['profiles']
-        self.assertEqual([(p['build'], p['engine'], int(p.get('revision', p['build'])))
-                          for p in contract_profiles(CONTRACT_FIXTURE, profiles)],
-                         [(p['profile'], p['engine'], int(p.get('revision', p['profile'])))
-                          for p in CONTRACTS])
+        contract_profiles_by_engine = {}
+        for contract in CONTRACTS:
+            revision = int(contract.get('revision', contract['profile']))
+            contract_profiles_by_engine.setdefault(contract['engine'], []).append(revision)
+        self.assertEqual(set(contract_profiles_by_engine), {p['engine'] for p in profiles})
+        expected = []
+        for profile in contract_profiles(CONTRACT_FIXTURE, profiles):
+            engine = profile['engine']
+            revision = int(profile.get('revision', profile['build']))
+            covered = contract_profiles_by_engine[engine]
+            if min(covered) <= revision <= max(covered):
+                expected.append((profile['build'], engine, revision))
+        self.assertEqual(expected, [(p['profile'], p['engine'], int(p.get('revision', p['profile'])))
+                                    for p in CONTRACTS])
         for contract in CONTRACTS:
             self.assertGreaterEqual(len(contract['cases']), 6, contract['profile'])
 

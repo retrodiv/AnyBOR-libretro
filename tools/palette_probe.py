@@ -7,7 +7,7 @@ import re
 
 
 def function(source, name):
-    declaration = re.search(r'(?m)^(?:static\s+)?(?:int|void)\s+' + name + r'\s*\(', source)
+    declaration = re.search(r'(?m)^(?:static\s+)?(?:int\s+|void\s+|unsigned char\s*\*\s*)' + name + r'\s*\(', source)
     if declaration is None:
         return ''
     opening = source.index('{', declaration.start())
@@ -39,8 +39,15 @@ def program(image_source, engine_source):
             model_cases.append(candidate)
     if len(model_cases) != 1:
         raise ValueError('Expected one model palette implementation')
-    return PREFIX + pcx + image_source[auto:interface] + '\n' + function(image_source, 'loadimagepalette') + '\n' + ''.join(
-        function(engine_source, name) for name in ('_load_palette16', '_load_palette32', 'load_palette')) + MODEL_PREFIX + model_cases[0] + MODEL_SUFFIX + MAIN
+    helper = ''
+    if 'obor_load_model_palette(' in model_cases[0]:
+        helper = ('#define malloc model_palette_allocate\n#define free model_palette_release\n'
+                  + function(engine_source, 'obor_load_model_palette') + '#undef malloc\n#undef free\n')
+    palette_loader = ''.join(function(engine_source, name)
+                             for name in ('_load_palette16', '_load_palette32', 'load_palette'))
+    return (PREFIX + pcx + image_source[auto:interface] + '\n' + function(image_source, 'loadimagepalette')
+            + '\n' + palette_loader + MODEL_PREFIX.replace('@MODEL_PALETTE_HELPER@', helper)
+            + model_cases[0] + MODEL_SUFFIX + MAIN)
 
 
 PREFIX = r'''
@@ -111,6 +118,10 @@ static int allocated;
 static void *model_palette_allocate(size_t bytes) {
     assert(bytes==(size_t)PAL_BYTES && !allocated); allocated=1; return palette;
 }
+static void model_palette_release(void *pointer) {
+    assert(pointer==palette && allocated); allocated=0;
+}
+@MODEL_PALETTE_HELPER@
 static int model_palette(char *name) {
     struct { unsigned char *palette; } model={NULL}, *newchar=&model;
     char *value=NULL, *value2=NULL, *fileext=NULL, *command="palette";
