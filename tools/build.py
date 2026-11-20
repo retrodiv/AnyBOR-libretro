@@ -510,6 +510,64 @@ def ensure_deps(target):
         build_dep(target, name, fingerprint)
 
 
+def system_dependencies(spec, archive_version):
+    """Find target libraries while preserving the codec allocation wrappers."""
+    if spec["plat"] != "linux" or spec.get("android"):
+        raise ValueError("--system-deps requires a GNU/Linux target.")
+    pkg_config = shlex.split(os.environ.get("PKG_CONFIG", "pkg-config"))
+    if not pkg_config:
+        raise ValueError("PKG_CONFIG must name the target pkg-config executable.")
+    codec_packages = ("vorbisfile", "vorbis", "ogg", "vpx")
+    # Keep the RAR5 decoder at least as recent as the standalone build.
+    shared_packages = ("libpng", "zlib", "libarchive >= " + archive_version)
+
+    def query(options, packages):
+        env = dict(os.environ, PKG_CONFIG_ALLOW_SYSTEM_LIBS="1")
+        try:
+            return subprocess.check_output(pkg_config + list(options) + list(packages),
+                                           env=env, universal_newlines=True, timeout=30)
+        except (OSError, subprocess.SubprocessError) as exc:
+            raise ValueError("Cannot query target pkg-config for {0}: {1}".format(
+                ", ".join(packages), exc))
+
+    archives = {}
+    for package in codec_packages:
+        # A shared decoder's private allocations would bypass ld --wrap and
+        # escape the snapshot arena. Resolve the target's exact static archive
+        # using the same sysroot lookup as its pkg-config libraries.
+        filename = "lib" + package + ".a"
+        paths = [Path(flag[2:]) / filename
+                 for flag in shlex.split(query(("--libs-only-L",), (package,)))
+                 if flag.startswith("-L")]
+        archive = next((path for path in paths if path.is_file()), None)
+        if archive is None:
+            raise ValueError("Target pkg-config must supply {0} for the engine's "
+                             "allocation wrappers.".format(filename))
+        archives[package] = str(archive.resolve())
+
+    cflags = shlex.split(query(("--cflags",), codec_packages + shared_packages))
+    # Record the actual compiler-selected headers so a rebuilt system package
+    # invalidates engine objects even if its version and flags stay the same.
+    includes = ["ogg/ogg.h", "vorbis/codec.h", "vorbis/vorbisfile.h",
+                "vpx/vp8dx.h", "vpx/vpx_decoder.h", "png.h", "zlib.h",
+                "archive.h", "archive_entry.h"]
+    command = (shlex.split(spec["cc"]) + cflags +
+               external_flag_args("CFLAGS", spec, isolated=True) +
+               external_flag_args("CPPFLAGS", spec, isolated=True) +
+               ["-M", "-MT", "headers", "-x", "c", "-"])
+    header_list = subprocess.run(command, input="".join("#include <{}>\n".format(h) for h in includes),
+                                 stdout=subprocess.PIPE, universal_newlines=True, check=True,
+                                 timeout=30).stdout
+    headers = shlex.split(header_list.replace("\\\n", ""))[1:]
+    return {
+        "cflags": cflags,
+        "ldflags": shlex.split(query(("--libs",), shared_packages)),
+        "archives": archives,
+        "archive_sha256": {name: sha256_file(path) for name, path in archives.items()},
+        "headers": {path: sha256_file(path) for path in headers},
+    }
+
+
 def glibc_version(value):
     if not isinstance(value, str) or not re.fullmatch(r"[0-9]+\.[0-9]+(?:\.[0-9]+)?", value):
         raise ValueError("glibc ceiling must be MAJOR.MINOR[.PATCH] or none")
@@ -588,12 +646,15 @@ def build_engine(target, eng, spec, outdir, check_only=False):
     if not (tree / "Makefile.libretro").exists():
         sys.exit('missing generated engine source: {0}'.format(tree))
     dep = deps_prefix(target)
-    if not dep.exists():
+    system = spec.get("system_deps")
+    if not system and not dep.exists():
         sys.exit('missing prepared dependencies for {0}: {1}'.format(target, dep))
     objdir = BUILD_ROOT / "objs" / target / build
     # Make's timestamps alone cannot detect compiler/flag changes or a source
     # regenerated with an older mtime. Fingerprint the actual local inputs.
-    engine_flags = shlex.join([*native_io_flags(spec),*external_flag_args("CFLAGS",spec,isolated=True),*external_flag_args("CPPFLAGS",spec,isolated=True), "-fno-stack-protector"])
+    engine_flags = shlex.join([*native_io_flags(spec), *(system["cflags"] if system else []),
+                               *external_flag_args("CFLAGS",spec,isolated=True),
+                               *external_flag_args("CPPFLAGS",spec,isolated=True), "-fno-stack-protector"])
     if uses_macho(spec):
         # Darwin has no fixed image address: dyld slides and rebases every
         # loaded image, so save states take the rebasing path instead of the
@@ -604,7 +665,8 @@ def build_engine(target, eng, spec, outdir, check_only=False):
         engine_flags += " -DOBOR_FIXED_ELF_IMAGE=1"
     elif uses_fixed_pe_image(spec):
         engine_flags += " -DOBOR_FIXED_PE_IMAGE=1"
-    payload = {"external_flag_policy": EXTERNAL_FLAG_POLICY, "spec": spec, "deps": (dep / ".obor-deps-fingerprint").read_text(encoding="utf-8"),
+    payload = {"external_flag_policy": EXTERNAL_FLAG_POLICY, "spec": spec,
+               "deps": None if system else (dep / ".obor-deps-fingerprint").read_text(encoding="utf-8"),
                "flags": engine_flags,
                "files": {str(p.relative_to(SRC)): sha256_file(p)
                          for root in (tree, SRC / "port/libretro")
@@ -630,7 +692,7 @@ def build_engine(target, eng, spec, outdir, check_only=False):
         'BUILD_NUM={0}'.format(build),
         'PLATFORM={0}'.format(spec['plat']),
         'CC={0}'.format(spec['cc']),
-        'DEPS_PREFIX={0}'.format(dep),
+        'DEPS_PREFIX={0}'.format("" if system else dep),
         'OBJDIR={0}'.format(objdir),
         'PORT_ROOT={0}'.format(SRC / 'port' / 'libretro'),
         'STATIC_PNGZ={0}'.format(1 if spec.get('static_pngz') else 0),
@@ -645,6 +707,16 @@ def build_engine(target, eng, spec, outdir, check_only=False):
                             or spec.get("min_version", "11.0")),
         "USER_CFLAGS=" + engine_flags,
     ]
+    codecs = ['vorbisfile', 'vorbis', 'ogg']
+    if (tree / 'source/webmlib/vidplay.c').is_file() or (tree / 'source/webmlib/movie_playback.c').is_file():
+        codecs.append('vpx')
+    if system:
+        archives = [Path(system["archives"][name]) for name in codecs]
+        mk.append("DEP_ARCH=" + shlex.join(str(path) for path in archives))
+    else:
+        archives = [dep / 'lib' / ('lib' + name + '.a') for name in codecs]
+        if spec.get('static_pngz'):
+            archives += [dep / 'lib/libpng.a', dep / 'lib/libz.a']
     run(mk, cwd=tree)
     obj = objdir / 'obor_engine_{0}.o'.format(build)
     if not obj.exists():
@@ -653,12 +725,6 @@ def build_engine(target, eng, spec, outdir, check_only=False):
         localize_android_engine(objdir, build, spec)
     if spec["plat"] == "windows":
         uniquify_refptr_sections(obj, build, spec)
-    archives = [dep / 'lib' / ('lib' + name + '.a')
-                for name in ('vorbisfile', 'vorbis', 'ogg')]
-    if (tree / 'source/webmlib/vidplay.c').is_file() or (tree / 'source/webmlib/movie_playback.c').is_file():
-        archives.append(dep / 'lib/libvpx.a')
-    if spec.get('static_pngz'):
-        archives += [dep / 'lib/libpng.a', dep / 'lib/libz.a']
     audit_engine(spec, objdir, archives, outdir / ('file-bindings-' + build + '.json'))
     shutil.copy2(str(obj), str(outdir / obj.name))
     stamp.write_text(fingerprint, encoding="utf-8")
@@ -735,7 +801,14 @@ def build_glue(target, spec, outdir):
                  if spec["plat"] == "linux" else [])
     gc_ldflags = (["-Wl,--gc-sections"] if spec["plat"] == "linux" else
                   ["-Wl,-dead_strip"] if uses_macho(spec) else [])
-    archive_include, archive_library = build_archive_reader(target)
+    system = spec.get("system_deps")
+    if system:
+        deps_cflags = system["cflags"]
+        deps_ldflags = system["ldflags"]
+    else:
+        archive_include, archive_library = build_archive_reader(target)
+        deps_cflags = ["-DLIBARCHIVE_STATIC", "-I", archive_include]
+        deps_ldflags = [archive_library]
     miniz_o = outdir / "miniz.o"
     run([spec["cc"], "-O2", "-fPIC", "-fvisibility=hidden",
          *arch_flags(spec), *native_io_flags(spec),
@@ -781,12 +854,12 @@ def build_glue(target, spec, outdir):
         *gc_cflags,
         *glue_defs,
         "-ffile-prefix-map=" + str(HERE) + "=.",
-        "-DOBOR_WITH_RAR5=1", "-DLIBARCHIVE_STATIC", "-I", archive_include,
+        "-DOBOR_WITH_RAR5=1", *deps_cflags,
         "-I", outdir, "-I", SRC / "glue", "-I", third,
         SRC / "glue" / "libretro.cpp",
         miniz_o,
         *compat_objs,
-        *engines, archive_library,
+        *engines, *deps_ldflags,
         "-o", out,
         *gc_ldflags,
         *spec["glue_link"],
@@ -810,6 +883,8 @@ def build_glue(target, spec, outdir):
         cmd += ["-Wl,-z,relro", "-Wl,-z,now", "-Wl,-z,defs",
                 '-Wl,--version-script={0}'.format(SRC / 'glue' / 'exports.map'),
                 "-ldl", "-lm"]
+        if system:
+            cmd.append("-Wl,-z,text")
         if spec.get("android"):
             cmd += ["-static-libstdc++", "-Wl,-z,max-page-size=16384",
                     "-Wl,-z,common-page-size=16384"]
@@ -820,7 +895,7 @@ def build_glue(target, spec, outdir):
             # which 64-bit words in large game buffers happen to look like
             # pointers.  The arena lives separately at 0x2a00000000.
             cmd += ["-Wl,-Ttext-segment=" + fixed_elf_image_base(spec), "-lpthread"]
-        if not spec.get("static_pngz"):
+        if not system and not spec.get("static_pngz"):
             cmd += ["-lpng", "-lz"]
     elif spec["plat"] == "windows":
         # PE savestates carry the same module pointers as ELF states.  Disable
@@ -1045,14 +1120,20 @@ def main():
                     help="dependency Autoconf build (default: CONFIGURE_BUILD; guessed with explicit host)")
     ap.add_argument("--glibc-max", metavar="VERSION|none",
                     help="maximum GNU/Linux glibc requirement (default: GLIBC_MAX, otherwise unchecked)")
+    ap.add_argument("--system-deps", action="store_true",
+                    help="use target pkg-config libraries on GNU/Linux")
     ap.add_argument("--glue-only", action="store_true")
     args = ap.parse_args()
-    epoch = load_pin()["source_date_epoch"]
-    os.environ.setdefault("SOURCE_DATE_EPOCH", str(epoch))
+    pin = load_pin()
+    os.environ.setdefault("SOURCE_DATE_EPOCH", str(pin["source_date_epoch"]))
     try:
         args.target, spec = configure_target(args.target, args.platform,
                                              args.configure_host, args.configure_build, args.glibc_max)
-    except ValueError as exc:
+        if args.system_deps:
+            spec["system_deps"] = system_dependencies(spec, pin["deps"]["libarchive"]["version"])
+            spec["static_pngz"] = False
+            spec["dep_builds"] = ["libogg", "libvorbis", "libvpx"]
+    except (ValueError, subprocess.SubprocessError) as exc:
         ap.error(str(exc))
     outdir = BUILD_ROOT / "dist" / args.target
     outdir.mkdir(parents=True, exist_ok=True)
@@ -1064,8 +1145,9 @@ def main():
     verify_external_file_abi(spec, outdir)
     import release
     source_snapshot = release.source_files(strict=False)
-    ensure_deps(args.target)
-    for eng in load_pin()["engines"]:
+    if not args.system_deps:
+        ensure_deps(args.target)
+    for eng in pin["engines"]:
         build_engine(args.target, eng, spec, outdir, check_only=args.glue_only)
     build_glue(args.target, spec, outdir)
     release.record_build(args.target, spec, outdir, source_snapshot)

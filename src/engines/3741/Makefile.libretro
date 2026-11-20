@@ -181,7 +181,7 @@ else
 FILE_WRAPS += --wrap=open64 --wrap=stat --wrap=stat64 --wrap=chmod
 endif
 ifeq ($(PLATFORM),linux)
-FILE_WRAPS += --wrap=read --wrap=fread
+FILE_WRAPS += --wrap=fopen64 --wrap=read --wrap=fread
 endif
 
 # NOTE (windows): mingw emits a COMDAT .rdata$.refptr.<sym> indirection

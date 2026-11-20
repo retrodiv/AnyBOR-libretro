@@ -195,13 +195,15 @@ def expected_exports():
     return release.expected_exports()
 
 
-def check_binary(path, target=None):
+def check_binary(path, target=None, system_deps=False):
     """Validate a built core: format, architecture, dependencies, exports."""
     path = Path(path)
     if not path.is_file():
         raise RuntimeError("core not found: " + str(path))
     with path.open("rb") as handle:
         head = handle.read(256)
+    if system_deps and (head[:4] != b"\x7fELF" or target == "android-arm64"):
+        raise RuntimeError("System dependencies require a GNU/Linux core")
     expected = expected_exports()
     if head[:4] == b"\xcf\xfa\xed\xfe":
         if target and not target.startswith("macos-"):
@@ -255,6 +257,11 @@ def check_binary(path, target=None):
                     "ld-linux-x86-64.so.2", "ld-linux-aarch64.so.1", "ld-linux-riscv64-lp64d.so.1"})
         if target is None:
             allowed.update(("libc.so", "libdl.so", "libm.so", "liblog.so"))
+        if system_deps:
+            shared = {"libpng16.so.16", "libarchive.so.13"}
+            if not shared <= set(dependencies):
+                raise RuntimeError("Missing system libpng or libarchive dependency")
+            allowed.update(shared | {"libz.so.1"})
         require_dependencies(dependencies, allowed)
         print("ELF core: arch=%s exports=%d deps=%s: OK" %
               (architectures[machine], len(names), ",".join(dependencies)))
@@ -328,6 +335,8 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--binary", type=str)
     parser.add_argument("--sources-only", action="store_true")
+    parser.add_argument("--system-deps", action="store_true",
+                        help="check the shared library imports of a GNU/Linux package build")
     parser.add_argument("--target", choices=("linux-x86_64", "linux-aarch64", "linux-riscv64",
                                              "windows-x86_64", "android-arm64", "macos-x86_64", "macos-arm64"))
     args = parser.parse_args()
@@ -335,7 +344,7 @@ def main():
     if args.binary:
         release.verify_notices(Path(args.binary))
         print("Matching notices embedded in binary: OK")
-        check_binary(args.binary, args.target)
+        check_binary(args.binary, args.target, system_deps=args.system_deps)
     if not args.sources_only:
         primitives()
 

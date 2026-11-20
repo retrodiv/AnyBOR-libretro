@@ -120,6 +120,14 @@ FILE *__wrap_fopen(const char *path, const char *mode)
     return tracked_fopen(path, mode);
 }
 
+#if defined(__linux__)
+/* Target codec archives can be built with large-file redirection. */
+FILE *__wrap_fopen64(const char *path, const char *mode)
+{
+    return tracked_fopen(path, mode);
+}
+#endif
+
 /* Relative paths belong to the engine session, including metadata and
  * script writes. Only actual I/O resolves a path; yielding a frame does not.
  * The partial-link wrappers are confined to this engine's symbol namespace. */

@@ -125,7 +125,18 @@ consume the library and its `build.json` receipt only from
 `$OBOR_BUILD_ROOT/dist/<target>/`; managed builds do not overwrite a library
 in the source root. Ordinary `make` without this variable retains the
 conventional root library for frontend/buildbot compatibility. Dependencies
-are built from `src/deps/`; there is no download or prebuilt-library fallback.
+are built from `src/deps/` by default.
+
+GNU/Linux package builds can opt in with `make SYSTEM_DEPS=1` or
+`python3 tools/build.py --system-deps`. Set `PKG_CONFIG` and its search environment
+to select the target sysroot. The build uses the target's shared libpng, zlib
+and libarchive and takes the PIC static libogg, libvorbis, libvorbisfile and
+libvpx archives from that same sysroot. The partial link keeps codec
+allocations in each engine's snapshot arena. The libarchive version must be
+at least the one pinned for the standalone build. The build receipt records
+the selected archive hashes and pkg-config flags. Use
+`make check-binary SYSTEM_DEPS=1 BINARY=anybor_libretro.so` to check package
+builds. Release ZIPs use the default standalone build.
 
 External toolchains can set `CONFIGURE_HOST` and `CONFIGURE_BUILD` to the
 Autoconf system triplets used by libpng, libogg and libvorbis. For a Buildroot

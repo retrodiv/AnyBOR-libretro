@@ -218,6 +218,13 @@ def record_build(target, spec, outdir, expected_sources):
         "binary_format": binary_format,
         "notice_sha256": sha256(ROOT / "NOTICE.txt"),
     }
+    if spec.get("system_deps"):
+        system = spec["system_deps"]
+        receipt["system_dependencies"] = {
+            "archive_sha256": system["archive_sha256"],
+            "cflags": system["cflags"],
+            "ldflags": system["ldflags"],
+        }
     (outdir / "build.json").write_text(json.dumps(receipt, indent=2, sort_keys=True) + "\n", encoding="utf-8")
 
 
