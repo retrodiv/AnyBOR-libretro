@@ -1,0 +1,118 @@
+/* SPDX-License-Identifier: BSD-3-Clause
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me>
+ */
+#include <stdio.h>
+#include <stdlib.h>
+#include "openbor.h"
+#include "profile_ids.h"
+#undef printf
+#undef calloc
+#undef free
+#undef assert
+#include <assert.h>
+
+uint32_t obor_profile_build;
+int max_attack_types;
+u32 _time = 900;
+entity *self;
+s_axis_principal_float default_model_dropv = {.x = -0.75f, .y = 2.5f, .z = 1.25f};
+@DEFAULTS@
+@DROP@
+
+static const struct context { unsigned revision; int native_maximum, last_slot; } contexts[] = {
+@CONTROLS@
+};
+static const struct context *active;
+static entity summoner, child;
+static unsigned hits, removals;
+
+static int allows_pain(s_collision_attack *attack)
+{
+@STORE@
+    return @PAIN@;
+}
+
+static int take_damage(entity *other, s_collision_attack *attack, int fall_flag)
+{
+    assert(self == &child && other == &child && fall_flag == 0);
+    const int expected = obor_attack_to_native(max_attack_types) - active->last_slot;
+    const int observed = obor_attack_to_native(attack->attack_type);
+    if(observed != expected)
+        fprintf(stderr, "%u unsummon selector %d instead of %d\n", obor_profile_build, observed, expected);
+    assert(observed == expected);
+    assert(attack->attack_type == obor_attack_from_native(expected));
+    assert(attack->attack_force == 37);
+    assert(attack->dropv.x == -0.75f && attack->dropv.y == 2.5f && attack->dropv.z == 1.25f);
+    assert(attack->tag == emptyattack.tag && attack->blocksound == emptyattack.blocksound);
+    s_collision_attack reaction = *attack;
+    reaction.attack_drop = 1;
+    reaction.attack_force = 6;
+    checkdamagedrop(&reaction);
+    assert(child.knockdowncount == (active->last_slot ? 5 : 8));
+    assert(allows_pain(&reaction) == active->last_slot);
+    assert(child.last_damage_type == (active->last_slot ? attack->attack_type : ATK_NORMAL));
+    assert(reaction.attack_type == attack->attack_type);
+    ++hits;
+    return 1;
+}
+
+void kill_entity(entity *victim)
+{
+    assert(victim == &child && self == &child);
+    victim->exists = 0;
+    ++removals;
+}
+
+static void run_frame(entity *ent, unsigned f)
+{
+    s_anim *anim = ent->animation;
+    s_collision_attack attack;
+@UNSUMMON@
+}
+
+static void check(int extra_types)
+{
+    obor_profile_build = active->revision;
+    max_attack_types = MAX_ATKS + extra_types;
+    assert(obor_attack_to_native(max_attack_types) == active->native_maximum + extra_types);
+    s_defense *defenses = calloc((size_t)max_attack_types, sizeof(*defenses));
+    assert(defenses);
+    defenses[ATK_NORMAL].knockdown = 2;
+    defenses[ATK_NORMAL].pain = 9;
+    if(active->last_slot)
+    {
+        const int slot = obor_attack_from_native(active->native_maximum + extra_types - 1);
+        assert(slot >= 0 && slot < max_attack_types);
+        defenses[slot].knockdown = 5;
+        defenses[slot].pain = 3;
+    }
+    s_anim animation = {.unsummonframe = 3};
+    summoner = (entity){.animation = &animation, .subentity = &child};
+    child = (entity){.exists = 1, .takedamage = take_damage, .defense = defenses, .knockdowncount = 10};
+    child.energy_status.health_current = 37;
+    self = &summoner;
+    hits = removals = 0;
+    run_frame(&summoner, 2);
+    assert(!hits && !removals && summoner.subentity == &child);
+    run_frame(&summoner, 3);
+    assert(hits == 1 && !removals && self == &summoner && !summoner.subentity);
+    run_frame(&summoner, 3);
+    assert(hits == 1 && !removals);
+    child.takedamage = NULL;
+    summoner.subentity = &child;
+    run_frame(&summoner, 3);
+    assert(hits == 1 && removals == 1 && !child.exists && self == &summoner && !summoner.subentity);
+    free(defenses);
+}
+
+int main(void)
+{
+    for(size_t i = 0; i < sizeof(contexts) / sizeof(*contexts); ++i)
+    {
+        active = &contexts[i];
+        check(0);
+        check(4);
+    }
+    printf("PASS %zu\n", sizeof(contexts) / sizeof(*contexts));
+    return 0;
+}

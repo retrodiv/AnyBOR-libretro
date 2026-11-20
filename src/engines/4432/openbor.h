@@ -10,7 +10,8 @@
  * request storage and script entry points by profile. Retain the historical
  * last-hit scalar independently of the live attack reference. Define native
  * set property selectors and retain ownership of their level orders. Define
- * the active player spawn extent and native level flags. Store star launch
+ * the active player spawn extent and native level flags. Store owned and
+ * live body coordinate references for the 4905 selector. Store star launch
  * multipliers with their animation.
  * Existing changes recorded here; this is not their implementation date.
  * See MODIFICATIONS.md and docs/modifications/4432.md
@@ -82,7 +83,7 @@
 			"\n" \
 			"Special thanks to SEGA and SNK.\n\n"
 
-#define		COMPATIBLEVERSION	((obor_profile_build >= 4574 && obor_profile_build <= 4750) ? 0x00033748u : 0x00033747u)
+#define		COMPATIBLEVERSION	((obor_profile_build >= 4574 && obor_profile_build <= 4905) ? 0x00033748u : 0x00033747u)
 #define		CV_SAVED_GAME		0x00033747
 #define		CV_HIGH_SCORE		0x00033747
 #define     GAME_SPEED          200
@@ -1419,6 +1420,12 @@ typedef struct
 
 typedef struct
 {
+    s_hitbox box;
+    unsigned references;
+} s_body_hitbox;
+
+typedef struct
+{
     float       blockpower;     // If > unblockable, this attack type is blocked.
     float       blockthreshold; // Strongest attack from this attack type that can be blocked.
     float       blockratio;     // % of damage still taken from this attack type when blocked.
@@ -1439,6 +1446,7 @@ typedef struct
     s_defense   *defense;       // Defense properties for this collision box only.
     int         index;          // To enable user tracking of this box's index when multiple instances are in use.
     int         tag;            // User defined tag for scripts. No hard coded purpose.
+    s_hitbox    *obor_owned_coords;
 } s_collision_body;
 
 // Caskey, Damon V.

@@ -22,7 +22,19 @@
  * aligned local outputs while preserving native record layout and results.
  * Close owned input files after stream loading and on buffer allocation
  * failure. Preserve modified 6330 LNS script property numbering, result
- * types, deferred loads and player state.
+ * types, deferred loads and player state. Count scripted boss spawns in the
+ * counters used by each profile. Use the original path capacities when
+ * opening or saving script file streams. Preserve the native formatted text
+ * widths for script drawing and logging. Record complete input recording
+ * names within the selected profile's path capacities. Retain the original
+ * AI flag names, numeric selectors and delay factor result type. Return the
+ * native empty or failed result for unknown numeric player properties.
+ * Preserve the 5134 and 6119 legacy entity property names, numbering and
+ * boomerang dispatch. Store legacy animation direction as a boolean for 5134
+ * and 6119. Preserve the original default script wall lookup altitude in
+ * 5134 and 6119. Preserve the 5134 and 6119 system variable names, numeric
+ * selectors and coordinate writes. Preserve the 32-bit representation of
+ * script-written player inputs in 5134 and 6119.
  * Existing changes recorded here; this is not their implementation date.
  * See MODIFICATIONS.md and docs/modifications/6391.md
  * at the source repository root. Original notices follow below.
@@ -1362,9 +1374,35 @@ static const char *obor_svlist6330lns[] =
     "ypos",
 };
 
+static bool obor_uses_6119_systemvariants(void)
+{
+    return obor_profile_build == 5134 || obor_profile_build == 6119;
+}
+
+static int obor_systemvariant_6119_native(int index)
+{
+    if(index >= _sv_in_sa_count - 2) return _sv_the_end;
+    if(index >= _sv_bossescount) ++index;
+    if(index >= _sv_numbosses) ++index;
+    return index;
+}
+
+static HRESULT obor_systemvariant_decimal_value(ScriptVariant *value, DOUBLE *out)
+{
+    if(obor_uses_6119_systemvariants())
+    {
+        LONG integer_value;
+        HRESULT status = ScriptVariant_IntegerValue(value, &integer_value);
+        if(SUCCEEDED(status)) *out = (float)integer_value;
+        return status;
+    }
+    return ScriptVariant_DecimalValue(value, out);
+}
+
 /* LNS inserts in_sa_count before in_selectscreen in its native namespace. */
 static int obor_systemvariant_native(int index)
 {
+    if(obor_uses_6119_systemvariants()) return obor_systemvariant_6119_native(index);
     if(obor_profile_features & OBOR_PROFILE_LNS_6330)
     {
         if(index == _sv_in_selectscreen) return _sv_in_sa_count;
@@ -1381,7 +1419,18 @@ int mapstrings_systemvariant(ScriptVariant **varlist, int paramCount)
     int prop;
 
 
-    if(obor_profile_features & OBOR_PROFILE_LNS_6330)
+    if(obor_uses_6119_systemvariants())
+    {
+        if(varlist[0]->vt != VT_STR) return 1;
+        const char *legacy_names[_sv_in_sa_count - 2];
+        for(int i = 0; i < _sv_in_sa_count - 2; ++i)
+        {
+            legacy_names[i] = svlist[obor_systemvariant_6119_native(i)];
+        }
+        MAPSTRINGS(varlist[0], legacy_names, _sv_in_sa_count - 2,
+                   "openborvariant: System variable name not found: '%s'\n");
+    }
+    else if(obor_profile_features & OBOR_PROFILE_LNS_6330)
     {
     MAPSTRINGS(varlist[0], obor_svlist6330lns, _sv_the_end,
                "openborvariant: System variable name not found: '%s'\n");
@@ -1474,6 +1523,24 @@ changesystemvariant_error:
 
 }
 
+static int obor_script_display_text(ScriptVariant *value, char buffer[MAX_BUFFER_LEN])
+{
+    const size_t capacity = obor_profile_uses_5134_script_ids() ? 256 : MAX_BUFFER_LEN;
+    if(value->vt == VT_STR)
+    {
+        const char *text = StrCache_GetIfPresent(value->strVal);
+        if(!text) return 0;
+        const size_t length = strlen(text);
+        if(length >= capacity) return 0;
+        memcpy(buffer, text, length + 1);
+        return 1;
+    }
+
+    // Native non-string values fit MAX_BUFFER_LEN, including a fixed-format double.
+    ScriptVariant_ToString(value, buffer);
+    return strlen(buffer) < capacity;
+}
+
 // use font_printf to draw string
 //drawstring(x, y, font, string, z);
 HRESULT openbor_drawstring(ScriptVariant **varlist , ScriptVariant **pretvar, int paramCount)
@@ -1506,7 +1573,7 @@ HRESULT openbor_drawstring(ScriptVariant **varlist , ScriptVariant **pretvar, in
     {
         value[3] = 0;
     }
-    ScriptVariant_ToString(varlist[3], buf);
+    if(!obor_script_display_text(varlist[3], buf)) return E_FAIL;
     font_printf((int)value[0], (int)value[1], (int)value[2], (int)value[3], "%s", buf);
     return S_OK;
 
@@ -1548,7 +1615,7 @@ HRESULT openbor_drawstringtoscreen(ScriptVariant **varlist , ScriptVariant **pre
         }
     }
 
-    ScriptVariant_ToString(varlist[4], buf);
+    if(!obor_script_display_text(varlist[4], buf)) return E_FAIL;
     screen_printf(scr, (int)value[0], (int)value[1], (int)value[2], "%s", buf);
     return S_OK;
 
@@ -1569,7 +1636,7 @@ HRESULT openbor_log(ScriptVariant **varlist , ScriptVariant **pretvar, int param
         goto drawstring_error;
     }
 
-    ScriptVariant_ToString(varlist[0], buf);
+    if(!obor_script_display_text(varlist[0], buf)) return E_FAIL;
     printf("%s", buf);
     return S_OK;
 
@@ -2817,6 +2884,19 @@ static const char *eplist_aiflag[] =
     "walkmode",
 };
 
+/* Early script arguments retain their compact indices even after a name
+ * has been resolved and cached as an integer. */
+enum { OBOR_EARLY_AIFLAG_COUNT = _ep_aiflag_the_end - 3 };
+
+static int obor_aiflag_from_native(LONG native)
+{
+    if(!obor_profile_uses_5134_script_ids()) return native;
+    if(native >= OBOR_EARLY_AIFLAG_COUNT) return -1;
+    if(native >= _ep_aiflag_riseattacking - 1) return native + 3;
+    if(native >= _ep_aiflag_ducking) return native + 1;
+    return native;
+}
+
 enum boomerang_enum
 {
     _ep_boomerang_acceleration,
@@ -3872,11 +3952,29 @@ static const char *obor_eplist6330lns[] =
     "zdir",
 };
 
+enum
+{
+    OBOR_6330_ENTITY_EDGE_ORDINAL = 54,
+    OBOR_6330_ENTITY_PREVANIMATION_ORDINAL = 135,
+    OBOR_5134_ENTITY_PROPERTY_COUNT = sizeof(obor_entityproperty6330) / sizeof(*obor_entityproperty6330) - 3,
+};
+
+/* 5134 and 6119 precede the edge, edgerange and prevanimationid entries. */
+static int obor_entityproperty_5134_index(int native)
+{
+    if(native >= OBOR_6330_ENTITY_EDGE_ORDINAL) native += 2;
+    if(native >= OBOR_6330_ENTITY_PREVANIMATION_ORDINAL) ++native;
+    return native;
+}
+
 static int obor_entityproperty(int native)
 {
     if(obor_profile_features & OBOR_PROFILE_LNS_6330)
         return native >= 0 && native < (int)(sizeof(obor_entityproperty6330lns)/sizeof(*obor_entityproperty6330lns))
             ? obor_entityproperty6330lns[native] : _ep_the_end;
+    if(obor_profile_uses_5134_script_ids())
+        return native >= 0 && native < OBOR_5134_ENTITY_PROPERTY_COUNT
+            ? obor_entityproperty6330[obor_entityproperty_5134_index(native)] : _ep_the_end;
     if(obor_profile_build != 6330) return native >= 0 && native < _ep_boomerang ? native : _ep_the_end;
     return native >= 0 && native < (int)(sizeof(obor_entityproperty6330)/sizeof(*obor_entityproperty6330))
         ? obor_entityproperty6330[native] : _ep_the_end;
@@ -4271,6 +4369,17 @@ int mapstrings_entityproperty(ScriptVariant **varlist, int paramCount)
         MAPSTRINGS(varlist[1], obor_eplist6330lns, sizeof(obor_eplist6330lns)/sizeof(*obor_eplist6330lns),
                    "Property name '%s' is not supported by function getentityproperty.\n");
     }
+    else if(obor_profile_uses_5134_script_ids())
+    {
+        if(varlist[1]->vt == VT_STR)
+        {
+            const char *names[OBOR_5134_ENTITY_PROPERTY_COUNT];
+            for(int i = 0; i < OBOR_5134_ENTITY_PROPERTY_COUNT; ++i)
+                names[i] = obor_eplist6330[obor_entityproperty_5134_index(i)];
+            MAPSTRINGS(varlist[1], names, OBOR_5134_ENTITY_PROPERTY_COUNT,
+                       "Property name '%s' is not supported by function getentityproperty.\n");
+        }
+    }
     else if(obor_profile_build == 6330)
     {
         MAPSTRINGS(varlist[1], obor_eplist6330, sizeof(obor_eplist6330)/sizeof(*obor_eplist6330),
@@ -4301,13 +4410,25 @@ int mapstrings_entityproperty(ScriptVariant **varlist, int paramCount)
     // map subproperties of aiflag property
     case _ep_aiflag:
     {
-        MAPSTRINGS(varlist[2], eplist_aiflag, _ep_aiflag_the_end,
-                   _is_not_a_known_subproperty_of_, eps);
+        if(varlist[2]->vt == VT_STR && obor_profile_uses_5134_script_ids())
+        {
+            const char *names[OBOR_EARLY_AIFLAG_COUNT];
+            for(int i = 0; i < OBOR_EARLY_AIFLAG_COUNT; ++i)
+                names[i] = eplist_aiflag[obor_aiflag_from_native(i)];
+            MAPSTRINGS(varlist[2], names, OBOR_EARLY_AIFLAG_COUNT,
+                       _is_not_a_known_subproperty_of_, eps);
+        }
+        else
+        {
+            MAPSTRINGS(varlist[2], eplist_aiflag, _ep_aiflag_the_end,
+                       _is_not_a_known_subproperty_of_, eps);
+        }
         break;
     }
     // map subproperties of edgerange property
     case _ep_boomerang:
     {
+        if(obor_profile_uses_5134_script_ids()) break;
         MAPSTRINGS(varlist[2], eplist_boomerang, _ep_boomerang_the_end,
                    _is_not_a_known_subproperty_of_, eps);
         break;
@@ -4565,7 +4686,7 @@ HRESULT openbor_getentityproperty(ScriptVariant **varlist , ScriptVariant **pret
         ltemp = arg->lVal;
 
         ScriptVariant_ChangeType(*pretvar, VT_INTEGER);
-        switch(ltemp)
+        switch(obor_aiflag_from_native(ltemp))
         {
         case _ep_aiflag_dead:
             (*pretvar)->lVal = (LONG)ent->dead;
@@ -4861,6 +4982,23 @@ HRESULT openbor_getentityproperty(ScriptVariant **varlist , ScriptVariant **pret
     }
     case _ep_boomerang:
     {
+        if(obor_profile_uses_5134_script_ids())
+        {
+            if(paramCount >= 3)
+            {
+                ScriptVariant_ChangeType(*pretvar, VT_DECIMAL);
+                if(SUCCEEDED(ScriptVariant_IntegerValue(varlist[2], &ltemp)))
+                {
+                    (*pretvar)->dblVal = ltemp == 0 ? (DOUBLE)ent->modeldata.boomerang_prop.acceleration
+                                                  : (DOUBLE)ent->modeldata.boomerang_prop.hdistance;
+                    break;
+                }
+            }
+            printf("You must specify a flag value for boomerang property (0 = acceleration, 1 = distance_x).\n");
+            *pretvar = NULL;
+            return E_FAIL;
+        }
+
         if(paramCount < 3)
         {
             break;
@@ -5216,7 +5354,8 @@ HRESULT openbor_getentityproperty(ScriptVariant **varlist , ScriptVariant **pret
         }
         case _ep_edelay_factor:
         {
-            ScriptVariant_ChangeType(*pretvar, VT_DECIMAL);
+            if(!obor_profile_uses_5134_script_ids())
+                ScriptVariant_ChangeType(*pretvar, VT_DECIMAL);
             (*pretvar)->dblVal = (DOUBLE)ent->modeldata.edelay.factor;
             break;
         }
@@ -6931,7 +7070,7 @@ HRESULT openbor_changeentityproperty(ScriptVariant **varlist , ScriptVariant **p
 
         if(SUCCEEDED(ScriptVariant_IntegerValue(varlist[3], &ltemp)))
         {
-            switch(varlist[2]->lVal)
+            switch(obor_aiflag_from_native(varlist[2]->lVal))
             {
             case _ep_aiflag_dead:
                 ent->dead = (LONG)ltemp;
@@ -6994,7 +7133,7 @@ HRESULT openbor_changeentityproperty(ScriptVariant **varlist , ScriptVariant **p
                 ent->toexplode = (LONG)ltemp;
                 break;
             case _ep_aiflag_animating:
-                ent->animating = (LONG)ltemp;
+                ent->animating = (obor_profile_build == 5134 || obor_profile_build == 6119) ? (ltemp != 0) : (LONG)ltemp;
                 break;
             case _ep_aiflag_blink:
                 ent->blink = (LONG)ltemp;
@@ -7148,6 +7287,20 @@ HRESULT openbor_changeentityproperty(ScriptVariant **varlist , ScriptVariant **p
     }
     case _ep_boomerang:
     {
+        if(obor_profile_uses_5134_script_ids())
+        {
+            DOUBLE distance;
+            if(paramCount < 4 || FAILED(ScriptVariant_DecimalValue(varlist[2], &dbltemp)) ||
+                FAILED(ScriptVariant_DecimalValue(varlist[3], &distance)))
+            {
+                printf("You must specify 2 float values to change boomerang property (acceleration anddistance_x).\n");
+                return E_FAIL;
+            }
+            ent->modeldata.boomerang_prop.acceleration = (float)dbltemp;
+            ent->modeldata.boomerang_prop.hdistance = (float)distance;
+            break;
+        }
+
         if(varlist[2]->vt != VT_INTEGER)
         {
             if(varlist[2]->vt != VT_STR)
@@ -9329,10 +9482,9 @@ HRESULT openbor_getplayerproperty(ScriptVariant **varlist , ScriptVariant **pret
     }
     default:
     {
-        //printf("Property name '%s' is not supported by function getplayerproperty.\n", propname);
+        if(obor_profile_uses_5134_script_ids()) break;
         *pretvar = NULL;
         return E_FAIL;
-        break;
     }
     //this property is not known
     //default:{
@@ -9347,6 +9499,7 @@ HRESULT openbor_getplayerproperty(ScriptVariant **varlist , ScriptVariant **pret
 HRESULT openbor_changeplayerproperty(ScriptVariant **varlist , ScriptVariant **pretvar, int paramCount)
 {
     LONG ltemp, ltemp2;
+    const bool early_input_masks = obor_profile_build == 5134 || obor_profile_build == 6119;
     int index;
     entity *ent = NULL;
     int prop = -1;
@@ -9559,7 +9712,7 @@ HRESULT openbor_changeplayerproperty(ScriptVariant **varlist , ScriptVariant **p
     {
         if(SUCCEEDED(ScriptVariant_IntegerValue(arg, &ltemp)))
         {
-            player[index].disablekeys = (LONG)ltemp;
+            player[index].disablekeys = early_input_masks ? (u32)ltemp : (u64)ltemp;
         }
         else
         {
@@ -9571,7 +9724,7 @@ HRESULT openbor_changeplayerproperty(ScriptVariant **varlist , ScriptVariant **p
     {
         if(SUCCEEDED(ScriptVariant_IntegerValue(arg, &ltemp)))
         {
-            player[index].playkeys = (LONG)ltemp;
+            player[index].playkeys = early_input_masks ? (u32)ltemp : (u64)ltemp;
         }
         else
         {
@@ -9583,7 +9736,7 @@ HRESULT openbor_changeplayerproperty(ScriptVariant **varlist , ScriptVariant **p
     {
         if(SUCCEEDED(ScriptVariant_IntegerValue(arg, &ltemp)))
         {
-            player[index].keys = (LONG)ltemp;
+            player[index].keys = early_input_masks ? (u32)ltemp : (u64)ltemp;
         }
         else
         {
@@ -9595,7 +9748,7 @@ HRESULT openbor_changeplayerproperty(ScriptVariant **varlist , ScriptVariant **p
     {
         if(SUCCEEDED(ScriptVariant_IntegerValue(arg,&ltemp)))
         {
-            player[index].newkeys = (LONG)ltemp;
+            player[index].newkeys = early_input_masks ? (u32)ltemp : (u64)ltemp;
         }
         else
         {
@@ -9638,7 +9791,7 @@ HRESULT openbor_changeplayerproperty(ScriptVariant **varlist , ScriptVariant **p
     {
         if(SUCCEEDED(ScriptVariant_IntegerValue(arg,&ltemp)))
         {
-            player[index].releasekeys = (LONG)ltemp;
+            player[index].releasekeys = early_input_masks ? (u32)ltemp : (u64)ltemp;
         }
         else
         {
@@ -10055,7 +10208,8 @@ int getsyspropertybyindex(ScriptVariant *var, int index)
     case _sv_pakname:
     {
         char tempstr[MAX_BUFFER_LEN];
-        getPakName(tempstr, sizeof(tempstr), -1);
+        const size_t pak_name_capacity = obor_uses_6119_systemvariants() ? 256u : sizeof(tempstr);
+        getPakName(tempstr, pak_name_capacity, -1);
         ScriptVariant_ChangeType(var, VT_STR);
         var->strVal = StrCache_CreateNewFrom(tempstr);
         break;
@@ -10375,43 +10529,43 @@ int changesyspropertybyindex(int index, ScriptVariant *value)
         }
         break;
     case _sv_xpos:
-        if(SUCCEEDED(ScriptVariant_DecimalValue(value, &dbltemp)))
+        if(SUCCEEDED(obor_systemvariant_decimal_value(value, &dbltemp)))
         {
             advancex = (float)dbltemp;
         }
         break;
     case _sv_ypos:
-        if(SUCCEEDED(ScriptVariant_DecimalValue(value, &dbltemp)))
+        if(SUCCEEDED(obor_systemvariant_decimal_value(value, &dbltemp)))
         {
             advancey = (DOUBLE)dbltemp;
         }
         break;
     case _sv_scrollminz:
-        if(SUCCEEDED(ScriptVariant_DecimalValue(value, &dbltemp)))
+        if(SUCCEEDED(obor_systemvariant_decimal_value(value, &dbltemp)))
         {
             scrollminz = (DOUBLE)dbltemp;
         }
         break;
     case _sv_scrollmaxz:
-        if(SUCCEEDED(ScriptVariant_DecimalValue(value, &dbltemp)))
+        if(SUCCEEDED(obor_systemvariant_decimal_value(value, &dbltemp)))
         {
             scrollmaxz = (DOUBLE)dbltemp;
         }
         break;
     case _sv_scrollminx:
-        if(SUCCEEDED(ScriptVariant_DecimalValue(value, &dbltemp)))
+        if(SUCCEEDED(obor_systemvariant_decimal_value(value, &dbltemp)))
         {
             scrollminx = (DOUBLE)dbltemp;
         }
         break;
     case _sv_scrollmaxx:
-        if(SUCCEEDED(ScriptVariant_DecimalValue(value, &dbltemp)))
+        if(SUCCEEDED(obor_systemvariant_decimal_value(value, &dbltemp)))
         {
             scrollmaxx = (DOUBLE)dbltemp;
         }
         break;
     case _sv_blockade:
-        if(SUCCEEDED(ScriptVariant_DecimalValue(value, &dbltemp)))
+        if(SUCCEEDED(obor_systemvariant_decimal_value(value, &dbltemp)))
         {
             blockade = (DOUBLE)dbltemp;
         }
@@ -10454,19 +10608,19 @@ int changesyspropertybyindex(int index, ScriptVariant *value)
         break;
     case _sv_lasthita:
     case _sv_lasthity:
-        if(SUCCEEDED(ScriptVariant_DecimalValue(value, &dbltemp)))
+        if(SUCCEEDED(obor_systemvariant_decimal_value(value, &dbltemp)))
         {
             lasthit.position.y = (DOUBLE)dbltemp;
         }
         break;
     case _sv_lasthitx:
-        if(SUCCEEDED(ScriptVariant_DecimalValue(value, &dbltemp)))
+        if(SUCCEEDED(obor_systemvariant_decimal_value(value, &dbltemp)))
         {
             lasthit.position.x = (DOUBLE)dbltemp;
         }
         break;
     case _sv_lasthitz:
-        if(SUCCEEDED(ScriptVariant_DecimalValue(value, &dbltemp)))
+        if(SUCCEEDED(obor_systemvariant_decimal_value(value, &dbltemp)))
         {
             lasthit.position.z = (DOUBLE)dbltemp;
         }
@@ -10743,7 +10897,7 @@ HRESULT openbor_checkwall(ScriptVariant **varlist , ScriptVariant **pretvar, int
     ScriptVariant *arg = NULL;
     DOUBLE x, z, y;
     int wall;
-    float h = T_MAX_CHECK_ALTITUDE;
+    float h = (obor_profile_build == 5134 || obor_profile_build == 6119) ? 100000.0f : T_MAX_CHECK_ALTITUDE;
 
     if(paramCount < 2)
     {
@@ -11118,11 +11272,12 @@ HRESULT openbor_openfilestream(ScriptVariant **varlist , ScriptVariant **pretvar
     // Load file from saves directory if specified
     if(location)
     {
+        const size_t capacity = obor_profile_uses_5134_script_ids() ? 256 : sizeof(path);
         getBasePath(path, "Saves", 0);
         getPakName(tmpname, sizeof(tmpname), -1);
-        if(!obor_pak_path_append(path, sizeof(path), tmpname)) return E_FAIL;
-        if(!obor_pak_path_append(path, sizeof(path), "/")) return E_FAIL;
-        if(!obor_pak_path_append(path, sizeof(path), filename)) return E_FAIL;
+        if(!obor_pak_path_append(path, capacity, tmpname)) return E_FAIL;
+        if(!obor_pak_path_append(path, capacity, "/")) return E_FAIL;
+        if(!obor_pak_path_append(path, capacity, filename)) return E_FAIL;
         //printf("open path: %s", path);
 #ifndef DC
         if(!(fileExists(path)))
@@ -11546,22 +11701,23 @@ HRESULT openbor_savefilestream(ScriptVariant **varlist , ScriptVariant **pretvar
         }
     }
 
+    const size_t capacity = obor_profile_uses_5134_script_ids() ? 256 : sizeof(path);
     // Get the saves directory
     if ( paramCount <= 2 || patharg == NULL )
     {
         getBasePath(path, "Saves", 0);
         getPakName(tmpname, sizeof(tmpname), -1);
-        if(!obor_pak_path_append(path, sizeof(path), tmpname)) return E_FAIL;
+        if(!obor_pak_path_append(path, capacity, tmpname)) return E_FAIL;
         // Add user's filename to path and write the filestream to it
-        if(!obor_pak_path_append(path, sizeof(path), "/")) return E_FAIL;
+        if(!obor_pak_path_append(path, capacity, "/")) return E_FAIL;
     } else // By White Dragon
     {
-        if(!obor_pak_path_append(path, sizeof(path), "./")) return E_FAIL;
-        if(!obor_pak_path_append(path, sizeof(path), patharg)) return E_FAIL;
+        if(!obor_pak_path_append(path, capacity, "./")) return E_FAIL;
+        if(!obor_pak_path_append(path, capacity, patharg)) return E_FAIL;
     }
     //printf("path:%s\n",path);
 
-    if(!obor_pak_path_append(path, sizeof(path), (char *)StrCache_Get(arg->strVal))) return E_FAIL;
+    if(!obor_pak_path_append(path, capacity, (char *)StrCache_Get(arg->strVal))) return E_FAIL;
 
     for(i = strlen(path) - 1; i >= 0; i--)
     {
@@ -12450,7 +12606,10 @@ HRESULT openbor_spawn(ScriptVariant **varlist , ScriptVariant **pretvar, int par
     if(spawnentry.boss && level)
     {
         level->bossescount++;
-        level->numbosses++;
+        if(!obor_profile_uses_5134_script_ids())
+        {
+            level->numbosses++;
+        }
     }
 
     ent = smartspawn(&spawnentry);
@@ -12865,7 +13024,9 @@ HRESULT openbor_fademusic(ScriptVariant **varlist , ScriptVariant **pretvar, int
 
     if(paramCount == 4)
     {
-        strncpy(musicname, StrCache_Get(varlist[1]->strVal), MAX_STR_LEN - 1);
+        const size_t copy_length = obor_profile_uses_5134_script_ids() ? 128 : MAX_STR_LEN - 1;
+        strncpy(musicname, StrCache_Get(varlist[1]->strVal), copy_length);
+        if(obor_profile_uses_5134_script_ids()) musicname[copy_length] = '\0';
         if(FAILED(ScriptVariant_IntegerValue(varlist[2], &values[0])))
         {
             goto fademusic_error;
@@ -13345,8 +13506,9 @@ static int obor_textobj_store(s_textobj *object, const char *text)
     const char *end;
     char *stored;
     size_t length, capacity;
+    const unsigned native_capacity = obor_script_text_limit(MAX_STR_VAR_LEN);
     if(!object || !text) return 0;
-    end = memchr(text, 0, MAX_STR_VAR_LEN);
+    end = memchr(text, 0, native_capacity);
     if(!end) return 0;
     length = (size_t)(end - text);
     stored = object->text;
@@ -13367,33 +13529,34 @@ static int obor_textobj_format(ScriptVariant *value, char *buffer)
 {
     int written;
     const char *text;
+    const unsigned native_capacity = obor_script_text_limit(MAX_STR_VAR_LEN);
     if(!buffer) return 0;
     buffer[0] = 0;
     if(!value) return 0;
     switch(value->vt)
     {
     case VT_EMPTY:
-        written = snprintf(buffer, MAX_STR_VAR_LEN, "<VT_EMPTY>   Unitialized");
+        written = snprintf(buffer, native_capacity, "<VT_EMPTY>   Unitialized");
         break;
     case VT_INTEGER:
-        written = snprintf(buffer, MAX_STR_VAR_LEN, "%ld", (long)value->lVal);
+        written = snprintf(buffer, native_capacity, "%ld", (long)value->lVal);
         break;
     case VT_DECIMAL:
-        written = snprintf(buffer, MAX_STR_VAR_LEN, "%lf", value->dblVal);
+        written = snprintf(buffer, native_capacity, "%lf", value->dblVal);
         break;
     case VT_PTR:
-        written = snprintf(buffer, MAX_STR_VAR_LEN, "#%ld", (long)value->ptrVal);
+        written = snprintf(buffer, native_capacity, "#%ld", (long)value->ptrVal);
         break;
     case VT_STR:
         text = StrCache_GetIfPresent(value->strVal);
         if(!text) return 0;
-        written = snprintf(buffer, MAX_STR_VAR_LEN, "%s", text);
+        written = snprintf(buffer, native_capacity, "%s", text);
         break;
     default:
-        written = snprintf(buffer, MAX_STR_VAR_LEN, "<Unprintable VARIANT type.>");
+        written = snprintf(buffer, native_capacity, "<Unprintable VARIANT type.>");
         break;
     }
-    if(written < 0 || written >= MAX_STR_VAR_LEN)
+    if(written < 0 || (unsigned)written >= native_capacity)
     {
         buffer[0] = 0;
         return 0;
@@ -15660,10 +15823,13 @@ HRESULT openbor_executeanimation(ScriptVariant **varlist , ScriptVariant **pretv
     e->drop = 0;
     e->falling = 0;
     e->inpain = 0;
-    e->rising = 0;
-    e->riseattacking = 0;
-    e->edge = EDGE_NO;
-    e->ducking = DUCK_INACTIVE;
+    if(!obor_profile_uses_5134_script_ids())
+    {
+        e->rising = 0;
+        e->riseattacking = 0;
+        e->edge = EDGE_NO;
+        e->ducking = DUCK_INACTIVE;
+    }
     e->inbackpain = 0;
     e->blocking = 0;
 
@@ -15676,6 +15842,7 @@ HRESULT openbor_executeanimation(ScriptVariant **varlist , ScriptVariant **pretv
     {
         goto executeanimation_error;
     }
+    if(obor_profile_uses_5134_script_ids()) anim = obor_animation_from_native(anim);
     if(paramCount > 2 && FAILED(ScriptVariant_IntegerValue(varlist[2], &resetable)))
     {
         goto executeanimation_error;
@@ -15725,9 +15892,12 @@ HRESULT openbor_performattack(ScriptVariant **varlist , ScriptVariant **pretvar,
     e->drop = 0;
     e->falling = 0;
     e->inpain = 0;
-    e->rising = 0;
-    e->riseattacking = 0;
-    e->edge = EDGE_NO;
+    if(!obor_profile_uses_5134_script_ids())
+    {
+        e->rising = 0;
+        e->riseattacking = 0;
+        e->edge = EDGE_NO;
+    }
     e->inbackpain = 0;
     e->blocking = 0;
 
@@ -15791,10 +15961,13 @@ HRESULT openbor_setidle(ScriptVariant **varlist , ScriptVariant **pretvar, int p
     e->drop = 0;
     e->falling = 0;
     e->inpain = 0;
-    e->rising = 0;
-    e->riseattacking = 0;
-    e->edge = EDGE_NO;
-    e->ducking = DUCK_INACTIVE;
+    if(!obor_profile_uses_5134_script_ids())
+    {
+        e->rising = 0;
+        e->riseattacking = 0;
+        e->edge = EDGE_NO;
+        e->ducking = DUCK_INACTIVE;
+    }
     e->inbackpain = 0;
     e->blocking = 0;
     e->nograb = e->nograb_default; //e->nograb = 0;
@@ -17004,7 +17177,7 @@ HRESULT openbor_recordinputs(ScriptVariant **varlist , ScriptVariant **pretvar, 
     int ltemp;
 
     *pretvar = NULL;
-    if( paramCount < 1 && varlist[0]->vt != VT_INTEGER )
+    if( paramCount < 1 || varlist[0]->vt != VT_INTEGER )
     {
         return E_FAIL;
     }
@@ -17016,29 +17189,19 @@ HRESULT openbor_recordinputs(ScriptVariant **varlist , ScriptVariant **pretvar, 
             stopRecordInputs();
             break;
         case A_REC_REC:
-            if( paramCount < 3 || varlist[1]->vt != VT_STR || varlist[2]->vt != VT_STR )
-            {
-                printf("Function recordinputs requires a pathname and filename parameters.\n");
-                return E_FAIL;
-            }
-            strcpy(playrecstatus->path,(char*)StrCache_Get(varlist[1]->strVal));
-            strcpy(playrecstatus->filename,(char*)StrCache_Get(varlist[2]->strVal));
-            //debug_printf("%s/%s",(char*)StrCache_Get(varlist[1]->strVal),(char*)StrCache_Get(varlist[2]->strVal));
-            stopRecordInputs();
-            playrecstatus->status = A_REC_REC;
-            recordInputs();
-            break;
         case A_REC_PLAY:
-            if( paramCount < 3 || varlist[1]->vt != VT_STR || varlist[2]->vt != VT_STR )
+            if(paramCount < 3 || varlist[1]->vt != VT_STR || varlist[2]->vt != VT_STR)
             {
                 printf("Function recordinputs requires a pathname and filename parameters.\n");
                 return E_FAIL;
             }
-            strcpy(playrecstatus->path,(char*)StrCache_Get(varlist[1]->strVal));
-            strcpy(playrecstatus->filename,(char*)StrCache_Get(varlist[2]->strVal));
+            if(!obor_set_replay_paths(playrecstatus, StrCache_GetIfPresent(varlist[1]->strVal),
+                                     StrCache_GetIfPresent(varlist[2]->strVal)))
+                return E_FAIL;
             stopRecordInputs();
-            playrecstatus->status = A_REC_PLAY;
-            playRecordedInputs();
+            playrecstatus->status = ltemp;
+            if(ltemp == A_REC_REC) recordInputs();
+            else playRecordedInputs();
             break;
         case A_REC_FREE:
             freeRecordedInputs();

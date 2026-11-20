@@ -1,0 +1,146 @@
+/* SPDX-License-Identifier: BSD-3-Clause
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me>
+ */
+#include <stdint.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <strings.h>
+#include "openbor.h"
+#undef assert
+#undef printf
+#include <assert.h>
+
+#ifndef stricmp
+#define stricmp strcasecmp
+#endif
+
+#if OBOR_ENGINE_BUILD == 6391
+#include "profile_ids.h"
+#endif
+
+uint32_t obor_profile_build, obor_profile_features;
+static s_model palette_model;
+static entity preview_object = {.model = &palette_model};
+static s_set_entry settings;
+s_set_entry *levelsets = &settings;
+s_player player[MAX_PLAYERS];
+int current_set, colourselect;
+enum { ROUTE_COUNT = 6, POLICY_COUNT = 3 };
+static unsigned scenario;
+
+@METHODS@
+
+static int palette_for_route(int route, int i, int lns, int prev_color)
+{
+    s_set_entry *set = &settings;
+    s_model *model = &palette_model;
+    switch(route)
+    {
+        @ROUTES@
+        default: abort();
+    }
+    return player[i].colourmap;
+}
+
+static const struct {
+    int maps, frozen, hide_start, hide_end, current, slot, enabled, nosame;
+    int occupied[3], expected[POLICY_COUNT][2];
+} cycling[] = {@CYCLING@};
+
+static const struct {
+    int current, slot, enabled, nosame, occupied;
+    int expected[POLICY_COUNT][ROUTE_COUNT + 2];
+} callers[] = {@CALLERS@};
+
+static void reset(int slot, int enabled, int flags, const int *occupied)
+{
+    memset(player, 0, sizeof(player));
+    settings.nosame = flags;
+    settings.maxplayers = MAX_PLAYERS;
+    colourselect = enabled;
+    strcpy(player[slot].name, "Hero");
+    int index = 0;
+    for(int i = 0; i < MAX_PLAYERS; ++i)
+    {
+        if(i == slot) continue;
+        int colour = occupied[index++];
+        strcpy(player[i].name, colour == -1 ? "Different" : "hERO");
+        player[i].colourmap = colour;
+    }
+}
+
+static void check_cycling(int policy)
+{
+    for(scenario = 0; scenario < sizeof(cycling) / sizeof(*cycling); ++scenario)
+    {
+        const __typeof__(*cycling) *test = &cycling[scenario];
+        palette_model.maps_loaded = test->maps;
+        palette_model.maps.frozen = test->frozen;
+        palette_model.maps.hide_start = test->hide_start;
+        palette_model.maps.hide_end = test->hide_end;
+        reset(test->slot, test->enabled, test->nosame, test->occupied);
+#if OBOR_ENGINE_BUILD == 4432
+        int next = nextcolourmap(&palette_model, test->current);
+        int prev = prevcolourmap(&palette_model, test->current);
+#else
+        int next = nextcolourmapn(&palette_model, test->current, test->slot);
+        int prev = prevcolourmapn(&palette_model, test->current, test->slot);
+#endif
+        if(next != test->expected[policy][0] || prev != test->expected[policy][1])
+        {
+            fprintf(stderr, "palette revision=%u case=%u results=%d,%d\n",
+                    obor_profile_build, scenario, next, prev);
+            abort();
+        }
+    }
+}
+
+static void check_callers(int policy)
+{
+    palette_model = (s_model){.maps_loaded = 4};
+    for(scenario = 0; scenario < sizeof(callers) / sizeof(*callers); ++scenario)
+    {
+        const __typeof__(*callers) *test = &callers[scenario];
+        const int occupied[] = {test->occupied, -1, -1};
+        for(int route = 0; route < ROUTE_COUNT + 2; ++route)
+        {
+            reset(test->slot, test->enabled, test->nosame, occupied);
+            s_player *participant = &player[test->slot];
+            participant->colourmap = test->current;
+            participant->playkeys = participant->newkeys =
+                route < ROUTE_COUNT ? FLAG_MOVEUP : FLAG_MOVEDOWN;
+            int actual = palette_for_route(route < ROUTE_COUNT ? route : route - 2, test->slot, 0, 0);
+            if(actual != test->expected[policy][route])
+            {
+                fprintf(stderr, "palette caller revision=%u case=%u route=%d result=%d\n",
+                        obor_profile_build, scenario, route, actual);
+                abort();
+            }
+        }
+    }
+#if OBOR_ENGINE_BUILD == 6391
+    if(policy == 2)
+    {
+        const int empty[] = {-1, -1, -1};
+        reset(0, 1, 2, empty);
+        player[0].colourmap = 1;
+        assert(palette_for_route(1, 0, 1, 3) == 3);
+        colourselect = 0;
+        assert(palette_for_route(1, 0, 1, 2) == 2);
+    }
+#endif
+}
+
+int main(void)
+{
+    const struct {uint32_t revision; int policy;} rows[] = {@ROWS@};
+    for(unsigned i = 0; i < sizeof(rows) / sizeof(*rows); ++i)
+    {
+        obor_profile_build = rows[i].revision;
+        check_cycling(rows[i].policy);
+        check_callers(rows[i].policy);
+        printf("%u\n", obor_profile_build);
+    }
+    return 0;
+}

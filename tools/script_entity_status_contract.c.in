@@ -1,0 +1,333 @@
+/* SPDX-License-Identifier: BSD-3-Clause
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me>
+ */
+#include <limits.h>
+#include <stdarg.h>
+#include <stdint.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <strings.h>
+#include "openbor.h"
+#undef assert
+#undef printf
+#include <assert.h>
+#ifndef stricmp
+#define stricmp strcasecmp
+#endif
+
+#if OBOR_ENGINE_BUILD == 6391
+#include "profile_ids.h"
+#define HEALTH energy_status.health_current
+#define MAGIC energy_status.mp_current
+#define REMOVE kill_entity
+#define DAMAGE_ARGS entity *other, s_collision_attack *record, int fall_flag
+#else
+#define HEALTH health
+#define MAGIC mp
+#define REMOVE kill
+#define DAMAGE_ARGS entity *other, s_collision_attack *record
+#endif
+
+uint32_t obor_profile_build, obor_profile_features;
+static entity actor, observer;
+entity *self = &observer;
+static s_anim animation;
+static s_anim *animations[MAX_ANIS];
+static s_collision_attack attack;
+static const char *names[2];
+static int removals, delegated;
+
+CHAR *StrCache_Get(int index)
+{
+    assert(index == 0 || index == 1);
+    return (CHAR *)names[index];
+}
+
+CHAR *StrCache_GetIfPresent(int index) { return StrCache_Get(index); }
+void StrCache_Collect(int index) {}
+#if OBOR_ENGINE_BUILD == 6391
+int StrCache_Pop(int length) { abort(); }
+#else
+int StrCache_Pop(void) { abort(); }
+#endif
+void StrCache_Copy(int index, CHAR *value) { abort(); }
+
+void REMOVE(entity *ent)
+{
+    assert(ent == &actor && self == &observer && ent->HEALTH <= 0);
+    removals++;
+}
+
+static int observe_damage(DAMAGE_ARGS)
+{
+    assert(self == &actor && other == &observer);
+    assert(record->attack_force == 7 && record->attack_drop == 1 && record->attack_type == ATK_NORMAL2);
+#if OBOR_ENGINE_BUILD == 6391
+    assert(!fall_flag);
+#endif
+    delegated++;
+    return 13;
+}
+
+@VARIANTS@
+@SEARCH@
+@NAMESPACE@
+@MACROS@
+@DEFAULT@
+@METHODS@
+
+static char lookup_log[128];
+
+static void record_lookup(const char *format, ...)
+{
+    size_t used = strlen(lookup_log);
+    va_list args;
+    va_start(args, format);
+    int written = vsnprintf(lookup_log + used, sizeof(lookup_log) - used, format, args);
+    va_end(args);
+    assert(written >= 0 && (size_t)written < sizeof(lookup_log) - used);
+}
+
+static int sample_lookup(ScriptVariant *key)
+{
+    const char *properties[] = {"health", "mp", NULL};
+    char *propname;
+    int prop;
+#define printf record_lookup
+    MAPSTRINGS(key, properties, 2, "Unknown property '%s'.\n");
+#undef printf
+    return 1;
+}
+
+static void check_lookup_report(void)
+{
+    ScriptVariant key = {.vt = VT_STR};
+    lookup_log[0] = 0;
+    names[0] = "mp";
+    assert(sample_lookup(&key) && key.vt == VT_INTEGER && key.lVal == 1 && !lookup_log[0]);
+
+    names[0] = "unknown";
+    key = (ScriptVariant){.vt = VT_STR};
+    assert(!sample_lookup(&key) && key.vt == VT_STR);
+    const char *expected = "Unknown property 'unknown'.\n";
+#if OBOR_ENGINE_BUILD == 6391
+    expected = "Unknown property 'unknown'.\n\n Available properties:\n\n\thealth\n\tmp\n\n";
+#endif
+    assert(!strcmp(lookup_log, expected));
+}
+
+static ScriptVariant get(const char *name, const char *detail, int animation_id, int argc)
+{
+    names[0] = name;
+    names[1] = detail;
+    ScriptVariant handle = {.vt = VT_PTR, .ptrVal = &actor};
+    ScriptVariant key = {.vt = VT_STR};
+    ScriptVariant sub = {.vt = VT_STR, .strVal = 1};
+    ScriptVariant clip = {.vt = VT_INTEGER, .lVal = animation_id};
+    ScriptVariant result = {.vt = VT_INTEGER, .lVal = 99}, *out = &result;
+    ScriptVariant *args[] = {&handle, &key, &sub, &clip};
+    assert(openbor_getentityproperty(args, &out, argc) == S_OK && out == &result);
+    return result;
+}
+
+static void set(const char *name, ScriptVariant input)
+{
+    names[0] = name;
+    ScriptVariant handle = {.vt = VT_PTR, .ptrVal = &actor};
+    ScriptVariant key = {.vt = VT_STR};
+    ScriptVariant result = {.vt = VT_INTEGER, .lVal = 99}, *out = &result;
+    ScriptVariant *args[] = {&handle, &key, &input};
+    assert(openbor_changeentityproperty(args, &out, 3) == S_OK && !out);
+}
+
+static void check_energy_properties(void)
+{
+    static const struct { int input, health, mp; } cases[] = {
+        {-4, 0, 0}, {8, 8, 8}, {24, 24, 12}, {33, 24, 12},
+    };
+    actor.modeldata.health = 24;
+    actor.modeldata.mp = 12;
+    for(size_t i = 0; i < sizeof(cases) / sizeof(*cases); ++i)
+    {
+        ScriptVariant input = {.vt = VT_INTEGER, .lVal = cases[i].input};
+        set("health", input);
+        set("mp", input);
+        ScriptVariant health = get("health", NULL, 0, 2), mp = get("mp", NULL, 0, 2);
+        assert(health.vt == VT_INTEGER && health.lVal == cases[i].health && actor.HEALTH == cases[i].health);
+        assert(mp.vt == VT_INTEGER && mp.lVal == cases[i].mp && actor.MAGIC == cases[i].mp);
+    }
+    set("health", (ScriptVariant){.vt = VT_DECIMAL, .dblVal = 9.5});
+    set("mp", (ScriptVariant){.vt = VT_DECIMAL, .dblVal = 6.5});
+    set("health", (ScriptVariant){.vt = VT_EMPTY});
+    set("mp", (ScriptVariant){.vt = VT_EMPTY});
+    assert(actor.HEALTH == 9 && actor.MAGIC == 6);
+    assert(get("health", NULL, 0, 2).lVal == 9 && get("mp", NULL, 0, 2).lVal == 6);
+}
+
+enum old_flag { ATTACKING, BLOCKING, CHARGING, BLINK };
+
+static LONG read_flag(entity *ent, enum old_flag flag)
+{
+    ScriptVariant result = {.vt = VT_INTEGER}, *out = &result, **pretvar = &out;
+    switch(flag)
+    {
+        @FLAG_GETTERS@
+        default: abort();
+    }
+    return result.lVal;
+}
+
+static void write_flag(entity *ent, enum old_flag flag, LONG ltemp)
+{
+    switch(flag)
+    {
+        @FLAG_SETTERS@
+        default: abort();
+    }
+}
+
+static void check_legacy_flags(void)
+{
+#if OBOR_ENGINE_BUILD == 6391
+    _Static_assert(__builtin_types_compatible_p(__typeof__(actor.attacking), e_attacking_state) &&
+                   __builtin_types_compatible_p(__typeof__(actor.blocking), unsigned int) &&
+                   __builtin_types_compatible_p(__typeof__(actor.charging), bool) &&
+                   __builtin_types_compatible_p(__typeof__(actor.blink), bool),
+                   "record family keeps the native combat state types");
+    _Static_assert(__builtin_types_compatible_p(__typeof__(actor.animpos), unsigned int) &&
+                   __builtin_types_compatible_p(__typeof__(actor.animnum), unsigned int),
+                   "record family keeps its unsigned frame and animation fields");
+    const bool boolean_flags = true;
+#else
+    _Static_assert(__builtin_types_compatible_p(__typeof__(actor.attacking), int) &&
+                   __builtin_types_compatible_p(__typeof__(actor.blocking), int) &&
+                   __builtin_types_compatible_p(__typeof__(actor.charging), int) &&
+                   __builtin_types_compatible_p(__typeof__(actor.blink), int),
+                   "early family keeps its integer combat state types");
+    _Static_assert(__builtin_types_compatible_p(__typeof__(actor.animpos), int) &&
+                   __builtin_types_compatible_p(__typeof__(actor.animnum), int),
+                   "early family keeps its signed frame and animation fields");
+    const bool boolean_flags = false;
+#endif
+    const LONG values[] = {-2, -1, 0, 1, 2};
+    for(enum old_flag flag = ATTACKING; flag <= BLINK; ++flag)
+    {
+        const bool boolean = boolean_flags && (flag == CHARGING || flag == BLINK);
+        for(size_t i = 0; i < sizeof(values) / sizeof(*values); ++i)
+        {
+            write_flag(&actor, flag, values[i]);
+            const LONG expected = boolean ? values[i] != 0 : values[i];
+            assert(read_flag(&actor, flag) == expected);
+        }
+    }
+}
+
+static void check_spawn_flags(void)
+{
+#if OBOR_ENGINE_BUILD == 6391
+    _Static_assert(__builtin_types_compatible_p(__typeof__(actor.exists), bool) &&
+                   __builtin_types_compatible_p(__typeof__(actor.boss), bool) &&
+                   __builtin_types_compatible_p(__typeof__(actor.dying), unsigned int) &&
+                   __builtin_types_compatible_p(__typeof__(actor.dying2), unsigned int),
+                   "record family keeps the native spawn and palette state types");
+    const bool boolean_boss = true;
+#else
+    _Static_assert(__builtin_types_compatible_p(__typeof__(actor.exists), int) &&
+                   __builtin_types_compatible_p(__typeof__(actor.boss), int) &&
+                   __builtin_types_compatible_p(__typeof__(actor.dying), int) &&
+                   __builtin_types_compatible_p(__typeof__(actor.dying2), int),
+                   "early family keeps its integer spawn and palette state types");
+    const bool boolean_boss = false;
+#endif
+    for(int exists = 0; exists <= 1; ++exists)
+    {
+        actor.exists = exists;
+        ScriptVariant live = get("exists", NULL, 0, 2);
+        assert(live.vt == VT_INTEGER && live.lVal == exists);
+    }
+    const LONG values[] = {-2, 0, 1, 2};
+    for(size_t i = 0; i < sizeof(values) / sizeof(*values); ++i)
+    {
+        set("boss", (ScriptVariant){.vt = VT_INTEGER, .lVal = values[i]});
+        ScriptVariant boss = get("boss", NULL, 0, 2);
+        const LONG expected = boolean_boss ? (values[i] != 0) : values[i];
+        assert(boss.vt == VT_INTEGER && boss.lVal == expected);
+    }
+}
+
+static void check_landframe_property(int absent_is_empty)
+{
+    s_anim *newanim = &animation;
+    animation = (s_anim){.numframes = 1};
+    @LAND_INIT@
+    actor.modeldata.animation = animations;
+    actor.modeldata.animation_capacity = MAX_ANIS;
+    animations[ANI_IDLE] = &animation;
+    ScriptVariant item = get("landframe", "ent", ANI_IDLE, 4), frame = get("landframe", "frame", ANI_IDLE, 4);
+    if(absent_is_empty)
+    {
+        assert(item.vt == VT_EMPTY && frame.vt == VT_EMPTY);
+    }
+    else
+    {
+        assert(item.vt == VT_INTEGER && item.lVal == 0 && frame.vt == VT_INTEGER && frame.lVal == -1);
+    }
+#if OBOR_ENGINE_BUILD == 6391
+    __typeof__(*animation.landframe) record = {.ent = 17, .frame = 4};
+    animation.landframe = &record;
+#else
+    animation.landframe.ent = 17;
+    animation.landframe.frame = 4;
+#endif
+    item = get("landframe", "ent", ANI_IDLE, 4);
+    frame = get("landframe", "frame", ANI_IDLE, 4);
+    assert(item.vt == VT_INTEGER && item.lVal == 17 && frame.vt == VT_INTEGER && frame.lVal == 4);
+    assert(get("landframe", "frame", -1, 4).vt == VT_EMPTY);
+    assert(get("landframe", NULL, ANI_IDLE, 2).vt == VT_EMPTY);
+#if OBOR_ENGINE_BUILD == 6391
+    animation.landframe = NULL;
+#endif
+}
+
+static void check_damage(void)
+{
+    ScriptVariant handle = {.vt = VT_PTR, .ptrVal = &actor};
+    ScriptVariant attacker = {.vt = VT_PTR, .ptrVal = &observer};
+    ScriptVariant force = {.vt = VT_INTEGER, .lVal = 3};
+    ScriptVariant drop = {.vt = VT_INTEGER, .lVal = 1};
+    ScriptVariant type = {.vt = VT_INTEGER, .lVal = ATK_NORMAL2};
+    ScriptVariant result = {.vt = VT_EMPTY}, *out = &result;
+    ScriptVariant *args[] = {&handle, &attacker, &force, &drop, &type};
+    actor.HEALTH = 14;
+    removals = delegated = 0;
+    assert(openbor_damageentity(args, &out, 3) == S_OK && result.vt == VT_INTEGER && result.lVal == 1);
+    assert(get("health", NULL, 0, 2).lVal == 11 && !removals);
+    attack = emptyattack;
+    attack.attack_force = 11;
+    assert(openbor_damageentity(args, &out, 2) == S_OK && result.lVal == 1);
+    assert(!get("health", NULL, 0, 2).lVal && removals == 1);
+    force.lVal = 7;
+    actor.HEALTH = 22;
+    actor.takedamage = observe_damage;
+    assert(openbor_damageentity(args, &out, 5) == S_OK && result.lVal == 13);
+    assert(self == &observer && actor.HEALTH == 22 && removals == 1 && delegated == 1);
+}
+
+int main(void)
+{
+    static const struct { uint32_t revision; int absent; } rows[] = {@ROWS@};
+    for(size_t i = 0; i < sizeof(rows) / sizeof(*rows); ++i)
+    {
+        obor_profile_build = rows[i].revision;
+        actor = (entity){0};
+        check_lookup_report();
+        check_energy_properties();
+        check_legacy_flags();
+        check_spawn_flags();
+        check_landframe_property(rows[i].absent);
+        check_damage();
+        printf("%u\n", obor_profile_build);
+    }
+    return 0;
+}

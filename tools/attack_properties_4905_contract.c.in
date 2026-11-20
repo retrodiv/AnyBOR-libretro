@@ -1,0 +1,102 @@
+/* SPDX-License-Identifier: BSD-3-Clause
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me>
+ */
+#include <stdint.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <strings.h>
+#include "openbor.h"
+#undef printf
+#undef assert
+#include <assert.h>
+#ifndef stricmp
+#define stricmp strcasecmp
+#endif
+#define COUNT(a) (sizeof(a) / sizeof(*(a)))
+
+uint32_t obor_profile_build;
+static s_axis_f result_vector = {.x = 1.125f, .y = -2.25f, .z = 3.5f};
+
+void *checkAlloc(void *ptr, size_t size, const char *func, const char *file, int line)
+{
+    assert(!size || ptr);
+    return ptr;
+}
+
+int obor_allocation_contains(const void *ptr, size_t size)
+{
+    return ptr == &result_vector && size == sizeof(result_vector);
+}
+
+@CACHE@
+@CONVERSIONS@
+@METHODS@
+@CONSTANT_MACROS@
+
+static LONG resolve_collision_constant(const char *constname)
+{
+    ScriptVariant v;
+    if(0) return -1;
+@CONSTANT_CASES@
+    else return -1;
+    return v.lVal;
+}
+
+typedef struct {
+    const char *name;
+    LONG ordinal;
+} Constant;
+
+@TABLES@
+
+static void check_ordinals(unsigned revision, const LONG *slots, size_t count)
+{
+    obor_profile_build = revision;
+    for(size_t ordinal = 0; ordinal < count; ++ordinal)
+        assert(obor_attack_property_selector(ordinal) == slots[ordinal]);
+    assert(obor_attack_property_selector(-1) == -1);
+    assert(obor_attack_property_selector(count) == -1);
+}
+
+static void check_constants(const Constant *values, size_t count)
+{
+    for(size_t i = 0; i < count; ++i)
+        assert(resolve_collision_constant(values[i].name) == values[i].ordinal);
+}
+
+static void check_velocity(void)
+{
+    s_collision_attack attack = {.dropv = {.x = 8.75f, .y = -9.25f, .z = 0.625f}};
+    ScriptVariant handle = {.vt = VT_PTR, .ptrVal = &attack};
+    ScriptVariant selector = {.vt = VT_INTEGER};
+    ScriptVariant value = {.vt = VT_EMPTY}, *out = &value;
+    ScriptVariant input = {.vt = VT_PTR, .ptrVal = &result_vector};
+    ScriptVariant *arguments[] = {&handle, &selector, &input};
+
+    obor_profile_build = @OLD_REVISION@;
+    selector.lVal = @OLD_VELOCITY_Y@;
+    assert(openbor_get_attack_property(arguments, &out, 2) == S_OK);
+    assert(out == &value && value.vt == VT_DECIMAL && value.dblVal == -9.25);
+
+    obor_profile_build = @NEW_REVISION@;
+    selector.lVal = @VECTOR_ORDINAL@;
+    assert(openbor_get_attack_property(arguments, &out, 2) == S_OK);
+    assert(out == &value && value.vt == VT_PTR && value.ptrVal == &attack.dropv);
+    assert(openbor_set_attack_property(arguments, &out, 3) == S_OK && out == &value);
+    assert(attack.dropv.x == result_vector.x && attack.dropv.y == result_vector.y &&
+           attack.dropv.z == result_vector.z);
+
+    selector.lVal = @RESERVED_ORDINAL@;
+    assert(openbor_get_attack_property(arguments, &out, 2) == E_FAIL);
+    assert(out == &value && value.vt == VT_EMPTY);
+    assert(openbor_set_attack_property(arguments, &out, 3) == E_FAIL && out == &value);
+}
+
+int main(void)
+{
+@CHECKS@
+    check_velocity();
+    puts("attack_properties_4905");
+    return 0;
+}

@@ -8,7 +8,8 @@
  * before using header dimensions. Preserve native palette-only filename
  * probing, three-plane refusals and final RGB table conversion without
  * interpreting palette bytes as sprite dimensions. Keep bitmap row reads
- * within the requested output width.
+ * within the requested output width. Keep the original image extension
+ * search order and require each candidate filename to fit before trying it.
  * Existing changes recorded here; this is not their implementation date.
  * See MODIFICATIONS.md and docs/modifications/6391.md
  * at the source repository root. Original notices follow below.
@@ -1021,8 +1022,8 @@ static int openimage_mode(char *filename, char *packfile, int palette_only)
 {
     int pcx_result;
     char fnam[128];
-    int len = strlen(filename);
-    char *ext = filename + len - 4;
+    size_t len = strlen(filename);
+    const char *ext = len >= 4 ? filename + len - 4 : filename;
     open_type = 0;
 
     if(0 == stricmp(ext, ".png") && openpng(filename, packfile))
@@ -1044,6 +1045,11 @@ static int openimage_mode(char *filename, char *packfile, int palette_only)
     {
         open_type = OT_BMP;
         return 1;
+    }
+
+    if(len > sizeof(fnam) - sizeof(".png"))
+    {
+        return 0;
     }
 
     sprintf(fnam, "%s.png", filename);

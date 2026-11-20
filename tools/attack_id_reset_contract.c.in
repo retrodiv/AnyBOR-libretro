@@ -1,0 +1,199 @@
+/* SPDX-License-Identifier: BSD-3-Clause
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me>
+ */
+#include <stdint.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include "openbor.h"
+#undef assert
+#undef printf
+#include <assert.h>
+
+#if OBOR_ENGINE_BUILD == 4432
+#define OUTGOING attack_id
+#define INCOMING hit_by_attack_id
+u32 time = 20;
+#else
+#define OUTGOING attack_id_outgoing
+#define INCOMING attack_id_incoming
+u32 _time = 20;
+#endif
+
+uint32_t obor_profile_build;
+static entity actor, attacker;
+entity *self = &actor, *textbox, *smartbomber;
+float advancex = 100;
+s_videomodes videomodes = {.hRes = 320};
+s_savedata savedata = {.effectvol = 42};
+int PLAYER_MIN_Z = 160, PLAYER_MAX_Z = 232, SAMPLE_BIKE;
+static s_collision_attack_list attack_frame;
+static s_collision_attack_list *frames[] = {&attack_frame, NULL};
+static s_anim animation = {.numframes = 2};
+static int attacks, randoms, sounds, exchanges, record;
+static entity *landing_attacker;
+
+void do_attack(entity *ent)
+{
+    assert(ent == &actor && actor.OUTGOING == 91 && actor.INCOMING == 144);
+    ++attacks;
+}
+
+float randf(float max)
+{
+    assert(actor.OUTGOING == 0 && actor.INCOMING == 144);
+    assert(max == (randoms ? 0.6f : 72));
+    ++randoms;
+    return max / 2;
+}
+
+int sound_play_sample(int sample, unsigned int priority, int left, int right, unsigned int speed)
+{
+    assert(actor.OUTGOING == 0 && actor.INCOMING == 144 && actor.position.z == 196);
+    assert(sample == 17 && !priority && left == 42 && right == 42 && speed == 100);
+    assert(randoms == 1);
+    ++sounds;
+    return 0;
+}
+
+static void observe_landing(entity *ent, entity *other, int which, int id)
+{
+    assert(exchanges < 2);
+    assert(ent == (exchanges ? landing_attacker : &actor));
+    assert(other == (exchanges ? &actor : landing_attacker));
+    assert(which == (record ? !exchanges : exchanges));
+    assert(id == (int)landing_attacker->OUTGOING);
+    ++exchanges;
+}
+
+#if OBOR_ENGINE_BUILD == 4432
+void execute_ondoattack_script(entity *ent, entity *other, int force, int drop, int type, int noblock,
+                              int guardcost, int jugglecost, int pauseadd, int which, int id, int tag)
+{
+    assert(force == 33 && drop == 3 && type == ATK_BURN && noblock == 1);
+    assert(guardcost == 4 && jugglecost == 5 && pauseadd == 6 && tag == -7);
+    observe_landing(ent, other, which, id);
+}
+#else
+void execute_ondoattack_script(entity *ent, entity *other, s_collision_attack *attack, e_exchange which, int id)
+{
+    assert(attack->attack_force == 33 && attack->attack_drop == 3 && attack->attack_type == ATK_BURN);
+    assert(attack->no_block == 1 && attack->guardcost == 4 && attack->jugglecost == 5);
+    assert(attack->pause_add == 6 && attack->tag == -7);
+    observe_landing(ent, other, which, id);
+}
+#endif
+
+@METHODS@
+
+static void publish_landing(entity *other, s_collision_attack payload)
+{
+#if OBOR_ENGINE_BUILD == 4432
+    s_collision_attack *attack = &payload;
+#else
+    s_collision_attack attack = payload;
+#endif
+    @LANDING_CALLS@
+}
+
+static void reset(void)
+{
+    actor = (entity){.animation = &animation, .OUTGOING = 91, .INCOMING = 144};
+    attacker = (entity){.OUTGOING = 237, .INCOMING = 14};
+    textbox = smartbomber = NULL;
+    attacks = exchanges = randoms = sounds = 0;
+}
+
+static void check_attack_eligibility(void)
+{
+    static const struct {
+        int falling, projectile, drop, frozen, timer, text, bomber, boxes, frame, admitted;
+    } cases[] = {
+        {1, 0, 0, 0, 0, 0, 0, 1, 0, 0},
+        {0, 0, 1, 0, 0, 0, 0, 1, 0, 0},
+        {1, 1, 1, 0, 0, 0, 0, 1, 0, 1},
+        {0, 0, 0, 1, 21, 0, 0, 1, 0, 0},
+        {0, 0, 0, 1, 20, 0, 0, 1, 0, 1},
+        {0, 0, 0, 0, 0, 1, 0, 1, 0, 0},
+        {0, 0, 0, 0, 0, 0, 1, 1, 0, 0},
+        {0, 0, 0, 0, 0, 0, 0, 1, 0, 1},
+        {0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+        {0, 0, 0, 0, 0, 0, 0, 1, 1, 0},
+    };
+    for(unsigned i = 0; i < sizeof(cases) / sizeof(*cases); ++i)
+    {
+        reset();
+        actor.falling = cases[i].falling;
+        actor.projectile = cases[i].projectile;
+        actor.drop = cases[i].drop;
+        actor.frozen = cases[i].frozen;
+        actor.freezetime = cases[i].timer;
+        actor.animpos = cases[i].frame;
+        animation.collision_attack = cases[i].boxes ? frames : NULL;
+        if(cases[i].text) textbox = &attacker;
+        if(cases[i].bomber) smartbomber = &attacker;
+        check_attack();
+        assert(attacks == cases[i].admitted);
+        assert(actor.OUTGOING == (cases[i].admitted ? 91 : 0) && actor.INCOMING == 144);
+    }
+}
+
+static void check_biker_turns(void)
+{
+    static const struct {
+        int dir, x, speed, sample, turned, expected_velocity;
+    } cases[] = {
+        {DIRECTION_RIGHT, 619, 3, 17, 0, 8},
+        {DIRECTION_RIGHT, 620, 3, 17, 0, 8},
+        {DIRECTION_RIGHT, 621, 3, 17, 1, -3},
+        {DIRECTION_LEFT, -99, 3, -1, 0, 8},
+        {DIRECTION_LEFT, -100, 3, 17, 0, 8},
+        {DIRECTION_LEFT, -101, 3, -1, 1, 3},
+        {DIRECTION_RIGHT, 621, 0, -1, 1, -2},
+        {DIRECTION_LEFT, -101, 0, 17, 1, 2},
+    };
+    for(unsigned i = 0; i < sizeof(cases) / sizeof(*cases); ++i)
+    {
+        reset();
+        SAMPLE_BIKE = cases[i].sample;
+        actor.direction = cases[i].dir;
+        actor.position.x = cases[i].x;
+        actor.position.z = 30;
+        actor.modeldata.speed = cases[i].speed;
+        actor.velocity.x = 8;
+        assert(biker_move() == 1);
+        assert((int)actor.direction == (cases[i].turned ? !cases[i].dir : cases[i].dir));
+        assert(actor.OUTGOING == (cases[i].turned ? 0 : 91) && actor.INCOMING == 144);
+        assert(actor.position.z == (cases[i].turned ? 196 : 30) && actor.velocity.x == cases[i].expected_velocity);
+        assert(randoms == (cases[i].turned ? 1 + !cases[i].speed : 0));
+        assert(sounds == (cases[i].turned && cases[i].sample >= 0));
+    }
+}
+
+static void check_landing_arguments(void)
+{
+    const s_collision_attack attack = {.attack_force = 33, .attack_drop = 3, .attack_type = ATK_BURN,
+        .no_block = 1, .guardcost = 4, .jugglecost = 5, .pause_add = 6, .tag = -7};
+    for(int fallback = 0; fallback < 2; ++fallback)
+    {
+        reset();
+        landing_attacker = fallback ? &actor : &attacker;
+        publish_landing(landing_attacker, attack);
+        assert(exchanges == 2);
+        assert(actor.OUTGOING == 91 && actor.INCOMING == 144 && attacker.OUTGOING == 237 && attacker.INCOMING == 14);
+    }
+}
+
+int main(void)
+{
+    const struct { unsigned revision; int record; } rows[] = {@ROWS@};
+    for(unsigned i = 0; i < sizeof(rows) / sizeof(*rows); ++i)
+    {
+        obor_profile_build = rows[i].revision;
+        record = rows[i].record;
+        check_attack_eligibility();
+        check_biker_turns();
+        check_landing_arguments();
+        printf("%u\n", rows[i].revision);
+    }
+    return 0;
+}

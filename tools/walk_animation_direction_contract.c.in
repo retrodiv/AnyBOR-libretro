@@ -1,0 +1,125 @@
+/* SPDX-License-Identifier: BSD-3-Clause
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me>
+ */
+#include <stdint.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include "openbor.h"
+#undef printf
+#undef assert
+#include <assert.h>
+
+uint32_t obor_profile_build, obor_profile_features;
+static entity actor;
+entity *self = &actor;
+
+HRESULT Interpreter_Call(Interpreter *interpreter) { abort(); }
+HRESULT Interpreter_EvalInstruction(Interpreter *interpreter) { abort(); }
+
+static void set_walk_direction(int dir)
+{
+    @WALK_DIRECTION@
+}
+
+static int next_frame(void)
+{
+    int f;
+    @NEXT_FRAME@
+    return f;
+}
+
+static LONG legacy_read(entity *ent)
+{
+    ScriptVariant result = {.vt = VT_INTEGER}, *out = &result, **pretvar = &out;
+    @LEGACY_READ@
+    return result.lVal;
+}
+
+static void legacy_write(entity *ent, LONG ltemp)
+{
+    @LEGACY_WRITE@
+}
+
+#if OBOR_ENGINE_BUILD != 4432
+@INTEGER_VALUE@
+
+static LONG typed_read(entity *handle, int property)
+{
+    ScriptVariant result = {.vt = VT_INTEGER}, *out = &result, **pretvar = &out;
+    switch(property)
+    {
+        @TYPED_READ_CASES@
+        default: abort();
+    }
+    return result.lVal;
+}
+
+static void typed_write(entity *handle, int property, ScriptVariant input)
+{
+    enum { ARG_VALUE };
+    ScriptVariant *varlist[] = {&input};
+    LONG temp_int;
+    switch(property)
+    {
+        @TYPED_WRITE_CASES@
+        default: abort();
+    }
+}
+#endif
+
+static void check_frame(int expected)
+{
+    assert(actor.animating == expected);
+    assert(next_frame() == 3 + expected);
+    assert(legacy_read(&actor) == expected);
+#if OBOR_ENGINE_BUILD != 4432
+    assert(typed_read(&actor, _ENTITY_ANIMATION_ANIMATING) == expected);
+#endif
+}
+
+int main(void)
+{
+    static const unsigned revisions[] = {@ROWS@};
+    static const struct { int dir; float x, z; int signed_value; } motion[] = {
+        {1, -1, 0, -1}, {1, 1, 0, 1}, {2, 0, 1, -1},
+        {2, 0, -1, 1}, {3, 0, -1, -1}, {3, 0, 1, 1},
+    };
+    static const LONG integers[] = {-2, -1, 0, 1, 2};
+    for(size_t i = 0; i < sizeof(revisions) / sizeof(*revisions); ++i)
+    {
+        obor_profile_build = revisions[i];
+        const int use_boolean = obor_profile_build == 5134 || obor_profile_build == 6119;
+        actor.animpos = 3;
+        actor.direction = DIRECTION_RIGHT;
+        for(size_t j = 0; j < sizeof(motion) / sizeof(*motion); ++j)
+        {
+            actor.velocity.x = motion[j].x;
+            actor.velocity.z = motion[j].z;
+            set_walk_direction(motion[j].dir);
+            check_frame(use_boolean ? 1 : motion[j].signed_value);
+        }
+        for(size_t j = 0; j < sizeof(integers) / sizeof(*integers); ++j)
+        {
+            LONG input = integers[j];
+            const int expected = use_boolean ? (input != 0) : input;
+            legacy_write(&actor, input);
+            check_frame(expected);
+#if OBOR_ENGINE_BUILD != 4432
+            actor.animating = 0;
+            ScriptVariant argument = {.vt = VT_INTEGER, .lVal = input};
+            typed_write(&actor, _ENTITY_ANIMATION_ANIMATING, argument);
+            check_frame(expected);
+            typed_write(&actor, _ENTITY_ARROW_ON, argument);
+            assert(typed_read(&actor, _ENTITY_ARROW_ON) == (input != 0));
+#endif
+        }
+#if OBOR_ENGINE_BUILD != 4432
+        typed_write(&actor, _ENTITY_ANIMATION_ANIMATING, (ScriptVariant){.vt = VT_DECIMAL, .dblVal = -2.75});
+        check_frame(use_boolean ? 1 : -2);
+        typed_write(&actor, _ENTITY_ANIMATION_ANIMATING, (ScriptVariant){.vt = VT_DECIMAL, .dblVal = -0.75});
+        check_frame(0);
+#endif
+        printf("%u\n", obor_profile_build);
+    }
+    return 0;
+}

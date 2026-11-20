@@ -1,0 +1,186 @@
+/* SPDX-License-Identifier: BSD-3-Clause
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me>
+ */
+#include <stdint.h>
+#include <stdio.h>
+#include <string.h>
+#include "openbor.h"
+#undef assert
+#undef printf
+#include <assert.h>
+
+#if OBOR_ENGINE_BUILD == 4432
+#define LEGACY_ORIGINS 1
+#define DAMAGE_ARGS entity *other, s_collision_attack *attack
+u32 time = 103;
+#else
+#define LEGACY_ORIGINS 0
+#define DAMAGE_ARGS entity *other, s_collision_attack *attack, int fall_flag
+#include "profile_ids.h"
+u32 _time = 103;
+#endif
+
+uint32_t obor_profile_build, obor_profile_features;
+static entity actor, weapon, projectile;
+static s_anim animation;
+static s_model model;
+static s_energycost energy;
+entity *self = &actor;
+static s_level stage;
+s_level *level;
+s_savedata savedata;
+int nocost;
+
+enum { BY_NAME, BY_INDEX, WEAPON_MODEL, FRAME_KNIFE, FRAME_FLASH,
+       HEADER_KNIFE, HEADER_PSHOT, GLOBAL_SHOT, GLOBAL_KNIFE, ROUTE_COUNT };
+static int calls, maps, available, expected_index, expected_y;
+static const char *expected_name;
+static int launch_hostile, launch_candamage;
+
+void common_think(void) { assert(0); }
+int arrow_takedamage(DAMAGE_ARGS) { assert(0); return 0; }
+
+entity *spawn(float x, float z, float y, int direction, char *name, int index, s_model *override)
+{
+    assert(x == 3 && z == 7 && y == expected_y && direction == DIRECTION_RIGHT);
+    assert(!override && !calls && index == expected_index && !!name == !!expected_name);
+    assert(!name || !strcmp(name, expected_name));
+    ++calls;
+    if(!available) return NULL;
+    projectile = (entity){.model = &model};
+    projectile.position.y = -22;
+    projectile.modeldata.hostile = launch_hostile;
+    projectile.modeldata.candamage = launch_candamage;
+    return &projectile;
+}
+
+void ent_set_colourmap(entity *ent, unsigned int map)
+{
+    assert(ent == &projectile && map == 6 && !maps);
+    ++maps;
+}
+
+@METHODS@
+
+static void apply_spawn_filter(entity *e)
+{
+    @SPAWN_FILTER@
+}
+
+static entity *launch(int route, int both_selectors)
+{
+    char explicit_name[] = "Explicit";
+    const int floor = route == FRAME_FLASH || route == HEADER_PSHOT;
+    calls = maps = 0;
+#if LEGACY_ORIGINS
+    actor.cantfire = 0;
+#endif
+    actor.animation = &animation;
+    actor.weapent = route <= WEAPON_MODEL ? &weapon : NULL;
+    weapon.modeldata.project = 10;
+    animation.projectile.knife = route <= FRAME_KNIFE ? 11 : -1;
+    animation.projectile.flash = route <= FRAME_FLASH ? 12 : -1;
+    actor.modeldata.knife = route <= HEADER_KNIFE ? 13 : -1;
+    actor.modeldata.pshotno = route <= HEADER_PSHOT ? 14 : -1;
+    expected_y = floor ? 0 : 11;
+    expected_name = route == BY_NAME || both_selectors ? explicit_name :
+                    route == GLOBAL_SHOT ? "Shot" : route == GLOBAL_KNIFE ? "Knife" : NULL;
+    const int expected_indices[] = {-1, 9, 10, 11, 12, 13, 14, -1, -1};
+    expected_index = expected_indices[route];
+    return knife_spawn(route == BY_NAME || both_selectors ? explicit_name : NULL,
+                      route == BY_INDEX ? 9 : -1, 3, 7, 11,
+                      DIRECTION_RIGHT, route == GLOBAL_SHOT, 6);
+}
+
+static void check_routes(const unsigned *origin_masks, int active_state, int spawn_type)
+{
+    level = NULL;
+    savedata.mode = 0;
+    actor.modeldata.type = TYPE_PLAYER;
+    actor.modeldata.hostile = TYPE_PLAYER | TYPE_ENEMY;
+    actor.modeldata.candamage = TYPE_PLAYER | TYPE_NPC;
+    launch_hostile = launch_candamage = -1;
+    for(int route = 0; route < ROUTE_COUNT; ++route)
+        for(available = 0; available <= 1; ++available)
+        {
+            energy.cost = 1;
+            animation.energycost = &energy;
+            nocost = 1;
+            entity *out = launch(route, route == BY_INDEX);
+            assert(out == (available ? &projectile : NULL) && calls == 1 && maps == available);
+#if LEGACY_ORIGINS
+            assert(actor.cantfire == available);
+#endif
+            if(!out) continue;
+            assert(out->owner == self && out->modeldata.type == TYPE_SHOT && out->nograb);
+            assert(out->nextthink == 104 && (int)out->attacking == active_state);
+            assert(out->position.y == expected_y && out->base == expected_y);
+            assert(out->modeldata.hostile == self->modeldata.hostile && out->modeldata.candamage == self->modeldata.candamage);
+#if LEGACY_ORIGINS
+            assert((unsigned)out->ptype == origin_masks[route] && spawn_type == -1);
+#else
+            assert(obor_projectile_prime_to_native(out->projectile_prime) == origin_masks[route]);
+            assert(obor_spawn_type_to_native(out->spawntype) == spawn_type);
+#endif
+        }
+    available = 1;
+    assert(launch(BY_INDEX, 0) == &projectile);
+    for(int cost = -1; cost <= 1; ++cost)
+        for(nocost = 0; nocost <= 1; ++nocost)
+        {
+            energy.cost = cost;
+            animation.energycost = cost < 0 ? NULL : &energy;
+            assert(launch(BY_NAME, 0) == &projectile);
+#if LEGACY_ORIGINS
+            assert(actor.cantfire == (nocost && cost > 0));
+#endif
+        }
+}
+
+static void check_player_targets(int exclusion_value)
+{
+    available = 1;
+    const int hostile = TYPE_PLAYER | TYPE_ENEMY;
+    const int candamage = TYPE_PLAYER | TYPE_NPC;
+    for(int level_value = -1; level_value <= 1; ++level_value)
+        for(int player = 0; player <= 1; ++player)
+            for(int mode = 0; mode <= 1; ++mode)
+                for(int inherit = 0; inherit <= 1; ++inherit)
+                {
+                    stage.nohit = level_value < 0 ? 0 : level_value;
+                    level = level_value < 0 ? NULL : &stage;
+                    savedata.mode = mode;
+                    actor.modeldata.type = player ? TYPE_PLAYER : TYPE_ENEMY;
+                    actor.modeldata.hostile = hostile;
+                    actor.modeldata.candamage = candamage;
+                    launch_hostile = inherit ? -1 : candamage;
+                    launch_candamage = inherit ? -1 : hostile;
+                    int remove_player = player && (mode || level_value == exclusion_value);
+                    const int mask = remove_player ? ~TYPE_PLAYER : -1;
+                    entity *out = launch(BY_NAME, 0);
+                    assert(out == &projectile && out->modeldata.type == (player ? TYPE_SHOT : TYPE_ENEMY));
+                    assert(out->modeldata.hostile == ((inherit ? hostile : candamage) & mask));
+                    assert(out->modeldata.candamage == ((inherit ? candamage : hostile) & mask));
+
+                    out->modeldata.type = actor.modeldata.type;
+                    out->modeldata.hostile = hostile;
+                    out->modeldata.candamage = candamage;
+                    apply_spawn_filter(out);
+                    assert(out->modeldata.hostile == (hostile & mask));
+                    assert(out->modeldata.candamage == (candamage & mask));
+                }
+}
+
+int main(void)
+{
+    const struct {uint32_t revision; int exclusion, active_state, spawn_type;
+                  unsigned origin_masks[ROUTE_COUNT];} rows[] = {@ROWS@};
+    for(unsigned i = 0; i < sizeof(rows) / sizeof(*rows); ++i)
+    {
+        obor_profile_build = rows[i].revision;
+        check_routes(rows[i].origin_masks, rows[i].active_state, rows[i].spawn_type);
+        check_player_targets(rows[i].exclusion);
+        printf("%u\n", obor_profile_build);
+    }
+    return 0;
+}

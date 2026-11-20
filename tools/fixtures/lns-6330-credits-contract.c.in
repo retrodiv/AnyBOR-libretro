@@ -10,6 +10,7 @@
 @GAME_SPEED@
 typedef uint32_t u32;
 static unsigned obor_profile_features;
+static uint32_t obor_profile_build;
 static u32 _time,bothnewkeys,input;
 static int fade,frames,exit_after;
 static struct {int hRes,vRes,vShift;} videomodes;
@@ -42,6 +43,7 @@ static void update(int gameplay,int second) {
 static void reset(void) {count=frames=0;_time=135;fade=9;bothnewkeys=0;memset(events,0,sizeof(events));}
 int main(void) {
  unsigned cases=0;
+ obor_profile_build=6391;
  const u32 keys[]={FLAG_ESC,FLAG_START,FLAG_ATTACK,0,FLAG_ESC|FLAG_ATTACK};
  for(obor_profile_features=0;obor_profile_features<8;++obor_profile_features)
   for(unsigned family=0;family<3;++family)for(savedata.logo=-1;savedata.logo<=2;++savedata.logo)

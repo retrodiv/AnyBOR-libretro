@@ -43,6 +43,7 @@
 *  input stream and add it to the current token buffer.
 ******************************************************************************/
 #define CONSUMECHARACTER \
+   if(plexer->theTokenLen >= obor_script_text_limit(MAX_TOKEN_LENGTH)) return E_FAIL; \
    plexer->theTokenSource[plexer->theTokenLen++] = *(plexer->pcurChar);\
    plexer->theTokenSource[plexer->theTokenLen] = '\0';\
    plexer->pcurChar++; \
@@ -358,19 +359,19 @@ HRESULT pp_lexer_GetNextToken (pp_lexer *plexer, pp_token *theNextToken)
 ******************************************************************************/
 HRESULT pp_lexer_GetTokenIdentifier(pp_lexer *plexer, pp_token *theNextToken)
 {
-    int len = 0;
+    const unsigned limit = obor_script_text_limit(MAX_TOKEN_LENGTH);
 
     //copy the source that makes up this token
     //an identifier is a string of letters, digits and/or underscores
     do
     {
-        CONSUMECHARACTER;
-        if(++len > MAX_TOKEN_LENGTH)
+        if(plexer->theTokenLen >= limit)
         {
-            printf("Warning: unable to lex token longer than %d characters\n", MAX_TOKEN_LENGTH);
+            printf("Warning: unable to lex token longer than %u characters\n", limit);
             MAKETOKEN( PP_TOKEN_IDENTIFIER );
             return E_FAIL;
         }
+        CONSUMECHARACTER;
     }
     while ((*plexer->pcurChar >= '0' && *plexer->pcurChar <= '9')  ||
             (*plexer->pcurChar >= 'a' && *plexer->pcurChar <= 'z')  ||
@@ -670,12 +671,11 @@ HRESULT pp_lexer_GetTokenNumber(pp_lexer *plexer, pp_token *theNextToken)
 HRESULT pp_lexer_GetTokenStringLiteral(pp_lexer *plexer, pp_token *theNextToken)
 {
     int escaped = 0;
-    /* Every consumed byte must leave space for the token terminator. */
     CONSUMECHARACTER;
     for(;;)
     {
         const char value = *plexer->pcurChar;
-        if(!value || strlen(plexer->theTokenSource) + 1 >= sizeof(plexer->theTokenSource))
+        if(!value)
             return E_FAIL;
         CONSUMECHARACTER;
         if(!escaped && value == '"') break;

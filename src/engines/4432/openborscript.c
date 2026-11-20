@@ -54,6 +54,12 @@
  * registered height alias and private helper result epochs. Preserve native
  * cell selection and initial map size by profile, checking owned map storage
  * before writes. Route the optional basemap generation argument by profile.
+ * Register 4905 scalar binding properties and preserve the preceding entity-
+ * property order. Preserve versioned attack property numbers, named
+ * constants and the combined fall velocity view. Preserve recognized body
+ * collision frame and instance pointer routes by profile. Expose source-
+ * defined body collision property order, coordinate aliases and defense
+ * references in 4905.
  * Existing changes recorded here; this is not their implementation date.
  * See MODIFICATIONS.md and docs/modifications/4432.md
  * at the source repository root. Original notices follow below.
@@ -97,6 +103,7 @@
 #include "globals.h"
 #include "ImportCache.h"
 #include "models.h"
+#include "anybor_resources.h"
 
 #define _is_not_a_known_subproperty_of_  "'%s' is not a known subproperty of '%s'.\n"
 #define _is_not_supported_by_ "'%s' is not supported by '%s'.\n"
@@ -111,6 +118,10 @@ if(VAR->vt == VT_STR) { \
 		VAR->lVal = prop; \
 	} else { printf(FAILMSG, propname, ##args); return 0;} \
 }
+
+static int mapstrings_binding(ScriptVariant **varlist, int paramCount);
+static HRESULT openbor_get_binding_property(ScriptVariant **varlist, ScriptVariant **pretvar, int paramCount);
+static HRESULT openbor_set_binding_property(ScriptVariant **varlist, ScriptVariant **pretvar, int paramCount);
 
 extern int			  PLAYER_MIN_Z;
 extern int			  PLAYER_MAX_Z;
@@ -828,7 +839,7 @@ int Script_AppendText(Script *pscript, char *text, char *path)
 //return name of function from pointer to function
 static int obor_has_computed_damage(void)
 {
-    return obor_profile_build >= 4682 && obor_profile_build <= 4750;
+    return obor_profile_build >= 4682 && obor_profile_build <= 4905;
 }
 
 const char *Script_GetFunctionName(void *functionRef)
@@ -991,6 +1002,14 @@ const char *Script_GetFunctionName(void *functionRef)
     else if (functionRef == ((void *)openbor_changeplayerproperty))
     {
         return "changeplayerproperty";
+    }
+    else if (obor_profile_build >= 4905 && functionRef == ((void *)openbor_get_binding_property))
+    {
+        return "get_binding_property";
+    }
+    else if (obor_profile_build >= 4905 && functionRef == ((void *)openbor_set_binding_property))
+    {
+        return "set_binding_property";
     }
     else if (functionRef == ((void *)openbor_getplayerproperty))
     {
@@ -1569,7 +1588,7 @@ const char *Script_GetFunctionName(void *functionRef)
     {
         return "finishlevel";
     }
-    else if (obor_profile_build >= 4642 && obor_profile_build <= 4750 &&
+    else if (obor_profile_build >= 4642 && obor_profile_build <= 4905 &&
              functionRef == ((void *)openbor_gameover))
     {
         return "gameover";
@@ -1627,6 +1646,12 @@ void *Script_GetStringMapFunction(void *functionRef)
     else if (functionRef == ((void *)openbor_changeplayerproperty))
     {
         return (void *)mapstrings_playerproperty;
+    }
+    else if (obor_profile_build >= 4905 &&
+             (functionRef == ((void *)openbor_get_binding_property) ||
+              functionRef == ((void *)openbor_set_binding_property)))
+    {
+        return (void *)mapstrings_binding;
     }
     else if (functionRef == ((void *)openbor_setspawnentry))
     {
@@ -1887,6 +1912,13 @@ void Script_LoadSystemFunctions()
                      (void *)openbor_changeplayerproperty, "changeplayerproperty");
     List_InsertAfter(&theFunctionList,
                      (void *)openbor_changeentityproperty, "changeentityproperty");
+    if(obor_profile_build >= 4905)
+    {
+        List_InsertAfter(&theFunctionList,
+                         (void *)openbor_get_binding_property, "get_binding_property");
+        List_InsertAfter(&theFunctionList,
+                         (void *)openbor_set_binding_property, "set_binding_property");
+    }
     List_InsertAfter(&theFunctionList,
                      (void *)openbor_getplayerproperty, "getplayerproperty");
     List_InsertAfter(&theFunctionList,
@@ -2206,7 +2238,7 @@ void Script_LoadSystemFunctions()
                      (void *)openbor_loadgamefile, "loadgamefile");
     List_InsertAfter(&theFunctionList,
                      (void *)openbor_finishlevel, "finishlevel");
-    if(obor_profile_build >= 4642 && obor_profile_build <= 4750)
+    if(obor_profile_build >= 4642 && obor_profile_build <= 4905)
     {
         List_InsertAfter(&theFunctionList,
                          (void *)openbor_gameover, "gameover");
@@ -2235,7 +2267,7 @@ void Script_LoadSystemFunctions()
 //isempty(var);
 HRESULT system_isempty(ScriptVariant **varlist , ScriptVariant **pretvar, int paramCount)
 {
-    if(obor_profile_build < 4682 || obor_profile_build > 4750 || paramCount != 1)
+    if(obor_profile_build < 4682 || obor_profile_build > 4905 || paramCount != 1)
     {
         *pretvar = NULL;
         return E_FAIL;
@@ -3975,6 +4007,7 @@ enum entityproperty_enum
     _ep_autokill,
     _ep_base,
     _ep_bbox,
+    _ep_binding,
     _ep_blink,
     _ep_blockback,
     _ep_blockodds,
@@ -4172,6 +4205,7 @@ static const char *eplist[] =
     "autokill",
     "base",
     "bbox",
+    "binding",
     "blink",
     "blockback",
     "blockodds",
@@ -4827,6 +4861,7 @@ static int obor_script_collision_coordinates(void)
 /* Preserve the original ordinal in script values and resolve it at dispatch. */
 static const struct { int selector; unsigned introduced; } obor_entity_property_additions[] =
 {
+    {_ep_binding, 4905},
     {_ep_boomerang, 4405},
     {_ep_custom_target, 4414},
     {_ep_die_on_landing, 4665},
@@ -4872,6 +4907,10 @@ static int obor_resolve_entity_property(LONG ordinal)
                 ++ordinal;
         }
     }
+    else if(obor_profile_build < 4905 && ordinal >= _ep_binding)
+    {
+        ++ordinal;
+    }
     return ordinal < _ep_the_end ? (int)ordinal : -1;
 }
 
@@ -4892,7 +4931,7 @@ static int obor_map_entity_property_name(ScriptVariant *value)
     int ordinal;
     if(value->vt != VT_STR) return 1;
     name = StrCache_Get(value->strVal);
-    if(obor_entity_property_uses_history())
+    if(obor_profile_build < 4905)
     {
         const char *names[_ep_the_end];
         int count = 0;
@@ -4903,7 +4942,8 @@ static int obor_map_entity_property_name(ScriptVariant *value)
             if(addition < additions && selector == obor_entity_property_additions[addition].selector)
             {
                 const unsigned introduced = obor_entity_property_additions[addition++].introduced;
-                if(obor_profile_build < introduced) continue;
+                if((selector == _ep_binding || obor_entity_property_uses_history()) &&
+                   obor_profile_build < introduced) continue;
             }
             names[count++] = obor_entity_property_name(selector);
         }
@@ -5706,6 +5746,58 @@ HRESULT openbor_get_attack_instance(ScriptVariant **varlist, ScriptVariant **pre
     #undef ARG_INDEX
 }
 
+enum { OBOR_ATTACK_FALL_VELOCITY = ATTACK_PROP_TAG + 1 };
+
+static LONG obor_attack_property_selector(LONG selector)
+{
+    static const int selectors[] =
+    {
+        ATTACK_PROP_BLOCK_COST,
+        ATTACK_PROP_BLOCK_PENETRATE,
+        -1, /* Reserved coordinates selector. */
+        ATTACK_PROP_COUNTER,
+        ATTACK_PROP_DAMAGE_FORCE,
+        ATTACK_PROP_DAMAGE_LAND_FORCE,
+        ATTACK_PROP_DAMAGE_LAND_MODE,
+        ATTACK_PROP_DAMAGE_LETHAL_DISABLE,
+        ATTACK_PROP_DAMAGE_RECURSIVE_FORCE,
+        ATTACK_PROP_DAMAGE_RECURSIVE_INDEX,
+        ATTACK_PROP_DAMAGE_RECURSIVE_MODE,
+        ATTACK_PROP_DAMAGE_RECURSIVE_TIME_RATE,
+        ATTACK_PROP_DAMAGE_RECURSIVE_TIME_EXPIRE,
+        ATTACK_PROP_DAMAGE_STEAL,
+        ATTACK_PROP_DAMAGE_TYPE,
+        ATTACK_PROP_EFFECT_BLOCK_FLASH,
+        ATTACK_PROP_EFFECT_BLOCK_SOUND,
+        ATTACK_PROP_EFFECT_HIT_FLASH,
+        ATTACK_PROP_EFFECT_HIT_FLASH_DISABLE,
+        ATTACK_PROP_EFFECT_HIT_SOUND,
+        ATTACK_PROP_INDEX,
+        ATTACK_PROP_GROUND,
+        ATTACK_PROP_MAP_INDEX,
+        ATTACK_PROP_MAP_TIME,
+        ATTACK_PROP_REACTION_FALL_FORCE,
+        OBOR_ATTACK_FALL_VELOCITY,
+        ATTACK_PROP_REACTION_FREEZE_MODE,
+        ATTACK_PROP_REACTION_FREEZE_TIME,
+        ATTACK_PROP_REACTION_INVINCIBLE_TIME,
+        ATTACK_PROP_REACTION_REPOSITION_DIRECTION,
+        ATTACK_PROP_REACTION_REPOSITION_DISTANCE,
+        ATTACK_PROP_REACTION_REPOSITION_MODE,
+        ATTACK_PROP_REACTION_PAIN_SKIP,
+        ATTACK_PROP_REACTION_PAUSE_TIME,
+        ATTACK_PROP_SEAL_COST,
+        ATTACK_PROP_SEAL_TIME,
+        ATTACK_PROP_STAYDOWN_RISE,
+        ATTACK_PROP_STAYDOWN_RISEATTACK,
+        ATTACK_PROP_TAG
+    };
+
+    if(obor_profile_build < 4905) return selector < OBOR_ATTACK_FALL_VELOCITY ? selector : -1;
+    return selector >= 0 && (size_t)selector < sizeof(selectors) / sizeof(*selectors)
+        ? selectors[selector] : -1;
+}
+
 // get_attack_property(void handle, int property)
 HRESULT openbor_get_attack_property(ScriptVariant **varlist, ScriptVariant **pretvar, int paramCount)
 {
@@ -5718,7 +5810,7 @@ HRESULT openbor_get_attack_property(ScriptVariant **varlist, ScriptVariant **pre
 
     int                     result      = S_OK; // Success or error?
     s_collision_attack                *handle     = NULL; // Property handle.
-    e_attack_properties     property    = 0;    // Property argument.
+    LONG                    property    = 0;    // Property argument.
 
     // Clear pass by reference argument used to send
     // property data back to calling script.     .
@@ -5739,7 +5831,7 @@ HRESULT openbor_get_attack_property(ScriptVariant **varlist, ScriptVariant **pre
     else
     {
         handle      = (s_collision_attack *)varlist[ARG_HANDLE]->ptrVal;
-        property    = (LONG)varlist[ARG_PROPERTY]->lVal;
+        property    = obor_attack_property_selector(varlist[ARG_PROPERTY]->lVal);
     }
 
     // Which property to get?
@@ -6010,6 +6102,12 @@ HRESULT openbor_get_attack_property(ScriptVariant **varlist, ScriptVariant **pre
             (*pretvar)->lVal = (LONG)handle->sealtime;
             break;
 
+        case OBOR_ATTACK_FALL_VELOCITY:
+            OBOR_ATTACK_REQUIRE_HANDLE();
+            ScriptVariant_ChangeType(*pretvar, VT_PTR);
+            (*pretvar)->ptrVal = &handle->dropv;
+            break;
+
         case ATTACK_PROP_SIZE_X:
 
             ScriptVariant_ChangeType(*pretvar, VT_INTEGER);
@@ -6102,7 +6200,7 @@ HRESULT openbor_set_attack_property(ScriptVariant **varlist, ScriptVariant **pre
 
     int                     result      = S_OK; // Success or error?
     s_collision_attack                *handle     = NULL; // Property handle.
-    e_attack_properties     property    = 0;    // Property to access.
+    LONG                    property    = 0;    // Property to access.
 
     // Value carriers to apply on properties after
     // taken from argument.
@@ -6122,7 +6220,7 @@ HRESULT openbor_set_attack_property(ScriptVariant **varlist, ScriptVariant **pre
     else
     {
         handle      = (s_collision_attack *)varlist[ARG_HANDLE]->ptrVal;
-        property    = (LONG)varlist[ARG_PROPERTY]->lVal;
+        property    = obor_attack_property_selector(varlist[ARG_PROPERTY]->lVal);
     }
 
     // Which property to modify?
@@ -6329,6 +6427,14 @@ HRESULT openbor_set_attack_property(ScriptVariant **varlist, ScriptVariant **pre
                 handle->attack_drop = temp_int;
             }
 
+            break;
+
+        case OBOR_ATTACK_FALL_VELOCITY:
+            if(handle && varlist[ARG_VALUE] && varlist[ARG_VALUE]->vt == VT_PTR &&
+               obor_allocation_contains(varlist[ARG_VALUE]->ptrVal, sizeof(handle->dropv)))
+            {
+                memmove(&handle->dropv, varlist[ARG_VALUE]->ptrVal, sizeof(handle->dropv));
+            }
             break;
 
         case ATTACK_PROP_REACTION_FALL_VELOCITY_X:
@@ -6637,61 +6743,111 @@ HRESULT openbor_get_body_collision_collection(ScriptVariant **varlist, ScriptVar
     #undef ARG_FRAME
 }
 
+/* The original frame record has one pointer slot. An instance vector returned
+ * from that slot then supports the indices owned by its animation frame. */
+static int obor_body_collision_at(const void *handle, LONG index, void **selected)
+{
+    if(!handle || index < 0) return 0;
+
+    for(const s_anim_list *node = anim_list; node; node = node->next)
+    {
+        const s_anim *animation = node->anim;
+        if(!animation || !animation->collision_body) continue;
+        for(size_t frame = 0; frame < animation->obor_frame_capacity; ++frame)
+        {
+            const s_collision_body_list *list = animation->collision_body[frame];
+            if(!list) continue;
+            if(handle == list)
+            {
+                if(index != 0) return 0;
+                *selected = list->instance;
+                return 1;
+            }
+            if(handle == list->instance)
+            {
+                if((size_t)index >= list->obor_instance_capacity) return 0;
+                *selected = list->instance[index];
+                return 1;
+            }
+        }
+    }
+    return 0;
+}
+
 // get_body_collision_instance(void handle, int index)
 HRESULT openbor_get_body_collision_instance(ScriptVariant **varlist, ScriptVariant **pretvar, int paramCount)
 {
-    #define SELF_NAME       "get_body_collision_instance(void handle, int index)"
-    #define ARG_MINIMUM     2   // Minimum required arguments.
-    #define ARG_HANDLE      0   // Handle (pointer to property structure).
-    #define ARG_INDEX       1   // Index to access.
-
-    int         result     = S_OK; // Success or error?
-    s_collision_body      *handle    = NULL; // Property handle.
-    //int         index      = 0;    // Property argument.
-
-    // Clear pass by reference argument used to send
-    // property data back to calling script.     .
+    if(!pretvar || !*pretvar) return E_FAIL;
     ScriptVariant_Clear(*pretvar);
 
-    // Verify incoming arguments. There should at least
-    // be a pointer for the property handle and an integer
-    // to determine which index is accessed.
-    if(paramCount < ARG_MINIMUM
-       || varlist[ARG_HANDLE]->vt != VT_PTR
-       || varlist[ARG_INDEX]->vt != VT_INTEGER)
+    if(paramCount < 2 || !varlist || !varlist[0] || !varlist[1] ||
+       varlist[0]->vt != VT_PTR || varlist[1]->vt != VT_INTEGER)
+        goto invalid;
+
+    void *selected = varlist[0]->ptrVal;
+    if(obor_profile_build >= 4905)
     {
-        *pretvar = NULL;
-        goto error_local;
+        if(!obor_body_collision_at(selected, varlist[1]->lVal, &selected))
+            goto invalid;
+        if(!selected) return S_OK;
     }
-    else
+    ScriptVariant_ChangeType(*pretvar, VT_PTR);
+    (*pretvar)->ptrVal = selected;
+    return S_OK;
+
+invalid:
+    *pretvar = NULL;
+    printf("You must provide a valid handle and index: "
+           "get_body_collision_instance(void handle, int index)\n");
+    return E_FAIL;
+}
+
+enum { OBOR_BODY_COLLISION_COORDINATES = BODY_COLLISION_PROP_TAG + 1 };
+
+static LONG obor_body_property_selector(LONG selector)
+{
+    static const int selectors[] = {
+        OBOR_BODY_COLLISION_COORDINATES, BODY_COLLISION_PROP_DEFENSE, BODY_COLLISION_PROP_TAG
+    };
+    if(obor_profile_build < 4905) return selector < OBOR_BODY_COLLISION_COORDINATES ? selector : -1;
+    return selector >= 0 && (size_t)selector < sizeof(selectors) / sizeof(*selectors)
+        ? selectors[selector] : -1;
+}
+
+static int obor_body_coords_is_live(const s_hitbox *coords)
+{
+    for(const s_anim_list *node = anim_list; node; node = node->next)
     {
-        handle  = (s_collision_body *)varlist[ARG_HANDLE]->ptrVal;
-        //index   = (LONG)varlist[ARG_INDEX]->lVal;
+        const s_anim *anim = node->anim;
+        if(!anim || !anim->collision_body) continue;
+        for(size_t frame = 0; frame < anim->obor_frame_capacity; ++frame)
+        {
+            const s_collision_body_list *list = anim->collision_body[frame];
+            if(!list || !list->instance) continue;
+            for(size_t slot = 0; slot < list->obor_instance_capacity; ++slot)
+            {
+                const s_collision_body *body = list->instance[slot];
+                if(body && body->obor_owned_coords &&
+                   (body->obor_owned_coords == coords || body->coords == coords))
+                    return 1;
+            }
+        }
     }
+    return 0;
+}
 
-    // If this index has property, send value back to user.
-    //if(handle[index])
-    //{
-        ScriptVariant_ChangeType(*pretvar, VT_PTR);
-        //(*pretvar)->ptrVal = handle[index];
-
-        (*pretvar)->ptrVal = handle;
-    //}
-
-    return result;
-
-    // Error trapping.
-    error_local:
-
-    printf("You must provide a valid handle and index: " SELF_NAME "\n");
-
-    result = E_FAIL;
-    return result;
-
-    #undef SELF_NAME
-    #undef ARG_MINIMUM
-    #undef ARG_HANDLE
-    #undef ARG_INDEX
+static void obor_body_set_coords(s_collision_body *body, s_hitbox *coords)
+{
+    if(!body->obor_owned_coords || body->coords == coords ||
+       (coords && !obor_body_coords_is_live(coords))) return;
+    if(coords && coords != body->obor_owned_coords)
+        ++((s_body_hitbox *)coords)->references;
+    if(body->coords && body->coords != body->obor_owned_coords)
+    {
+        s_body_hitbox *old = (s_body_hitbox *)body->coords;
+        if(--old->references == 0) free(old);
+    }
+    body->coords = coords;
 }
 
 // get_body_collision_property(void handle, int property)
@@ -6704,16 +6860,18 @@ HRESULT openbor_get_body_collision_property(ScriptVariant **varlist, ScriptVaria
 
     int                         result      = S_OK; // Success or error?
     s_collision_body                      *handle     = NULL; // Property handle.
-    e_body_collision_properties property    = 0;    // Property argument.
+    LONG                        property    = 0;    // Property argument.
 
     // Clear pass by reference argument used to send
     // property data back to calling script.     .
+    if(!pretvar || !*pretvar) return E_FAIL;
     ScriptVariant_Clear(*pretvar);
 
     // Verify incoming arguments. There should at least
     // be a pointer for the property handle and an integer
     // to determine which property is accessed.
     if(paramCount < ARG_MINIMUM
+       || !varlist || !varlist[ARG_HANDLE] || !varlist[ARG_PROPERTY]
        || varlist[ARG_HANDLE]->vt != VT_PTR
        || varlist[ARG_PROPERTY]->vt != VT_INTEGER)
     {
@@ -6723,23 +6881,32 @@ HRESULT openbor_get_body_collision_property(ScriptVariant **varlist, ScriptVaria
     else
     {
         handle      = (s_collision_body *)varlist[ARG_HANDLE]->ptrVal;
-        property    = (LONG)varlist[ARG_PROPERTY]->lVal;
+        property    = obor_body_property_selector(varlist[ARG_PROPERTY]->lVal);
+    }
+
+    if(obor_profile_build >= 4905 && (!handle || !obor_allocation_contains(handle, sizeof(*handle))))
+    {
+        *pretvar = NULL;
+        goto error_local;
     }
 
     // Which property to get?
     switch(property)
     {
-        case BODY_COLLISION_PROP_DEFENSE:
-
-            /*
-            // Verify animation has any defense.
-            if(handle->defense)
+        case OBOR_BODY_COLLISION_COORDINATES:
+            if(handle->coords)
             {
                 ScriptVariant_ChangeType(*pretvar, VT_PTR);
-                (*pretvar)->ptrVal = (VOID *)handle->defense;
+                (*pretvar)->ptrVal = handle->coords;
             }
-            */
+            break;
 
+        case BODY_COLLISION_PROP_DEFENSE:
+            if(obor_profile_build >= 4905 && handle->defense)
+            {
+                ScriptVariant_ChangeType(*pretvar, VT_PTR);
+                (*pretvar)->ptrVal = handle->defense;
+            }
             break;
 
         case BODY_COLLISION_PROP_POSITION_X:
@@ -6836,7 +7003,7 @@ HRESULT openbor_set_body_collision_property(ScriptVariant **varlist, ScriptVaria
 
     int                         result      = S_OK; // Success or error?
     s_collision_body                      *handle     = NULL; // Property handle.
-    e_body_collision_properties property    = 0;    // Property to access.
+    LONG                        property    = 0;    // Property to access.
 
 
     // Value carriers to apply on properties after
@@ -6847,7 +7014,9 @@ HRESULT openbor_set_body_collision_property(ScriptVariant **varlist, ScriptVaria
     // Verify incoming arguments. There must be a
     // pointer for the animation handle, an integer
     // property, and a new value to apply.
+    if(!pretvar) return E_FAIL;
     if(paramCount < ARG_MINIMUM
+       || !varlist || !varlist[ARG_HANDLE] || !varlist[ARG_PROPERTY] || !varlist[ARG_VALUE]
        || varlist[ARG_HANDLE]->vt != VT_PTR
        || varlist[ARG_PROPERTY]->vt != VT_INTEGER)
     {
@@ -6857,16 +7026,35 @@ HRESULT openbor_set_body_collision_property(ScriptVariant **varlist, ScriptVaria
     else
     {
         handle      = (s_collision_body *)varlist[ARG_HANDLE]->ptrVal;
-        property    = (LONG)varlist[ARG_PROPERTY]->lVal;
+        property    = obor_body_property_selector(varlist[ARG_PROPERTY]->lVal);
+    }
+
+    if(obor_profile_build >= 4905 && (!handle || !obor_allocation_contains(handle, sizeof(*handle))))
+    {
+        *pretvar = NULL;
+        goto error_local;
     }
 
     // Which property to modify?
     switch(property)
     {
+        case OBOR_BODY_COLLISION_COORDINATES:
+            if(varlist[ARG_VALUE]->vt == VT_EMPTY)
+                obor_body_set_coords(handle, NULL);
+            else if(varlist[ARG_VALUE]->vt == VT_PTR)
+                obor_body_set_coords(handle, varlist[ARG_VALUE]->ptrVal);
+            break;
+
         case BODY_COLLISION_PROP_DEFENSE:
-
-                //handle->defense = (temp_defense *)varlist[ARG_VALUE]->ptrVal;
-
+            if(obor_profile_build >= 4905)
+            {
+                if(varlist[ARG_VALUE]->vt == VT_EMPTY)
+                    handle->defense = NULL;
+                else if(varlist[ARG_VALUE]->vt == VT_PTR &&
+                        (!varlist[ARG_VALUE]->ptrVal ||
+                         obor_allocation_contains(varlist[ARG_VALUE]->ptrVal, sizeof(*handle->defense))))
+                    handle->defense = varlist[ARG_VALUE]->ptrVal;
+            }
             break;
 
         case BODY_COLLISION_PROP_POSITION_X:
@@ -7394,6 +7582,12 @@ HRESULT openbor_getentityproperty(ScriptVariant **varlist , ScriptVariant **pret
         (*pretvar)->lVal = (LONG)ent->modeldata.bounce;
         break;
     }
+    case _ep_binding:
+    {
+        ScriptVariant_ChangeType(*pretvar, VT_PTR);
+        (*pretvar)->ptrVal = (VOID *)&ent->binding;
+        break;
+    }
     case _ep_bound:
     {
         ScriptVariant_ChangeType(*pretvar, VT_PTR);
@@ -7465,7 +7659,7 @@ HRESULT openbor_getentityproperty(ScriptVariant **varlist , ScriptVariant **pret
     case _ep_damage_on_landing:
     {
         ScriptVariant_ChangeType(*pretvar, VT_INTEGER);
-        if(obor_profile_build >= 4642 && obor_profile_build <= 4750 && paramCount >= 3)
+        if(obor_profile_build >= 4642 && obor_profile_build <= 4905 && paramCount >= 3)
         {
             if(FAILED(ScriptVariant_IntegerValue(varlist[2], &ltemp2)) || ltemp2 < 0 || ltemp2 > 1)
             {
@@ -9611,7 +9805,7 @@ HRESULT openbor_changeentityproperty(ScriptVariant **varlist , ScriptVariant **p
         {
             ent->damage_on_landing = (int)ltemp;
         }
-        if(obor_profile_build >= 4642 && obor_profile_build <= 4750 && paramCount >= 4 &&
+        if(obor_profile_build >= 4642 && obor_profile_build <= 4905 && paramCount >= 4 &&
            SUCCEEDED(ScriptVariant_IntegerValue(varlist[3], &ltemp2)))
         {
             if(ltemp2 == 0)
@@ -14027,6 +14221,18 @@ else if(stricmp(#x, constname)==0) {\
 	v.lVal = (LONG)x;\
 }
 
+#define ICMPCOLLISIONPROP(x, slot) \
+else if((obor_profile_build < 4905 || (slot) >= 0) && stricmp(#x, constname) == 0) \
+{ \
+    v.lVal = obor_profile_build < 4905 ? (LONG)(x) : (slot); \
+}
+
+#define ICMPCONST_4905(name, slot) \
+else if(obor_profile_build >= 4905 && stricmp(#name, constname) == 0) \
+{ \
+    v.lVal = (slot); \
+}
+
 #define ICMPSUBTYPE(x) \
 else if(stricmp(#x, constname)==0) {\
     v.lVal = obor_profile_subtype_value(x);\
@@ -14267,7 +14473,7 @@ static int obor_level_property_native(int index)
     };
 
     if(index < 0 || index >= OBOR_LEVEL_PROP_COUNT) return -1;
-    if(obor_profile_build >= 4642 && obor_profile_build <= 4750)
+    if(obor_profile_build >= 4642 && obor_profile_build <= 4905)
     {
         if(index == LEVEL_PROP_DAMAGE_FROM_ENEMY) return LEVEL_PROP_GAMEOVER;
         return index > LEVEL_PROP_DAMAGE_FROM_ENEMY ? index - 1 : index;
@@ -14927,61 +15133,71 @@ int mapstrings_transconst(ScriptVariant **varlist, int paramCount)
         ICMPANIMPROP(ANI_PROP_WEAPONFRAME)
 
         // Attack properties
-        ICMPCONST(ATTACK_PROP_BLOCK_COST)
-        ICMPCONST(ATTACK_PROP_BLOCK_PENETRATE)
-        ICMPCONST(ATTACK_PROP_COUNTER)
-        ICMPCONST(ATTACK_PROP_DAMAGE_FORCE)
-        ICMPCONST(ATTACK_PROP_DAMAGE_LAND_FORCE)
-        ICMPCONST(ATTACK_PROP_DAMAGE_LAND_MODE)
-        ICMPCONST(ATTACK_PROP_DAMAGE_LETHAL_DISABLE)
-        ICMPCONST(ATTACK_PROP_DAMAGE_RECURSIVE_FORCE)
-        ICMPCONST(ATTACK_PROP_DAMAGE_RECURSIVE_INDEX)
-        ICMPCONST(ATTACK_PROP_DAMAGE_RECURSIVE_MODE)
-        ICMPCONST(ATTACK_PROP_DAMAGE_RECURSIVE_TIME_RATE)
-        ICMPCONST(ATTACK_PROP_DAMAGE_RECURSIVE_TIME_EXPIRE)
-        ICMPCONST(ATTACK_PROP_DAMAGE_STEAL)
-        ICMPCONST(ATTACK_PROP_DAMAGE_TYPE)
-        ICMPCONST(ATTACK_PROP_EFFECT_BLOCK_FLASH)
-        ICMPCONST(ATTACK_PROP_EFFECT_BLOCK_SOUND)
-        ICMPCONST(ATTACK_PROP_EFFECT_HIT_FLASH)
-        ICMPCONST(ATTACK_PROP_EFFECT_HIT_FLASH_DISABLE)
-        ICMPCONST(ATTACK_PROP_EFFECT_HIT_SOUND)
-        ICMPCONST(ATTACK_PROP_GROUND)
-        ICMPCONST(ATTACK_PROP_MAP_INDEX)
-        ICMPCONST(ATTACK_PROP_MAP_TIME)
-        ICMPCONST(ATTACK_PROP_POSITION_X)
-        ICMPCONST(ATTACK_PROP_POSITION_Y)
-        ICMPCONST(ATTACK_PROP_REACTION_FALL_FORCE)
-        ICMPCONST(ATTACK_PROP_REACTION_FALL_VELOCITY_X)
-        ICMPCONST(ATTACK_PROP_REACTION_FALL_VELOCITY_Y)
-        ICMPCONST(ATTACK_PROP_REACTION_FALL_VELOCITY_Z)
-        ICMPCONST(ATTACK_PROP_REACTION_FREEZE_MODE)
-        ICMPCONST(ATTACK_PROP_REACTION_FREEZE_TIME)
-        ICMPCONST(ATTACK_PROP_REACTION_INVINCIBLE_TIME)
-        ICMPCONST(ATTACK_PROP_REACTION_REPOSITION_DIRECTION)
-        ICMPCONST(ATTACK_PROP_REACTION_REPOSITION_DISTANCE)
-        ICMPCONST(ATTACK_PROP_REACTION_REPOSITION_MODE)
-        ICMPCONST(ATTACK_PROP_REACTION_PAIN_SKIP)
-        ICMPCONST(ATTACK_PROP_REACTION_PAUSE_TIME)
-        ICMPCONST(ATTACK_PROP_SEAL_COST)
-        ICMPCONST(ATTACK_PROP_SEAL_TIME)
-        ICMPCONST(ATTACK_PROP_SIZE_X)
-        ICMPCONST(ATTACK_PROP_SIZE_Y)
-        ICMPCONST(ATTACK_PROP_SIZE_Z_1)
-        ICMPCONST(ATTACK_PROP_SIZE_Z_2)
-        ICMPCONST(ATTACK_PROP_STAYDOWN_RISE)
-        ICMPCONST(ATTACK_PROP_STAYDOWN_RISEATTACK)
-        ICMPCONST(ATTACK_PROP_TAG)
+        ICMPCOLLISIONPROP(ATTACK_PROP_BLOCK_COST, 0)
+        ICMPCOLLISIONPROP(ATTACK_PROP_BLOCK_PENETRATE, 1)
+        ICMPCOLLISIONPROP(ATTACK_PROP_COUNTER, 3)
+        ICMPCOLLISIONPROP(ATTACK_PROP_DAMAGE_FORCE, 4)
+        ICMPCOLLISIONPROP(ATTACK_PROP_DAMAGE_LAND_FORCE, 5)
+        ICMPCOLLISIONPROP(ATTACK_PROP_DAMAGE_LAND_MODE, 6)
+        ICMPCOLLISIONPROP(ATTACK_PROP_DAMAGE_LETHAL_DISABLE, 7)
+        ICMPCOLLISIONPROP(ATTACK_PROP_DAMAGE_RECURSIVE_FORCE, 8)
+        ICMPCOLLISIONPROP(ATTACK_PROP_DAMAGE_RECURSIVE_INDEX, 9)
+        ICMPCOLLISIONPROP(ATTACK_PROP_DAMAGE_RECURSIVE_MODE, 10)
+        ICMPCOLLISIONPROP(ATTACK_PROP_DAMAGE_RECURSIVE_TIME_RATE, 11)
+        ICMPCOLLISIONPROP(ATTACK_PROP_DAMAGE_RECURSIVE_TIME_EXPIRE, 12)
+        ICMPCOLLISIONPROP(ATTACK_PROP_DAMAGE_STEAL, 13)
+        ICMPCOLLISIONPROP(ATTACK_PROP_DAMAGE_TYPE, 14)
+        ICMPCOLLISIONPROP(ATTACK_PROP_EFFECT_BLOCK_FLASH, 15)
+        ICMPCOLLISIONPROP(ATTACK_PROP_EFFECT_BLOCK_SOUND, 16)
+        ICMPCOLLISIONPROP(ATTACK_PROP_EFFECT_HIT_FLASH, 17)
+        ICMPCOLLISIONPROP(ATTACK_PROP_EFFECT_HIT_FLASH_DISABLE, 18)
+        ICMPCOLLISIONPROP(ATTACK_PROP_EFFECT_HIT_SOUND, 19)
+        ICMPCOLLISIONPROP(ATTACK_PROP_GROUND, 21)
+        ICMPCOLLISIONPROP(ATTACK_PROP_MAP_INDEX, 22)
+        ICMPCOLLISIONPROP(ATTACK_PROP_MAP_TIME, 23)
+        ICMPCOLLISIONPROP(ATTACK_PROP_POSITION_X, -1)
+        ICMPCOLLISIONPROP(ATTACK_PROP_POSITION_Y, -1)
+        ICMPCOLLISIONPROP(ATTACK_PROP_REACTION_FALL_FORCE, 24)
+        ICMPCONST_4905(ATTACK_PROP_REACTION_FALL_VELOCITY, 25)
+        ICMPCOLLISIONPROP(ATTACK_PROP_REACTION_FALL_VELOCITY_X, -1)
+        ICMPCOLLISIONPROP(ATTACK_PROP_REACTION_FALL_VELOCITY_Y, -1)
+        ICMPCOLLISIONPROP(ATTACK_PROP_REACTION_FALL_VELOCITY_Z, -1)
+        ICMPCOLLISIONPROP(ATTACK_PROP_REACTION_FREEZE_MODE, 26)
+        ICMPCOLLISIONPROP(ATTACK_PROP_REACTION_FREEZE_TIME, 27)
+        ICMPCOLLISIONPROP(ATTACK_PROP_REACTION_INVINCIBLE_TIME, 28)
+        ICMPCOLLISIONPROP(ATTACK_PROP_REACTION_REPOSITION_DIRECTION, 29)
+        ICMPCOLLISIONPROP(ATTACK_PROP_REACTION_REPOSITION_DISTANCE, 30)
+        ICMPCOLLISIONPROP(ATTACK_PROP_REACTION_REPOSITION_MODE, 31)
+        ICMPCOLLISIONPROP(ATTACK_PROP_REACTION_PAIN_SKIP, 32)
+        ICMPCOLLISIONPROP(ATTACK_PROP_REACTION_PAUSE_TIME, 33)
+        ICMPCOLLISIONPROP(ATTACK_PROP_SEAL_COST, 34)
+        ICMPCOLLISIONPROP(ATTACK_PROP_SEAL_TIME, 35)
+        ICMPCOLLISIONPROP(ATTACK_PROP_SIZE_X, -1)
+        ICMPCOLLISIONPROP(ATTACK_PROP_SIZE_Y, -1)
+        ICMPCOLLISIONPROP(ATTACK_PROP_SIZE_Z_1, -1)
+        ICMPCOLLISIONPROP(ATTACK_PROP_SIZE_Z_2, -1)
+        ICMPCOLLISIONPROP(ATTACK_PROP_STAYDOWN_RISE, 36)
+        ICMPCOLLISIONPROP(ATTACK_PROP_STAYDOWN_RISEATTACK, 37)
+        ICMPCOLLISIONPROP(ATTACK_PROP_TAG, 38)
+
+        // Collision coordinate constants. The 4905 script registry has no coordinate accessors.
+        ICMPCONST_4905(COLLISION_COORDINATES_PROP_DEPTH_BACKGROUND, 0)
+        ICMPCONST_4905(COLLISION_COORDINATES_PROP_DEPTH_FOREGROUND, 1)
+        ICMPCONST_4905(COLLISION_COORDINATES_PROP_HEIGHT, 2)
+        ICMPCONST_4905(COLLISION_COORDINATES_PROP_WIDTH, 3)
+        ICMPCONST_4905(COLLISION_COORDINATES_PROP_X, 4)
+        ICMPCONST_4905(COLLISION_COORDINATES_PROP_Y, 5)
 
         // Body Collision (bbox) properties.
-        ICMPCONST(BODY_COLLISION_PROP_DEFENSE)
-        ICMPCONST(BODY_COLLISION_PROP_POSITION_X)
-        ICMPCONST(BODY_COLLISION_PROP_POSISTION_Y)
-        ICMPCONST(BODY_COLLISION_PROP_SIZE_X)
-        ICMPCONST(BODY_COLLISION_PROP_SIZE_Y)
-        ICMPCONST(BODY_COLLISION_PROP_SIZE_Z_1)
-        ICMPCONST(BODY_COLLISION_PROP_SIZE_Z_2)
-        ICMPCONST(BODY_COLLISION_PROP_TAG)
+        ICMPCONST_4905(BODY_COLLISION_PROP_COORDINATES, 0)
+        ICMPCOLLISIONPROP(BODY_COLLISION_PROP_DEFENSE, 1)
+        ICMPCOLLISIONPROP(BODY_COLLISION_PROP_POSITION_X, -1)
+        ICMPCOLLISIONPROP(BODY_COLLISION_PROP_POSISTION_Y, -1)
+        ICMPCOLLISIONPROP(BODY_COLLISION_PROP_SIZE_X, -1)
+        ICMPCOLLISIONPROP(BODY_COLLISION_PROP_SIZE_Y, -1)
+        ICMPCOLLISIONPROP(BODY_COLLISION_PROP_SIZE_Z_1, -1)
+        ICMPCOLLISIONPROP(BODY_COLLISION_PROP_SIZE_Z_2, -1)
+        ICMPCOLLISIONPROP(BODY_COLLISION_PROP_TAG, 2)
 
         // Porting
         ICMPCONST_FROM(PORTING_ANDROID, 4347)
@@ -17676,7 +17892,7 @@ error:
 
 static int obor_terrain_query_selector(const ScriptVariant *selector, const char *collection)
 {
-    const int mapped = obor_profile_build >= 4682 && obor_profile_build <= 4750;
+    const int mapped = obor_profile_build >= 4682 && obor_profile_build <= 4905;
     if(mapped && selector->vt == VT_INTEGER)
     {
         return 1;
@@ -18509,6 +18725,149 @@ HRESULT openbor_jumptobranch(ScriptVariant **varlist , ScriptVariant **pretvar, 
     return S_OK;
 jumptobranch_error:
     printf("Function requires 1 string value, the second argument is optional(int): jumptobranch(name, immediate)\n");
+    return E_FAIL;
+}
+
+/* Adapted from OpenBOR 4905 binding properties by Damon V. Caskey. */
+enum obor_binding_property
+{
+    _binding_animation,
+    _binding_bind_x,
+    _binding_bind_y,
+    _binding_bind_z,
+    _binding_direction,
+    _binding_entity,
+    _binding_offset_x,
+    _binding_offset_y,
+    _binding_offset_z,
+    _binding_sort_id,
+    _binding_the_end
+};
+
+static int mapstrings_binding(ScriptVariant **varlist, int paramCount)
+{
+    static const char *properties[] =
+    {
+        "animation", "bind_x", "bind_y", "bind_z", "direction",
+        "entity", "offset_x", "offset_y", "offset_z", "sort_id"
+    };
+    if(paramCount < 2 || !varlist || !varlist[1] || varlist[1]->vt != VT_STR)
+        return 1;
+
+    ScriptVariant *selector = varlist[1];
+    const char *name = StrCache_GetIfPresent(selector->strVal);
+    const int property = name ? searchList(properties, name, _binding_the_end) : -1;
+    if(property < 0)
+    {
+        printf("Property name '%s' is not supported by binding.\n", name ? name : "");
+        return 0;
+    }
+    ScriptVariant_ChangeType(selector, VT_INTEGER);
+    selector->lVal = property;
+    return 1;
+}
+
+static s_bind *obor_binding_handle(const ScriptVariant *value)
+{
+    if(!value || value->vt != VT_PTR || !value->ptrVal ||
+       (uintptr_t)value->ptrVal % _Alignof(s_bind) ||
+       !obor_allocation_contains(value->ptrVal, sizeof(s_bind)))
+        return NULL;
+    return value->ptrVal;
+}
+
+static HRESULT openbor_get_binding_property(ScriptVariant **varlist, ScriptVariant **pretvar, int paramCount)
+{
+    if(!pretvar || !*pretvar) return E_FAIL;
+
+    ScriptVariant_Clear(*pretvar);
+    mapstrings_binding(varlist, paramCount);
+    const s_bind *binding = paramCount >= 2 && varlist ? obor_binding_handle(varlist[0]) : NULL;
+    if(!binding || !varlist[1] || varlist[1]->vt != VT_INTEGER)
+        goto invalid;
+
+    LONG value;
+    switch(varlist[1]->lVal)
+    {
+    case _binding_animation: value = binding->ani_bind; break;
+    case _binding_bind_x: value = binding->offset_flag.x; break;
+    case _binding_bind_y: value = binding->offset_flag.y; break;
+    case _binding_bind_z: value = binding->offset_flag.z; break;
+    case _binding_direction: value = binding->direction; break;
+    case _binding_entity:
+        if(binding->ent)
+        {
+            ScriptVariant_ChangeType(*pretvar, VT_PTR);
+            (*pretvar)->ptrVal = binding->ent;
+        }
+        return S_OK;
+    case _binding_offset_x: value = binding->offset.x; break;
+    case _binding_offset_y: value = binding->offset.y; break;
+    case _binding_offset_z: value = binding->offset.z; break;
+    case _binding_sort_id: value = binding->sortid; break;
+    default:
+        printf("Unsupported property.\n");
+        goto invalid;
+    }
+
+    ScriptVariant_ChangeType(*pretvar, VT_INTEGER);
+    (*pretvar)->lVal = value;
+    return S_OK;
+
+invalid:
+    printf("You must provide a valid binding handle and property name: "
+           "openbor_get_binding_property(void handle, char property)\n");
+    *pretvar = NULL;
+    return E_FAIL;
+}
+
+static HRESULT openbor_set_binding_property(ScriptVariant **varlist, ScriptVariant **pretvar, int paramCount)
+{
+    if(!pretvar) return E_FAIL;
+
+    mapstrings_binding(varlist, paramCount);
+    s_bind *binding = paramCount >= 3 && varlist ? obor_binding_handle(varlist[0]) : NULL;
+    if(!binding || !varlist[1] || varlist[1]->vt != VT_INTEGER || !varlist[2])
+    {
+        *pretvar = NULL;
+        goto invalid;
+    }
+
+    const LONG property = varlist[1]->lVal;
+    if(property < 0 || property >= _binding_the_end)
+    {
+        printf("Unsupported property.\n");
+        goto invalid;
+    }
+    if(property == _binding_entity)
+    {
+        if(varlist[2]->vt == VT_EMPTY)
+            binding->ent = NULL;
+        else if(varlist[2]->vt == VT_PTR &&
+                (!varlist[2]->ptrVal || obor_allocation_contains(varlist[2]->ptrVal, sizeof(entity))))
+            binding->ent = varlist[2]->ptrVal;
+        return S_OK;
+    }
+
+    LONG value;
+    if(FAILED(ScriptVariant_IntegerValue(varlist[2], &value))) return S_OK;
+    switch(property)
+    {
+    case _binding_animation: binding->ani_bind = value; break;
+    case _binding_bind_x: binding->offset_flag.x = value; break;
+    case _binding_bind_y: binding->offset_flag.y = value; break;
+    case _binding_bind_z: binding->offset_flag.z = value; break;
+    case _binding_direction: binding->direction = (e_direction_adjust)value; break;
+    case _binding_offset_x: binding->offset.x = value; break;
+    case _binding_offset_y: binding->offset.y = value; break;
+    case _binding_offset_z: binding->offset.z = value; break;
+    case _binding_sort_id: binding->sortid = value; break;
+    }
+    return S_OK;
+
+invalid:
+    printf("You must provide a valid binding handle, property, and new value: "
+           "set_binding_property(void handle, char property, value)\n");
     return E_FAIL;
 }
 
@@ -21088,7 +21447,7 @@ HRESULT openbor_finishlevel(ScriptVariant **varlist , ScriptVariant **pretvar, i
 HRESULT openbor_gameover(ScriptVariant **varlist, ScriptVariant **pretvar, int paramCount)
 {
     *pretvar = NULL;
-    if(!level || obor_profile_build < 4642 || obor_profile_build > 4750)
+    if(!level || obor_profile_build < 4642 || obor_profile_build > 4905)
     {
         return E_FAIL;
     }

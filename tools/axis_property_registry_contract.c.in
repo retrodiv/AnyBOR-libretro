@@ -1,0 +1,176 @@
+/* SPDX-License-Identifier: BSD-3-Clause
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me>
+ */
+#include <stdint.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <strings.h>
+#include "scriptcommon.h"
+#undef assert
+#undef printf
+#include <assert.h>
+#ifndef stricmp
+#define stricmp strcasecmp
+#endif
+
+uint32_t obor_profile_build;
+static CHAR labels[][2] = {"x", "y", "z"};
+static int conversions;
+
+CHAR *StrCache_Get(int index)
+{
+    assert(index >= 0 && index < 3);
+    return labels[index];
+}
+
+void StrCache_Collect(int index)
+{
+    assert(index >= 0 && index < 3);
+    ++conversions;
+}
+
+@VARIANTS@
+@SEARCH@
+#include "axis.c"
+
+typedef HRESULT (*accessor)(ScriptVariant **, ScriptVariant **, int);
+typedef int (*string_map)(ScriptVariant **, int);
+enum { SHAPES = 5, SLOTS = 2 * SHAPES };
+static const char *const expected_names[] = {@NAMES@};
+static const accessor expected_functions[] = {@FUNCTIONS@};
+static accessor bindings[SLOTS];
+static int insertions;
+
+static void register_axis(void *callee, const char *name)
+{
+    assert(insertions < SLOTS && !strcmp(expected_names[insertions], name));
+    assert(callee == (void *)expected_functions[insertions]);
+    bindings[insertions++] = (accessor)callee;
+}
+
+#undef List_InsertAfter
+#define List_InsertAfter(list, callee, name) register_axis(callee, name)
+static void register_properties(void)
+{
+    @FORWARD@
+}
+#undef List_InsertAfter
+
+static const char *property_name(void *functionRef)
+{
+    @REVERSE@
+}
+
+static string_map property_mapper(void *functionRef)
+{
+    @MAPPER@
+}
+
+static void check_registry(int visible)
+{
+    static const string_map mappers[] = {mapstrings_axis_plane_lateral_property,
+        mapstrings_axis_plane_lateral_property, mapstrings_axis_plane_vertical_property,
+        mapstrings_axis_principal_property, mapstrings_axis_principal_property};
+    memset(bindings, 0, sizeof(bindings));
+    insertions = 0;
+    register_properties();
+    assert(insertions == (visible ? SLOTS : 0));
+    for(int i = 0; i < SLOTS; ++i)
+    {
+        void *symbol = (void *)expected_functions[i];
+        assert(bindings[i] == (visible ? expected_functions[i] : NULL));
+        assert(!strcmp(property_name(symbol), visible ? expected_names[i] : "<unknown function>"));
+        assert(property_mapper(symbol) == (visible ? mappers[i % SHAPES] : NULL));
+    }
+}
+
+static double read_property(accessor get, ScriptVariant **args, int integer)
+{
+    ScriptVariant result, *out = &result;
+    ScriptVariant_Init(&result);
+    assert(get(args, &out, 2) == S_OK && out == &result);
+    assert(result.vt == (integer ? VT_INTEGER : VT_DECIMAL));
+    return integer ? (double)result.lVal : result.dblVal;
+}
+
+static void write_property(accessor set, ScriptVariant **args)
+{
+    ScriptVariant result = {.vt = VT_INTEGER, .lVal = 42}, *out = &result;
+    assert(set(args, &out, 3) == S_OK && out == &result && result.vt == VT_INTEGER && result.lVal == 42);
+}
+
+static void check_values(int shape, void *handle, const char *axes, int integer,
+                         double x, double second, double third)
+{
+    const int coordinates = strlen(axes);
+    double expected[] = {x, second, third};
+    ScriptVariant pointer = {.vt = VT_PTR, .ptrVal = handle}, selector, value;
+    ScriptVariant *args[] = {&pointer, &selector, &value};
+    accessor get = bindings[shape], set = bindings[shape + SHAPES];
+    string_map get_map = property_mapper((void *)get), set_map = property_mapper((void *)set);
+    conversions = 0;
+    for(int i = 0; i < coordinates; ++i)
+    {
+        selector = (ScriptVariant){.vt = VT_STR, .strVal = axes[i] - 'x'};
+        assert(get_map(args, 2) == 1 && selector.vt == VT_INTEGER && selector.lVal == i);
+        assert(read_property(get, args, integer) == expected[i]);
+
+        selector = (ScriptVariant){.vt = VT_STR, .strVal = axes[i] - 'x'};
+        value = (ScriptVariant){.vt = VT_DECIMAL, .dblVal = -12.75 - i};
+        /* Compile-time literals use the mapper registered for the setter. */
+        assert(set_map(args, 3) == 1 && selector.vt == VT_INTEGER && selector.lVal == i);
+        write_property(set, args);
+
+        /* The original principal setters route the Y selector to X. */
+        const int destination = coordinates == 3 && i == 1 ? 0 : i;
+        expected[destination] = integer ? (int)value.dblVal : value.dblVal;
+        for(int j = 0; j < coordinates; ++j)
+        {
+            selector = (ScriptVariant){.vt = VT_INTEGER, .lVal = j};
+            assert(read_property(get, args, integer) == expected[j]);
+        }
+    }
+    if(coordinates == 3)
+    {
+        /* A runtime string goes through the principal setter's lateral mapper. */
+        selector = (ScriptVariant){.vt = VT_STR, .strVal = 'z' - 'x'};
+        value = (ScriptVariant){.vt = VT_INTEGER, .lVal = 22};
+        write_property(set, args);
+        assert(selector.vt == VT_INTEGER && selector.lVal == 1);
+        expected[0] = 22;
+        for(int j = 0; j < coordinates; ++j)
+        {
+            selector = (ScriptVariant){.vt = VT_INTEGER, .lVal = j};
+            assert(read_property(get, args, integer) == expected[j]);
+        }
+    }
+    assert(conversions == coordinates * 2 + (coordinates == 3));
+}
+
+static void check_properties(void)
+{
+    s_axis_plane_lateral_float lateral_float = {.x = 2.25f, .z = -3.5f};
+    s_axis_plane_lateral_int lateral_int = {.x = 2, .z = -3};
+    s_axis_plane_vertical_int vertical_int = {.x = 4, .y = -5};
+    s_axis_principal_float principal_float = {.x = 2.25f, .y = 3.5f, .z = 6.75f};
+    s_axis_principal_int principal_int = {.x = 7, .y = -6, .z = 3};
+    check_values(0, &lateral_float, "xz", 0, 2.25, -3.5, 0);
+    check_values(1, &lateral_int, "xz", 1, 2, -3, 0);
+    check_values(2, &vertical_int, "xy", 1, 4, -5, 0);
+    check_values(3, &principal_float, "xyz", 0, 2.25, 3.5, 6.75);
+    check_values(4, &principal_int, "xyz", 1, 7, -6, 3);
+}
+
+int main(void)
+{
+    static const struct { unsigned revision; int visible; } rows[] = {@ROWS@};
+    for(unsigned i = 0; i < sizeof(rows) / sizeof(*rows); ++i)
+    {
+        obor_profile_build = rows[i].revision;
+        check_registry(rows[i].visible);
+        if(rows[i].visible) check_properties();
+        printf("%u\n", rows[i].revision);
+    }
+    return 0;
+}

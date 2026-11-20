@@ -1,0 +1,139 @@
+/* SPDX-License-Identifier: BSD-3-Clause
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me>
+ */
+#include <stdint.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include "openbor.h"
+#undef assert
+#undef printf
+#include <assert.h>
+
+uint32_t obor_profile_build;
+static Script script;
+static s_scripts slots = {.onblockp_script = &script};
+static entity actor = {.scripts = &slots, .position.x = 20, .position.y = 2, .position.z = 30,
+                       .modeldata.subject_to_platform = 1};
+entity *self = &actor;
+static entity platforms[2];
+static s_terrain wall = {.z = 100, .depth = 100, .upperright = 100, .lowerright = 100};
+static s_level test_level = {.walls = &wall, .numwalls = 1};
+s_level *level = &test_level;
+static const float dx = 4, dz = 5, heightvar = 7;
+static ScriptVariant locals[3];
+static int planes[2], blocked, active, queries, writes, calls, axis;
+
+void StrCache_Collect(int index) { abort(); }
+@VARIANTS@
+
+int Script_IsInitialized(Script *value)
+{
+    assert(value == &script);
+    return active;
+}
+
+int Script_Execute(Script *value)
+{
+    assert(value == &script && writes == 3);
+    assert(locals[0].vt == VT_PTR && locals[0].ptrVal == self);
+    assert(locals[1].vt == VT_INTEGER && locals[1].lVal == planes[axis]);
+    assert(locals[2].vt == VT_PTR && locals[2].ptrVal == &platforms[axis]);
+    ++calls;
+    return 0;
+}
+
+static void observe_local(Script *value, const char *name, ScriptVariant *variant)
+{
+    static const char *const keys[] = {"self", "plane", "platform"};
+    assert(value == &script && !strcmp(name, keys[writes % 3]));
+    if(writes >= 3) assert(variant->vt == VT_EMPTY);
+    locals[writes % 3] = *variant;
+    if(++writes == 6) writes = 0;
+}
+
+#undef Script_Set_Local_Variant
+#define Script_Set_Local_Variant observe_local
+@FUNCTIONS@
+#undef Script_Set_Local_Variant
+
+@SCRIPT@
+
+entity *check_platform_between(float x, float z, float amin, float amax, entity *exclude)
+{
+    assert(exclude == self && amin == 2 && amax == 9 && queries < 2 && writes == 0);
+    axis = queries++;
+    assert(x == 20 + (axis == 0 ? dx : 0) && z == 30 + (axis == 1 ? dz : 0));
+    return (blocked & (1 << axis)) ? &platforms[axis] : NULL;
+}
+
+void ent_set_anim(entity *ent, int animation, int reset) { abort(); }
+
+static void move_against_platform(void)
+{
+    float xdir = dx, zdir = dz, x = self->position.x + dx, z = self->position.z + dz;
+    entity *other;
+    @PLATFORM_COLLISION@
+    assert(xdir == ((blocked & 1) ? 0 : dx));
+    assert(zdir == ((blocked & 2) ? 0 : dz));
+}
+
+static void check_platforms(void)
+{
+    for(active = 0; active <= 1; ++active)
+    {
+        for(blocked = 0; blocked <= 3; ++blocked)
+        {
+            queries = writes = calls = 0;
+            move_against_platform();
+            assert(queries == 2 && writes == 0);
+            assert(calls == (active && (blocked & 1)) + (active && (blocked & 2)));
+        }
+    }
+}
+
+static void check_wall_callers(int limit)
+{
+    const float x = 24, z = 35, xdir = x, zdir = z;
+    const int results[] = {@WALL_CALLS@};
+    for(unsigned i = 0; i < sizeof(results) / sizeof(*results); ++i)
+        assert(results[i] == (wall.height <= limit ? 0 : -1));
+}
+
+static void check_script_wall(int limit)
+{
+    ScriptVariant args[3] = {{.vt = VT_INTEGER, .lVal = 24}, {.vt = VT_INTEGER, .lVal = 35},
+                             {.vt = VT_DECIMAL, .dblVal = wall.height}};
+    ScriptVariant result;
+    ScriptVariant *arguments[] = { &args[0], &args[1], &args[2] }, *value = &result;
+    ScriptVariant_Init(&result);
+    assert(openbor_checkwall(arguments, &value, 2) == S_OK);
+    assert(value == &result && result.vt == VT_DECIMAL && result.dblVal ==
+           (wall.height <= limit ? wall.height : 0));
+    assert(openbor_checkwall(arguments, &value, 3) == S_OK);
+    assert(result.vt == VT_DECIMAL && result.dblVal == wall.height);
+    --args[2].dblVal;
+    assert(openbor_checkwall(arguments, &value, 3) == S_OK);
+    assert(result.vt == VT_DECIMAL && result.dblVal == 0);
+}
+
+int main(void)
+{
+    static const struct { unsigned revision; int platform_x, platform_z, movement_limit, script_limit; } rows[] = {@ROWS@};
+    static const float heights[] = {100000, 100001, 999999, 1000000, 9999999, 10000000};
+    for(unsigned i = 0; i < sizeof(rows) / sizeof(*rows); ++i)
+    {
+        obor_profile_build = rows[i].revision;
+        planes[0] = rows[i].platform_x;
+        planes[1] = rows[i].platform_z;
+        check_platforms();
+        for(unsigned j = 0; j < sizeof(heights) / sizeof(*heights); ++j)
+        {
+            wall.height = heights[j];
+            check_wall_callers(rows[i].movement_limit);
+            check_script_wall(rows[i].script_limit);
+        }
+        printf("%u\n", rows[i].revision);
+    }
+    return 0;
+}

@@ -4,6 +4,7 @@ SPDX-License-Identifier: BSD-3-Clause
 Copyright (c) 2026 retrodiv <retrodiv@proton.me>
 """
 import json
+import os
 from pathlib import Path
 import re
 import unittest
@@ -18,8 +19,8 @@ METHODS = ('alloc_frames', 'free_frames', 'collision_alloc_coords',
            'collision_alloc_body_instance', 'collision_alloc_body_list', 'addframe')
 
 
-def program(data):
-    source = (ROOT / 'src/engines' / data['engine'] / 'openbor.c').read_text(encoding='latin1')
+def program(data, engine):
+    source = (engine / 'openbor.c').read_text(encoding='latin1')
     cases = []
     for case in data['cases']:
         values = [str(case['slots']), str(case['damage'])]
@@ -41,7 +42,9 @@ class FrameCollisionConstructionTests(unittest.TestCase):
         revisions = {row['revision'] for row in data['sources']}
         self.assertEqual(len(revisions), len(data['sources']))
         self.assertEqual(revisions, contract_revisions(data, data['expected_revisions']))
-        actual = [json.loads(line) for line in native_output(program(data), data).splitlines()]
+        engine = Path(os.environ.get('OBOR_HISTORICAL_ENGINE', ROOT / 'src/engines' / data['engine']))
+        actual = [json.loads(line) for line in native_output(
+            program(data, engine), data, engine_source=engine).splitlines()]
         expected = [[row['revision'], *result] for row in data['sources']
                     for result in data['contracts'][row['contract']]]
         self.assertEqual(len(actual), len(expected))

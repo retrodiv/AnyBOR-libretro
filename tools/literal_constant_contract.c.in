@@ -1,0 +1,183 @@
+/* SPDX-License-Identifier: BSD-3-Clause
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me>
+ */
+#include <stdint.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <strings.h>
+#include "scriptcommon.h"
+#include "profile_ids.h"
+#undef printf
+#undef assert
+#include <assert.h>
+#ifndef stricmp
+#define stricmp strcasecmp
+#endif
+#ifndef strnicmp
+#define strnicmp strncasecmp
+#endif
+
+uint32_t obor_profile_build, obor_profile_features;
+@RUNTIME_GLOBALS@
+static int dynamic_animations[64];
+@ANIMATION_TABLES@
+
+void *checkAlloc(void *ptr, size_t size, const char *function, const char *file, int line)
+{
+    assert(!size || ptr);
+    return ptr;
+}
+
+@VARIANTS@
+@MAPPER@
+@WRAPPER@
+s_level scene;
+s_level *level = &scene;
+/* This probe retains only the level switch arms around the changed selectors. */
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wswitch"
+@LEVEL_METHODS@
+#pragma GCC diagnostic pop
+@BACKGROUND_SPEED_METHODS@
+
+static const struct literal_case { const char *name; unsigned accepted; LONG values[3]; } cases[] = {@CASES@};
+
+static void check_constant(const struct literal_case *item, unsigned table)
+{
+    ScriptVariant argument = {.vt = VT_STR, .strVal = StrCache_CreateNewFrom(item->name)};
+    ScriptVariant result, *out = &result, *args[] = {&argument};
+    ScriptVariant_Init(&result);
+    if(item->accepted & (1u << table))
+    {
+        const HRESULT status = openbor_transconst(args, &out, 1);
+        if(status != S_OK || !out || result.vt != VT_INTEGER || result.lVal != item->values[table])
+            fprintf(stderr, "%u %s expected %lld obtained %lld (status %d)\n", obor_profile_build,
+                    item->name, (long long)item->values[table],
+                    result.vt == VT_INTEGER ? (long long)result.lVal : 0LL, (int)status);
+        assert(status == S_OK && out == &result && result.vt == VT_INTEGER && result.lVal == item->values[table]);
+    }
+    else
+    {
+        const int found = mapstrings_transconst(args, 1);
+        if(found) fprintf(stderr, "%u unexpectedly accepted %s\n", obor_profile_build, item->name);
+        assert(!found && argument.vt == VT_STR);
+    }
+    ScriptVariant_Clear(&argument);
+    ScriptVariant_Clear(&result);
+}
+
+static LONG property_number(const char *name)
+{
+    ScriptVariant arg = {.vt = VT_STR, .strVal = StrCache_CreateNewFrom(name)};
+    ScriptVariant result, *out = &result, *args[] = {&arg};
+    ScriptVariant_Init(&result);
+    assert(openbor_transconst(args, &out, 1) == S_OK && out == &result && result.vt == VT_INTEGER);
+    const LONG value = result.lVal;
+    ScriptVariant_Clear(&arg);
+    ScriptVariant_Clear(&result);
+    return value;
+}
+
+static void move_level_value(LONG id, LONG before, LONG after)
+{
+    ScriptVariant handle = {.vt = VT_PTR, .ptrVal = &scene};
+    ScriptVariant property = {.vt = VT_INTEGER, .lVal = id};
+    ScriptVariant input = {.vt = VT_INTEGER, .lVal = after};
+    ScriptVariant result, *out = &result, *args[] = {&handle, &property, &input};
+    ScriptVariant_Init(&result);
+    assert(openbor_get_level_property(args, &out, 2) == S_OK && out == &result);
+    assert(result.vt == VT_INTEGER && result.lVal == before);
+    assert(openbor_set_level_property(args, &out, 3) == S_OK);
+    assert(openbor_get_level_property(args, &out, 2) == S_OK && out == &result);
+    assert(result.vt == VT_INTEGER && result.lVal == after);
+    ScriptVariant_Clear(&result);
+}
+
+static void check_level_properties(unsigned table)
+{
+    scene.mirror = 0;
+    scene.pos = 131;
+    scene.setweap = 7;
+    scene.bossescount = 5;
+    scene.numbosses = 3;
+    move_level_value(property_number("LEVEL_PROP_BOSS_COUNT"), 5, 8);
+    move_level_value(property_number("LEVEL_PROP_MIRROR"), 0, 1);
+    move_level_value(property_number("LEVEL_PROP_POSITION_X"), 131, 137);
+    move_level_value(property_number("LEVEL_PROP_WEAPON"), 7, 9);
+    assert(scene.mirror == 1 && scene.pos == 137 && scene.setweap == 9);
+    assert(scene.bossescount == 8 && scene.numbosses == 3);
+    if(table)
+    {
+        move_level_value(LEVEL_PROP_NUM_BOSSES, 3, 4);
+        assert(scene.numbosses == 4);
+    }
+    else
+    {
+        ScriptVariant handle = {.vt = VT_PTR, .ptrVal = &scene};
+        ScriptVariant first_absent = {.vt = VT_INTEGER, .lVal = LEVEL_PROP_WEAPON};
+        ScriptVariant input = {.vt = VT_INTEGER, .lVal = 14};
+        ScriptVariant result, *out = &result, *args[] = {&handle, &first_absent, &input};
+        ScriptVariant_Init(&result);
+        assert(openbor_set_level_property(args, &out, 3) == S_OK);
+        assert(scene.setweap == 9 && scene.numbosses == 3);
+    }
+}
+
+static void check_level_background_speeds(int legacy)
+{
+    scene.bgspeed = 2.75f;
+    scene.vbgspeed = -6.5f;
+    static const struct { const char *name; LONG selector; DOUBLE speed; } cases[] = {
+        {"bgspeed", 1, 2.75}, {"vbgspeed", 12, -6.5},
+    };
+    const DOUBLE seeds[] = {0.0, 1.0};
+    for(size_t i = 0; i < sizeof(cases) / sizeof(*cases); ++i)
+    {
+        for(size_t j = 0; j < sizeof(seeds) / sizeof(*seeds); ++j)
+        {
+            const LONG converted = (LONG)cases[i].speed;
+            DOUBLE expected = cases[i].speed;
+            if(legacy)
+            {
+                expected = seeds[j];
+                memcpy(&expected, &converted, sizeof(converted));
+            }
+            ScriptVariant arg = {.vt = VT_INTEGER, .lVal = cases[i].selector};
+            if(j)
+            {
+                arg.vt = VT_STR;
+                arg.strVal = StrCache_CreateNewFrom(cases[i].name);
+            }
+            ScriptVariant result = {.vt = VT_DECIMAL, .dblVal = seeds[j]};
+            ScriptVariant *out = &result, *args[] = {&arg};
+            assert(openbor_getlevelproperty(args, &out, 1) == S_OK && out == &result);
+            assert(arg.vt == VT_INTEGER && arg.lVal == cases[i].selector);
+            assert(result.vt == VT_DECIMAL);
+            if(memcmp(&result.dblVal, &expected, sizeof(expected)))
+                fprintf(stderr, "%u %s returned %.17g instead of %.17g\n", obor_profile_build,
+                        cases[i].name, result.dblVal, expected);
+            assert(!memcmp(&result.dblVal, &expected, sizeof(expected)));
+            ScriptVariant_Clear(&result);
+        }
+    }
+}
+
+int main(void)
+{
+    static const struct { unsigned revision, table; int legacy_background_speed; } rows[] = {@ROWS@};
+    for(size_t i = 0; i < sizeof(dynamic_animations) / sizeof(*dynamic_animations); ++i)
+        dynamic_animations[i] = MAX_ANIS + (int)i;
+    StrCache_Init();
+    for(size_t i = 0; i < sizeof(rows) / sizeof(*rows); ++i)
+    {
+        obor_profile_build = rows[i].revision;
+        for(size_t j = 0; j < sizeof(cases) / sizeof(*cases); ++j)
+            check_constant(&cases[j], rows[i].table);
+        check_level_properties(rows[i].table);
+        check_level_background_speeds(rows[i].legacy_background_speed);
+        printf("PASS %u\n", rows[i].revision);
+    }
+    StrCache_Clear();
+    return 0;
+}

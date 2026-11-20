@@ -4,6 +4,7 @@ SPDX-License-Identifier: BSD-3-Clause
 Copyright (c) 2026 retrodiv <retrodiv@proton.me>
 """
 import json
+import os
 from pathlib import Path
 import re
 import unittest
@@ -66,6 +67,22 @@ class TerrainGeometryContracts(unittest.TestCase):
         actual = [json.loads(line) for line in native_output(program(data), data).splitlines()]
         self.assertEqual(actual, [dict(revision=row['revision'], status='PASS')
                                   for row in data['sources']])
+
+    def test_6391_original_platform_walkoff_height(self):
+        data = load_contract_fixture(FIXTURE.with_name('profile-6391-platform-walkoff.json'))
+        rows = data['sources']
+        self.assertEqual({row['revision'] for row in rows}, contract_revisions(data, data['expected_revisions']))
+        engine = Path(os.environ.get('OBOR_HISTORICAL_ENGINE', ROOT / 'src/engines' / data['engine']))
+        core = (engine / 'openbor.c').read_text(encoding='latin1')
+        methods = '\n'.join(function(core, name) for name in (
+            'testplatform', 'check_platform_below_entity', 'get_platform_base'))
+        controls = ',\n'.join('{%du,{%s}}' % (row['revision'], ','.join(str(i) for i in row['selected']))
+                              for row in rows)
+        heights = ','.join(f'{float(height)}f' for height in data['heights'])
+        template = Path(__file__).with_name('platform_walkoff_contract.c.in').read_text()
+        code = (template.replace('@METHODS@', methods).replace('@CONTROLS@', controls)
+                .replace('@HEIGHTS@', heights))
+        self.assertEqual(native_output(code, data, engine_source=engine), f'PASS {len(rows)}\n')
 
 
 if __name__ == '__main__':

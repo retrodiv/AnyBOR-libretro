@@ -1,0 +1,140 @@
+/* SPDX-License-Identifier: BSD-3-Clause
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me>
+ */
+#include <stddef.h>
+#include <stdint.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#pragma GCC diagnostic ignored "-Wignored-qualifiers"
+#if defined(__clang__)
+#pragma GCC diagnostic ignored "-Wdeprecated-non-prototype"
+#endif
+#include "openbor.h"
+#include "profile_ids.h"
+#undef printf
+#undef malloc
+#undef calloc
+#undef free
+
+#define CHECK(condition) do { if(!(condition)) { fprintf(stderr, "%s\n", #condition); abort(); } } while(0)
+uint32_t obor_profile_build, obor_profile_features;
+int max_collisons;
+
+void borShutdown(int status, char *message, ...)
+{
+    fprintf(stderr, "%s\n", message);
+    abort();
+}
+
+HRESULT Interpreter_Call(Interpreter *p) { abort(); }
+HRESULT Interpreter_EvalInstruction(Interpreter *p) { abort(); }
+void exitIfFalse(int value, const char *expression, const char *func, const char *file, int line)
+{
+    CHECK(value);
+}
+
+void setDrawMethod(s_anim *animation, ptrdiff_t frame, s_drawmethod *value) { abort(); }
+s_drawmethod *getDrawMethod(s_anim *animation, ptrdiff_t frame) { abort(); }
+
+@INITIALIZER@
+@METHODS@
+
+static void append(s_anim *animation, int capacity, s_hitbox ebox,
+                   s_collision_entity ebox_con, s_axis_plane_vertical_int offset)
+{
+    s_hitbox entity_coords;
+    @TRANSFORM@
+    s_hitbox absent = {0};
+    s_hitbox body_coords = {.width = 3, .height = 5};
+    s_collision_body body = {.tag = 13};
+    s_collision_attack attack = {0};
+    s_damage_recursive recursive = {0};
+    s_drawmethod drawmethod = {0};
+    float platform[8] = {0};
+    int shadow[2] = {0};
+    const int frame = animation->numframes;
+    CHECK(addframe(animation, 5 + frame, capacity, 3, 0, &ebox_con, &body, &attack, NULL,
+                   platform, -1, shadow, -1, &drawmethod, &offset,
+                   &recursive, &absent, &body_coords, &entity_coords) == frame + 1);
+}
+
+static void check_frame(const s_collision_entity_list *list, int count, int tag, const s_hitbox expected)
+{
+    CHECK(list && list->obor_instance_capacity == (size_t)count);
+    for(int i = 0; i < count; ++i)
+    {
+        const s_collision_entity *entry = list->instance[i];
+        CHECK(entry && entry->tag == tag && entry->index == i);
+        CHECK(entry->coords && entry->coords->x == expected.x && entry->coords->y == expected.y);
+        CHECK(entry->coords->width == expected.width && entry->coords->height == expected.height);
+        CHECK(entry->coords->z1 == expected.z1 && entry->coords->z2 == expected.z2);
+        if(i)
+        {
+            CHECK(entry != list->instance[i - 1]);
+            CHECK(entry->coords != list->instance[i - 1]->coords);
+        }
+    }
+}
+
+static void check_animation(int enabled, int count)
+{
+    s_anim animation = {0};
+    s_hitbox ebox = {0};
+    s_collision_entity ebox_con = empty_entity_collision;
+    const s_axis_plane_vertical_int shifted = {.x = 2, .y = 4};
+    max_collisons = count;
+    CHECK(!ebox_con.coords && ebox_con.index == 0 && ebox_con.tag == 0);
+    append(&animation, 5, ebox, ebox_con, shifted);
+    CHECK(!animation.collision_entity);
+
+    ebox = (s_hitbox){.x = 12, .y = 16, .width = 8, .height = 6, .z1 = -3, .z2 = 5};
+    ebox_con.tag = 41;
+    append(&animation, -5, ebox, ebox_con, shifted);
+
+    ebox.width = 0;
+    append(&animation, -5, ebox, ebox_con, shifted);
+    @RESET@
+    CHECK(!ebox_con.coords && ebox_con.index == 0 && ebox_con.tag == 0);
+    append(&animation, -5, ebox, ebox_con, shifted);
+
+    ebox = (s_hitbox){.x = 7, .y = 8, .width = 3, .height = 4, .z1 = 3, .z2 = 3};
+    const s_axis_plane_vertical_int opposite = {.x = -2, .y = 3};
+    append(&animation, -5, ebox, ebox_con, opposite);
+
+    for(int frame = 0; frame < 5; ++frame)
+    {
+        CHECK(animation.vulnerable[frame] && animation.sprite[frame] == 5 + frame);
+        CHECK(animation.collision_body[frame]->instance[0]->tag == 13);
+    }
+    if(enabled)
+    {
+        CHECK(animation.collision_entity && !animation.collision_entity[0]);
+        CHECK(!animation.collision_entity[2] && !animation.collision_entity[3]);
+        check_frame(animation.collision_entity[1], count, 41,
+                    (s_hitbox){.x = 10, .y = 12, .width = 18, .height = 18, .z1 = -7, .z2 = 1});
+        check_frame(animation.collision_entity[4], count, 0,
+                    (s_hitbox){.x = 9, .y = 5, .width = 12, .height = 9, .z1 = 3, .z2 = 3});
+        CHECK(animation.collision_entity[1]->instance[0]->coords != animation.collision_entity[4]->instance[0]->coords);
+    }
+    else
+        CHECK(!animation.collision_entity);
+
+    max_collisons = 1;
+    free_frames(&animation);
+    CHECK(!animation.collision_entity && !animation.collision_body);
+    CHECK(!animation.sprite && !animation.delay && !animation.vulnerable);
+}
+
+int main(void)
+{
+    static const struct { uint32_t revision; int enabled; } rows[] = { @ROWS@ };
+    for(size_t i = 0; i < sizeof(rows) / sizeof(*rows); ++i)
+    {
+        obor_profile_build = rows[i].revision;
+        check_animation(rows[i].enabled, 1);
+        check_animation(rows[i].enabled, 2);
+        printf("%u\n", obor_profile_build);
+    }
+    return 0;
+}

@@ -38,5 +38,32 @@ class ModernControlMenuContracts(unittest.TestCase):
         self.assertEqual(json.loads(native_output(program(data), data)), expected)
 
 
+class ClassicControlMenuContracts(unittest.TestCase):
+    def check_control_menu(self, engine_id):
+        data = load_contract_fixture(FIXTURE.with_name('classic-control-menu-contracts.json'))
+        rows = [row for row in data['sources'] if row['engine'] == engine_id]
+        revisions = [row['revision'] for row in rows]
+        self.assertEqual(revisions, sorted(contract_revisions(data, data['expected_revisions'][engine_id])))
+        engine = Path(os.environ.get('OBOR_HISTORICAL_ENGINE', ROOT / 'src/engines' / engine_id))
+        source = (engine / 'openbor.c').read_text(encoding='latin-1')
+        fields = ('revision', 'has_default', 'label_input_length', 'label_display_length')
+        values = dict(MENU=function(source, 'keyboard_setup'),
+                      TRANSLATE=function(source, 'translate_SDID'),
+                      DEFAULTS=function(source, 'clearbuttons') if engine_id == '6391' else '',
+                      CLEAR_SETTINGS=function(source, 'clearsettings'),
+                      ROWS=',\n'.join('{' + ','.join(str(row[k]) for k in fields) + '}' for row in rows))
+        template = Path(__file__).with_name('classic_control_menu_contract.c.in').read_text()
+        code = re.sub(r'@([A-Z_]+)@', lambda match: values[match[1]], template)
+        output = native_output(code, {'engine': engine_id}, engine_source=engine,
+                               extra_cflags=('-DLINUX=1', '-fgnu89-inline'))
+        self.assertEqual([int(line) for line in output.splitlines()], revisions)
+
+    def test_4432_control_menu(self):
+        self.check_control_menu('4432')
+
+    def test_6391_control_menu(self):
+        self.check_control_menu('6391')
+
+
 if __name__ == '__main__':
     unittest.main()

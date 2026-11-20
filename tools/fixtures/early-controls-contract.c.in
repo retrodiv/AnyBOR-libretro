@@ -1,0 +1,132 @@
+/* SPDX-License-Identifier: BSD-3-Clause
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me>
+ */
+#include <assert.h>
+#include <stdbool.h>
+#include <stddef.h>
+#include <stdint.h>
+#include <stdio.h>
+#include <string.h>
+#include @ABI@
+
+static uint32_t obor_profile_build, obor_profile_features;
+@LIMITS@
+@KEYS@
+@CONTROL_CODES@
+@RECORD@
+
+static s_savedata savedata;
+#define JOY_MAX_INPUTS 64
+typedef uint64_t u64;
+typedef struct { int settings[JOY_MAX_INPUTS]; u64 keyflags, newkeyflags; int kb_break; } s_playercontrols;
+static s_playercontrols default_control;
+static int default_keys[MAX_BTN_NUM];
+static unsigned char obor_pad[MAX_PLAYERS][16];
+static int rumble_ratio[MAX_PLAYERS], rumble_ms[MAX_PLAYERS];
+static struct Binding { uint32_t flag; int key; } bindings[MAX_BTN_NUM + 1];
+static size_t binding_count;
+
+static void control_setkey(s_playercontrols *control, uint32_t flag, int key)
+{
+    assert(control == &default_control && binding_count < MAX_BTN_NUM + 1);
+    bindings[binding_count++] = (struct Binding){flag, key};
+}
+
+static void obor_poll_tick(void) {}
+static int allow_default_keys(void) { return 0; }
+
+@ORIGINALS@
+@METHODS@
+@BACKEND@
+
+static void check_file(const void *reference, size_t size)
+{
+    unsigned char bytes[sizeof(savedata)];
+    FILE *file = tmpfile();
+    assert(file && size <= sizeof(bytes));
+    obor_profile_write_settings(file);
+    assert(ftell(file) == (long)size);
+    rewind(file);
+    assert(fread(bytes, 1, size, file) == size);
+    assert(memcmp(bytes, reference, size) == 0);
+    fclose(file);
+}
+
+static void check_rumble(int port, bool enabled)
+{
+    int32_t ratio, duration;
+    control_rumble(port, 1, 125);
+    obor_get_rumble(port, &ratio, &duration);
+    assert(ratio == (enabled ? 1 : 0));
+    assert(duration == (enabled ? 125 : 0));
+    obor_get_rumble(port, &ratio, &duration);
+    assert(!ratio && !duration);
+}
+
+static void check_default_fallback(bool enabled)
+{
+    s_playercontrols controller[2] = {0}, *players[] = {controller, controller + 1};
+    const int default_button = 5, remapped_button = 6;
+    memset(&default_control, 0, sizeof(default_control));
+    memset(obor_pad, 0, sizeof(obor_pad));
+    default_control.settings[2] = OBOR_KEY(0, default_button);
+    controller[0].settings[4] = OBOR_KEY(0, remapped_button);
+    controller[1].settings[4] = OBOR_KEY(1, remapped_button);
+    obor_pad[0][default_button] = 1;
+    control_update(players, 2);
+    assert(controller[0].keyflags == (enabled ? 1u << 2 : 0));
+    assert(controller[0].keyflags == controller[0].newkeyflags && controller[1].keyflags == 0);
+    obor_pad[0][remapped_button] = 1;
+    control_update(players, 2);
+    assert(controller[0].keyflags == 1u << 4 && controller[0].newkeyflags == 1u << 4);
+    assert(controller[1].keyflags == 0);
+}
+
+#define CHECK_CONTROLS(revision, haptics, fallback, seed) do { \
+    obor_profile_build = revision; \
+    memset(&original_##revision, 0, sizeof(original_##revision)); \
+    original_##revision.gamma = 3; \
+    original_##revision.showtitles = 1; \
+    original_##revision.fullscreen = 1; \
+    original_##revision.hwscale = 2.0f; \
+    for(int p = 0; p < MAX_PLAYERS; ++p) \
+    { \
+        original_##revision.keys[p][SDID_MOVEUP] = 100 + p; \
+        seed \
+    } \
+    FILE *file = tmpfile(); \
+    assert(file && fwrite(&original_##revision, sizeof(original_##revision), 1, file) == 1); \
+    rewind(file); \
+    memset(&savedata, 0, sizeof(savedata)); \
+    obor_profile_read_settings(file); \
+    assert(ftell(file) == (long)sizeof(original_##revision)); \
+    fclose(file); \
+    assert(savedata.gamma == 3 && savedata.showtitles == 1 && savedata.fullscreen == 1); \
+    assert(savedata.hwscale == 2.0f); \
+    for(int p = MAX_PLAYERS - 1; p >= 0; --p) \
+    { \
+        assert(savedata.joyrumble[p] == haptics); \
+        check_rumble(p, haptics); \
+        binding_count = 0; \
+        clearbuttons_##revision(p); \
+        size_t expected_count = binding_count; \
+        struct Binding expected[MAX_BTN_NUM + 1]; \
+        memcpy(expected, bindings, sizeof(expected)); \
+        binding_count = 0; \
+        clearbuttons(p); \
+        assert(!savedata.joyrumble[p] && binding_count == expected_count); \
+        for(size_t i = 0; i < binding_count; ++i) \
+        { \
+            assert(bindings[i].flag == expected[i].flag); \
+            assert(bindings[i].key == expected[i].key); \
+        } \
+        check_file(&original_##revision, sizeof(original_##revision)); \
+    } \
+    check_default_fallback(fallback); \
+} while(0)
+
+int main(void)
+{
+    @TESTS@
+    return 0;
+}

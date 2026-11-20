@@ -959,9 +959,11 @@ void ScriptVariant_Neg( ScriptVariant *svar)
     {
     case VT_DECIMAL:
         svar->dblVal = -(svar->dblVal);
-        if(obor_profile_build != 6330) break;
+        if(obor_profile_build != 5134 && obor_profile_build != 6119 && obor_profile_build != 6330) break;
+        /* fall through */
     case VT_INTEGER:
-        svar->lVal = -(svar->lVal);
+        if(svar->lVal != INT32_MIN) svar->lVal = -(svar->lVal);
+        break;
     default:
         break;
     }

@@ -1,0 +1,63 @@
+/* SPDX-License-Identifier: BSD-3-Clause
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me>
+ */
+#include <stdint.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <strings.h>
+#include "openbor.h"
+#include "profile_ids.h"
+#undef assert
+#undef printf
+#include <assert.h>
+#ifndef stricmp
+#define stricmp strcasecmp
+#endif
+#ifndef strnicmp
+#define strnicmp strncasecmp
+#endif
+
+uint32_t obor_profile_build, obor_profile_features;
+enum { SERIES_SLOTS = MAX_ATKS + 10 };
+
+@TABLES@
+
+void *checkAlloc(void *p, size_t size, const char *name, const char *file, int line)
+{
+    assert(!size || p);
+    return p;
+}
+
+@TRANSLATOR@
+
+static const struct {
+    uint32_t revision;
+    const char *name;
+    int animation, bounce;
+} cases[] = {
+@CASES@
+};
+
+int main(void)
+{
+    animbackwalks[0] = ANI_BACKWALK;
+    for(size_t n = 0; n < sizeof(cases) / sizeof(*cases); ++n)
+    {
+        obor_profile_build = cases[n].revision;
+        for(int i = 0; i < SERIES_SLOTS; ++i)
+        {
+@DYNAMIC_IDS@
+        }
+        s_model model = {0};
+        s_anim animation = {.bounce = 7};
+        s_collision_attack attack = {0};
+        const int actual = translate_ani_id(cases[n].name, &model, &animation, &attack);
+        if(actual != cases[n].animation || animation.bounce != cases[n].bounce)
+            fprintf(stderr, "%u %s gives animation %d and bounce %g\n",
+                    cases[n].revision, cases[n].name, actual, (double)animation.bounce);
+        assert(actual == cases[n].animation && animation.bounce == cases[n].bounce);
+    }
+    printf("PASS %zu\n", sizeof(cases) / sizeof(*cases));
+    return 0;
+}

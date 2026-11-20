@@ -1,0 +1,300 @@
+/* SPDX-License-Identifier: BSD-3-Clause
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me>
+ */
+#include <stdint.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include "openbor.h"
+#undef printf
+#undef assert
+#include <assert.h>
+
+#if OBOR_ENGINE_BUILD == 4432
+#define LEGACY_STATES 1
+u32 time = 10;
+HRESULT Interpreter_Call(Interpreter *interpreter) { abort(); }
+HRESULT Interpreter_EvalInstruction(Interpreter *interpreter) { abort(); }
+#else
+#define LEGACY_STATES 0
+#include "profile_ids.h"
+u32 _time = 10;
+#endif
+
+uint32_t obor_profile_build, obor_profile_features;
+static entity actor, opponent;
+entity *self = &actor, *smartbomber;
+static s_anim animation = {.numframes = 1};
+static s_anim *animations[MAX_ANIS];
+static int death[2] = {ANI_IDLE, ANI_IDLE}, fall[2] = {ANI_FALL, ANI_FALL2};
+static int backfall[2] = {ANI_FALL3, ANI_FALL4};
+int *animdies = death, *animbackdies = death, *animfalls = fall, *animbackfalls = backfall;
+int max_attack_types = 2;
+float min_noatk_chance;
+static int selected, allow_attack, onfall_calls, idle_calls, shot_calls, finish_calls, thaw_calls, backpain_resets;
+static int fall_callback_type = 1;
+
+void normal_prepare(void) { abort(); }
+void common_rise(void) { abort(); }
+void common_block(void) { abort(); }
+int reset_backpain(entity *ent) { assert(ent == self && ent->inbackpain); ++backpain_resets; return 0; }
+void smart_bomb(entity *ent, s_collision_attack *attack) { abort(); }
+int check_energy(e_cost_check which, int ani) { abort(); }
+unsigned int rand32(void) { return 1; }
+float randf(float limit) { assert(limit >= 3); return 3; }
+void subtract_shot(void) { ++shot_calls; }
+void common_attack_finish(void) { assert(!self->attacking); ++finish_calls; }
+entity *block_find_target(int anim, int detect) { assert(anim == ANI_BLOCK && detect == 0); return &opponent; }
+int pick_random_attack(entity *target, int testonly) { assert(target == &opponent && testonly == 1); return 0; }
+int check_attack_chance(entity *target, float min, float max) { assert(target == &opponent); return allow_attack; }
+entity *normal_find_target(int anim, int detect) { assert(anim == -1 && detect == 0); return &opponent; }
+int common_idle_anim(entity *ent) { assert(ent == self); ++idle_calls; return 1; }
+
+void ent_set_anim(entity *ent, int id, int reset)
+{
+    assert(ent == self && (reset == 0 || reset == 1));
+    selected = id;
+}
+
+#if LEGACY_STATES
+void ent_set_colourmap(entity *ent, unsigned int map)
+{
+    assert(ent == self && ent->frozen && map == ent->map);
+    ++thaw_calls;
+}
+#else
+void unfrozen(entity *ent)
+{
+    assert(ent == self && ent->frozen);
+    ent->frozen = 0;
+    ++thaw_calls;
+}
+#endif
+
+#if LEGACY_STATES
+void execute_onfall_script(entity *ent, entity *other, int force, int drop, int type, int noblock,
+                           int guardcost, int jugglecost, int pauseadd, int tag)
+#else
+void execute_onfall_script(entity *ent, entity *other, s_collision_attack *attack)
+#endif
+{
+    assert(ent == self && other == &opponent && ent->falling && !ent->attacking && !ent->frozen);
+#if LEGACY_STATES
+    assert(type == fall_callback_type && force == 7 && guardcost == 3);
+#else
+    assert(attack->attack_type == fall_callback_type && attack->attack_force == 7 && attack->guardcost == 3);
+#endif
+    ++onfall_calls;
+}
+
+@METHODS@
+
+static void set_recovery(void)
+{
+    actor = (entity){.modeldata.animation = animations, .modeldata.animation_capacity = MAX_ANIS};
+    actor.inpain = 1;
+    actor.falling = 1;
+#if !LEGACY_STATES
+    actor.rising = 1;
+    actor.riseattacking = 1;
+    actor.ducking = 1;
+#endif
+    actor.attacking = 1;
+    actor.idling = 1;
+    actor.inbackpain = 1;
+    actor.jumping = 1;
+    actor.getting = 1;
+    actor.charging = 1;
+    actor.frozen = 1;
+    selected = -1;
+    onfall_calls = idle_calls = shot_calls = finish_calls = thaw_calls = backpain_resets = 0;
+}
+
+static void check_recovery_flags(int expected)
+{
+#if !LEGACY_STATES
+    assert(actor.rising == expected && actor.riseattacking == expected && actor.ducking == expected);
+#endif
+}
+
+static void check_fall_recovery(int keep)
+{
+    const int slots[] = {ANI_FALL2, ANI_FALL4, ANI_FALL3, ANI_FALL2, ANI_FALL, -1};
+    for(size_t scenario = 0; scenario < sizeof(slots) / sizeof(*slots); ++scenario)
+    {
+        set_recovery();
+        actor.inbackpain = scenario != 0;
+        const int id = slots[scenario];
+        for(int index = 0; index < 2; ++index)
+        {
+            animations[fall[index]] = NULL;
+            animations[backfall[index]] = NULL;
+        }
+        if(id >= 0) animations[id] = &animation;
+#if LEGACY_STATES
+        int result = set_fall(self, 1, 1, &opponent, 7, 0, 0, 3, 0, 0, 0);
+#else
+        s_collision_attack attack = {.attack_type = 1, .attack_force = 7, .guardcost = 3};
+        int result = set_fall(self, &opponent, &attack, 1);
+#endif
+        assert(result == (id >= 0) && selected == id);
+        if(!result)
+        {
+            assert(!onfall_calls && actor.frozen && actor.attacking);
+            check_recovery_flags(1);
+            continue;
+        }
+        assert(actor.drop && actor.falling && actor.nograb && onfall_calls == 1 && thaw_calls == 1);
+        assert(!actor.idling && !actor.inpain && !actor.jumping && !actor.getting && !actor.charging);
+        assert(!actor.attacking && !actor.blocking && !actor.frozen);
+        check_recovery_flags(keep);
+        assert(backpain_resets == (scenario == 3 || scenario == 4));
+        assert(actor.inbackpain == (scenario == 1 || scenario == 2));
+    }
+}
+
+static void check_fall_type_boundary(void)
+{
+    const int types[] = {-1, max_attack_types};
+    for(size_t i = 0; i < sizeof(types) / sizeof(*types); ++i)
+    {
+        set_recovery();
+        animations[fall[0]] = &animation;
+#if LEGACY_STATES
+        fall_callback_type = ATK_NORMAL;
+        assert(set_fall(self, types[i], 1, &opponent, 7, 0, 0, 3, 0, 0, 0));
+#else
+        fall_callback_type = types[i];
+        s_collision_attack attack = {.attack_type = types[i], .attack_force = 7, .guardcost = 3};
+        assert(set_fall(self, &opponent, &attack, 1));
+        assert(attack.attack_type == types[i]);
+#endif
+        assert(selected == fall[0] && onfall_calls == 1);
+    }
+    fall_callback_type = 1;
+}
+
+static void check_recovery(int keep)
+{
+    set_recovery();
+    assert(set_idle(self) == 1 && idle_calls == 1);
+    assert(actor.idling == 1 && !actor.attacking && !actor.inpain && !actor.falling);
+    assert(!actor.inbackpain && !actor.jumping && !actor.blocking);
+    check_recovery_flags(keep);
+
+    for(int chipped = 0; chipped <= 1; ++chipped)
+    {
+        set_recovery();
+        actor.inbackpain = 0;
+        actor.blocking = chipped;
+        assert(set_death(self, 0, 1) == 1 && selected == (chipped ? ANI_CHIPDEATH : ANI_IDLE));
+        assert(!actor.idling && !actor.getting && !actor.jumping && !actor.attacking);
+        assert(!actor.charging && !actor.blocking && actor.frozen == chipped && thaw_calls == !chipped);
+        assert(actor.inpain == keep && actor.falling == keep);
+        check_recovery_flags(keep);
+    }
+
+    check_fall_recovery(keep);
+}
+
+static int reject_run(entity *target) { return @RUN_TARGET@; }
+static int reject_first_jump(entity *target) { return @JUMP_TARGET_FIRST@; }
+static int reject_second_jump(entity *target) { return @JUMP_TARGET_SECOND@; }
+static int block_eligible(entity *attacker) { return @BLOCK_ELIGIBLE@; }
+
+static void check_wander(entity *target, int behind, int busy)
+{
+    int t = 2;
+    float mindx, grabd = 10;
+    @WANDER_BEHIND@
+    @WANDER_DISTANCE@
+    assert(t == (behind && busy ? 7 : 2));
+    assert(mindx == (!behind && busy ? 30 : 12));
+}
+
+static void check_attack_decisions(int prepared_attack)
+{
+    __typeof__(*animation.vulnerable) vulnerable = 0;
+    animation.vulnerable = &vulnerable;
+    opponent = (entity){.animation = &animation};
+    for(int state = 0; state <= 2; ++state)
+    {
+        int busy = state != 0;
+        opponent.attacking = state;
+        assert(reject_run(&opponent) == busy && reject_first_jump(&opponent) == busy);
+        assert(reject_second_jump(&opponent) == busy);
+        assert(block_eligible(&opponent) == busy);
+        opponent.dead = 1;
+        assert(!block_eligible(&opponent));
+        opponent.dead = 0;
+        check_wander(&opponent, 0, busy);
+        check_wander(&opponent, 1, busy);
+        set_recovery();
+        actor.nextattack = 20;
+        opponent.jumping = 1;
+        assert(recheck_nextattack(&opponent) == (busy ? 16 : 4));
+        opponent.blocking = 1;
+        assert(recheck_nextattack(&opponent) == 0);
+        opponent.blocking = opponent.jumping = 0;
+        actor.modeldata.nopassiveblock = actor.modeldata.blockodds = 1;
+        assert(common_try_block(NULL) == busy);
+        assert(selected == (busy ? ANI_BLOCK : -1));
+
+        set_recovery();
+        actor.combostep[0] = 1;
+        actor.combotime = 20;
+        assert(common_try_normalattack(NULL) == !busy);
+        if(!busy)
+        {
+            assert(actor.takeaction == normal_prepare && actor.stalltime == 11 && idle_calls == 1);
+            assert((int)actor.attacking == prepared_attack && !actor.idling);
+        }
+    }
+    set_recovery();
+    opponent.attacking = 0;
+    actor.nextattack = 20;
+    assert(common_try_normalattack(NULL) == 0 && actor.nextattack == 20 && !idle_calls);
+    actor.nextattack = 0;
+    actor.modeldata.attackthrottletime = 12;
+    allow_attack = 0;
+    assert(common_try_normalattack(NULL) == 0 && actor.nextattack == 13 && !idle_calls);
+    actor.nextattack = 0;
+    allow_attack = 1;
+    assert(common_try_normalattack(NULL) == 1 && actor.stalltime == 13 && idle_calls == 1);
+    assert((int)actor.attacking == prepared_attack);
+}
+
+static void check_attack_reset(entity *ent)
+{
+    set_recovery();
+    @MODEL_RESET@
+    assert(!ent->attacking);
+    actor.attacking = 1;
+#if LEGACY_STATES
+    actor.reactive = 1;
+#else
+    actor.deduct_ammo = 1;
+#endif
+    common_attack_proc();
+    assert(!actor.attacking && shot_calls == 1 && finish_calls == 1);
+#if LEGACY_STATES
+    assert(!actor.reactive);
+#else
+    assert(!actor.deduct_ammo);
+#endif
+}
+
+int main(void)
+{
+    const struct { unsigned revision; int keep, prepared; } rows[] = {@PROFILES@};
+    animations[ANI_IDLE] = animations[ANI_FALL] = animations[ANI_CHIPDEATH] = animations[ANI_BLOCK] = &animation;
+    for(size_t i = 0; i < sizeof(rows) / sizeof(*rows); ++i)
+    {
+        obor_profile_build = rows[i].revision;
+        check_recovery(rows[i].keep);
+        check_fall_type_boundary();
+        check_attack_decisions(rows[i].prepared);
+        check_attack_reset(self);
+        printf("%u\n", obor_profile_build);
+    }
+    return 0;
+}

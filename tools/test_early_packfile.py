@@ -206,6 +206,41 @@ int main(int argc, char **argv)
                         cwd=work, env=sanitizer_environment(), capture_output=True, text=True, timeout=10)
                     self.assertEqual(run.returncode, 0, run.stdout + run.stderr)
 
+    def test_6391_cached_member_names(self):
+        from make_fixture import write_pak
+        from test_historical_common_think import native_output
+        data = load_contract_fixture(FIXTURE.with_name('profile-6391-packed-members.json'))
+        rows = data['sources']
+        revisions = [row['revision'] for row in rows]
+        self.assertEqual(revisions, sorted(contract_revisions(data, data['expected_revisions'])))
+        engine = Path(os.environ.get('OBOR_HISTORICAL_ENGINE', ROOT / 'src/engines' / data['engine']))
+        gamelib = engine / 'source/gamelib'
+        unit = (gamelib / 'packfile.c').read_text(encoding='latin-1')
+        header = (gamelib / 'packfile.h').read_text(encoding='latin-1')
+        utils = (engine / 'source/utils.c').read_text(encoding='latin-1')
+        constants = re.findall(r'(?m)^#define\s+(?:MAXPACKHANDLES|CACHEBLOCKSIZE|PACKFILE_PATH_MAX)\b[^\n]*'
+                              r'|^static const size_t USED_FLAG[^\n]*;', unit + '\n' + header)
+        prefix = 'Data/' + 'Scenery/' * 61
+        filenames = ('Data/Actors/Walk.bin', prefix + 'SceneFragments.bin', prefix + 'ScreenFragments.bin')
+        self.assertEqual([len(name) for name in filenames], [20, 511, 512])
+        with tempfile.TemporaryDirectory(prefix='packed-member-names-') as work:
+            path = Path(work) / 'members.pak'
+            write_pak(path, {tag: bytes([index + 1]) for index, tag in enumerate(filenames)})
+            image = path.read_bytes()
+        functions = ('tolowerOneChar', 'fnlc', 'myfilenamecmp', 'pak_header_entry', 'makefilenamecache',
+                     'freefilenamecache', 'openreadaheadpackfile', 'openPackfileCached')
+        fields = {
+            'CONSTANTS': '\n'.join(constants),
+            'FUNCTIONS': function(utils, 'readlsb32') + '\n'.join(function(unit, name) for name in functions),
+            'IMAGE': ','.join(str(byte) for byte in image),
+            'NAMES': ',\n'.join(json.dumps(name) for name in filenames),
+            'PROFILES': ',\n'.join('{%du,%d}' % (r['revision'], r['member_capacity']) for r in rows),
+        }
+        template = Path(__file__).with_name('packed_member_names_contract.c.in').read_text()
+        code = re.sub(r'@([A-Z_]+)@', lambda match: fields[match[1]], template)
+        actual = native_output(bind_named_allocation_support(code, engine), data, engine_source=engine)
+        self.assertEqual([int(line) for line in actual.splitlines()], revisions)
+
     def _exercise(self, fixture, lookup=False, header=False):
         rows = fixture['sources']
         revisions = {row['revision'] for row in rows}

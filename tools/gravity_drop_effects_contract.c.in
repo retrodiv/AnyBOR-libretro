@@ -1,0 +1,189 @@
+/* SPDX-License-Identifier: BSD-3-Clause
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me>
+ */
+#include <stdint.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <strings.h>
+#include "openbor.h"
+#undef assert
+#undef printf
+#include <assert.h>
+
+#ifndef stricmp
+#define stricmp strcasecmp
+#endif
+
+#if OBOR_ENGINE_BUILD == 6391
+#include "profile_ids.h"
+#define FRAME_T unsigned int
+#define NATIVE_REASON(reason) obor_spawn_type_to_native(reason)
+_Static_assert(__builtin_types_compatible_p(__typeof__(((s_anim *)0)->jumpframe->frame), FRAME_T),
+               "movement record frame keeps the original type");
+_Static_assert(__builtin_types_compatible_p(__typeof__(((s_anim *)0)->landframe->frame), FRAME_T),
+               "landing record frame keeps the original type");
+#else
+#define FRAME_T int
+#define NATIVE_REASON(reason) (reason)
+_Static_assert(__builtin_types_compatible_p(__typeof__(((s_anim *)0)->jumpframe.frame), FRAME_T),
+               "embedded jump frame keeps the original type");
+_Static_assert(__builtin_types_compatible_p(__typeof__(((s_anim *)0)->landframe.frame), FRAME_T),
+               "embedded landing frame keeps the original type");
+#endif
+_Static_assert(__builtin_types_compatible_p(__typeof__(((s_anim *)0)->dropframe->frame), FRAME_T),
+               "drop-frame record keeps the original type");
+
+uint32_t obor_profile_build, obor_profile_features;
+static entity actor, effect;
+entity *self = &actor;
+static s_anim action;
+static char trace[6];
+static size_t events;
+static int expected_frame, expected_reason, effect_exists;
+
+void *checkAlloc(void *ptr, size_t size, const char *name, const char *file, int line)
+{
+    assert(!size || ptr);
+    return ptr;
+}
+
+static void observe(char event)
+{
+    assert(events + 1 < sizeof(trace));
+    trace[events++] = event;
+    trace[events] = '\0';
+}
+
+static void reset_trace(void)
+{
+    events = 0;
+    trace[0] = '\0';
+}
+
+void update_frame(entity *ent, FRAME_T frame)
+{
+    assert(ent == &actor && frame == 3 && actor.animpos < frame && !events);
+    assert(frame < action.numframes);
+    actor.animpos = frame;
+    observe('F');
+}
+
+void execute_onmovea_script(entity *ent)
+{
+    assert(ent == &actor && actor.velocity.y && (int)actor.animpos == expected_frame);
+    observe('M');
+}
+
+entity *spawn(float x, float z, float y, int direction, char *name, int index, s_model *override)
+{
+    assert(x == 7 && z == 8 && y == 9 && direction == DIRECTION_RIGHT && !name && !override);
+    assert(!actor.falling && !actor.hitwall && actor.position.y == actor.base && index == 17);
+    observe('S');
+    return effect_exists ? &effect : NULL;
+}
+
+void execute_onspawn_script(entity *ent)
+{
+    assert(ent == &effect && !strcmp(trace, "S") && self == &actor);
+    assert(ent->base == actor.base && ent->autokill == 2);
+    assert(NATIVE_REASON(ent->spawntype) == expected_reason);
+    observe('C');
+}
+
+static void drop_and_move(void)
+{
+    @DROP@
+    @MOVE@
+}
+
+static void land(void)
+{
+    entity *dust;
+    @LAND@
+}
+
+@NUMBERS@
+
+static void load_drop_frame(s_anim *newanim, char *frame)
+{
+    enum { CMD_MODEL_DROPFRAME };
+    char filename[] = "fixture", command[] = "dropframe";
+    ArgList arglist = {.count = 2, .args = {command, frame}};
+    switch(CMD_MODEL_DROPFRAME)
+    {
+        case CMD_MODEL_DROPFRAME: @DROPFRAME_CASE@
+    }
+}
+
+static void check_frames(char *directive_frame)
+{
+    action.numframes = 3;
+    load_drop_frame(&action, directive_frame);
+    assert(action.dropframe && action.dropframe->frame == 3);
+    action.numframes = 5;
+    __typeof__(action.dropframe) drop_record = action.dropframe;
+    for(int declared = 0; declared <= 1; ++declared)
+    {
+        action.dropframe = declared ? drop_record : NULL;
+        for(FRAME_T frame = 2; frame <= 4; ++frame)
+        {
+            for(int velocity = -1; velocity <= 1; ++velocity)
+            {
+                reset_trace();
+                actor.animation = &action;
+                actor.animpos = frame;
+                actor.velocity.y = velocity;
+                int advance = declared && frame < 3 && velocity <= 0;
+                expected_frame = advance ? 3 : frame;
+                drop_and_move();
+                assert((int)actor.animpos == expected_frame);
+                assert(!strcmp(trace, advance ? (velocity ? "FM" : "F") : (velocity ? "M" : "")));
+            }
+        }
+    }
+    action.dropframe = NULL;
+    free(drop_record);
+}
+
+static void check_landing(void)
+{
+    static const struct { int model, drop, velocity, available; const char *events; } cases[] = {
+        {17, 1, -2, 1, "SC"}, {17, 1, -2, 0, "S"}, {-1, 1, -2, 1, ""},
+        {17, 0, -2, 1, ""}, {17, 1, -1, 1, ""}, {17, 1, 1, 1, ""},
+    };
+    for(size_t i = 0; i < sizeof(cases) / sizeof(*cases); ++i)
+    {
+        reset_trace();
+        actor.position.x = 7;
+        actor.position.z = 8;
+        actor.position.y = 2;
+        actor.base = 9;
+        actor.direction = DIRECTION_RIGHT;
+        actor.falling = actor.hitwall = 1;
+        actor.drop = cases[i].drop;
+        actor.velocity.y = cases[i].velocity;
+        actor.modeldata.dust.fall_land = cases[i].model;
+        effect_exists = cases[i].available;
+        effect = (entity){0};
+        land();
+        assert(!strcmp(trace, cases[i].events));
+        assert(actor.position.y == actor.base && !actor.falling && !actor.hitwall);
+    }
+}
+
+int main(void)
+{
+    static const struct { uint32_t revision; int reason; } rows[] = {@ROWS@};
+    for(size_t i = 0; i < sizeof(rows) / sizeof(*rows); ++i)
+    {
+        obor_profile_build = rows[i].revision;
+        expected_reason = rows[i].reason;
+        char numeric[] = "3", current[] = "ThIs";
+        check_frames(numeric);
+        check_frames(current);
+        check_landing();
+        printf("%u\n", obor_profile_build);
+    }
+    return 0;
+}

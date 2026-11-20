@@ -5,7 +5,10 @@
  * Upstream code retains its original license and notices.
  * Register native functions according to each logical profile's upstream
  * API. Expose the reconstructed 6392 test profile's earlier backtotitle
- * alias only in that profile.
+ * alias only in that profile. Expose entity collision script functions only
+ * in profiles that define them. Preserve the 5134 and 6119 basemap query
+ * alias and terrain query availability. Expose axis property functions only
+ * in profiles whose original script API includes them.
  * Existing changes recorded here; this is not their implementation date.
  * See MODIFICATIONS.md and docs/modifications/6391.md
  * at the source repository root. Original notices follow below.
@@ -25,6 +28,8 @@
 //return name of function from pointer to function
 const char *Script_GetFunctionName(void *functionRef)
 {
+    const bool axis_properties = obor_profile_build != 5134 && obor_profile_build != 6119;
+    const int entity_collision = obor_profile_build != 6330 && obor_profile_build != 5134 && obor_profile_build != 6119;
     if (functionRef == ((void *)system_isempty))
     {
         return "isempty";
@@ -187,43 +192,43 @@ const char *Script_GetFunctionName(void *functionRef)
     }
 
     // Axis
-    else if (functionRef == ((void *)openbor_get_axis_plane_lateral_float_property))
+    else if (axis_properties && functionRef == ((void *)openbor_get_axis_plane_lateral_float_property))
     {
         return "get_axis_plane_lateral_float_property";
     }
-    else if (functionRef == ((void *)openbor_get_axis_plane_lateral_int_property))
+    else if (axis_properties && functionRef == ((void *)openbor_get_axis_plane_lateral_int_property))
     {
         return "get_axis_plane_lateral_int_property";
     }
-    else if (functionRef == ((void *)openbor_get_axis_plane_vertical_int_property))
+    else if (axis_properties && functionRef == ((void *)openbor_get_axis_plane_vertical_int_property))
     {
         return "get_axis_plane_vertical_int_property";
     }
-    else if (functionRef == ((void *)openbor_get_axis_principal_float_property))
+    else if (axis_properties && functionRef == ((void *)openbor_get_axis_principal_float_property))
     {
         return "get_axis_principal_float_property";
     }
-    else if (functionRef == ((void *)openbor_get_axis_principal_int_property))
+    else if (axis_properties && functionRef == ((void *)openbor_get_axis_principal_int_property))
     {
         return "get_axis_principal_int_property";
     }
-    else if (functionRef == ((void *)openbor_set_axis_plane_lateral_float_property))
+    else if (axis_properties && functionRef == ((void *)openbor_set_axis_plane_lateral_float_property))
     {
         return "set_axis_plane_lateral_float_property";
     }
-    else if (functionRef == ((void *)openbor_set_axis_plane_lateral_int_property))
+    else if (axis_properties && functionRef == ((void *)openbor_set_axis_plane_lateral_int_property))
     {
         return "set_axis_plane_lateral_int_property";
     }
-    else if (functionRef == ((void *)openbor_set_axis_plane_vertical_int_property))
+    else if (axis_properties && functionRef == ((void *)openbor_set_axis_plane_vertical_int_property))
     {
         return "set_axis_plane_vertical_int_property";
     }
-    else if (functionRef == ((void *)openbor_set_axis_principal_float_property))
+    else if (axis_properties && functionRef == ((void *)openbor_set_axis_principal_float_property))
     {
         return "set_axis_principal_float_property";
     }
-    else if (functionRef == ((void *)openbor_set_axis_principal_int_property))
+    else if (axis_properties && functionRef == ((void *)openbor_set_axis_principal_int_property))
     {
         return "set_axis_principal_int_property";
     }
@@ -312,19 +317,19 @@ const char *Script_GetFunctionName(void *functionRef)
     }
 
     // Entity collision (ebox)
-    else if (functionRef == ((void *)openbor_get_entity_collision_collection))
+    else if (entity_collision && functionRef == ((void *)openbor_get_entity_collision_collection))
     {
         return "get_entity_collision_collection";
     }
-    else if (functionRef == ((void *)openbor_get_entity_collision_instance))
+    else if (entity_collision && functionRef == ((void *)openbor_get_entity_collision_instance))
     {
         return "get_entity_collision_instance";
     }
-    else if (functionRef == ((void *)openbor_get_entity_collision_property))
+    else if (entity_collision && functionRef == ((void *)openbor_get_entity_collision_property))
     {
         return "get_entity_collision_property";
     }
-    else if (functionRef == ((void *)openbor_set_entity_collision_property))
+    else if (entity_collision && functionRef == ((void *)openbor_set_entity_collision_property))
     {
         return "set_entity_collision_property";
     }
@@ -533,7 +538,8 @@ const char *Script_GetFunctionName(void *functionRef)
     {
         return "checkbasemapindex";
     }
-    else if (functionRef == ((void *)openbor_checkbase))
+    else if (functionRef == ((void *)openbor_checkbase) &&
+             obor_profile_build != 5134 && obor_profile_build != 6119)
     {
         return "checkbase";
     }
@@ -882,6 +888,7 @@ const char *Script_GetFunctionName(void *functionRef)
 //return string mapping function corresponding to a given function
 void *Script_GetStringMapFunction(void *functionRef)
 {
+    const bool axis_properties = obor_profile_build != 5134 && obor_profile_build != 6119;
     if (functionRef == ((void *)openbor_systemvariant))
     {
         return (void *)mapstrings_systemvariant;
@@ -924,43 +931,43 @@ void *Script_GetStringMapFunction(void *functionRef)
     }
 
     // Axis
-    else if (functionRef == ((void *)openbor_get_axis_plane_lateral_float_property))
+    else if (axis_properties && functionRef == ((void *)openbor_get_axis_plane_lateral_float_property))
     {
         return (void *)mapstrings_axis_plane_lateral_property;
     }
-    else if (functionRef == ((void *)openbor_get_axis_plane_lateral_int_property))
+    else if (axis_properties && functionRef == ((void *)openbor_get_axis_plane_lateral_int_property))
     {
         return (void *)mapstrings_axis_plane_lateral_property;
     }
-    else if (functionRef == ((void *)openbor_get_axis_plane_vertical_int_property))
+    else if (axis_properties && functionRef == ((void *)openbor_get_axis_plane_vertical_int_property))
     {
         return (void *)mapstrings_axis_plane_vertical_property;
     }
-    else if (functionRef == ((void *)openbor_get_axis_principal_float_property))
+    else if (axis_properties && functionRef == ((void *)openbor_get_axis_principal_float_property))
     {
         return (void *)mapstrings_axis_principal_property;
     }
-    else if (functionRef == ((void *)openbor_get_axis_principal_int_property))
+    else if (axis_properties && functionRef == ((void *)openbor_get_axis_principal_int_property))
     {
         return (void *)mapstrings_axis_principal_property;
     }
-    else if (functionRef == ((void *)openbor_set_axis_plane_lateral_float_property))
+    else if (axis_properties && functionRef == ((void *)openbor_set_axis_plane_lateral_float_property))
     {
         return (void *)mapstrings_axis_plane_lateral_property;
     }
-    else if (functionRef == ((void *)openbor_set_axis_plane_lateral_int_property))
+    else if (axis_properties && functionRef == ((void *)openbor_set_axis_plane_lateral_int_property))
     {
         return (void *)mapstrings_axis_plane_lateral_property;
     }
-    else if (functionRef == ((void *)openbor_set_axis_plane_vertical_int_property))
+    else if (axis_properties && functionRef == ((void *)openbor_set_axis_plane_vertical_int_property))
     {
         return (void *)mapstrings_axis_plane_vertical_property;
     }
-    else if (functionRef == ((void *)openbor_set_axis_principal_float_property))
+    else if (axis_properties && functionRef == ((void *)openbor_set_axis_principal_float_property))
     {
         return (void *)mapstrings_axis_principal_property;
     }
-    else if (functionRef == ((void *)openbor_set_axis_principal_int_property))
+    else if (axis_properties && functionRef == ((void *)openbor_set_axis_principal_int_property))
     {
         return (void *)mapstrings_axis_principal_property;
     }
@@ -1115,26 +1122,29 @@ void Script_LoadSystemFunctions()
 
 
     // Axis
-    List_InsertAfter(&theFunctionList,
-                     (void *)openbor_get_axis_plane_lateral_float_property, "get_axis_plane_lateral_float_property");
-    List_InsertAfter(&theFunctionList,
-                     (void *)openbor_get_axis_plane_lateral_int_property, "get_axis_plane_lateral_int_property");
-    List_InsertAfter(&theFunctionList,
-                     (void *)openbor_get_axis_plane_vertical_int_property, "get_axis_plane_vertical_int_property");
-    List_InsertAfter(&theFunctionList,
-                     (void *)openbor_get_axis_principal_float_property, "get_axis_principal_float_property");
-    List_InsertAfter(&theFunctionList,
-                     (void *)openbor_get_axis_principal_int_property, "get_axis_principal_int_property");
-    List_InsertAfter(&theFunctionList,
-                     (void *)openbor_set_axis_plane_lateral_float_property, "set_axis_plane_lateral_float_property");
-    List_InsertAfter(&theFunctionList,
-                     (void *)openbor_set_axis_plane_lateral_int_property, "set_axis_plane_lateral_int_property");
-    List_InsertAfter(&theFunctionList,
-                     (void *)openbor_set_axis_plane_vertical_int_property, "set_axis_plane_vertical_int_property");
-    List_InsertAfter(&theFunctionList,
-                     (void *)openbor_set_axis_principal_float_property, "set_axis_principal_float_property");
-    List_InsertAfter(&theFunctionList,
-                     (void *)openbor_set_axis_principal_int_property, "set_axis_principal_int_property");
+    if(obor_profile_build != 5134 && obor_profile_build != 6119)
+    {
+        List_InsertAfter(&theFunctionList,
+                         (void *)openbor_get_axis_plane_lateral_float_property, "get_axis_plane_lateral_float_property");
+        List_InsertAfter(&theFunctionList,
+                         (void *)openbor_get_axis_plane_lateral_int_property, "get_axis_plane_lateral_int_property");
+        List_InsertAfter(&theFunctionList,
+                         (void *)openbor_get_axis_plane_vertical_int_property, "get_axis_plane_vertical_int_property");
+        List_InsertAfter(&theFunctionList,
+                         (void *)openbor_get_axis_principal_float_property, "get_axis_principal_float_property");
+        List_InsertAfter(&theFunctionList,
+                         (void *)openbor_get_axis_principal_int_property, "get_axis_principal_int_property");
+        List_InsertAfter(&theFunctionList,
+                         (void *)openbor_set_axis_plane_lateral_float_property, "set_axis_plane_lateral_float_property");
+        List_InsertAfter(&theFunctionList,
+                         (void *)openbor_set_axis_plane_lateral_int_property, "set_axis_plane_lateral_int_property");
+        List_InsertAfter(&theFunctionList,
+                         (void *)openbor_set_axis_plane_vertical_int_property, "set_axis_plane_vertical_int_property");
+        List_InsertAfter(&theFunctionList,
+                         (void *)openbor_set_axis_principal_float_property, "set_axis_principal_float_property");
+        List_InsertAfter(&theFunctionList,
+                         (void *)openbor_set_axis_principal_int_property, "set_axis_principal_int_property");
+    }
 
     // Binding
     List_InsertAfter(&theFunctionList,
@@ -1170,18 +1180,17 @@ void Script_LoadSystemFunctions()
                      (void *)openbor_set_body_collision_property, "set_body_collision_property");
 
     // Entity collision (ebox) properties.
-    if(obor_profile_build != 6330)
-    List_InsertAfter(&theFunctionList,
-                     (void *)openbor_get_entity_collision_collection, "get_entity_collision_collection");
-    if(obor_profile_build != 6330)
-    List_InsertAfter(&theFunctionList,
-                     (void *)openbor_get_entity_collision_instance, "get_entity_collision_instance");
-    if(obor_profile_build != 6330)
-    List_InsertAfter(&theFunctionList,
-                     (void *)openbor_get_entity_collision_property, "get_entity_collision_property");
-    if(obor_profile_build != 6330)
-    List_InsertAfter(&theFunctionList,
-                     (void *)openbor_set_entity_collision_property, "set_entity_collision_property");
+    if(obor_profile_build != 6330 && obor_profile_build != 5134 && obor_profile_build != 6119)
+    {
+        List_InsertAfter(&theFunctionList,
+                         (void *)openbor_get_entity_collision_collection, "get_entity_collision_collection");
+        List_InsertAfter(&theFunctionList,
+                         (void *)openbor_get_entity_collision_instance, "get_entity_collision_instance");
+        List_InsertAfter(&theFunctionList,
+                         (void *)openbor_get_entity_collision_property, "get_entity_collision_property");
+        List_InsertAfter(&theFunctionList,
+                         (void *)openbor_set_entity_collision_property, "set_entity_collision_property");
+    }
 
     // Energy status properties.
     List_InsertAfter(&theFunctionList,
@@ -1306,10 +1315,15 @@ void Script_LoadSystemFunctions()
                      (void *)openbor_checkplatformbetween, "checkplatformbetween");
     List_InsertAfter(&theFunctionList,
                      (void *)openbor_checkbasemap, "checkbasemap");
+    const bool legacy_basemap_query = obor_profile_build == 5134 || obor_profile_build == 6119;
     List_InsertAfter(&theFunctionList,
-                     (void *)openbor_checkbasemapindex, "checkbasemapindex");
-    List_InsertAfter(&theFunctionList,
-                     (void *)openbor_checkbase, "checkbase");
+                     (void *)(legacy_basemap_query ? openbor_checkbasemap : openbor_checkbasemapindex),
+                     "checkbasemapindex");
+    if(!legacy_basemap_query)
+    {
+        List_InsertAfter(&theFunctionList,
+                         (void *)openbor_checkbase, "checkbase");
+    }
     List_InsertAfter(&theFunctionList,
                      (void *)openbor_generatebasemap, "generatebasemap");
     List_InsertAfter(&theFunctionList,

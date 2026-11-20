@@ -23,6 +23,7 @@ PIN = json.loads((ROOT / 'src/pin.json').read_text())
 NATIVE_ENGINES = {'3400', '3741', '3842', '4086', '4432'}
 CONTRACT = Path(__file__).with_name('dot_bounds_contract.c')
 PERIODIC_FIXTURE = Path(__file__).with_name('fixtures') / 'profile-4432-periodic-damage.json'
+RECORD_PERIODIC_FIXTURE = PERIODIC_FIXTURE.with_name('profile-6391-periodic-damage.json')
 
 
 def run_contract(engine, revisions):
@@ -110,6 +111,28 @@ class DotBoundsTests(unittest.TestCase):
 
 
 class HistoricalPeriodicDamageTests(unittest.TestCase):
+    def test_6391_periodic_damage_script_payload_and_order(self):
+        data = load_contract_fixture(RECORD_PERIODIC_FIXTURE)
+        rows = data['sources']
+        revisions = [row['revision'] for row in rows]
+        self.assertEqual(revisions, sorted(contract_revisions(data, data['expected_revisions'])))
+        engine = Path(os.environ.get('OBOR_HISTORICAL_ENGINE', ROOT / 'src/engines' / data['engine']))
+        core = (engine / 'openbor.c').read_text(encoding='latin-1')
+        variant = (engine / 'source/scriptlib/ScriptVariant.c').read_text(encoding='latin-1')
+        values = {
+            'FUNCTIONS': '\n'.join(function(core, name) for name in ('execute_takedamage_script', 'damage_recursive')),
+            'VARIANTS': '\n'.join(function(variant, name) for name in
+                                  ('ScriptVariant_Init', 'ScriptVariant_Clear', 'ScriptVariant_ChangeType')),
+            'DEFAULTS': '\n'.join(re.search(r'(?ms)^' + signature + r'\s*=\s*\{.*?^\};', core)[0]
+                                 for signature in ('const s_collision_attack emptyattack',
+                                                   's_axis_principal_float default_model_dropv')),
+            'ROWS': ','.join('{%du,%d}' % (row['revision'], row['timeover']) for row in rows),
+        }
+        template = Path(__file__).with_name('periodic_damage_record_contract.c.in').read_text()
+        code = re.sub(r'@([A-Z_]+)@', lambda match: values[match[1]], template)
+        raw = native_output(code, data, engine_source=engine)
+        self.assertEqual([int(line) for line in raw.splitlines()], revisions)
+
     def test_4432_periodic_damage_modes_and_recipient(self):
         data = load_contract_fixture(PERIODIC_FIXTURE)
         rows = data['sources']

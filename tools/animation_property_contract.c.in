@@ -1,0 +1,104 @@
+/* SPDX-License-Identifier: BSD-3-Clause
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me>
+ */
+#include <ctype.h>
+#include <stdint.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+@HEADERS@
+#include "commands.h"
+#undef printf
+#undef assert
+#include <assert.h>
+
+uint32_t obor_profile_build;
+uint32_t obor_profile_features;
+
+void *checkAlloc(void *ptr, size_t size, const char *func, const char *file, int line)
+{
+    assert(!size || ptr);
+    return ptr;
+}
+
+@CACHE@
+@METHODS@
+@PARSERS@
+
+static char *charge_argument(unsigned index, char *text)
+{
+    assert(index == 1);
+    return text;
+}
+
+static void load_charge(s_anim *newanim, char *text)
+{
+    char filename[] = "fixture", command[] = "chargetime";
+#undef GET_ARG
+#define GET_ARG(z) charge_argument(z, text)
+    switch(CMD_MODEL_CHARGETIME)
+    {
+        @CHARGE_COMMAND@
+        default: assert(0);
+    }
+#undef GET_ARG
+}
+
+static ScriptVariant get(s_anim *animation, LONG ordinal)
+{
+    ScriptVariant handle = {.vt = VT_PTR, .ptrVal = animation};
+    ScriptVariant property = {.vt = VT_INTEGER, .lVal = ordinal};
+    ScriptVariant result = {.vt = VT_EMPTY}, *out = &result;
+    ScriptVariant *args[] = {&handle, &property};
+    assert(openbor_get_animation_property(args, &out, 2) == S_OK && out == &result);
+    return result;
+}
+
+int main(void)
+{
+    const struct { unsigned revision; LONG bounce, charge, frames, entity_collision; } profiles[] = {
+        @PROFILES@
+    };
+    for(size_t i = 0; i < sizeof(profiles) / sizeof(*profiles); ++i)
+    {
+        obor_profile_build = profiles[i].revision;
+        s_anim animation = {.bounce = 2.25f, .numframes = 5};
+#if OBOR_ENGINE_BUILD == 4432
+        animation.obor_frame_capacity = 9;
+#endif
+        char text[] = "7.5";
+        load_charge(&animation, text);
+        ScriptVariant value = get(&animation, profiles[i].charge);
+#if OBOR_ENGINE_BUILD == 4432
+        _Static_assert(__builtin_types_compatible_p(__typeof__(animation.chargetime), float),
+                       "4905 charge time storage must be floating point");
+        assert(value.vt == VT_DECIMAL && value.dblVal == 7.5);
+#else
+        _Static_assert(__builtin_types_compatible_p(__typeof__(animation.chargetime), unsigned int),
+                       "charge time storage must be unsigned integer");
+        assert(value.vt == VT_INTEGER && value.lVal == 7);
+        if(profiles[i].entity_collision >= 0)
+        {
+            s_collision_entity_list *list = NULL;
+            value = get(&animation, profiles[i].entity_collision);
+            assert(value.vt == VT_EMPTY);
+            animation.collision_entity = &list;
+            value = get(&animation, profiles[i].entity_collision);
+            assert(value.vt == VT_PTR && value.ptrVal == &list);
+        }
+#endif
+        value = get(&animation, profiles[i].bounce);
+        assert(value.vt == VT_DECIMAL && value.dblVal == 2.25);
+        value = get(&animation, profiles[i].frames);
+        assert(value.vt == VT_INTEGER && value.lVal == 5);
+        ScriptVariant handle = {.vt = VT_PTR, .ptrVal = &animation};
+        ScriptVariant property = {.vt = VT_INTEGER, .lVal = profiles[i].frames};
+        ScriptVariant input = {.vt = VT_INTEGER, .lVal = 9};
+        ScriptVariant *args[] = {&handle, &property, &input};
+        ScriptVariant result = {.vt = VT_EMPTY}, *out = &result;
+        assert(openbor_set_animation_property(args, &out, 3) == S_OK && out == &result);
+        assert(animation.numframes == 9);
+        printf("PASS %u\n", obor_profile_build);
+    }
+    return 0;
+}

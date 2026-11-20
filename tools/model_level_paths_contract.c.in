@@ -1,0 +1,224 @@
+/* SPDX-License-Identifier: BSD-3-Clause
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me>
+ */
+#include <assert.h>
+#include <stddef.h>
+#include <stdint.h>
+#include <stdio.h>
+#include <string.h>
+
+@LIMIT@
+static uint32_t obor_profile_build;
+static char observed[MAX_BUFFER_LEN];
+static unsigned requests, diagnostics;
+static int fade_mode;
+
+static void observe(const char *path)
+{
+    assert(strlen(path) < sizeof(observed));
+    strcpy(observed, path);
+    ++requests;
+}
+
+static void borShutdown(int status, const char *message, ...)
+{
+    assert(status == 1 && *message);
+    ++diagnostics;
+}
+
+static void load_background(char *path, int fading)
+{
+    fade_mode = fading;
+    observe(path);
+}
+
+static void load_cached_background(const char *path, int fading)
+{
+    fade_mode = fading;
+    observe(path);
+}
+
+@PATH@
+
+static int observe_model_path(const char *custModels)
+{
+    char filename[MAX_BUFFER_LEN] = "data/models.txt";
+    @MODEL@
+    observe(filename);
+    return 1;
+}
+
+static void observe_level_path(const char *custLevels)
+{
+    char filename[MAX_BUFFER_LEN] = "";
+    @LEVEL@
+    observe(filename);
+}
+
+static int observe_loading_background(const char *custBkgrds)
+{
+    char tmpBuff[MAX_BUFFER_LEN] = {""};
+    @BACKGROUND@
+    return 1;
+}
+
+static int observe_level_background(const char *value)
+{
+    char bgPath[MAX_BUFFER_LEN] = "";
+    const char *errormessage = NULL;
+    @LEVEL_BACKGROUND@
+    load_background(bgPath, 1);
+    return 1;
+lCleanup:
+    assert(errormessage && *errormessage);
+    ++diagnostics;
+    return 0;
+}
+
+static int observe_level_loading(const char *custBkgrds)
+{
+    char string[MAX_BUFFER_LEN] = "";
+    const char *errormessage = NULL;
+    @LEVEL_LOADING@
+    return 1;
+lCleanup:
+    assert(errormessage && *errormessage);
+    ++diagnostics;
+    return 0;
+}
+
+static int observe_select_background(const char *custBkgrds)
+{
+    char string[MAX_BUFFER_LEN] = "";
+    @SELECT_BACKGROUND@
+    return 1;
+}
+
+static int update_include_name(char **fn, char *namebuf, const char *argument)
+{
+#define GET_ARGP(n) argument
+    @INCLUDE@
+#undef GET_ARGP
+}
+
+static void buffer_append(char **dest, const char *text, int chunk,
+                          size_t *capacity, size_t *length)
+{
+    assert(*dest == observed && chunk == 0xffffff);
+    assert(*capacity == sizeof(observed) && *length == 0);
+    observe(text);
+}
+
+static int observe_script_call(const char *value)
+{
+    char namebuf[MAX_BUFFER_LEN];
+    char *scriptbuf = observed;
+    size_t sbsize = sizeof(observed), scriptlen = 0;
+    const char *shutdownmessage = NULL;
+    @CALL_FORMAT@
+    @CALL@
+    return 1;
+lCleanup:
+    assert(shutdownmessage && *shutdownmessage);
+    ++diagnostics;
+    return 0;
+}
+
+static void make_name(char *name, size_t length, const char *tail)
+{
+    const size_t suffix = strlen(tail);
+    assert(length >= suffix && length <= MAX_BUFFER_LEN);
+    memset(name, 'a', length - suffix);
+    memcpy(name + length - suffix, tail, suffix + 1);
+}
+
+static void check_paths(size_t capacity)
+{
+    char name[MAX_BUFFER_LEN + 1], expected[MAX_BUFFER_LEN];
+    assert(observe_model_path(NULL));
+    assert(strcmp(observed, "data/models.txt") == 0);
+    observe_level_path(NULL);
+    assert(strcmp(observed, "data/levels.txt") == 0);
+    assert(observe_loading_background(NULL));
+    assert(strcmp(observed, "data/bgs/loading") == 0 && !fade_mode);
+    assert(observe_level_loading(NULL));
+    assert(strcmp(observed, "data/bgs/loading2") == 0 && !fade_mode);
+    assert(observe_select_background(NULL));
+    assert(strcmp(observed, "data/bgs/select") == 0 && fade_mode == 1);
+
+    make_name(name, capacity - sizeof("data/"), ".txt");
+    assert(snprintf(expected, sizeof(expected), "data/%s", name) == (int)capacity - 1);
+    assert(observe_model_path(name) && strcmp(observed, expected) == 0);
+    observe_level_path(name);
+    assert(strcmp(observed, expected) == 0);
+    make_name(name, capacity - sizeof("data/") + 1, ".txt");
+    const unsigned before = requests, notes = diagnostics;
+    assert(!observe_model_path(name));
+    observe_level_path(name);
+    assert(requests == before && diagnostics == notes + 2);
+
+    make_name(name, capacity - sizeof("loading"), "/");
+    assert(snprintf(expected, sizeof(expected), "%sloading", name) == (int)capacity - 1);
+    assert(observe_loading_background(name) && strcmp(observed, expected) == 0);
+    make_name(name, capacity - sizeof("loading") + 1, "/");
+    assert(!observe_loading_background(name));
+    assert(requests == before + 1 && diagnostics == notes + 3);
+
+    make_name(name, capacity - sizeof("select"), "/");
+    assert(snprintf(expected, sizeof(expected), "%sselect", name) == (int)capacity - 1);
+    assert(observe_select_background(name) && strcmp(observed, expected) == 0);
+    assert(fade_mode == 1);
+    make_name(name, capacity - sizeof("select") + 1, "/");
+    assert(!observe_select_background(name));
+    assert(requests == before + 2 && diagnostics == notes + 4);
+
+    make_name(name, capacity - 1, ".png");
+    assert(observe_level_background(name) && strcmp(observed, name) == 0);
+    assert(fade_mode == 1);
+    make_name(name, capacity, ".png");
+    assert(!observe_level_background(name));
+    assert(requests == before + 3 && diagnostics == notes + 5);
+
+    make_name(name, capacity - sizeof("loading2"), "/");
+    assert(snprintf(expected, sizeof(expected), "%sloading2", name) == (int)capacity - 1);
+    assert(observe_level_loading(name) && strcmp(observed, expected) == 0 && !fade_mode);
+    make_name(name, capacity - sizeof("loading2") + 1, "/");
+    assert(!observe_level_loading(name));
+    assert(requests == before + 4 && diagnostics == notes + 6);
+
+    char path[MAX_BUFFER_LEN], previous[] = "data/models.txt", *selected = previous;
+    make_name(name, capacity - 1, ".txt");
+    assert(update_include_name(&selected, path, name) == 4);
+    assert(selected == path && strcmp(path, name) == 0);
+    memcpy(expected, path, capacity);
+    make_name(name, capacity, ".txt");
+    assert(update_include_name(&selected, path, name) == 0);
+    assert(selected == path && strcmp(path, expected) == 0);
+}
+
+static void check_script_calls(size_t capacity)
+{
+    char symbol[MAX_BUFFER_LEN + 1], expected[MAX_BUFFER_LEN];
+    assert(observe_script_call("advance"));
+    assert(strcmp(observed, "            advance(") == 0);
+    make_name(symbol, capacity - sizeof("            ("), "");
+    assert(snprintf(expected, sizeof(expected), "            %s(", symbol) == (int)capacity - 1);
+    assert(observe_script_call(symbol) && strcmp(observed, expected) == 0);
+    const unsigned before = requests, notes = diagnostics;
+    make_name(symbol, capacity - sizeof("            (") + 1, "");
+    assert(!observe_script_call(symbol));
+    assert(requests == before && diagnostics == notes + 1);
+}
+
+int main(void)
+{
+    static const struct { uint32_t revision; size_t path, script; } profiles[] = { @PROFILES@ };
+    for(size_t i = 0; i < sizeof(profiles) / sizeof(*profiles); ++i)
+    {
+        obor_profile_build = profiles[i].revision;
+        check_paths(profiles[i].path);
+        check_script_calls(profiles[i].script);
+        printf("PASS %u\n", obor_profile_build);
+    }
+    return 0;
+}

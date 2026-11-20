@@ -1,0 +1,148 @@
+/* SPDX-License-Identifier: BSD-3-Clause
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me>
+ */
+#include <stddef.h>
+#include <stdint.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include "scriptcommon.h"
+#include "anybor_pak_name.h"
+#undef assert
+#undef printf
+#undef fopen
+#undef fclose
+#include <assert.h>
+
+uint32_t obor_profile_build, obor_profile_features;
+int current_set, models_cached;
+Varlist global_var_list;
+static List variables;
+static int index_of_name;
+static char text_value[] = @SOURCE_TEXT@;
+static const char expected[] = @EXPECTED@;
+static char record[1024], path_expected[64];
+static size_t file_bytes;
+static int writing, missing, phase, opens, closes;
+
+static s_modelcache cache[2];
+static ScriptVariant named[] = {
+    {.vt = VT_STR, .strVal = 0}, {.vt = VT_INTEGER, .lVal = -75},
+    {.vt = VT_DECIMAL, .dblVal = 2.25}, {.vt = VT_EMPTY}, {.vt = VT_PTR}
+};
+static char *names[] = {"note", "count", "scale", "unused", "reference"};
+static ScriptVariant indexed[] = {
+    {.vt = VT_INTEGER, .lVal = 4}, {.vt = VT_INTEGER, .lVal = 25},
+    {.vt = VT_EMPTY}, {.vt = VT_STR, .strVal = 0}, {.vt = VT_PTR}
+};
+
+int List_GetSize(const List *list) { assert(list == &variables); return sizeof(named) / sizeof(*named); }
+void List_Reset(List *list) { assert(list == &variables); index_of_name = 0; }
+int List_GotoNext(List *list) { assert(list == &variables); return ++index_of_name < List_GetSize(list); }
+void *List_Retrieve(const List *list) { assert(list == &variables); return &named[index_of_name]; }
+char *List_GetName(const List *list) { assert(list == &variables); return names[index_of_name]; }
+CHAR *StrCache_Get(int index) { assert(!index); return text_value; }
+
+void getBasePath(char *path, char *name, int type)
+{
+    assert(!type && !strcmp(name, "Saves"));
+    strcpy(path, "Saves/");
+}
+
+void getPakName(char *name, size_t capacity, int type)
+{
+    assert(type == 2 && obor_pak_name(name, capacity, "fixture.pak", type));
+}
+
+void borExit(int status) { (void)status; abort(); }
+
+void *checkAlloc(void *value, size_t size, const char *name, const char *file, int line)
+{
+    assert(!size || value);
+    return value;
+}
+
+static FILE *open_record(const char *path, const char *mode)
+{
+    assert(!strcmp(path, path_expected) && (!strcmp(mode, "wb") || !strcmp(mode, "rb")));
+    ++opens;
+    if(missing) return NULL;
+    writing = mode[0] == 'w';
+    FILE *file = tmpfile();
+    assert(file);
+    if(!writing)
+    {
+        assert(fwrite(record, 1, file_bytes, file) == file_bytes);
+        rewind(file);
+    }
+    return file;
+}
+
+static int close_record(FILE *file)
+{
+    ++closes;
+    if(writing)
+    {
+        assert(fflush(file) == 0);
+        rewind(file);
+        file_bytes = fread(record, 1, sizeof(record), file);
+        assert(file_bytes < sizeof(record));
+        record[file_bytes] = 0;
+    }
+    return fclose(file);
+}
+
+void Script_Init(Script *script, char *name, char *comment, int first)
+{
+    assert(!phase++ && script && !strcmp(name, "loadScriptFile") && !comment && first == 1);
+}
+
+int Script_AppendText(Script *script, char *text, char *path)
+{
+    assert(phase++ == 1 && script && !strcmp(path, path_expected));
+    assert(strlen(text) == sizeof(expected) - 2);
+    assert(!memcmp(text, expected, sizeof(expected) - 2));
+    return 1;
+}
+
+int Script_Compile(Script *script) { assert(phase++ == 2 && script); return 1; }
+int Script_Execute(Script *script) { assert(phase++ == 3 && script); return 1; }
+void Script_Clear(Script *script, int localclear) { assert(phase++ == 4 && script && localclear == 2); }
+
+#define fopen open_record
+#define fclose close_record
+@METHODS@
+#undef fopen
+#undef fclose
+
+static void check(unsigned revision, int slot, const char *expected_path)
+{
+    obor_profile_build = revision;
+    current_set = slot;
+    strcpy(path_expected, expected_path);
+    missing = phase = opens = closes = 0;
+    assert(saveScriptFile() == 1 && opens == 1 && closes == 1);
+    assert(file_bytes == sizeof(expected) - 1 && !memcmp(record, expected, file_bytes));
+    assert(loadScriptFile() == 1 && phase == 5 && opens == 2 && closes == 2);
+    phase = 0;
+    missing = 1;
+    assert(!saveScriptFile() && !loadScriptFile() && !phase && opens == 4 && closes == 2);
+}
+
+int main(void)
+{
+    global_var_list = (Varlist){.list = &variables, .vars = indexed};
+    model_cache = cache;
+    models_cached = 2;
+    cache[0].name = "player";
+    cache[0].selectable = 1;
+    cache[1].name = "other";
+    const unsigned profiles[] = {@PROFILES@};
+    for(size_t i = 0; i < sizeof(profiles) / sizeof(*profiles); ++i)
+    {
+        check(profiles[i], 0, "Saves/fixture.s00");
+        check(profiles[i], 7, "Saves/fixture.s07");
+        printf("PASS %u\n", profiles[i]);
+    }
+    return 0;
+}

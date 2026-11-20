@@ -19,6 +19,7 @@ FIXTURE = Path(__file__).with_name('fixtures') / 'modern-attack-lifecycle-contra
 WEAPON_FIXTURE = FIXTURE.with_name('profile-rejoin-enemy-weapon-contracts.json')
 SCRIPT_QUERY_FIXTURE = FIXTURE.with_name('profile-4432-script-damage-and-empty.json')
 LAST_PLAYER_FIXTURE = FIXTURE.with_name('profile-4432-last-player-timer.json')
+GROUND_SPECIAL_FIXTURE = FIXTURE.with_name('profile-ground-special.json')
 
 
 def program(data):
@@ -59,6 +60,34 @@ def rejoin_weapon_program(data, engine):
 
 
 class ModernAttackLifecycleContracts(unittest.TestCase):
+    def check_ground_special(self, physical):
+        data = load_contract_fixture(GROUND_SPECIAL_FIXTURE)
+        rows = [row for row in data['sources'] if row['engine'] == physical]
+        revisions = [row['revision'] for row in rows]
+        self.assertEqual(revisions, sorted(contract_revisions(data, data['expected_revisions'][physical])))
+        engine = Path(os.environ.get('OBOR_HISTORICAL_ENGINE', ROOT / 'src/engines' / physical))
+        source = (engine / 'openbor.c').read_text(encoding='latin-1')
+        think = function(source, 'player_think')
+        values = {
+            'SPECIAL': function(source, 'check_special'),
+            'DROP_ALL': function(source, 'drop_all_enemies'),
+            'DEFAULT': re.search(r'(?ms)^const s_collision_attack emptyattack\s*=\s*\{.*?^\};', source)[0],
+            'GRAB': braced_statement(think, 'if(self->grabbing && '),
+            'CHAIN': braced_statement(think, 'else if(perform_atchain())').removeprefix('else '),
+            'ROWS': ','.join('{%du,%d}' % (row['revision'], row['cantfire_blocks']) for row in rows),
+        }
+        template = Path(__file__).with_name('ground_special_contract.c.in').read_text()
+        code = re.sub(r'@([A-Z_]+)@', lambda token: values[token[1]], template)
+        output = native_output(code, {'engine': physical}, engine_source=engine,
+                               extra_cflags=('-fgnu89-inline',))
+        self.assertEqual([int(line) for line in output.splitlines()], revisions)
+
+    def test_4432_ground_special(self):
+        self.check_ground_special('4432')
+
+    def test_6391_ground_special(self):
+        self.check_ground_special('6391')
+
     def test_4432_last_player_continue_timer(self):
         data = load_contract_fixture(LAST_PLAYER_FIXTURE)
         revisions = [row['revision'] for row in data['sources']]

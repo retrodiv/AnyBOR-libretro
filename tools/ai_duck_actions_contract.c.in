@@ -1,0 +1,308 @@
+/* SPDX-License-Identifier: BSD-3-Clause
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me>
+ */
+#include <math.h>
+#include <stdint.h>
+#include <stdio.h>
+#include <string.h>
+#include "openbor.h"
+#include "profile_ids.h"
+#undef assert
+#undef printf
+#include <assert.h>
+
+uint32_t obor_profile_build, obor_profile_features;
+u32 _time;
+float min_noatk_chance = 0.25f;
+static entity actor, enemy;
+entity *self = &actor;
+static entity *next_target;
+static s_anim clip = {.numframes = 1};
+static s_anim *animations[MAX_ANIS];
+
+static int random_value, allowed, range_ok, air_actor, air_enemy, chain_ok;
+static int random_calls, chance_calls, range_calls, queries, checks, grab_calls, chain_calls;
+static int idle_calls, walk_calls, animation, animation_calls, normal_choices;
+
+void common_attack_proc(void) {}
+void common_turn(void) {}
+
+void ent_set_anim(entity *ent, int id, int reset)
+{
+    assert(ent == &actor && !reset);
+    ++animation_calls;
+    animation = id;
+    actor.animnum = (unsigned)id;
+}
+
+int common_idle_anim(entity *ent)
+{
+    assert(ent == &actor);
+    ++idle_calls;
+    return 1;
+}
+
+void adjust_walk_animation(entity *ent)
+{
+    assert(ent == &enemy);
+    ++walk_calls;
+}
+
+float diff(float a, float b) { return fabsf(a - b); }
+unsigned int rand32(void) { ++random_calls; return (unsigned int)random_value; }
+float randf(float max) { ++random_calls; return max / 2; }
+
+int inair(entity *ent) { return ent == &actor ? air_actor : air_enemy; }
+
+entity *normal_find_target(int id, int detect)
+{
+    assert((id == -1 || id == ANI_UPPER) && !detect);
+    ++queries;
+    return next_target;
+}
+
+int check_range_target_all(entity *ent, entity *target, e_animations id)
+{
+    assert(ent == &actor && target == &enemy && id == ANI_DUCK);
+    ++range_calls;
+    return range_ok;
+}
+
+int check_attack_chance(entity *target, float min, float max)
+{
+    assert(target == &enemy && min == 0.75f && max == 0.75f);
+    ++chance_calls;
+    return allowed;
+}
+
+u32 recheck_nextattack(entity *target)
+{
+    assert(target == &enemy);
+    ++checks;
+    return _time;
+}
+
+int common_try_grab(entity *target) { ++grab_calls; return 0; }
+int common_try_block(entity *target) { return 0; }
+int common_try_runattack(entity *target) { return 0; }
+int common_try_normalattack(entity *target) { return 0; }
+int common_try_jumpattack(entity *target) { return 0; }
+int perform_atchain(void) { ++chain_calls; return chain_ok; }
+
+@ACTIONS@
+
+static int think_duck(void)
+{
+@THINK_GATE@
+    return 0;
+}
+
+static int turn_allowed(int predir)
+{
+@TURN_GATE@
+        return 1;
+    return 0;
+}
+
+static void prepare_attack(void)
+{
+@PREPARE_GATE@
+    else
+    {
+        ++normal_choices;
+    }
+}
+
+static void reset(int stance)
+{
+    memset(animations, 0, sizeof(animations));
+    const int ids[] = {ANI_DUCK, ANI_DUCKING, ANI_DUCKRISE, ANI_DUCKATTACK, ANI_UPPER, ANI_TURN};
+    for(size_t i = 0; i < sizeof(ids) / sizeof(*ids); ++i)
+        animations[ids[i]] = &clip;
+    actor = (entity){
+        .modeldata = {.animation = animations, .animation_capacity = MAX_ANIS,
+            .type = TYPE_ENEMY, .speed = 5, .aggression = 30, .attackthrottletime = 40,
+            .candamage = TYPE_PLAYER, .projectilehit = TYPE_PLAYER},
+        .animnum = ANI_DUCK,
+        .ducking = stance, .idling = IDLING_ACTIVE, .direction = DIRECTION_LEFT, .running = 1,
+        .position = {.x = 100, .z = 60}, .velocity = {.x = 3, .z = 4},
+        .opponent = &enemy, .takeaction = common_attack_proc, .nextattack = 20, .stalltime = 90
+    };
+    enemy = (entity){.modeldata = {.type = TYPE_PLAYER}, .ducking = DUCK_ACTIVE, .exists = 1,
+                     .position = {.x = 60, .z = 62}};
+    _time = 10;
+    next_target = &enemy;
+    allowed = range_ok = random_value = 1;
+    air_actor = air_enemy = chain_ok = 0;
+    random_calls = chance_calls = range_calls = queries = checks = grab_calls = chain_calls = 0;
+    idle_calls = walk_calls = animation_calls = normal_choices = 0;
+    animation = -1;
+}
+
+static void check_ai(int stateful)
+{
+    const int postures[] = {DUCK_INACTIVE, DUCK_PREPARED, DUCK_ACTIVE, DUCK_RISE};
+    for(size_t n = 0; n < sizeof(postures) / sizeof(*postures); ++n)
+    {
+        const int posture = postures[n];
+        reset(posture);
+        const int prepares = stateful && posture == DUCK_INACTIVE;
+        assert(think_duck() == stateful && animation_calls == prepares);
+        assert(queries == (stateful && (posture == DUCK_INACTIVE || posture == DUCK_ACTIVE)));
+        if(prepares)
+        {
+            assert(animation == ANI_DUCKING && actor.takeaction == common_preduck && actor.ducking == DUCK_PREPARED);
+            actor.animating = 1;
+            common_preduck();
+            assert(animation_calls == 1);
+            actor.animating = 0;
+            common_preduck();
+            assert(animation_calls == 2 && animation == ANI_DUCK && actor.ducking == DUCK_ACTIVE);
+        }
+        reset(posture);
+        assert(turn_allowed(DIRECTION_RIGHT) == (!stateful || posture == DUCK_INACTIVE));
+        assert(!turn_allowed(DIRECTION_LEFT));
+        prepare_attack();
+        const int direct = stateful && posture == DUCK_ACTIVE;
+        assert(animation_calls == direct && normal_choices == !direct);
+        if(direct) assert(animation == ANI_DUCKATTACK && actor.takeaction == common_attack_proc);
+        reset(posture);
+        actor.modeldata.chainlength = 2;
+        chain_ok = 1;
+        prepare_attack();
+        assert(chain_calls == 1 && !animation_calls && !normal_choices);
+    }
+
+    reset(DUCK_ACTIVE);
+    next_target = NULL;
+    assert(think_duck() == stateful && animation_calls == stateful);
+    if(stateful)
+    {
+        assert(animation == ANI_DUCKRISE && actor.takeaction == common_idle && actor.ducking == DUCK_RISE);
+        actor.animating = 1;
+        common_idle();
+        assert(!idle_calls && actor.takeaction == common_idle);
+        actor.animating = 0;
+        common_idle();
+        assert(idle_calls == 1 && !actor.takeaction && actor.idling == IDLING_PREPARED);
+    }
+
+    reset(DUCK_INACTIVE);
+    actor.custom_target = &enemy;
+    range_ok = 0;
+    assert(think_duck() == stateful && !queries);
+    assert(range_calls == stateful && animation_calls == stateful);
+    reset(DUCK_INACTIVE);
+    air_actor = 1;
+    assert(!think_duck() && !queries && !animation_calls);
+    reset(DUCK_INACTIVE);
+    actor.projectile = 2;
+    actor.modeldata.projectilehit = TYPE_NPC;
+    assert(!think_duck() && queries == stateful && !animation_calls);
+    reset(DUCK_INACTIVE);
+    animations[ANI_DUCKATTACK] = NULL;
+    assert(!think_duck() && !queries && !animation_calls);
+    reset(DUCK_INACTIVE);
+    range_ok = 0;
+    enemy.position.x = 300;
+    enemy.position.z = 200;
+    assert(!think_duck() && queries == stateful && range_calls == stateful && !animation_calls);
+
+    reset(DUCK_ACTIVE);
+    assert(normal_attack() == stateful && animation_calls == stateful);
+    assert(grab_calls == !stateful && checks == stateful && chance_calls == stateful);
+    assert(queries == 1);
+    if(stateful)
+    {
+        assert(animation == ANI_DUCKATTACK && !actor.running && actor.stalltime == 70);
+    }
+}
+
+static void check_upper(int stateful)
+{
+    reset(DUCK_INACTIVE);
+    enemy.jumping = 1;
+    allowed = 0;
+    assert(common_try_upper(NULL) == !stateful && queries == 1 && chance_calls == stateful);
+    assert(animation_calls == !stateful && random_calls == stateful);
+    if(stateful) assert(actor.nextattack == 30 && actor.stalltime == 90);
+    else assert(animation == ANI_UPPER && actor.takeaction == common_attack_proc && actor.nextattack == 20);
+
+    reset(DUCK_INACTIVE);
+    enemy.jumping = 1;
+    assert(common_try_upper(&enemy) && !queries && chance_calls == stateful);
+    assert(random_calls == stateful && animation_calls == !stateful);
+    assert(actor.attacking == ATTACKING_PREPARED && !actor.velocity.x && !actor.velocity.z);
+    if(stateful)
+    {
+        assert(actor.takeaction == upper_prepare && actor.stalltime == 70 && idle_calls == 1);
+        upper_prepare();
+        assert(!animation_calls && actor.takeaction == upper_prepare);
+        _time = 70;
+        upper_prepare();
+        assert(animation_calls == 1 && animation == ANI_UPPER && actor.takeaction == common_attack_proc);
+    }
+    else
+    {
+        assert(animation == ANI_UPPER && actor.takeaction == common_attack_proc && !idle_calls && actor.stalltime == 90);
+    }
+    if(stateful)
+    {
+        reset(DUCK_INACTIVE);
+        upper_prepare();
+        assert(!animation_calls);
+        next_target = NULL;
+        upper_prepare();
+        assert(!actor.takeaction && actor.idling == IDLING_PREPARED);
+        reset(DUCK_INACTIVE);
+        enemy.position.x = 150;
+        upper_prepare();
+        assert(animation == ANI_TURN && actor.takeaction == common_turn && actor.direction == DIRECTION_LEFT);
+    }
+}
+
+static void check_recovery(int stateful)
+{
+    const int postures[] = {DUCK_INACTIVE, DUCK_PREPARED, DUCK_ACTIVE, DUCK_RISE};
+    for(size_t n = 0; n < sizeof(postures) / sizeof(*postures); ++n)
+    {
+        const int posture = postures[n];
+        for(int player = 0; player < 2; ++player)
+        {
+            for(int moves = 0; moves < 2; ++moves)
+            {
+                reset(posture);
+                if(player) actor.modeldata.type = TYPE_PLAYER;
+                actor.modeldata.nomove = !moves;
+                const int away = !player && moves && (!stateful || posture == DUCK_INACTIVE);
+                const int duck = stateful && posture == DUCK_ACTIVE;
+                common_attack_finish();
+                assert(random_calls == away && walk_calls == away);
+                assert(animation_calls == duck && idle_calls == (!away && !duck));
+                assert(!actor.takeaction && !actor.velocity.z && actor.velocity.x == (away ? 5 : 0));
+                assert(actor.stalltime == (player ? 90u : 180u));
+                if(away) assert(actor.destx == 140 && actor.destz == 60 && actor.idling == IDLING_PREPARED);
+                if(duck) assert(animation == ANI_DUCK && actor.ducking == DUCK_ACTIVE);
+            }
+        }
+    }
+    reset(DUCK_INACTIVE);
+    random_value = 0;
+    common_attack_finish();
+    assert(random_calls == 1 && !walk_calls && idle_calls == 1 && actor.stalltime == 180);
+}
+
+static void check(unsigned revision, int stateful)
+{
+    obor_profile_build = revision;
+    check_ai(stateful);
+    check_upper(stateful);
+    check_recovery(stateful);
+    printf("PASS %u\n", revision);
+}
+
+int main(void)
+{
+    @CASES@
+    return 0;
+}

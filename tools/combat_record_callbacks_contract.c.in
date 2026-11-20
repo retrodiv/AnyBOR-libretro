@@ -1,0 +1,220 @@
+/* SPDX-License-Identifier: BSD-3-Clause
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me>
+ */
+#include <stdint.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include "openbor.h"
+#include "profile_ids.h"
+#undef printf
+#undef assert
+#include <assert.h>
+
+uint32_t obor_profile_build, obor_profile_features;
+static entity subject, sides[2];
+static Script local_script, global_script;
+static s_scripts owned_scripts, shared_scripts;
+s_scripts *global_model_scripts = &shared_scripts;
+static ScriptVariant locals[2][16];
+static const char *keys[] = {
+    "self", "other", "attacker", "damagetaker", "damage", "drop", "attacktype",
+    "noblock", "guardcost", "jugglecost", "pauseadd", "tag", "which", "attack_id",
+    "attackid", "blocked"
+};
+static const char *const *assigned_keys, *const *cleared_keys;
+static const char *participant;
+static entity *counterpart;
+static int installed, cleared, executions, enabled = 1;
+static int native_timeover, attack_number, wants_global;
+
+void StrCache_Collect(int index) { abort(); }
+@VARIANTS@
+
+static size_t key_index(const char *key)
+{
+    for(size_t i = 0; i < sizeof(keys) / sizeof(*keys); ++i)
+        if(!strcmp(keys[i], key)) return i;
+    abort();
+}
+
+static ScriptVariant *local(Script *script, const char *name)
+{
+    assert(script == &local_script || script == &global_script);
+    return &locals[script == &global_script][key_index(name)];
+}
+
+static LONG expected_number(const char *name)
+{
+    static const LONG values[] = {
+        0, 0, 0, 0, 41, 2, 0, 1, 7, 9, 12, 31, EXCHANGE_CONFERRER, 0, 0, 1
+    };
+    if(!strcmp(name, "attacktype")) return native_timeover;
+    if(!strcmp(name, "attack_id")) return attack_number;
+    return values[key_index(name)];
+}
+
+static void set_local(Script *script, const char *name, ScriptVariant *value)
+{
+    if(value->vt == VT_EMPTY)
+    {
+        assert(cleared_keys[cleared] && !strcmp(name, cleared_keys[cleared]));
+        ++cleared;
+    }
+    else
+    {
+        if(!installed && cleared)
+        {
+            assert(wants_global && executions == 1 && cleared == 11);
+            assert(script == &local_script);
+            cleared = 0;
+        }
+        assert(assigned_keys[installed] && !strcmp(name, assigned_keys[installed]));
+        if(installed < 2)
+        {
+            assert(value->vt == VT_PTR && value->ptrVal == (installed ? counterpart : &subject));
+        }
+        else
+        {
+            assert(value->vt == VT_INTEGER && value->lVal == expected_number(name));
+        }
+        ++installed;
+    }
+    *local(script, name) = *value;
+}
+
+int Script_IsInitialized(Script *script)
+{
+    return enabled && (script == &local_script || script == &global_script);
+}
+
+int Script_Execute(Script *script)
+{
+    assert(script == (wants_global && executions == 0 ? &global_script : &local_script));
+    assert(!assigned_keys[installed] && !cleared);
+    assert(local(script, assigned_keys[1])->ptrVal == counterpart);
+    ++executions;
+    installed = 0;
+    cleared = 0;
+    return 1;
+}
+
+#undef Script_Set_Local_Variant
+#define Script_Set_Local_Variant set_local
+@METHODS@
+#undef Script_Set_Local_Variant
+
+static void check_hit_gate(entity *target, s_collision_attack *attack, int blocked)
+{
+    int reached = 0;
+    for(int slot = 0; slot < 1; ++slot)
+    {
+        @JUGGLE@
+        reached = 1;
+    }
+    assert(reached == !blocked);
+}
+
+static void reset_callback(const char *const *assign, const char *const *clear)
+{
+    assigned_keys = assign;
+    cleared_keys = clear;
+    installed = cleared = executions = 0;
+}
+
+static void check_callbacks(void)
+{
+    const char *const onattack[] = {
+        "self", participant, "damage", "drop", "attacktype", "noblock", "guardcost",
+        "jugglecost", "pauseadd", "tag", "which", "attack_id", NULL
+    };
+    const char *const onattack_clear[] = {
+        "self", "other", "damage", "drop", "attacktype", "noblock", "guardcost",
+        "jugglecost", "pauseadd", "which", "attackid", "tag", NULL
+    };
+    const char *const hit[] = {
+        "self", "damagetaker", "damage", "drop", "attacktype", "noblock", "guardcost",
+        "jugglecost", "pauseadd", "tag", "blocked", NULL
+    };
+    const char *const hit_clear[] = {
+        "self", "damagetaker", "damage", "drop", "attacktype", "noblock", "guardcost",
+        "jugglecost", "pauseadd", "blocked", "tag", NULL
+    };
+    const char *const damage[] = {
+        "self", "attacker", "damage", "drop", "attacktype", "noblock", "guardcost",
+        "jugglecost", "pauseadd", "tag", NULL
+    };
+    s_collision_attack attack = {
+        .attack_force = 41, .attack_drop = 2, .attack_type = ATK_TIMEOVER, .no_block = 1,
+        .guardcost = 7, .jugglecost = 9, .pause_add = 12, .tag = 31
+    };
+    owned_scripts.ondoattack_script = owned_scripts.didhit_script = &local_script;
+    owned_scripts.takedamage_script = owned_scripts.didblock_script = &local_script;
+    subject.scripts = &owned_scripts;
+    for(int i = 0; i < 2; ++i)
+    {
+        counterpart = &sides[i];
+        attack_number = 122 + i;
+        *local(&local_script, "attackid") = (ScriptVariant){.vt = VT_INTEGER, .lVal = 700};
+        *local(&local_script, "other") = (ScriptVariant){.vt = VT_PTR, .ptrVal = &sides[1-i]};
+        reset_callback(onattack, onattack_clear);
+        execute_ondoattack_script(&subject, counterpart, &attack, EXCHANGE_CONFERRER, attack_number);
+        assert(executions == 1 && cleared == 12);
+        assert(local(&local_script, "attackid")->vt == VT_EMPTY);
+        assert(local(&local_script, "other")->vt == VT_EMPTY);
+        assert(local(&local_script, "attack_id")->vt == VT_INTEGER);
+        assert(local(&local_script, "attack_id")->lVal == attack_number);
+        if(!strcmp(participant, "attacker"))
+            assert(local(&local_script, "attacker")->ptrVal == counterpart);
+    }
+    reset_callback(onattack, onattack_clear);
+    enabled = 0;
+    execute_ondoattack_script(&subject, counterpart, &attack, EXCHANGE_CONFERRER, 900);
+    assert(!installed && !executions && !cleared);
+    assert(local(&local_script, "attack_id")->lVal == attack_number);
+    enabled = 1;
+
+    reset_callback(hit, hit_clear);
+    shared_scripts.didhit_script = &global_script;
+    wants_global = 1;
+    execute_didhit_script(&subject, counterpart, &attack, 1);
+    assert(executions == 2 && cleared == 11);
+    assert(local(&global_script, "tag")->vt == VT_EMPTY);
+    assert(local(&local_script, "tag")->vt == VT_EMPTY);
+    wants_global = 0;
+
+    reset_callback(damage, damage);
+    execute_takedamage_script(&subject, counterpart, &attack);
+    assert(executions == 1 && cleared == 10);
+    reset_callback(damage, damage);
+    execute_didblock_script(&subject, counterpart, &attack);
+    assert(executions == 1 && cleared == 10);
+}
+
+int main(void)
+{
+    const struct { unsigned revision; const char *name; int timeover, falling_rule; } rows[] = {@PROFILES@};
+    for(size_t i = 0; i < sizeof(rows) / sizeof(*rows); ++i)
+    {
+        obor_profile_build = rows[i].revision;
+        participant = rows[i].name;
+        native_timeover = rows[i].timeover;
+        memset(locals, 0, sizeof(locals));
+        check_callbacks();
+        s_collision_attack attack = {.jugglecost = 2};
+        entity target = {0};
+        for(int falling = 0; falling <= 2; ++falling)
+        for(int airborne = 0; airborne <= 1; ++airborne)
+        {
+            target.falling = falling;
+            target.position.y = airborne;
+            int selected = rows[i].falling_rule ? falling == 1 : airborne;
+            target.modeldata.jugglepoints.current = 1;
+            check_hit_gate(&target, &attack, selected);
+            target.modeldata.jugglepoints.current = 2;
+            check_hit_gate(&target, &attack, 0);
+        }
+        printf("%u\n", obor_profile_build);
+    }
+    return 0;
+}

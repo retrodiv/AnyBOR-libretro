@@ -170,19 +170,36 @@ static void instances(void) {
  bad_arguments(openbor_get_attack_instance,&attack,0);
 #endif
 }
+static int profile_property(int property)
+{
+#ifdef OBOR_TEST_PROFILE_ATTACK_SELECTORS
+    for(int ordinal = 0; ordinal <= ATTACK_PROP_TAG; ++ordinal)
+        if(obor_attack_property_selector(ordinal) == property) return ordinal;
+    return -1;
+#else
+    return property;
+#endif
+}
+
 static void properties(void) {
  attack.attack_force=73;
- reset(&attack,@FORCE@);CHECK(openbor_get_attack_property(args,&out,2)==S_OK);
+ int force=profile_property(@FORCE@);
+ CHECK(force>=0);
+ reset(&attack,force);CHECK(openbor_get_attack_property(args,&out,2)==S_OK);
  CHECK(out==&result && result.vt==VT_INTEGER && result.lVal==73);
  int guarded[]={@GUARDED_CASES@};
  for(unsigned i=0;i<sizeof(guarded)/sizeof(*guarded);++i) {
-  reset(NULL,guarded[i]);CHECK(openbor_get_attack_property(args,&out,2)==E_FAIL);
+  int ordinal=profile_property(guarded[i]);
+  if(ordinal<0) continue;
+  reset(NULL,ordinal);CHECK(openbor_get_attack_property(args,&out,2)==E_FAIL);
   CHECK(!out && result.vt==VT_EMPTY);
  }
 #if @NULL_CASE_COUNT@
  int defined_null[]={@NULL_CASES@};
  for(unsigned i=0;i<(unsigned)@NULL_CASE_COUNT@;++i) {
-  reset(NULL,defined_null[i]);CHECK(openbor_get_attack_property(args,&out,2)==S_OK);
+  int ordinal=profile_property(defined_null[i]);
+  if(ordinal<0) continue;
+  reset(NULL,ordinal);CHECK(openbor_get_attack_property(args,&out,2)==S_OK);
   CHECK(out==&result && result.vt==VT_INTEGER && result.lVal==0);
  }
 #endif
@@ -191,7 +208,7 @@ static void properties(void) {
   reset(NULL,unknown[i]);CHECK(openbor_get_attack_property(args,&out,2)==E_FAIL);
   CHECK(out==&result && result.vt==VT_EMPTY);
  }
- bad_arguments(openbor_get_attack_property,&attack,@FORCE@);
+ bad_arguments(openbor_get_attack_property,&attack,force);
 }
 int main(void) {
  unsigned profiles[]={@PROFILES@};

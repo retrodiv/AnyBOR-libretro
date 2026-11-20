@@ -1,0 +1,200 @@
+/* SPDX-License-Identifier: BSD-3-Clause
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me>
+ */
+#include <ctype.h>
+#include <stdbool.h>
+#include <stdint.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <strings.h>
+#include "openbor.h"
+#if OBOR_ENGINE_BUILD == 4432
+#define LAND_FORCE(item) ((item).damage_on_landing)
+#define LAND_TYPE(item) ((item).damage_on_landing_type)
+enum { MODEL_MODE = 2, SCRIPT_MODE = 3 };
+_Static_assert(__builtin_types_compatible_p(__typeof__(((s_collision_attack *)0)->blast), int),
+               "landing mode storage must retain its original integer type");
+#else
+#include "profile_ids.h"
+#define LAND_FORCE(item) ((item).damage_on_landing.attack_force)
+#define LAND_TYPE(item) ((item).damage_on_landing.attack_type)
+enum { MODEL_MODE = 1, SCRIPT_MODE = 1 };
+_Static_assert(__builtin_types_compatible_p(__typeof__(((s_collision_attack *)0)->blast), bool),
+               "landing mode storage must retain its original boolean type");
+#endif
+#include "commands.h"
+#undef assert
+#undef printf
+#include <assert.h>
+#ifndef stricmp
+#define stricmp strcasecmp
+#endif
+#ifndef strnicmp
+#define strnicmp strncasecmp
+#endif
+
+uint32_t obor_profile_build;
+uint32_t obor_profile_features;
+List *modelcmdlist;
+
+void *checkAlloc(void *p, size_t size, const char *name, const char *file, int line)
+{
+    assert(!size || p);
+    return p;
+}
+
+void borExit(int status) { abort(); }
+
+#include "List.c"
+@CACHE@
+@SCRIPT@
+@COMMANDS@
+@NUMBERS@
+@DEFAULT@
+
+static s_collision_attack load(char *directive, s_model *newchar, s_anim *newanim,
+                               s_collision_attack attack, char *values[])
+{
+    char filename[] = "fixture";
+    char *command = values[0];
+    s_collision_attack *pattack;
+#undef GET_ARG
+#define GET_ARG(n) values[n]
+    switch(getModelCommand(modelcmdlist, directive))
+    {
+        @MODEL_CASES@
+        default: assert(0);
+    }
+#undef GET_ARG
+    return attack;
+}
+
+static LONG read_attack(s_collision_attack *attack, LONG ordinal)
+{
+    ScriptVariant target = {.vt = VT_PTR, .ptrVal = attack};
+    ScriptVariant key = {.vt = VT_INTEGER, .lVal = ordinal};
+    ScriptVariant result = {.vt = VT_EMPTY}, *out = &result;
+    ScriptVariant *args[] = {&target, &key};
+    assert(openbor_get_attack_property(args, &out, 2) == S_OK && out == &result);
+    assert(result.vt == VT_INTEGER);
+    return result.lVal;
+}
+
+static void write_attack(s_collision_attack *attack, LONG ordinal, DOUBLE value)
+{
+    ScriptVariant target = {.vt = VT_PTR, .ptrVal = attack};
+    ScriptVariant key = {.vt = VT_INTEGER, .lVal = ordinal};
+    ScriptVariant input = {.vt = VT_DECIMAL, .dblVal = value};
+    ScriptVariant result = {.vt = VT_EMPTY}, *out = &result;
+    ScriptVariant *args[] = {&target, &key, &input};
+    assert(openbor_set_attack_property(args, &out, 3) == S_OK);
+}
+
+static LONG expected_flag(LONG input)
+{
+#if OBOR_ENGINE_BUILD == 4432
+    return input;
+#else
+    return input != 0;
+#endif
+}
+
+static void check_attack_flags(bool preceding_ordinals)
+{
+    struct { LONG preceding, current; char directive[40]; } properties[] = {
+        {5, 6, "attack.damage.land.mode"},
+        {6, 7, "attack.damage.lethal.disable"},
+        {12, 13, "attack.damage.steal"},
+        {17, 18, "attack.effect.hit.flash.disable"},
+        {35, 32, "attack.reaction.pain.disable"},
+    };
+    struct { char text[4]; LONG integer; } model_values[] = {
+        {"0", 0}, {"3", 3}, {"-2", -2},
+    };
+    const struct { DOUBLE decimal; LONG integer; } script_values[] = {
+        {0.0, 0}, {3.75, 3}, {-2.75, -2}, {-0.75, 0},
+    };
+    s_anim animation = {0};
+    s_model model = {0};
+    for(size_t i = 0; i < sizeof(properties) / sizeof(*properties); ++i)
+    {
+        LONG ordinal = preceding_ordinals ? properties[i].preceding : properties[i].current;
+        for(size_t j = 0; j < sizeof(model_values) / sizeof(*model_values); ++j)
+        {
+            char *args[] = {properties[i].directive, model_values[j].text};
+            s_collision_attack attack = load(args[0], &model, &animation, emptyattack, args);
+            assert(read_attack(&attack, ordinal) == expected_flag(model_values[j].integer));
+        }
+        s_collision_attack attack = emptyattack;
+        for(size_t j = 0; j < sizeof(script_values) / sizeof(*script_values); ++j)
+        {
+            write_attack(&attack, ordinal, script_values[j].decimal);
+            assert(read_attack(&attack, ordinal) == expected_flag(script_values[j].integer));
+        }
+    }
+}
+
+static void check_pending(entity *self, s_collision_attack *attack)
+{
+    @COPY_PENDING@
+    assert(LAND_FORCE(*self) == LAND_FORCE(*attack));
+    assert(LAND_TYPE(*self) == LAND_TYPE(*attack));
+    @RESET_PENDING@
+    assert(LAND_FORCE(*self) == 0 && LAND_TYPE(*self) == -1);
+}
+
+static void check(LONG force, LONG mode, bool lose_type)
+{
+    s_anim animation = {0};
+    s_collision_attack smartbomb = emptyattack;
+    s_model model = {.smartbomb = &smartbomb};
+    entity actor = {0};
+    char force_name[] = "attack.damage.land.force", landing_name[] = "damageonlanding";
+    char force_arg[] = "23", bomb_arg[] = "12", mode_arg[] = "2", attack_type[] = "attack3";
+    char *force_args[] = {force_name, force_arg};
+    char *landing_args[] = {landing_name, bomb_arg, mode_arg, attack_type};
+    assert(LAND_FORCE(emptyattack) == 0 && LAND_TYPE(emptyattack) == -1);
+
+    s_collision_attack attack = load(force_name, &model, &animation, emptyattack, force_args);
+    assert(LAND_FORCE(attack) == 23 && LAND_TYPE(attack) == -1);
+    assert(read_attack(&attack, force) == 23);
+    write_attack(&attack, force, -8.75);
+    assert(read_attack(&attack, force) == -8 && LAND_TYPE(attack) == -1);
+    write_attack(&attack, mode, 3.75);
+    assert(read_attack(&attack, mode) == SCRIPT_MODE && read_attack(&attack, force) == -8);
+
+    attack = load(landing_name, &model, NULL, attack, landing_args);
+    assert(read_attack(&attack, force) == -8 && read_attack(&attack, mode) == SCRIPT_MODE);
+    assert(read_attack(&smartbomb, force) == 12 && read_attack(&smartbomb, mode) == MODEL_MODE);
+    assert(LAND_TYPE(smartbomb) == ATK_NORMAL3);
+    check_pending(&actor, &smartbomb);
+
+    attack = load(landing_name, &model, &animation, attack, landing_args);
+    assert(read_attack(&attack, force) == 12 && read_attack(&attack, mode) == MODEL_MODE);
+    assert(LAND_TYPE(attack) == ATK_NORMAL3);
+
+    char lose[] = "lose";
+    landing_args[3] = lose;
+    attack = load(landing_name, &model, &animation, attack, landing_args);
+#if OBOR_ENGINE_BUILD == 4432
+    assert(!lose_type && LAND_TYPE(attack) == -1);
+#else
+    assert(LAND_TYPE(attack) == (lose_type ? ATK_LOSE : ATK_NONE));
+#endif
+}
+
+int main(void)
+{
+    const struct { unsigned revision; LONG force, mode; bool lose_type; } profiles[] = {@ROWS@};
+    for(size_t i = 0; i < sizeof(profiles) / sizeof(*profiles); ++i)
+    {
+        obor_profile_build = profiles[i].revision;
+        modelcmdlist = createModelCommandList();
+        check(profiles[i].force, profiles[i].mode, profiles[i].lose_type);
+        check_attack_flags(profiles[i].revision == 4750);
+        freeCommandList(modelcmdlist);
+        printf("%u\n", obor_profile_build);
+    }
+    return 0;
+}

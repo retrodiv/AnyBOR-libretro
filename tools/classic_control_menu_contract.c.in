@@ -1,0 +1,255 @@
+/* SPDX-License-Identifier: BSD-3-Clause
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me>
+ */
+#include <stdarg.h>
+#include <stdint.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <strings.h>
+#include "openbor.h"
+#include "translation.h"
+#undef printf
+#undef assert
+#include <assert.h>
+#undef _menutext
+#undef _menutextm
+
+#if SDL || WII || DC
+#error The libretro menu runs without the standalone rumble row.
+#endif
+#ifndef stricmp
+#define stricmp strcasecmp
+#endif
+
+uint32_t obor_profile_build, obor_profile_features;
+s_savedata savedata;
+s_level *level;
+unsigned bothnewkeys;
+int default_keys[MAX_BTN_NUM];
+
+static const struct context {
+    uint32_t revision;
+    int has_default, label_input_length, label_display_length;
+} contexts[] = {@ROWS@};
+
+static const struct context *active;
+static s_savedata initial, stored;
+#if OBOR_ENGINE_BUILD == 4432
+static char label[16];
+#else
+static char label[32];
+s_playercontrols default_control;
+
+void control_setkey(s_playercontrols *controls, unsigned int flag, int key)
+{
+    assert(controls == &default_control);
+}
+#endif
+static int scenario, frame, saves, applies, loads, defaults, updates;
+static int default_rows, rumble_rows, wraps, labels, selected_labels;
+static int keys_at_apply, renamed, label_display_length;
+
+void *checkAlloc(void *ptr, size_t size, const char *function, const char *file, int line)
+{
+    assert(ptr || !size);
+    return ptr;
+}
+
+@TRANSLATE@
+@DEFAULTS@
+@CLEAR_SETTINGS@
+
+static void check_all_player_defaults(void)
+{
+    const struct {int action, button;} bindings[] = {
+        {SDID_MOVEUP, 0}, {SDID_MOVEDOWN, 1}, {SDID_MOVELEFT, 2}, {SDID_MOVERIGHT, 3},
+        {SDID_ATTACK, 4}, {SDID_ATTACK2, 5}, {SDID_ATTACK3, 6}, {SDID_ATTACK4, 7},
+        {SDID_JUMP, 8}, {SDID_SPECIAL, 9}, {SDID_START, 10}, {SDID_SCREENSHOT, 12},
+    };
+    for(int seed = 0; seed < 2; ++seed)
+    {
+        savedata = (s_savedata){0};
+        savedata.gamma = 7;
+        savedata.brightness = 8;
+        savedata.soundrate = 22050;
+        savedata.usesound = 0;
+        savedata.usemusic = 0;
+        savedata.fullscreen = 1;
+        savedata.debuginfo = 1;
+        savedata.swfilter = 5;
+        savedata.mode = 4;
+        savedata.showtitles = 1;
+        savedata.stretch = 1;
+        for(int player = 0; player < MAX_PLAYERS; ++player)
+            for(int key = 0; key < MAX_BTN_NUM; ++key)
+                savedata.keys[player][key] = seed ? 20 + player : 0;
+
+        clearsettings();
+        assert(savedata.compatibleversion == 0x00033748);
+        assert(savedata.gamma == 0 && savedata.brightness == 0);
+        assert(savedata.usesound == 1 && savedata.soundrate == 44100);
+        assert(savedata.soundbits == 16 && savedata.soundvol == 15);
+        assert(savedata.usemusic == 1 && savedata.musicvol == 100 && savedata.effectvol == 120);
+        assert(savedata.usejoy == 1 && savedata.mode == 0 && savedata.showtitles == 0);
+        assert(savedata.windowpos == 0 && savedata.logo == 0 && savedata.uselog == 1);
+        assert(!savedata.debuginfo && !savedata.fullscreen && !savedata.stretch && !savedata.swfilter);
+        for(int player = 0; player < MAX_PLAYERS; ++player)
+        {
+            for(unsigned i = 0; i < sizeof(bindings) / sizeof(bindings[0]); ++i)
+                assert(savedata.keys[player][bindings[i].action] == OBOR_KEY(player, bindings[i].button));
+            assert(savedata.keys[player][SDID_ESC] == (seed ? 20 + player : 0));
+        }
+    }
+}
+
+#if OBOR_ENGINE_BUILD == 6391
+#include "profile_ids.h"
+static void restore_defaults(int player)
+{
+    assert(player == 0);
+    ++defaults;
+    const int previous_default = default_keys[SDID_MOVEUP];
+    clearbuttons(player);
+    assert(savedata.keys[0][SDID_MOVEUP] == CONTROL_DEFAULT1_UP);
+    assert(savedata.keys[0][SDID_ATTACK] == CONTROL_DEFAULT1_FIRE1);
+    assert(default_keys[SDID_MOVEUP] == (obor_profile_uses_5134_script_ids()
+           ? previous_default : CONTROL_DEFAULT1_UP));
+}
+#endif
+
+static void save_settings(void)
+{
+    stored = savedata;
+    ++saves;
+}
+
+static void load_settings(void)
+{
+    savedata = stored;
+    ++loads;
+}
+
+static void apply_settings(void)
+{
+    ++applies;
+    keys_at_apply = savedata.keys[0][SDID_MOVEUP];
+}
+
+static int menu_file(char *path, char **buffer, size_t *size)
+{
+    assert(!strcmp(path, "data/menu.txt"));
+    if(!renamed) return 0;
+    *buffer = malloc(2);
+    assert(*buffer);
+    memcpy(*buffer, "\n", 2);
+    *size = 1;
+    return 1;
+}
+
+static void menu_args(ArgList *args, char *text, char *scratch)
+{
+    assert(text[0] == '\n');
+    *args = (ArgList){.count = 3, .args = {"renamekey", "moveup", label}};
+}
+
+char *ob_gettrans(char *text) { return text; }
+
+static void menu_text(int selected, int x, int y, const char *format, ...)
+{
+    if(!strcmp(format, "Default")) ++default_rows;
+    if(!strcmp(format, "Rumble Enabled") || !strcmp(format, "Rumble Disabled")) ++rumble_rows;
+    if(selected && !strcmp(format, active->has_default ? "Default" : "Cancel")) ++wraps;
+    if(renamed && x == -8 && !strcmp(format, "%s"))
+    {
+        va_list args;
+        va_start(args, format);
+        const char *text = va_arg(args, const char *);
+        va_end(args);
+        if(text[0] == label[0])
+        {
+            assert(strlen(text) == (size_t)label_display_length);
+            assert(!strncmp(text, label, (size_t)label_display_length));
+            ++labels;
+            selected_labels += !!selected;
+        }
+    }
+}
+
+static void menu_update(int ingame, int wait)
+{
+    const unsigned up = FLAG_MOVEUP, press = FLAG_ATTACK, stop = FLAG_ESC;
+    const unsigned keys[][6] = {
+        {stop},
+        {up, press, stop},
+        {up, up, active->has_default ? up : press, press},
+        {up, press, up, up, press},
+        {up, FLAG_MOVERIGHT, stop},
+        {up, FLAG_MOVEDOWN, stop},
+        {up, FLAG_MOVEDOWN, stop},
+    };
+    assert(!ingame && !wait);
+    ++updates;
+    if(loads || applies) return;
+    assert(frame < 5 && keys[scenario][frame]);
+    bothnewkeys = keys[scenario][frame++];
+}
+
+#define savesettings save_settings
+#define loadsettings load_settings
+#define apply_controls apply_settings
+#define clearbuttons restore_defaults
+#define buffer_pakfile menu_file
+#define ParseArgs menu_args
+#define getNewLineStart(text) 1
+#define control_getkeyname(key) "Bound"
+#define control_scankey() (abort(), 0)
+#define keyboard_getlastkey() abort()
+#define safe_set(...) abort()
+#define sound_play_sample(...) ((void)0)
+#define update menu_update
+#define _menutext menu_text
+#define _menutextm menu_text
+#define printf(...) ((void)0)
+@MENU@
+#undef printf
+
+int main(void)
+{
+    for(unsigned p = 0; p < sizeof(contexts) / sizeof(contexts[0]); ++p)
+    {
+        active = &contexts[p];
+        obor_profile_build = active->revision;
+        check_all_player_defaults();
+        for(scenario = 0; scenario < 7; ++scenario)
+        {
+            frame = saves = applies = loads = defaults = updates = 0;
+            default_rows = rumble_rows = wraps = labels = selected_labels = keys_at_apply = 0;
+            bothnewkeys = 0;
+            initial.keys[0][SDID_MOVEUP] = 800;
+            initial.keys[0][SDID_ATTACK] = 801;
+            savedata = initial;
+            renamed = scenario >= 5;
+            const int label_input_length = scenario == 6 ? active->label_input_length : 15;
+            assert(label_input_length >= 0 && label_input_length < (int)sizeof(label));
+            label_display_length = scenario == 6 ? active->label_display_length : 15;
+            for(int i = 0; i < label_input_length; ++i) label[i] = 'x';
+            label[label_input_length] = '\0';
+            keyboard_setup(0);
+
+            const int accepted = scenario == 2 || (scenario == 3 && active->has_default);
+            const int restored = active->has_default && (scenario == 1 || scenario == 3);
+            assert(applies == accepted && loads == !accepted && saves == 1 + accepted);
+            assert(defaults == restored && default_rows == (active->has_default ? frame : 0));
+            assert(!rumble_rows && !bothnewkeys && updates == frame + 1);
+            assert((wraps != 0) == (scenario != 0));
+            assert(labels == (renamed ? frame : 0));
+            if(renamed) assert(wraps == 1 && selected_labels == 2);
+            assert(savedata.keys[0][SDID_MOVEUP] ==
+                   (accepted && restored ? CONTROL_DEFAULT1_UP : initial.keys[0][SDID_MOVEUP]));
+            if(accepted) assert(keys_at_apply == savedata.keys[0][SDID_MOVEUP]);
+        }
+        printf("%u\n", obor_profile_build);
+    }
+    return 0;
+}

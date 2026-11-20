@@ -1,0 +1,224 @@
+/* SPDX-License-Identifier: BSD-3-Clause
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me>
+ */
+#include <stdint.h>
+#include <stdio.h>
+#include "openbor.h"
+#undef assert
+#undef printf
+#include <assert.h>
+
+uint32_t obor_profile_build;
+#if OBOR_ENGINE_BUILD == 4432
+u32 time = 20;
+#define KILL kill
+#define HEALTH health
+#else
+#include "profile_ids.h"
+u32 _time = 20;
+#define KILL kill_entity
+#define HEALTH energy_status.health_current
+#endif
+
+static entity actor, child, sibling, owner;
+static s_scripts scripts;
+entity *self = &actor, *textbox, *smartbomber;
+static entity *entities[] = {&actor, &child, &sibling};
+entity **ent_list = entities;
+int ent_count, ent_max = sizeof(entities) / sizeof(*entities), max_attack_types = MAX_ATKS, level_completed;
+s_player player[MAX_PLAYERS];
+static s_level stage;
+s_level *level = &stage;
+s_videomodes videomodes = {.hRes = 320, .vRes = 240};
+float advancex = 100, advancey = 40;
+enum { RETAIN, REMOVE, PLAYER_DIES, PIT_HIT, LIFESPAN_HIT };
+static int outcome, removals, summon_hits, full_summon_type;
+
+@DEFAULTS@
+
+void execute_onkill_script(entity *target)
+{
+    assert(target == self && target->exists);
+}
+
+void ent_unlink(entity *target)
+{
+    assert(target == self && target->exists);
+}
+
+void clear_all_scripts(s_scripts *value, int mode)
+{
+    assert(value == &scripts && mode == 1 && !self->exists && self->HEALTH == 0);
+    ++removals;
+}
+
+void player_die(void)
+{
+    assert((self->modeldata.type & TYPE_PLAYER) && outcome == RETAIN);
+    outcome = PLAYER_DIES;
+}
+
+#if OBOR_ENGINE_BUILD == 4432
+static int take_damage(entity *target, s_collision_attack *attack)
+#else
+static int take_damage(entity *target, s_collision_attack *attack, int fall_flag)
+#endif
+{
+#if OBOR_ENGINE_BUILD != 4432
+    assert(fall_flag == 0);
+#endif
+    assert(target == self && outcome == RETAIN);
+    assert(attack->attack_type == ATK_PIT || attack->attack_type == ATK_LIFESPAN);
+    assert(attack->attack_force == 37);
+    assert(attack->dropv.x == -0.75f && attack->dropv.y == 2.5f && attack->dropv.z == 1.25f);
+    assert(attack->tag == emptyattack.tag && attack->blocksound == emptyattack.blocksound);
+    outcome = attack->attack_type == ATK_PIT ? PIT_HIT : LIFESPAN_HIT;
+    return 0;
+}
+
+@METHODS@
+
+static void reset_actor(void)
+{
+    actor = (entity){.exists = 1, .scripts = &scripts};
+    child = sibling = owner = (entity){0};
+    self = &actor;
+    ent_count = 1;
+    level_completed = removals = summon_hits = 0;
+    outcome = RETAIN;
+}
+
+static void check_loss_cases(void)
+{
+    const struct {
+        int scrolling, distance, player, damage, frozen;
+        float x, y, z;
+        int initial_life, final_life, expected;
+    } cases[] = {
+        {SCROLL_RIGHT, 50, 0, 1, 0,   50, 0,     100,  4,  3, RETAIN},
+        {SCROLL_RIGHT, 50, 0, 1, 0,   49, 0,     100,  4,  4, REMOVE},
+        {SCROLL_RIGHT, 50, 0, 0, 0,  470, 0,     100,  4,  3, RETAIN},
+        {SCROLL_RIGHT, 50, 1, 1, 0,  471, 0,     100,  4,  4, PLAYER_DIES},
+        {SCROLL_RIGHT, 50, 0, 1, 0,  500, 0,  100000,  4,  3, RETAIN},
+        {SCROLL_RIGHT,  0, 0, 0, 0, 3420, 0,     100,  4,  3, RETAIN},
+        {SCROLL_RIGHT,  0, 0, 0, 0, 3421, 0,     100,  4,  4, REMOVE},
+        {SCROLL_RIGHT, 50, 0, 0, 0,  100, 4,      -6,  4,  3, RETAIN},
+        {SCROLL_RIGHT, 50, 0, 0, 0,  100, 4,      -7,  4,  4, REMOVE},
+        {SCROLL_RIGHT, 50, 0, 0, 0,  100, 4,     334,  4,  3, RETAIN},
+        {SCROLL_RIGHT, 50, 0, 0, 0,  100, 4,     335,  4,  4, REMOVE},
+        {SCROLL_UP,    50, 0, 0, 0,  100, 4,     -46,  4,  3, RETAIN},
+        {SCROLL_UP,    50, 0, 0, 0,  100, 4,     -47,  4,  4, REMOVE},
+        {SCROLL_DOWN,  50, 0, 0, 0,  100, 4,     294,  4,  3, RETAIN},
+        {SCROLL_DOWN,  50, 0, 0, 0,  100, 4,     295,  4,  4, REMOVE},
+        {SCROLL_RIGHT, 50, 0, 1, 0,  100, 2 * PIT_DEPTH-1, 100000, 4, 4, REMOVE},
+        {SCROLL_RIGHT, 50, 0, 1, 0,  100, 2 * PIT_DEPTH,   100000, 4, 4, PIT_HIT},
+        {SCROLL_RIGHT, 50, 0, 0, 0,  100, PIT_DEPTH-1,     100000, 4, 4, REMOVE},
+        {SCROLL_RIGHT, 50, 0, 1, 0,  100, PIT_DEPTH-1,     100000,-1,-1, PIT_HIT},
+        {SCROLL_RIGHT, 50, 0, 1, 0,  100, PIT_DEPTH,       100000, 0,-1, RETAIN},
+        {SCROLL_RIGHT, 50, 0, 1, 1,  100, 0,     100, -1, -1, LIFESPAN_HIT},
+        {SCROLL_RIGHT, 50, 0, 0, 0,  100, 0,     100, -1, -1, REMOVE},
+        {SCROLL_RIGHT, 50, 0, 1, 1,  100, 0,     100,  0,  0, RETAIN},
+        {SCROLL_RIGHT, 50, 0, 1, 0,  100, 0,     100, INT32_MAX, INT32_MAX, RETAIN},
+    };
+    default_model_dropv.x = -0.75f;
+    default_model_dropv.y = 2.5f;
+    default_model_dropv.z = 1.25f;
+    for(unsigned i = 0; i < sizeof(cases) / sizeof(*cases); ++i)
+    {
+        reset_actor();
+        stage.scrolldir = cases[i].scrolling;
+        actor.modeldata.offscreenkill = cases[i].distance;
+        actor.modeldata.type = cases[i].player ? TYPE_PLAYER : TYPE_ENEMY;
+        actor.takedamage = cases[i].damage ? take_damage : NULL;
+        actor.HEALTH = 37;
+        actor.frozen = cases[i].frozen;
+        actor.freezetime = 21;
+        actor.position.x = cases[i].x;
+        actor.position.y = cases[i].y;
+        actor.position.z = cases[i].z;
+        actor.lifespancountdown = cases[i].initial_life;
+        outcome = RETAIN;
+#if OBOR_ENGINE_BUILD == 4432
+        check_lost();
+#else
+        assert(check_lost() == (cases[i].expected != RETAIN));
+#endif
+        assert(outcome == (cases[i].expected == REMOVE ? RETAIN : cases[i].expected));
+        assert(removals == (cases[i].expected == REMOVE));
+        assert(actor.exists == (cases[i].expected != REMOVE));
+        assert(self == &actor && actor.lifespancountdown == cases[i].final_life);
+    }
+}
+
+#if OBOR_ENGINE_BUILD == 4432
+static int take_summon_damage(entity *target, s_collision_attack *attack)
+#else
+static int take_summon_damage(entity *target, s_collision_attack *attack, int fall_flag)
+#endif
+{
+#if OBOR_ENGINE_BUILD != 4432
+    assert(fall_flag == 0);
+#endif
+    assert(target == self && !target->parent && !actor.exists && removals == 1);
+    assert(target == (summon_hits ? &sibling : &child));
+    const int previous_type = max_attack_types - (max_attack_types == MAX_ATKS ? 2 : 1);
+    assert(attack->attack_type == (full_summon_type ? max_attack_types : previous_type));
+    assert(attack->attack_force == (summon_hits ? 41 : 37));
+    assert(attack->dropv.x == -0.75f && attack->dropv.y == 2.5f && attack->dropv.z == 1.25f);
+    ++summon_hits;
+    return 0;
+}
+
+static void check_summon_cases(int release_shot)
+{
+    for(int custom = 0; custom < 2; ++custom)
+    {
+        max_attack_types = MAX_ATKS + 7 * custom;
+        for(int mode = 0; mode <= 2; ++mode)
+        {
+            for(int completed = 0; completed <= 1; ++completed)
+            {
+                reset_actor();
+                owner.modeldata.type = TYPE_PLAYER;
+#if OBOR_ENGINE_BUILD == 4432
+                owner.cantfire = 1;
+#endif
+                actor.modeldata.type = TYPE_SHOT;
+                actor.owner = &owner;
+                actor.modeldata.summonkill = mode;
+                actor.subentity = &child;
+                child = (entity){.exists = 1, .parent = &actor, .scripts = &scripts,
+                                 .takedamage = take_summon_damage, .HEALTH = 37};
+                sibling = child;
+                sibling.HEALTH = 41;
+                ent_count = 3;
+                level_completed = completed;
+                KILL(&actor);
+                assert(self == &actor && !actor.exists && !actor.subentity);
+                assert(!child.parent && !sibling.parent);
+#if OBOR_ENGINE_BUILD == 4432
+                assert(owner.cantfire == !release_shot);
+#else
+                assert(!release_shot);
+#endif
+                assert(summon_hits == (completed ? 0 : mode));
+                assert(removals == (completed ? 1 + mode : 1));
+                assert(ent_count == 3 - removals);
+            }
+        }
+    }
+}
+
+int main(void)
+{
+    const struct {uint32_t revision; int full_summon_type, release_shot;} revisions[] = {@PROFILES@};
+    for(unsigned i = 0; i < sizeof(revisions) / sizeof(*revisions); ++i)
+    {
+        obor_profile_build = revisions[i].revision;
+        full_summon_type = revisions[i].full_summon_type;
+        check_loss_cases();
+        check_summon_cases(revisions[i].release_shot);
+        printf("%u\n", obor_profile_build);
+    }
+    return 0;
+}

@@ -1,0 +1,236 @@
+/* SPDX-License-Identifier: BSD-3-Clause
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me>
+ */
+#include <stdint.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <strings.h>
+#include "openbor.h"
+#undef assert
+#undef printf
+#include <assert.h>
+
+#ifndef stricmp
+#define stricmp strcasecmp
+#endif
+
+#if OBOR_ENGINE_BUILD == 4432
+u32 time = 103;
+#define LEGACY_LAUNCH 1
+#define DAMAGE_ARGS entity *other, s_collision_attack *attack
+typedef int frame_index;
+#else
+u32 _time = 103;
+#define LEGACY_LAUNCH 0
+#define DAMAGE_ARGS entity *other, s_collision_attack *attack, int fall_flag
+typedef unsigned int frame_index;
+#endif
+
+_Static_assert(__builtin_types_compatible_p(__typeof__(((s_projectile *)0)->throwframe), frame_index) &&
+               __builtin_types_compatible_p(__typeof__(((s_projectile *)0)->shootframe), frame_index) &&
+               __builtin_types_compatible_p(__typeof__(((s_projectile *)0)->tossframe), frame_index),
+               "projectile frame fields retain their original types");
+_Static_assert(__builtin_types_compatible_p(__typeof__(((s_projectile *)0)->position.x), int) &&
+               __builtin_types_compatible_p(__typeof__(((s_projectile *)0)->position.y), int) &&
+               __builtin_types_compatible_p(__typeof__(((s_projectile *)0)->position.z), int),
+               "projectile coordinates retain all three integer axes");
+
+static entity actor, projectiles[3];
+static s_model model;
+static s_anim animation;
+static s_energycost energy;
+static int count, limit, colourmaps, tosses;
+static const char *projectile_name;
+static int expected_index;
+static unsigned int expected_map;
+static float expected_height;
+entity *self = &actor;
+uint32_t obor_profile_build, obor_profile_features;
+int nocost;
+
+void common_think(void) { assert(0); }
+int common_takedamage(DAMAGE_ARGS) { assert(0); return 0; }
+int arrow_takedamage(DAMAGE_ARGS) { assert(0); return 0; }
+#if LEGACY_LAUNCH
+HRESULT Interpreter_Call(Interpreter *interpreter) { assert(0); return 0; }
+HRESULT Interpreter_EvalInstruction(Interpreter *interpreter) { assert(0); return 0; }
+#endif
+
+entity *spawn(float x, float z, float y, int direction, char *name, int index, s_model *override)
+{
+    assert(x == 3 && z == 7 && y == expected_height && direction == DIRECTION_RIGHT);
+    assert(name ? projectile_name && !strcmp(name, projectile_name) : !projectile_name);
+    assert(index == expected_index && !override);
+    if(count == limit) return NULL;
+    entity *projectile = &projectiles[count];
+    *projectile = (entity){.model = &model, .sortid = 30 + 10 * count};
+    projectile->modeldata.jumpheight = 4;
+    ++count;
+    return projectile;
+}
+
+void ent_set_colourmap(entity *ent, unsigned int map)
+{
+    assert(ent == projectiles && map == expected_map);
+    ++colourmaps;
+}
+
+void toss(entity *ent, float lift)
+{
+    assert(ent == projectiles && lift == 4);
+    ++tosses;
+}
+
+@METHODS@
+
+static void reset(const char *name, int available)
+{
+    actor = (entity){.animation = &animation, .attacking = 7};
+    actor.modeldata.star = -1;
+    animation = (s_anim){0};
+    animation.projectile.star = -1;
+    projectile_name = name;
+    expected_index = -1;
+    expected_map = 6;
+    expected_height = 11;
+    limit = available;
+    count = colourmaps = tosses = 0;
+}
+
+static void check_bomb_launch(void)
+{
+    for(int available = 0; available <= 1; ++available)
+    for(int cost = -1; cost <= 1; ++cost)
+    for(nocost = 0; nocost <= 1; ++nocost)
+    {
+        reset("Bomb", available);
+        energy.cost = cost;
+        animation.energycost = cost < 0 ? NULL : &energy;
+        entity *bomb = bomb_spawn("Bomb", -1, 3, 7, 11, DIRECTION_RIGHT, 6);
+#if LEGACY_LAUNCH
+        assert(actor.cantfire == (available && nocost && cost > 0));
+#endif
+        assert(count == available && colourmaps == available && tosses == available);
+        assert(bomb == (available ? projectiles : NULL));
+        if(!bomb) continue;
+        assert(bomb->attacking == (LEGACY_LAUNCH ? 1 : 2) && bomb->nextthink == 104);
+        assert(bomb->owner == self && bomb->toexplode == 1 && bomb->position.y == 11.5f);
+#if !LEGACY_LAUNCH
+        assert(bomb->spawntype == SPAWN_TYPE_PROJECTILE_BOMB);
+#endif
+    }
+}
+
+enum projectile_directive { PSHOTFRAMENO, SHOOTFRAME, PBOMBFRAME };
+
+static void initialize_projectile_frames(s_anim *newanim)
+{
+    @DEFAULT_FRAMES@
+}
+
+static void load_projectile_frame(s_anim *newanim, enum projectile_directive route,
+                                  char *frame, char *height)
+{
+    char filename[] = "fixture", command[] = "projectile frame";
+    ArgList arglist = {.count = 3, .args = {command, frame, height}};
+    switch(route)
+    {
+        @DIRECTIVES@
+        default: abort();
+    }
+}
+
+static int selects_frame(s_anim *anim, enum projectile_directive route, frame_index f)
+{
+    switch(route)
+    {
+        @SELECTORS@
+        default: abort();
+    }
+}
+
+static void dispatch_bomb_frame(s_anim *anim, frame_index f)
+{
+    @BOMB_FRAME@
+}
+
+static void check_frame_directives(void)
+{
+    struct { char input[8]; int height[3]; } offsets[] = {
+        {"0", {70, 0, 0}}, {"-1", {0, 0, -1}}, {"-2", {-2, -2, -1}},
+        {"17", {17, 17, 17}}, {"40000", {40000, 40000, 40000}},
+    };
+    struct { char input[8]; frame_index expected; } frames[] = {{"2", 2}, {"ThIs", 3}};
+    for(enum projectile_directive route = PSHOTFRAMENO; route <= PBOMBFRAME; ++route)
+    {
+        for(size_t i = 0; i < sizeof(frames) / sizeof(*frames); ++i)
+        {
+            for(size_t j = 0; j < sizeof(offsets) / sizeof(*offsets); ++j)
+            {
+                reset(NULL, 1);
+                initialize_projectile_frames(&animation);
+                assert(animation.projectile.throwframe == (frame_index)-1);
+                assert(animation.projectile.shootframe == (frame_index)-1);
+                assert(animation.projectile.tossframe == (frame_index)-1);
+                animation.numframes = 3;
+                load_projectile_frame(&animation, route, frames[i].input, offsets[j].input);
+                animation.numframes = 5;
+                const frame_index frame = frames[i].expected;
+                const int height = offsets[j].height[route];
+                assert(animation.projectile.position.y == height);
+                for(enum projectile_directive test = PSHOTFRAMENO; test <= PBOMBFRAME; ++test)
+                    assert(selects_frame(&animation, test, frame) == (test == route));
+                assert(!selects_frame(&animation, route, frame - 1));
+                if(route == PBOMBFRAME)
+                {
+                    actor.position.x = 3;
+                    actor.position.y = 11;
+                    actor.position.z = 7;
+                    actor.direction = DIRECTION_RIGHT;
+                    animation.projectile.bomb = expected_index = 5;
+                    expected_map = 0;
+                    expected_height = 11 + height;
+                    dispatch_bomb_frame(&animation, frame - 1);
+                    assert(count == 0);
+                    dispatch_bomb_frame(&animation, frame);
+                    assert(count == 1 && colourmaps == 1 && tosses == 1);
+                    assert(projectiles[0].position.y == expected_height + 0.5f);
+                }
+            }
+        }
+    }
+}
+
+static void check_star_launch(void)
+{
+    for(int available = 0; available <= 3; ++available)
+    {
+        reset("Star", available);
+        assert(star_spawn(3, 7, 11, DIRECTION_RIGHT) == (available == 3));
+        assert(count == available && actor.attacking == (available ? 0 : 7));
+        for(int i = 0; i < count; ++i)
+        {
+            entity *star = &projectiles[i];
+            assert(star->attacking == (LEGACY_LAUNCH ? 1 : 2) && star->nextthink == 104);
+            assert(star->owner == self && star->base == 11 && star->sortid == 30 - i);
+#if !LEGACY_LAUNCH
+            assert(star->spawntype == SPAWN_TYPE_PROJECTILE_STAR);
+#endif
+        }
+    }
+}
+
+int main(void)
+{
+    const unsigned revisions[] = {@PROFILES@};
+    for(size_t i = 0; i < sizeof(revisions) / sizeof(*revisions); ++i)
+    {
+        obor_profile_build = revisions[i];
+        check_bomb_launch();
+        check_frame_directives();
+        check_star_launch();
+        printf("%u\n", obor_profile_build);
+    }
+    return 0;
+}

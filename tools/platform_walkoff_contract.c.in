@@ -1,0 +1,51 @@
+/* SPDX-License-Identifier: BSD-3-Clause
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me>
+ */
+#include <stdio.h>
+#include "openbor.h"
+#include "profile_ids.h"
+#undef printf
+#undef assert
+#include <assert.h>
+
+uint32_t obor_profile_build;
+static s_level room;
+s_level *level = &room;
+static entity deck, actor;
+static entity *entities[] = {&deck, &actor};
+entity **ent_list = entities;
+int ent_max = 2;
+
+@METHODS@
+
+int main(void)
+{
+    static const float heights[] = {@HEIGHTS@};
+    static const struct { unsigned revision; int selected[sizeof(heights) / sizeof(*heights)]; } rows[] = {
+@CONTROLS@
+    };
+    float frames[][8] = {{0, 0, -5, -6, 5, 6, 10, 0}};
+    s_anim animation = {.platform = frames};
+    deck = (entity){.exists = 1, .position = {.x = 20, .y = 7, .z = 40}, .animation = &animation};
+    actor = (entity){.exists = 1, .position = {.x = 20, .y = 10, .z = 37}};
+    for(size_t i = 0; i < sizeof(rows) / sizeof(*rows); ++i)
+    {
+        obor_profile_build = rows[i].revision;
+        for(size_t j = 0; j < sizeof(heights) / sizeof(*heights); ++j)
+        {
+            frames[0][7] = heights[j];
+            assert(get_platform_base(&deck) == 7.0f + heights[j]);
+            assert(testplatform(&deck, 20, 37, &actor));
+            assert(!testplatform(&deck, 20, 37, &deck));
+            assert(!testplatform(&deck, 28, 37, &actor));
+            assert(!testplatform(&deck, 20, 29, &actor));
+            entity *selected = check_platform_below_entity(&actor);
+            if(selected != (rows[i].selected[j] ? &deck : NULL))
+                fprintf(stderr, "%u platform height %.2f selected=%d instead of %d\n",
+                        rows[i].revision, heights[j], selected != NULL, rows[i].selected[j]);
+            assert(selected == (rows[i].selected[j] ? &deck : NULL));
+        }
+    }
+    printf("PASS %zu\n", sizeof(rows) / sizeof(*rows));
+    return 0;
+}

@@ -1,0 +1,242 @@
+/* SPDX-License-Identifier: BSD-3-Clause
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me>
+ */
+#include <stdint.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include "openbor.h"
+#undef assert
+#undef printf
+#include <assert.h>
+
+#if OBOR_ENGINE_BUILD == 6391
+#define HEALTH energy_status.health_current
+#define LANDING_FORCE damage_on_landing.attack_force
+#define LANDING_TYPE damage_on_landing.attack_type
+#define CLEAR_TYPE ATK_NONE
+#else
+#define HEALTH health
+#define LANDING_FORCE damage_on_landing
+#define LANDING_TYPE damage_on_landing_type
+#define CLEAR_TYPE -1
+#endif
+
+uint32_t obor_profile_build, obor_profile_features;
+static entity actor, enemy[3];
+entity *self = &actor, *smartbomber;
+static entity *actors[] = {&enemy[0], &enemy[1], &enemy[2]};
+entity **ent_list = actors;
+int ent_max = 3;
+static s_level scene, *level = &scene;
+static s_anim action = {.numframes = 1};
+static s_anim *animations[MAX_ANIS];
+s_savedata savedata = {.effectvol = 21};
+static int SAMPLE_PUNCH, nocost = 1, healthcheat;
+static int energy, energy_checks, animation_calls, chain, grab_calls, sounds;
+static int unlinks, weapon_drops, tosses, falls;
+
+void common_attack_proc(void) {}
+void common_fall(void) {}
+void common_throw_wait(void) {}
+int set_idle(entity *ent) { abort(); }
+void smart_bomb(entity *ent, s_collision_attack *attack) { abort(); }
+
+void player_grab_check(void) { grab_calls++; }
+int perform_atchain(void) { return chain; }
+
+int sound_play_sample(int index, unsigned priority, int left, int right, unsigned speed)
+{
+    assert(self == &actor && index == SAMPLE_PUNCH && !priority);
+    assert(left == 21 && right == 21 && speed == 100);
+    sounds++;
+    return 0;
+}
+
+int check_energy(e_cost_check which, int animation)
+{
+    assert(animation == ANI_SPECIAL);
+    energy_checks++;
+    return energy && which == COST_CHECK_MP;
+}
+
+void ent_set_anim(entity *ent, int animation, int reset)
+{
+    assert(ent == &actor && animation == ANI_SPECIAL && !reset);
+    assert(actor.attacking && !actor.idling && !actor.running);
+    assert(!actor.velocity.x && !actor.velocity.z && actor.takeaction == common_attack_proc);
+    animation_calls++;
+}
+
+void ent_unlink(entity *ent)
+{
+    assert(ent == self && ent != &actor && ent->takeaction == common_fall);
+    assert(!ent->attacking && !ent->projectile && !ent->LANDING_FORCE);
+    assert(ent->LANDING_TYPE == CLEAR_TYPE);
+    unlinks++;
+}
+
+void dropweapon(int flag)
+{
+    assert(flag == 1 && self == &enemy[0] && unlinks == 1 && !tosses);
+    weapon_drops++;
+}
+
+float randf(float maximum)
+{
+    assert(maximum == 1);
+    return 0.25f;
+}
+
+void toss(entity *ent, float height)
+{
+    assert(ent == self && ent != &actor && height == 2.75f);
+    assert(ent->velocity.x == (ent->direction == DIRECTION_RIGHT ? -1.2f : 1.2f));
+    assert(unlinks == tosses + 1);
+    tosses++;
+}
+
+@DEFAULT@
+
+static void observe_fall(entity *ent, entity *other, int type, int reset)
+{
+    assert(ent == self && other == ent && ent != &actor && tosses == falls + 1);
+    assert(type == ATK_NORMAL && reset == 1);
+    assert(ent->knockdowncount == 7 && !ent->knockdowntime);
+    falls++;
+}
+
+#if OBOR_ENGINE_BUILD == 6391
+int set_fall(entity *ent, entity *other, s_collision_attack *attack, int reset)
+{
+    assert(attack != &emptyattack && !attack->attack_force && !attack->attack_drop);
+    assert(!attack->no_block && !attack->guardcost && !attack->jugglecost && !attack->pause_add && !attack->tag);
+    assert(!attack->damage_on_landing.attack_force && attack->damage_on_landing.attack_type == ATK_NONE);
+    assert(!attack->dropv.x && !attack->dropv.y && !attack->dropv.z);
+    observe_fall(ent, other, attack->attack_type, reset);
+    attack->attack_force = 99;
+    return 1;
+}
+#else
+int set_fall(entity *ent, int type, int reset, entity *other, int force, int drop,
+             int noblock, int guardcost, int jugglecost, int pauseadd, int tag)
+{
+    assert(!force && !drop && !noblock && !guardcost && !jugglecost && !pauseadd && !tag);
+    observe_fall(ent, other, type, reset);
+    return 1;
+}
+#endif
+
+@SPECIAL@
+@DROP_ALL@
+
+static int grab_phase(void)
+{
+    @GRAB@
+    return 0;
+endthinkcheck:
+    return 1;
+}
+
+static int chain_phase(void)
+{
+    @CHAIN@
+    return 0;
+endthinkcheck:
+    return 1;
+}
+
+static void check_special_cases(int cantfire_blocks)
+{
+    for(int lock = 0; lock <= cantfire_blocks; ++lock)
+    {
+        for(int denied = 0; denied <= 2; ++denied)
+        {
+            scene.nospecial = denied == 1;
+            energy = denied != 2;
+            actor = (entity){0};
+            actor.modeldata.animation = animations;
+            actor.modeldata.animation_capacity = MAX_ANIS;
+#if OBOR_ENGINE_BUILD == 4432
+            actor.cantfire = lock;
+#endif
+            actor.idling = actor.running = 1;
+            actor.velocity.x = 3;
+            actor.velocity.z = 4;
+            energy_checks = animation_calls = 0;
+            int eligible = !scene.nospecial && !lock;
+            assert(check_special() == (eligible && energy));
+            assert(energy_checks == (eligible ? 2 : 0));
+            assert(animation_calls == (eligible && energy));
+#if OBOR_ENGINE_BUILD == 4432
+            assert(actor.cantfire == lock);
+#endif
+        }
+    }
+}
+
+static void check_player_dispatch(void)
+{
+    for(int attack = 0; attack <= 2; ++attack)
+    {
+        actor.attacking = attack;
+        actor.grabbing = &enemy[0];
+        actor.takeaction = NULL;
+        grab_calls = 0;
+        assert(grab_phase() == !attack && grab_calls == !attack);
+        actor.takeaction = common_throw_wait;
+        assert(!grab_phase() && grab_calls == !attack);
+        for(chain = 0; chain <= 1; ++chain)
+        {
+            for(SAMPLE_PUNCH = -1; SAMPLE_PUNCH <= 0; ++SAMPLE_PUNCH)
+            {
+                sounds = 0;
+                assert(chain_phase() == chain);
+                assert(sounds == (chain && SAMPLE_PUNCH >= 0 && attack));
+            }
+        }
+    }
+}
+
+static void check_collective_fall(void)
+{
+    for(int i = 0; i < ent_max; ++i)
+    {
+        entity *ent = &enemy[i];
+        *ent = (entity){0};
+        ent->exists = 1;
+        ent->HEALTH = 5;
+        ent->direction = i ? DIRECTION_LEFT : DIRECTION_RIGHT;
+        ent->attacking = ent->projectile = 1;
+        ent->LANDING_FORCE = 9;
+        ent->LANDING_TYPE = ATK_NORMAL2;
+        ent->knockdowntime = 27;
+        ent->modeldata.type = TYPE_ENEMY;
+        ent->modeldata.animation = animations;
+        ent->modeldata.animation_capacity = MAX_ANIS;
+        ent->modeldata.knockdowncount = 7;
+    }
+    enemy[1].modeldata.weaploss[0] = WEAPLOSS_TYPE_CHANGE;
+    enemy[2].frozen = 1;
+    unlinks = weapon_drops = tosses = falls = 0;
+    drop_all_enemies();
+    assert(self == &actor && unlinks == 2 && weapon_drops == 1 && tosses == 2 && falls == 2);
+    assert(enemy[2].attacking && enemy[2].projectile && enemy[2].knockdowntime == 27);
+    assert(enemy[2].LANDING_FORCE == 9 && enemy[2].LANDING_TYPE == ATK_NORMAL2);
+}
+
+int main(void)
+{
+    static const struct { uint32_t revision; int cantfire_blocks; } profiles[] = {@ROWS@};
+    animations[ANI_SPECIAL] = animations[ANI_FALL] = &action;
+    assert(ATK_NORMAL == 0 && emptyattack.attack_type == ATK_NORMAL);
+    for(size_t i = 0; i < sizeof(profiles) / sizeof(*profiles); ++i)
+    {
+        obor_profile_build = profiles[i].revision;
+        check_special_cases(profiles[i].cantfire_blocks);
+        check_player_dispatch();
+        check_collective_fall();
+        printf("%u\n", obor_profile_build);
+    }
+    return 0;
+}

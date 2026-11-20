@@ -1,0 +1,158 @@
+/* SPDX-License-Identifier: BSD-3-Clause
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me>
+ */
+#include <stdint.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include "openbor.h"
+#include "anybor_abi.h"
+#undef assert
+#undef printf
+#include <assert.h>
+
+#if OBOR_ENGINE_BUILD == 6391
+#include "profile_ids.h"
+#define HEALTH energy_status.health_current
+#define MAGIC energy_status.mp_current
+#define NATIVE_REASON(reason) obor_spawn_type_to_native(reason)
+#else
+#define HEALTH health
+#define MAGIC mp
+#define NATIVE_REASON(reason) (reason)
+#endif
+
+uint32_t obor_profile_build, obor_profile_features;
+static entity attacker, target, effect;
+entity *self = &target;
+static entity *ent_list[] = {&target};
+static s_lasthit lasthit;
+static int expected_model, expected_reason, effect_exists, spawns, callbacks;
+static int nocost, healthcheat;
+
+entity *spawn(float x, float z, float y, int direction, char *name, int index, s_model *override)
+{
+    assert(x == 7 && z == 11 && y == 13 && !direction && !name && !override);
+    assert(self == &target && index == expected_model && !spawns && !callbacks);
+    spawns++;
+    return effect_exists ? &effect : NULL;
+}
+
+void execute_onspawn_script(entity *ent)
+{
+    assert(ent == &effect && self == &target && spawns == 1 && !callbacks);
+    assert(NATIVE_REASON(ent->spawntype) == expected_reason);
+    assert(ent->base == 23 && !ent->autokill);
+    callbacks++;
+}
+
+static void flash_path(int path, entity *e, s_collision_attack *attack)
+{
+    entity *flash = NULL;
+    int i = 0;
+    switch(path)
+    {
+    @FLASH_CASES@
+    default: abort();
+    }
+}
+
+static void charge(entity *e, entity *topowner, s_anim *current_anim)
+{
+    @CHARGE@
+}
+
+static void check_flash_path(int path, int scenario)
+{
+    int hit = path == 3;
+    s_collision_attack attack = {.hitflash = -1, .blockflash = -1};
+    target.modeldata.noatflash = scenario == 2;
+    target.modeldata.bflash = 31;
+    target.modeldata.flash = 33;
+    attacker.modeldata.flash = 35;
+    attack.no_flash = scenario == 3;
+    effect_exists = scenario != 4;
+    expected_model = hit ? 35 : 31;
+#if OBOR_ENGINE_BUILD == 6391
+    target.modeldata.flashoverridesource = -1;
+#endif
+    if(scenario == 1)
+    {
+        attack.hitflash = attack.blockflash = 17;
+        expected_model = 17;
+    }
+    if(target.modeldata.noatflash)
+    {
+        attack.hitflash = attack.blockflash = 17;
+        expected_model = hit ? 33 : 31;
+    }
+    effect = (entity){.base = 23};
+    spawns = callbacks = 0;
+    flash_path(path, &attacker, &attack);
+    assert(spawns == !attack.no_flash);
+    assert(callbacks == (spawns && effect_exists));
+}
+
+static void check_projectile_cost(void)
+{
+    static const struct charge_case {
+        int cost, mp, hp, mode, free, cheat, charged, direct;
+        int want_mp, want_hp, want_charged, want_lock;
+    } cases[] = {
+        {3,  5,  9, COST_TYPE_MP_ONLY,    1, 0, 0, 0, 2,  9, 1, 0},
+        {6,  2,  9, COST_TYPE_MP_ONLY,    1, 0, 0, 0, 0,  9, 1, 0},
+        {6, 10,  5, COST_TYPE_MP_THEN_HP, 1, 0, 0, 0, 10, 1, 1, 0},
+        {3,  5,  9, COST_TYPE_MP_ONLY,    1, 0, 0, 1, 5,  9, 1, 1},
+        {3,  5,  9, COST_TYPE_MP_ONLY,    0, 0, 0, 0, 5,  9, 0, 1},
+        {3,  5,  9, COST_TYPE_MP_ONLY,    1, 1, 0, 0, 5,  9, 0, 1},
+        {3,  5,  9, COST_TYPE_MP_ONLY,    1, 0, 1, 0, 5,  9, 1, 1},
+        {0,  5,  9, COST_TYPE_MP_ONLY,    1, 0, 0, 0, 5,  9, 0, 1},
+    };
+    for(size_t i = 0; i < sizeof(cases) / sizeof(*cases); ++i)
+    {
+        const struct charge_case *c = &cases[i];
+        entity owner = {0}, shot = {0};
+        s_energycost cost = {.cost = c->cost, .mponly = c->mode};
+        s_anim animation = {.energycost = &cost};
+        entity *producer = c->direct ? &owner : &shot;
+        owner.HEALTH = c->hp;
+        owner.MAGIC = c->mp;
+        producer->tocost = c->charged;
+#if OBOR_ENGINE_BUILD == 4432
+        owner.cantfire = shot.cantfire = 1;
+#endif
+        nocost = c->free;
+        healthcheat = c->cheat;
+        for(int repeat = 0; repeat < 2; ++repeat)
+        {
+            charge(producer, &owner, &animation);
+            assert(owner.MAGIC == c->want_mp && owner.HEALTH == c->want_hp);
+            assert(producer->tocost == c->want_charged);
+#if OBOR_ENGINE_BUILD == 4432
+            assert(owner.cantfire == c->want_lock && shot.cantfire == 1);
+#endif
+        }
+    }
+}
+
+int main(void)
+{
+    static const struct { unsigned revision; int reason; } profiles[] = {@ROWS@};
+    lasthit.position.x = 7;
+    lasthit.position.z = 11;
+    lasthit.position.y = 13;
+    for(size_t i = 0; i < sizeof(profiles) / sizeof(*profiles); ++i)
+    {
+        obor_profile_build = profiles[i].revision;
+        expected_reason = profiles[i].reason;
+        for(int path = 0; path < 4; ++path)
+        {
+            for(int scenario = 0; scenario < 5; ++scenario)
+            {
+                check_flash_path(path, scenario);
+            }
+        }
+        check_projectile_cost();
+        printf("%u\n", obor_profile_build);
+    }
+    return 0;
+}

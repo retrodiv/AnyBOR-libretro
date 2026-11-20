@@ -1,0 +1,142 @@
+/* SPDX-License-Identifier: BSD-3-Clause
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me>
+ */
+#include <stdint.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <strings.h>
+#include "openbor.h"
+#include "commands.h"
+#include "profile_ids.h"
+#undef assert
+#undef printf
+#include <assert.h>
+#ifndef stricmp
+#define stricmp strcasecmp
+#endif
+#ifndef strnicmp
+#define strnicmp strncasecmp
+#endif
+
+uint32_t obor_profile_build, obor_profile_features;
+static List *modelcmdlist;
+static int max_attack_types = MAX_ATKS + 2;
+static int warnings;
+
+void *checkAlloc(void *p, size_t size, const char *name, const char *file, int line)
+{
+    assert(!size || p);
+    return p;
+}
+
+void borExit(int status) { (void)status; abort(); }
+void writeToLogFile(const char *format, ...) { (void)format; ++warnings; }
+
+#include "List.c"
+@COMMANDS@
+@ATTACK_TYPE@
+@DEFAULT_DEFENSE@
+
+#undef GET_ARG
+#undef GET_FLOAT_ARG
+#define GET_ARG(index) args[index]
+#define GET_FLOAT_ARG(index) ((float)atof(args[index]))
+
+static void parse(s_model *newchar, modelCommands selector, char *name, int count)
+{
+    char *args[] = {"command", name, "0.25", "0.5", "0.75", "4", "5", "0.125", "1"};
+    struct { int count; } arglist = {count};
+    char *value, *filename = "fixture.txt", *command = "command";
+    s_defense defense;
+    int i, tempInt;
+    float tempFloat;
+    switch(selector)
+    {
+        @MODEL_CHOICES@
+        default: abort();
+    }
+}
+
+static void check_lose_case(void)
+{
+    s_collision_attack attack = {.attack_type = ATK_NORMAL, .attack_drop = 1};
+    switch(CMD_MODEL_LOSE)
+    {
+        @LOSE_CASE@
+        default: abort();
+    }
+    assert(attack.attack_type == ATK_LOSE && !attack.attack_drop);
+}
+
+static const struct {
+    uint32_t revision;
+    const char *name;
+    uint64_t mask;
+} cases[] = {
+@TESTS@
+};
+
+static void check_profile(uint32_t revision, int has_lose)
+{
+    obor_profile_build = revision;
+    modelcmdlist = createModelCommandList();
+    char lose[40] = "lose";
+    assert((getModelCommand(modelcmdlist, lose) == CMD_MODEL_LOSE) == has_lose);
+    assert(translate_attack_type(lose) == (has_lose ? ATK_LOSE : -1));
+    if(has_lose) check_lose_case();
+    freeCommandList(modelcmdlist);
+
+    s_defense defense[MAX_ATKS + 2];
+    float offense[MAX_ATKS + 2];
+    s_model model = {.defense = defense, .offense_factors = offense};
+    for(size_t n = 0; n < sizeof(cases) / sizeof(*cases); ++n)
+    {
+        if(cases[n].revision != revision) continue;
+        char key[40];
+        assert(strlen(cases[n].name) < sizeof(key));
+        strcpy(key, cases[n].name);
+        memset(defense, 0, sizeof(defense));
+        memset(offense, 0, sizeof(offense));
+        warnings = 0;
+        parse(&model, CMD_MODEL_DEFENSE, key, 8);
+        parse(&model, CMD_MODEL_OFFENSE, key, 8);
+        assert(!warnings);
+        for(int slot = 0; slot < max_attack_types; ++slot)
+        {
+            const int changed = !!(cases[n].mask & (UINT64_C(1) << slot));
+            if(defense[slot].factor != (changed ? 0.25f : 0) || offense[slot] != (changed ? 0.25f : 0))
+                fprintf(stderr, "%u %s disagrees at attack slot %d\n", revision, key, slot);
+            assert(defense[slot].factor == (changed ? 0.25f : 0));
+            assert(offense[slot] == (changed ? 0.25f : 0));
+            assert(defense[slot].pain == (changed ? 0.5f : 0));
+            assert(defense[slot].knockdown == (changed ? 0.75f : 0));
+            assert(defense[slot].blockpower == (changed ? 4.0f : 0));
+            assert(defense[slot].blockthreshold == (changed ? 5.0f : 0));
+            assert(defense[slot].blockratio == (changed ? 0.125f : 0));
+            assert(defense[slot].blocktype == changed);
+        }
+    }
+
+    char normal[] = "normal";
+    for(int count = 1; count <= 8; ++count)
+    {
+        model.subtype = SUBTYPE_BIKER;
+        parse(&model, CMD_MODEL_DEFENSE, normal, count);
+        s_defense selected = model.defense[ATK_NORMAL];
+        assert(selected.factor == (count >= 2 ? 0.25f : 2.0f));
+        assert(selected.pain == (count >= 3 ? 0.5f : default_defense.pain));
+        assert(selected.knockdown == (count >= 4 ? 0.75f : default_defense.knockdown));
+        assert(selected.blockpower == (count >= 5 ? 4.0f : default_defense.blockpower));
+        assert(selected.blockthreshold == (count >= 6 ? 5.0f : default_defense.blockthreshold));
+        assert(selected.blockratio == (count >= 7 ? 0.125f : default_defense.blockratio));
+        assert(selected.blocktype == (count >= 8 ? 1 : default_defense.blocktype));
+    }
+    printf("PASS %u\n", revision);
+}
+
+int main(void)
+{
+    @PROFILES@
+    return 0;
+}

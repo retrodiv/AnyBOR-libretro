@@ -1,0 +1,148 @@
+/* SPDX-License-Identifier: BSD-3-Clause
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me>
+ */
+#include <assert.h>
+#include <float.h>
+#include <stdarg.h>
+#include <stdint.h>
+#include <stdio.h>
+#include <string.h>
+
+@LIMIT@
+enum { VT_EMPTY, VT_INTEGER, VT_DECIMAL, VT_PTR, VT_STR, VT_OTHER };
+enum { S_OK = 0, E_FAIL = -1 };
+typedef int HRESULT;
+typedef int32_t LONG;
+typedef char *LPSTR;
+typedef struct { int vt; LONG lVal; double dblVal; void *ptrVal; int strVal; } ScriptVariant;
+typedef struct { int unused; } s_screen;
+#define FAILED(status) ((status) < 0)
+
+static uint32_t obor_profile_build;
+static char cached_text[MAX_BUFFER_LEN + 1];
+static char observed[MAX_BUFFER_LEN];
+static int output_route;
+static s_screen screen;
+static int expected_layer;
+
+static char *StrCache_GetIfPresent(int key)
+{
+    return key == 1 ? cached_text : NULL;
+}
+
+static char *StrCache_Get(int key)
+{
+    assert(StrCache_GetIfPresent(key));
+    return StrCache_GetIfPresent(key);
+}
+
+static HRESULT ScriptVariant_IntegerValue(const ScriptVariant *value, LONG *output)
+{
+    if(value->vt != VT_INTEGER) return E_FAIL;
+    *output = value->lVal;
+    return S_OK;
+}
+
+static void record_output(int route, const char *format, const char *text)
+{
+    assert(!output_route && strcmp(format, "%s") == 0 && strlen(text) < sizeof(observed));
+    output_route = route;
+    strcpy(observed, text);
+}
+
+static void font_printf(int x, int y, int font, int layer, const char *format, const char *text)
+{
+    assert(x == 11 && y == 22 && font == 3 && layer == expected_layer);
+    record_output(1, format, text);
+}
+
+static void screen_printf(s_screen *destination, int x, int y, int font, const char *format, const char *text)
+{
+    assert(destination == &screen && x == 11 && y == 22 && font == 3);
+    record_output(2, format, text);
+}
+
+static int log_result(const char *format, ...)
+{
+    va_list args;
+    va_start(args, format);
+    assert(strcmp(format, "%s") == 0);
+    record_output(3, format, va_arg(args, char *));
+    va_end(args);
+    return 0;
+}
+
+@PROFILE@
+@FORMAT@
+#define printf log_result
+@NATIVE@
+#undef printf
+
+static void check_value(ScriptVariant value, const char *expected, size_t capacity)
+{
+    ScriptVariant coords[] = {{.vt=VT_INTEGER,.lVal=11}, {.vt=VT_INTEGER,.lVal=22},
+                              {.vt=VT_INTEGER,.lVal=3}, {.vt=VT_INTEGER,.lVal=15}};
+    ScriptVariant target = {.vt=VT_PTR,.ptrVal=&screen};
+    ScriptVariant *draw[] = {&coords[0], &coords[1], &coords[2], &value, &coords[3]};
+    ScriptVariant *draw_screen[] = {&target, &coords[0], &coords[1], &coords[2], &value};
+    ScriptVariant *log[] = {&value};
+    const int has_output = expected && strlen(expected) < capacity;
+    const struct {
+        HRESULT (*call)(ScriptVariant **, ScriptVariant **, int);
+        ScriptVariant **args;
+        int count, route, layer;
+    } calls[] = {
+        {openbor_drawstring,draw,4,1,0}, {openbor_drawstring,draw,5,1,15},
+        {openbor_drawstringtoscreen,draw_screen,5,2,0}, {openbor_log,log,1,3,0},
+    };
+    for(size_t i = 0; i < sizeof(calls) / sizeof(*calls); ++i)
+    {
+        ScriptVariant *returned = &target;
+        output_route = 0;
+        expected_layer = calls[i].layer;
+        const HRESULT result = calls[i].call(calls[i].args, &returned, calls[i].count);
+        assert(!returned);
+        if(has_output)
+        {
+            assert(result == S_OK && output_route == calls[i].route);
+            assert(strcmp(observed, expected) == 0);
+        }
+        else assert(result == E_FAIL && output_route == 0);
+    }
+}
+
+static void check_profile(size_t capacity, size_t integer_bits)
+{
+    assert(sizeof(LONG) * 8 == integer_bits);
+    check_value((ScriptVariant){.vt=VT_EMPTY}, "<VT_EMPTY>   Unitialized", capacity);
+    check_value((ScriptVariant){.vt=VT_INTEGER,.lVal=INT32_MIN}, "-2147483648", capacity);
+    check_value((ScriptVariant){.vt=VT_INTEGER,.lVal=INT32_MAX}, "2147483647", capacity);
+    check_value((ScriptVariant){.vt=VT_DECIMAL,.dblVal=-2.75}, "-2.750000", capacity);
+    check_value((ScriptVariant){.vt=VT_PTR,.ptrVal=NULL}, "#0", capacity);
+    check_value((ScriptVariant){.vt=VT_OTHER}, "<Unprintable VARIANT type.>", capacity);
+    check_value((ScriptVariant){.vt=VT_STR,.strVal=2}, NULL, capacity);
+
+    char reference[MAX_BUFFER_LEN];
+    const int decimal = snprintf(reference, sizeof(reference), "%lf", DBL_MAX);
+    assert(decimal > 256 && (size_t)decimal < sizeof(reference));
+    check_value((ScriptVariant){.vt=VT_DECIMAL,.dblVal=DBL_MAX}, reference, capacity);
+    const size_t lengths[] = {0, 12, 255, 256, 511, 512};
+    for(size_t i = 0; i < sizeof(lengths) / sizeof(*lengths); ++i)
+    {
+        memset(cached_text, '%', lengths[i]);
+        cached_text[lengths[i]] = '\0';
+        check_value((ScriptVariant){.vt=VT_STR,.strVal=1}, cached_text, capacity);
+    }
+}
+
+int main(void)
+{
+    static const struct { unsigned revision; size_t capacity, integer_bits; } profiles[] = {@PROFILES@};
+    for(size_t i = 0; i < sizeof(profiles) / sizeof(*profiles); ++i)
+    {
+        obor_profile_build = profiles[i].revision;
+        check_profile(profiles[i].capacity, profiles[i].integer_bits);
+        printf("PASS %u\n", obor_profile_build);
+    }
+    return 0;
+}

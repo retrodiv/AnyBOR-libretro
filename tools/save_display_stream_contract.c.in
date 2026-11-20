@@ -1,0 +1,138 @@
+/* SPDX-License-Identifier: BSD-3-Clause
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me>
+ */
+#include <assert.h>
+#include <stdbool.h>
+#include <stdint.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include "anybor_pak_name.h"
+
+@LIMIT@
+enum { E_FAIL = -1, S_OK = 0 };
+static uint32_t obor_profile_build;
+static char packfile[MAX_BUFFER_LEN + 16];
+static char displayed[MAX_BUFFER_LEN];
+static char requested[MAX_BUFFER_LEN];
+static unsigned requests;
+static const char *script_filename;
+
+static void getBasePath(char *path, const char *dir, int type)
+{
+    assert(strcmp(dir, "Saves") == 0 && type == 0);
+    strcpy(path, "./Saves/");
+}
+
+static void writeToLogFile(const char *message, ...) { abort(); }
+static void borExit(int status) { abort(); }
+
+static void _menutext(int font, int column, int line, const char *format, int width, const char *text)
+{
+    assert(font == 0 && column == 6 && line == -2 && strcmp(format, "%.*s") == 0);
+    const int written = snprintf(displayed, sizeof(displayed), format, width, text);
+    assert(written >= 0 && (size_t)written < sizeof(displayed));
+}
+
+static const char *StrCache_Get(int key)
+{
+    assert(key == 1);
+    return script_filename;
+}
+
+static void observe_path(const char *path)
+{
+    assert(strlen(path) < sizeof(requested));
+    strcpy(requested, path);
+    ++requests;
+}
+
+@PROFILE@
+@NAME_PROVIDER@
+
+static void show_save_name(void)
+{
+    char name[MAX_BUFFER_LEN] = "";
+    const int col2 = 6;
+    @SAVED_NAME@
+    @LABEL@
+}
+
+static int open_saved_path(const char *filename)
+{
+    char path[MAX_BUFFER_LEN] = "", tmpname[MAX_BUFFER_LEN] = "";
+    @OPEN_PATH@
+    observe_path(path);
+    return S_OK;
+}
+
+static int save_path(const char *custom_folder)
+{
+    char path[MAX_BUFFER_LEN] = "", tmpname[MAX_BUFFER_LEN] = "";
+    const char *patharg = custom_folder;
+    const int paramCount = patharg ? 3 : 2;
+    const struct { int strVal; } argument = {1}, *arg = &argument;
+    @SAVE_PATH@
+    observe_path(path);
+    return S_OK;
+}
+
+static void check_display(size_t capacity)
+{
+    const char *folder = "Paks/";
+    const char *extension = ".pak";
+    const size_t stems[] = {4, 251, 252, 257, 507};
+    for(size_t i = 0; i < sizeof(stems) / sizeof(*stems); ++i)
+    {
+        strcpy(packfile, folder);
+        memset(packfile + strlen(folder), 'n', stems[i]);
+        strcpy(packfile + strlen(folder) + stems[i], extension);
+        show_save_name();
+        char expected[MAX_BUFFER_LEN];
+        memset(expected, 'n', stems[i]);
+        strcpy(expected + stems[i], ".sav");
+        if(stems[i] + strlen(".sav") >= capacity) expected[capacity - 1] = '\0';
+        assert(strcmp(displayed, expected) == 0);
+    }
+}
+
+static void check_stream(size_t capacity, int write, const char *folder)
+{
+    const char *root = folder ? "./notes/" : "./Saves/Case/";
+    strcpy(packfile, "Paks/Case.pak");
+    char filename[MAX_BUFFER_LEN + 1];
+    script_filename = filename;
+    const size_t lengths[] = {24, capacity - 1, capacity};
+    for(size_t i = 0; i < sizeof(lengths) / sizeof(*lengths); ++i)
+    {
+        const char *suffix = "record.txt";
+        const size_t prefix = lengths[i] - strlen(root) - strlen(suffix);
+        for(size_t j = 0; j < prefix; ++j) filename[j] = j % 8 == 7 ? '/' : 'p';
+        strcpy(filename + prefix, suffix);
+        requests = 0;
+        const int result = write ? save_path(folder) : open_saved_path(filename);
+        if(lengths[i] < capacity)
+        {
+            assert(result == S_OK && requests == 1 && strlen(requested) == lengths[i]);
+            assert(strncmp(requested, root, strlen(root)) == 0);
+            assert(strcmp(requested + strlen(root), filename) == 0);
+        }
+        else assert(result == E_FAIL && requests == 0);
+    }
+}
+
+int main(void)
+{
+    static const struct { uint32_t revision; size_t display, reading, writing; }
+        profiles[] = {@PROFILES@};
+    for(size_t i = 0; i < sizeof(profiles) / sizeof(*profiles); ++i)
+    {
+        obor_profile_build = profiles[i].revision;
+        check_display(profiles[i].display);
+        check_stream(profiles[i].reading, 0, NULL);
+        check_stream(profiles[i].writing, 1, NULL);
+        check_stream(profiles[i].writing, 1, "notes/");
+        printf("PASS %u\n", obor_profile_build);
+    }
+    return 0;
+}

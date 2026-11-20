@@ -1,0 +1,82 @@
+/* SPDX-License-Identifier: BSD-3-Clause
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me>
+ */
+#include <limits.h>
+#include <stdint.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <strings.h>
+#include "scriptcommon.h"
+#include "profile_ids.h"
+#undef printf
+#undef assert
+#include <assert.h>
+#ifndef stricmp
+#define stricmp strcasecmp
+#endif
+#ifndef strnicmp
+#define strnicmp strncasecmp
+#endif
+
+uint32_t obor_profile_build;
+uint32_t obor_profile_features;
+int PLAYER_MIN_Z, PLAYER_MAX_Z, BGHEIGHT, MAX_WALL_HEIGHT;
+int SAMPLE_GO, SAMPLE_BEAT, SAMPLE_BLOCK, SAMPLE_INDIRECT, SAMPLE_FALL;
+int SAMPLE_GET, SAMPLE_GET2, SAMPLE_JUMP, SAMPLE_PUNCH, SAMPLE_1UP;
+int SAMPLE_TIMEOVER, SAMPLE_BEEP, SAMPLE_BEEP2, SAMPLE_BIKE;
+static int dynamic_animations[16];
+@ANIMATION_TABLES@
+
+void *checkAlloc(void *ptr, size_t size, const char *func, const char *file, int line)
+{
+    assert(!size || ptr);
+    return ptr;
+}
+
+@VARIANTS@
+@MAPPER@
+
+typedef struct { const char *name; LONG expected; } constant_case;
+static const constant_case early[] = {@EARLY@};
+static const constant_case base[] = {@BASE@};
+
+static void check_cases(const constant_case *cases, size_t count)
+{
+    for(size_t i = 0; i < count; ++i)
+    {
+        const constant_case *test = &cases[i];
+        ScriptVariant value = {.vt = VT_STR, .strVal = StrCache_CreateNewFrom(test->name)};
+        ScriptVariant *args[] = {&value};
+        int found = mapstrings_transconst(args, 1);
+        if(test->expected != INT_MIN)
+        {
+            if(!found || value.vt != VT_INTEGER || value.lVal != test->expected)
+                fprintf(stderr, "%u %s expected %d\n", obor_profile_build, test->name, (int)test->expected);
+            assert(found && value.vt == VT_INTEGER && value.lVal == test->expected);
+        }
+        else
+        {
+            if(found) fprintf(stderr, "%u unexpectedly accepted %s\n", obor_profile_build, test->name);
+            assert(!found && value.vt == VT_STR);
+        }
+        ScriptVariant_Clear(&value);
+    }
+}
+
+int main(void)
+{
+    const struct { unsigned revision; int early_ids; } profiles[] = {@PROFILES@};
+    for(size_t i = 0; i < sizeof(dynamic_animations) / sizeof(*dynamic_animations); ++i)
+        dynamic_animations[i] = MAX_ANIS + (int)i;
+    StrCache_Init();
+    for(size_t i = 0; i < sizeof(profiles) / sizeof(*profiles); ++i)
+    {
+        obor_profile_build = profiles[i].revision;
+        if(profiles[i].early_ids) check_cases(early, sizeof(early) / sizeof(*early));
+        else check_cases(base, sizeof(base) / sizeof(*base));
+        printf("PASS %u\n", obor_profile_build);
+    }
+    StrCache_Clear();
+    return 0;
+}

@@ -1,0 +1,38 @@
+/* SPDX-License-Identifier: BSD-3-Clause
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me>
+ */
+#include <math.h>
+#include <stdint.h>
+#include <stdio.h>
+#include "openbor.h"
+#undef printf
+
+uint32_t obor_profile_build;
+
+@FUNCTION@
+
+int main(void)
+{
+    static const unsigned revisions[] = {@REVISIONS@};
+    static const struct {
+        int direction;
+        int flip;
+        float velocity;
+    } cases[] = {@CASES@};
+
+    for(size_t i = 0; i < sizeof(revisions) / sizeof(*revisions); ++i)
+    {
+        obor_profile_build = revisions[i];
+        for(size_t j = 0; j < sizeof(cases) / sizeof(*cases); ++j)
+        {
+            entity target = {0};
+            target.direction = cases[j].direction;
+            target.normaldamageflipdir = cases[j].flip;
+            target.velocity.x = cases[j].velocity;
+            int result = reset_backpain(&target);
+            printf("%u %d %d %a %d\n", obor_profile_build, result,
+                   target.direction, target.velocity.x, !!signbit(target.velocity.x));
+        }
+    }
+    return 0;
+}

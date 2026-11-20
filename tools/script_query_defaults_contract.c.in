@@ -1,0 +1,137 @@
+/* SPDX-License-Identifier: BSD-3-Clause
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me>
+ */
+#include <assert.h>
+#include <limits.h>
+#include <stdint.h>
+#include <stdio.h>
+#include "anybor_abi.h"
+
+typedef int32_t LONG;
+typedef double DOUBLE;
+typedef void VOID;
+typedef int HRESULT, VARTYPE;
+enum { VT_EMPTY, VT_INTEGER, VT_DECIMAL, VT_STR, VT_PTR };
+enum { S_OK = 0, E_FAIL = -1, MAX_PLAYERS = 4, _ep_direction = 1 };
+#define SUCCEEDED(value) ((value) == S_OK)
+#define FAILED(value) ((value) != S_OK)
+typedef struct { union { LONG lVal; DOUBLE dblVal; void *ptrVal; int strVal; }; VARTYPE vt; } ScriptVariant;
+typedef struct { int animnum, direction; } entity;
+static uint32_t obor_profile_build, obor_profile_features;
+static entity actor, target;
+static struct { entity *ent; int lives; } player[MAX_PLAYERS];
+static unsigned range_calls;
+static int last_animation;
+int max_animations = 8;
+
+static const char *StrCache_GetIfPresent(int key) { assert(key == 0); return "unknown"; }
+static void StrCache_Collect(int key) { assert(key == 0); }
+static void mapstrings_playerproperty(ScriptVariant **args, int count) { assert(args && count == 2); }
+static int diagnostic(const char *format, ...) { return 0; }
+static int obor_animation_from_native(int native) { return native < 7 ? native + 1 : -1; }
+static int check_range_target_all(entity *origin, entity *destination, int animation)
+{
+    assert(origin == &actor && destination == &target);
+    ++range_calls;
+    last_animation = animation;
+    return animation % 2;
+}
+
+@PLAYER_ENUM@
+@PROFILE@
+@VARIANTS@
+#define printf diagnostic
+@PLAYER@
+@RANGE@
+
+static void write_direction(entity *ent, ScriptVariant *input)
+{
+    ScriptVariant *args[] = {NULL, NULL, input}, **varlist = args;
+    LONG ltemp;
+    switch(_ep_direction) { @DIRECTION@ }
+}
+#undef printf
+
+static ScriptVariant integer(LONG value) { return (ScriptVariant){.vt=VT_INTEGER,.lVal=value}; }
+
+static void check_player(int empty)
+{
+    ScriptVariant index = integer(0), property = integer(_pp_lives), value = integer(32), *result = &value;
+    ScriptVariant *args[] = {&index, &property};
+    player[0].lives = 3;
+    player[0].ent = &actor;
+    assert(openbor_getplayerproperty(args, &result, 2) == S_OK && result == &value);
+    assert(value.vt == VT_INTEGER && value.lVal == 3);
+    property = integer(_pp_ent);
+    assert(openbor_getplayerproperty(args, &result, 2) == S_OK && result->ptrVal == &actor);
+    const LONG unknown[] = {-1, INT_MAX};
+    for(size_t i=0; i<sizeof(unknown)/sizeof(*unknown); ++i)
+    {
+        property = integer(unknown[i]);
+        value = integer(32);
+        result = &value;
+        assert(openbor_getplayerproperty(args, &result, 2) == (empty ? S_OK : E_FAIL));
+        assert(result == (empty ? &value : NULL));
+        assert(value.vt == VT_EMPTY);
+    }
+    property = (ScriptVariant){.vt=VT_STR,.strVal=0};
+    result = &value;
+    assert(openbor_getplayerproperty(args, &result, 2) == E_FAIL && !result);
+}
+
+static void check_direction(int decimal_conversion)
+{
+    ScriptVariant cases[] = {integer(INT32_MIN), integer(-1), integer(0), integer(1), integer(INT32_MAX),
+        {.vt=VT_DECIMAL,.dblVal=0.75}, {.vt=VT_DECIMAL,.dblVal=-1.75},
+        {.vt=VT_DECIMAL,.dblVal=1.99}, {.vt=VT_DECIMAL,.dblVal=2147483647.5},
+        {.vt=VT_DECIMAL,.dblVal=-2147483648.5}, {.vt=VT_STR,.strVal=0}, {.vt=VT_EMPTY}};
+    for(size_t i=0;i<sizeof(cases)/sizeof(*cases);++i)
+    {
+        LONG expected = 1;
+        DOUBLE native;
+        actor.direction = 1;
+        if(decimal_conversion)
+        {
+            if(SUCCEEDED(ScriptVariant_DecimalValue(&cases[i], &native))) expected = (int)native;
+        }
+        else ScriptVariant_IntegerValue(&cases[i], &expected);
+        write_direction(&actor, &cases[i]);
+        assert(actor.direction == expected);
+    }
+}
+
+static void check_range(void)
+{
+    ScriptVariant origin = {.vt=VT_PTR,.ptrVal=&actor}, destination = {.vt=VT_PTR,.ptrVal=&target};
+    ScriptVariant animation = integer(2), value = integer(0), *result = &value;
+    ScriptVariant *args[] = {&origin, &destination, &animation};
+    actor.animnum = 4;
+    range_calls = 0;
+    assert(openbor_checkrange(args, &result, 2) == S_OK);
+    assert(range_calls == 1 && last_animation == 4 && result->vt == VT_INTEGER && result->lVal == 0);
+    assert(openbor_checkrange(args, &result, 3) == S_OK);
+    assert(range_calls == 2 && last_animation == 3 && result->lVal == 1);
+    animation = integer(7);
+    assert(openbor_checkrange(args, &result, 3) == E_FAIL && !result && range_calls == 2);
+}
+
+struct profile { uint32_t revision; int player_default_empty, decimal_direction; };
+
+static void check(const struct profile *p, uint32_t features)
+{
+    obor_profile_build = p->revision;
+    obor_profile_features = features;
+    check_player(p->player_default_empty);
+    check_direction(p->decimal_direction);
+    check_range();
+    printf("%u\n", p->revision);
+}
+
+int main(void)
+{
+    static const struct profile profiles[] = {@PROFILES@};
+    static const struct profile modified = @LNS@;
+    for(size_t i=0; i<sizeof(profiles)/sizeof(*profiles); ++i) check(&profiles[i], 0);
+    check(&modified, OBOR_PROFILE_LNS_6330);
+    return 0;
+}

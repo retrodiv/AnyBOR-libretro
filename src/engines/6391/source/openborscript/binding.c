@@ -4,7 +4,8 @@
  * These contributions are licensed under BSD-3-Clause; see LICENSE at the root.
  * Upstream code retains its original license and notices.
  * Map native legacy, 6412 and 6510 binding property names and IDs to the
- * shared layout.
+ * shared layout. Preserve boolean axis values and diagnostic sizes in 5134
+ * and 6119.
  * Existing changes recorded here; this is not their implementation date.
  * See MODIFICATIONS.md and docs/modifications/6391.md
  * at the source repository root. Original notices follow below.
@@ -93,6 +94,11 @@ int mapstrings_binding(ScriptVariant **varlist, int paramCount)
     #undef ARG_PROPERTY
 }
 
+static bool obor_profile_boolean_binding_axes(void)
+{
+    return obor_profile_build == 5134 || obor_profile_build == 6119;
+}
+
 static e_binding_properties profile_binding_property(LONG property)
 {
     static const e_binding_properties modern[] = {
@@ -156,8 +162,13 @@ HRESULT openbor_get_binding_property(ScriptVariant **varlist , ScriptVariant **p
         property    = profile_binding_property((LONG)varlist[ARG_PROPERTY]->lVal);
     }
 
-    printf("\n\n Size entity: %d", sizeof(entity));
-    printf("\n Size bind: %d", sizeof(s_bind));
+    const bool boolean_axes = obor_profile_boolean_binding_axes();
+    /* The original diagnostics report the selected profile's record layout. */
+    const size_t entity_bytes = boolean_axes ? (sizeof(void *) == 4 ? 2100 : 2304) : sizeof(entity);
+    const size_t binding_bytes = boolean_axes ? (sizeof(void *) == 4 ? 32 : 36) : sizeof(s_bind);
+
+    printf("\n\n Size entity: %zu", entity_bytes);
+    printf("\n Size bind: %zu", binding_bytes);
 
     switch(property)
     {
@@ -171,21 +182,21 @@ HRESULT openbor_get_binding_property(ScriptVariant **varlist , ScriptVariant **p
         case _BINDING_BIND_X:
 
             ScriptVariant_ChangeType(*pretvar, VT_INTEGER);
-            (*pretvar)->lVal = (LONG)handle->bind_toggle.x;
+            (*pretvar)->lVal = boolean_axes ? handle->bind_toggle.x != 0 : (LONG)handle->bind_toggle.x;
 
             break;
 
         case _BINDING_BIND_Y:
 
             ScriptVariant_ChangeType(*pretvar, VT_INTEGER);
-            (*pretvar)->lVal = (LONG)handle->bind_toggle.y;
+            (*pretvar)->lVal = boolean_axes ? handle->bind_toggle.y != 0 : (LONG)handle->bind_toggle.y;
 
             break;
 
         case _BINDING_BIND_Z:
 
             ScriptVariant_ChangeType(*pretvar, VT_INTEGER);
-            (*pretvar)->lVal = (LONG)handle->bind_toggle.z;
+            (*pretvar)->lVal = boolean_axes ? handle->bind_toggle.z != 0 : (LONG)handle->bind_toggle.z;
 
             break;
 
@@ -309,6 +320,7 @@ HRESULT openbor_set_binding_property(ScriptVariant **varlist, ScriptVariant **pr
     // Value carriers to apply on properties after
     // taken from argument.
     LONG         temp_int;
+    const bool boolean_axes = obor_profile_boolean_binding_axes();
 
     // Map string property name to a
     // matching integer constant.
@@ -346,7 +358,7 @@ HRESULT openbor_set_binding_property(ScriptVariant **varlist, ScriptVariant **pr
 
             if(SUCCEEDED(ScriptVariant_IntegerValue(varlist[ARG_VALUE], &temp_int)))
             {
-                handle->bind_toggle.x = temp_int;
+                handle->bind_toggle.x = boolean_axes ? temp_int != 0 : temp_int;
 
             }
 
@@ -356,7 +368,7 @@ HRESULT openbor_set_binding_property(ScriptVariant **varlist, ScriptVariant **pr
 
             if(SUCCEEDED(ScriptVariant_IntegerValue(varlist[ARG_VALUE], &temp_int)))
             {
-                handle->bind_toggle.y = temp_int;
+                handle->bind_toggle.y = boolean_axes ? temp_int != 0 : temp_int;
             }
 
             break;
@@ -365,7 +377,7 @@ HRESULT openbor_set_binding_property(ScriptVariant **varlist, ScriptVariant **pr
 
             if(SUCCEEDED(ScriptVariant_IntegerValue(varlist[ARG_VALUE], &temp_int)))
             {
-                handle->bind_toggle.z = temp_int;
+                handle->bind_toggle.z = boolean_axes ? temp_int != 0 : temp_int;
             }
 
             break;

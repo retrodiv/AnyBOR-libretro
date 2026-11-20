@@ -5,7 +5,10 @@
  * Upstream code retains its original license and notices.
  * Translate native entity property names, numeric IDs and animation values
  * for each logical profile. Map modified 6330 LNS entity properties without
- * changing the other profile namespaces.
+ * changing the other profile namespaces. Restore the native scalar position
+ * names, numbering and field access for 5134 and 6119. Translate the
+ * historical projectile request flags on typed reads and writes. Store typed
+ * animation direction as a boolean for 5134 and 6119.
  * Existing changes recorded here; this is not their implementation date.
  * See MODIFICATIONS.md and docs/modifications/6391.md
  * at the source repository root. Original notices follow below.
@@ -21,6 +24,11 @@
 
  #include "scriptcommon.h"
 #include "profile_ids.h"
+
+static bool obor_profile_scalar_entity_positions(void)
+{
+    return obor_profile_build == 5134 || obor_profile_build == 6119;
+}
 
 // Use string property argument to find an
 // integer property constant and populate
@@ -78,6 +86,52 @@ int mapstrings_entity_property(ScriptVariant **varlist, int paramCount)
     // functions.
     if(paramCount < ARG_MINIMUM)
     {
+        return 1;
+    }
+
+    if(obor_profile_scalar_entity_positions())
+    {
+        static const char *names[] = {
+            "ai_target_entity",
+            "animation_animating",
+            "animation_animation",
+            "animation_collection",
+            "animation_frame",
+            "arrow_on",
+            "attacking",
+            "attack_id_incoming",
+            "attack_id_outgoing",
+            "autokill",
+            "binding",
+            "blink",
+            "blocking",
+            "boomerang_loop",
+            "boss",
+            "charging",
+            "colorset_default",
+            "colorset_dying_health_1",
+            "colorset_dying_health_2",
+            "colorset_dying_index_1",
+            "colorset_dying_index_2",
+            "colorset_table",
+            "colorset_time",
+            "combo_step",
+            "combo_time",
+            "damage_on_landing",
+            "deduct_ammo",
+            "energy_status",
+            "player_index",
+            "position_alternate_base",
+            "position_base",
+            "position_direction",
+            "position_x",
+            "position_y",
+            "position_z",
+            "projectile_prime",
+            "spawn_type",
+        };
+        MAPSTRINGS(varlist[ARG_PROPERTY], names, (int)(sizeof(names) / sizeof(*names)),
+                   "\n\n Error: '%s' is not a known entity property.\n");
         return 1;
     }
 
@@ -156,6 +210,21 @@ int mapstrings_entity_property(ScriptVariant **varlist, int paramCount)
 
 static e_entity_properties profile_entity_property(LONG property)
 {
+    if(obor_profile_scalar_entity_positions())
+    {
+        static const e_entity_properties tail[] = {
+            _ENTITY_POSITION_DIRECTION, _ENTITY_POSITION_X, _ENTITY_POSITION_Y,
+            _ENTITY_POSITION_Z, _ENTITY_PROJECTILE_PRIME, _ENTITY_SPAWN_TYPE,
+        };
+
+        /* The original table inserts boomerang_loop at 13 and its scalar tail at 31. */
+        if(property < 0) return _ENTITY_END;
+        if(property < 13) return (e_entity_properties)property;
+        if(property == 13) return _ENTITY_BOOMERANG_LOOP;
+        if(property < 31) return (e_entity_properties)(property - 1);
+        return property - 31 < (LONG)(sizeof(tail) / sizeof(*tail))
+            ? tail[property - 31] : _ENTITY_END;
+    }
     if(obor_profile_build == 6330)
     {
         if(property == 13) return _ENTITY_BOOMERANG_LOOP;
@@ -467,6 +536,27 @@ HRESULT openbor_get_entity_property(ScriptVariant **varlist , ScriptVariant **pr
 
             break;
 
+        case _ENTITY_POSITION_X:
+
+            ScriptVariant_ChangeType(*pretvar, VT_DECIMAL);
+            (*pretvar)->dblVal = (DOUBLE)handle->position.x;
+
+            break;
+
+        case _ENTITY_POSITION_Y:
+
+            ScriptVariant_ChangeType(*pretvar, VT_DECIMAL);
+            (*pretvar)->dblVal = (DOUBLE)handle->position.y;
+
+            break;
+
+        case _ENTITY_POSITION_Z:
+
+            ScriptVariant_ChangeType(*pretvar, VT_DECIMAL);
+            (*pretvar)->dblVal = (DOUBLE)handle->position.z;
+
+            break;
+
         case _ENTITY_POSITION_DIRECTION:
 
             ScriptVariant_ChangeType(*pretvar, VT_INTEGER);
@@ -477,7 +567,7 @@ HRESULT openbor_get_entity_property(ScriptVariant **varlist , ScriptVariant **pr
         case _ENTITY_PROJECTILE_PRIME:
 
             ScriptVariant_ChangeType(*pretvar, VT_INTEGER);
-            (*pretvar)->lVal = (LONG)handle->projectile_prime;
+            (*pretvar)->lVal = (LONG)obor_projectile_prime_to_native(handle->projectile_prime);
 
             break;
 
@@ -567,7 +657,7 @@ HRESULT openbor_set_entity_property(ScriptVariant **varlist, ScriptVariant **pre
 
             if(SUCCEEDED(ScriptVariant_IntegerValue(varlist[ARG_VALUE], &temp_int)))
             {
-                handle->animating = temp_int;
+                handle->animating = (obor_profile_build == 5134 || obor_profile_build == 6119) ? (temp_int != 0) : temp_int;
             }
 
             break;
@@ -836,6 +926,33 @@ HRESULT openbor_set_entity_property(ScriptVariant **varlist, ScriptVariant **pre
 
             break;
 
+        case _ENTITY_POSITION_X:
+
+            if(SUCCEEDED(ScriptVariant_DecimalValue(varlist[ARG_VALUE], &temp_float)))
+            {
+                handle->position.x = temp_float;
+            }
+
+            break;
+
+        case _ENTITY_POSITION_Y:
+
+            if(SUCCEEDED(ScriptVariant_DecimalValue(varlist[ARG_VALUE], &temp_float)))
+            {
+                handle->position.y = temp_float;
+            }
+
+            break;
+
+        case _ENTITY_POSITION_Z:
+
+            if(SUCCEEDED(ScriptVariant_DecimalValue(varlist[ARG_VALUE], &temp_float)))
+            {
+                handle->position.z = temp_float;
+            }
+
+            break;
+
         case _ENTITY_POSITION_DIRECTION:
 
             if(SUCCEEDED(ScriptVariant_IntegerValue(varlist[ARG_VALUE], &temp_int)))
@@ -849,7 +966,7 @@ HRESULT openbor_set_entity_property(ScriptVariant **varlist, ScriptVariant **pre
 
             if(SUCCEEDED(ScriptVariant_IntegerValue(varlist[ARG_VALUE], &temp_int)))
             {
-                handle->projectile_prime = temp_int;
+                handle->projectile_prime = obor_projectile_prime_from_native(temp_int);
             }
 
             break;

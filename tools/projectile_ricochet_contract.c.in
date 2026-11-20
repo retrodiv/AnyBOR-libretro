@@ -1,0 +1,172 @@
+/* SPDX-License-Identifier: BSD-3-Clause
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me>
+ */
+#include <stdint.h>
+#include <stdio.h>
+#include "openbor.h"
+#include "profile_ids.h"
+#undef assert
+#undef printf
+#include <assert.h>
+
+static entity actor, obstacle;
+static s_anim motion;
+static s_anim *animations[MAX_ANIS];
+static s_terrain walls[2];
+static s_level stage = {.numwalls = 2, .walls = walls};
+s_level *level = &stage;
+entity *self = &actor;
+s_videomodes videomodes = {.hRes = 320};
+@DEFAULT_ATTACK@
+uint32_t obor_profile_build, obor_profile_features;
+u32 _time = 100;
+float advancex;
+
+static int wall_index, has_platform, fall_calls, platform_calls, kills;
+
+int testwall(int index, float x, float z)
+{
+    assert(x == actor.position.x && z == actor.position.z);
+    return index == wall_index;
+}
+
+entity *check_platform_between(float x, float z, float bottom, float top, entity *exclude)
+{
+    assert(x == actor.position.x && z == actor.position.z && exclude == self);
+    assert(bottom == actor.position.y && top == (int)(actor.position.y + 4));
+    ++platform_calls;
+    return has_platform ? &obstacle : NULL;
+}
+
+float randf(float max) { assert(max == 1); return 0.25f; }
+void common_fall(void) { assert(0); }
+void common_lie(void) { assert(0); }
+void kill_entity(entity *victim) { assert(victim == self); ++kills; }
+void ent_set_anim(entity *ent, int id, int resetable) { assert(0); }
+static void common_walk_anim(entity *ent) { assert(0); }
+static void common_up_anim(entity *ent) { assert(0); }
+static void common_down_anim(entity *ent) { assert(0); }
+entity *homing_find_target(int type) { assert(0); return NULL; }
+int check_projectile_wall_collision(entity *ent) { assert(0); return 0; }
+int check_lost(void) { assert(0); return 0; }
+void boomerang_initialize(entity *ent) { assert(0); }
+int boomerang_catch(entity *ent, float distance) { assert(0); return 0; }
+void sort_invert_by_parent(entity *ent, entity *parent) { assert(0); }
+
+int set_fall(entity *ent, entity *other, s_collision_attack *attack, int reset)
+{
+    assert(ent == self && other == self && reset == 0);
+    assert(ent->takeaction == common_fall && !ent->projectile);
+    assert(!ent->energy_status.health_current && !attack->attack_force);
+    ++fall_calls;
+    return 0;
+}
+
+@METHODS@
+
+typedef struct {
+    int wall, height, y, wall_enabled, platform_enabled, platform, fall, left;
+    int preceding_wall, later_wall, preceding_hit, later_hit;
+} ricochet_case;
+
+static void reset(const ricochet_case *test)
+{
+    actor = (entity){0};
+    motion = (s_anim){.numframes = 1, .size = {.y = test->left ? 0 : 4}};
+    animations[ANI_FALL] = test->fall ? &motion : NULL;
+    actor.modeldata.animation = animations;
+    actor.modeldata.animation_capacity = MAX_ANIS;
+    actor.animation = &motion;
+    actor.modeldata.subtype = SUBTYPE_NONE;
+    actor.modeldata.size.y = 4;
+    actor.modeldata.speed = 8;
+    actor.direction = test->left ? DIRECTION_LEFT : DIRECTION_RIGHT;
+    actor.velocity.x = test->left ? -8 : 8;
+    actor.position.x = 100;
+    actor.position.z = 10;
+    actor.position.y = test->y;
+    actor.base = 11;
+    actor.modeldata.falldie = 1;
+    actor.modeldata.subject_to_wall = test->wall_enabled;
+    actor.modeldata.subject_to_platform = test->platform_enabled;
+    actor.modeldata.no_adjust_base = 1;
+    actor.energy_status.health_current = 12;
+    actor.damage_on_landing.attack_force = 4;
+    actor.damage_on_landing.attack_type = ATK_NORMAL;
+    actor.projectile = 1;
+    actor.attacking = ATTACKING_ACTIVE;
+    actor.projectile_prime = test->left ? 0 : PROJECTILE_PRIME_BASE_FLOOR;
+    walls[0].height = walls[1].height = test->height;
+    wall_index = test->wall;
+    has_platform = test->platform;
+    fall_calls = platform_calls = kills = 0;
+}
+
+static void check_arrow(const ricochet_case *test, int preceding)
+{
+    const int hits = preceding ? test->preceding_hit : test->later_hit;
+    reset(test);
+    assert(check_block_wall(self) == (preceding ? test->preceding_wall : test->later_wall));
+    assert(arrow_move() == 1 && actor.autokill == (test->left ? 0 : 2));
+    assert(fall_calls == hits && platform_calls == (test->fall && test->platform_enabled));
+    assert(actor.velocity.x == (hits ? -2 : test->left ? -8 : 8));
+    assert(actor.energy_status.health_current == (hits ? 0 : 12));
+    assert(actor.projectile == !hits);
+    assert(actor.position.y == (hits ? test->y + 0.5f : test->y));
+    assert(actor.toss_time == (hits ? 101u : 0u));
+    assert(actor.velocity.y == (hits ? 2.75f : 0));
+    assert(actor.damage_on_landing.attack_force == (hits ? 0 : 4));
+    assert(actor.damage_on_landing.attack_type == (hits ? ATK_NONE : ATK_NORMAL));
+    const int reset_base = hits && !preceding;
+    assert(actor.base == (reset_base ? 0 : 11));
+    assert(actor.modeldata.subject_to_basemap == reset_base);
+    assert(actor.modeldata.subject_to_hole == reset_base);
+    assert(actor.modeldata.no_adjust_base == !reset_base);
+}
+
+static void check_star(int preceding)
+{
+    const ricochet_case wall = {.wall = 1, .height = 10, .y = 6, .wall_enabled = 1, .fall = 1};
+    reset(&wall);
+    assert(star_move() == 1 && fall_calls == 1);
+    assert(actor.takeaction == (preceding ? common_lie : common_fall));
+    assert(!kills);
+    reset(&wall);
+    actor.position.x = 401;
+    assert(star_move() == 0 && kills == 1 && !fall_calls);
+}
+
+static void check_obstacle_height(void)
+{
+    const ricochet_case platform = {.wall = -1, .y = 6, .platform_enabled = 1, .platform = 1, .fall = 1};
+    reset(&platform);
+    actor.position.y = 6.25f;
+    assert(check_block_obstacle(self) == &obstacle && platform_calls == 1);
+}
+
+static void check_boomerang_deflection(void)
+{
+    const ricochet_case wall = {.wall = 1, .height = 10, .y = 6, .wall_enabled = 1, .fall = 1};
+    reset(&wall);
+    actor.modeldata.nomove = 1;
+    assert(boomerang_move() == 1 && fall_calls == 1);
+    assert(actor.takeaction == common_fall && actor.base == 11);
+    assert(actor.velocity.x == -2 && actor.velocity.y == 2.75f);
+}
+
+int main(void)
+{
+    const struct { unsigned revision; int preceding; } profiles[] = {@PROFILES@};
+    const ricochet_case cases[] = {@CASES@};
+    for(size_t i = 0; i < sizeof(profiles) / sizeof(*profiles); ++i)
+    {
+        obor_profile_build = profiles[i].revision;
+        for(size_t j = 0; j < sizeof(cases) / sizeof(*cases); ++j)
+            check_arrow(&cases[j], profiles[i].preceding);
+        check_star(profiles[i].preceding);
+        check_obstacle_height();
+        if(profiles[i].preceding) check_boomerang_deflection();
+        printf("%u\n", obor_profile_build);
+    }
+    return 0;
+}

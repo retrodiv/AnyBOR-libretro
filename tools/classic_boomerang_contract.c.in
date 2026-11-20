@@ -1,0 +1,364 @@
+/* SPDX-License-Identifier: BSD-3-Clause
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me>
+ */
+#include <ctype.h>
+#include <stdint.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <strings.h>
+#include "openbor.h"
+#include "commands.h"
+#include "profile_ids.h"
+#undef printf
+#undef assert
+#include <assert.h>
+#ifndef stricmp
+#define stricmp strcasecmp
+#endif
+
+uint32_t obor_profile_build, obor_profile_features;
+static entity projectile, parent, owner;
+entity *self = &projectile, *textbox, *smartbomber;
+u32 _time;
+s_videomodes videomodes = {.hRes = 320};
+static s_level active_level;
+s_level *level = &active_level;
+float advancex, advancey;
+@LOSS_DEFAULTS@
+static s_anim catch_animation = {.numframes = 1};
+static s_anim *animations[MAX_ANIS];
+static entity *expected_catcher;
+static int expected_animation, catches, deflections;
+static int spawn_callbacks;
+
+void *checkAlloc(void *p, size_t size, const char *fn, const char *file, int line)
+{
+    assert(!size || p);
+    return p;
+}
+void borExit(int status) { abort(); }
+#include "List.c"
+
+int get_cached_model_index(char *name)
+{
+    if(!strcmp(name, "0.75")) return 21;
+    assert(!strcmp(name, "replacement"));
+    return 17;
+}
+
+void player_die(void) { abort(); }
+int projectile_wall_deflect(entity *ent)
+{
+    assert(ent == self);
+    ++deflections;
+    return 0;
+}
+int check_range_target_all(entity *ent, entity *target, e_animations id)
+{
+    assert(ent == expected_catcher && target == self && id == (e_animations)expected_animation);
+    return 1;
+}
+void common_animation_normal(void) { abort(); }
+void ent_set_anim(entity *ent, int id, int reset)
+{
+    assert(ent == expected_catcher && id == expected_animation && !reset);
+}
+void kill_entity(entity *target)
+{
+    assert(target == self);
+    ++catches;
+}
+
+int arrow_takedamage(entity *other, s_collision_attack *attack, int fall_flag) { abort(); }
+
+entity *spawn(float x, float z, float y, int direction, char *name, int index, s_model *model)
+{
+    assert(x == 12 && z == 23 && y == 4 && direction == DIRECTION_RIGHT);
+    assert(!name && index == 7 && !model);
+    return self;
+}
+
+void execute_onspawn_script(entity *ent)
+{
+    assert(ent == self && ent->parent == &parent && ent->playerindex == parent.playerindex);
+    ++spawn_callbacks;
+}
+
+@LOST@
+@METHODS@
+@COMMANDS@
+
+static int model_command(List *commands, s_model *newchar, char *arguments[])
+{
+    char filename[] = "fixture";
+    char *command = arguments[0], *value;
+#undef GET_ARG
+#define GET_ARG(n) arguments[n]
+    switch(getModelCommand(commands, command))
+    {
+        @MODEL@
+        default: return 0;
+    }
+#undef GET_ARG
+    return 1;
+}
+
+static void model_subtype(s_model *newchar, char *value)
+{
+    if(0) {}
+    @SUBTYPE@
+}
+
+static void model_aimove(s_model *newchar, char *value)
+{
+    if(0) {}
+    @AIMOVE@
+}
+
+static int animation_id(const char *value)
+{
+    int ani_id = -1;
+    if(0) {}
+    @ANIMATION@
+    return ani_id;
+}
+
+static int move_dispatch(int aimove)
+{
+    if(0) return -1;
+    @DISPATCH@
+    return 0;
+}
+
+static void default_damage(s_model *newchar)
+{
+    newchar->candamage = TYPE_PLAYER | TYPE_SHOT;
+    @DAMAGE@
+}
+
+static void initialize_projectile(entity *e)
+{
+    do
+    {
+        if(0) {}
+        @INITIALIZE@
+    } while(0);
+}
+
+static int default_drop(entity *e)
+{
+    int dodrop;
+    @DROP@
+    return dodrop;
+}
+
+static void land_velocity(void)
+{
+    if(0) {}
+    @LAND@
+}
+
+static int sprite_sort(entity *e)
+{
+    int sortid = e->sortid;
+    @DRAW@
+    return sortid;
+}
+
+static void check_callers(int classic)
+{
+    const int subtypes[] = {SUBTYPE_NONE, SUBTYPE_ARROW, SUBTYPE_BOOMERANG};
+    float frame[] = {0, 2, 3, 4, 0};
+    s_anim animation = {.spawnframe = frame, .summonframe = frame, .subentity = 7};
+    parent = (entity){.position = {.x = 10, .z = 20}, .animation = &animation,
+                      .direction = DIRECTION_RIGHT, .playerindex = 1};
+    active_level.scrolldir = SCROLL_UP;
+    for(size_t i = 0; i < sizeof(subtypes) / sizeof(*subtypes); ++i)
+    {
+        int subtype = subtypes[i];
+        int is_classic_projectile = subtype == SUBTYPE_ARROW || (classic && subtype == SUBTYPE_BOOMERANG);
+        projectile = (entity){.position.y = 9, .base = 17, .modeldata.subtype = subtype,
+                              .modeldata.type = TYPE_SHOT};
+        default_damage(&projectile.modeldata);
+        assert(projectile.modeldata.candamage ==
+               (TYPE_PLAYER | TYPE_SHOT | (is_classic_projectile ? TYPE_OBSTACLE : 0)));
+        initialize_projectile(self);
+        assert(projectile.energy_status.health_current == is_classic_projectile);
+        assert(projectile.modeldata.speed == (is_classic_projectile ? 2 : 0));
+        assert(projectile.base == (is_classic_projectile ? 9 : 17));
+        assert((projectile.takedamage == arrow_takedamage) == is_classic_projectile);
+        if(is_classic_projectile)
+        {
+            projectile.projectile_prime = PROJECTILE_PRIME_BASE_FLOOR;
+            initialize_projectile(self);
+            assert(projectile.base == 0);
+        }
+        assert(default_drop(self) == !is_classic_projectile);
+        spawn_callbacks = 0;
+        parent.subentity = NULL;
+        ent_spawn_ent(&parent);
+        assert(projectile.spawntype == SPAWN_TYPE_CMD_SPAWN && !parent.subentity);
+        assert(projectile.owner == (is_classic_projectile ? &parent : NULL));
+        projectile.owner = NULL;
+        ent_summon_ent(&parent);
+        assert(projectile.spawntype == SPAWN_TYPE_CMD_SUMMON && parent.subentity == self);
+        assert(projectile.owner == (is_classic_projectile ? &parent : NULL) && spawn_callbacks == 2);
+    }
+    active_level.scrolldir = 0;
+
+    s_move movement = {0};
+    s_move *frames[] = {&movement};
+    animation.move = frames;
+    projectile = (entity){.animation = &animation};
+    owner = (entity){.sortid = 50};
+    entity drawn = {.sortid = 20, .owner = &owner};
+    const int ai_modes[] = {0, AIMOVE1_STAR, AIMOVE1_BOOMERANG};
+    for(size_t i = 0; i < sizeof(ai_modes) / sizeof(*ai_modes); ++i)
+    {
+        projectile.modeldata.aimove = ai_modes[i];
+        projectile.velocity = (s_axis_principal_float){.x = 3, .y = -2, .z = 1};
+        land_velocity();
+        int retains_velocity = classic && ai_modes[i] == AIMOVE1_BOOMERANG;
+        assert(projectile.velocity.x == (retains_velocity ? 3 : 0));
+        assert(projectile.velocity.y == (retains_velocity ? -2 : 0));
+        assert(projectile.velocity.z == (retains_velocity ? 1 : 0));
+        assert(sprite_sort(&drawn) == (retains_velocity || ai_modes[i] == AIMOVE1_STAR ? 20 : 51));
+    }
+}
+
+static void check_model(int syntax, int boomerang_id, int touch_id)
+{
+    char command[] = "boomerang", values[] = "boomerangvalues", custom[] = "custboomerang";
+    char acceleration[] = "0.75", distance[] = "35.5", replacement[] = "replacement";
+    char *arguments[] = {command, syntax == 2 ? replacement : acceleration, distance};
+    s_model model = {.boomerang = -1, .bomb = 5};
+    List *commands = createModelCommandList();
+    assert(model_command(commands, &model, arguments) == !!syntax);
+    assert((getModelCommand(commands, custom) == CMD_MODEL_CUSTBOOMERANG) == (syntax == 2));
+    if(syntax == 2)
+    {
+        assert(model.boomerang == 17 && model.boomerang_prop.acceleration == 0);
+        arguments[0] = values;
+        arguments[1] = acceleration;
+        assert(model_command(commands, &model, arguments) == 1);
+    }
+    else
+    {
+        assert(model.boomerang == -1);
+        assert(getModelCommand(commands, values) != CMD_MODEL_BOOMERANGVALUES);
+    }
+    assert(model.boomerang_prop.acceleration == (syntax ? 0.75f : 0));
+    assert(model.boomerang_prop.hdistance == (syntax ? 35.5f : 0));
+    assert(model.bomb == (syntax == 1 ? 21 : 5));
+    model.aimove = -1;
+    model_subtype(&model, command);
+    assert((model.subtype == SUBTYPE_BOOMERANG) == !!syntax);
+    assert(model.aimove == (syntax ? AIMOVE1_BOOMERANG : (unsigned int)-1));
+    assert(model.offscreenkill == (syntax ? 200 : 0));
+    assert(model.subject_to_gravity == !!syntax && model.no_adjust_base == !!syntax);
+    assert(model.subject_to_minz == !!syntax && model.subject_to_maxz == !!syntax);
+    model.aimove = 0;
+    model_aimove(&model, command);
+    assert(model.aimove == (syntax ? AIMOVE1_BOOMERANG : 0));
+    projectile = (entity){.model = &model};
+    assert(!!is_projectile(self) == !!syntax);
+    assert(animation_id("getboomerang") == (syntax ? ANI_GETBOOMERANG : -1));
+    assert(animation_id("getboomeranginair") == (syntax ? ANI_GETBOOMERANGINAIR : -1));
+    if(syntax)
+    {
+        assert(obor_subtype_from_native(boomerang_id) == SUBTYPE_BOOMERANG);
+        assert(obor_subtype_to_native(SUBTYPE_BOOMERANG) == boomerang_id);
+    }
+    assert(obor_subtype_from_native(touch_id) == SUBTYPE_TOUCH);
+    assert(obor_subtype_to_native(SUBTYPE_TOUCH) == touch_id);
+    freeCommandList(commands);
+}
+
+static void check_motion(int syntax)
+{
+    parent = (entity){.position = {.x = 20, .z = 10}, .direction = DIRECTION_RIGHT, .sortid = 8};
+    owner = (entity){.position = {.x = 70, .z = 30, .y = 6}, .direction = DIRECTION_LEFT, .sortid = 50};
+    projectile = (entity){.parent = &parent, .owner = &owner};
+    projectile.modeldata.speed = 8;
+    projectile.modeldata.boomerang_prop.hdistance = 45;
+    projectile.modeldata.boomerang_prop.acceleration = 1;
+    if(!syntax)
+    {
+        assert(move_dispatch(AIMOVE1_BOOMERANG) == 0);
+        return;
+    }
+
+    entity *reference = syntax == 1 ? &parent : &owner;
+    reference->modeldata.type = TYPE_NPC;
+    projectile.modeldata.hostile = TYPE_NPC;
+    int direction = reference->direction == DIRECTION_RIGHT ? 1 : -1;
+    projectile.position.x = reference->position.x + direction * 10;
+    catches = deflections = 0;
+    assert(move_dispatch(AIMOVE1_BOOMERANG) == 1);
+    assert(projectile.direction == reference->direction && projectile.boomerang_loop == 1);
+    assert(projectile.velocity.x == direction * 8 && projectile.sortid == reference->sortid + 1);
+    assert(projectile.position.z == reference->position.z && projectile.position.y == reference->position.y);
+    assert(projectile.modeldata.noflip && projectile.modeldata.antigrab);
+    assert(projectile.modeldata.grabforce == -99999 && projectile.modeldata.offscreenkill == 80);
+    assert(projectile.modeldata.hostile == TYPE_ENEMY);
+    assert(deflections == 1 && catches == 0);
+
+    projectile.position.x = reference->position.x + direction * 45;
+    projectile.velocity.x = direction;
+    assert(move_dispatch(AIMOVE1_BOOMERANG) == 1);
+    assert(projectile.velocity.x == 0 && projectile.boomerang_loop == 2);
+    assert(projectile.sortid == reference->sortid - 1 && deflections == 2 && catches == 0);
+
+    animations[ANI_GETBOOMERANG] = animations[ANI_GETBOOMERANGINAIR] = &catch_animation;
+    reference->modeldata.animation = animations;
+    reference->modeldata.animation_capacity = MAX_ANIS;
+    reference->ducking = 1;
+    expected_catcher = reference;
+    expected_animation = syntax == 1 ? ANI_GETBOOMERANG : ANI_GETBOOMERANGINAIR;
+    projectile.position.x = reference->position.x;
+    projectile.velocity.x = -direction * 2;
+    assert(boomerang_catch(&projectile, 0) == 0);
+    projectile.position.x += direction * 10;
+    reference->inpain = 1;
+    assert(boomerang_catch(&projectile, 10) == 0);
+    reference->inpain = 0;
+    assert(move_dispatch(AIMOVE1_BOOMERANG) == 1);
+    assert(catches == 1 && reference->takeaction == common_animation_normal);
+    assert(reference->ducking == (syntax == 1));
+    if(syntax == 1)
+    {
+        projectile.parent = NULL;
+        projectile.position.z = 5;
+        projectile.position.y = 8;
+        boomerang_initialize(&projectile);
+        assert(projectile.position.z == 5 && projectile.position.y == 8);
+        assert(boomerang_catch(&projectile, 10) == 0 && catches == 1);
+        projectile.modeldata.offscreenkill = 80;
+        projectile.position.x = 400;
+        projectile.lifespancountdown = 0;
+        int prior_deflections = deflections;
+        assert(move_dispatch(AIMOVE1_BOOMERANG) == 1);
+        assert(projectile.lifespancountdown == -1 && catches == 1 && deflections == prior_deflections + 1);
+        assert(move_dispatch(AIMOVE1_BOOMERANG) == 0 && catches == 2);
+        assert(deflections == prior_deflections + 1);
+        projectile.position.x = 410;
+        projectile.lifespancountdown = 40;
+        assert(move_dispatch(AIMOVE1_BOOMERANG) == 0 && catches == 3);
+        assert(projectile.lifespancountdown == 40 && deflections == prior_deflections + 1);
+    }
+}
+
+int main(void)
+{
+    const struct { unsigned revision; int syntax, boomerang_id, touch_id; } rows[] = {@PROFILES@};
+    for(size_t i = 0; i < sizeof(rows) / sizeof(*rows); ++i)
+    {
+        obor_profile_build = rows[i].revision;
+        check_model(rows[i].syntax, rows[i].boomerang_id, rows[i].touch_id);
+        check_callers(!!rows[i].syntax);
+        check_motion(rows[i].syntax);
+        printf("%u\n", obor_profile_build);
+    }
+    return 0;
+}

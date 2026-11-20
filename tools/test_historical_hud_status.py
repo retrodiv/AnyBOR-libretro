@@ -4,6 +4,7 @@ SPDX-License-Identifier: BSD-3-Clause
 Copyright (c) 2026 retrodiv <retrodiv@proton.me>
 """
 import json
+import os
 from pathlib import Path
 import re
 import unittest
@@ -48,6 +49,44 @@ class HistoricalHudStatusTests(unittest.TestCase):
                 self.assertEqual(actual['revision'], row['revision'])
                 self.assertEqual(actual['overlay'], expected['overlay'])
                 self.assertEqual(actual['join'], expected['join'])
+
+    def test_6391_original_join_credit_prompt(self):
+        data = load_contract_fixture(FIXTURE.with_name('profile-6391-join-credit-prompt.json'))
+        rows = data['sources']
+        self.assertEqual({row['revision'] for row in rows}, contract_revisions(data, data['expected_revisions']))
+        engine = Path(os.environ.get('OBOR_HISTORICAL_ENGINE', ROOT / 'src/engines' / data['engine']))
+        source = (engine / 'openbor.c').read_text(encoding='latin1')
+        predraw = function(source, 'predrawstatus')
+        branch = re.search(r'(?ms)^        else (if\(player\[i\]\.credits \|\| credits \|\| '
+                           r'\(!player\[i\]\.hasplayed && noshare\)\).*?)(?=^    \}// end of for)', predraw)[1]
+        checks = []
+        for row in rows:
+            for case, expected in zip(data['cases'], data['messages'][row['family']], strict=True):
+                values = ','.join(str(value) for value in case)
+                checks.append(f'check({row["revision"]}u,{values},{json.dumps(expected)});')
+        template = Path(__file__).with_name('join_credit_prompt_contract.c.in').read_text()
+        code = template.replace('@CREDIT_BRANCH@', branch).replace('@CHECKS@', '\n    '.join(checks))
+        count = len(rows) * len(data['cases'])
+        self.assertEqual(native_output(code, data, engine_source=engine), f'PASS {count}\n')
+
+    def test_6391_original_performance_overlay(self):
+        from test_early_jump_walkoff import braced_statement
+        data = load_contract_fixture(FIXTURE.with_name('profile-6391-performance-overlay.json'))
+        rows = data['sources']
+        self.assertEqual({row['revision'] for row in rows}, contract_revisions(data, data['expected_revisions']))
+        engine = Path(os.environ.get('OBOR_HISTORICAL_ENGINE', ROOT / 'src/engines' / data['engine']))
+        source = (engine / 'openbor.c').read_text(encoding='latin1')
+        utilities = (engine / 'source/utils.c').read_text(encoding='latin1')
+        predraw = function(source, 'predrawstatus')
+        branch = braced_statement(predraw, 'if(savedata.debuginfo)')
+        contexts = ',\n'.join('{%du,%d,%d,%d,%d}' % (row['revision'], row['box_layer'], row['text_layer'],
+                                data['free_bytes'] // row['byte_divisor'], data['used_bytes'] // row['byte_divisor'])
+                                for row in rows)
+        template = Path(__file__).with_name('performance_overlay_contract.c.in').read_text()
+        code = (template.replace('@SUBJECT@', branch).replace('@FORMAT@', function(utilities, 'commaprint'))
+                .replace('@CONTEXTS@', contexts).replace('@FREE_BYTES@', str(data['free_bytes']))
+                .replace('@USED_BYTES@', str(data['used_bytes'])))
+        self.assertEqual(native_output(code, data, engine_source=engine), f'PASS {len(rows)}\n')
 
 
 if __name__ == '__main__':

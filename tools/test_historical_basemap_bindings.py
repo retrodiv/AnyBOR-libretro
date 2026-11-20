@@ -63,6 +63,8 @@ def program(data):
         if m is None: raise ValueError('Native integral basemap metadata required')
         types.append(m[0])
     registry = '\n'.join(function(script, n) for n in ('Script_GetFunctionName', 'Script_LoadSystemFunctions'))
+    if 'obor_has_computed_damage()' in registry:
+        registry = function(script, 'obor_has_computed_damage') + '\n' + registry
     selected = {'openbor_checkbasemap', 'openbor_checkbasemapindex'}
     symbols = sorted(set(re.findall(r'\(void\s*\*\)\s*(\w+)', registry)))
     if not selected <= set(symbols) or not 8 <= len(symbols) <= 512:

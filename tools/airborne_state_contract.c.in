@@ -1,0 +1,179 @@
+/* SPDX-License-Identifier: BSD-3-Clause
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me>
+ */
+#include <stdint.h>
+#include <stdio.h>
+#include "openbor.h"
+#undef assert
+#undef printf
+#include <assert.h>
+
+#if OBOR_ENGINE_BUILD == 6391
+#define FORCE damage_on_landing.attack_force
+#define DAMAGE last_damage_type
+#define HEALTH energy_status.health_current
+#define MAGIC energy_status.mp_current
+#define JUMP_ID jump.animation_id
+#define TICK _time
+#else
+#define FORCE damage_on_landing
+#define DAMAGE damagetype
+#define HEALTH health
+#define MAGIC mp
+#define JUMP_ID jump.id
+#define TICK time
+#endif
+
+uint32_t obor_profile_build, obor_profile_features;
+static entity actor;
+entity *self = &actor;
+static s_player player[MAX_PLAYERS];
+static s_level scene, *level = &scene;
+static unsigned int TICK = 100;
+static int autoland, noaircancel, healthcheat;
+static int selected, rise_type, can_pay;
+static unsigned int callback_keys, callback_state;
+static s_energycost cost = {.cost = 3};
+static s_anim action = {.numframes = 1, .energycost = &cost};
+static s_anim *animations[MAX_ANIS];
+
+void ent_set_anim(entity *ent, int animation, int reset)
+{
+    assert(ent == &actor && !reset && selected == -1);
+    selected = animation;
+    callback_state = actor.attacking;
+    callback_keys = player[0].playkeys;
+}
+
+int check_energy(e_cost_check which, int animation)
+{
+    assert(animation == ANI_JUMPSPECIAL);
+    return which == COST_CHECK_MP && can_pay;
+}
+
+int set_riseattack(entity *ent, int type, int reset)
+{
+    assert(ent == &actor && !reset && !actor.stalltime);
+    assert(actor.direction == DIRECTION_RIGHT && !(player[0].playkeys & FLAG_ATTACK));
+    rise_type = type;
+    return 1;
+}
+
+@FUNCTIONS@
+
+static void prepare(void)
+{
+    actor = (entity){0};
+    player[0] = (s_player){0};
+    actor.modeldata.animation = animations;
+    actor.modeldata.animation_capacity = MAX_ANIS;
+    actor.velocity.x = 1;
+    actor.velocity.y = 2;
+    actor.velocity.z = 3;
+    actor.HEALTH = 20;
+    actor.MAGIC = 10;
+    selected = rise_type = -1;
+    callback_keys = callback_state = 0;
+    noaircancel = 0;
+}
+
+static void check_fall(int landing)
+{
+    static const unsigned inputs[] = {0, FLAG_JUMP, FLAG_MOVEUP, FLAG_MOVEUP | FLAG_JUMP | FLAG_ATTACK};
+    for(autoland = 0; autoland <= 2; ++autoland)
+    {
+        for(size_t i = 0; i < sizeof(inputs) / sizeof(*inputs); ++i)
+        {
+            prepare();
+            actor.FORCE = 7;
+#if OBOR_ENGINE_BUILD == 6391
+            actor.damage_on_landing.attack_type = ATK_NORMAL2;
+#endif
+            player[0].keys = inputs[i];
+            player[0].playkeys = FLAG_SPECIAL;
+            player_fall_check();
+            assert(actor.FORCE == (i == 3 && autoland != 2 ? landing : 7));
+#if OBOR_ENGINE_BUILD == 6391
+            assert(actor.damage_on_landing.attack_type == ATK_NORMAL2);
+#endif
+            assert(player[0].keys == inputs[i] && player[0].playkeys == FLAG_SPECIAL);
+        }
+    }
+}
+
+static void check_air_actions(unsigned int attack)
+{
+    for(can_pay = 0; can_pay <= 1; ++can_pay)
+    {
+        prepare();
+        player[0].playkeys = FLAG_SPECIAL | FLAG_JUMP;
+        player_jump_check();
+        assert(selected == (can_pay ? ANI_JUMPSPECIAL : ANI_JUMPCANT));
+        assert(callback_state == (can_pay ? attack : 0) && (unsigned int)actor.attacking == callback_state);
+        assert(callback_keys == (unsigned)(can_pay ? FLAG_JUMP : FLAG_SPECIAL | FLAG_JUMP));
+        assert(actor.MAGIC == (can_pay ? 7 : 10) && actor.HEALTH == 20);
+        assert(actor.velocity.y == 0);
+        assert(actor.velocity.x == (can_pay ? 0 : 1) && actor.velocity.z == (can_pay ? 0 : 3));
+    }
+
+    static const unsigned directions[] = {0, FLAG_MOVEDOWN, FLAG_MOVEUP};
+    static const int expected[] = {ANI_JUMPATTACK, ANI_JUMPATTACK2, ANI_JUMPATTACK3};
+    for(size_t i = 0; i < sizeof(expected) / sizeof(*expected); ++i)
+    {
+        prepare();
+        player[0].playkeys = FLAG_ATTACK | FLAG_JUMP;
+        player[0].keys = directions[i];
+        player_jump_check();
+        assert(selected == expected[i] && callback_state == attack && callback_keys == FLAG_JUMP);
+        assert(actor.velocity.x == 1 && actor.velocity.y == 2 && actor.velocity.z == 3);
+    }
+
+    prepare();
+    noaircancel = actor.animating = 1;
+    actor.animnum = ANI_IDLE;
+    actor.JUMP_ID = ANI_JUMP;
+    player[0].playkeys = FLAG_ATTACK;
+    player_jump_check();
+    assert(selected == -1 && !actor.attacking && player[0].playkeys == FLAG_ATTACK);
+    actor.animnum = ANI_JUMP;
+    player_jump_check();
+    assert(selected == ANI_JUMPATTACK && (unsigned int)actor.attacking == attack && !player[0].playkeys);
+}
+
+static void check_rise_and_trap(unsigned int attack)
+{
+    for(int ready = 0; ready <= 1; ++ready)
+    {
+        prepare();
+        actor.staydown.riseattack_stall = TICK - ready;
+        actor.stalltime = 19;
+        actor.DAMAGE = ready ? 7 : 3;
+        player[0].playkeys = FLAG_ATTACK;
+        player[0].keys = FLAG_MOVEUP | FLAG_MOVERIGHT;
+        player_lie_check();
+        assert(rise_type == (ready ? 7 : -1));
+        assert(actor.stalltime == (ready ? 0 : 19));
+        assert(player[0].playkeys == (ready ? 0 : FLAG_ATTACK));
+    }
+
+    prepare();
+    actor.idling = 1;
+    trap_think();
+    assert((unsigned int)actor.attacking == attack && actor.idling && selected == -1);
+}
+
+int main(void)
+{
+    static const struct { uint32_t revision; unsigned int attack; int landing; } profiles[] = {@ROWS@};
+    animations[ANI_JUMPSPECIAL] = animations[ANI_JUMPCANT] = animations[ANI_RISEATTACK] = &action;
+    animations[ANI_JUMPATTACK] = animations[ANI_JUMPATTACK2] = animations[ANI_JUMPATTACK3] = &action;
+    for(size_t i = 0; i < sizeof(profiles) / sizeof(*profiles); ++i)
+    {
+        obor_profile_build = profiles[i].revision;
+        check_fall(profiles[i].landing);
+        check_air_actions(profiles[i].attack);
+        check_rise_and_trap(profiles[i].attack);
+        printf("%u\n", obor_profile_build);
+    }
+    return 0;
+}

@@ -1,0 +1,283 @@
+/* SPDX-License-Identifier: BSD-3-Clause
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me>
+ */
+#include <stdint.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <strings.h>
+#include "openbor.h"
+#include "commands.h"
+#include "profile_ids.h"
+#undef assert
+#undef printf
+#include <assert.h>
+#ifndef stricmp
+#define stricmp strcasecmp
+#endif
+
+uint32_t obor_profile_build, obor_profile_features;
+static entity actor, target;
+static entity *actors[] = {&actor, &target};
+entity **ent_list = actors;
+int ent_max = 2, max_collisons = 1;
+List theFunctionList;
+s_savedata savedata;
+static char trace[5];
+static size_t trace_size;
+
+void *checkAlloc(void *p, size_t size, const char *name, const char *file, int line)
+{
+    assert(!size || p);
+    return p;
+}
+
+void borExit(int status) { abort(); }
+
+#include "List.c"
+@COMMANDS@
+
+HRESULT openbor_get_entity_collision_collection(ScriptVariant **a, ScriptVariant **r, int n) { abort(); }
+HRESULT openbor_get_entity_collision_instance(ScriptVariant **a, ScriptVariant **r, int n) { abort(); }
+HRESULT openbor_get_entity_collision_property(ScriptVariant **a, ScriptVariant **r, int n) { abort(); }
+HRESULT openbor_set_entity_collision_property(ScriptVariant **a, ScriptVariant **r, int n) { abort(); }
+
+static const char *collision_function_name(void *functionRef)
+{
+    @REVERSE_DECLARATIONS@
+    if(!functionRef) return "<unknown function>";
+    @REVERSE@
+    return "<unknown function>";
+}
+
+static void register_collision_functions(void)
+{
+    @FORWARD@
+}
+
+static long collision_constant(const char *constname)
+{
+    struct { long lVal; } v = {-1};
+    if(!constname) return -1;
+    @CONSTANTS@
+    return v.lVal;
+}
+
+static int show_debug_row(void) { return !!(@DEBUG_DISPLAY@); }
+static int draw_debug(void) { return !!(@DEBUG_ENTRY@); }
+static int draw_entity_boxes(void) { return !!(@DEBUG_ENTITY_BOXES@); }
+
+static int debug_selection(int selector, int bothnewkeys)
+{
+    enum { ITEM_COL_ENTITY = 3 };
+    @DEBUG_SKIP@
+    switch(selector)
+    {
+        @DEBUG_TOGGLE@
+        default: break;
+    }
+    return selector;
+}
+
+static void observe(char step)
+{
+    assert(trace_size + 1 < sizeof(trace));
+    trace[trace_size++] = step;
+    trace[trace_size] = '\0';
+}
+
+void check_gravity(entity *ent) { assert(ent == &actor); observe('G'); }
+void check_move(entity *ent) { assert(ent == &actor); observe('M'); }
+void adjust_bind(entity *ent) { assert(ent == &actor); observe('B'); }
+
+static s_hitbox coords = {.x = 0, .width = 8, .height = 8, .z1 = -4, .z2 = 4};
+static s_collision_entity box = {.coords = &coords}, other_box = {.coords = &coords};
+static s_collision_entity *box_instance[] = {&box}, *other_instance[] = {&other_box};
+static s_collision_entity_list box_list = {.instance = box_instance, .obor_instance_capacity = 1};
+static s_collision_entity_list other_list = {.instance = other_instance, .obor_instance_capacity = 1};
+static s_collision_entity_list *box_frames[] = {&box_list}, *other_frames[] = {&other_list};
+static s_anim animation = {.numframes = 1, .collision_entity = box_frames};
+static s_anim other_animation = {.numframes = 1, .collision_entity = other_frames};
+static Script contact_script;
+static s_scripts contact_slots = {.onentitycollision_script = &contact_script};
+static ScriptVariant contact_locals[4];
+static int contact_enabled, contact_writes;
+
+void StrCache_Collect(int index) { abort(); }
+@VARIANTS@
+
+int Script_IsInitialized(Script *script)
+{
+    assert(script == &contact_script);
+    return contact_enabled;
+}
+
+int Script_Execute(Script *script)
+{
+    assert(script == &contact_script && contact_writes == 4);
+    assert(!actor.collided_entity && !target.collided_entity);
+    void *const expected[] = { &actor, &target, &box, &other_box };
+    for(int i = 0; i < 4; ++i)
+        assert(contact_locals[i].vt == VT_PTR && contact_locals[i].ptrVal == expected[i]);
+    observe('C');
+    return 0;
+}
+
+static void observe_contact_local(Script *script, const char *key, ScriptVariant *value)
+{
+    static const char *const names[] = {"self", "target", "self_ebox_handler", "target_ebox_handler"};
+    assert(script == &contact_script && contact_writes < 8);
+    int slot = contact_writes % 4;
+    assert(!strcmp(key, names[slot]));
+    if(contact_writes >= 4) assert(value->vt == VT_EMPTY);
+    contact_locals[slot] = *value;
+    ++contact_writes;
+}
+
+#undef Script_Set_Local_Variant
+#define Script_Set_Local_Variant observe_contact_local
+@METHODS@
+#undef Script_Set_Local_Variant
+
+size_t lcmHandleCommandScripts(ArgList *args, char *buf, Script *script, char *name, char *filename, int compile, int first)
+{
+    assert(args->count == 7 && !strcmp(args->args[0], name));
+    assert(*buf == 'e' && script && !strcmp(name, "onentitycollisionscript"));
+    assert(!strcmp(filename, "fixture") && compile == 1 && first == 0);
+    return 3;
+}
+
+static size_t read_model_command(List *commands, char *name, s_model *newchar, s_hitbox *result,
+                                 char *value, char *second)
+{
+    char filename[] = "fixture";
+    char buf[] = " event";
+    size_t pos = 1;
+    char *command = name;
+    ArgList arglist = {.count = 7, .args = {command, value, second, "3", "4", "5", "6"}};
+    s_hitbox ebox = *result;
+    switch(getModelCommand(commands, name))
+    {
+        @MODEL_CASES@
+        default: break;
+    }
+    *result = ebox;
+    return pos;
+}
+
+static void check_model(int supported)
+{
+    static const char *const names[] = {"ebox", "ebox.index", "ebox.position.x", "ebox.position.y",
+        "ebox.size.x", "ebox.size.y", "ebox.size.z.1", "ebox.size.z.2", "eboxz",
+        "entitypushing", "pushingfactor", "onentitycollisionscript"};
+    const modelCommands ids[] = {CMD_MODEL_EBOX, CMD_MODEL_EBOX_INDEX, CMD_MODEL_EBOX_POSITION_X,
+        CMD_MODEL_EBOX_POSITION_Y, CMD_MODEL_EBOX_SIZE_X, CMD_MODEL_EBOX_SIZE_Y, CMD_MODEL_EBOX_SIZE_Z_1,
+        CMD_MODEL_EBOX_SIZE_Z_2, CMD_MODEL_EBOXZ, CMD_MODEL_ENTITYPUSHING, CMD_MODEL_PUSHINGFACTOR,
+        CMD_MODEL_ONENTITYCOLLISIONSCRIPT};
+    List *commands = createModelCommandList();
+    char name[32];
+    for(size_t i = 0; i < sizeof(ids) / sizeof(*ids); ++i)
+    {
+        assert(strlen(names[i]) < sizeof(name));
+        strcpy(name, names[i]);
+        assert(getModelCommand(commands, name) == (supported ? ids[i] : 0));
+    }
+    Script script = {0};
+    s_scripts scripts = {.onentitycollision_script = &script};
+    s_model model = {.scripts = &scripts};
+    s_hitbox result = {0};
+    read_model_command(commands, strcpy(name, "ebox"), &model, &result, "1", "2");
+    assert(result.x == supported && result.y == 2 * supported && result.width == 3 * supported);
+    assert(result.height == 4 * supported && result.z1 == 5 * supported && result.z2 == 6 * supported);
+    for(size_t i = 1; i < 9; ++i)
+        read_model_command(commands, strcpy(name, names[i]), &model, &result, "9", "7");
+    assert(result.x == 9 * supported && result.y == 9 * supported && result.width == 9 * supported);
+    assert(result.height == 9 * supported && result.z1 == 9 * supported && result.z2 == 7 * supported);
+    read_model_command(commands, strcpy(name, "entitypushing"), &model, &result, "1", "");
+    read_model_command(commands, strcpy(name, "pushingfactor"), &model, &result, "0.5", "");
+    assert(model.entitypushing == supported && model.pushingfactor == (supported ? 0.5f : 0));
+    assert(read_model_command(commands, strcpy(name, "onentitycollisionscript"), &model, &result, "", "") ==
+           (supported ? 4u : 1u));
+    freeCommandList(commands);
+}
+
+static void check_script(int supported)
+{
+    static const char *const names[] = {"get_entity_collision_collection", "get_entity_collision_instance",
+                                       "get_entity_collision_property", "set_entity_collision_property"};
+    void *ids[] = {(void *)openbor_get_entity_collision_collection, (void *)openbor_get_entity_collision_instance,
+                   (void *)openbor_get_entity_collision_property, (void *)openbor_set_entity_collision_property};
+    List_Init(&theFunctionList);
+    register_collision_functions();
+    for(size_t i = 0; i < sizeof(ids) / sizeof(*ids); ++i)
+    {
+        Node *row = List_GetNodeByName(&theFunctionList, names[i]);
+        assert(supported ? (row && row->value == ids[i]) : !row);
+        assert(!strcmp(collision_function_name(ids[i]), supported ? names[i] : "<unknown function>"));
+    }
+    List_Clear(&theFunctionList);
+    assert(collision_constant("ENTITY_COLLISION_PROP_COORDINATES") == (supported ? ENTITY_COLLISION_PROP_COORDINATES : -1));
+    assert(collision_constant("ENTITY_COLLISION_PROP_TAG") == (supported ? ENTITY_COLLISION_PROP_TAG : -1));
+    assert(show_debug_row() == supported);
+    savedata = (s_savedata){0};
+    assert(debug_selection(3, FLAG_MOVEUP) == (supported ? 3 : 2));
+    assert(savedata.debug_collision_entity == supported);
+    assert(draw_debug() == supported);
+    assert(debug_selection(3, 0) == (supported ? 3 : 4));
+    assert(!savedata.debug_collision_entity && !draw_debug());
+    savedata.debug_collision_entity = 1;
+    assert(draw_debug() == supported);
+    savedata.debug_collision_body = 1;
+    assert(draw_debug() && draw_entity_boxes() == supported);
+}
+
+static void check_phases(int supported)
+{
+    const struct { float x, z, movement, factor, moved_x, moved_z; int pushes, link, hit, script; } cases[] = {
+        {12, 20, 1.5f, 0, 0, 0, 0, 0, 1, 1},
+        {12, 20, 1.5f, 0, 0.5f, 0, 1, 0, 1, 1},
+        {12, 20, 1.5f, 0.5f, 1, 0, 1, 0, 1, 1},
+        {6, 20, -1.5f, 0.5f, -1, 0, 1, 0, 1, 1},
+        {12, 16, 1.5f, 0.5f, 1, 0.5f, 1, 0, 1, 1},
+        {12, 24, 1.5f, 0.5f, 1, -0.5f, 1, 0, 1, 1},
+        {100, 20, 1.5f, 0.5f, 1.5f, 0, 1, 0, 0, 1},
+        {12, 20, 1.5f, 0.5f, 1.5f, 0, 1, 1, 0, 1},
+        {12, 20, 1.5f, 0.5f, 1, 0, 1, 0, 1, 0},
+    };
+    for(size_t i = 0; i < sizeof(cases) / sizeof(*cases); ++i)
+    {
+        actor = (entity){.animation = &animation, .exists = 1, .direction = DIRECTION_RIGHT,
+                         .position.x = 10, .position.z = 20, .movex = cases[i].movement,
+                         .modeldata.entitypushing = cases[i].pushes, .modeldata.pushingfactor = cases[i].factor,
+                         .scripts = &contact_slots};
+        target = (entity){.animation = &other_animation, .exists = 1, .direction = DIRECTION_RIGHT,
+                          .position.x = cases[i].x, .position.z = cases[i].z};
+        if(cases[i].link) target.link = &actor;
+        trace_size = 0;
+        contact_enabled = cases[i].script;
+        contact_writes = 0;
+        ent_post_update(&actor);
+        int hit = supported && cases[i].hit;
+        int callback = hit && contact_enabled;
+        assert(!strcmp(trace, callback ? "GCMB" : "GMB"));
+        assert(contact_writes == (callback ? 8 : 0));
+        assert(actor.collided_entity == (hit ? &target : NULL));
+        assert(target.collided_entity == (hit ? &actor : NULL));
+        assert(actor.movex == (supported ? cases[i].moved_x : cases[i].movement));
+        assert(actor.movez == (supported ? cases[i].moved_z : 0));
+    }
+}
+
+int main(void)
+{
+    static const struct { unsigned revision; int supported; } rows[] = {@ROWS@};
+    for(size_t i = 0; i < sizeof(rows) / sizeof(*rows); ++i)
+    {
+        obor_profile_build = rows[i].revision;
+        check_model(rows[i].supported);
+        check_script(rows[i].supported);
+        check_phases(rows[i].supported);
+        printf("%u\n", rows[i].revision);
+    }
+    return 0;
+}

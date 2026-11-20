@@ -1,0 +1,341 @@
+/* SPDX-License-Identifier: BSD-3-Clause
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me>
+ */
+#include <stdint.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include "openbor.h"
+#undef printf
+#undef assert
+#include <assert.h>
+
+#if OBOR_ENGINE_BUILD == 4432
+#define HEALTH health
+#define BOSS_COUNT bosses
+#else
+#include "profile_ids.h"
+#define HEALTH energy_status.health_current
+#define BOSS_COUNT bossescount
+static s_item_properties carried;
+#endif
+
+uint32_t obor_profile_build, obor_profile_features;
+s_savedata savedata;
+static s_level stage;
+s_level *level = &stage;
+static entity actor, opponent;
+entity *self = &actor;
+static uint32_t fixture_clock;
+int level_completed, level_completed_defeating_boss;
+static int players, player_queries, drops, enemies_killed, self_kills, sounds, scores;
+
+int count_ents(int type)
+{
+    assert(type == TYPE_PLAYER);
+    ++player_queries;
+    return players;
+}
+
+entity *drop_item(entity *ent)
+{
+    assert(ent == self && self->dead && self->nograb && !self->idling);
+    ++drops;
+    return NULL;
+}
+
+void kill_all_enemies(void)
+{
+    assert(self->dead && !self->boss && !level_completed);
+    ++enemies_killed;
+}
+
+void addscore(int player_index, int points)
+{
+    assert(self->dead && player_index == 2 && points == 15 && !sounds);
+    ++scores;
+}
+
+int sound_play_sample(int sample, unsigned int priority, int left, int right, unsigned int speed)
+{
+    assert(sample == 7 && !priority && left == 50 && right == 50 && speed == 100);
+    assert(scores == 1 && self->nograb && !self->idling);
+    ++sounds;
+    return 0;
+}
+
+static void engine_self_kill(entity *ent)
+{
+    assert(ent == self);
+    ++self_kills;
+}
+
+@CHECK_DEATH@
+
+#undef kill
+#undef time
+#undef _time
+#define kill engine_self_kill
+#define kill_entity engine_self_kill
+#define time fixture_clock
+#define _time fixture_clock
+@SUICIDE@
+#undef kill
+#undef kill_entity
+#undef time
+#undef _time
+
+#if OBOR_ENGINE_BUILD == 6391
+#include "ScriptVariant.h"
+
+const s_collision_attack emptyattack;
+s_axis_principal_float default_model_dropv = {.x = 2, .y = 3, .z = 4};
+int max_attack_types = MAX_ATKS;
+static entity target;
+static entity *entities[] = {&target};
+entity **ent_list = entities;
+int ent_max = 1;
+static int damage_calls, native_attack_type;
+
+static int observe_damage(entity *cause, s_collision_attack *attack, int blocked)
+{
+    assert(cause == &actor && self == &target && !blocked);
+    assert(attack->attack_force == 25 && attack->dropv.x == 2);
+    assert(attack->dropv.y == 3 && attack->dropv.z == 4);
+    native_attack_type = obor_attack_to_native(attack->attack_type);
+    ++damage_calls;
+    return 1;
+}
+
+#define kill_all_enemies clear_enemies
+@CLEAR_ENEMIES@
+#undef kill_all_enemies
+
+static void check_clear_enemies(int expected_type)
+{
+    self = &actor;
+    target = (entity){.exists = 1, .modeldata.type = TYPE_ENEMY,
+                      .energy_status.health_current = 25, .takedamage = observe_damage};
+    damage_calls = 0;
+    clear_enemies();
+    assert(damage_calls == 1 && native_attack_type == expected_type);
+    assert(self == &actor && target.dead);
+}
+
+static s_spawn_entry spawnentry;
+
+entity *smartspawn(s_spawn_entry *entry)
+{
+    assert(entry == &spawnentry);
+    return &target;
+}
+
+void ScriptVariant_ChangeType(ScriptVariant *value, VARTYPE type)
+{
+    value->vt = type;
+}
+
+void ScriptVariant_Clear(ScriptVariant *value)
+{
+    *value = (ScriptVariant){0};
+}
+
+@SCRIPT_SPAWN@
+
+static void check_scripted_boss_spawn(int later)
+{
+    ScriptVariant result = {0}, *out = &result;
+    level = &stage;
+    stage.bossescount = 3;
+    stage.numbosses = 6;
+    for(int boss = 0; boss <= 1; ++boss)
+    {
+        spawnentry.boss = boss;
+        assert(openbor_spawn(NULL, &out, 0) == S_OK);
+        assert(out == &result && result.vt == VT_PTR && result.ptrVal == &target);
+        assert(stage.bossescount == 3 + boss && stage.numbosses == 6 + (boss && later));
+    }
+    level = NULL;
+    assert(openbor_spawn(NULL, &out, 0) == S_OK);
+    assert(stage.bossescount == 4 && stage.numbosses == 6 + later);
+    level = &stage;
+}
+
+s_player player[MAX_PLAYERS];
+int endgame;
+static entity winner;
+static unsigned poses;
+
+void ent_set_anim(entity *ent, int animation, int reset_anim)
+{
+    assert(ent == &winner && self == ent && animation == ANI_VICTORY && !reset_anim);
+    ++poses;
+    ent->animnum = animation;
+}
+
+#undef validanim
+#define validanim(ent, animation) ((ent) == &winner && (animation) == ANI_VICTORY)
+@VICTORY@
+#undef validanim
+
+entity *findent(int type)
+{
+    assert(type == TYPE_ENEMY || type == TYPE_ENDLEVEL);
+    return NULL;
+}
+
+static void finish_level(void)
+{
+    @FINISH@
+}
+
+static void reset_level_completion(void)
+{
+    @RESET@
+}
+#endif
+
+static void reset(int type)
+{
+    actor = (entity){.idling = 1, .modeldata.diesound = -1};
+    actor.modeldata.type = type;
+#if OBOR_ENGINE_BUILD == 6391
+    actor.ducking = DUCK_ACTIVE;
+#endif
+    stage.BOSS_COUNT = 0;
+    level_completed = level_completed_defeating_boss = 0;
+    players = player_queries = drops = enemies_killed = self_kills = sounds = scores = 0;
+}
+
+static void check_item_gate(void)
+{
+    const int indices[] = {-1, 17, 0};
+    for(unsigned i = 0; i < sizeof(indices) / sizeof(indices[0]); ++i)
+        for(int threshold = 0; threshold <= 3; ++threshold)
+            for(int count = 0; count <= 4; ++count)
+            {
+                reset(TYPE_ENEMY);
+                players = count;
+#if OBOR_ENGINE_BUILD == 4432
+                actor.item = indices[i] < 0 ? 0 : indices[i];
+                actor.itemplayer_count = threshold;
+                const int present = actor.item != 0;
+#else
+                const int present = indices[i] >= 0;
+                carried.index = indices[i];
+                carried.player_count = threshold;
+                actor.item_properties = present ? &carried : NULL;
+#endif
+                checkdeath();
+                assert(actor.dead && actor.nograb && !actor.idling);
+                assert(player_queries == present && drops == (present && count > threshold));
+                assert(!enemies_killed && !level_completed && !level_completed_defeating_boss);
+            }
+}
+
+static void check_boss_gate(int later)
+{
+    const int types[] = {TYPE_ENEMY, TYPE_NPC};
+    for(unsigned i = 0; i < sizeof(types) / sizeof(types[0]); ++i)
+        for(int count = -1; count <= 2; ++count)
+        {
+            reset(types[i]);
+            actor.boss = 1;
+            stage.BOSS_COUNT = count;
+            checkdeath();
+            const int finish = types[i] == TYPE_ENEMY && (later ? count <= 1 : count == 1);
+            assert(actor.dead && !actor.boss && stage.BOSS_COUNT == count - 1);
+            assert(enemies_killed == finish && level_completed == finish);
+            assert(level_completed_defeating_boss == (finish && later));
+#if OBOR_ENGINE_BUILD == 6391
+            assert(actor.ducking == (later ? DUCK_INACTIVE : DUCK_ACTIVE));
+#endif
+            checkdeath();
+            assert(stage.BOSS_COUNT == count - 1 && enemies_killed == finish);
+        }
+}
+
+static void check_health_and_rewards(void)
+{
+    reset(TYPE_ENEMY);
+    opponent = (entity){.playerindex = 2, .modeldata.type = TYPE_PLAYER};
+    actor.HEALTH = 1;
+    actor.opponent = &opponent;
+    actor.modeldata.score = 15;
+    actor.modeldata.diesound = 7;
+    savedata.effectvol = 50;
+    checkdeath();
+    assert(!actor.dead && !actor.nograb && actor.idling && !scores && !sounds);
+
+    actor.HEALTH = 0;
+    checkdeath();
+    assert(actor.dead && actor.nograb && !actor.idling && scores == 1 && sounds == 1);
+}
+
+static void check_delayed_suicide(int later)
+{
+    for(int boss = 0; boss <= 1; ++boss)
+    {
+        reset(TYPE_ENEMY);
+        actor.boss = boss;
+        actor.stalltime = 7;
+        fixture_clock = 6;
+        suicide();
+        assert(!self_kills && !level_completed && !level_completed_defeating_boss);
+
+        fixture_clock = 7;
+        suicide();
+        assert(self_kills == 1 && level_completed == boss);
+        assert(level_completed_defeating_boss == (boss && later));
+    }
+}
+
+#if OBOR_ENGINE_BUILD == 6391
+static void check_victory(int later)
+{
+    reset(TYPE_ENEMY);
+    actor.boss = 1;
+    stage.BOSS_COUNT = 1;
+    checkdeath();
+    winner = (entity){.base = 2, .position.y = 2, .idling = IDLING_ACTIVE,
+                      .animnum = ANI_IDLE, .velocity = {.x = 3, .z = 4}};
+    player[2].ent = &winner;
+    endgame = 0;
+    poses = 0;
+    finish_level();
+    assert(self == &actor && poses == (unsigned)later && endgame == !later);
+    assert(winner.animnum == (later ? ANI_VICTORY : ANI_IDLE));
+    assert(winner.velocity.x == (later ? 0 : 3) && winner.velocity.z == (later ? 0 : 4));
+    if(later)
+    {
+        winner.animating = 1;
+        finish_level();
+        assert(poses == 1 && !endgame && self == &actor);
+    }
+    reset_level_completion();
+    assert(!level_completed && !level_completed_defeating_boss);
+}
+#endif
+
+int main(void)
+{
+    const struct {uint32_t revision; int later_completion;} rows[] = {@ROWS@};
+    for(unsigned i = 0; i < sizeof(rows) / sizeof(rows[0]); ++i)
+    {
+        obor_profile_build = rows[i].revision;
+        check_boss_gate(rows[i].later_completion);
+        check_item_gate();
+        check_health_and_rewards();
+        check_delayed_suicide(rows[i].later_completion);
+#if OBOR_ENGINE_BUILD == 6391
+        check_victory(rows[i].later_completion);
+        check_clear_enemies(rows[i].later_completion ? ATK_NORMAL : MAX_ATKS - 2);
+        check_scripted_boss_spawn(rows[i].later_completion);
+#endif
+        printf("%u\n", obor_profile_build);
+    }
+#if OBOR_ENGINE_BUILD == 6391
+    obor_profile_build = 6510;
+    check_clear_enemies(15);
+#endif
+    return 0;
+}

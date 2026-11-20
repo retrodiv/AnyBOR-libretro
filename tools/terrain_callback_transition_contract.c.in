@@ -1,0 +1,213 @@
+/* SPDX-License-Identifier: BSD-3-Clause
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me>
+ */
+#include <stdint.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include "openbor.h"
+#undef assert
+#undef printf
+#include <assert.h>
+
+enum terrain_event { AT_WALL_X, AT_WALL_Z, IN_HOLE };
+enum local_key { LOCAL_SELF, LOCAL_PLANE, LOCAL_HEIGHT, LOCAL_INDEX, LOCAL_DEPTH, LOCAL_TYPE, LOCAL_COUNT };
+uint32_t obor_profile_build, obor_profile_features;
+static entity actor;
+entity *self = &actor;
+static Script script;
+static s_scripts script_slots = {.onblockw_script = &script, .inhole_script = &script};
+static s_terrain walls[6] = {
+    [3] = {.height = 12.5f, .depth = 7.3f, .type = 5},
+    [5] = {.height = 12.5f, .depth = 7.2f, .type = 6},
+};
+static s_terrain holes[4] = {[3] = {.height = -8.5f, .depth = 7.3f, .type = -6}};
+static s_level test_level = {.walls = walls, .holes = holes};
+s_level *level = &test_level;
+static ScriptVariant locals[LOCAL_COUNT];
+static const s_terrain *expected_terrain;
+static const float *axis_direction;
+static const int *wall_hit;
+static int path, record, axis_x, axis_z, expected_index, expected_plane, expected_hit;
+static int initialized, result_index, lookups, installed, executed, cleared;
+
+void StrCache_Collect(int index) { abort(); }
+#if OBOR_ENGINE_BUILD == 4432
+int StrCache_Pop(void) { abort(); }
+#endif
+@VARIANTS@
+
+static void observe_local(Script *value, const char *name, ScriptVariant *variant)
+{
+    static const char *const keys[] = {"self", "plane", "height", "index", "depth", "type"};
+    static const int wall_record[] = {LOCAL_SELF, LOCAL_HEIGHT, LOCAL_DEPTH, LOCAL_TYPE, LOCAL_INDEX, LOCAL_PLANE};
+    static const int hole_record[] = {LOCAL_SELF, LOCAL_HEIGHT, LOCAL_DEPTH, LOCAL_TYPE, LOCAL_INDEX};
+    static const int hole_cleanup[] = {LOCAL_SELF, LOCAL_HEIGHT, LOCAL_INDEX, LOCAL_DEPTH, LOCAL_TYPE};
+    assert(value == &script);
+    const int position = executed ? cleared++ : installed++;
+    assert(position < (record && path == IN_HOLE ? LOCAL_COUNT - 1 : LOCAL_COUNT));
+    int key = position;
+    if(record && path == IN_HOLE) key = (executed ? hole_cleanup : hole_record)[position];
+    else if(record && !executed) key = wall_record[position];
+    assert(!strcmp(keys[key], name));
+    if(executed) assert(variant->vt == VT_EMPTY);
+    locals[key] = *variant;
+}
+
+int Script_IsInitialized(Script *value)
+{
+    assert(value == &script);
+    return initialized;
+}
+
+int Script_Execute(Script *value)
+{
+    assert(value == &script && !executed && !cleared);
+    assert(installed == (record && path == IN_HOLE ? LOCAL_COUNT - 1 : LOCAL_COUNT));
+    assert(locals[LOCAL_SELF].vt == VT_PTR && locals[LOCAL_SELF].ptrVal == &actor);
+    assert(locals[LOCAL_HEIGHT].vt == VT_DECIMAL && locals[LOCAL_HEIGHT].dblVal == expected_terrain->height);
+    assert(locals[LOCAL_INDEX].vt == VT_INTEGER && locals[LOCAL_INDEX].lVal == expected_index);
+    assert(locals[LOCAL_PLANE].vt == VT_INTEGER && locals[LOCAL_PLANE].lVal == expected_plane);
+    assert(locals[LOCAL_TYPE].vt == VT_INTEGER && locals[LOCAL_TYPE].lVal == expected_terrain->type);
+    const double depth = expected_terrain->depth;
+    if(record)
+    {
+        assert(locals[LOCAL_DEPTH].vt == VT_DECIMAL && locals[LOCAL_DEPTH].dblVal == depth);
+    }
+    else
+    {
+        LONG tagged_value;
+        memcpy(&tagged_value, &depth, sizeof(tagged_value));
+        assert(locals[LOCAL_DEPTH].vt == VT_INTEGER && locals[LOCAL_DEPTH].lVal == tagged_value);
+    }
+    assert(actor.position.x == 20 && actor.position.z == 30);
+    if(path != IN_HOLE) assert(*axis_direction == 0 && *wall_hit == expected_hit);
+    ++executed;
+    locals[LOCAL_INDEX].lVal = -77;
+    return 0;
+}
+
+#undef Script_Set_Local_Variant
+#define Script_Set_Local_Variant observe_local
+@CALLBACKS@
+#undef Script_Set_Local_Variant
+
+int checkwall_below(float x, float z, float a)
+{
+    assert(path != IN_HOLE && a > 10000);
+    assert(x == (path == AT_WALL_X ? 24 : 20) && z == (path == AT_WALL_Z ? 34 : 30));
+    ++lookups;
+    return result_index;
+}
+
+int checkholeindex_in(float x, float z, float a)
+{
+    assert(path == IN_HOLE && x == 20 && z == 30 && a == 5);
+    ++lookups;
+    return result_index;
+}
+
+static float contact_wall(float xdir, float zdir)
+{
+    float x = self->position.x + xdir, z = self->position.z + zdir;
+    int wall, hit = 0;
+    axis_direction = path == AT_WALL_X ? &xdir : &zdir;
+    wall_hit = &hit;
+    @WALLS@
+    assert(hit == expected_hit);
+    wall_hit = NULL;
+    axis_direction = NULL;
+    return xdir + zdir;
+}
+
+static void contact_hole(int hole)
+{
+    @HOLE@
+}
+
+static void reset(int enabled, int index)
+{
+    actor = (entity){.scripts = &script_slots, .position.x = 20, .position.y = 5, .position.z = 30, .falling = 1};
+    initialized = enabled;
+    result_index = index;
+    lookups = installed = executed = cleared = 0;
+    for(int key = 0; key < LOCAL_COUNT; ++key)
+        locals[key] = (ScriptVariant){.vt = VT_INTEGER, .lVal = 99};
+}
+
+static void verify(int called)
+{
+    const int fields = record && path == IN_HOLE ? LOCAL_COUNT - 1 : LOCAL_COUNT;
+    assert(executed == called && installed == called * fields && cleared == installed);
+    for(int key = 0; key < LOCAL_COUNT; ++key)
+    {
+        if(called && !(record && path == IN_HOLE && key == LOCAL_PLANE)) assert(locals[key].vt == VT_EMPTY);
+        else assert(locals[key].vt == VT_INTEGER && locals[key].lVal == 99);
+    }
+}
+
+static void check_walls(void)
+{
+    static const struct { int enabled, found, move, equal_height, match, blocked; } cases[] = {
+        {1, 1, 1, 0, 1, 1},
+        {0, 1, 1, 0, 1, 1},
+        {1, 1, 1, 1, 1, 0},
+        {1, 0, 1, 0, 1, 0},
+        {1, 1, 0, 0, 1, 0},
+        {1, 1, 1, 0, 0, 1},
+    };
+    for(path = AT_WALL_X; path <= AT_WALL_Z; ++path)
+    {
+        const int slot = path == AT_WALL_X ? 3 : 5;
+        const int axis = path == AT_WALL_X ? axis_x : axis_z;
+        expected_plane = record ? slot : axis;
+        expected_index = record ? axis : slot;
+        expected_terrain = &walls[slot];
+        for(unsigned i = 0; i < sizeof(cases) / sizeof(*cases); ++i)
+        {
+            reset(cases[i].enabled, cases[i].found ? slot : -1);
+            if(cases[i].equal_height) actor.position.y = expected_terrain->height;
+            actor.modeldata.hitwalltype = expected_terrain->type + !cases[i].match;
+            expected_hit = cases[i].blocked && cases[i].match;
+            const float direction = cases[i].move ? 4 : 0;
+            const float movement = contact_wall(path == AT_WALL_X ? direction : 0,
+                                                path == AT_WALL_Z ? direction : 0);
+            assert(lookups == cases[i].move && movement == (cases[i].blocked ? 0 : direction));
+            verify(cases[i].blocked && cases[i].enabled);
+        }
+    }
+}
+
+static void check_holes(void)
+{
+    static const struct { int enabled, hole, index, called; } cases[] = {
+        {1, 1, 3, 1}, {0, 1, 3, 0}, {1, 1, -1, 0}, {1, 0, 3, 0},
+    };
+    path = IN_HOLE;
+    expected_terrain = &holes[3];
+    expected_index = 3;
+    expected_plane = record ? 99 : 0;
+    for(unsigned i = 0; i < sizeof(cases) / sizeof(*cases); ++i)
+    {
+        reset(cases[i].enabled, cases[i].index);
+        contact_hole(cases[i].hole);
+        assert(lookups == cases[i].hole);
+        verify(cases[i].called);
+    }
+}
+
+int main(void)
+{
+    const struct { unsigned revision; int record, x, z; } rows[] = {@ROWS@};
+    for(unsigned i = 0; i < sizeof(rows) / sizeof(*rows); ++i)
+    {
+        obor_profile_build = rows[i].revision;
+        record = rows[i].record;
+        axis_x = rows[i].x;
+        axis_z = rows[i].z;
+        check_walls();
+        check_holes();
+        printf("%u\n", rows[i].revision);
+    }
+    return 0;
+}

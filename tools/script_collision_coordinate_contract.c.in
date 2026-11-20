@@ -2,6 +2,7 @@
  * Copyright (c) 2026 retrodiv <retrodiv@proton.me>
  */
 #include <assert.h>
+#include <stddef.h>
 #include <stdio.h>
 
 typedef int LONG;
@@ -24,6 +25,11 @@ static int StrCache_Pop(void) { assert(0); return 0; }
 
 typedef struct { @COORDINATE_FIELD@ coords; } s_collision_attack, s_collision_body, s_collision, s_body;
 static unsigned int obor_profile_build;
+
+static int obor_allocation_contains(const void *pointer, size_t size)
+{
+    return pointer && size;
+}
 
 void ScriptVariant_ChangeType(ScriptVariant *var, VARTYPE cvt);
 @VARIANTS@

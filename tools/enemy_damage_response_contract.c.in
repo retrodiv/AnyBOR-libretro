@@ -1,0 +1,245 @@
+/* SPDX-License-Identifier: BSD-3-Clause
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me>
+ */
+#include <stdint.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include "openbor.h"
+#undef assert
+#undef printf
+#include <assert.h>
+
+#if OBOR_ENGINE_BUILD == 6391
+#define HEALTH energy_status.health_current
+#define DAMAGE last_damage_type
+#define TICK _time
+#define REMOVE kill_entity
+#define APPLY(fn, from, attack) fn(from, attack, 0)
+#define DAMAGE_ARGS entity *from, s_collision_attack *attack, int fall_flag
+#else
+#define HEALTH health
+#define DAMAGE damagetype
+#define TICK time
+#define REMOVE kill
+#define APPLY(fn, from, attack) fn(from, attack)
+#define DAMAGE_ARGS entity *from, s_collision_attack *attack
+#endif
+
+uint32_t obor_profile_build, obor_profile_features;
+static entity actor, attacker, driver;
+entity *self = &actor;
+s_savedata savedata;
+static unsigned int TICK = 100;
+static unsigned int active;
+static int bike;
+static s_collision_attack incoming;
+static s_anim animation = {.numframes = 1};
+static s_anim *animations[MAX_ANIS];
+static char trace[16];
+static size_t events;
+
+static void observe(char event)
+{
+    assert(events + 1 < sizeof(trace));
+    trace[events++] = event;
+    trace[events] = '\0';
+}
+
+void REMOVE(entity *ent)
+{
+    assert(ent == self && ent == &actor && !ent->attacking);
+    observe('K');
+}
+
+void set_opponent(entity *ent, entity *other)
+{
+    assert(ent == &attacker && other == &actor && self == other);
+    other->opponent = ent;
+    observe('O');
+}
+
+void checkdamage(entity *other, s_collision_attack *attack)
+{
+    assert(other == &attacker && attack == &incoming && self == &actor && !actor.attacking);
+    actor.HEALTH -= attack->attack_force;
+    observe('D');
+}
+
+int check_backpain(entity *other, entity *ent)
+{
+    assert(bike && other == &attacker && ent == &actor && self == ent);
+    observe('B');
+    return 0;
+}
+
+int set_pain(entity *ent, int type, int reset)
+{
+    assert(bike && ent == &actor && self == ent && !ent->attacking && reset == 1);
+    assert(type == ATK_BURN && type != incoming.attack_type);
+    observe('P');
+    return 1;
+}
+
+void bike_crash(void) {}
+void obstacle_fly(void) {}
+void obstacle_fall(void) {}
+
+entity *drop_driver(entity *ent)
+{
+    assert(bike && ent == &actor && self == ent && ent->think == bike_crash);
+    assert((unsigned int)ent->attacking == active);
+    observe('R');
+    return &driver;
+}
+
+static int driver_damage(DAMAGE_ARGS)
+{
+    assert(self == &driver && from == &attacker && attack == &incoming);
+    assert(driver.position.y == actor.position.y && driver.direction == actor.direction && driver.drop);
+#if OBOR_ENGINE_BUILD == 6391
+    assert(!fall_flag);
+#endif
+    driver.HEALTH -= attack->attack_force;
+    observe('H');
+    return 1;
+}
+
+void checkdeath(void)
+{
+    assert(self == &actor && actor.HEALTH <= 0);
+    assert((unsigned int)actor.attacking == (bike ? active : 0));
+    observe('X');
+}
+
+void addscore(int playerindex, int score)
+{
+    assert(!bike && self == &actor && actor.playerindex == playerindex);
+    assert(playerindex == attacker.playerindex && score == 6);
+    observe('S');
+}
+
+#if OBOR_ENGINE_BUILD == 6391
+void control_rumble(int port, int ratio, int msec) { abort(); }
+#else
+void control_rumble(int port, int msec) { abort(); }
+#endif
+
+void ent_set_anim(entity *ent, int animation_id, int reset)
+{
+    assert(!bike && ent == &actor && self == ent && !reset);
+    assert((unsigned int)actor.attacking == active);
+    assert(animation_id == (animations[ANI_DIE] && actor.think == obstacle_fall ? ANI_DIE : ANI_FALL));
+    observe('A');
+}
+
+void toss(entity *ent, float lift)
+{
+    assert(!bike && ent == &actor && actor.think == obstacle_fall);
+    assert(lift > 2.99f && lift < 3.01f);
+    observe('T');
+}
+
+@METHODS@
+
+static void prepare(void)
+{
+    actor = (entity){0};
+    attacker = (entity){0};
+    driver = (entity){0};
+    actor.HEALTH = 10;
+    actor.DAMAGE = ATK_BURN;
+    actor.position.x = 10;
+    actor.position.y = 8;
+    actor.direction = DIRECTION_RIGHT;
+    actor.modeldata.animation = animations;
+    actor.modeldata.animation_capacity = MAX_ANIS;
+    actor.modeldata.multiple = 2;
+    actor.modeldata.jumpheight = 4;
+    attacker.modeldata.type = TYPE_ENEMY;
+    attacker.playerindex = 1;
+    driver.HEALTH = 5;
+    incoming = (s_collision_attack){.attack_type = ATK_NORMAL2, .attack_force = 3};
+    animations[ANI_DIE] = &animation;
+    events = 0;
+    trace[0] = '\0';
+}
+
+static void check_bike(void)
+{
+    bike = 1;
+    prepare();
+    actor.dead = 1;
+    assert(!APPLY(biker_takedamage, &attacker, &incoming) && !events);
+
+    prepare();
+    actor.position.y = PIT_DEPTH - 1;
+    assert(!APPLY(biker_takedamage, &attacker, &incoming) && !strcmp(trace, "K"));
+
+    prepare();
+    incoming.no_pain = 1;
+    assert(APPLY(biker_takedamage, &attacker, &incoming) && !strcmp(trace, "OD"));
+    assert(actor.HEALTH == 7 && !actor.attacking);
+
+    prepare();
+    actor.position.y = PIT_DEPTH;
+    driver.takedamage = driver_damage;
+    assert(APPLY(biker_takedamage, &attacker, &incoming) && !strcmp(trace, "OBPRHX"));
+    assert(!actor.HEALTH && driver.HEALTH == 2 && actor.modeldata.offscreenkill == 100);
+
+    prepare();
+    actor.HEALTH = 2;
+    actor.modeldata.offscreenkill = 40;
+    incoming.no_pain = 1;
+    assert(APPLY(biker_takedamage, &attacker, &incoming) && !strcmp(trace, "ODBPRX"));
+    assert(!actor.HEALTH && driver.HEALTH == 2 && actor.modeldata.offscreenkill == 40);
+}
+
+static void check_obstacle(void)
+{
+    bike = 0;
+    prepare();
+    actor.position.y = PIT_DEPTH;
+    assert(!APPLY(obstacle_takedamage, &attacker, &incoming) && !strcmp(trace, "K"));
+
+    prepare();
+    assert(APPLY(obstacle_takedamage, &attacker, &incoming) && !strcmp(trace, "ODS"));
+    assert(actor.HEALTH == 7 && !actor.attacking && actor.nextthink == TICK + 1);
+
+    static const char *const expected[] = {"ODSXA", "ODSXA", "ODSXTA"};
+    for(size_t i = 0; i < sizeof(expected) / sizeof(*expected); ++i)
+    {
+        prepare();
+        actor.HEALTH = 3;
+        if(!i)
+        {
+            actor.modeldata.subtype = SUBTYPE_FLYDIE;
+        }
+        if(i == 2)
+        {
+            attacker.position.x = 15;
+            actor.modeldata.nodieblink = 1;
+            animations[ANI_DIE] = NULL;
+        }
+        assert(APPLY(obstacle_takedamage, &attacker, &incoming) && !strcmp(trace, expected[i]));
+        assert((unsigned int)actor.attacking == active && actor.nextthink == TICK + 1);
+        assert(actor.velocity.x == (i == 0 ? 4 : (i == 1 ? 1 : -1)));
+        assert(actor.blink == (i == 1));
+        assert(actor.think == (i ? obstacle_fall : obstacle_fly));
+    }
+}
+
+int main(void)
+{
+    static const struct { uint32_t revision; unsigned active; } profiles[] = {@ROWS@};
+    animations[ANI_FALL] = &animation;
+    for(size_t i = 0; i < sizeof(profiles) / sizeof(*profiles); ++i)
+    {
+        obor_profile_build = profiles[i].revision;
+        active = profiles[i].active;
+        check_bike();
+        check_obstacle();
+        printf("%u\n", obor_profile_build);
+    }
+    return 0;
+}

@@ -1,0 +1,56 @@
+/* SPDX-License-Identifier: BSD-3-Clause
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me>
+ */
+#include <limits.h>
+#include <math.h>
+#include <stdint.h>
+#include <stdio.h>
+#include "openbor.h"
+#undef printf
+
+uint32_t obor_profile_build;
+@DECLARATIONS@
+
+typedef struct {
+    int right, present;
+    float from[4], to[4];
+    int min[4], max[4];
+} range_case;
+
+static int evaluate(const range_case *input)
+{
+    s_anim animation = {0};
+    s_anim *animations[] = {&animation};
+    entity actor = {0}, other = {0};
+    entity *origin = &actor;
+    entity *target = input->present ? &other : NULL;
+    origin->modeldata.animation = input->present ? animations : NULL;
+    origin->direction = input->right ? DIRECTION_RIGHT : DIRECTION_LEFT;
+    origin->position.x = input->from[0];
+    origin->position.y = input->from[1];
+    origin->position.z = input->from[2];
+    origin->base = input->from[3];
+    other.position.x = input->to[0];
+    other.position.y = input->to[1];
+    other.position.z = input->to[2];
+    other.base = input->to[3];
+    @SET_RANGES@
+    return @EVALUATE@;
+}
+
+int main(void)
+{
+    const unsigned profiles[] = {@PROFILES@};
+    const range_case cases[] = {@CASES@};
+    printf("{\"status\":\"PASS\",\"profiles\":[");
+    for(size_t p = 0; p < sizeof(profiles) / sizeof(*profiles); ++p)
+    {
+        obor_profile_build = profiles[p];
+        printf("%s{\"revision\":%u,\"results\":[", p ? "," : "", profiles[p]);
+        for(size_t i = 0; i < sizeof(cases) / sizeof(*cases); ++i)
+            printf("%s%d", i ? "," : "", evaluate(&cases[i]));
+        printf("]}");
+    }
+    printf("]}\n");
+    return 0;
+}

@@ -1,0 +1,349 @@
+/* SPDX-License-Identifier: BSD-3-Clause
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me>
+ */
+#include <stdint.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include "openbor.h"
+#undef printf
+#undef assert
+#include <assert.h>
+
+#if OBOR_ENGINE_BUILD == 4432
+#define LEGACY_STRUCT 1
+HRESULT Interpreter_Call(Interpreter *interpreter) { abort(); }
+HRESULT Interpreter_EvalInstruction(Interpreter *interpreter) { abort(); }
+#else
+#define LEGACY_STRUCT 0
+#include "profile_ids.h"
+#endif
+
+uint32_t obor_profile_build, obor_profile_features;
+static entity actor, other;
+entity *self;
+static s_anim animation = {.numframes = 1};
+static s_anim *slots[MAX_ANIS];
+static int front[2] = {ANI_IDLE, ANI_FALL}, back[2] = {ANI_BLOCK, ANI_RUN};
+int *animrises = front, *animriseattacks = front, *animpains = front;
+int *animbackrises = back, *animbackriseattacks = back, *animbackpains = back;
+int max_attack_types = 2;
+static int selected, reset_argument, drop_at_animation, attack_at_animation;
+static int resets, thaws, pains, pain_type, pain_state;
+
+void common_rise(void) { abort(); }
+void common_attack_proc(void) { abort(); }
+int reset_backpain(entity *ent) { assert(ent == &actor && ent->inbackpain); ++resets; return 0; }
+
+void ent_set_anim(entity *ent, int id, int reset)
+{
+    assert(ent == &actor && selected == -1);
+    selected = id;
+    reset_argument = reset;
+    drop_at_animation = ent->drop;
+    attack_at_animation = ent->attacking;
+}
+
+#if LEGACY_STRUCT
+void ent_set_colourmap(entity *ent, unsigned map)
+{
+    assert(ent == &actor && ent->frozen && map == ent->map);
+    ++thaws;
+}
+#else
+void unfrozen(entity *ent)
+{
+    assert(ent == &actor && ent->frozen);
+    ent->frozen = 0;
+    ++thaws;
+}
+#endif
+void execute_onpain_script(entity *ent, int type, int reset)
+{
+    assert(ent == &actor && reset == 1 && !ent->frozen);
+    ++pains;
+    pain_type = type;
+    pain_state = ent->inpain;
+}
+
+@PAIN_FLAGS@
+#if LEGACY_STRUCT && defined(__GNUC__) && !defined(__clang__)
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wmultistatement-macros"
+#endif
+@METHODS@
+#if LEGACY_STRUCT && defined(__GNUC__) && !defined(__clang__)
+#pragma GCC diagnostic pop
+#endif
+
+static void initialize(unsigned mask)
+{
+    memset(slots, 0, sizeof(slots));
+    for(unsigned index = 0; index < 2; ++index)
+    {
+        if(mask & (1u << index)) slots[front[index]] = &animation;
+        if(mask & (4u << index)) slots[back[index]] = &animation;
+    }
+    actor = (entity){.modeldata.animation = slots, .modeldata.animation_capacity = MAX_ANIS,
+                     .velocity = {4, 5, 6}, .nograb_default = 1};
+    actor.modeldata.jugglepoints.max = 9;
+    other = (entity){.velocity = {7, 8, 9}};
+    other.staydown.riseattack_stall = 11;
+    self = &other;
+    actor.inpain = 1;
+    actor.inbackpain = 1;
+    actor.falling = 1;
+    actor.drop = 1;
+    actor.projectile = 1;
+    actor.attacking = 2;
+    actor.frozen = 1;
+    actor.jumping = 1;
+    actor.running = 1;
+    actor.idling = 1;
+#if !LEGACY_STRUCT
+    actor.rising = 1;
+    actor.riseattacking = 1;
+    actor.ducking = 1;
+#endif
+    selected = -1;
+    resets = thaws = pains = 0;
+}
+
+static void recovery_flags(int rising, int riseattacking, int ducking)
+{
+#if !LEGACY_STRUCT
+    assert(actor.rising == rising && actor.riseattacking == riseattacking && actor.ducking == ducking);
+#endif
+}
+
+static void check_rise(int early)
+{
+    const unsigned masks[] = {15, 13, 4, 2, 1, 0};
+    const int early_ids[] = {ANI_FALL, ANI_IDLE, -1, ANI_FALL, ANI_IDLE, -1};
+    const int later_ids[] = {ANI_RUN, ANI_RUN, ANI_BLOCK, ANI_FALL, ANI_IDLE, -1};
+    for(size_t i = 0; i < sizeof(masks) / sizeof(*masks); ++i)
+    {
+        initialize(masks[i]);
+#if !LEGACY_STRUCT
+        actor.rising = 0;
+#endif
+        const int id = early ? early_ids[i] : later_ids[i];
+        assert(set_rise(&actor, 1, 1) == (id >= 0) && selected == id);
+        if(id < 0)
+        {
+            assert(actor.inbackpain && actor.falling && actor.drop && actor.projectile && !resets);
+            continue;
+        }
+        assert(reset_argument == 1 && drop_at_animation == 1);
+        assert(actor.takeaction == common_rise && !actor.drop && !actor.falling && !actor.projectile);
+        assert(actor.nograb && actor.modeldata.jugglepoints.current == 9);
+        assert(!actor.velocity.x && !other.velocity.y && !other.velocity.z && other.velocity.x == 7);
+        assert(actor.inbackpain == (!early && i < 3));
+        assert(resets == (!early && (i == 3 || i == 4)));
+        recovery_flags(!early, early, 1);
+    }
+}
+
+static void check_riseattack(int early)
+{
+    const unsigned masks[] = {15, 13, 9, 15, 1, 0};
+    const int modes[] = {1, 1, 2, 0, 2, 1};
+    const int early_ids[] = {ANI_FALL, ANI_IDLE, -1, ANI_IDLE, -1, -1};
+    const int later_ids[] = {ANI_RUN, ANI_BLOCK, ANI_RUN, ANI_BLOCK, ANI_IDLE, -1};
+    for(size_t i = 0; i < sizeof(masks) / sizeof(*masks); ++i)
+    {
+        initialize(masks[i]);
+#if !LEGACY_STRUCT
+        actor.riseattacking = 0;
+#endif
+        actor.modeldata.riseattacktype = modes[i];
+        const int id = early ? early_ids[i] : later_ids[i];
+        assert(set_riseattack(&actor, 1, 1) == (id >= 0) && selected == id);
+        if(id < 0)
+        {
+            assert(actor.drop && actor.inpain && actor.falling && other.staydown.riseattack_stall == 11);
+            continue;
+        }
+        assert(reset_argument == !early && drop_at_animation == !early);
+        assert(attack_at_animation == (early ? 1 : 2));
+        assert(actor.takeaction == common_attack_proc && !actor.drop && actor.attacking == 1);
+        assert(actor.inpain == early && actor.falling == early && actor.projectile);
+        assert(!other.staydown.riseattack_stall && actor.nograb && actor.modeldata.jugglepoints.current == 9);
+        assert(actor.inbackpain == (early || i != 4));
+        assert(resets == (!early && i == 4));
+        recovery_flags(early, !early, early);
+    }
+}
+
+static void check_pain(int early)
+{
+    for(int mode = 0; mode < 3; ++mode)
+    {
+        initialize(15);
+        const int type = mode == 1 ? -1 : 1;
+        const int id = mode == 1 ? ANI_GRABBED : mode == 2 ? ANI_GUARDBREAK : ANI_RUN;
+        slots[id] = &animation;
+        if(mode == 2) actor.modeldata.guardpoints.max = 7;
+        assert(set_pain(&actor, type, 1) == 1 && selected == id && drop_at_animation == 1);
+        assert(pains == 1 && pain_type == type && pain_state == (mode != 1));
+        assert(thaws == 1 && !actor.falling && !actor.attacking && !actor.drop && !actor.projectile);
+        assert(actor.inbackpain == (mode != 1));
+        assert(actor.modeldata.guardpoints.current == (mode == 2 ? 7 : 0));
+        recovery_flags(early, early, early);
+    }
+}
+
+static void jump_landing(void)
+{
+    @LANDING@
+}
+
+static void grab_state(entity *attacker, entity *target)
+{
+    @GRAB@
+}
+
+static void check_landing_and_grab(int early)
+{
+    initialize(0);
+    self = &actor;
+    jump_landing();
+    assert(!actor.attacking && !actor.jumping);
+    recovery_flags(1, 1, early);
+
+    initialize(0);
+    other.attacking = 1;
+    grab_state(&actor, &other);
+    assert(!other.attacking && !actor.idling && !actor.running);
+    assert(actor.inbackpain == early);
+    recovery_flags(1, 1, early);
+}
+
+static void grab_attack_write(unsigned operation)
+{
+    entity *attacker = &actor;
+    entity *ent_list[] = {&actor};
+    int i = 0;
+    switch(operation)
+    {
+        @GRAB_WRITES@
+        default: assert(0);
+    }
+}
+
+static int ai_grab_available(void) { return @AI_GRAB_TEST@; }
+static int player_grab_active(void) { return !!(@PLAYER_GRAB_TEST@); }
+
+static void check_grab_attacks(void)
+{
+    initialize(0);
+    self = &actor;
+    for(unsigned operation = 0; operation < 8; ++operation)
+    {
+        actor.attacking = 1;
+        grab_attack_write(operation);
+        assert(actor.attacking == (operation == 6 ? (LEGACY_STRUCT ? 1 : 2) : 0));
+    }
+    for(int state = 0; state <= 2; ++state)
+    {
+        actor.attacking = state;
+        actor.grabbing = 0;
+        assert(!ai_grab_available());
+        actor.grabbing = &other;
+        assert(ai_grab_available() == (state == 0));
+        assert(player_grab_active() == (state != 0));
+    }
+}
+
+int testmove(entity *ent, float start_x, float start_z, float x, float z)
+{
+    assert(ent == &actor || ent == &other);
+    assert(start_x == ent->position.x && start_z == ent->position.z);
+    assert(z == 0);
+    return 1;
+}
+
+static int grab_link_count;
+
+void ents_link(entity *attacker, entity *target)
+{
+    assert(attacker == &other && target == &actor);
+    ++grab_link_count;
+}
+
+@GRAB_GEOMETRY@
+
+static int grab_allowed(entity *attacker, entity *target)
+{
+    return attacker == &other && target == &actor;
+}
+
+#undef cangrab
+#define cangrab grab_allowed
+@CHECK_GRAB@
+#undef cangrab
+
+static s_collision_attack load_grab_distance(float distance, int newanim)
+{
+    enum { CMD_MODEL_GRABIN };
+    s_collision_attack attack = {0}, smartbomb = {0}, *pattack;
+    s_model model = {.smartbomb = &smartbomb}, *newchar = &model;
+    const float arguments[] = {0, 1, distance};
+#undef GET_INT_ARG
+#undef GET_FLOAT_ARG
+#define GET_INT_ARG(index) ((int)arguments[index])
+#define GET_FLOAT_ARG(index) (arguments[index])
+    switch(CMD_MODEL_GRABIN)
+    {
+        @GRAB_DIRECTIVE@
+    }
+#undef GET_FLOAT_ARG
+#undef GET_INT_ARG
+    assert((newanim ? smartbomb : attack).grab == 0);
+    return newanim ? attack : smartbomb;
+}
+
+static void check_grab_distance(void)
+{
+    const struct { float configured, whole; } distances[] = {
+        {3.75f, 3.0f}, {-3.75f, -3.0f}, {3.0f, 3.0f}, {0.0f, 0.0f},
+    };
+    for(int newanim = 0; newanim <= 1; ++newanim)
+    {
+        for(size_t i = 0; i < sizeof(distances) / sizeof(*distances); ++i)
+        {
+            const float expected = LEGACY_STRUCT ? distances[i].configured : distances[i].whole;
+            s_collision_attack attack = load_grab_distance(distances[i].configured, newanim);
+            assert(attack.grab == 1 && attack.grab_distance == expected);
+            actor = (entity){.position.x = 20};
+            other = (entity){.position.x = 10};
+            self = &actor;
+            grab_link_count = 0;
+            assert(checkgrab(&other, &attack));
+            assert(grab_link_count == 1);
+            assert(other.position.x == 10 && actor.position.x == 10 + expected);
+        }
+    }
+}
+
+int main(void)
+{
+    const struct { unsigned revision; int early; } rows[] = {@PROFILES@};
+    if(LEGACY_STRUCT)
+    {
+        obor_profile_build = 4750;
+        check_grab_distance();
+    }
+    for(size_t i = 0; i < sizeof(rows) / sizeof(*rows); ++i)
+    {
+        obor_profile_build = rows[i].revision;
+        check_rise(rows[i].early);
+        check_riseattack(rows[i].early);
+        check_pain(rows[i].early);
+        check_landing_and_grab(rows[i].early);
+        check_grab_attacks();
+        check_grab_distance();
+        printf("%u\n", obor_profile_build);
+    }
+    return 0;
+}

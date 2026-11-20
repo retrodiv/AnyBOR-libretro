@@ -1,0 +1,186 @@
+/* SPDX-License-Identifier: BSD-3-Clause
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me>
+ */
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <strings.h>
+#include "scriptcommon.h"
+#include "profile_ids.h"
+#include "Lexer.h"
+#include "commands.h"
+#include "anybor_resources.h"
+#undef printf
+#undef malloc
+#undef free
+#undef assert
+#include <assert.h>
+#ifndef stricmp
+#define stricmp strcasecmp
+#endif
+
+uint32_t obor_profile_build;
+s_savedata savedata;
+float musicfade[2];
+char musicname[MAX_BUFFER_LEN];
+static char currentmusic[MAX_BUFFER_LEN];
+int musicloop;
+u32 musicoffset;
+
+static const void *live_text;
+static char input[MAX_STR_LEN + 2];
+
+CHAR *StrCache_Get(int index)
+{
+    assert(index == 0);
+    return input;
+}
+
+CHAR *StrCache_GetIfPresent(int index)
+{
+    return StrCache_Get(index);
+}
+
+int obor_allocation_query(const void *address, const void **base, size_t *remaining)
+{
+    if(!live_text || address != live_text) return 0;
+    if(base) *base = live_text;
+    *remaining = MAX_STR_VAR_LEN;
+    return 1;
+}
+
+/* The original music operations deliberately copy only the profile's span. */
+#if defined(__GNUC__) && !defined(__clang__)
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wstringop-truncation"
+#endif
+@FUNCTIONS@
+
+static char played_name[MAX_BUFFER_LEN];
+static int played_loop;
+static long played_offset;
+
+int music(char *filename, int loop, long offset)
+{
+    snprintf(played_name, sizeof(played_name), "%s", filename);
+    played_loop = loop;
+    played_offset = offset;
+@MUSIC_CACHE@
+    return 1;
+}
+
+static void load_music_name(char *filename, int loadingmusic, int event_music, size_t expected_length)
+{
+    char string[MAX_BUFFER_LEN] = {0}, musicPath[MAX_BUFFER_LEN] = {0};
+    char buf[] = "music line\nat line\n", argbuf2[16];
+    char *command, *value;
+    size_t pos = 0, oldpos, size = sizeof(buf) - 1;
+    long musicOffset = 0;
+    levelCommands cmd2;
+    s_spawn_entry next = {0};
+    struct { int count; char *args[1]; } arglist2;
+#undef GET_ARG
+#define GET_ARG(index) ((index) == 1 ? filename : "17")
+#define getNewLineStart(source) ((void)(source), 11)
+#define ParseArgs(list, source, scratch) \
+    do { (void)(source); (void)(scratch); (list)->count = 1; (list)->args[0] = event_music ? "at" : ""; } while(0)
+#define getLevelCommand(list, token) (!strcmp(token, "at") ? CMD_LEVEL_AT : 0)
+    switch(CMD_LEVEL_MUSIC)
+    {
+@MUSIC_COMMAND@
+    default:
+        abort();
+    }
+#undef getLevelCommand
+#undef ParseArgs
+#undef getNewLineStart
+#undef GET_ARG
+
+    const char *name = loadingmusic ? played_name : (event_music ? next.music : musicPath);
+    assert(strlen(name) == expected_length && !memcmp(name, filename, expected_length));
+    assert(pos == 0 && musicOffset == 17);
+    if(loadingmusic) assert(played_loop == 1 && played_offset == 17);
+    if(event_music) assert(next.musicoffset == 17);
+}
+
+static void restore_music_after_scene(char *replacement)
+{
+@BEFORE_SCENE@
+    music(replacement, 0, 19);
+@AFTER_SCENE@
+}
+#if defined(__GNUC__) && !defined(__clang__)
+#pragma GCC diagnostic pop
+#endif
+
+static void check(unsigned revision, unsigned token_capacity, unsigned text_capacity, unsigned fade_copy_bytes)
+{
+    obor_profile_build = revision;
+    pp_token raw = {.theType = PP_TOKEN_IDENTIFIER, .theTextPosition = {7, 4}, .charOffset = 23};
+    memset(raw.theSource, 'a', token_capacity);
+    Token token;
+    memset(&token, 1, sizeof(token));
+    assert(Token_InitFromPreprocessor(&token, &raw) == S_OK && token.theType == TOKEN_IDENTIFIER);
+    assert(token.theTextPosition.row == raw.theTextPosition.row && token.theTextPosition.col == raw.theTextPosition.col);
+    assert(token.charOffset == 23 && !strcmp(token.theSource, raw.theSource));
+
+    s_textobj object = {0};
+    char output[MAX_STR_VAR_LEN];
+    ScriptVariant text = {.vt = VT_STR, .strVal = 0};
+    memset(input, 'a', 62);
+    input[62] = '\0';
+    assert(obor_textobj_format(&text, output) && !strcmp(output, input));
+    assert(obor_textobj_store(&object, output) && !strcmp(object.text, input));
+    live_text = object.text;
+
+    input[62] = 'b';
+    input[63] = '\0';
+    const int fits = text_capacity == 64;
+    assert(obor_textobj_format(&text, output) == fits);
+    assert(obor_textobj_store(&object, input) == fits);
+    assert(object.text == live_text && strlen(object.text) == 62 + (size_t)fits);
+    assert(fits ? !strcmp(output, input) : !output[0]);
+    free(object.text);
+    live_text = NULL;
+
+    memset(input, 't', 124);
+    memcpy(input + 124, ".ogg", 5);
+    memset(musicname, 0, sizeof(musicname));
+    ScriptVariant fade = {.vt = VT_DECIMAL, .dblVal = 0.75};
+    ScriptVariant loop = {.vt = VT_INTEGER, .lVal = 1};
+    ScriptVariant offset = {.vt = VT_INTEGER, .lVal = 22};
+    ScriptVariant result, *ret = &result, *args[] = {&fade, &text, &loop, &offset};
+    savedata.musicvol = 80;
+    assert(openbor_fademusic(args, &ret, 4) == S_OK && !ret);
+    assert(musicfade[0] == 0.75f && musicfade[1] == 80.0f);
+    assert(musicloop == 1 && musicoffset == 22);
+    assert(strlen(musicname) == fade_copy_bytes && !memcmp(musicname, input, fade_copy_bytes));
+
+    s_spawn_entry stage_music = {.musicoffset = 17};
+    s_level stage = {.spawnpoints = &stage_music};
+    memset(stage_music.music, 'k', 150);
+    memcpy(stage_music.music + 150, ".ogg", 5);
+    set_spawn_music(&stage, 0);
+    const size_t spawn_copy_bytes = fade_copy_bytes == 128 ? 128 : 154;
+    assert(strlen(musicname) == spawn_copy_bytes && !memcmp(musicname, stage_music.music, spawn_copy_bytes));
+    assert(musicoffset == 17 && musicloop == 1);
+
+    load_music_name(stage_music.music, 1, 0, spawn_copy_bytes);
+    load_music_name(stage_music.music, 0, 1, spawn_copy_bytes);
+    load_music_name(stage_music.music, 0, 0, spawn_copy_bytes);
+    music(stage_music.music, 1, 31);
+    const size_t stored_length = fade_copy_bytes == 128 ? 127 : 154;
+    assert(strlen(currentmusic) == stored_length && !memcmp(currentmusic, stage_music.music, stored_length));
+    musicloop = 1;
+    char scene_track[] = "scene.ogg";
+    restore_music_after_scene(scene_track);
+    assert(strlen(played_name) == stored_length && !memcmp(played_name, stage_music.music, stored_length));
+    assert(played_loop == 1 && played_offset == 0);
+    printf("PASS %u\n", revision);
+}
+
+int main(void)
+{
+    @CHECKS@
+    return 0;
+}

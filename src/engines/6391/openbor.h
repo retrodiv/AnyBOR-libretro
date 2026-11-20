@@ -10,7 +10,10 @@
  * screen escape using explicit profile feature flags and published upstream
  * code. Track each model's allocated animation-table capacity and reject
  * lookups outside it. Declare the modified 6330 LNS profile's shared model,
- * player, score and parser layouts.
+ * player, score and parser layouts. Apply the original posture resets when
+ * starting jumps, charging, pickups or turns. Reserve a terminator for the
+ * historical item alias and resulting entity name. Retain the extra early
+ * difficulty-name byte and terminate the live name.
  * Existing changes recorded here; this is not their implementation date.
  * See MODIFICATIONS.md and docs/modifications/6391.md
  * at the source repository root. Original notices follow below.
@@ -1459,22 +1462,22 @@ if(n<1) n = 1;
 
 #define set_jumping(e)   e->jumping = 1;\
 						 e->idling = IDLING_INACTIVE; \
-						 e->ducking = DUCK_INACTIVE;
+						 if(!obor_profile_uses_5134_script_ids()) e->ducking = DUCK_INACTIVE;
 
 #define set_charging(e)  e->charging = 1;\
 						 e->idling = IDLING_INACTIVE; \
-						 e->ducking = DUCK_INACTIVE;
+						 if(!obor_profile_uses_5134_script_ids()) e->ducking = DUCK_INACTIVE;
 
 #define set_getting(e)   e->getting = 1;\
 						 e->idling = IDLING_INACTIVE; \
-						 e->ducking = DUCK_INACTIVE;
+						 if(!obor_profile_uses_5134_script_ids()) e->ducking = DUCK_INACTIVE;
 
 #define set_blocking(e)  e->blocking = 1;\
 						 e->idling = IDLING_INACTIVE;
 
 #define set_turning(e)  e->turning = 1;\
 						e->idling = IDLING_INACTIVE; \
-						 e->ducking = DUCK_INACTIVE;
+						 if(!obor_profile_uses_5134_script_ids()) e->ducking = DUCK_INACTIVE;
 
 #define expand_time(e)   if(e->stalltime>0) e->stalltime++;\
 						 if(e->releasetime>0)e->releasetime++;\
@@ -1495,7 +1498,7 @@ if(n<1) n = 1;
 
 #define freezeall        (smartbomber || textbox)
 
-#define is_projectile(e) (e->modeldata.type == TYPE_SHOT || e->model->subtype == SUBTYPE_ARROW || (obor_profile_build == 6330 && e->model->subtype == SUBTYPE_BOOMERANG) || e->owner)
+#define is_projectile(e) (e->modeldata.type == TYPE_SHOT || e->model->subtype == SUBTYPE_ARROW || ((obor_profile_build == 5134 || obor_profile_build == 6119 || obor_profile_build == 6330) && e->model->subtype == SUBTYPE_BOOMERANG) || e->owner)
 
 #define screeny (level?((level->scrolldir == SCROLL_UP || level->scrolldir == SCROLL_DOWN )? 0:advancey ):0)
 #define screenx (level?advancex:0)
@@ -1632,7 +1635,7 @@ typedef struct
 typedef struct
 {
     unsigned compatibleversion;
-    char dName[MAX_NAME_LEN]; // Difficulty Name
+    char dName[MAX_NAME_LEN + 2]; // Early name and terminator occupy the two alignment bytes.
     unsigned level; // Level Number
     unsigned stage; // Stage
     unsigned pLives[MAX_PLAYERS]; // Player Lives Left
@@ -2436,7 +2439,7 @@ typedef struct
     int health;                     // int itemhealth; // Now items spawned can have their properties changed
     int index;                      // int itemindex; // item model index
     int player_count;               // int itemplayer_count;
-    char alias[MAX_NAME_LEN];   // char itemalias[MAX_NAME_LEN]; // Now items spawned can have their properties changed
+    char alias[MAX_NAME_LEN + 1];   // char itemalias[MAX_NAME_LEN + 1]; // Now items spawned can have their properties changed
 } s_item_properties;
 
 
@@ -2448,7 +2451,7 @@ typedef struct entity
     e_projectile_prime  projectile_prime;       // If this entity is a projectile, several priming values go here to set up its behavior.
     int                 playerindex;            // Player controlling the entity.
     s_energy_status     energy_status;          // Health and MP.
-    char                name[MAX_NAME_LEN]; // this is display name
+    char                name[MAX_NAME_LEN + 1]; // this is display name
     s_model             *defaultmodel;          // this is the default model
     s_model             *model;                 // current model
     s_model             modeldata;              // model data copied here
@@ -2666,7 +2669,7 @@ typedef struct
     char *item; // must be a name in the model list, so just reference
     s_model *itemmodel;
     s_model *model;
-    char alias[MAX_NAME_LEN];
+    char alias[MAX_NAME_LEN + 1];
     int health[MAX_PLAYERS];
     int mp; // mp's variable for mpbar by tails
     unsigned score; // So score can be overridden for enemies/obstacles
@@ -3325,6 +3328,7 @@ float getValidFloat(char *text, char *file, char *cmd);
 int dograb(entity *attacker, entity *target, e_dograb_adjustcheck adjustcheck);
 int stopRecordInputs(void);
 int recordInputs(void);
+int obor_set_replay_paths(a_playrecstatus *record, const char *folder, const char *filename);
 int playRecordedInputs(void);
 int freeRecordedInputs(void);
 a_playrecstatus* init_input_recorder(void);

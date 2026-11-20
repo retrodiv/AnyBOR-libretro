@@ -13,6 +13,7 @@ import re
 import unittest
 
 from test_early_system_callbacks import block
+from test_historical_script_collision_coordinates import attack_property_mapping
 from test_historical_player import function, switch_cases
 from test_model_constructor_ownership import run_native
 
@@ -35,6 +36,9 @@ def program(engine, profiles, *, remove_frame_guard=False, remove_slot_guard=Fal
         raise ValueError('Native attack property handle type required')
     coordinates = ('obor_script_collision_coordinates' if
                    'static int obor_script_collision_coordinates(void)' in source else None)
+    mapping = attack_property_mapping(source)
+    if mapping:
+        mapping = '#define OBOR_TEST_PROFILE_ATTACK_SELECTORS 1\n' + mapping
     guarded, defined_null = [], []
     force = None
     for label, case in cases.items():
@@ -83,7 +87,7 @@ def program(engine, profiles, *, remove_frame_guard=False, remove_slot_guard=Fal
         CONVERSIONS='\n'.join(function(variant, name) for name in
             ('ScriptVariant_ChangeType', 'ScriptVariant_Clear', 'ScriptVariant_IntegerValue')),
         ALLOCATION=allocate, COLLECTION=collection, INSTANCE=instance,
-        COORDINATE_PROFILE=function(source, coordinates) if coordinates else '', PROPERTY=prop,
+        COORDINATE_PROFILE=(function(source, coordinates) if coordinates else '') + mapping, PROPERTY=prop,
         BODY_INSTANCE=function((engine / 'source/openborscript/collision_body.c').read_text(encoding='latin1'),
                                'openbor_get_body_collision_instance') if 'active_bit' in instance else '',
         ATTACK_TYPE=handle[1], FORCE=force, INDEXED='1' if 'active_bit' in instance else '0',

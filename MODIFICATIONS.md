@@ -619,10 +619,12 @@ code removal is not represented as a source edit. See each engine's
 ## Compiler warning cleanup
 
 The control menu uses the compile-time button count for its name array.
-The array remains 13 entries of 32 bytes, with the same menu behavior.
+Renamed controls use the label length of their profile and end with a terminator.
 
 Palette and model-cache declarations use the parameter types of their native
 definitions, preserving calls and data layout.
+Grab finishers return the animation sentinel when neither finishing
+animation is available.
 
 The engine is built with `-Wall` on Clang. Its type and alignment declarations
 preserve the intended behavior and structure layouts; record-layout dumps
@@ -659,6 +661,18 @@ enabled for every profile.
 
 ## Logical profile compatibility
 
+Combo labels, saved progress and high scores retain the selected profile's
+original text widths and file layout.
+Controller defaults and saved settings follow the profile's original
+behavior. Vibration requests follow the selected profile's support.
+Input recordings retain the profile's original row layout.
+Live player controls retain the profile's original input width.
+Entity collision boxes are created in the profiles that define them.
+Custom model and level filenames follow the selected profile's original
+path capacity.
+Screenshot names retain the profile's original formatting and length.
+Packed resource names match by their complete normalized name.
+
 Main-menu introductions retain each profile's condition and request-reset order.
 Failed-level game-over and score displays follow the profile's request flags.
 Screen scripts and entity updates use the profile's active-screen conditions.
@@ -688,6 +702,54 @@ Direct PAK lookup accepts member names up to 255 bytes from build 4701
 through build 4750.
 Landing damage uses profile-specific opponent selection, health rounding and
 fall continuation. Build 4642 applies landing damage after motion has stopped.
+Builds 5134 and 6119 preserve the attack type sent to summoned entities when
+their summoner is removed. Fall animation selection uses an available slot.
+Entity creation and knife launches apply the selected profile's level rule
+when deciding whether player targets are eligible.
+5134 and 6119 use the original four-unit height tolerance when looking for a
+platform below an entity.
+Character selection in 5134 and 6119 starts from the player's current
+palette and uses the original occupied-palette threshold.
+With separate credits and an empty balance, 5134 and 6119 show the original
+join prompt before the player's first entry.
+The performance panel in 5134, 6119 and 6330 uses the original drawing
+depths and divides memory totals by 1,000 bytes per displayed KB.
+Entity display names and aliases in 5134 and 6119 retain up to 50 characters
+through spawning and item drops. Alpha mask paths retain the
+original length and apply to the next layer that loads a sprite.
+Custom startup scenes, scene media, and backgrounds for game menus and level
+loading use the original path capacities.
+The saved-game filename display and the disk paths used by script file streams
+follow the selected profile's original widths.
+Input recording uses the original name and path capacities for storage and
+lookup.
+Script drawing and log calls preserve the selected profile's native formatted
+text width.
+Script AI flags and animation delay queries preserve native selector order and
+result types.
+Unknown numeric player selectors return the selected profile's native result.
+Background image lookup tries extensions in the original order.
+Model animation names for backward shock, burn, rise and block reactions
+are accepted in profiles that define them.
+Dynamic reaction animations follow the original allocation order, and block
+reactions use each profile's original selection and state changes.
+Default reaction animations follow the selected profile on each content load.
+Player duck attacks, movement and release follow the original controls.
+AI ducking, uppercut timing and attack recovery use the original rules
+for each profile.
+Pain, jumps, turns, pickups and platform departures reset posture where
+the original profile defines that transition.
+Named and indexed script values retain their original save text.
+Model defense and offense accept the attack labels and group selectors
+defined by the selected profile.
+Renamed controls in 5134 and 6119 retain up to 16 characters in the
+control menu.
+Boss completion in 5134 and 6119 follows the original zero-count
+condition and victory-pose policy.
+Scripted boss spawns update the original profile counters, and clearing enemies after a boss defeat reports the original attack type.
+Windows memory queries use the API selected by the profile.
+Script animation, attack and idle actions in 5134 and 6119 preserve the
+original recovery flags and use the original animation numbering.
 Landing damage records retain separate force and type values for the profiles
 from build 4642 through build 4750.
 Profiles from 4665 through 4750 preserve landing attack confirmation, the
@@ -778,7 +840,7 @@ in their respective files.
 |---|---|
 | Selectable engine profiles | Core Options offers v3.0 3020-dev, v3.0 3057, v3.0 3062, v3.0 3073, v3.0 3081, v3.0 3109, v3.0 3117, v3.0 3143, v3.0 3160, v3.0 3173, v3.0 3192, v3.0 3208, v3.0 3273, v3.0 3288, v3.0 3303, v3.0 3307, v3.0 3310, v3.0 3311, v3.0 3316, v3.0 3317, v3.0 3318, v3.0 3327, v3.0 3328, v3.0 3330, v3.0 3332, v3.0 3335, v3.0 3337, v3.0 3340, v3.0 3341, v3.0 3342, v3.0 3350, v3.0 3351, v3.0 3352, v3.0 3353, v3.0 3354, v3.0 3355, v3.0 3356, v3.0 3357, v3.0 3360, v3.0 3361, v3.0 3362, v3.0 3365, v3.0 3366, v3.0 3367, v3.0 3371, v3.0 3372, v3.0 3373, v3.0 3375, v3.0 3379, v3.0 3380, v3.0 3381, v3.0 3383, v3.0 3385, v3.0 3388, v3.0 3391, v3.0 3394, v3.0 3397, v3.0 3400, v3.0 3406, v3.0 3411, v3.0 3415, v3.0 3416, v3.0 3420, v3.0 3422, v3.0 3427, v3.0 3428, v3.0 3431, v3.0 3434, v3.0 3436, v3.0 3441, v3.0 3445, v3.0 3446, v3.0 3449, v3.0 3454, v3.0 3458, v3.0 3461, v3.0 3463, v3.0 3465, v3.0 3467, v3.0 3469, v3.0 3472, v3.0 3477, v3.0 3482, v3.0 3500, v3.0 3509, v3.0 3511, v3.0 3515, v3.0 3517, v3.0 3520, v3.0 3526, v3.0 3549, v3.0 3550, v3.0 3551, v3.0 3552, v3.0 3553, v3.0 3554, v3.0 3557, v3.0 3559, v3.0 3562, v3.0 3565, v3.0 3567, v3.0 3568, v3.0 3581, v3.0 3583, v3.0 3585, v3.0 3586, v3.0 3587, v3.0 3591, v3.0 3594, v3.0 3596, v3.0 3597, v3.0 3602, v3.0 3604, v3.0 3605, v3.0 3608, v3.0 3609, v3.0 3611, v3.0 3614, v3.0 3618, v3.0 3619, v3.0 3623, v3.0 3624, v3.0 3626, v3.0 3629, v3.0 3631, v3.0 3633, v3.0 3635, v3.0 3638, v3.0 3639, v3.0 3640, v3.0 3644, v3.0 3646, v3.0 3647, v3.0 3649, v3.0 3650, v3.0 3651, v3.0 3655, v3.0 3656, v3.0 3657, v3.0 3660, v3.0 3661, v3.0 3663, v3.0 3664, v3.0 3665, v3.0 3666, v3.0 3667, v3.0 3669, v3.0 3670, v3.0 3671, v3.0 3672, v3.0 3673, v3.0 3674, v3.0 3675, v3.0 3677, v3.0 3678, v3.0 3679, v3.0 3680, v3.0 3682, v3.0 3685, v3.0 3686, v3.0 3689, v3.0 3690, v3.0 3691, v3.0 3692, v3.0 3693, v3.0 3694, v3.0 3697, v3.0 3699, v3.0 3701, v3.0 3703, v3.0 3704, v3.0 3707, v3.0 3708, v3.0 3709, v3.0 3710, v3.0 3711, v3.0 3713, v3.0 3714, v3.0 3715, v3.0 3716, v3.0 3722, v3.0 3725, v3.0 3726, v3.0 3727, v3.0 3728, v3.0 3729, v3.0 3730, v3.0 3732, v3.0 3738, v3.0 3740, v3.0 3741, v3.0 3742-dev, v3.0 3761-dev, v3.0 3769, v3.0 3773, v3.0 3780, v3.0 3783, v3.0 3789, v3.0 3793, v3.0 3797, v3.0 3805, v3.0 3814, v3.0 3818, v3.0 3822, v3.0 3824, v3.0 3829, v3.0 3831, v3.0 3837, v3.0 3839, v3.0 3842, v3.0 3846, v3.0 3847-dev, v3.0 3849, v3.0 3854, v3.0 3968-dev, v3.0 3970-dev, v3.0 3978, v3.0 3984, v3.0 3993, v3.0 3994, v3.0 4011, v3.0 4046, v3.0 4051, v3.0 4054, v3.0 4055, v3.0 4079, v3.0 4080, v3.0 4082, v3.0 4085, v3.0 4086, v3.0 4088-dev, v3.0 4107, v3.0 4111, v3.0 4129, v3.0 4153, v3.0 4161-dev, v3.0 4183-dev, v3.0 4213, v3.0 4283-dev, v3.0 4287, v3.0 4316, v3.0 4317, v3.0 4320, v3.0 4321, v3.0 4328, v3.0 4330, v3.0 4332, v3.0 4334, v3.0 4336, v3.0 4342, v3.0 4343, v3.0 4344, v3.0 4346, v3.0 4349, v3.0 4352, v3.0 4366, v3.0 4367-dev, v3.0 4377, v3.0 4379, v3.0 4383, v3.0 4385, v3.0 4387, v3.0 4389, v3.0 4390, v3.0 4393, v3.0 4394, v3.0 4396, v3.0 4400, v3.0 4401, v3.0 4403, v3.0 4404-dev, v3.0 4406, v3.0 4411, v3.0 4412, v3.0 4413, v3.0 4414, v3.0 4417, v3.0 4419, v3.0 4420, v3.0 4421-dev, v3.0 4423, v3.0 4424, v3.0 4426, v3.0 4429, v3.0 4430, v3.0 4431, v3.0 4432, v3.0 4453, v3.0 4454-dev, v3.0 4456, v3.0 4510-dev, v3.0 4574, v3.0 4580, v3.0 4583, v3.0 4596,
 v3.0 4624, v3.0 4626, v3.0 4642, v3.0 4665, v3.0 4682, v3.0 4701, v3.0 4742, v3.0 4750,
-v3.0 6330, v3.0 6330-lns-010g, v3.0 6391, v3.0 6391-mod, v3.0 6392-dev, v3.0 6412-dev, v3.0 6510-dev, v3.0 7086-dev, v3.0 7123-dev, v4.0 7142-alpha, v4.0 7530, v4.0 7533, v4.0 7555, v4.0 7556, v4.0 7735 and v4.0 8023-dev. Auto uses build tags and content clues. Each profile retains its compatibility behavior and save directory. [`anybor_abi.h`](src/glue/anybor_abi.h), [`anybor_engines.h`](src/glue/anybor_engines.h), [`tools/build.py`](tools/build.py). |
+v3.0 4905, v3.0 5134, v3.0 6119, v3.0 6330, v3.0 6330-lns-010g, v3.0 6391, v3.0 6391-mod, v3.0 6392-dev, v3.0 6412-dev, v3.0 6510-dev, v3.0 7086-dev, v3.0 7123-dev, v4.0 7142-alpha, v4.0 7530, v4.0 7533, v4.0 7555, v4.0 7556, v4.0 7735 and v4.0 8023-dev. Auto uses build tags and content clues. Each profile retains its compatibility behavior and save directory. [`anybor_abi.h`](src/glue/anybor_abi.h), [`anybor_engines.h`](src/glue/anybor_engines.h), [`tools/build.py`](tools/build.py). |
 | Automatic engine selection | An explicit core option takes precedence; otherwise inspect legacy script API requirements, filename tags, nearby executables as data, and PAK content tokens, then use the pinned fallback. Selection is rerun on Reset. [`libretro.cpp`](src/glue/libretro.cpp), `decide_engine`, `pick_anchor`, `build_from_content`; [`anybor_markers.h`](src/glue/anybor_markers.h). |
 | Frontend-owned frame delivery | Run the engine main loop on a libco coroutine, yield at video submission, and advance an emulated microsecond clock. Sleep/input-wait paths also yield so frontend input remains live. [`libretroport.c`](src/port/libretro/libretroport.c), [`libretroport.h`](src/port/libretro/libretroport.h), [`timer.c`](src/port/libretro/timer.c). |
 | Video and audio backends | Convert engine video to XRGB8888, publish geometry, and pull engine audio through the frontend. [`video.c`](src/port/libretro/video.c), [`video.h`](src/port/libretro/video.h), [`vga.h`](src/port/libretro/vga.h), [`sblaster.c`](src/port/libretro/sblaster.c), [`sblaster.h`](src/port/libretro/sblaster.h). |
@@ -1673,6 +1735,9 @@ idle fallback.
 Animation-frame spawn, summon and removal order, removal attack defaults and
 script interruption follow the selected profile. Idle context restoration
 preserves the profile's explicit scan or animation-series behavior.
+In 5134 and 6119, both animation-driven unsummoning and parent removal send
+the original attack selector to callbacks. Reaction lookups use the normal
+slot for a selector outside the available attack types.
 
 Fresh script records retain the selected profile's initial validity marker
 and empty variables, with explicit initialization handled separately.
@@ -1770,6 +1835,62 @@ Keep GIF dictionaries, pixel writes, palettes and filenames within their storage
 limits. Handle unavailable decoder storage cleanly and access packed screen
 references through aligned local values. Preserve valid decoded pixel bytes.
 
+## Level time limits
+
+The 5134 and 6119 profiles retain their time-limit damage, countdown
+display and timer callback order.
+
+## Obstacle collision callbacks
+
+The 5134 and 6119 profiles require the obstacle to lie strictly ahead on the
+movement axis. On contact they set and clear the `self` and `obstacle` script
+locals. Profiles whose original callback supplies `plane` set and clear that
+local for both contact axes.
+
+## Platform and wall contact
+
+The 5134 and 6119 profiles report platform callback axes 1 and 2. Their wall
+lookup ceiling is 999999 during movement and jumping. The `checkwall` script
+function starts at 100000 and uses the caller's height when supplied.
+
+## Script terrain queries
+
+The 5134 and 6119 profiles bind `checkbasemapindex` to the height query.
+Profiles that define `checkbase` expose it under its original script name.
+
+## Script axis properties
+
+The 6330 and 6391 profiles expose the original axis property functions.
+Their principal-axis setters use the numeric `y` selector to write `x`.
+
+## Script system variables
+
+The 5134 and 6119 profiles preserve the original 117 system variable names
+and their numeric selectors. Position, scroll and last-hit coordinate writes
+use the original integer conversion.
+
+## Script constants and typed level indices
+
+The 5134 and 6119 profiles use their original state and platform constant
+names. Their typed level getters and setters accept the original numeric
+indices returned by `openborconstant`.
+The 5134, 6119 and 6330 profiles retain the original decimal tag and integer
+conversion for the legacy background speed queries. Conversions outside the
+script integer range follow the standard refusal.
+
+## Script text limits
+
+The 5134 and 6119 profiles use their original lengths for script tokens, text
+object values and music names from scripts and levels. The current track name
+retains the profile's original length when a scene can restore it. Script text
+keeps a terminating byte within the core's shared storage.
+
+## Script decimal negation
+
+The 5134, 6119 and 6330 profiles preserve the original decimal result of the
+script interpreter's unary minus. The minimum script integer retains its
+value under negation.
+
 ## HUD model validation
 
 Player selection checks resolved models before drawing icons, joining, copying
@@ -1791,6 +1912,8 @@ argument errors. Unavailable animation or frame storage produces an empty result
 
 Animation, animation-property and attack ID translation preserve native
 numbering and give unsupported integer endpoints a defined invalid result.
+Attack and counter reactions select an animation only when its follow-up
+entry is available.
 
 ## Player property inputs
 
@@ -1889,7 +2012,13 @@ The legacy animation property query uses the entity's current animation.
 It validates the current animation and optional arguments before reading
 their data. Model-copy callbacks can query the previous entity.
 
+The walking animation uses the selected profile's direction value. Script
+queries return the value used to select the next animation frame.
+
 ## Animation frame ownership
+
+Repeated jump-frame and dive directives reset the animation's existing
+jump-frame record before applying the new values.
 
 Animation cleanup releases the initialized frame tables and collision entries
 using their allocation counts. Script edits to the visible frame count do

@@ -1,0 +1,150 @@
+/* SPDX-License-Identifier: BSD-3-Clause
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me>
+ */
+#include <stdint.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <strings.h>
+#include "scriptcommon.h"
+#undef assert
+#undef printf
+#include <assert.h>
+#ifndef stricmp
+#define stricmp strcasecmp
+#endif
+
+uint32_t obor_profile_build, obor_profile_features;
+float advancex, advancey, scrollminx, scrollmaxx, scrollminz, scrollmaxz, blockade;
+s_lasthit lasthit;
+static s_level scene;
+s_level *level = &scene;
+static CHAR label[96];
+static size_t pak_capacity;
+
+CHAR *StrCache_Get(int index) { assert(index == 0); return label; }
+void StrCache_Collect(int index) { assert(index >= 0 && index <= 2); }
+int StrCache_Pop(int length) { assert(length >= 0); return 2; }
+int StrCache_CreateNewFrom(const CHAR *text) { assert(!strcmp(text, "test_content")); return 1; }
+void getPakName(char *name, size_t capacity, int type)
+{
+    assert(type == -1 && capacity >= sizeof("test_content"));
+    pak_capacity = capacity;
+    memcpy(name, "test_content", sizeof("test_content"));
+}
+
+@VARIANTS@
+@SEARCH@
+@TABLES@
+@NATIVE@
+@MAPPER@
+@GETTER@
+@SETTER@
+@WRAPPERS@
+
+struct name_entry { const char *name; int native; };
+static const struct name_entry early_names[] = {@NAMES_6119@};
+static const struct name_entry later_names[] = {@NAMES_6391@};
+
+static ScriptVariant named(const char *name)
+{
+    assert(strlen(name) < sizeof(label));
+    strcpy(label, name);
+    return (ScriptVariant){.vt = VT_STR, .strVal = 0};
+}
+
+static int ordinal(const struct name_entry *entries, size_t length, const char *name)
+{
+    for(size_t i = 0; i < length; ++i)
+        if(!strcmp(entries[i].name, name)) return (int)i;
+    abort();
+}
+
+static void check_namespace(const struct name_entry *entries, size_t length)
+{
+    for(size_t i = 0; i < length; ++i)
+    {
+        ScriptVariant selector = named(entries[i].name), *args[] = {&selector};
+        assert(mapstrings_systemvariant(args, 1) == 1);
+        assert(selector.vt == VT_INTEGER && selector.lVal == (LONG)i);
+        assert(obor_systemvariant_native(i) == entries[i].native);
+    }
+    assert(obor_systemvariant_native(length) == _sv_the_end);
+}
+
+static ScriptVariant get_value(ScriptVariant arg)
+{
+    ScriptVariant result, *out = &result, *args[] = {&arg};
+    ScriptVariant_Init(&result);
+    assert(openbor_systemvariant(args, &out, 1) == S_OK && out == &result);
+    return result;
+}
+
+static void set_value(ScriptVariant arg, ScriptVariant value)
+{
+    ScriptVariant result, *out = &result, *args[] = {&arg, &value};
+    ScriptVariant_Init(&result);
+    assert(openbor_setsystemvariant(args, &out, 2) == S_OK && out == &result);
+}
+
+static void check_coordinates(const struct name_entry *entries, size_t length, int integer)
+{
+    static const char *const names[] = {@COORDINATES@};
+    for(size_t i = 0; i < sizeof(names) / sizeof(*names); ++i)
+    {
+        ScriptVariant slot = {.vt = VT_INTEGER, .lVal = ordinal(entries, length, names[i])};
+        ScriptVariant number = {.vt = VT_DECIMAL, .dblVal = -18.75 - (double)i};
+        set_value(slot, number);
+        ScriptVariant got = get_value(named(names[i]));
+        assert(got.vt == VT_DECIMAL && got.dblVal == (integer ? (int)number.dblVal : number.dblVal));
+        number.dblVal = 24.25 + (double)i;
+        set_value(named(names[i]), number);
+        got = get_value(slot);
+        assert(got.vt == VT_DECIMAL && got.dblVal == (integer ? (int)number.dblVal : number.dblVal));
+    }
+}
+
+static void check_bosses(int integer)
+{
+    scene.bossescount = 4;
+    scene.numbosses = 6;
+    ScriptVariant next = {.vt = VT_INTEGER, .lVal = 3};
+    if(integer)
+    {
+        ScriptVariant result, *out = &result, selector = named("bossescount"), *args[] = {&selector, &next};
+        ScriptVariant_Init(&result);
+        assert(openbor_systemvariant(args, &out, 1) == E_FAIL && !out);
+        selector = named("numbosses");
+        out = &result;
+        assert(openbor_setsystemvariant(args, &out, 2) == E_FAIL && !out);
+        assert(scene.bossescount == 4 && scene.numbosses == 6);
+        return;
+    }
+    ScriptVariant got = get_value(named("bossescount"));
+    assert(got.vt == VT_INTEGER && got.lVal == 4);
+    set_value(named("bossescount"), next);
+    assert(scene.bossescount == 3 && scene.numbosses == 6);
+    got = get_value(named("numbosses"));
+    assert(got.vt == VT_INTEGER && got.lVal == 6);
+    set_value(named("numbosses"), next);
+    assert(scene.bossescount == 3 && scene.numbosses == 3);
+}
+
+int main(void)
+{
+    static const struct { unsigned revision; int integer; } rows[] = {@ROWS@};
+    for(size_t i = 0; i < sizeof(rows) / sizeof(*rows); ++i)
+    {
+        obor_profile_build = rows[i].revision;
+        const int integer = rows[i].integer;
+        const struct name_entry *entries = integer ? early_names : later_names;
+        const size_t length = integer ? sizeof(early_names) / sizeof(*early_names) : sizeof(later_names) / sizeof(*later_names);
+        check_namespace(entries, length);
+        check_coordinates(entries, length, integer);
+        check_bosses(integer);
+        ScriptVariant pak = get_value(named("pakname"));
+        assert(pak.vt == VT_STR && pak.strVal == 1 && pak_capacity == (integer ? 256 : 512));
+        printf("%u\n", rows[i].revision);
+    }
+    return 0;
+}

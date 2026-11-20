@@ -1,0 +1,178 @@
+/* SPDX-License-Identifier: BSD-3-Clause
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me>
+ */
+#include <assert.h>
+#include <stdbool.h>
+#include <stdint.h>
+#include <stdio.h>
+#include <string.h>
+#include @ABI@
+
+#define MAX_PLAYERS 4
+#define MAX_SPECIAL_INPUTS 16
+#define GAME_SPEED 100
+typedef uint32_t u32;
+typedef uint64_t u64;
+typedef int32_t LONG;
+typedef struct { LONG value; bool valid; } ScriptVariant;
+static uint32_t obor_profile_build, obor_profile_features;
+@FLAGS@
+@CODES@
+
+enum { A_REC_STOP, A_REC_PLAY, ANI_BLOCK };
+enum { _pp_disablekeys, _pp_playkeys, _pp_keys, _pp_newkeys, _pp_releasekeys };
+
+typedef struct { int settings[JOY_MAX_INPUTS]; u64 keyflags, newkeyflags; int kb_break; } s_playercontrols;
+static s_playercontrols controls[MAX_PLAYERS], default_control;
+static s_playercontrols *playercontrolpointers[] = {
+    &controls[0], &controls[1], &controls[2], &controls[3]
+};
+static unsigned char obor_pad[MAX_PLAYERS][16];
+
+typedef struct { u32 movetime; int playerindex, direction, stalltime; } entity;
+typedef struct {
+    @PLAYER_FIELDS@
+    u32 combokey[MAX_SPECIAL_INPUTS], inputtime[MAX_SPECIAL_INPUTS];
+    unsigned combostep;
+    entity *ent;
+} s_player;
+static s_player player[MAX_PLAYERS];
+static entity actor, *self = &actor;
+static u64 bothkeys, bothnewkeys;
+static u32 _time;
+static int ajspecial;
+static bool special_allowed;
+
+static void obor_poll_tick(void) {}
+static int allow_default_keys(void) { return 0; }
+static bool validanim(entity *ent, int anim)
+{
+    assert(ent == self && anim == ANI_BLOCK);
+    return true;
+}
+static bool check_special(void) { return special_allowed; }
+
+#define SUCCEEDED(result) ((result) == 0)
+static int ScriptVariant_IntegerValue(const ScriptVariant *value, LONG *out)
+{
+    if(!value->valid) return -1;
+    *out = value->value;
+    return 0;
+}
+
+static int set_input(int property, LONG value, bool valid)
+{
+    const int index = 0;
+    ScriptVariant argument = {value, valid}, *arg = &argument;
+    LONG ltemp;
+    @PROFILE_WIDTH@
+    switch(property)
+    {
+        @SETTERS@
+        default: goto cpperror;
+    }
+    return 1;
+cpperror:
+    return 0;
+}
+
+@METHODS@
+
+static unsigned key_slot(u64 flag)
+{
+    unsigned slot = 0;
+    while((flag & 1) == 0)
+    {
+        flag >>= 1;
+        ++slot;
+    }
+    return slot;
+}
+
+static void reset_input(void)
+{
+    memset(&actor, 0, sizeof(actor));
+    memset(player, 0, sizeof(player));
+    memset(controls, 0, sizeof(controls));
+    memset(obor_pad, 0, sizeof(obor_pad));
+    bothkeys = bothnewkeys = 0;
+}
+
+static void check_script_writes(unsigned width)
+{
+    u64 *fields[] = {&player[0].disablekeys, &player[0].playkeys, &player[0].keys,
+                    &player[0].newkeys, &player[0].releasekeys};
+    const LONG values[] = {0, 31, INT32_MIN, -1};
+    for(size_t field = 0; field < sizeof(fields) / sizeof(*fields); ++field)
+    {
+        for(size_t choice = 0; choice < sizeof(values) / sizeof(*values); ++choice)
+        {
+            const LONG value = values[choice];
+            assert(set_input((int)field, value, true));
+            assert(*fields[field] == (width == 32 ? (u32)value : (u64)value));
+        }
+        const u64 before = *fields[field];
+        assert(!set_input((int)field, 0, false));
+        assert(*fields[field] == before);
+    }
+}
+
+static void check_held_and_released(unsigned width)
+{
+    const u64 high_bit = width == 64 ? (UINT64_C(1) << 40) : 0;
+    controls[0].settings[40] = OBOR_KEY(0, 0);
+    controls[0].settings[key_slot(FLAG_ATTACK)] = OBOR_KEY(0, 1);
+    controls[1].settings[key_slot(FLAG_JUMP)] = OBOR_KEY(1, 2);
+    obor_pad[0][0] = obor_pad[0][1] = obor_pad[1][2] = 1;
+    inputrefresh(A_REC_STOP);
+    assert(player[0].keys == (FLAG_ATTACK | high_bit) && player[1].keys == FLAG_JUMP);
+    assert(bothkeys == (FLAG_ATTACK | FLAG_JUMP | high_bit) && bothnewkeys == bothkeys);
+    assert(player[0].combokey[0] == FLAG_ATTACK);
+    obor_pad[0][0] = obor_pad[0][1] = 0;
+    inputrefresh(A_REC_STOP);
+    assert(bothkeys == FLAG_JUMP && bothnewkeys == 0);
+    assert(player[0].releasekeys == (FLAG_ATTACK | high_bit));
+}
+
+static void check_replay_and_special(unsigned width)
+{
+    const u64 mask = width == 32 ? UINT32_MAX : UINT64_MAX;
+    assert(set_input(_pp_keys, -1, true));
+    assert(set_input(_pp_newkeys, -1, true));
+    assert(set_input(_pp_playkeys, -1, true));
+    player[0].prevkeys = player[0].keys;
+    player[0].ent = self;
+    _time = 42;
+    inputrefresh(A_REC_PLAY);
+    assert(bothkeys == mask && bothnewkeys == mask && player[0].releasekeys == mask);
+    assert(player[0].combokey[0] == UINT32_MAX && player[0].inputtime[0] == _time);
+    ajspecial = 0;
+    special_allowed = false;
+    assert(!player_check_special() && player[0].playkeys == mask);
+    special_allowed = true;
+    self->stalltime = 5;
+    assert(player_check_special() && !self->stalltime);
+    assert(player[0].playkeys == (mask & ~(u64)FLAG_SPECIAL));
+    ajspecial = 1;
+    assert(player_check_special());
+    assert(player[0].playkeys == (mask & ~((u64)FLAG_SPECIAL | FLAG_JUMP)));
+}
+
+static const struct { u32 revision; unsigned width; } profiles[] = {
+    @PROFILES@
+};
+
+int main(void)
+{
+    for(size_t i = 0; i < sizeof(profiles) / sizeof(*profiles); ++i)
+    {
+        obor_profile_build = profiles[i].revision;
+        reset_input();
+        check_script_writes(profiles[i].width);
+        reset_input();
+        check_held_and_released(profiles[i].width);
+        reset_input();
+        check_replay_and_special(profiles[i].width);
+    }
+    return 0;
+}

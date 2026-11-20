@@ -4,7 +4,8 @@
  * These contributions are licensed under BSD-3-Clause; see LICENSE at the root.
  * Upstream code retains its original license and notices.
  * Keep legacy entity IDs and append selectors needed by the nearby logical
- * profiles.
+ * profiles. Add shared selectors for the historical scalar position
+ * properties.
  * Existing changes recorded here; this is not their implementation date.
  * See MODIFICATIONS.md and docs/modifications/6391.md
  * at the source repository root. Original notices follow below.
@@ -67,6 +68,9 @@ typedef enum
     _ENTITY_LEGACY_END,
     _ENTITY_OPPONENT = _ENTITY_LEGACY_END,
     _ENTITY_OWNER,
+    _ENTITY_POSITION_X,
+    _ENTITY_POSITION_Y,
+    _ENTITY_POSITION_Z,
     _ENTITY_END,
 } e_entity_properties;
 

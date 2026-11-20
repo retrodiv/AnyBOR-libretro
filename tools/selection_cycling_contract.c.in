@@ -1,0 +1,103 @@
+/* SPDX-License-Identifier: BSD-3-Clause
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me>
+ */
+#include <stdint.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <strings.h>
+#include "openbor.h"
+#undef assert
+#undef printf
+#include <assert.h>
+
+#ifndef stricmp
+#define stricmp strcasecmp
+#endif
+
+uint32_t obor_profile_build, obor_profile_features;
+static s_model models[8], outsider;
+static s_modelcache cache[8];
+static s_set_entry settings;
+s_set_entry *levelsets = &settings;
+s_player player[MAX_PLAYERS];
+unsigned int models_cached = 8;
+int current_set, bonus, allow_secret_chars;
+static int diagnostics;
+
+#if OBOR_ENGINE_BUILD == 4432
+void shutdown(int status, char *message, ...)
+#else
+void borShutdown(int status, char *message, ...)
+#endif
+{
+    assert(status == 1 && !strcmp(message, "Fatal: can't find any player models!"));
+    ++diagnostics;
+}
+
+#if OBOR_ENGINE_BUILD != 4432
+s_model *load_cached_model(char *name, char *owner, char unload)
+{
+    abort();
+}
+#endif
+
+@FUNCTIONS@
+
+static const struct {
+    unsigned selectable;
+    int allow_secret, bonus, current, slot, maxplayers, nosame;
+    const char *names[MAX_PLAYERS];
+    int expected[2];
+} cases[] = {@CASES@};
+
+static void initialize_case(unsigned number)
+{
+    static char names[][8] = {
+        "Aster", "Brim", "Clay", "Dune", "Ember", "Frost", "Glaive", "Haze"
+    };
+    model_cache = cache;
+    memset(models, 0, sizeof(models));
+    memset(cache, 0, sizeof(cache));
+    for(unsigned i = 0; i < models_cached; ++i)
+    {
+        models[i].name = names[i];
+        models[i].type = i == 6 ? TYPE_ENEMY : TYPE_PLAYER;
+        models[i].secret = i == 4;
+        models[i].clearcount = i == 5 ? 2 : 0;
+        cache[i].model = i == 7 ? NULL : &models[i];
+        cache[i].selectable = !!(cases[number].selectable & (1u << i));
+    }
+    for(int i = 0; i < MAX_PLAYERS; ++i)
+        strcpy(player[i].name, cases[number].names[i]);
+    settings.maxplayers = cases[number].maxplayers;
+    settings.nosame = cases[number].nosame;
+    allow_secret_chars = cases[number].allow_secret;
+    bonus = cases[number].bonus;
+}
+
+int main(void)
+{
+    const uint32_t revisions[] = {@REVISIONS@};
+    for(unsigned p = 0; p < sizeof(revisions) / sizeof(*revisions); ++p)
+    {
+        obor_profile_build = revisions[p];
+        for(unsigned i = 0; i < sizeof(cases) / sizeof(*cases); ++i)
+        {
+            initialize_case(i);
+            const int from = cases[i].current;
+            s_model *current = from == -1 ? NULL : from == 8 ? &outsider : &models[from];
+            for(int backwards = 0; backwards < 2; ++backwards)
+            {
+                const int expected = cases[i].expected[backwards];
+                diagnostics = 0;
+                s_model *result = backwards ? prevplayermodeln(current, cases[i].slot)
+                                           : nextplayermodeln(current, cases[i].slot);
+                assert(result == (expected < 0 ? NULL : &models[expected]));
+                assert(diagnostics == (expected < 0));
+            }
+        }
+        printf("%u\n", obor_profile_build);
+    }
+    return 0;
+}

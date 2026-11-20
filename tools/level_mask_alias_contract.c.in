@@ -1,0 +1,147 @@
+/* SPDX-License-Identifier: BSD-3-Clause
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me>
+ */
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include "scriptcommon.h"
+#include "profile_ids.h"
+#include "commands.h"
+#undef printf
+#undef assert
+#include <assert.h>
+
+uint32_t obor_profile_build;
+static s_level scene;
+s_level *level = &scene;
+static s_layer layers[3];
+static s_sprite sprites[4];
+static s_screen screen;
+static char requested_mask[MAX_BUFFER_LEN];
+static unsigned sprite_loads, screen_loads;
+
+s_sprite *loadsprite2(char *filename, int *width, int *height)
+{
+    assert(sprite_loads < sizeof(sprites) / sizeof(*sprites));
+    if(strcmp(filename, "front.png")) snprintf(requested_mask, sizeof(requested_mask), "%s", filename);
+    *width = 32;
+    *height = 16;
+    return &sprites[sprite_loads++];
+}
+
+int loadscreen(char *filename, char *archive, unsigned char *palette, int format, s_screen **output)
+{
+    assert(!strcmp(filename, "floor.png") && archive && !palette && format == PIXEL_32);
+    ++screen_loads;
+    screen.width = 32;
+    screen.height = 16;
+    s_screen *loaded = &screen;
+    memcpy(output, &loaded, sizeof(loaded));
+    return 1;
+}
+
+void borShutdown(int status, char *message, ...)
+{
+    abort();
+}
+
+static char test_archive[] = "fixture";
+#undef packfile
+#undef pixelformat
+#define packfile test_archive
+#define pixelformat PIXEL_32
+@NATIVE@
+#undef pixelformat
+#undef packfile
+
+static void parse_command(levelCommands command, char *argument, char *maskPath, s_spawn_entry *entry)
+{
+    s_spawn_entry next = *entry;
+#undef GET_ARG
+#undef GET_INT_ARG
+#define GET_ARG(index) (argument)
+#define GET_INT_ARG(index) atoi(argument)
+    switch(command)
+    {
+@COMMANDS@
+    default:
+        abort();
+    }
+#undef GET_INT_ARG
+#undef GET_ARG
+    *entry = next;
+}
+
+static void apply_alias(entity *e, s_spawn_entry *props)
+{
+@ALIAS@
+}
+
+static void apply_model_name(entity *e)
+{
+@MODEL_NAME@
+}
+
+static void check(unsigned revision, size_t mask_bytes, size_t alias_bytes, size_t model_name_bytes)
+{
+    obor_profile_build = revision;
+    memset(&scene, 0, sizeof(scene));
+    memset(layers, 0, sizeof(layers));
+    memset(sprites, 0, sizeof(sprites));
+    sprite_loads = screen_loads = 0;
+    scene.layers = layers;
+    char long_mask[165];
+    memset(long_mask, 'g', 160);
+    memcpy(long_mask + 160, ".png", 5);
+    char maskPath[MAX_BUFFER_LEN] = {0};
+    s_spawn_entry entry = {0};
+    parse_command(CMD_LEVEL_ALPHAMASK, long_mask, maskPath, &entry);
+    const size_t mask_length = mask_bytes < strlen(long_mask) ? mask_bytes : strlen(long_mask);
+    if(strlen(maskPath) != mask_length)
+        fprintf(stderr, "%u mask path length %zu instead of %zu\n", revision, strlen(maskPath), mask_length);
+    assert(strlen(maskPath) == mask_length && !memcmp(maskPath, long_mask, mask_length));
+    load_layer("front.png", maskPath, 0);
+    assert(!maskPath[0] && sprite_loads == 2 && !screen_loads);
+    assert(sprites[0].mask == &sprites[1] && strlen(requested_mask) == mask_length);
+    assert(!memcmp(requested_mask, long_mask, mask_length));
+    load_layer("floor.png", maskPath, 1);
+    assert(sprite_loads == 2 && screen_loads == 1);
+    parse_command(CMD_LEVEL_ALPHAMASK, "pattern.png", maskPath, &entry);
+    load_layer("front.png", maskPath, 0);
+    assert(!strcmp(maskPath, "pattern.png") && sprite_loads == 2);
+    load_layer("front.png", maskPath, 2);
+    assert(!maskPath[0] && sprite_loads == 4 && !strcmp(requested_mask, "pattern.png"));
+
+    char alias[57];
+    memset(alias, 'r', sizeof(alias) - 1);
+    alias[sizeof(alias) - 1] = '\0';
+    entity actor = {0};
+    actor.modeldata.name = alias;
+    apply_model_name(&actor);
+    assert(strlen(actor.name) == model_name_bytes && !memcmp(actor.name, alias, model_name_bytes));
+    actor.modeldata.name = "Pilot";
+    apply_model_name(&actor);
+    assert(!strcmp(actor.name, "Pilot"));
+
+    parse_command(CMD_LEVEL_ALIAS, alias, maskPath, &entry);
+    apply_alias(&actor, &entry);
+    assert(strlen(actor.name) == alias_bytes && !memcmp(actor.name, alias, alias_bytes));
+    parse_command(CMD_LEVEL_ALIAS, "Pilot", maskPath, &entry);
+    apply_alias(&actor, &entry);
+    assert(!strcmp(actor.name, "Pilot"));
+
+    level->bossescount = level->numbosses = 8;
+@COUNTS@
+    assert(!level->bossescount && !level->numbosses);
+    parse_command(CMD_LEVEL_BOSS, "1", maskPath, &entry);
+    assert(entry.boss == 1 && level->bossescount == 1 && level->numbosses == 1);
+    parse_command(CMD_LEVEL_BOSS, "0", maskPath, &entry);
+    assert(!entry.boss && level->bossescount == 1 && level->numbosses == 1);
+    printf("PASS %u\n", revision);
+}
+
+int main(void)
+{
+    @CHECKS@
+    return 0;
+}

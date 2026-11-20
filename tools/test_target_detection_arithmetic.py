@@ -6,9 +6,11 @@ Copyright (c) 2026 retrodiv <retrodiv@proton.me>
 import json
 import os
 from pathlib import Path
+import re
 import unittest
 
-from contract_fixtures import load_contract_fixture
+from contract_fixtures import contract_revisions, load_contract_fixture
+from test_historical_common_think import native_output
 from test_historical_player import function
 from test_model_constructor_ownership import run_native
 
@@ -63,6 +65,33 @@ class TargetDetectionArithmeticTests(unittest.TestCase):
         result = run_native(engine, program(engine, [profile], remove_promotion=True))
         self.assertNotEqual(result.returncode, 0)
         self.assertIn('signed integer overflow', result.stderr)
+
+
+class NormalTargetSelectionContracts(unittest.TestCase):
+    def check_normal_target_selection(self, engine_id):
+        data = load_contract_fixture(HERE / 'fixtures/profile-normal-target-selection.json')
+        rows = [row for row in data['sources'] if row['engine'] == engine_id]
+        revisions = [row['revision'] for row in rows]
+        self.assertEqual(revisions, sorted(contract_revisions(data, data['expected_revisions'][engine_id])))
+        engine = Path(os.environ.get('OBOR_HISTORICAL_ENGINE', ROOT / 'src/engines' / engine_id))
+        source = (engine / 'openbor.c').read_text(encoding='latin-1')
+        ranges = ('obor_check_range_5134', 'check_range_target_base', 'check_range_target_x',
+                  'check_range_target_y', 'check_range_target_z', 'check_range_target_all')
+        values = dict(DIFF=function(source, 'diff'), TARGET=function(source, 'normal_find_target'),
+                      RANGES='\n'.join(function(source, name) for name in ranges) if engine_id == '6391' else '',
+                      ROWS=',\n'.join('{%du,%d,%d}' % (
+                          row['revision'], row['inclusive_distance'], row['fractional_range']) for row in rows))
+        template = (HERE / 'normal_target_selection_contract.c.in').read_text()
+        code = re.sub(r'@([A-Z_]+)@', lambda match: values[match[1]], template)
+        output = native_output(code, {'engine': engine_id}, engine_source=engine,
+                               extra_cflags=('-fgnu89-inline',), libraries=('m',))
+        self.assertEqual([int(line) for line in output.splitlines()], revisions)
+
+    def test_4432_normal_target_selection(self):
+        self.check_normal_target_selection('4432')
+
+    def test_6391_normal_target_selection(self):
+        self.check_normal_target_selection('6391')
 
 
 if __name__ == '__main__':

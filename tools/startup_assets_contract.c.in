@@ -1,0 +1,121 @@
+/* SPDX-License-Identifier: BSD-3-Clause
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me>
+ */
+#include <stdio.h>
+#include <string.h>
+#include <strings.h>
+#include "scriptcommon.h"
+#include "profile_ids.h"
+#undef printf
+#undef assert
+#include <assert.h>
+#ifndef stricmp
+#define stricmp strcasecmp
+#endif
+
+uint32_t obor_profile_build;
+static unsigned scene_calls, background_calls, shutdown_calls;
+static char resource_name[MAX_BUFFER_LEN];
+
+void playscene(char *path)
+{
+    ++scene_calls;
+    strcpy(resource_name, path);
+}
+
+void load_background(char *path, int tables)
+{
+    assert(!tables);
+    ++background_calls;
+    strcpy(resource_name, path);
+}
+
+void borShutdown(int status, char *message, ...)
+{
+    assert(status == 1 && message);
+    ++shutdown_calls;
+}
+
+@STARTUP@
+
+enum { OT_PNG = 1, OT_GIF, OT_PCX, OT_BMP, OT_RAW_PALETTE };
+static int open_type;
+static unsigned image_calls, match_image_format;
+static size_t image_stem_length;
+static const char *const image_extensions[] = {@EXTENSIONS@};
+
+static int image_attempt(const char *path, const char *pack, unsigned format)
+{
+    assert(!strcmp(pack, "fixture.pak"));
+    assert(strlen(path) == image_stem_length + strlen(image_extensions[format - 1]));
+    assert(!strcmp(path + image_stem_length, image_extensions[format - 1]));
+    ++image_calls;
+    return format == match_image_format;
+}
+
+static int openpng(char *path, char *pack) { return image_attempt(path, pack, OT_PNG); }
+static int opengif(char *path, char *pack) { return image_attempt(path, pack, OT_GIF); }
+static int openpcx(char *path, char *pack) { return image_attempt(path, pack, OT_PCX); }
+static int openbmp(char *path, char *pack) { return image_attempt(path, pack, OT_BMP); }
+
+static int openpcx_mode(char *path, char *pack, int palette_only)
+{
+    assert(palette_only);
+    return image_attempt(path, pack, OT_PCX) ? 2 : 0;
+}
+
+@IMAGE@
+
+static void check(unsigned revision, size_t startup_name_bytes, size_t image_stem_bytes)
+{
+    obor_profile_build = revision;
+    scene_calls = background_calls = shutdown_calls = 0;
+    char path[MAX_BUFFER_LEN];
+    play_startup_scene(path, "custom/", "intro.txt");
+    assert(scene_calls == 1 && !strcmp(resource_name, "custom/intro.txt"));
+    load_startup_background(path, "custom/", "logo");
+    assert(background_calls == 1 && !strcmp(resource_name, "custom/logo"));
+
+    char prefix[MAX_BUFFER_LEN];
+    const size_t short_prefix = startup_name_bytes - strlen("intro.txt");
+    memset(prefix, 'c', sizeof(prefix));
+    prefix[short_prefix] = '\0';
+    play_startup_scene(path, prefix, "intro.txt");
+    assert(scene_calls == 2 && strlen(resource_name) == startup_name_bytes);
+    assert(!memcmp(resource_name, prefix, short_prefix));
+    assert(!strcmp(resource_name + short_prefix, "intro.txt"));
+    prefix[short_prefix] = 'c';
+    prefix[startup_name_bytes] = '\0';
+    play_startup_scene(path, prefix, "intro.txt");
+    load_startup_background(path, prefix, "title");
+    assert(scene_calls == 2 && background_calls == 1 && shutdown_calls == 1);
+
+    memset(path, 'p', sizeof(path));
+    path[image_stem_bytes] = '\0';
+    image_stem_length = image_stem_bytes;
+    image_calls = 0;
+    match_image_format = OT_BMP;
+    assert(openimage_mode(path, "fixture.pak", 0));
+    assert(image_calls == 4 && open_type == OT_BMP);
+    image_calls = 0;
+    match_image_format = OT_PCX;
+    assert(openimage_mode(path, "fixture.pak", 1));
+    assert(image_calls == 3 && open_type == OT_RAW_PALETTE);
+    path[image_stem_bytes] = 'p';
+    path[image_stem_bytes + 1] = '\0';
+    image_calls = 0;
+    assert(!openimage_mode(path, "fixture.pak", 0) && !image_calls && !open_type);
+
+    image_stem_length = image_stem_bytes + 1;
+    strcpy(path + image_stem_length, ".png");
+    match_image_format = OT_PNG;
+    assert(openimage_mode(path, "fixture.pak", 0));
+    assert(image_calls == 1 && open_type == OT_PNG);
+    printf("PASS %u\n", revision);
+}
+
+int main(void)
+{
+    @CHECKS@
+    return 0;
+}

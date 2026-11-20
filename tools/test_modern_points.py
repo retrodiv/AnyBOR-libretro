@@ -10,11 +10,13 @@ import re
 import unittest
 
 from contract_fixtures import contract_revisions, load_contract_fixture
+from test_early_jump_walkoff import braced_statement
 from test_historical_common_think import ROOT, native_output
 from test_historical_player import function, switch_cases
 
 
 FIXTURE = Path(__file__).with_name('fixtures') / 'modern-points-contracts.json'
+ENERGY_FIXTURE = FIXTURE.with_name('profile-energy-callers.json')
 
 
 def one(pattern, source, label):
@@ -98,6 +100,40 @@ def program(data):
 
 
 class ModernPointsContracts(unittest.TestCase):
+    def check_energy_callers(self, physical):
+        data = load_contract_fixture(ENERGY_FIXTURE)
+        rows = [row for row in data['sources'] if row['engine'] == physical]
+        self.assertEqual([row['revision'] for row in rows], data['expected_revisions'][physical])
+        engine = Path(os.environ.get('OBOR_HISTORICAL_ENGINE', ROOT / 'src/engines' / physical))
+        core = (engine / 'openbor.c').read_text(encoding='latin-1')
+        damage = function(core, 'checkdamage')
+        callback = re.search(r'(?m)^    execute_takedamage_script\(self, other, [^;]+;', damage)
+        level = function(core, 'playlevel')
+        saved_vitals = level.index('nomaxrushreset[i] = player[i].ent->rush.count.max;')
+        loop = level[level.rindex('    for(i = 0', 0, saved_vitals):]
+        level_exit = braced_statement(loop, loop.splitlines()[0].strip())
+        self.assertIn('player[i].spawnhealth', level_exit)
+        values = {
+            'CHARGE': function(core, 'do_energy_charge') if physical != '4432' else '',
+            'UPDATE': function(core, 'update_health'),
+            'LEVEL_EXIT': level_exit,
+            'DAMAGE': damage[damage.index('{') + 1:callback.end()],
+            'ROWS': ','.join('{%du,%d,%d,%d,%d}' % (row['revision'], row['reset_weapon'], row['raw_damage'],
+                                                 row['timeover'], row['custom'])
+                             for row in rows),
+        }
+        template = Path(__file__).with_name('energy_callers_contract.c.in').read_text()
+        code = re.sub(r'@([A-Z_]+)@', lambda match: values[match[1]], template)
+        raw = native_output(code, {'engine': physical}, engine_source=engine,
+                            extra_cflags=('-fgnu89-inline',))
+        self.assertEqual([int(line) for line in raw.splitlines()], [row['revision'] for row in rows])
+
+    def test_4432_energy_callers(self):
+        self.check_energy_callers('4432')
+
+    def test_6391_energy_callers(self):
+        self.check_energy_callers('6391')
+
     def test_model_entity_state_legacy_access_and_guard_juggle_operations(self):
         data = load_contract_fixture(FIXTURE)
         revisions = [row['revision'] for row in data['sources']]

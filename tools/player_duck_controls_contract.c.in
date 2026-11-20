@@ -1,0 +1,187 @@
+/* SPDX-License-Identifier: BSD-3-Clause
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me>
+ */
+#include <assert.h>
+#include <stdint.h>
+#include <stdio.h>
+#include <string.h>
+#include "openbor.h"
+#include "profile_ids.h"
+#undef assert
+#undef printf
+#include <assert.h>
+
+uint32_t obor_profile_build, obor_profile_features;
+static entity subject;
+entity *self = &subject;
+static int calls, animation, idle_calls, two_lanes;
+static s_anim clip = {.numframes = 1};
+static s_anim *animations[MAX_ANIS];
+static s_player controls;
+
+#undef PLAYER_MIN_Z
+#undef PLAYER_MAX_Z
+#define PLAYER_MIN_Z 0
+#define PLAYER_MAX_Z two_lanes
+
+void common_preduck(void) {}
+void common_idle(void) {}
+void common_attack_proc(void) {}
+
+int common_idle_anim(entity *actor)
+{
+    assert(actor == self);
+    ++idle_calls;
+    return 1;
+}
+
+void ent_set_anim(entity *actor, int id, int reset)
+{
+    assert(actor == self && !reset);
+    ++calls;
+    animation = id;
+}
+
+@ACTIONS@
+
+static int duck_attack(s_player *pl, int notinair)
+{
+@PROFILE@
+@ATTACK@
+    return 0;
+endthinkcheck:
+    return 1;
+}
+
+static int duck_movement(s_player *pl, int notinair)
+{
+@PROFILE@
+    int action = 0;
+@MOVEMENT@
+    return action;
+endthinkcheck:
+    return -1;
+}
+
+static int horizontal(s_player *pl)
+{
+@PROFILE@
+@LEFT@
+        return -1;
+@RIGHT@
+        return 1;
+    return 0;
+}
+
+static int duck_release(s_player *pl)
+{
+@PROFILE@
+@RELEASE@
+    return 0;
+endthinkcheck:
+    return 1;
+}
+
+static void reset_player(int posture, int keys, int lanes)
+{
+    memset(animations, 0, sizeof(animations));
+    subject = (entity){
+        .modeldata = {.animation = animations, .animation_capacity = MAX_ANIS, .speed = 6, .runspeed = 10},
+        .velocity = {.x = 3, .z = 4},
+        .idling = IDLING_ACTIVE,
+        .ducking = posture,
+        .running = 1,
+        .direction = DIRECTION_RIGHT,
+        .stalltime = 10
+    };
+    controls = (s_player){.keys = keys, .playkeys = FLAG_ATTACK};
+    calls = idle_calls = 0;
+    animation = -1;
+    two_lanes = lanes;
+}
+
+static void check(unsigned revision, int stateful)
+{
+    obor_profile_build = revision;
+    const int postures[] = {DUCK_INACTIVE, DUCK_PREPARED, DUCK_ACTIVE, DUCK_RISE};
+    for(size_t i = 0; i < sizeof(postures) / sizeof(*postures); ++i)
+    {
+        const int posture = postures[i];
+        for(int down = 0; down < 2; ++down)
+        {
+            for(int lanes = 0; lanes < 2; ++lanes)
+            {
+                for(int ground = 0; ground < 2; ++ground)
+                {
+                    reset_player(posture, down ? FLAG_MOVEDOWN : 0, lanes);
+                    animations[ANI_DUCKATTACK] = &clip;
+                    const int attack = ground && !lanes && (stateful ? posture == DUCK_ACTIVE : down);
+                    assert(duck_attack(&controls, ground) == attack && calls == attack);
+                    assert(!!(controls.playkeys & FLAG_ATTACK) == !ground);
+                    if(attack)
+                    {
+                        assert(animation == ANI_DUCKATTACK && subject.takeaction == common_attack_proc);
+                        assert(!subject.velocity.x && !subject.velocity.z && !subject.stalltime);
+                        assert(subject.attacking == ATTACKING_PREPARED && subject.idling == IDLING_INACTIVE);
+                    }
+
+                    reset_player(posture, down ? FLAG_MOVEDOWN : 0, lanes);
+                    animations[ANI_DUCK] = &clip;
+                    const int admitted = !stateful || posture == DUCK_INACTIVE;
+                    const int enters = ground && down && !lanes && admitted;
+                    const int moves = lanes && down && admitted;
+                    assert(duck_movement(&controls, ground) == (enters ? -1 : moves ? 4 : 0));
+                    assert(calls == enters);
+                    if(enters)
+                    {
+                        assert(animation == ANI_DUCK && !subject.velocity.x && !subject.velocity.z);
+                        assert(subject.running == !stateful);
+                        assert(subject.ducking == (stateful ? DUCK_ACTIVE : posture));
+                        assert(subject.idling == (stateful ? IDLING_ACTIVE | IDLING_PREPARED : IDLING_ACTIVE));
+                    }
+                    else if(moves)
+                    {
+                        assert(subject.velocity.z == 5);
+                    }
+                }
+            }
+        }
+
+        reset_player(posture, FLAG_MOVELEFT, 0);
+        const int horizontal_allowed = !stateful || posture == DUCK_INACTIVE;
+        assert(horizontal(&controls) == (horizontal_allowed ? -1 : 0));
+        controls.keys = FLAG_MOVERIGHT;
+        assert(horizontal(&controls) == horizontal_allowed);
+        controls.keys |= FLAG_MOVELEFT;
+        assert(horizontal(&controls) == (horizontal_allowed ? -1 : 0));
+        controls.keys = FLAG_MOVEDOWN | FLAG_MOVELEFT;
+        assert(duck_release(&controls) == (stateful && posture != DUCK_INACTIVE));
+        assert(subject.direction == (stateful && posture == DUCK_ACTIVE ? DIRECTION_LEFT : DIRECTION_RIGHT));
+        assert(!calls && !idle_calls);
+    }
+
+    reset_player(DUCK_INACTIVE, FLAG_MOVEDOWN, 0);
+    animations[ANI_DUCK] = animations[ANI_DUCKING] = &clip;
+    assert(duck_movement(&controls, 1) == -1 && calls == 1);
+    assert(animation == (stateful ? ANI_DUCKING : ANI_DUCK));
+    assert(subject.ducking == (stateful ? DUCK_PREPARED : DUCK_INACTIVE));
+    assert(subject.takeaction == (stateful ? common_preduck : NULL));
+
+    reset_player(DUCK_ACTIVE, 0, 0);
+    animations[ANI_DUCKRISE] = &clip;
+    assert(duck_release(&controls) == stateful && calls == stateful);
+    if(stateful)
+    {
+        assert(animation == ANI_DUCKRISE && subject.ducking == DUCK_RISE);
+        assert(subject.idling == IDLING_INACTIVE && subject.takeaction == common_idle);
+    }
+    reset_player(DUCK_ACTIVE, 0, 0);
+    assert(duck_release(&controls) == stateful && idle_calls == stateful && !calls);
+    printf("PASS %u\n", revision);
+}
+
+int main(void)
+{
+    @CASES@
+    return 0;
+}

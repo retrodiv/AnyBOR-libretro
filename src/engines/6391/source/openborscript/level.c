@@ -3,7 +3,8 @@
  * Copyright (c) 2026 retrodiv <retrodiv@proton.me> (original contributions).
  * These contributions are licensed under BSD-3-Clause; see LICENSE at the root.
  * Upstream code retains its original license and notices.
- * Select the native 6330 background-speed return representation.
+ * Select the native 6330 background-speed return representation. Preserve
+ * the 5134 and 6119 numeric selectors for typed level access.
  * Existing changes recorded here; this is not their implementation date.
  * See MODIFICATIONS.md and docs/modifications/6391.md
  * at the source repository root. Original notices follow below.
@@ -24,6 +25,7 @@
 // Access to level and level set properties.
 
 #include "scriptcommon.h"
+#include "profile_ids.h"
 
 #define invalid_pointer_input arg_value->vt != VT_PTR && arg_value->vt != VT_EMPTY
 
@@ -380,7 +382,7 @@ HRESULT openbor_get_level_property(ScriptVariant **varlist, ScriptVariant **pret
     }
 
     // Get the property argument.
-    property    = (LONG)varlist[ARG_PROPERTY]->lVal;
+    property    = obor_level_property_from_native(varlist[ARG_PROPERTY]->lVal);
 
     // Which property to get?
     switch(property)
@@ -965,7 +967,7 @@ HRESULT openbor_set_level_property(ScriptVariant **varlist, ScriptVariant **pret
     else
     {
         handle      = (s_level *)varlist[ARG_HANDLE]->ptrVal;
-        property    = (LONG)varlist[ARG_PROPERTY]->lVal;
+        property    = obor_level_property_from_native(varlist[ARG_PROPERTY]->lVal);
         arg_value   = varlist[ARG_VALUE];
     }
 
@@ -1834,17 +1836,30 @@ HRESULT openbor_getlevelproperty(ScriptVariant **varlist , ScriptVariant **pretv
     switch(varlist[0]->lVal)
     {
     case _lp_bgspeed:
-    {
-        ScriptVariant_ChangeType(*pretvar, VT_DECIMAL);
-        if(obor_profile_build == 6330) (*pretvar)->lVal = (DOUBLE)level->bgspeed;
-        else (*pretvar)->dblVal = (DOUBLE)level->bgspeed;
-        break;
-    }
     case _lp_vbgspeed:
     {
+        const DOUBLE speed = varlist[0]->lVal == _lp_bgspeed ? level->bgspeed : level->vbgspeed;
+        const int legacy = obor_profile_build == 5134 || obor_profile_build == 6119 || obor_profile_build == 6330;
+        LONG integer;
+
+        if(legacy)
+        {
+            ScriptVariant value = {.dblVal = speed, .vt = VT_DECIMAL};
+            if(FAILED(ScriptVariant_IntegerValue(&value, &integer)))
+            {
+                goto getlevelproperty_error;
+            }
+        }
+
         ScriptVariant_ChangeType(*pretvar, VT_DECIMAL);
-        if(obor_profile_build == 6330) (*pretvar)->lVal = (DOUBLE)level->vbgspeed;
-        else (*pretvar)->dblVal = (DOUBLE)level->vbgspeed;
+        if(legacy)
+        {
+            (*pretvar)->lVal = integer;
+        }
+        else
+        {
+            (*pretvar)->dblVal = speed;
+        }
         break;
     }
     case _lp_cameraxoffset:

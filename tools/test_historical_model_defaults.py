@@ -4,6 +4,7 @@ SPDX-License-Identifier: BSD-3-Clause
 Copyright (c) 2026 retrodiv <retrodiv@proton.me>
 """
 import json
+import os
 from pathlib import Path
 import re
 import unittest
@@ -158,6 +159,28 @@ def program(data, extra_commands=()):
 
 
 class ModelDefaultsContracts(unittest.TestCase):
+    def test_4432_model_stats_directive(self):
+        data = load_contract_fixture(FIXTURE.with_name('profile-legacy-entity-stats.json'))
+        rows = [row for row in data['sources'] if row['engine'] == '4432']
+        self.assertEqual([row['revision'] for row in rows], data['expected_revisions']['4432'])
+        self.assertTrue(all(row['model_stats'] for row in rows))
+        engine = Path(os.environ.get('OBOR_HISTORICAL_ENGINE', ROOT / 'src/engines/4432'))
+        core = (engine / 'openbor.c').read_text()
+        commands = (engine / 'source/gamelib/commands.c').read_text()
+        utility = (engine / 'source/utils.c').read_text()
+        _, arms = switch_cases(core, 'load_cached_model', 'cmd', outermost=True)
+        values = {
+            'NUMBERS': '\n'.join(function(core, name) for name in ('isNumeric', 'getValidFloat')),
+            'COMMANDS': model_command_functions(commands, utility),
+            'ARM': 'case CMD_MODEL_STATS:' + arms['CMD_MODEL_STATS']['body'],
+            'REVISIONS': ','.join(str(row['revision']) for row in rows),
+        }
+        template = Path(__file__).with_name('model_stats_contract.c.in').read_text()
+        code = re.sub(r'@([A-Z_]+)@', lambda match: values[match[1]], template)
+        result = native_output(code, {'engine': '4432'}, engine_source=engine,
+                               extra_cflags=('-fgnu89-inline',))
+        self.assertEqual(result.splitlines(), [f'PASS {row["revision"]}' for row in rows])
+
     def test_4432_model_command_names_and_ai_controls(self):
         data = load_contract_fixture(Path(__file__).with_name('fixtures') / 'profile-model-ai-control-contracts.json')
         revisions = {row['revision'] for row in data['sources']}

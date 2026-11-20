@@ -1,0 +1,318 @@
+/* SPDX-License-Identifier: BSD-3-Clause
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me>
+ */
+#include <stdint.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <strings.h>
+#include "scriptcommon.h"
+#include "profile_ids.h"
+#undef printf
+#undef assert
+#include <assert.h>
+#ifndef stricmp
+#define stricmp strcasecmp
+#endif
+
+uint32_t obor_profile_build;
+uint32_t obor_profile_features;
+static entity actor;
+
+void *checkAlloc(void *ptr, size_t size, const char *func, const char *file, int line)
+{
+    assert(!size || ptr);
+    return ptr;
+}
+
+@CACHE@
+@SEARCH@
+@METHODS@
+
+typedef int (*property_mapper)(ScriptVariant **, int);
+typedef struct { const char *name; SCRIPTFUNCTION function; } script_entry;
+static script_entry callbacks[4];
+static size_t registered;
+List theFunctionList;
+
+void List_InsertAfter(List *list, void *function, const char *name)
+{
+    assert(list == &theFunctionList && registered < 4);
+    callbacks[registered++] = (script_entry){name, (SCRIPTFUNCTION)function};
+}
+
+static void load_properties(void)
+{
+    @REGISTRY@
+}
+
+static const char *reverse_lookup(void *functionRef)
+{
+    @REVERSE@
+    return NULL;
+}
+
+static property_mapper argument_mapper(void *functionRef)
+{
+    @MAPPERS@
+    return NULL;
+}
+
+static SCRIPTFUNCTION lookup(const char *name)
+{
+    for(size_t i = 0; i < registered; ++i)
+        if(strcmp(callbacks[i].name, name) == 0) return callbacks[i].function;
+    assert(!"Expected a native registry entry");
+    return NULL;
+}
+
+static LONG selector(SCRIPTFUNCTION function, const char *name)
+{
+    ScriptVariant handle = {.vt = VT_PTR, .ptrVal = &actor};
+    ScriptVariant key = {.vt = VT_STR, .strVal = StrCache_CreateNewFrom(name)};
+    ScriptVariant *args[] = {&handle, &key};
+    property_mapper mapper = argument_mapper((void *)function);
+    assert(mapper);
+    if(!mapper(args, 2))
+    {
+        assert(key.vt == VT_STR);
+        ScriptVariant_Clear(&key);
+        return -1;
+    }
+    assert(key.vt == VT_INTEGER);
+    return key.lVal;
+}
+
+static ScriptVariant call(SCRIPTFUNCTION function, void *record, LONG ordinal, ScriptVariant *input)
+{
+    ScriptVariant handle = {.vt = VT_PTR, .ptrVal = record};
+    ScriptVariant key = {.vt = VT_INTEGER, .lVal = ordinal};
+    ScriptVariant result = {.vt = VT_EMPTY}, *out = &result;
+    ScriptVariant *args[] = {&handle, &key, input};
+    assert(function(args, &out, input ? 3 : 2) == S_OK && out == &result);
+    return result;
+}
+
+typedef struct { const char *name; e_entity_properties physical; bool named; } selector_entry;
+static const selector_entry historical[] = {@HISTORICAL@};
+static const selector_entry control[] = {@CONTROL@};
+
+static void check_mapping(SCRIPTFUNCTION getter, SCRIPTFUNCTION setter,
+                          const selector_entry *table, size_t size)
+{
+    for(size_t i = 0; i < size; ++i)
+    {
+        LONG ordinal = table[i].named ? (LONG)i : -1;
+        assert(selector(getter, table[i].name) == ordinal);
+        assert(selector(setter, table[i].name) == ordinal);
+        assert(profile_entity_property((LONG)i) == table[i].physical);
+        if(!table[i].named)
+        {
+            ScriptVariant result = call(getter, &actor, (LONG)i, NULL);
+            LONG expected = table[i].physical == _ENTITY_ATTACKING
+                ? ATTACKING_PREPARED : 24;
+            assert(result.vt == VT_INTEGER && result.lVal == expected);
+        }
+    }
+    assert(profile_entity_property((LONG)size) == _ENTITY_END);
+}
+
+static void check_scalar(SCRIPTFUNCTION getter, SCRIPTFUNCTION setter, const char *name,
+                         float *field, float value)
+{
+    LONG ordinal = selector(getter, name);
+    ScriptVariant result = call(getter, &actor, ordinal, NULL);
+    assert(result.vt == VT_DECIMAL && result.dblVal == *field);
+    ScriptVariant input = {.vt = VT_DECIMAL, .dblVal = value};
+    call(setter, &actor, ordinal, &input);
+    assert(*field == value);
+    result = call(getter, &actor, ordinal, NULL);
+    assert(result.vt == VT_DECIMAL && result.dblVal == value);
+}
+
+static void check_animation(SCRIPTFUNCTION getter, SCRIPTFUNCTION setter, bool old)
+{
+    const LONG ordinal = selector(getter, "animation_animation");
+    const LONG native_ids[] = {@ANIMATION_IDS@};
+    const LONG old_physical_ids[] = {ANI_BACKRUN, ANI_GETBOOMERANG, ANI_GETBOOMERANGINAIR,
+                                     MAX_ANIS, MAX_ANIS + 1};
+    for(size_t i = 0; i < sizeof(native_ids) / sizeof(*native_ids); ++i)
+    {
+        ScriptVariant input = {.vt = VT_INTEGER, .lVal = native_ids[i]};
+        call(setter, &actor, ordinal, &input);
+        assert(actor.animnum == (unsigned)(old ? old_physical_ids[i] : native_ids[i]));
+        ScriptVariant result = call(getter, &actor, ordinal, NULL);
+        assert(result.vt == VT_INTEGER && result.lVal == native_ids[i]);
+    }
+}
+
+static void check_energy_callbacks(SCRIPTFUNCTION getter, SCRIPTFUNCTION setter)
+{
+    const char *names[] = {"health_current", "health_old", "mp_current", "mp_old"};
+    const LONG initial[] = {91, 76, 32, 15};
+    SCRIPTFUNCTION read = lookup("get_energy_status_property");
+    SCRIPTFUNCTION write = lookup("set_energy_status_property");
+    assert(read == openbor_get_energy_status_property && write == read);
+    assert(strcmp(reverse_lookup((void *)write), "get_energy_status_property") == 0);
+    assert(strcmp(reverse_lookup((void *)openbor_set_energy_status_property),
+                  "set_energy_status_property") == 0);
+    assert(argument_mapper((void *)openbor_set_energy_status_property) == mapstrings_energy_status_property);
+
+    LONG energy_ordinal = selector(getter, "energy_status");
+    ScriptVariant handle = call(getter, &actor, energy_ordinal, NULL);
+    assert(handle.vt == VT_PTR && handle.ptrVal == &actor.energy_status);
+    ScriptVariant input = {.vt = VT_INTEGER, .lVal = 0};
+    call(setter, &actor, energy_ordinal, &input);
+    for(size_t i = 0; i < sizeof(names) / sizeof(*names); ++i)
+    {
+        assert(selector(read, names[i]) == (LONG)i && selector(write, names[i]) == (LONG)i);
+        ScriptVariant result = call(read, handle.ptrVal, (LONG)i, NULL);
+        assert(result.vt == VT_INTEGER && result.lVal == initial[i]);
+        result = call(write, handle.ptrVal, (LONG)i, &input);
+        assert(result.vt == VT_INTEGER && result.lVal == initial[i]);
+        result = call(read, handle.ptrVal, (LONG)i, NULL);
+        assert(result.vt == VT_INTEGER && result.lVal == initial[i]);
+        call(openbor_set_energy_status_property, handle.ptrVal, (LONG)i, &input);
+        result = call(read, handle.ptrVal, (LONG)i, NULL);
+        assert(result.vt == VT_INTEGER && result.lVal == input.lVal);
+        ++input.lVal;
+    }
+}
+
+static void check_projectile_requests(SCRIPTFUNCTION getter, SCRIPTFUNCTION setter, bool old)
+{
+    const unsigned requests[] = {
+        PROJECTILE_PRIME_REQUEST_UNDEFINED, PROJECTILE_PRIME_REQUEST_FLASH,
+        PROJECTILE_PRIME_REQUEST_KNIFE, PROJECTILE_PRIME_REQUEST_PROJECTILE,
+        PROJECTILE_PRIME_REQUEST_PSHOTNO, PROJECTILE_PRIME_REQUEST_SHOT,
+    };
+    const unsigned other = PROJECTILE_PRIME_BASE_Y | PROJECTILE_PRIME_SOURCE_INDEX;
+    LONG ordinal = selector(getter, "projectile_prime");
+    for(unsigned mask = 0; mask < 64; ++mask)
+    {
+        unsigned physical = other;
+        for(unsigned i = 0; i < 6; ++i)
+            if(mask & (1u << i)) physical |= requests[i];
+        unsigned native = old ? other | (mask << 4) : physical;
+        actor.projectile_prime = physical;
+        ScriptVariant value = call(getter, &actor, ordinal, NULL);
+        assert(value.vt == VT_INTEGER && value.lVal == (LONG)native);
+        actor.projectile_prime = 0;
+        call(setter, &actor, ordinal, &value);
+        assert(actor.projectile_prime == physical);
+    }
+}
+
+static void check_entity_state(SCRIPTFUNCTION getter, SCRIPTFUNCTION setter,
+                               const selector_entry *table, size_t size)
+{
+    static const struct { e_entity_properties field; bool boolean; } properties[] = {
+        {_ENTITY_ATTACKING, false}, {_ENTITY_BLOCKING, false}, {_ENTITY_CHARGING, true},
+        {_ENTITY_BLINK, true}, {_ENTITY_ANIMATION_FRAME, false},
+        {_ENTITY_BOSS, true}, {_ENTITY_DEDUCT_AMMO, true},
+        {_ENTITY_COLORSET_DYING_INDEX_1, false}, {_ENTITY_COLORSET_DYING_INDEX_2, false},
+        {_ENTITY_COLORSET_DYING_HEALTH_1, false}, {_ENTITY_COLORSET_DYING_HEALTH_2, false},
+    };
+    static const struct { DOUBLE argument; LONG integer; } values[] = {
+        {0.0, 0}, {1.0, 1}, {2.75, 2}, {-0.75, 0},
+    };
+    for(size_t i = 0; i < sizeof(properties) / sizeof(*properties); ++i)
+    {
+        size_t ordinal = 0;
+        while(ordinal < size && table[ordinal].physical != properties[i].field)
+            ++ordinal;
+        assert(ordinal < size);
+        for(size_t j = 0; j < sizeof(values) / sizeof(*values); ++j)
+        {
+            ScriptVariant input = {.vt = VT_DECIMAL, .dblVal = values[j].argument};
+            call(setter, &actor, (LONG)ordinal, &input);
+            ScriptVariant result = call(getter, &actor, (LONG)ordinal, NULL);
+            const LONG expected = properties[i].boolean ? (values[j].integer != 0) : values[j].integer;
+            assert(result.vt == VT_INTEGER && result.lVal == expected);
+        }
+    }
+}
+
+static void check_profile(unsigned revision, bool old)
+{
+    obor_profile_build = revision;
+    actor = (entity){.boomerang_loop = 7, .altbase = 1.5f, .base = 2.25f,
+                     .position = {.x = 3.25f, .y = -4.5f, .z = 5.75f},
+                     .attacking = ATTACKING_PREPARED, .attack_id_incoming = 24,
+                     .energy_status = {.health_current = 91, .health_old = 76,
+                                       .mp_current = 32, .mp_old = 15}};
+    SCRIPTFUNCTION getter = lookup("get_entity_property");
+    SCRIPTFUNCTION setter = lookup("set_entity_property");
+    assert(getter == openbor_get_entity_property && setter == openbor_set_entity_property);
+    assert(strcmp(reverse_lookup((void *)getter), "get_entity_property") == 0);
+    assert(strcmp(reverse_lookup((void *)setter), "set_entity_property") == 0);
+    LONG landing_ordinal = selector(getter, "damage_on_landing");
+    ScriptVariant landing = call(getter, &actor, landing_ordinal, NULL);
+    assert(landing.vt == VT_PTR && landing.ptrVal == &actor.damage_on_landing);
+    s_damage_on_landing replacement = {.attack_force = 24, .attack_type = ATK_NORMAL};
+    ScriptVariant landing_input = {.vt = VT_PTR, .ptrVal = &replacement};
+    call(setter, &actor, landing_ordinal, &landing_input);
+    assert(actor.damage_on_landing.attack_force == 0);
+    if(old)
+    {
+        check_mapping(getter, setter, historical, sizeof(historical) / sizeof(*historical));
+        check_scalar(getter, setter, "position_alternate_base", &actor.altbase, 8.125f);
+        check_scalar(getter, setter, "position_base", &actor.base, -2.375f);
+        check_scalar(getter, setter, "position_x", &actor.position.x, -5.25f);
+        check_scalar(getter, setter, "position_y", &actor.position.y, 1.75f);
+        check_scalar(getter, setter, "position_z", &actor.position.z, 9.5f);
+        ScriptVariant result = call(getter, &actor, 13, NULL);
+        assert(result.vt == VT_INTEGER && result.lVal == 7);
+        ScriptVariant input = {.vt = VT_DECIMAL, .dblVal = 18.75};
+        call(setter, &actor, 13, &input);
+        assert(actor.boomerang_loop == 18);
+    }
+    else
+    {
+        check_mapping(getter, setter, control, sizeof(control) / sizeof(*control));
+        check_scalar(getter, setter, "position_base_alternate", &actor.altbase, 8.125f);
+        check_scalar(getter, setter, "position_base_default", &actor.base, -2.375f);
+        LONG ordinal = selector(getter, "position_coordinates");
+        ScriptVariant result = call(getter, &actor, ordinal, NULL);
+        assert(result.vt == VT_PTR && result.ptrVal == &actor.position);
+        ScriptVariant input = {.vt = VT_DECIMAL, .dblVal = 18.75};
+        call(setter, &actor, ordinal, &input);
+        assert(actor.position.x == 3.25f && actor.position.y == -4.5f && actor.position.z == 5.75f);
+    }
+    LONG direction = selector(getter, "position_direction");
+    actor.direction = DIRECTION_RIGHT;
+    ScriptVariant current = call(getter, &actor, direction, NULL);
+    assert(current.vt == VT_INTEGER && current.lVal == DIRECTION_RIGHT);
+    ScriptVariant left = {.vt = VT_INTEGER, .lVal = DIRECTION_LEFT};
+    call(setter, &actor, direction, &left);
+    assert(actor.direction == DIRECTION_LEFT);
+    check_animation(getter, setter, old);
+    ScriptVariant incoming = {.vt = VT_INTEGER, .lVal = 39};
+    call(setter, &actor, 7, &incoming);
+    current = call(getter, &actor, 7, NULL);
+    assert(actor.attack_id_incoming == 39 && current.vt == VT_INTEGER && current.lVal == 39);
+    LONG spawn = selector(getter, "spawn_type");
+    ScriptVariant spawn_type = {.vt = VT_INTEGER, .lVal = SPAWN_TYPE_LEVEL};
+    call(setter, &actor, spawn, &spawn_type);
+    current = call(getter, &actor, spawn, NULL);
+    assert(actor.spawntype == SPAWN_TYPE_LEVEL && current.vt == VT_INTEGER && current.lVal == SPAWN_TYPE_LEVEL);
+    check_projectile_requests(getter, setter, old);
+    check_energy_callbacks(getter, setter);
+    if(old)
+        check_entity_state(getter, setter, historical, sizeof(historical) / sizeof(*historical));
+    else
+        check_entity_state(getter, setter, control, sizeof(control) / sizeof(*control));
+    printf("PASS %u\n", revision);
+}
+
+int main(void)
+{
+    const struct { unsigned revision; bool old; } rows[] = {@REVISIONS@};
+    load_properties();
+    assert(registered == 4);
+    StrCache_Init();
+    for(size_t i = 0; i < sizeof(rows) / sizeof(*rows); ++i)
+        check_profile(rows[i].revision, rows[i].old);
+    StrCache_Clear();
+    return 0;
+}

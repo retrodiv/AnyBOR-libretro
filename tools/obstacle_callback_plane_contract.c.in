@@ -1,0 +1,139 @@
+/* SPDX-License-Identifier: BSD-3-Clause
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me>
+ */
+#include <stdint.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include "openbor.h"
+#undef assert
+#undef printf
+#include <assert.h>
+
+enum local_key { LOCAL_SELF, LOCAL_PLANE, LOCAL_OBSTACLE, LOCAL_COUNT };
+uint32_t obor_profile_build;
+static Script script;
+static s_scripts slots = {.onblocko_script = &script};
+static entity actor = {.scripts = &slots, .modeldata.subject_to_obstacle = 1};
+entity *self = &actor;
+static float platform[1][8];
+static s_anim obstacle_animation;
+static entity obstacles[2] = {{.animation = &obstacle_animation}, {.animation = &obstacle_animation}};
+static entity *contacts[2], *expected_obstacle;
+static ScriptVariant locals[LOCAL_COUNT];
+static int planes[2];
+static float dx, dz;
+static int enabled, use_plane, expected_plane, expected_count, queries, writes, calls;
+
+void StrCache_Collect(int index) { abort(); }
+@VARIANTS@
+
+int Script_IsInitialized(Script *value)
+{
+    assert(value == &script);
+    return enabled;
+}
+
+int Script_Execute(Script *value)
+{
+    assert(value == &script && writes == expected_count && calls < 2);
+    assert(locals[LOCAL_SELF].vt == VT_PTR && locals[LOCAL_SELF].ptrVal == self);
+    assert(locals[LOCAL_OBSTACLE].vt == VT_PTR && locals[LOCAL_OBSTACLE].ptrVal == expected_obstacle);
+    assert(locals[LOCAL_PLANE].vt == VT_INTEGER && locals[LOCAL_PLANE].lVal == expected_plane);
+    ++calls;
+    return 0;
+}
+
+static void observe_local(Script *value, const char *name, ScriptVariant *variant)
+{
+    static const char *const keys[] = {"self", "plane", "obstacle"};
+    const int index = writes % expected_count;
+    const int key = !use_plane && index == 1 ? LOCAL_OBSTACLE : index;
+    assert(value == &script && !strcmp(name, keys[key]));
+    if(writes >= expected_count) assert(variant->vt == VT_EMPTY);
+    locals[key] = *variant;
+    ++writes;
+    if(writes == expected_count * 2) writes = 0;
+}
+
+#undef Script_Set_Local_Variant
+#define Script_Set_Local_Variant observe_local
+@CALLBACK@
+#undef Script_Set_Local_Variant
+
+entity *find_ent_here(entity *exclude, float x, float z, int types, int (*test)(entity *, entity *))
+{
+    assert(exclude == self && types == (TYPE_OBSTACLE | TYPE_TRAP) && !test);
+    assert(queries < 2 && writes == 0);
+    assert(x == (queries == 0 ? dx : 0) && z == (queries == 0 ? 0 : dz));
+    expected_plane = use_plane ? planes[queries] : 99;
+    expected_obstacle = contacts[queries++];
+    return expected_obstacle;
+}
+
+void ent_set_anim(entity *ent, int animation, int reset) { abort(); }
+
+static void move(int blocked)
+{
+    float xdir = dx, zdir = dz, x = xdir, z = zdir;
+    entity *other, *te = NULL;
+    @COLLISION@
+    assert(xdir == ((blocked & 1) ? 0 : dx));
+    assert(zdir == ((blocked & 2) ? 0 : dz));
+}
+
+int main(void)
+{
+    static const struct { unsigned revision; int plane, inclusive, x, z; } rows[] = {@ROWS@};
+    static const struct {
+        int x, z, enabled, direction, offset, height, strict_blocks, inclusive_blocks;
+    } cases[] = {
+        {1, 0, 1,  1,  1, 0, 1, 1},
+        {0, 2, 1,  1,  1, 0, 2, 2},
+        {1, 2, 1,  1,  1, 0, 3, 3},
+        {1, 1, 1,  1,  1, 0, 3, 3},
+        {1, 2, 0,  1,  1, 0, 3, 3},
+        {0, 0, 1,  1,  1, 0, 0, 0},
+        {1, 2, 1,  1,  0, 0, 0, 3},
+        {1, 2, 1, -1,  0, 0, 0, 3},
+        {1, 2, 1, -1, -1, 0, 3, 3},
+        {1, 2, 1, -1,  1, 0, 0, 0},
+        {1, 2, 1,  1, -1, 0, 0, 0},
+        {1, 2, 1,  1,  1, 1, 0, 0},
+    };
+    assert(PLATFORM_HEIGHT == 7);
+    for(unsigned i = 0; i < sizeof(rows) / sizeof(*rows); ++i)
+    {
+        obor_profile_build = rows[i].revision;
+        use_plane = rows[i].plane;
+        planes[0] = rows[i].x;
+        planes[1] = rows[i].z;
+        expected_count = use_plane ? 3 : 2;
+        for(unsigned j = 0; j < sizeof(cases) / sizeof(*cases); ++j)
+        {
+            enabled = cases[j].enabled;
+            contacts[0] = cases[j].x ? &obstacles[cases[j].x - 1] : NULL;
+            contacts[1] = cases[j].z ? &obstacles[cases[j].z - 1] : NULL;
+            dx = 4 * cases[j].direction;
+            dz = 5 * cases[j].direction;
+            for(int k = 0; k < 2; ++k)
+                obstacles[k].position.x = obstacles[k].position.z = cases[j].offset;
+            platform[0][PLATFORM_HEIGHT] = cases[j].height;
+            obstacle_animation.platform = cases[j].height ? platform : NULL;
+            calls = queries = writes = 0;
+            for(int key = 0; key < LOCAL_COUNT; ++key)
+                locals[key] = (ScriptVariant){.vt = VT_INTEGER, .lVal = 99};
+            const int blocked = rows[i].inclusive ? cases[j].inclusive_blocks : cases[j].strict_blocks;
+            const int both_distinct = blocked == 3 && contacts[0] != contacts[1];
+            move(blocked);
+            assert(queries == 2 && calls == (enabled && blocked) + (enabled && both_distinct) && writes == 0);
+            for(int key = 0; key < LOCAL_COUNT; ++key)
+            {
+                if(calls && (use_plane || key != LOCAL_PLANE)) assert(locals[key].vt == VT_EMPTY);
+                else assert(locals[key].vt == VT_INTEGER && locals[key].lVal == 99);
+            }
+        }
+        printf("%u\n", rows[i].revision);
+    }
+    return 0;
+}

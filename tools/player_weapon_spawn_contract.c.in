@@ -1,0 +1,199 @@
+/* SPDX-License-Identifier: BSD-3-Clause
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me>
+ */
+#include <stdint.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <strings.h>
+#include "openbor.h"
+#undef printf
+#undef assert
+#include <assert.h>
+
+#if OBOR_ENGINE_BUILD == 4432
+#define ITEM_INDEX itemindex
+#define WALL_QUERY checkwall
+#define SHUTDOWN shutdown
+#define NATIVE_REASON(id) (id)
+#define EXPECTED_PREVIEW_MAP 0
+#else
+#include "profile_ids.h"
+#define ITEM_INDEX item_properties.index
+#define WALL_QUERY checkwall_index
+#define SHUTDOWN borShutdown
+#define NATIVE_REASON(id) obor_spawn_type_to_native(id)
+#define EXPECTED_PREVIEW_MAP 3
+#endif
+
+uint32_t obor_profile_build, obor_profile_features;
+static s_level room;
+s_level *level = &room;
+s_videomodes videomodes = {.hRes = 320};
+s_player player[MAX_PLAYERS];
+s_set_entry sets[1], *levelsets = sets;
+int current_set, colourselect, psmenu[MAX_PLAYERS][4], spdirection[MAX_PLAYERS];
+int nomaxrushreset[5], currentspawnplayer, PLAYER_MIN_Z = 20, PLAYER_MAX_Z = 20;
+int MAX_WALL_HEIGHT = 1000;
+float advancex;
+char allowselect_args[MAX_ALLOWSELECT_LEN], skipselect[MAX_PLAYERS][MAX_NAME_LEN + 1];
+
+static entity actor, spawned_weapon, preview;
+static s_model sword = {.name = "Sword", .weapnum = 37};
+static s_model playable = {.name = "Player"};
+static unsigned weapon_calls, map_calls, resets;
+static int available, attachment, preview_slot, preview_origin;
+
+int WALL_QUERY(float x, float z) { return -1; }
+int checkhole(float x, float z) { abort(); }
+int checkhole_in(float x, float z, float y) { return 0; }
+void SHUTDOWN(int status, char *reason, ...) { abort(); }
+
+#if OBOR_ENGINE_BUILD != 4432
+s_model *findmodel(char *name) { abort(); }
+void unload_model(s_model *model) { abort(); }
+s_model *load_cached_model(char *name, char *owner, char unload) { abort(); }
+int nextcolourmapn(s_model *model, int initial, int slot)
+{
+    assert(model == &playable && slot == preview_slot && initial == preview_origin);
+    return 3;
+}
+#else
+static int nextcolourmap(s_model *model, int colour) { abort(); }
+#endif
+
+s_model *nextplayermodeln(s_model *model, int slot)
+{
+    assert(!model && slot == preview_slot);
+    return &playable;
+}
+
+entity *spawn(float x, float z, float y, int direction, char *name, int index, s_model *model)
+{
+    if(model == &sword)
+    {
+        assert(x == actor.position.x && z == 100000 && !y && !direction);
+        assert(name == sword.name && index == 42);
+        return available ? &spawned_weapon : NULL;
+    }
+    assert(model == &playable && !name && index == -1 && !y);
+    assert(x == psmenu[preview_slot][0] && z == psmenu[preview_slot][1]);
+    assert(direction == spdirection[preview_slot]);
+    preview.model = model;
+    return &preview;
+}
+
+entity *smartspawn(s_spawn_entry *entry)
+{
+    assert(currentspawnplayer == 2 && entry->name == player[2].name);
+    assert(entry->index == -1 && entry->ITEM_INDEX == -1 && entry->weaponindex == -1);
+    assert(!entry->spawntype && !entry->item && entry->spawnplayer_count == -1);
+    assert(entry->colourmap == 4 && entry->position.x == 80 && entry->position.z == 20);
+    return &actor;
+}
+
+void set_weapon(entity *ent, int number, int use_animation)
+{
+    assert(ent == &actor && number == sword.weapnum && !use_animation);
+    if(attachment) assert(!actor.weapent && !spawned_weapon.spawntype);
+    ++weapon_calls;
+}
+
+void ent_set_colourmap(entity *ent, unsigned int colour)
+{
+    assert(ent == &preview && colour == player[preview_slot].colourmap);
+    assert(!preview.spawntype);
+    ++map_calls;
+}
+
+static void reset_playable_list(int which)
+{
+    assert(which == 1);
+    ++resets;
+}
+
+@METHODS@
+
+static void create_weapon(s_spawn_entry *props, entity *e)
+{
+    entity *wp;
+    @WEAPON@
+}
+
+static void setup_selection(void)
+{
+    s_set_entry *set = levelsets + current_set;
+    @RESET@
+}
+
+int main(void)
+{
+    const struct {
+        uint32_t revision;
+        int weapon_reason, main_reason, preview_reason, allow_keyword, preview_origin;
+    } rows[] = {@ROWS@};
+
+    for(unsigned i = 0; i < sizeof(rows) / sizeof(*rows); ++i)
+    {
+        obor_profile_build = rows[i].revision;
+        for(available = 0; available < 2; ++available)
+        {
+            attachment = 1;
+            actor = (entity){.position.x = 28};
+            spawned_weapon = (entity){.modeldata.weapnum = sword.weapnum};
+            s_spawn_entry entry = {.weapon = sword.name, .weaponindex = 42, .weaponmodel = &sword};
+            weapon_calls = 0;
+            create_weapon(&entry, &actor);
+            assert(weapon_calls == (unsigned)available);
+            assert(actor.weapent == (available ? &spawned_weapon : NULL));
+            assert(NATIVE_REASON(spawned_weapon.spawntype) == (available ? rows[i].weapon_reason : 0));
+        }
+
+        attachment = 0;
+        actor = (entity){0};
+        memset(player, 0, sizeof(player));
+        strcpy(player[2].name, playable.name);
+        room.setweap = sword.weapnum;
+        player[2].colourmap = 4;
+        weapon_calls = 0;
+        spawnplayer(6);
+        assert(weapon_calls == 1 && player[2].ent == &actor && actor.playerindex == 2);
+        assert(NATIVE_REASON(actor.spawntype) == rows[i].main_reason);
+
+        preview_slot = 2;
+        psmenu[2][0] = 24;
+        psmenu[2][1] = 30;
+        spdirection[2] = 1;
+        sets[0].nosame = 2;
+        sets[0].maxplayers = MAX_PLAYERS;
+        for(colourselect = 0; colourselect <= 1; ++colourselect)
+        {
+            preview = (entity){0};
+            map_calls = 0;
+            player[2].colourmap = 2;
+            preview_origin = rows[i].preview_origin;
+            assert(spawnexample(2) == &preview && map_calls == 1);
+            assert(!strcmp(player[2].name, playable.name));
+            assert(player[2].colourmap == (colourselect ? EXPECTED_PREVIEW_MAP : 0));
+            assert(NATIVE_REASON(preview.spawntype) == rows[i].preview_reason);
+        }
+
+        for(int skip = 0; skip <= 1; ++skip)
+            for(int noselect = 0; noselect <= 1; ++noselect)
+            {
+                const char prefixes[] = {0, 'a', 'A', 'b'};
+                for(unsigned p = 0; p < sizeof(prefixes); ++p)
+                {
+                    skipselect[0][0] = skip ? 'P' : 0;
+                    sets[0].noselect = noselect;
+                    allowselect_args[0] = prefixes[p];
+                    resets = 0;
+                    setup_selection();
+                    assert(resets == (unsigned)(rows[i].allow_keyword ?
+                           prefixes[p] != 'a' && prefixes[p] != 'A' : !skip && !noselect));
+                }
+            }
+        printf("%u\n", obor_profile_build);
+    }
+    return 0;
+}

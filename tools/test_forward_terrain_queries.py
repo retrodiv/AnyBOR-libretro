@@ -9,11 +9,44 @@ from pathlib import Path
 import re
 import unittest
 
-from contract_fixtures import contract_profiles, load_contract_fixture
+from contract_fixtures import contract_profiles, contract_revisions, load_contract_fixture
+from test_early_jump_walkoff import braced_statement
 from test_historical_common_think import ROOT, native_output
 from test_historical_player import function, rename_identifiers
 
 FIXTURE = Path(__file__).with_name('fixtures') / 'profile-forward-terrain-queries-contracts.json'
+BASE_FIXTURE = FIXTURE.with_name('profile-terrain-callback-transitions.json')
+
+
+def basemap_registry_program(rows, engine):
+    core = (engine / 'openbor.c').read_text(encoding='latin-1')
+    script = (engine / 'openborscript.c').read_text(encoding='latin-1')
+    registry = (engine / 'source/openborscript/index.c').read_text(encoding='latin-1')
+    variant = (engine / 'source/scriptlib/ScriptVariant.c').read_text(encoding='latin-1')
+    forward = function(registry, 'Script_LoadSystemFunctions')
+    reverse = function(registry, 'Script_GetFunctionName')
+    forward_start = forward.rindex('    List_InsertAfter', 0, forward.index('"checkbasemap"'))
+    forward_end = forward.index(';', forward.index('"generatebasemap"')) + 1
+    reverse_start = reverse.index('else if (functionRef == ((void *)openbor_checkbasemap))')
+    reverse_last = braced_statement(reverse, 'else if (functionRef == ((void *)openbor_generatebasemap))')
+    reverse_end = reverse.index(reverse_last) + len(reverse_last)
+    fallback = re.search(r'(return "<unknown function>";)\s*}\s*}\s*$', reverse)[1]
+    values = {
+        'BACKENDS': '\n'.join(function(core, name) for name in ('testhole', 'checkhole', 'testwall',
+                             'checkwall_below', 'testplatform', 'check_platform_below', 'get_platform_base',
+                             'check_basemap', 'check_basemap_index', 'checkbase')),
+        'WRAPPERS': '\n'.join(function(script, name) for name in
+                             ('openbor_checkbasemap', 'openbor_checkbasemapindex', 'openbor_checkbase')),
+        'VARIANTS': '\n'.join(function(variant, name) for name in ('ScriptVariant_Init', 'ScriptVariant_Clear',
+                             'ScriptVariant_ChangeType', 'ScriptVariant_DecimalValue')),
+        'FORWARD': forward[forward_start:forward_end],
+        'REVERSE': reverse[reverse_start:reverse_end].removeprefix('else '),
+        'FALLBACK': fallback,
+        'ROWS': ','.join('{%du,%d,%d}' % (row['revision'], row['checkbase_api'], row['basemap_index_alias'])
+                         for row in rows),
+    }
+    template = Path(__file__).with_name('basemap_registry_contract.c.in').read_text()
+    return re.sub(r'@([A-Z_]+)@', lambda match: values[match[1]], template)
 
 
 def program(data, engine):
@@ -53,6 +86,16 @@ def program(data, engine):
 
 
 class ForwardTerrainQueryTests(unittest.TestCase):
+    def test_6391_basemap_registry_and_checkbase(self):
+        data = load_contract_fixture(BASE_FIXTURE)
+        rows = [row for row in data['sources'] if row['engine'] == '6391']
+        revisions = [row['revision'] for row in rows]
+        self.assertEqual(revisions, sorted(contract_revisions(data, data['expected_revisions']['6391'])))
+        engine = Path(os.environ.get('OBOR_TERRAIN_QUERIES_ENGINE', ROOT / 'src/engines/6391'))
+        result = native_output(basemap_registry_program(rows, engine), {'engine': '6391'}, engine_source=engine,
+                               extra_cflags=('-fgnu89-inline',))
+        self.assertEqual([int(line) for line in result.splitlines()], revisions)
+
     def test_native_geometry_query_defaults_arguments_and_registry_aliases(self):
         data = load_contract_fixture(FIXTURE)
         revisions = {row['revision'] for row in data['sources']}

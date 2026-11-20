@@ -1,0 +1,218 @@
+/* SPDX-License-Identifier: BSD-3-Clause
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me>
+ */
+#include <stdint.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include "openbor.h"
+#undef printf
+#undef assert
+#include <assert.h>
+
+#if OBOR_ENGINE_BUILD == 4432
+#define HEALTH health
+#define LAST_DAMAGE damagetype
+#define RECORD_ARGS 0
+#else
+#include "profile_ids.h"
+#define HEALTH energy_status.health_current
+#define LAST_DAMAGE last_damage_type
+#define RECORD_ARGS 1
+#endif
+
+uint32_t obor_profile_build, obor_profile_features;
+s_savedata savedata;
+static entity receiver, attacker;
+entity *self = &receiver;
+static uint32_t fixture_clock = 200;
+static s_defense defenses[ATK_TIMEOVER + 1];
+int max_attack_types = ATK_TIMEOVER + 1;
+static int slots[ATK_TIMEOVER + 1] = {[ATK_BURN] = 5, [ATK_LAND] = 7};
+int *animfalls = slots, *animbackfalls = slots;
+static s_collision_attack strike;
+static unsigned animations, falls, tossed, kills, deaths, pains;
+static int available, expected_animation, selected_type, selected_reset;
+
+void common_fall(void) { abort(); }
+void common_pain(void) { abort(); }
+void common_grabattack(void) { abort(); }
+void player_die(void) { abort(); }
+void dropweapon(int flag) { abort(); }
+int reset_backpain(entity *ent) { abort(); }
+#undef unfrozen
+void unfrozen(entity *ent) { abort(); }
+#if OBOR_ENGINE_BUILD == 4432
+void control_rumble(int port, int msec) { abort(); }
+#else
+void control_rumble(int port, int ratio, int msec) { abort(); }
+#endif
+
+int set_death(entity *ent, int type, int reset)
+{
+    assert(ent == &receiver && !reset && !ent->velocity.x && !ent->velocity.y && !ent->velocity.z);
+    selected_type = type;
+    ++deaths;
+    return 1;
+}
+int set_pain(entity *ent, int type, int reset)
+{
+    assert(ent == &receiver && ent->takeaction == common_pain);
+    selected_type = type;
+    selected_reset = reset;
+    ++pains;
+    return 1;
+}
+void toss(entity *ent, float lift)
+{
+    assert(ent == &receiver && lift == 4 && ent->velocity.x == -3 && ent->velocity.z == 2);
+    ++tossed;
+}
+static void remove_entity(entity *ent)
+{
+    assert(ent == &receiver);
+    ++kills;
+}
+
+void ent_set_anim(entity *ent, int slot, int reset)
+{
+    assert(ent == &receiver && slot == expected_animation && reset == 1);
+    assert(tossed == 1 && falls == 0);
+    ++animations;
+}
+
+static void record_fall(entity *ent, entity *other, int type, int force, int drop,
+                        int noblock, int guard, int juggle, int pause, int tag)
+{
+    assert(ent == &receiver && other == &attacker && animations == 1);
+    assert(ent->falling && ent->drop && ent->nograb && !ent->inpain && !ent->idling);
+    assert(force == 19 && drop == 1 && noblock == 1 && guard == 2 && juggle == 3 && pause == 4 && tag == 5);
+    selected_type = type;
+    ++falls;
+}
+
+#if OBOR_ENGINE_BUILD == 4432
+void execute_onfall_script(entity *ent, entity *other, int force, int drop, int type,
+                           int noblock, int guard, int juggle, int pause, int tag)
+{
+    record_fall(ent, other, type, force, drop, noblock, guard, juggle, pause, tag);
+}
+#else
+void execute_onfall_script(entity *ent, entity *other, s_collision_attack *attack)
+{
+    assert(attack == &strike);
+    record_fall(ent, other, attack->attack_type, attack->attack_force, attack->attack_drop,
+                attack->no_block, attack->guardcost, attack->jugglecost, attack->pause_add, attack->tag);
+}
+#endif
+
+#undef validanim
+#define validanim(ent, slot) ((ent) == &receiver && available && (slot) == expected_animation)
+@FALL@
+#undef validanim
+
+static void remember_damage(s_collision_attack *attack)
+{
+    @STORE@
+}
+
+#undef kill
+#undef time
+#undef _time
+#define kill remove_entity
+#define kill_entity remove_entity
+#define time fixture_clock
+#define _time fixture_clock
+static int recover(entity *other, s_collision_attack *attack, int fall_flag)
+{
+    @RECOVERY@
+}
+#undef kill
+#undef kill_entity
+#undef time
+#undef _time
+
+static void prepare(int rewrite)
+{
+    receiver = (entity){.direction = DIRECTION_RIGHT, .inpain = 1, .idling = 1};
+    receiver.modeldata.type = TYPE_ENEMY;
+    receiver.modeldata.weaploss[0] = WEAPLOSS_TYPE_CHANGE;
+    receiver.HEALTH = 70;
+    receiver.defense = defenses;
+    defenses[ATK_BURN].pain = 0;
+    attacker = (entity){0};
+    strike = (s_collision_attack){.attack_type = ATK_BURN, .attack_force = 19, .attack_drop = 1,
+        .no_block = 1, .guardcost = 2, .jugglecost = 3, .pause_add = 4, .tag = 5,
+        .dropv = {.x = 3, .y = 4, .z = 2}};
+    remember_damage(&strike);
+    assert(receiver.LAST_DAMAGE == ATK_BURN);
+    if(rewrite) receiver.LAST_DAMAGE = ATK_LAND;
+    animations = falls = tossed = kills = deaths = pains = 0;
+    selected_type = selected_reset = -1;
+}
+
+static void check_fallback(void)
+{
+    const int types[] = {-1, ATK_NORMAL, ATK_BURN, ATK_TIMEOVER, ATK_TIMEOVER + 1};
+    for(unsigned i = 0; i < sizeof(types) / sizeof(types[0]); ++i)
+    {
+        s_collision_attack value = {.attack_type = types[i]};
+        receiver.LAST_DAMAGE = ATK_LAND;
+        remember_damage(&value);
+        assert(receiver.LAST_DAMAGE == (types[i] >= 0 && types[i] < max_attack_types ? types[i] : ATK_NORMAL));
+    }
+}
+
+static void check_recovery(int rewrite)
+{
+    prepare(rewrite);
+    int stored = receiver.LAST_DAMAGE;
+    int incoming = RECORD_ARGS ? ATK_BURN : stored;
+    receiver.HEALTH = 0;
+    receiver.modeldata.falldie = 1;
+    receiver.velocity = (__typeof__(receiver.velocity)){.x = 1, .y = 2, .z = 3};
+    assert(recover(&attacker, &strike, 0) == 1);
+    assert(deaths == 1 && selected_type == incoming && !animations && !falls);
+
+    for(available = 0; available <= 1; ++available)
+    {
+        prepare(rewrite);
+        receiver.drop = 1;
+        expected_animation = slots[incoming];
+        assert(recover(&attacker, &strike, 0) == 1);
+        assert(tossed == 1 && animations == (unsigned)available && falls == animations);
+        assert(kills == !available && selected_type == (available ? incoming : -1));
+    }
+
+    for(int grab = 0; grab <= 1; ++grab)
+    {
+        prepare(rewrite);
+        strike.grab = grab;
+        assert(recover(&attacker, &strike, 0) == 1);
+        assert(pains == 1 && selected_type == stored && selected_reset == !grab);
+        if(grab)
+        {
+            assert(attacker.takeaction == common_grabattack);
+            assert(attacker.stalltime == fixture_clock + GRAB_STALL);
+            assert(receiver.releasetime == fixture_clock + GAME_SPEED / 2);
+        }
+    }
+
+    prepare(rewrite);
+    defenses[ATK_BURN].pain = 20;
+    assert(recover(&attacker, &strike, 0) == 1 && !pains);
+}
+
+int main(void)
+{
+    const struct {uint32_t revision; int record;} rows[] = {@ROWS@};
+    for(unsigned i = 0; i < sizeof(rows) / sizeof(rows[0]); ++i)
+    {
+        obor_profile_build = rows[i].revision;
+        assert(rows[i].record == RECORD_ARGS);
+        check_fallback();
+        check_recovery(0);
+        check_recovery(1);
+        printf("%u\n", obor_profile_build);
+    }
+    return 0;
+}

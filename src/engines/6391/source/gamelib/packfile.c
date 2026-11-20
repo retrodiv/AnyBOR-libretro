@@ -9,10 +9,11 @@
  * directory index proves its first component absent; preserve script changes
  * and case-insensitive overrides. Join case-corrected directory components
  * through a bounded temporary buffer, preserving nested loose-asset paths.
- * Preserve the modified 6330 unsigned cache coordinates and large-file ABI
- * in a separately compiled copy of the maintained reader, with shared
- * process descriptors; dispatch PACK 1.1 volumes through the separate read-
- * only port adapter.
+ * Use the same complete member names in the archive index and in cached
+ * lookup. Preserve the modified 6330 unsigned cache coordinates and large-
+ * file ABI in a separately compiled copy of the maintained reader, with
+ * shared process descriptors; dispatch PACK 1.1 volumes through the separate
+ * read-only port adapter.
  * Existing changes recorded here; this is not their implementation date.
  * See MODIFICATIONS.md and docs/modifications/6391.md
  * at the source repository root. Original notices follow below.
@@ -722,30 +723,44 @@ void update_filecache_vfd(int vfd)
     }
 }
 
+static int pak_header_entry(size_t hpos, size_t *next, size_t *length)
+{
+    size_t remaining, record;
+    const unsigned char *name, *end;
+    if(!pak_header || pak_headersize < 0 || hpos > (size_t)pak_headersize) return 0;
+    remaining = (size_t)pak_headersize - hpos;
+    if(remaining <= 12) return 0;
+    record = (unsigned int)readlsb32(pak_header + hpos);
+    if(record <= 12 || record > remaining) return 0;
+    name = pak_header + hpos + 12;
+    end = memchr(name, 0, record - 12);
+    if(!end) return 0;
+    *next = hpos + record;
+    *length = (size_t)(end - name);
+    return 1;
+}
+
 void makefilenamecache(void)
 {
-    ptrdiff_t hpos;
+    size_t hpos = 0, next, length;
     char target[PACKFILE_PATH_MAX];
 
     if(!filenamelist)
     {
         filenamelist = malloc(sizeof(List));
     }
+    if(!filenamelist) return;
     List_Init(filenamelist);
 
-    // look for filename in the header
-
-    hpos = 0;
-    for(;;)
+    while(pak_header_entry(hpos, &next, &length))
     {
-        if((hpos + 12) >= pak_headersize)
+        if(length < sizeof(target))
         {
-            return;
+            memcpy(target, pak_header + hpos + 12, length + 1);
+            fnlc(target);
+            List_InsertAfter(filenamelist, (void *)hpos, target);
         }
-        strncpy(target, (char *)pak_header + hpos + 12, PACKFILE_PATH_MAX - 1);
-        fnlc(target);
-        List_InsertAfter(filenamelist, (void *) hpos, target);
-        hpos += readlsb32(pak_header + hpos);
+        hpos = next;
     }
 }
 
@@ -821,12 +836,15 @@ int openreadaheadpackfile(const char *filename, const char *packfilename, int re
         }
     }
 
+    const size_t length = strlen(filename);
+    if(length >= sizeof(target)) return -1;
     if(!filenamelist)
     {
         makefilenamecache();
     }
+    if(!filenamelist) return -1;
 
-    strncpy(target, filename, PACKFILE_PATH_MAX - 1);
+    memcpy(target, filename, length + 1);
     fnlc(target);
 
     n = List_GetNodeByName(filenamelist, target);

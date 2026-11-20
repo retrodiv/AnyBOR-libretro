@@ -10,11 +10,13 @@ import re
 import unittest
 
 from contract_fixtures import contract_revisions, load_contract_fixture
+from test_early_jump_walkoff import braced_statement
 from test_historical_common_think import ROOT, native_output
 from test_historical_player import function, rename_identifiers
 
 
 FIXTURE = Path(__file__).with_name('fixtures') / 'modern-flash-effects-contracts.json'
+HIT_EFFECT_FIXTURE = FIXTURE.with_name('profile-hit-flash-and-charge.json')
 
 
 def program(data):
@@ -63,6 +65,36 @@ def program(data):
 
 
 class ModernFlashEffectContracts(unittest.TestCase):
+    def check_hit_flash_and_charge(self, physical):
+        data = load_contract_fixture(HIT_EFFECT_FIXTURE)
+        rows = [row for row in data['sources'] if row['engine'] == physical]
+        revisions = [row['revision'] for row in rows]
+        self.assertEqual(revisions, sorted(contract_revisions(data, data['expected_revisions'][physical])))
+        engine = Path(os.environ.get('OBOR_HISTORICAL_ENGINE', ROOT / 'src/engines' / physical))
+        source = (engine / 'openbor.c').read_text(encoding='latin-1')
+        attack = function(source, 'do_attack')
+        gates = [match.start() for match in re.finditer(r'if\(!attack->no_flash\)', attack)]
+        blocks = [braced_statement(attack[start:end], 'if(!attack->no_flash)')
+                  for start, end in zip(gates, gates[1:] + [len(attack)], strict=True)]
+        blocks = [block for block in blocks if 'execute_onspawn_script(flash);' in block]
+        self.assertEqual(len(blocks), 4)
+        values = {
+            'FLASH_CASES': '\n'.join(f'case {i}: {block}\n    break;' for i, block in enumerate(blocks)),
+            'CHARGE': braced_statement(attack, 'if(current_anim->energycost)'),
+            'ROWS': ','.join('{%du,%d}' % (r['revision'], r['reason']) for r in rows),
+        }
+        template = Path(__file__).with_name('hit_flash_and_charge_contract.c.in').read_text()
+        code = re.sub(r'@([A-Z_]+)@', lambda match: values[match[1]], template)
+        output = native_output(code, {'engine': physical}, engine_source=engine,
+                               extra_cflags=('-fgnu89-inline',))
+        self.assertEqual([int(line) for line in output.splitlines()], revisions)
+
+    def test_4432_hit_flash_and_charge(self):
+        self.check_hit_flash_and_charge('4432')
+
+    def test_6391_hit_flash_and_charge(self):
+        self.check_hit_flash_and_charge('6391')
+
     def test_placement_defaults_inheritance_smartbomb_and_shadow(self):
         data = load_contract_fixture(FIXTURE)
         revisions = [row['revision'] for row in data['sources']]

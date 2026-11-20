@@ -1,0 +1,160 @@
+/* SPDX-License-Identifier: BSD-3-Clause
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me>
+ */
+#include <stdint.h>
+#include <stdio.h>
+#include <string.h>
+#include "openbor.h"
+#undef assert
+#undef printf
+#include <assert.h>
+
+#if OBOR_ENGINE_BUILD == 6391
+#include "profile_ids.h"
+#define NATIVE_REASON(reason) obor_spawn_type_to_native(reason)
+#define PREPARED_ATTACK ATTACKING_PREPARED
+#else
+#define NATIVE_REASON(reason) (reason)
+#define PREPARED_ATTACK 1
+#endif
+
+uint32_t obor_profile_build, obor_profile_features;
+s_savedata savedata = {.effectvol = 19};
+int SAMPLE_JUMP = 11;
+static entity actor, effect;
+entity *self = &actor;
+static char trace[8];
+static size_t events;
+static int effect_available, expected_dust, ai_jump, steam;
+
+static void observe(char event)
+{
+    assert(events + 1 < sizeof(trace));
+    trace[events++] = event;
+    trace[events] = '\0';
+}
+
+void common_jump(void) {}
+void steam_think(void) {}
+
+int sound_play_sample(int index, unsigned priority, int left, int right, unsigned speed)
+{
+    assert(!ai_jump && actor.takeaction == common_jump && !actor.jumping);
+    assert(index == SAMPLE_JUMP && !priority && left == 19 && right == 19 && speed == 100);
+    observe('F');
+    return 0;
+}
+
+void toss(entity *ent, float lift)
+{
+    assert(ent == &actor && actor.takeaction == common_jump && actor.jumping && !actor.idling);
+    assert(lift == 4 && actor.attacking == (ai_jump ? PREPARED_ATTACK : 0));
+    actor.velocity.y = lift;
+    observe('T');
+}
+
+entity *spawn(float x, float z, float y, int direction, char *name, int index, s_model *override)
+{
+    assert(x == 7 && z == 8 && y == 9 && !override);
+    if(steam)
+    {
+        assert(direction == 0 && name && !strcmp(name, "Steam") && index == -1);
+    }
+    else
+    {
+        assert(direction == (int)actor.direction && !name && index == 12);
+        assert(actor.takeaction == common_jump && actor.jumping == ai_jump);
+        assert(actor.velocity.y == (ai_jump ? 4 : 0));
+    }
+    observe('S');
+    return effect_available ? &effect : NULL;
+}
+
+void execute_onspawn_script(entity *ent)
+{
+    assert(!steam && ent == &effect && self == &actor);
+    assert(ent->base == 9 && ent->autokill == 2 && NATIVE_REASON(ent->spawntype) == expected_dust);
+    assert(actor.jumping == ai_jump && actor.velocity.y == (ai_jump ? 4 : 0));
+    observe('C');
+}
+
+void ent_set_anim(entity *ent, int animation, int reset)
+{
+    assert(ent == &actor && animation == 17 && !reset && actor.velocity.y == 4);
+    if(!ai_jump)
+    {
+        assert(actor.velocity.x == (actor.direction == DIRECTION_LEFT ? -3 : 3));
+        assert(actor.velocity.z == 2);
+    }
+    observe('A');
+}
+
+@JUMP@
+@STEAM@
+
+static int accepted_jump_attack(int rnum, int ani)
+{
+    entity *dust;
+    @AI_ACCEPTED@
+    return 0;
+}
+
+static void reset(void)
+{
+    actor = (entity){0};
+    actor.position.x = 7;
+    actor.position.z = 8;
+    actor.position.y = 9;
+    actor.idling = 1;
+    actor.modeldata.jumpheight = 4;
+    effect = (entity){0};
+    events = 0;
+    trace[0] = '\0';
+}
+
+int main(void)
+{
+    static const struct { uint32_t revision; int dust, steam; } profiles[] = {@ROWS@};
+    static const char *jump_events[] = {"TA", "FSTA", "FSCTA"};
+    static const char *attack_events[] = {"TA", "TSA", "TSCA"};
+    for(size_t i = 0; i < sizeof(profiles) / sizeof(*profiles); ++i)
+    {
+        obor_profile_build = profiles[i].revision;
+        expected_dust = profiles[i].dust;
+        steam = 0;
+        for(ai_jump = 0; ai_jump <= 1; ++ai_jump)
+        {
+            for(int scenario = 0; scenario < 3; ++scenario)
+            {
+                reset();
+                actor.direction = scenario == 1 ? DIRECTION_LEFT : DIRECTION_RIGHT;
+                actor.modeldata.dust.jump_start = scenario ? 12 : -1;
+                SAMPLE_JUMP = scenario ? 11 : -1;
+                effect_available = scenario == 2;
+                if(ai_jump)
+                {
+                    assert(accepted_jump_attack(-1, 17) == 0 && !events);
+                    assert(accepted_jump_attack(0, 17) == 1);
+                }
+                else
+                {
+                    dojump(4, 3, 2, 17);
+                }
+                assert(!strcmp(trace, ai_jump ? attack_events[scenario] : jump_events[scenario]));
+            }
+        }
+        steam = 1;
+        for(effect_available = 0; effect_available <= 1; ++effect_available)
+        {
+            reset();
+            steam_spawn(7, 8, 9);
+            assert(!strcmp(trace, "S"));
+            assert(effect.base == (effect_available ? 9 : 0));
+            assert(effect.modeldata.no_adjust_base == effect_available);
+            assert(effect.think == (effect_available ? steam_think : NULL));
+            assert(NATIVE_REASON(effect.spawntype) == (effect_available ? profiles[i].steam : 0));
+        }
+        printf("%u\n", obor_profile_build);
+    }
+    return 0;
+}

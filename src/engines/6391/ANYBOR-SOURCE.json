@@ -17,12 +17,13 @@
       "upstream_sha256": null
     },
     "openbor.c": {
-      "distributed_sha256": "d51fffe0f8c6192716113a375fa8bb6e7612462b4680534a3f92cdcccc48e850",
+      "distributed_sha256": "8f4e30886ed92ddcc3a34e6418f9b3a8efb21e6494548a7128544e6516d30b61",
       "modified": true,
-      "summary": "Apply the port's engine corrections and select the PC video configuration on macOS. Derive output names from the content basename with explicit destination capacities, and reject overflowing output path joins. Select native 6330 boomerang, collision and settings behavior, 6412 frame-kill binding behavior, and 6510 binding, blocking and attack behavior. Preserve allocation handles used by inline animation-script guards. Reconstruct the 6391-mod and 6392 test contracts for four-ID attack history, native cheat toggles and selection-screen escape using explicit profile feature flags and published upstream code. Leave multiplayer slots without a selected model available to join even if game scripts preassign lives to them. Let a missing basename-only PAK self-check read the active frontend content after it has been validated and prepared. Allocate each model's animation pointer table through the highest animation index that model uses, and bound cache, copy and cleanup paths to that capacity. Ignore optional defense and offense entries outside the configured attack-type range with a log warning before accessing their tables. Yield after each newly completed model during explicit model-list or level preparation, and defer states until that preparation has cleaned up its intermediate parsers and handles. Resize repeated weapon lists and detach borrowed lists before replacing their entries. Return a defined null result for absent colourmap models or tables while retaining valid palette fallback. Keep selected palette-conversion reads bounded and reject missing maps or flags, while preserving unselected slots and native allocation failure callbacks. Check destination animation capacity when retaining an animation across model changes, preserving the native fallback and timing. Access script-container pointer slots with byte copies, preserving record layout, pointer values and native copy/cleanup order. Pointer-slot allocation and release accept byte storage without imposing pointer alignment on a packed field. Traverse binding script callbacks in their native profile order without moving shared fields. Release each sprite owner once and complete cleanup independently of alias counts. Preserve native sprite-map capacity policies, check allocation extents and retain existing storage and capacity when growth is unavailable. Validate sprite-node allocations and release partial resources without changing existing owners. Check cached sprite availability before reading metadata and ignore cache requests for absent nodes. Capture explicit shutdown failure text before cleanup and bound legacy diagnostic formatting. Reconstruct modified 6330 LNS v0.10g contributions by Hechelion and Gonzalo MVP: deferred model loading, character columns, Hall of Fame, menus, settings and combat contracts.",
+      "summary": "Apply the port's engine corrections and select the PC video configuration on macOS. Derive output names from the content basename with explicit destination capacities, and reject overflowing output path joins. Select native 6330 boomerang, collision and settings behavior, 6412 frame-kill binding behavior, and 6510 binding, blocking and attack behavior. Preserve allocation handles used by inline animation-script guards. Reconstruct the 6391-mod and 6392 test contracts for four-ID attack history, native cheat toggles and selection-screen escape using explicit profile feature flags and published upstream code. Leave multiplayer slots without a selected model available to join even if game scripts preassign lives to them. Let a missing basename-only PAK self-check read the active frontend content after it has been validated and prepared. Allocate each model's animation pointer table through the highest animation index that model uses, and bound cache, copy and cleanup paths to that capacity. Ignore optional defense and offense entries outside the configured attack-type range with a log warning before accessing their tables. Yield after each newly completed model during explicit model-list or level preparation, and defer states until that preparation has cleaned up its intermediate parsers and handles. Resize repeated weapon lists and detach borrowed lists before replacing their entries. Return a defined null result for absent colourmap models or tables while retaining valid palette fallback. Keep selected palette-conversion reads bounded and reject missing maps or flags, while preserving unselected slots and native allocation failure callbacks. Check destination animation capacity when retaining an animation across model changes, preserving the native fallback and timing. Access script-container pointer slots with byte copies, preserving record layout, pointer values and native copy/cleanup order. Pointer-slot allocation and release accept byte storage without imposing pointer alignment on a packed field. Traverse binding script callbacks in their native profile order without moving shared fields. Release each sprite owner once and complete cleanup independently of alias counts. Preserve native sprite-map capacity policies, check allocation extents and retain existing storage and capacity when growth is unavailable. Validate sprite-node allocations and release partial resources without changing existing owners. Check cached sprite availability before reading metadata and ignore cache requests for absent nodes. Capture explicit shutdown failure text before cleanup and bound legacy diagnostic formatting. Reconstruct modified 6330 LNS v0.10g contributions by Hechelion and Gonzalo MVP: deferred model loading, character columns, Hall of Fame, menus, settings and combat contracts. Draw credit rows in their source-defined order and positions for each historical layout. Select native animation range arithmetic for fractional positions in 5134 and 6119. Preserve the 5134 and 6119 model attack-type lookup before the lose type. Preserve those profiles' projectile wall eligibility and base state after deflection. Preserve their boomerang model arguments, parent movement and catch state. Select their original attack callback participant local and falling-state juggle rule. Preserve their recovery flags through idle, death and fall transitions. Preserve their boolean walking animation direction when selecting the next frame. Preserve their time-over damage, countdown display and tick callback order. Preserve their original obstacle contact boundaries and collision callback locals. Preserve their platform callback axis and original wall search altitude for movement and jumps. Select their native rise animations and preserve pain, jump and grab recovery state. Select historical edge detection, model animation names and idle and movement state by profile. Run entity collision and expose its debug view only in profiles that implement it. Create entity collision frames only for profiles that define them. Retain the original model, level and included filename capacities. Initialize the periodic damage callback arguments for every HP tick and retain the finishing hit velocity. Preserve historical summoned-entity attack types, player target filters and palette choices. Select fall animations within the available slots and return the typed grab-finisher sentinel. Reset the animation\u2019s owned jump-frame record when a later directive replaces it. Preserve historical model display-name and alias widths when spawning entities and items, with item alpha applied to an existing carry record. Preserve each profile's startup, level-loading, scene media, and game-menu path capacities and pass complete resource names to the loaders. Retain the native saved-game filename display width without changing the save lookup. Open input recordings with the original field and combined path capacities. Admit backward shock, burn, rise and block animation names only in profiles that define them. Allocate the original dynamic animation families in their original order and preserve block reaction selection. Install each profile's original reaction defaults without replacing the shared defaults. Preserve the historical player duck attack, movement and release controls. Preserve original AI duck decisions, uppercut timing, and attack recovery. Preserve the original posture changes on pain, blocks, specials, jumps and platform departures. Write script save values directly to the file while retaining the original text format. Use the native attack labels and group selectors for model defense and offense. Retain the profile's combo label width for the HUD. Read and write the original 5134 and 6119 game progress and high-score layouts. Retain the original control reset and settings records in 5134 and 6119. Read and write the original input recording rows for 5134 and 6119. Apply the historical alpha mask path length to level layers. Show the original first-join prompt in 5134 and 6119 when personal and shared credits are empty. Use the original platform height tolerance in 5134 and 6119. Preserve the 16-character control-menu label prefix in 5134 and 6119 and terminate renamed labels in every profile. Preserve the original boss-count threshold and death state in 5134 and 6119. Preserve the original attack type when a boss defeat clears the remaining enemies.",
       "topics": [
         "active-content-pak-aliases",
         "animation-frame-ownership",
+        "animation-id-bounds",
         "animation-memory-layout",
         "attack-query-input-bounds",
         "collision-memory-layout",
@@ -65,9 +66,9 @@
       "upstream_sha256": "09b28ba38c5c89ffe4ceba4aa1cbb5263319dda43c2251ce5a2b266a597cdfb5"
     },
     "openbor.h": {
-      "distributed_sha256": "75650a540f3e672f165ee68da529825b292a04fc24d1c0620663864df950e3ec",
+      "distributed_sha256": "5aef9736bae91bb91df9edea66fb834c8eacc39234b90cee2241d4fa2070ba87",
       "modified": true,
-      "summary": "Allocate collision pointer slots through the highest author-facing index used by each collection. Define shared selectors and layouts for native 6330, 6412 and 6510 behavior. Reconstruct the 6391-mod and 6392 test contracts for four-ID attack history, native cheat toggles and selection-screen escape using explicit profile feature flags and published upstream code. Track each model's allocated animation-table capacity and reject lookups outside it. Declare the modified 6330 LNS profile's shared model, player, score and parser layouts.",
+      "summary": "Allocate collision pointer slots through the highest author-facing index used by each collection. Define shared selectors and layouts for native 6330, 6412 and 6510 behavior. Reconstruct the 6391-mod and 6392 test contracts for four-ID attack history, native cheat toggles and selection-screen escape using explicit profile feature flags and published upstream code. Track each model's allocated animation-table capacity and reject lookups outside it. Declare the modified 6330 LNS profile's shared model, player, score and parser layouts. Apply the original posture resets when starting jumps, charging, pickups or turns. Reserve a terminator for the historical item alias and resulting entity name. Retain the extra early difficulty-name byte and terminate the live name.",
       "topics": [
         "animation-frame-ownership",
         "animation-memory-layout",
@@ -82,9 +83,9 @@
       "upstream_sha256": "5a69069cc1d8dfdec66dba09c2df2141d050ea2f564f2f8c0a199a7842ff8345"
     },
     "openborscript.c": {
-      "distributed_sha256": "0070ad6151fa12107bdd56163f396f2385d9a3d5be989d3672348f26d9a9ec95",
+      "distributed_sha256": "2194885479eef3cf3b87751e7687e0b48b13cd64dcfa119ce2bbdd3ac4bc798c",
       "modified": true,
-      "summary": "Keep the dormant constant-lowering diagnostic compatible with the single-value instruction layout. Derive output names from the content basename with explicit destination capacities, and reject overflowing output path joins. Compact compiler-only instruction records after resolving value ownership, preserving branch and export anchors, all mutable values and exactly-once pool cleanup. Supply native profile script APIs and translate numeric animation, attack, subtype and spawn IDs. Keep next-animation timestamps unchanged at the script boundary. Expose the reconstructed 6392 test profile's earlier backtotitle alias only in that profile. Retain shared interpreters through the last script reference while preserving independent variables, replacement and native callbacks. Track diagnostic comments independently so interpreter replacement can retain them. Resolve text-property names within the actual table bounds while preserving native numeric selectors. Reuse each text object's owned buffer when replacing its contents. Reject missing colourtable indices and keep selector arithmetic and table reads defined. Transfer loaded stream buffers through aligned local outputs while preserving native record layout and results. Close owned input files after stream loading and on buffer allocation failure. Preserve modified 6330 LNS script property numbering, result types, deferred loads and player state.",
+      "summary": "Keep the dormant constant-lowering diagnostic compatible with the single-value instruction layout. Derive output names from the content basename with explicit destination capacities, and reject overflowing output path joins. Compact compiler-only instruction records after resolving value ownership, preserving branch and export anchors, all mutable values and exactly-once pool cleanup. Supply native profile script APIs and translate numeric animation, attack, subtype and spawn IDs. Keep next-animation timestamps unchanged at the script boundary. Expose the reconstructed 6392 test profile's earlier backtotitle alias only in that profile. Retain shared interpreters through the last script reference while preserving independent variables, replacement and native callbacks. Track diagnostic comments independently so interpreter replacement can retain them. Resolve text-property names within the actual table bounds while preserving native numeric selectors. Reuse each text object's owned buffer when replacing its contents. Reject missing colourtable indices and keep selector arithmetic and table reads defined. Transfer loaded stream buffers through aligned local outputs while preserving native record layout and results. Close owned input files after stream loading and on buffer allocation failure. Preserve modified 6330 LNS script property numbering, result types, deferred loads and player state. Count scripted boss spawns in the counters used by each profile. Use the original path capacities when opening or saving script file streams. Preserve the native formatted text widths for script drawing and logging. Record complete input recording names within the selected profile's path capacities. Retain the original AI flag names, numeric selectors and delay factor result type. Return the native empty or failed result for unknown numeric player properties. Preserve the 5134 and 6119 legacy entity property names, numbering and boomerang dispatch. Store legacy animation direction as a boolean for 5134 and 6119. Preserve the original default script wall lookup altitude in 5134 and 6119. Preserve the 5134 and 6119 system variable names, numeric selectors and coordinate writes. Preserve the 32-bit representation of script-written player inputs in 5134 and 6119.",
       "topics": [
         "collision-selector-inputs",
         "colourtable-selector-bounds",
@@ -235,12 +236,13 @@
       "upstream_sha256": "9ca3470f0a34b7d46ffde9407aa098e666850c2e60e46fa3d8f1c19a117e2029"
     },
     "source/gamelib/loadimg.c": {
-      "distributed_sha256": "426d2303b343dbe0760933f10e6f01eaa2835d0f2fdf50fed7a4f704e9175a03",
+      "distributed_sha256": "40011368e4c97ec98e74ff7abc9728aaddb8db57076b799366b32c9dab28dd6d",
       "modified": true,
-      "summary": "Declare the resolved source member and original bitmap dimensions for independent sprite reconstruction proof. Validate PCX sprite signatures before using header dimensions. Preserve native palette-only filename probing, three-plane refusals and final RGB table conversion without interpreting palette bytes as sprite dimensions. Keep bitmap row reads within the requested output width.",
+      "summary": "Declare the resolved source member and original bitmap dimensions for independent sprite reconstruction proof. Validate PCX sprite signatures before using header dimensions. Preserve native palette-only filename probing, three-plane refusals and final RGB table conversion without interpreting palette bytes as sprite dimensions. Keep bitmap row reads within the requested output width. Keep the original image extension search order and require each candidate filename to fit before trying it.",
       "topics": [
         "bitmap-row-bounds",
         "image-loader-safety",
+        "logical-profile-compatibility",
         "reconstructible-resources"
       ],
       "upstream_sha256": "4a8d334ad3c887ce65b4a9d56169bf52108f908e7a8c83155c452383a06ec977"
@@ -264,9 +266,9 @@
       "upstream_sha256": "bb9095aeea455e8b435ca545683a9508f4b3fd60e374d6cd93b74b0ed0f27882"
     },
     "source/gamelib/packfile.c": {
-      "distributed_sha256": "aef1c58ba0625d50a9767f2c3249f8f1f5d1f6ce2fd92eaaeb09cbd1b74912ae",
+      "distributed_sha256": "ffa824b8438170544b856212c923b04fbc0d7e0d2b936079c1e8203d0b55075c",
       "modified": true,
-      "summary": "Repair PAK handles after state loads, close resources on reset, prune unused frontend APIs, and compile the case-insensitive loose-file search on macOS. Skip a loose lookup only when the common bounded, watched directory index proves its first component absent; preserve script changes and case-insensitive overrides. Join case-corrected directory components through a bounded temporary buffer, preserving nested loose-asset paths. Preserve the modified 6330 unsigned cache coordinates and large-file ABI in a separately compiled copy of the maintained reader, with shared process descriptors; dispatch PACK 1.1 volumes through the separate read-only port adapter.",
+      "summary": "Repair PAK handles after state loads, close resources on reset, prune unused frontend APIs, and compile the case-insensitive loose-file search on macOS. Skip a loose lookup only when the common bounded, watched directory index proves its first component absent; preserve script changes and case-insensitive overrides. Join case-corrected directory components through a bounded temporary buffer, preserving nested loose-asset paths. Use the same complete member names in the archive index and in cached lookup. Preserve the modified 6330 unsigned cache coordinates and large-file ABI in a separately compiled copy of the maintained reader, with shared process descriptors; dispatch PACK 1.1 volumes through the separate read-only port adapter.",
       "topics": [
         "darwin-platform-support",
         "logical-profile-compatibility",
@@ -523,9 +525,9 @@
       "upstream_sha256": "28d5b01b29bf9c70a44cb52962e4d8b6e4d64cccf1b6c798999b3846c860878c"
     },
     "source/openborscript/binding.c": {
-      "distributed_sha256": "bd92cd148e31f2f3a8d6fb4e67b8c462eac895ad831e1b65df0bbd2d2452ccc0",
+      "distributed_sha256": "0d4e4ab6b39e7b247769aaf9561233ec2538bc1bbb24da141e8813a8180e6daf",
       "modified": true,
-      "summary": "Map native legacy, 6412 and 6510 binding property names and IDs to the shared layout.",
+      "summary": "Map native legacy, 6412 and 6510 binding property names and IDs to the shared layout. Preserve boolean axis values and diagnostic sizes in 5134 and 6119.",
       "topics": [
         "logical-profile-compatibility",
         "record-dates-and-file-notices"
@@ -572,9 +574,9 @@
       "upstream_sha256": "e1893bcaf3ae9937f57322d1b01ce923786b65f3bc7f32b3429a68212b4b7cc7"
     },
     "source/openborscript/commands.c": {
-      "distributed_sha256": "8c4a2ede5d4f46cd887a72ce2f044b9647094d297dcf7f8ca4657d70e171df39",
+      "distributed_sha256": "d5b37d06faffa62e735c80aa8f81c1fd508912359b1323ca85fcc17b0e3be9f6",
       "modified": true,
-      "summary": "Convert the command-list lookup result to its command enumeration explicitly instead of through a plain pointer cast. Register modified 6330 LNS model and level-order commands only in that profile.",
+      "summary": "Convert the command-list lookup result to its command enumeration explicitly instead of through a plain pointer cast. Register modified 6330 LNS model and level-order commands only in that profile. Admit the original boomerang model command in 5134 and 6119. Register the edge range directive only in profiles that support it. Select entity collision and pushing directives by profile. Register the lose attack directive only in profiles that define it.",
       "topics": [
         "compiler-warning-cleanup",
         "logical-profile-compatibility",
@@ -605,9 +607,9 @@
       "upstream_sha256": "33d661990d87256135d39abb62204ad051b070d285ac3267863c0bf9f5feae5b"
     },
     "source/openborscript/constants.c": {
-      "distributed_sha256": "f7ecd47b593ea7e48ffac7bcb9d511862c47e8c194fe3d0a4e4df74e8f6fb437",
+      "distributed_sha256": "465bc26826e0405de0a41b6d7e6985675612146f3a615c3fa28f70dd49f29f26",
       "modified": true,
-      "summary": "Expose each logical profile's native constants and translate shared selectors to native values. Return the modified profile's native parser-capacity constant while preserving ordinary values.",
+      "summary": "Expose each logical profile's native constants and translate shared selectors to native values. Return the modified profile's native parser-capacity constant while preserving ordinary values. Preserve historical state and platform constant availability and level selector values. Select entity collision constants using their historical profile availability. Preserve the 5134 and 6119 names and values for animation and projectile request constants. Admit the animation entity collision constant only in the profiles that expose it. Preserve historical admission of the lose attack constant.",
       "topics": [
         "logical-profile-compatibility",
         "record-dates-and-file-notices"
@@ -627,9 +629,9 @@
       "upstream_sha256": "7c8e2b71838ada091de35f48ba38014bffd983321ced597f2ade422454da1016"
     },
     "source/openborscript/entity.c": {
-      "distributed_sha256": "8c6a1f8f397736016ac42e7e32129b101839e8f2ff10ad210b446bc7e70fc758",
+      "distributed_sha256": "e12b3d041106b4ec9f435998de688e84526ca755d5b9431cc5a75047d18af02c",
       "modified": true,
-      "summary": "Translate native entity property names, numeric IDs and animation values for each logical profile. Map modified 6330 LNS entity properties without changing the other profile namespaces.",
+      "summary": "Translate native entity property names, numeric IDs and animation values for each logical profile. Map modified 6330 LNS entity properties without changing the other profile namespaces. Restore the native scalar position names, numbering and field access for 5134 and 6119. Translate the historical projectile request flags on typed reads and writes. Store typed animation direction as a boolean for 5134 and 6119.",
       "topics": [
         "logical-profile-compatibility",
         "record-dates-and-file-notices"
@@ -637,9 +639,9 @@
       "upstream_sha256": "13a0f6018d7cc95352c6eb7f74f309df9ac7a78e9958819d5c626a308de3ff37"
     },
     "source/openborscript/entity.h": {
-      "distributed_sha256": "20682559125ce42e541e401b6ac5f7167b0a241736a1e3577fc171df9e876eee",
+      "distributed_sha256": "62750ea5a1ba4358f4a2d5e921b623865a733eaa265ee66ff61d2eaf67d75aaa",
       "modified": true,
-      "summary": "Keep legacy entity IDs and append selectors needed by the nearby logical profiles.",
+      "summary": "Keep legacy entity IDs and append selectors needed by the nearby logical profiles. Add shared selectors for the historical scalar position properties.",
       "topics": [
         "logical-profile-compatibility",
         "record-dates-and-file-notices"
@@ -647,9 +649,9 @@
       "upstream_sha256": "94470a80ac5fdc76cd14444aeb54fc604b1b6db80ca49527febf5b2f51942a32"
     },
     "source/openborscript/index.c": {
-      "distributed_sha256": "e4711bf426ef86690b237d115e946f3aebade563ab33058da2cb9c0f754db1ae",
+      "distributed_sha256": "2ed03ca557a09090e965c008b424cc2bb17f8a41466a648f0d30bc6687398851",
       "modified": true,
-      "summary": "Register native functions according to each logical profile's upstream API. Expose the reconstructed 6392 test profile's earlier backtotitle alias only in that profile.",
+      "summary": "Register native functions according to each logical profile's upstream API. Expose the reconstructed 6392 test profile's earlier backtotitle alias only in that profile. Expose entity collision script functions only in profiles that define them. Preserve the 5134 and 6119 basemap query alias and terrain query availability. Expose axis property functions only in profiles whose original script API includes them.",
       "topics": [
         "logical-profile-compatibility",
         "record-dates-and-file-notices"
@@ -663,9 +665,9 @@
       "upstream_sha256": "ea42303e1f173f50f5f0c2a5a57f4af0c7e35bee099d55b387cd3c2115f422db"
     },
     "source/openborscript/level.c": {
-      "distributed_sha256": "ed489314c47b3aa2d71d01568a5facad43a86c6860a82760fc4780adcac2068e",
+      "distributed_sha256": "a2bb59f200e66dff150ef2bc5b4c8b12c113f7a85e7093f469f9d899db3ce9dc",
       "modified": true,
-      "summary": "Select the native 6330 background-speed return representation.",
+      "summary": "Select the native 6330 background-speed return representation. Preserve the 5134 and 6119 numeric selectors for typed level access.",
       "topics": [
         "logical-profile-compatibility",
         "record-dates-and-file-notices",
@@ -680,9 +682,9 @@
       "upstream_sha256": "bb7b74c3d04121233c5f27ac6923df3bcc713604646843fd4e0bf10e611c1535"
     },
     "source/openborscript/profile_ids.h": {
-      "distributed_sha256": "4fe627e1a56967381ffa4258618377fa4ef2ea105311110173a8c57a27fa0eb4",
+      "distributed_sha256": "0e758948c96acad8d8862a881405a52ea49a6e5f0490274b890ef53008fce93e",
       "modified": true,
-      "summary": "Map native logical-profile animation, attack, subtype and spawn IDs to the shared engine selectors.",
+      "summary": "Map native logical-profile animation, attack, subtype and spawn IDs to the shared engine selectors. Preserve the 5134 and 6119 animation ID sequence and first dynamic IDs. Preserve their animation property numbering before the entity collision selector. Translate the original time-over and custom attack numbers for those profiles. Restore their native subtype numbering around boomerang. Translate their original projectile request flag order. Translate their original typed level property indices.",
       "topics": [
         "animation-id-bounds",
         "logical-profile-compatibility",
@@ -691,10 +693,11 @@
       "upstream_sha256": null
     },
     "source/openborscript/scriptcommon.h": {
-      "distributed_sha256": "798e3f43bb25a79286324fd878c274b7d2c13d6af673439305a5ebec2dc7e62d",
+      "distributed_sha256": "bc5a7d3938af886596d87b87286757cbda3983da4240582c621a5386c9c9201a",
       "modified": true,
       "summary": "Keep rejected-property diagnostics within each mapping table's declared length. Bound rejected-property diagnostics by the actual mapping-table length.",
       "topics": [
+        "logical-profile-compatibility",
         "record-dates-and-file-notices",
         "script-property-error-bounds"
       ],
@@ -748,10 +751,11 @@
       "upstream_sha256": "7dea0de0f286d884fc5bc918d92ea9e44f55dfc72169b8051617ff1729b8bf2a"
     },
     "source/preprocessorlib/pp_lexer.c": {
-      "distributed_sha256": "092e59fc5771b394c628a390cd7af3d6a255c3177b754ee806d8f990e3df017f",
+      "distributed_sha256": "e8c14b9f85f50ec7ae1fa465ef4ed8549e4b6257824ccecfa4b8b5044b8616a1",
       "modified": true,
       "summary": "Reject incomplete or oversized fixed-size string tokens before consuming an invalid source or token byte.",
       "topics": [
+        "logical-profile-compatibility",
         "record-dates-and-file-notices",
         "script-preprocessor-safety"
       ],
@@ -764,11 +768,12 @@
       "upstream_sha256": "6261af9812335c94aea4cd2fc38bce2cec0ac4f5cdf2b5880e21cfac5b93e668"
     },
     "source/preprocessorlib/pp_parser.c": {
-      "distributed_sha256": "102ec164a6ed10051bb315994ef065169981d2246445ef3410d6d194ae1a7c6a",
+      "distributed_sha256": "a023555ee4efd5150be9d4761b1284a81f733bbd404812aa0897f6f48dd3ed2a",
       "modified": true,
       "summary": "Drop the glibc-only <malloc.h> and rely on the standard library declarations the parser already includes. Bound active preprocessing nesting to 128 levels.",
       "topics": [
         "darwin-platform-support",
+        "logical-profile-compatibility",
         "record-dates-and-file-notices",
         "script-parser-table-safety",
         "script-preprocessor-safety"
@@ -782,11 +787,12 @@
       "upstream_sha256": "bf743d291108ab411fc0e34ed891ad78f2d52f1bf20bdfb36d226f0df279155e"
     },
     "source/ramlib/ram.c": {
-      "distributed_sha256": "6e4bd2e90958616e8df0d1c63d18da360ebc18eea8834fd209ec7446a40e7e5c",
+      "distributed_sha256": "338b7b74cbecef126546f293635bae27afd4659c3ba384b1737de91277c92c59",
       "modified": true,
-      "summary": "Read host memory statistics through mach on macOS instead of the glibc-only <malloc.h>.",
+      "summary": "Read host memory statistics through mach on macOS instead of the glibc-only <malloc.h>. Use the native Windows memory report selected by the profile.",
       "topics": [
         "darwin-platform-support",
+        "logical-profile-compatibility",
         "record-dates-and-file-notices"
       ],
       "upstream_sha256": "dd4a65d147ccab8a06908e007d39500ecd725de43d6e9da1851238852748bd01"
@@ -959,7 +965,7 @@
       "upstream_sha256": "1d66448d1f58d03690abf08980ca24e5f02e7ff6b7003273829d7e08f026cc49"
     },
     "source/scriptlib/ScriptVariant.c": {
-      "distributed_sha256": "cff5da452c97f45ad5e3db181150a27c92302efc815dd7d39fe2271a85e6c7c5",
+      "distributed_sha256": "56f3e63610cdd1648e57a1fb851a103e0dd29e41edf1c0103e77739a8e733e02",
       "modified": true,
       "summary": "Select the native 6330 decimal negation fallthrough. Preserve native signed32 integer conversion and truncated decimal results; refuse unavailable arguments and non-representable decimal results before conversion without changing result storage.",
       "topics": [
@@ -1019,9 +1025,13 @@
       "upstream_sha256": "7c93317f6e6e487d5ce6928fab0d8edf8cfaedf787ab6a0862e02d16e80f1d74"
     },
     "source/scriptlib/depends.h": {
-      "distributed_sha256": "1d912df9374d131200ba17edbbc15e4b7f7600d89e268d88273f85afba6d2859",
-      "modified": false,
-      "topics": [],
+      "distributed_sha256": "40eed7010b15dd4bb9b0562f4fae93e9399062d7e4c4765834282cd65675ac77",
+      "modified": true,
+      "summary": "Restore the pragma pack state the script headers rely on instead of leaving it set for every includer.",
+      "topics": [
+        "logical-profile-compatibility",
+        "record-dates-and-file-notices"
+      ],
       "upstream_sha256": "1d912df9374d131200ba17edbbc15e4b7f7600d89e268d88273f85afba6d2859"
     },
     "source/stringptr.c": {
@@ -1049,11 +1059,12 @@
       "upstream_sha256": "d9bf8cdb39ccbdc026f120a82f8dd12cc9d30a65e410617da7462b3317ffa8ca"
     },
     "source/utils.c": {
-      "distributed_sha256": "4a4af57961aef7ad937ecd52e2350e80dd8273a2c5a8a6bce2331c8fa0bb47fb",
+      "distributed_sha256": "ceb782f53dfd1616fc1962b6b5bdb6db907d9fd4677dd1577722b812d0a6d10c",
       "modified": true,
-      "summary": "Enable libretro platform and PNG helper declarations, the POSIX directory and mkdir forms macOS also uses, reach the standard allocation declarations without the glibc-only <malloc.h>, and report memory usage at exit on macOS through the port's own accounting instead of mallinfo(). Derive output names from the content basename with explicit destination capacities, and reject overflowing output path joins.",
+      "summary": "Enable libretro platform and PNG helper declarations, the POSIX directory and mkdir forms macOS also uses, reach the standard allocation declarations without the glibc-only <malloc.h>, and report memory usage at exit on macOS through the port's own accounting instead of mallinfo(). Derive output names from the content basename with explicit destination capacities, and reject overflowing output path joins. Preserve the original screenshot filename capacity for the selected profile.",
       "topics": [
         "darwin-platform-support",
+        "logical-profile-compatibility",
         "lowercase-byte-domain",
         "platform-integration",
         "record-dates-and-file-notices",

@@ -8,6 +8,21 @@
 #include "openbor.h"
 #undef printf
 
+#ifndef OBOR_BINDING_AXIS_MATRIX
+#define OBOR_BINDING_AXIS_MATRIX 0
+#endif
+
+#if OBOR_ENGINE_BUILD == 4432
+#define AXIS_ENABLE offset_flag
+#define KILL_BOUND_ENTITY kill
+typedef int frame_index;
+#else
+#define AXIS_ENABLE bind_toggle
+#define KILL_BOUND_ENTITY kill_entity
+typedef unsigned int frame_index;
+static void adjust_bind_6510(entity *ent) { abort(); }
+#endif
+
 uint32_t obor_profile_build;
 static entity actor, parent;
 static s_anim animations[2];
@@ -23,7 +38,7 @@ static const char *stage;
     }                                                                       \
 } while(0)
 
-void kill(entity *ent) { CHECK(ent == &actor); ++kills; }
+void KILL_BOUND_ENTITY(entity *ent) { CHECK(ent == &actor); ++kills; }
 void ent_set_anim(entity *ent, int number, int reset)
 {
     CHECK(ent == &actor && number == 1 && reset == 1);
@@ -32,7 +47,7 @@ void ent_set_anim(entity *ent, int number, int reset)
     ent->animpos = 0;
     ++animations_set;
 }
-void update_frame(entity *ent, int frame)
+void update_frame(entity *ent, frame_index frame)
 {
     CHECK(ent == &actor && frame == 3);
     ent->animpos = frame;
@@ -63,7 +78,7 @@ static void reset(void)
     animations_set = frames_set = kills = 0;
 }
 
-static unsigned native_checks(int has_sort)
+static unsigned native_checks(int has_sort, int enabled)
 {
     static const struct { int mode, direction[2]; float x[2]; } directions[] = {
         { DIRECTION_ADJUST_NONE, {DIRECTION_RIGHT, DIRECTION_RIGHT}, {95, 105} },
@@ -74,6 +89,7 @@ static unsigned native_checks(int has_sort)
         { 12345, {DIRECTION_RIGHT, DIRECTION_RIGHT}, {105, 105} },
     };
     static const int parent_directions[] = { DIRECTION_LEFT, DIRECTION_RIGHT };
+    const unsigned masks = OBOR_BINDING_AXIS_MATRIX ? 8 : 1;
     stage = "unattached actor";
     reset();
     adjust_bind(&actor);
@@ -82,17 +98,24 @@ static unsigned native_checks(int has_sort)
     stage = "native direction";
     for(unsigned d = 0; d < sizeof(directions) / sizeof(*directions); d++)
     for(unsigned p = 0; p < sizeof(parent_directions) / sizeof(*parent_directions); p++)
+    for(unsigned i = 0; i < masks; i++)
     {
+        const unsigned axes = OBOR_BINDING_AXIS_MATRIX ? i : 5;
         reset();
         parent.direction = parent_directions[p];
         actor.binding.ent = &parent;
-        actor.binding.offset_flag.x = actor.binding.offset_flag.z = 1;
+        actor.binding.AXIS_ENABLE.x = (axes & 1) ? enabled : 0;
+        actor.binding.AXIS_ENABLE.y = (axes & 2) ? enabled : 0;
+        actor.binding.AXIS_ENABLE.z = (axes & 4) ? enabled : 0;
         actor.binding.offset.x = 5;
+        actor.binding.offset.y = -7;
         actor.binding.offset.z = 6;
         actor.binding.direction = directions[d].mode;
         adjust_bind(&actor);
-        CHECK(actor.direction == directions[d].direction[p] && actor.position.x == directions[d].x[p]);
-        CHECK(actor.position.z == 206 && actor.position.y == 13);
+        CHECK((int)actor.direction == directions[d].direction[p]);
+        CHECK(actor.position.x == ((axes & 1) ? directions[d].x[p] : 11));
+        CHECK(actor.position.y == ((axes & 2) ? 293 : 13));
+        CHECK(actor.position.z == ((axes & 4) ? 206 : 12));
         CHECK(actor.sortid == (has_sort ? 273 : 19));
     }
 
@@ -111,13 +134,13 @@ static unsigned native_checks(int has_sort)
         reset();
         actor.binding.ani_bind = destroy ? 7 : 3;
         actor.binding.ent = &parent;
-        actor.binding.offset_flag.x = 1;
+        actor.binding.AXIS_ENABLE.x = 1;
         parent.animnum = 2;
         adjust_bind(&actor);
         CHECK(actor.binding.ent == NULL && kills == (unsigned)destroy);
         CHECK(actor.position.x == 11 && actor.sortid == 19 && !animations_set && !frames_set);
     }
-    return 16;
+    return 4 + 12 * masks;
 }
 
 static unsigned script_checks(int has_sort)
@@ -142,7 +165,7 @@ static unsigned script_checks(int has_sort)
         if(cases[i].detach)
         {
             actor.binding.ent = &parent;
-            actor.binding.offset_flag.x = actor.binding.offset_flag.z = actor.binding.offset_flag.y = 1;
+            actor.binding.AXIS_ENABLE.x = actor.binding.AXIS_ENABLE.z = actor.binding.AXIS_ENABLE.y = 1;
         }
         ScriptVariant data[] = {
             {.vt = VT_PTR, .ptrVal = &actor},
@@ -170,20 +193,58 @@ static unsigned script_checks(int has_sort)
         CHECK(actor.binding.sortid == (sorted ? offset : 73));
         CHECK(actor.sortid == (sorted && !failed ? 200 + offset : 19));
         if(cases[i].detach)
-            CHECK(!actor.binding.offset_flag.x && !actor.binding.offset_flag.z && !actor.binding.offset_flag.y);
+            CHECK(!actor.binding.AXIS_ENABLE.x && !actor.binding.AXIS_ENABLE.z && !actor.binding.AXIS_ENABLE.y);
     }
     return sizeof(cases) / sizeof(*cases);
 }
 
+#if OBOR_BINDING_AXIS_MATRIX
+static unsigned script_axis_checks(void)
+{
+    static const LONG offsets[][3] = {{32768, -32769, 65536}, {INT32_MAX, INT32_MIN, -65537}};
+    stage = "axis selection and full integer offsets";
+    for(unsigned i = 0; i < sizeof(offsets) / sizeof(*offsets); ++i)
+    for(unsigned mask = 0; mask < 8; ++mask)
+    {
+        const int x = !!(mask & 1), y = !!(mask & 2), z = !!(mask & 4);
+        reset();
+        actor.binding.offset.x = actor.binding.offset.y = actor.binding.offset.z = 7;
+        actor.binding.AXIS_ENABLE.x = actor.binding.AXIS_ENABLE.y = actor.binding.AXIS_ENABLE.z = 1;
+        ScriptVariant values[] = {
+            {.vt = VT_PTR, .ptrVal = &actor}, {.vt = VT_PTR, .ptrVal = &parent},
+            {.vt = x ? VT_INTEGER : VT_EMPTY, .lVal = offsets[i][0]},
+            {.vt = z ? VT_INTEGER : VT_EMPTY, .lVal = offsets[i][2]},
+            {.vt = y ? VT_INTEGER : VT_EMPTY, .lVal = offsets[i][1]},
+            {.vt = VT_INTEGER, .lVal = DIRECTION_ADJUST_RIGHT}, {.vt = VT_INTEGER, .lVal = i ? -1 : 0},
+        };
+        ScriptVariant *args[] = {&values[0], &values[1], &values[2], &values[3], &values[4], &values[5], &values[6]};
+        ScriptVariant result = {0}, *out = &result;
+        CHECK(openbor_bindentity(args, &out, 7) == S_OK && out == NULL);
+        CHECK((uint32_t)actor.binding.ani_bind == (i ? UINT32_MAX : 0));
+        CHECK(actor.binding.AXIS_ENABLE.x == x && actor.binding.AXIS_ENABLE.y == y && actor.binding.AXIS_ENABLE.z == z);
+        CHECK(actor.binding.offset.x == (x ? offsets[i][0] : 7));
+        CHECK(actor.binding.offset.y == (y ? offsets[i][1] : 7));
+        CHECK(actor.binding.offset.z == (z ? offsets[i][2] : 7));
+        CHECK(actor.position.x == (x ? parent.position.x + (float)offsets[i][0] : 11));
+        CHECK(actor.position.y == (y ? parent.position.y + (float)offsets[i][1] : 13));
+        CHECK(actor.position.z == (z ? parent.position.z + (float)offsets[i][2] : 12));
+    }
+    return 8 * sizeof(offsets) / sizeof(*offsets);
+}
+#endif
+
 int main(void)
 {
-    static const struct { unsigned revision; int has_sort; } contexts[] = { @PROFILES@ };
+    static const struct { unsigned revision; int has_sort, enabled; } contexts[] = { @PROFILES@ };
     unsigned checks = 0;
     for(unsigned r = 0; r < sizeof(contexts) / sizeof(*contexts); r++)
     {
         obor_profile_build = contexts[r].revision;
-        checks += native_checks(contexts[r].has_sort);
+        checks += native_checks(contexts[r].has_sort, contexts[r].enabled);
         checks += script_checks(contexts[r].has_sort);
+#if OBOR_BINDING_AXIS_MATRIX
+        checks += script_axis_checks();
+#endif
     }
     printf("{\"contexts\":%zu,\"checks\":%u}\n", sizeof(contexts) / sizeof(*contexts), checks);
     return 0;

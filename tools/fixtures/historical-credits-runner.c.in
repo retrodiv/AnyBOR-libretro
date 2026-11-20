@@ -1,0 +1,51 @@
+/* SPDX-License-Identifier: BSD-3-Clause
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me> */
+
+int main(void)
+{
+    const struct {
+        unsigned build;
+        void (*original)(void);
+    } profiles[] = {@RECORDS@};
+    const u32 keys[] = {FLAG_ESC, FLAG_START, FLAG_ATTACK, 0, FLAG_ESC | FLAG_ATTACK};
+    const unsigned profile_count = sizeof(profiles) / sizeof(*profiles);
+    unsigned comparisons = 0;
+    obor_profile_features = 0;
+
+    for(unsigned profile = 0; profile < profile_count; ++profile)
+    {
+        obor_profile_build = profiles[profile].build;
+        for(savedata.logo = -1; savedata.logo <= 2; ++savedata.logo)
+        {
+            for(int seed = 0; seed < 12; ++seed)
+            {
+                videomodes.hRes = 320 + seed % 3 * 160;
+                videomodes.vRes = 240 + seed % 4 * 32;
+                videomodes.vShift = seed * 3;
+                for(unsigned key = 0; key < sizeof(keys) / sizeof(*keys); ++key)
+                {
+                    input = keys[key];
+                    exit_after = key >= 2;
+                    reset();
+                    profiles[profile].original();
+                    memcpy(expected, events, sizeof(events));
+                    unsigned wanted = count;
+                    int old_fade = fade;
+                    int old_frames = frames;
+                    u32 old_time = _time;
+                    u32 old_keys = bothnewkeys;
+
+                    reset();
+                    candidate_credits();
+                    assert(wanted == count && old_fade == fade && old_frames == frames);
+                    assert(old_time == _time && old_keys == bothnewkeys);
+                    assert(!memcmp(expected, events, sizeof(events)));
+                    ++comparisons;
+                }
+            }
+        }
+    }
+    assert(comparisons == profile_count * 240);
+    fprintf(stderr, "Historical credits callback comparisons: %u\n", comparisons);
+    return 0;
+}

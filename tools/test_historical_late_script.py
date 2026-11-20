@@ -4,6 +4,7 @@ SPDX-License-Identifier: BSD-3-Clause
 Copyright (c) 2026 retrodiv <retrodiv@proton.me>
 """
 import json
+import os
 from pathlib import Path
 import re
 import unittest
@@ -19,6 +20,7 @@ FIXTURE = Path(__file__).with_name('fixtures') / 'profile-late-script-registry-c
 ATTACK_FIXTURE = Path(__file__).with_name('fixtures') / 'profile-late-attack-contracts.json'
 QUERY_FIXTURE = Path(__file__).with_name('fixtures') / 'profile-late-query-error-contracts.json'
 DAMAGE_FIXTURE = Path(__file__).with_name('fixtures') / 'profile-late-damage-effects-contracts.json'
+ENEMY_RESPONSE_FIXTURE = FIXTURE.with_name('profile-enemy-damage-response.json')
 
 
 def registry_program(data):
@@ -172,6 +174,28 @@ def query_error_program(data):
 
 
 class LaterScriptContracts(unittest.TestCase):
+    def check_enemy_damage_response(self, physical):
+        data = load_contract_fixture(ENEMY_RESPONSE_FIXTURE)
+        rows = [row for row in data['sources'] if row['engine'] == physical]
+        revisions = [row['revision'] for row in rows]
+        self.assertEqual(revisions, sorted(contract_revisions(data, data['expected_revisions'][physical])))
+        engine = Path(os.environ.get('OBOR_HISTORICAL_ENGINE', ROOT / 'src/engines' / physical))
+        source = (engine / 'openbor.c').read_text(encoding='latin-1')
+        template = Path(__file__).with_name('enemy_damage_response_contract.c.in').read_text()
+        fields = {'METHODS': '\n'.join(function(source, name) for name in
+                                       ('biker_takedamage', 'obstacle_takedamage')),
+                  'ROWS': ','.join('{%du,%d}' % (row['revision'], row['active']) for row in rows)}
+        code = re.sub(r'@([A-Z_]+)@', lambda token: fields[token[1]], template)
+        output = native_output(code, {'engine': physical}, engine_source=engine,
+                               extra_cflags=('-fgnu89-inline',))
+        self.assertEqual([int(line) for line in output.splitlines()], revisions)
+
+    def test_4432_enemy_damage_response(self):
+        self.check_enemy_damage_response('4432')
+
+    def test_6391_enemy_damage_response(self):
+        self.check_enemy_damage_response('6391')
+
     def test_damage_owner_and_driver_attacker_per_profile(self):
         data=load_contract_fixture(DAMAGE_FIXTURE)
         self.assertEqual({row['revision'] for row in data['sources']},

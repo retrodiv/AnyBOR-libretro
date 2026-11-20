@@ -8,6 +8,21 @@
 #include "openbor.h"
 #undef printf
 #undef assert
+#if OBOR_ENGINE_BUILD >= 4432
+#define POS_X position.x
+#define POS_Y position.y
+#define POS_Z position.z
+#else
+#define POS_X x
+#define POS_Y a
+#define POS_Z z
+#endif
+#if OBOR_ENGINE_BUILD == 6391
+#include "profile_ids.h"
+#define NATIVE_REASON(id) obor_spawn_type_to_native(id)
+#else
+#define NATIVE_REASON(id) (id)
+#endif
 #ifdef NDEBUG
 #error Native spawn assertions must remain enabled
 #endif
@@ -22,7 +37,7 @@ float advancex=100,advancey=200;
 static entity actor,other,child,old_child;
 static s_anim animation;
 static s_level stage;
-static int summoning,failed,kind,calls,callbacks;
+static int summoning,failed,kind,calls,callbacks,expected_reason;
 static float observed[3];
 static int observed_direction;
 entity *spawn(float x,float z,float a,int direction,char *name,int index,s_model *model) {
@@ -35,17 +50,19 @@ void execute_onspawn_script(entity *ent) {
  assert(self==&other && ent==&child && calls==1 && callbacks==0);
  assert(child.parent==&actor && child.owner==(kind==2?&actor:&other));
  assert(child.playerindex==(kind==1?actor.playerindex:-1));
+ assert(NATIVE_REASON(child.spawntype)==expected_reason);
  assert(actor.subentity==(summoning?&child:&old_child));++callbacks;
 }
 @FUNCTIONS@
 static int close_float(float a,float b){float d=a-b;return d<0.0001f && d>-0.0001f;}
-static void check(int summon,int mode,int direction,int level_mode,int child_kind,int fail,int expected_shift) {
+static void check(int summon,int mode,int direction,int level_mode,int child_kind,int fail,int expected_shift,int reason) {
  ++active_case;summoning=summon;failed=fail;kind=child_kind;calls=callbacks=0;
  memset(&actor,0,sizeof(actor));memset(&other,0,sizeof(other));
  memset(&child,0,sizeof(child));memset(&old_child,0,sizeof(old_child));
  memset(&animation,0,sizeof(animation));memset(&stage,0,sizeof(stage));
  float frame[5]={0,3,7,11,mode};animation.spawnframe=frame;animation.summonframe=frame;animation.subentity=9;
- actor.animation=&animation;actor.x=10;actor.z=20;actor.a=30;actor.direction=direction;
+ expected_reason=reason;
+ actor.animation=&animation;actor.POS_X=10;actor.POS_Z=20;actor.POS_Y=30;actor.direction=direction;
  actor.playerindex=3;actor.subentity=&old_child;child.parent=&other;child.owner=&other;
  child.playerindex=-1;child.direction=1;
  child.modeldata.type=kind==1?TYPE_SHOT:TYPE_ENEMY;
@@ -60,24 +77,26 @@ static void check(int summon,int mode,int direction,int level_mode,int child_kin
  float a=mode==0?41:mode==1?11:11+(summon?0:0.001f);
  assert(close_float(observed[0],x) && close_float(observed[1],z) && close_float(observed[2],a));
  assert(observed_direction==(mode==0?direction:0));
- assert(actor.x==10 && actor.z==20 && actor.a==30 && actor.direction==direction);
+ assert(actor.POS_X==10 && actor.POS_Z==20 && actor.POS_Y==30 && actor.direction==direction);
  assert(actor.subentity==(!fail && summon?&child:&old_child));
- if(fail)assert(child.parent==&other && child.owner==&other && child.playerindex==-1);
+ if(fail)assert(child.parent==&other && child.owner==&other && child.playerindex==-1 && !child.spawntype);
  else {
   assert(child.parent==&actor && child.owner==(kind==2?&actor:&other));
   assert(child.playerindex==(kind==1?3:-1));
   assert(child.direction==(summon && mode==0?direction:1));
+  assert(NATIVE_REASON(child.spawntype)==expected_reason);
  }
 }
 int main(void) {
- const struct {unsigned revision;int with_level,without_level;} profiles[]={@PROFILES@};
+ const struct {unsigned revision;int with_level,without_level;int reasons[2];} profiles[]={@PROFILES@};
  for(unsigned i=0;i<sizeof(profiles)/sizeof(*profiles);++i) {
   obor_profile_build=profiles[i].revision;active_case=0;
   for(int summon=0;summon<2;++summon)for(int mode=0;mode<3;++mode)
    for(int direction=0;direction<2;++direction)for(int level_mode=0;level_mode<4;++level_mode)
     for(int kind=0;kind<3;++kind)
-     check(summon,mode,direction,level_mode,kind,0,level_mode?profiles[i].with_level:profiles[i].without_level);
-  for(int summon=0;summon<2;++summon)check(summon,1,0,0,0,1,profiles[i].without_level);
+     check(summon,mode,direction,level_mode,kind,0,level_mode?profiles[i].with_level:profiles[i].without_level,
+           profiles[i].reasons[summon]);
+  for(int summon=0;summon<2;++summon)check(summon,1,0,0,0,1,profiles[i].without_level,profiles[i].reasons[summon]);
   printf("{\"revision\":%u,\"cases\":%u}\n",obor_profile_build,active_case);
  }
  return 0;

@@ -13,7 +13,11 @@ static unsigned active_case;
 HRESULT Interpreter_Call(Interpreter *p){(void)p;abort();}
 HRESULT Interpreter_EvalInstruction(Interpreter *p){(void)p;abort();}
 void StrCache_Collect(int index){(void)index;abort();}
+#if OBOR_ENGINE_BUILD == 6391
+int StrCache_Pop(int length){(void)length;abort();}
+#else
 int StrCache_Pop(void){abort();}
+#endif
 void StrCache_Grab(int index){(void)index;abort();}
 @VARIANTS@
 @INITIALIZED@
@@ -21,7 +25,7 @@ static entity actor,platform;
 static s_scripts scripts;
 static Script script;
 static ScriptVariant locals[3];
-static unsigned writes,executions;
+static unsigned writes,executions,cleanup_calls;
 static int plane,decimal;
 static entity *selected_platform;
 static const char *names[]={"self","plane","platform"};
@@ -52,8 +56,16 @@ int Script_Execute(Script *target)
 }
 #undef Script_Set_Local_Variant
 #define Script_Set_Local_Variant probe_local
+static void observe_cleanup(ScriptVariant *value)
+{
+    assert(executions == 1);
+    ++cleanup_calls;
+    ScriptVariant_Clear(value);
+}
+#define ScriptVariant_Clear observe_cleanup
 @CALLBACK@
-static const struct {unsigned revision;int decimal;} contexts[]={@CONTEXTS@};
+#undef ScriptVariant_Clear
+static const struct {unsigned revision;int decimal,cleanup;} contexts[]={@CONTEXTS@};
 static const struct {int plane,present,initialized;} cases[]={@CASES@};
 int main(void)
 {
@@ -64,10 +76,12 @@ int main(void)
         obor_profile_build=contexts[context].revision;decimal=contexts[context].decimal;
         for(active_case=0;active_case<sizeof(cases)/sizeof(*cases);active_case++){
             plane=cases[active_case].plane;selected_platform=cases[active_case].present?&platform:NULL;
-            script.initialized=cases[active_case].initialized;writes=executions=0;
+            script.initialized=cases[active_case].initialized;writes=executions=cleanup_calls=0;
             memset(locals,0,sizeof(locals));for(unsigned i=0;i<3;i++)ScriptVariant_Init(&locals[i]);
             execute_onblockp_script(&actor,plane,selected_platform);
             assert(writes==(script.initialized?6u:0u) && executions==(script.initialized?1u:0u));
+            if(contexts[context].cleanup >= 0)
+                assert(cleanup_calls == (unsigned)(script.initialized ? contexts[context].cleanup : 0));
             for(unsigned i=0;i<3;i++)assert(locals[i].vt==VT_EMPTY && locals[i].ptrVal==NULL);
             assert(actor.scripts==&scripts && scripts.onblockp_script==&script);
         }

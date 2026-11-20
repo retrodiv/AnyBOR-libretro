@@ -1,0 +1,177 @@
+/* SPDX-License-Identifier: BSD-3-Clause
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me>
+ */
+#include <assert.h>
+#include <limits.h>
+#include <stdint.h>
+#include <stdio.h>
+#include <string.h>
+#include <strings.h>
+#include "anybor_abi.h"
+
+typedef int32_t LONG;
+typedef double DOUBLE;
+typedef int HRESULT, VARTYPE;
+enum { VT_EMPTY, VT_INTEGER, VT_DECIMAL, VT_STR };
+enum { S_OK = 0, E_FAIL = -1 };
+typedef struct { union { LONG lVal; DOUBLE dblVal; void *ptrVal; int strVal; }; VARTYPE vt; } ScriptVariant;
+#define SUCCEEDED(code) ((code) >= 0)
+#define stricmp strcasecmp
+#define _is_not_a_known_subproperty_of_ "Unknown %s in %s."
+
+typedef struct {
+    @MEMBERS@
+    struct { int animation_id; } jump;
+    struct {
+        struct { float x,z; } edgerange;
+        struct { float factor; int mode; struct { int min,max; } cap,range; } edelay;
+    } modeldata;
+} entity;
+
+static entity subject;
+static uint32_t obor_profile_build, obor_profile_features;
+static unsigned diagnostics;
+static char name[40];
+
+static char *StrCache_Get(int index) { assert(index == 0); return name; }
+static void StrCache_Collect(int index) { assert(index == 0); }
+static int diagnose(const char *format, ...) { ++diagnostics; return 0; }
+static LONG obor_animation_from_native(LONG animation) { return animation; }
+static LONG obor_animation_to_native(LONG animation) { return animation; }
+
+@DECLARATIONS@
+@HELPERS@
+@VARIANTS@
+@SEARCH@
+
+#define printf diagnose
+@MACRO@
+
+static int map_field(int outer, const char *eps, ScriptVariant *field)
+{
+    ScriptVariant *args[] = {NULL, NULL, field}, **varlist = args;
+    char *propname;
+    int prop;
+    switch(outer) { @MAP@ }
+    return 1;
+}
+
+static HRESULT read_field(int outer, ScriptVariant *field, ScriptVariant **pretvar)
+{
+    ScriptVariant *args[] = {NULL, NULL, field}, **varlist = args, *arg;
+    entity *ent = &subject;
+    const int paramCount = 3;
+    LONG ltemp;
+    switch(outer) { @GET@ }
+    return S_OK;
+}
+
+static HRESULT write_field(int outer, ScriptVariant *field, ScriptVariant *value)
+{
+    ScriptVariant *args[] = {NULL, NULL, field, value}, **varlist = args;
+    entity *ent = &subject;
+    const int paramCount = 4;
+    LONG ltemp;
+    DOUBLE dbltemp;
+    switch(outer) { @SET@ }
+    return S_OK;
+changeentityproperty_error:
+    return E_FAIL;
+}
+#undef printf
+
+static ScriptVariant named(const char *key)
+{
+    assert(strlen(key) < sizeof(name));
+    strcpy(name, key);
+    return (ScriptVariant){.vt=VT_STR,.strVal=0};
+}
+
+static int *flag_field(const char *expected)
+{
+    static const struct { const char *name; int *value; } fields[] = {
+        {"jumpid", &subject.jump.animation_id}, @FIELDS@
+    };
+    for(size_t i=0; i<sizeof(fields)/sizeof(*fields); ++i)
+        if(strcmp(fields[i].name, expected)==0) return fields[i].value;
+    assert(0);
+    return NULL;
+}
+
+struct profile {
+    uint32_t revision;
+    size_t count;
+    const char *names[32];
+    int decimal_factor, edge_count;
+};
+
+static void check_profile(const struct profile *profile, uint32_t features)
+{
+    obor_profile_build = profile->revision;
+    obor_profile_features = features;
+    ScriptVariant zero = {.vt=VT_INTEGER,.lVal=0}, result = {.vt=VT_EMPTY}, *out = &result;
+    for(size_t i=0; i<profile->count; ++i)
+    {
+        int *value = flag_field(profile->names[i]);
+        memset(&subject, 0, sizeof(subject));
+        *value = 1;
+        ScriptVariant field = named(profile->names[i]);
+        assert(map_field(_ep_aiflag, "aiflag", &field) == 1);
+        assert(field.vt == VT_INTEGER && field.lVal == (LONG)i);
+        assert(map_field(_ep_aiflag, "aiflag", &field) == 1 && field.lVal == (LONG)i);
+        assert(read_field(_ep_aiflag, &field, &out) == S_OK);
+        assert(result.vt == VT_INTEGER && result.lVal == 1);
+        assert(write_field(_ep_aiflag, &field, &zero) == S_OK && !*value);
+    }
+    if(profile->count == 24)
+    {
+        const char *absent[] = {"ducking", "riseattacking", "rising"};
+        for(size_t i=0; i<sizeof(absent)/sizeof(*absent); ++i)
+        {
+            ScriptVariant field = named(absent[i]);
+            assert(!map_field(_ep_aiflag, "aiflag", &field) && field.vt == VT_STR);
+            assert(read_field(_ep_aiflag, &field, &out) == E_FAIL);
+            assert(write_field(_ep_aiflag, &field, &zero) == E_FAIL);
+        }
+    }
+    const LONG invalid[] = {-1, (LONG)profile->count, INT_MAX};
+    for(size_t i=0; i<sizeof(invalid)/sizeof(*invalid); ++i)
+    {
+        ScriptVariant field = {.vt=VT_INTEGER,.lVal=invalid[i]};
+        assert(read_field(_ep_aiflag, &field, &out) == E_FAIL && result.vt == VT_EMPTY);
+        assert(write_field(_ep_aiflag, &field, &zero) == E_FAIL);
+    }
+
+    int edge_parent=0;
+    for(int id=0; id<_ep_the_end; ++id) if(obor_entityproperty(id)==_ep_edgerange) ++edge_parent;
+    assert(edge_parent==(profile->edge_count>0));
+    const char *axes[] = {"x", "z"};
+    for(int i=0; i<profile->edge_count; ++i)
+    {
+        ScriptVariant field = named(axes[i]), value = {.vt=VT_DECIMAL,.dblVal=3.5+i};
+        assert(map_field(_ep_edgerange, "edgerange", &field) == 1 && field.lVal == i);
+        assert(write_field(_ep_edgerange, &field, &value)==S_OK);
+        assert(read_field(_ep_edgerange, &field, &out)==S_OK && result.vt==VT_DECIMAL);
+        assert(result.dblVal==value.dblVal);
+    }
+
+    ScriptVariant factor = {.vt=VT_INTEGER,.lVal=_ep_edelay_factor};
+    subject.modeldata.edelay.factor = 0.1f;
+    assert(read_field(_ep_edelay, &factor, &out) == S_OK);
+    assert(result.vt == (profile->decimal_factor ? VT_DECIMAL : VT_INTEGER));
+    assert(result.dblVal == (double)subject.modeldata.edelay.factor);
+}
+
+int main(void)
+{
+    static const struct profile profiles[] = {@PROFILES@};
+    static const struct profile modified = @LNS@;
+    for(size_t i=0; i<sizeof(profiles)/sizeof(*profiles); ++i)
+    {
+        check_profile(&profiles[i], 0);
+        printf("%u\n", profiles[i].revision);
+    }
+    check_profile(&modified, OBOR_PROFILE_LNS_6330);
+    printf("%u\n", modified.revision);
+    return 0;
+}

@@ -1,0 +1,152 @@
+/* SPDX-License-Identifier: BSD-3-Clause
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me>
+ */
+#include <assert.h>
+#include <stdarg.h>
+#include <stddef.h>
+#include <stdint.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+
+@LIMITS@
+@MACROS@
+
+typedef struct { int unused; } s_screen;
+typedef struct { int unused; } DIR;
+static DIR handle;
+static uint32_t obor_profile_build;
+static char packfile[MAX_FILENAME_LEN], checked_name[1024];
+static unsigned probes, encoded, reported, collisions, created;
+static const char *expected_directory;
+static int directory_present, create_result;
+
+static DIR *opendir(const char *path)
+{
+    assert(strcmp(path, expected_directory) == 0);
+    return directory_present ? &handle : NULL;
+}
+
+static int closedir(DIR *directory)
+{
+    assert(directory == &handle);
+    return 0;
+}
+
+static int create_directory(const char *path)
+{
+    assert(strcmp(path, expected_directory) == 0);
+    ++created;
+    return create_result;
+}
+#define MKDIR(path) create_directory(path)
+
+static void writeToLogFile(const char *message, ...) { abort(); }
+static void borExit(int code) { abort(); }
+
+@NAMES@
+
+static int fileExists(const char *path)
+{
+    assert(strlen(path) < sizeof(checked_name));
+    strcpy(checked_name, path);
+    return probes++ < collisions;
+}
+
+static void savepng(const char *path, s_screen *screen, unsigned char *palette)
+{
+    assert(strcmp(path, checked_name) == 0 && screen && palette);
+    ++encoded;
+}
+
+static void debug_printf(const char *message, ...)
+{
+    if(strcmp(message, "Saved %s") == 0)
+    {
+        va_list arguments;
+        va_start(arguments, message);
+        assert(strcmp(va_arg(arguments, char *), checked_name) == 0);
+        va_end(arguments);
+    }
+    else
+        assert(strcmp(message, "Screenshot name exceeds the profile path capacity.") == 0);
+    ++reported;
+}
+
+@METHODS@
+
+static void check_directories(void)
+{
+    char path[MAX_BUFFER_LEN] = {0};
+    char saves[] = "Saves", package[] = "example.pak";
+    getBasePath(path, saves, 0);
+    assert(strcmp(path, "./Saves/") == 0);
+    getBasePath(path, package, 1);
+    assert(strcmp(path, "./Paks/example.pak") == 0);
+
+    char authored[MAX_LABEL_LEN];
+    memset(authored, 'a', sizeof(authored) - 1);
+    authored[sizeof(authored) - 1] = '\0';
+    expected_directory = authored;
+    created = 0;
+    directory_present = 1;
+    assert(dirExists(authored, 1) && !created);
+    directory_present = 0;
+    assert(!dirExists(authored, 0) && !created);
+    create_result = 0;
+    assert(dirExists(authored, 1) && created == 1);
+    create_result = -1;
+    assert(!dirExists(authored, 1) && created == 2);
+}
+
+static void take(unsigned existing, int ingame)
+{
+    s_screen image = {0};
+    unsigned char palette = 0;
+    probes = encoded = reported = 0;
+    collisions = existing;
+    screenshot(&image, &palette, ingame);
+}
+
+static void check_screenshots(size_t capacity, size_t stem_capacity)
+{
+    strcpy(packfile, "Example.pak");
+    take(0, 0);
+    assert(probes == 1 && encoded == 1 && !reported);
+    assert(strcmp(checked_name, "./ScreenShots/Example - 0000.png") == 0);
+    take(2, 1);
+    assert(probes == 3 && encoded == 1 && reported == 1);
+    assert(strcmp(checked_name, "./ScreenShots/Example - 0002.png") == 0);
+    take(10000, 1);
+    assert(probes == 10000 && !encoded && reported == 1);
+    assert(strcmp(checked_name, "./ScreenShots/Example - 9999.png") == 0);
+
+    const size_t decoration = sizeof("./ScreenShots/ - 0000.png") - 1;
+    const size_t longest_path = capacity - decoration - 1;
+    size_t length = stem_capacity - sizeof(".pak");
+    if(length > longest_path) length = longest_path;
+    memset(packfile, 'A', length + 1);
+    memcpy(packfile + length, ".pak", sizeof(".pak"));
+    take(0, 0);
+    assert(probes == 1 && encoded == 1 && strlen(checked_name) == decoration + length);
+    if(length == longest_path)
+    {
+        packfile[length++] = 'A';
+        memcpy(packfile + length, ".pak", sizeof(".pak"));
+        take(0, 1);
+        assert(!probes && !encoded && reported == 1);
+    }
+}
+
+int main(void)
+{
+    static const struct { uint32_t revision; size_t screenshot, stem; } profiles[] = { @ROWS@ };
+    for(size_t i = 0; i < sizeof(profiles) / sizeof(*profiles); ++i)
+    {
+        obor_profile_build = profiles[i].revision;
+        check_directories();
+        check_screenshots(profiles[i].screenshot, profiles[i].stem);
+        printf("PASS %u\n", obor_profile_build);
+    }
+    return 0;
+}

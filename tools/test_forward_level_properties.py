@@ -99,8 +99,8 @@ def typed_level_setter_program(data, engine=None, gameover=None):
             LOOKUP=query,
             APPLY=function(core, 'obor_apply_level_gameover'),
             LOOP=braced_statement(function(core, 'playlevel'), 'while(!endgame)'),
-            REGISTER=braced_statement(registry, 'if(obor_profile_build >= 4642 && obor_profile_build <= 4750)'),
-            REVERSE=braced_statement(reverse, 'if (obor_profile_build >= 4642 && obor_profile_build <= 4750 &&'),
+            REGISTER=braced_statement(registry, f'if(obor_profile_build >= 4642 && obor_profile_build <= {gameover["range"][1]})'),
+            REVERSE=braced_statement(reverse, f'if (obor_profile_build >= 4642 && obor_profile_build <= {gameover["range"][1]} &&'),
             ROWS=rows,
         )
         extra = Path(__file__).with_name('level_gameover_contract.c.in').read_text()

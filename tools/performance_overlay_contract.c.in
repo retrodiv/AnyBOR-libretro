@@ -1,0 +1,91 @@
+/* SPDX-License-Identifier: BSD-3-Clause
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me>
+ */
+#include <locale.h>
+#include <stdarg.h>
+#include <stdio.h>
+#include <string.h>
+#include "openbor.h"
+#include "profile_ids.h"
+#include "ram.h"
+#include "translation.h"
+#undef printf
+#undef assert
+#include <assert.h>
+
+uint32_t obor_profile_build;
+s_savedata savedata;
+static s_videomodes videomodes;
+u64 freeram = @FREE_BYTES@, usedram = @USED_BYTES@;
+
+static const struct overlay_context { unsigned revision; int box_layer, text_layer, free_kb, used_kb; } contexts[] = {
+@CONTEXTS@
+};
+static const struct overlay_context *active;
+static unsigned calls;
+
+char *ob_gettrans(char *text) { return text; }
+unsigned getFPS(void) { return 42; }
+int spriteq_get_sprite_count(void) { return 7; }
+int spriteq_get_sprite_max(void) { return 25; }
+
+void spriteq_add_box(int x, int y, int width, int height, int layer, int colour, s_drawmethod *method)
+{
+    assert(calls == 0 && !method && !colour);
+    assert(x == 0 && y == 138 && width == 384 && height == 162);
+    if(layer != active->box_layer)
+        fprintf(stderr, "%u performance box layer %d instead of %d\n", active->revision, layer, active->box_layer);
+    assert(layer == active->box_layer);
+    ++calls;
+}
+
+void font_printf(int x, int y, int which, int layer, char *format, ...)
+{
+    static const int positions[][2] = {{2,140}, {192,140}, {2,150}, {192,150}};
+    assert(calls >= 1 && calls <= 4);
+    assert(x == positions[calls-1][0] && y == positions[calls-1][1]);
+    assert(which == 0 && layer == active->text_layer);
+    char expected[64];
+    char observed[64];
+    va_list args;
+    va_start(args, format);
+    vsnprintf(observed, sizeof(observed), format, args);
+    va_end(args);
+    switch(calls)
+    {
+    case 1: strcpy(expected, "FPS: 042"); break;
+    case 2: snprintf(expected, sizeof(expected), "Free Ram: %d KB", active->free_kb); break;
+    case 3: strcpy(expected, "Sprites: 7 / 25"); break;
+    case 4: snprintf(expected, sizeof(expected), "Used Ram: %d KB", active->used_kb); break;
+    default: assert(0);
+    }
+    assert(!strcmp(observed, expected));
+    ++calls;
+}
+
+@FORMAT@
+
+static void draw_performance(void)
+{
+@SUBJECT@
+}
+
+int main(void)
+{
+    videomodes.hRes = 384;
+    videomodes.dOffset = 150;
+    for(size_t i = 0; i < sizeof(contexts) / sizeof(*contexts); ++i)
+    {
+        active = &contexts[i];
+        obor_profile_build = active->revision;
+        calls = 0;
+        savedata.debuginfo = 0;
+        draw_performance();
+        assert(calls == 0);
+        savedata.debuginfo = 1;
+        draw_performance();
+        assert(calls == 5);
+    }
+    printf("PASS %zu\n", sizeof(contexts) / sizeof(*contexts));
+    return 0;
+}

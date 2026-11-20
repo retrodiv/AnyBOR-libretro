@@ -1,0 +1,61 @@
+/* SPDX-License-Identifier: BSD-3-Clause
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me>
+ */
+#include <stdint.h>
+#include <string.h>
+#include "openbor.h"
+#undef assert
+#include <assert.h>
+
+#define WIN 1
+
+typedef struct {uint32_t dwLength; size_t dwAvailPhys, dwTotalPhys;} MEMORYSTATUS;
+typedef struct {uint32_t dwLength; uint64_t ullAvailPhys, ullTotalPhys;} MEMORYSTATUSEX;
+
+uint32_t obor_profile_build;
+static u64 systemRam;
+static unsigned legacy_calls, extended_calls, status_calls;
+
+void getRamStatus(int unit)
+{
+    assert(unit == BYTES && systemRam != 0);
+    ++status_calls;
+}
+
+static void GlobalMemoryStatus(MEMORYSTATUS *stat)
+{
+    assert(stat->dwLength == sizeof(*stat));
+    stat->dwAvailPhys = UINT64_C(2147483648);
+    stat->dwTotalPhys = UINT64_C(2147483648);
+    ++legacy_calls;
+}
+
+static int GlobalMemoryStatusEx(MEMORYSTATUSEX *stat)
+{
+    assert(stat->dwLength == sizeof(*stat));
+    stat->ullAvailPhys = UINT64_C(6442450944);
+    stat->ullTotalPhys = UINT64_C(12884901888);
+    ++extended_calls;
+    return 1;
+}
+
+@METHODS@
+
+int main(void)
+{
+    const struct {uint32_t revision; int legacy;} cases[] = {
+        {5134,1}, {6119,1}, {6330,0}, {6391,0}, {6510,0}
+    };
+    for(unsigned i = 0; i < sizeof(cases) / sizeof(cases[0]); ++i)
+    {
+        obor_profile_build = cases[i].revision;
+        legacy_calls = extended_calls = status_calls = 0;
+        setSystemRam();
+        assert(status_calls == 1);
+        assert(getSystemRam(KBYTES) == (cases[i].legacy ? 2097152 : 12582912));
+        assert(getFreeRam(KBYTES) == (cases[i].legacy ? 2097152 : 6291456));
+        assert(legacy_calls == (cases[i].legacy ? 2u : 0u));
+        assert(extended_calls == (cases[i].legacy ? 0u : 2u));
+    }
+    return 0;
+}

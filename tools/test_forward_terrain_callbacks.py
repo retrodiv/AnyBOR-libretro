@@ -10,6 +10,7 @@ import re
 import unittest
 
 from contract_fixtures import contract_profiles, contract_revisions, load_contract_fixture
+from test_forward_attack_callbacks import source_calls
 from test_historical_common_think import ROOT, native_output
 from test_historical_player import function, switch_cases
 from test_early_jump_walkoff import braced_statement
@@ -17,6 +18,7 @@ from test_early_jump_walkoff import braced_statement
 FIXTURE = Path(__file__).with_name('fixtures') / 'profile-forward-terrain-callbacks-contracts.json'
 BASEMAP_FIXTURE = FIXTURE.with_name('profile-basemap-hole-contracts.json')
 ARGUMENT_FIXTURE = FIXTURE.with_name('profile-terrain-callback-arguments.json')
+TRANSITION_FIXTURE = FIXTURE.with_name('profile-terrain-callback-transitions.json')
 
 
 def program(data, engine):
@@ -87,7 +89,118 @@ def callback_arguments_program(data, core, variant):
     return re.sub(r'@([A-Z_]+)@', lambda match: values[match[1]], template)
 
 
+def terrain_transition_program(data, engine):
+    core = (engine / 'openbor.c').read_text(encoding='latin-1')
+    variant = (engine / 'source/scriptlib/ScriptVariant.c').read_text(encoding='latin-1')
+    movement = function(core, 'common_trymove')
+    walls = []
+    for axis in ('x', 'z'):
+        condition = re.search(r'(?m)^[ \t]*(if\(' + axis + r'dir && \(wall = checkwall_below[^\n]+'
+                              r'level->walls\[wall\]\.height > self->position\.y\))', movement)[1]
+        walls.append(braced_statement(movement, condition))
+    wall_code = '\n'.join(walls)
+    callbacks = ['execute_onblockw_script', 'execute_inhole_script']
+    if 'movement_wall_altitude()' in wall_code:
+        callbacks.append('movement_wall_altitude')
+    base = function(core, 'adjust_base')
+    condition = re.search(r'(if\s*\(\s*hole\s*\))\s*\{\s*int holeind = checkholeindex_in', base)[1]
+    values = {
+        'VARIANTS': '\n'.join(function(variant, name) for name in
+                              ('ScriptVariant_Init', 'ScriptVariant_Clear', 'ScriptVariant_ChangeType')),
+        'CALLBACKS': '\n'.join(function(core, name) for name in callbacks),
+        'WALLS': wall_code,
+        'HOLE': braced_statement(base, condition),
+        'ROWS': ','.join('{%du,%d,%d,%d}' % (row['revision'], row['record'], row['x_axis'], row['z_axis'])
+                         for row in data['sources']),
+    }
+    template = Path(__file__).with_name('terrain_callback_transition_contract.c.in').read_text()
+    return re.sub(r'@([A-Z_]+)@', lambda match: values[match[1]], template)
+
+
+def obstacle_callback_program(rows, engine):
+    core = (engine / 'openbor.c').read_text(encoding='latin-1')
+    variant = (engine / 'source/scriptlib/ScriptVariant.c').read_text(encoding='latin-1')
+    movement = function(core, 'common_trymove')
+    condition = re.search(r'(?m)^\s*(if\(self->modeldata\.subject_to_obstacle > 0[^\n]*)', movement)[1]
+    values = {
+        'VARIANTS': '\n'.join(function(variant, name) for name in
+                              ('ScriptVariant_Init', 'ScriptVariant_Clear', 'ScriptVariant_ChangeType')),
+        'CALLBACK': function(core, 'execute_onblocko_script'),
+        'COLLISION': braced_statement(movement, condition),
+        'ROWS': ','.join('{%du,%d,%d,%d,%d}' % (row['revision'], row['obstacle_plane'],
+                         row['obstacle_contact_inclusive'], row['x_axis'], row['z_axis']) for row in rows),
+    }
+    template = Path(__file__).with_name('obstacle_callback_plane_contract.c.in').read_text()
+    return re.sub(r'@([A-Z_]+)@', lambda match: values[match[1]], template)
+
+
+def terrain_contact_limits_program(rows, engine):
+    core = (engine / 'openbor.c').read_text(encoding='latin-1')
+    script = (engine / 'openborscript.c').read_text(encoding='latin-1')
+    variant = (engine / 'source/scriptlib/ScriptVariant.c').read_text(encoding='latin-1')
+    movement = function(core, 'common_trymove')
+    platform_condition = re.search(r'(?m)^\s*(if\(self->modeldata\.subject_to_platform > 0[^\n]*)', movement)[1]
+    wall_calls = []
+    for caller, count in (('testmove', 1), ('common_trymove', 2), ('common_try_jump', 2)):
+        calls = source_calls(function(core, caller), ['checkwall_below'])
+        if len(calls) != count:
+            raise ValueError('Unexpected wall lookups in ' + caller)
+        wall_calls.extend(call['text'] for call in calls)
+    functions = ['testwall', 'checkwall_below', 'execute_onblockp_script']
+    if 'movement_wall_altitude()' in '\n'.join(wall_calls):
+        functions.append('movement_wall_altitude')
+    values = {
+        'VARIANTS': '\n'.join(function(variant, name) for name in ('ScriptVariant_Init', 'ScriptVariant_Clear',
+                              'ScriptVariant_ChangeType', 'ScriptVariant_DecimalValue')),
+        'FUNCTIONS': '\n'.join(function(core, name) for name in functions),
+        'SCRIPT': function(script, 'openbor_checkwall'),
+        'PLATFORM_COLLISION': braced_statement(movement, platform_condition),
+        'WALL_CALLS': ',\n'.join(wall_calls),
+        'ROWS': ','.join('{%du,%d,%d,%d,%d}' % (row['revision'], row['platform_x'], row['platform_z'],
+                         row['movement_wall_altitude'], row['script_wall_altitude']) for row in rows),
+    }
+    template = Path(__file__).with_name('terrain_contact_limits_contract.c.in').read_text()
+    return re.sub(r'@([A-Z_]+)@', lambda match: values[match[1]], template)
+
+
 class ForwardTerrainCallbackTests(unittest.TestCase):
+    def check_terrain_callback_transition(self, engine_id):
+        data = load_contract_fixture(TRANSITION_FIXTURE)
+        rows = [row for row in data['sources'] if row['engine'] == engine_id]
+        revisions = [row['revision'] for row in rows]
+        self.assertEqual(revisions, sorted(contract_revisions(data, data['expected_revisions'][engine_id])))
+        data = data | {'engine': engine_id, 'sources': rows}
+        engine = Path(os.environ.get('OBOR_TERRAIN_CALLBACKS_ENGINE', ROOT / 'src/engines' / engine_id))
+        result = native_output(terrain_transition_program(data, engine), data, engine_source=engine,
+                               extra_cflags=('-fgnu89-inline',))
+        self.assertEqual([int(line) for line in result.splitlines()], revisions)
+
+    def test_4432_terrain_callback_transition(self):
+        self.check_terrain_callback_transition('4432')
+
+    def test_6391_terrain_callback_transition(self):
+        self.check_terrain_callback_transition('6391')
+
+    def test_6391_obstacle_callback_plane(self):
+        data = load_contract_fixture(TRANSITION_FIXTURE)
+        rows = [row for row in data['sources'] if row['engine'] == '6391']
+        revisions = [row['revision'] for row in rows]
+        self.assertEqual(revisions, sorted(contract_revisions(data, data['expected_revisions']['6391'])))
+        engine = Path(os.environ.get('OBOR_TERRAIN_CALLBACKS_ENGINE', ROOT / 'src/engines/6391'))
+        result = native_output(obstacle_callback_program(rows, engine), {'engine': '6391'}, engine_source=engine,
+                               extra_cflags=('-fgnu89-inline',))
+        self.assertEqual([int(line) for line in result.splitlines()], revisions)
+
+    def test_6391_platform_tags_and_wall_limits(self):
+        data = load_contract_fixture(TRANSITION_FIXTURE)
+        rows = [row for row in data['sources'] if row['engine'] == '6391']
+        revisions = [row['revision'] for row in rows]
+        self.assertEqual(revisions, sorted(contract_revisions(data, data['expected_revisions']['6391'])))
+        engine = Path(os.environ.get('OBOR_TERRAIN_CALLBACKS_ENGINE', ROOT / 'src/engines/6391'))
+        result = native_output(terrain_contact_limits_program(rows, engine), {'engine': '6391'}, engine_source=engine,
+                               extra_cflags=('-fgnu89-inline',))
+        self.assertEqual([int(line) for line in result.splitlines()], revisions)
+
     def test_native_locals_cleanup_axis_events_and_height_movement(self):
         data = load_contract_fixture(FIXTURE)
         revisions = {row['revision'] for row in data['sources']}
@@ -120,10 +233,10 @@ class ForwardTerrainCallbackTests(unittest.TestCase):
         revisions = [row['revision'] for row in data['sources']]
         self.assertEqual(len(revisions), len(set(revisions)))
         self.assertEqual(set(revisions), contract_revisions(data, data['expected_revisions']))
-        engine = ROOT / 'src/engines' / data['engine']
+        engine = Path(os.environ.get('OBOR_TERRAIN_CALLBACKS_ENGINE', ROOT / 'src/engines' / data['engine']))
         core = (engine / 'openbor.c').read_text()
         variant = (engine / 'source/scriptlib/ScriptVariant.c').read_text()
-        output = native_output(callback_arguments_program(data, core, variant), data,
+        output = native_output(callback_arguments_program(data, core, variant), data, engine_source=engine,
                                extra_cflags=('-fgnu89-inline',))
         self.assertEqual([json.loads(line) for line in output.splitlines()],
                          [dict(revision=revision, calls=len(data['cases'])) for revision in revisions])

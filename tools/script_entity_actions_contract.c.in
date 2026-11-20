@@ -1,0 +1,106 @@
+/* SPDX-License-Identifier: BSD-3-Clause
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me>
+ */
+#include <stdint.h>
+#include <stdio.h>
+#include "openbor.h"
+#undef assert
+#undef printf
+#include <assert.h>
+
+#if OBOR_ENGINE_BUILD == 6391
+#include "profile_ids.h"
+unsigned int _time = 100;
+#else
+unsigned int time = 100;
+#endif
+
+uint32_t obor_profile_build, obor_profile_features;
+static entity actor;
+entity *self = &actor;
+static int expected_action, expected_active, keep_flags, expected_animation, callbacks;
+
+void common_animation_normal(void) {}
+void common_attack_proc(void) {}
+
+static void check_actor(void)
+{
+    void (*expected)(void) = expected_action == 0 ? common_animation_normal :
+                             expected_action == 1 ? common_attack_proc : NULL;
+    assert(actor.takeaction == expected);
+    assert((int)actor.attacking == (expected_action == 1 ? expected_active : 0));
+    assert(actor.idling == (expected_action == 2));
+    assert(!actor.drop && !actor.falling && !actor.inpain && !actor.inbackpain && !actor.blocking);
+#if OBOR_ENGINE_BUILD == 6391
+    assert(actor.rising == keep_flags && actor.riseattacking == keep_flags);
+    assert((int)actor.edge == keep_flags);
+    assert((int)actor.ducking == (keep_flags || expected_action == 1));
+#endif
+    if(expected_action == 2)
+    {
+        assert(actor.nograb == actor.nograb_default);
+        assert(actor.destx == actor.position.x && actor.destz == actor.position.z);
+    }
+}
+
+void ent_set_anim(entity *ent, int animation, int reset)
+{
+    assert(ent == &actor && animation == expected_animation && reset == 1);
+    check_actor();
+    callbacks++;
+}
+
+@INTEGER@
+@METHODS@
+
+static void prepare(void)
+{
+    actor = (entity){0};
+    actor.drop = actor.falling = actor.inpain = actor.inbackpain = 1;
+    actor.blocking = 1;
+    actor.position.x = 7;
+    actor.position.z = 11;
+    actor.nograb_default = 1;
+    actor.stalltime = 60;
+#if OBOR_ENGINE_BUILD == 6391
+    actor.rising = actor.riseattacking = 1;
+    actor.edge = 1;
+    actor.ducking = 1;
+#endif
+    callbacks = 0;
+}
+
+int main(void)
+{
+    static const struct { uint32_t revision; int active, keep, animation, native; } rows[] = {@ROWS@};
+    static HRESULT (*const actions[])(ScriptVariant **, ScriptVariant **, int) = {
+        openbor_executeanimation, openbor_performattack, openbor_setidle,
+    };
+    for(size_t i = 0; i < sizeof(rows) / sizeof(*rows); ++i)
+    {
+        obor_profile_build = rows[i].revision;
+        expected_active = rows[i].active;
+        keep_flags = rows[i].keep;
+        expected_animation = rows[i].animation;
+        ScriptVariant entity_arg = {.vt = VT_PTR, .ptrVal = &actor};
+        ScriptVariant animation = {.vt = VT_INTEGER, .lVal = rows[i].native};
+        ScriptVariant reset = {.vt = VT_INTEGER, .lVal = 1};
+        ScriptVariant stall = {.vt = VT_INTEGER, .lVal = 4};
+        ScriptVariant *args[] = {&entity_arg, &animation, &reset, &stall};
+        for(expected_action = 0; expected_action < 3; expected_action++)
+        {
+            for(int optional = 0; optional <= 1; ++optional)
+            {
+                prepare();
+                ScriptVariant result = {0}, *out = &result;
+                int argc = optional ? 3 + (expected_action == 2) : 1;
+                assert(actions[expected_action](args, &out, argc) == S_OK && !out);
+                check_actor();
+                assert(callbacks == optional);
+                assert(actor.stalltime == (expected_action == 2 && optional ? 104 : 60));
+            }
+        }
+        printf("%u\n", obor_profile_build);
+    }
+    return 0;
+}

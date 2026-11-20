@@ -1,0 +1,229 @@
+/* SPDX-License-Identifier: BSD-3-Clause
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me>
+ */
+#include <stdint.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include "openbor.h"
+#undef printf
+#undef assert
+#include <assert.h>
+
+#if OBOR_ENGINE_BUILD == 4432
+#define LEGACY_OPERANDS 1
+HRESULT Interpreter_Call(Interpreter *interpreter) { abort(); }
+HRESULT Interpreter_EvalInstruction(Interpreter *interpreter) { abort(); }
+int StrCache_Pop(void) { abort(); }
+#else
+#define LEGACY_OPERANDS 0
+int multihitcheat;
+#endif
+
+uint32_t obor_profile_build, obor_profile_features;
+static entity defender, attacker;
+static const s_collision_attack *expected_attack;
+static int handled_item, index_in_sequence, record_operands, picking_up;
+static s_collision_attack test_attack = {
+    .attack_force = 23, .attack_drop = 2, .attack_type = ATK_NORMAL,
+    .no_block = 3, .guardcost = 4, .jugglecost = 5, .pause_add = 6, .tag = 7,
+};
+
+void StrCache_Collect(int index) { abort(); }
+@VARIANTS@
+
+static void observe(int kind, entity *receiver, entity *other, int force, int type, int role)
+{
+    static const int kinds[] = {0, 0, 1, 2, 1, 2, 1};
+    static const int roles[] = {0, 1, 1, 0, 1, 0, 0};
+    static const int attacking_receiver[] = {0, 1, 1, 0, 1, 0, 1};
+    int index = index_in_sequence++;
+    if(expected_attack->attack_type == ATK_ITEM)
+    {
+        const int subtype = picking_up ? attacker.modeldata.subtype : defender.modeldata.subtype;
+        assert(index == 0 && kind == 1 && receiver == &attacker && other == &defender);
+        assert(force == (record_operands || picking_up ? 0 : 41));
+        assert(type == (record_operands ? ATK_ITEM : subtype));
+        assert(role == (!record_operands && !picking_up));
+        return;
+    }
+    assert(index < 7 && kind == kinds[index]);
+    assert(role == (kind == 0 && record_operands ? 1 - roles[index] : roles[index]));
+    assert(receiver == (attacking_receiver[index] ? &attacker : &defender));
+    assert(other == (attacking_receiver[index] ? &defender : &attacker));
+    assert(force == (record_operands ? expected_attack->attack_force : 41));
+    assert(type == expected_attack->attack_type);
+}
+
+#if LEGACY_OPERANDS
+static void check_fields(int drop, int noblock, int guardcost, int jugglecost, int pauseadd, int tag)
+{
+    if(picking_up)
+    {
+        assert(!drop && !noblock && !guardcost && !jugglecost && !pauseadd && !tag);
+        return;
+    }
+    assert(drop == 2 && noblock == 3 && guardcost == 4 &&
+           jugglecost == 5 && pauseadd == 6 && tag == 7);
+}
+
+void execute_ondoattack_script(entity *ent, entity *other, int force, int drop, int type, int noblock,
+                              int guardcost, int jugglecost, int pauseadd, int which, int id, int tag)
+{
+    assert(id == 83);
+    check_fields(drop, noblock, guardcost, jugglecost, pauseadd, tag);
+    observe(0, ent, other, force, type, which);
+}
+
+void execute_didhit_script(entity *ent, entity *other, int force, int drop, int type, int noblock,
+                           int guardcost, int jugglecost, int pauseadd, int blocked, int tag)
+{
+    check_fields(drop, noblock, guardcost, jugglecost, pauseadd, tag);
+    observe(1, ent, other, force, type, blocked);
+}
+
+void execute_didblock_script(entity *ent, entity *other, int force, int drop, int type, int noblock,
+                             int guardcost, int jugglecost, int pauseadd, int tag)
+{
+    check_fields(drop, noblock, guardcost, jugglecost, pauseadd, tag);
+    observe(2, ent, other, force, type, 0);
+}
+#else
+void execute_ondoattack_script(entity *ent, entity *other, s_collision_attack *attack, e_exchange which, int id)
+{
+    assert(attack == expected_attack && id == 83);
+    observe(0, ent, other, attack->attack_force, attack->attack_type, which);
+}
+
+void execute_didhit_script(entity *ent, entity *other, s_collision_attack *attack, int blocked)
+{
+    if(expected_attack->attack_type == ATK_ITEM)
+    {
+        assert(attack != expected_attack);
+        assert(!attack->attack_drop && !attack->no_block && !attack->guardcost);
+        assert(!attack->jugglecost && !attack->pause_add && !attack->tag);
+    }
+    else
+    {
+        assert(attack == expected_attack);
+    }
+    observe(1, ent, other, attack->attack_force, attack->attack_type, blocked);
+}
+
+void execute_didblock_script(entity *ent, entity *other, s_collision_attack *attack)
+{
+    assert(attack == expected_attack);
+    observe(2, ent, other, attack->attack_force, attack->attack_type, 0);
+}
+#endif
+
+@HELPERS@
+
+void didfind_item(entity *item)
+{
+    assert(item == &attacker && index_in_sequence == 1);
+    ++handled_item;
+}
+
+static void native_calls(entity *self, entity *e, s_collision_attack *attack, int force, int current_attack_id)
+{
+    @CALLS@
+}
+
+static void item_contact(entity *self, entity *e, s_collision_attack *attack, int force)
+{
+    @ITEM_BRANCH@
+    assert(0);
+}
+
+static void pickup_contact(entity *self, entity *other, int caller)
+{
+    switch(caller)
+    {
+        @PICKUP_CALLS@
+        default: assert(0);
+    }
+}
+
+static LONG read_id(entity *ent, int property)
+{
+    ScriptVariant value = {.vt = VT_EMPTY};
+    ScriptVariant *result = &value;
+    ScriptVariant **pretvar = &result;
+    switch(property)
+    {
+        @GETTERS@
+    }
+    assert(value.vt == VT_INTEGER);
+    return value.lVal;
+}
+
+static void write_id(entity *ent, int property, ScriptVariant *input)
+{
+    ScriptVariant *varlist[] = {NULL, NULL, input};
+    LONG ltemp;
+    switch(property)
+    {
+        @SETTERS@
+    }
+}
+
+static void check_ids(void)
+{
+    entity actor = {0};
+    const LONG values[] = {INT32_MIN, -1, 0, 1, INT32_MAX};
+    for(size_t i = 0; i < sizeof(values) / sizeof(*values); ++i)
+    {
+        for(int property = 0; property < 2; ++property)
+        {
+            LONG previous = read_id(&actor, 1 - property);
+            ScriptVariant input = {.vt = VT_INTEGER, .lVal = values[i]};
+            write_id(&actor, property, &input);
+            assert(read_id(&actor, property) == values[i]);
+            assert(read_id(&actor, 1 - property) == previous);
+#if LEGACY_OPERANDS
+            assert((property ? actor.hit_by_attack_id : actor.attack_id) == values[i]);
+#else
+            assert((property ? actor.attack_id_incoming : actor.attack_id_outgoing) == (u32)values[i]);
+#endif
+        }
+    }
+    ScriptVariant decimal = {.vt = VT_DECIMAL, .dblVal = -12.75};
+    write_id(&actor, 0, &decimal);
+    assert(read_id(&actor, 0) == -12);
+    ScriptVariant empty = {.vt = VT_EMPTY};
+    write_id(&actor, 0, &empty);
+    assert(read_id(&actor, 0) == -12 && read_id(&actor, 1) == INT32_MAX);
+    _Static_assert(sizeof(LONG) == sizeof(int), "Legacy attack ID casts share the same width");
+}
+
+int main(void)
+{
+    const struct { unsigned revision; int record_operands; } rows[] = {@PROFILES@};
+    defender.modeldata.subtype = SUBTYPE_WEAPON;
+    attacker.modeldata.subtype = SUBTYPE_PROJECTILE;
+    for(size_t i = 0; i < sizeof(rows) / sizeof(*rows); ++i)
+    {
+        obor_profile_build = rows[i].revision;
+        record_operands = rows[i].record_operands;
+        s_collision_attack contact = test_attack;
+        expected_attack = &contact;
+        index_in_sequence = handled_item = picking_up = 0;
+        native_calls(&defender, &attacker, &contact, 41, 83);
+        assert(index_in_sequence == 7 && handled_item == 0);
+        contact.attack_type = ATK_ITEM;
+        index_in_sequence = 0;
+        item_contact(&defender, &attacker, &contact, 41);
+        assert(index_in_sequence == 1 && handled_item == 1);
+        picking_up = 1;
+        for(int caller = 0; caller < 3; ++caller)
+        {
+            index_in_sequence = handled_item = 0;
+            pickup_contact(&defender, &attacker, caller);
+            assert(index_in_sequence == 1 && handled_item == 0);
+        }
+        picking_up = 0;
+        check_ids();
+        printf("%u\n", obor_profile_build);
+    }
+    return 0;
+}

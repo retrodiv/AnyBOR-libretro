@@ -1,0 +1,166 @@
+/* SPDX-License-Identifier: BSD-3-Clause
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me>
+ */
+#include <math.h>
+#include <stdint.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include "openbor.h"
+#undef printf
+#undef assert
+#include <assert.h>
+
+uint32_t obor_profile_build, obor_profile_features;
+static entity origin, targets[6];
+static entity *pool[] = {&origin, &targets[0], &targets[1], &targets[2],
+                         &targets[3], &targets[4], &targets[5]};
+entity *self = &origin;
+entity **ent_list = pool;
+int ent_max;
+
+static s_anim vulnerable, invulnerable, attack_range;
+static __typeof__(*vulnerable.vulnerable) exposed[] = {1}, protected[] = {0};
+static s_anim *attacks[] = {&attack_range};
+static unsigned range_calls, range_log;
+static entity *out_of_range;
+static int use_native_range;
+
+@DIFF@
+@RANGES@
+
+static int observed_range(entity *source, entity *target, int animation)
+{
+    assert(source == &origin && animation == 0 && range_calls < 6);
+    int slot = 0;
+    while(slot < 6 && target != &targets[slot]) ++slot;
+    assert(slot < 6);
+    ++range_calls;
+    range_log = range_log * 10 + slot + 1;
+    if(!use_native_range) return target != out_of_range;
+#if OBOR_ENGINE_BUILD == 4432
+    return check_range(source, target, animation);
+#else
+    return check_range_target_all(source, target, animation);
+#endif
+}
+
+#undef check_range
+#define check_range(source, target, animation) observed_range(source, target, animation)
+#define check_range_target_all(source, target, animation) observed_range(source, target, animation)
+@TARGET@
+#undef check_range
+#undef check_range_target_all
+
+static void reset(int target_count)
+{
+    origin = (entity){.exists = 1, .direction = DIRECTION_RIGHT};
+    origin.modeldata.hostile = TYPE_ENEMY | TYPE_SHOT;
+    origin.modeldata.animation = attacks;
+    vulnerable.vulnerable = exposed;
+    invulnerable.vulnerable = protected;
+    for(int i = 0; i < target_count; ++i)
+    {
+        targets[i] = (entity){.exists = 1, .animation = &vulnerable};
+        targets[i].modeldata.type = TYPE_ENEMY;
+        targets[i].position.x = 8 + i;
+    }
+    ent_max = target_count + 1;
+    range_calls = range_log = 0;
+    out_of_range = NULL;
+    use_native_range = 0;
+}
+
+static void check_distance(int inclusive)
+{
+    const struct {float x, z; int strictly_inside, at_boundary;} cases[] = {
+        {0, 0, 0, 1}, {0, 0.25f, 1, 0}, {-0.25f, 0, 1, 0},
+        {9998.75f, 0, 1, 0}, {9999, 0, 0, 1}, {-9999, 0, 0, 1},
+        {9999.25f, 0, 0, 0}, {5000, -4999, 0, 1},
+        {5000, -4998.75f, 1, 0}, {5000, -4999.25f, 0, 0},
+    };
+    for(unsigned i = 0; i < sizeof(cases) / sizeof(cases[0]); ++i)
+    {
+        reset(1);
+        targets[0].position.x = cases[i].x;
+        targets[0].position.z = cases[i].z;
+        int accepted = cases[i].strictly_inside || (inclusive && cases[i].at_boundary);
+        assert(normal_find_target(-1, 0) == (accepted ? &targets[0] : NULL));
+        assert(!range_calls);
+    }
+
+    reset(1);
+    targets[0].position.x = INFINITY;
+    assert(normal_find_target(-1, 0) == NULL);
+    targets[0].position.x = NAN;
+    assert(normal_find_target(-1, 0) == (inclusive ? NULL : &targets[0]));
+    assert(!range_calls);
+}
+
+static void check_filters(void)
+{
+    reset(6);
+    targets[0].exists = 0;
+    targets[1].modeldata.type = TYPE_ITEM;
+    targets[2].dead = 1;
+    targets[3].modeldata.stealth.hide = 3;
+    out_of_range = &targets[4];
+    targets[5].modeldata.stealth.hide = 2;
+    targets[5].modeldata.type = TYPE_SHOT;
+    origin.modeldata.stealth.detect = 1;
+    assert(normal_find_target(0, 1) == &targets[5]);
+    assert(range_calls == 4 && range_log == 3456);
+
+    range_calls = range_log = 0;
+    assert(normal_find_target(0, 0) == NULL);
+    assert(range_calls == 4 && range_log == 3456);
+}
+
+static void check_ties(void)
+{
+    reset(2);
+    targets[1].position.x = targets[0].position.x;
+    assert(normal_find_target(-1, 0) == &targets[0]);
+    targets[1].position.x -= 1;
+    assert(normal_find_target(-1, 0) == &targets[1]);
+
+    targets[1].position.x = -3;
+    assert(normal_find_target(-1, 0) == &targets[0]);
+    origin.direction = DIRECTION_LEFT;
+    assert(normal_find_target(-1, 0) == &targets[1]);
+
+    origin.direction = DIRECTION_RIGHT;
+    targets[1].position.x = -20;
+    targets[0].invincible = 1;
+    assert(normal_find_target(-1, 0) == &targets[1]);
+    targets[0].invincible = 0;
+    targets[0].animation = &invulnerable;
+    assert(normal_find_target(-1, 0) == &targets[1]);
+    assert(!range_calls);
+}
+
+static void check_range_dispatch(int fractional)
+{
+    reset(1);
+    use_native_range = 1;
+    origin.position.x = 0.5f;
+    targets[0].position.x = 0.75f;
+    assert(normal_find_target(-1, 0) == &targets[0]);
+    assert(normal_find_target(0, 0) == (fractional ? NULL : &targets[0]));
+    assert(range_calls == 1 && range_log == 1);
+}
+
+int main(void)
+{
+    const struct {uint32_t revision; int inclusive_distance, fractional_range;} rows[] = {@ROWS@};
+    for(unsigned i = 0; i < sizeof(rows) / sizeof(rows[0]); ++i)
+    {
+        obor_profile_build = rows[i].revision;
+        check_distance(rows[i].inclusive_distance);
+        check_filters();
+        check_ties();
+        check_range_dispatch(rows[i].fractional_range);
+        printf("%u\n", obor_profile_build);
+    }
+    return 0;
+}

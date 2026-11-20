@@ -277,13 +277,16 @@ void control_update(s_playercontrols **playercontrols, int numplayers)
                 k |= ((u64)1 << i);
         }
 #if OBOR_ENGINE_BUILD == 6391
-        if ((obor_profile_features & OBOR_PROFILE_LNS_6330) &&
-            player == 0 && !k && allow_default_keys()) {
+        if (player == 0 && !k &&
+            ((obor_profile_features & OBOR_PROFILE_LNS_6330) ? allow_default_keys() :
+             (obor_profile_build == 6330 || obor_profile_build == 6391))) {
             for (int i = 0; i < JOY_MAX_INPUTS; i++) {
                 if (key_down(default_control.settings[i]))
                     k |= ((u64)1 << i);
             }
         }
+        if (obor_profile_build == 5134 || obor_profile_build == 6119)
+            k &= UINT32_MAX;
 #endif
         pcontrols->kb_break = 0;
         pcontrols->newkeyflags = k & (~pcontrols->keyflags);
@@ -349,6 +352,10 @@ void obor_get_rumble(int32_t player, int32_t *ratio, int32_t *msec)
 #if OBOR_ENGINE_BUILD >= 5000
 void control_rumble(int port, int ratio, int msec)
 {
+#if OBOR_ENGINE_BUILD == 6391
+    if (obor_profile_build == 5134 || obor_profile_build == 6119)
+        return;
+#endif
     if (port < 0 || port >= 4 || msec <= 0)
         return;
     rumble_ratio[port] = ratio > 0 ? (ratio > 100 ? 100 : ratio) : 100;

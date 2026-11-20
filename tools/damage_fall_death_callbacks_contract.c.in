@@ -1,0 +1,205 @@
+/* SPDX-License-Identifier: BSD-3-Clause
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me>
+ */
+#include <limits.h>
+#include <stdint.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include "openbor.h"
+#if OBOR_ENGINE_BUILD == 4432
+#define HEALTH(ent) ((ent)->health)
+HRESULT Interpreter_Call(Interpreter *p) { abort(); }
+HRESULT Interpreter_EvalInstruction(Interpreter *p) { abort(); }
+#else
+#define HEALTH(ent) ((ent)->energy_status.health_current)
+#include "profile_ids.h"
+#endif
+#undef printf
+#undef assert
+#include <assert.h>
+
+enum callback { DAMAGE, FALL, DEATH, CALLBACKS };
+static entity receiver, attacker;
+entity *self = &receiver;
+uint32_t obor_profile_build, obor_profile_features;
+int max_attack_types = ATK_TIMEOVER + 1;
+static float offense[ATK_TIMEOVER + 1] = {[ATK_TIMEOVER] = 0.5f};
+static s_defense defense[ATK_TIMEOVER + 1] = {[ATK_TIMEOVER].factor = 0.5f};
+static Script scripts[CALLBACKS];
+static s_scripts script_slots = {
+    .takedamage_script = &scripts[DAMAGE], .onfall_script = &scripts[FALL], .ondeath_script = &scripts[DEATH],
+};
+static const char *const keys[] = {
+    "self", "attacker", "damage", "drop", "attacktype", "noblock", "guardcost", "jugglecost", "pauseadd", "tag",
+};
+static const unsigned key_count = sizeof(keys) / sizeof(*keys);
+static struct callback_state {
+    ScriptVariant locals[sizeof(keys) / sizeof(*keys)];
+    unsigned set_count, clear_count;
+    int ran, enabled;
+} state[CALLBACKS];
+static const entity *expected_attacker;
+static int expected_kind[2], expected_health[CALLBACKS], expected_damage, native_timeover;
+static unsigned executed, expected_count;
+
+void StrCache_Collect(int index) { abort(); }
+#if OBOR_ENGINE_BUILD == 4432
+int StrCache_Pop(void) { abort(); }
+#endif
+@VARIANTS@
+
+static int script_id(Script *script)
+{
+    for(int i = 0; i < CALLBACKS; ++i)
+        if(script == &scripts[i]) return i;
+    abort();
+}
+
+static void observe_local(Script *script, const char *name, ScriptVariant *value)
+{
+    const LONG expected[] = {0, 0, expected_damage, 3, native_timeover, 2, -7, 11, 13, -31};
+    const int id = script_id(script);
+    struct callback_state *cs = &state[id];
+    const unsigned index = cs->ran ? cs->clear_count++ : cs->set_count++;
+    assert(index < key_count && !strcmp(name, keys[index]));
+    if(cs->ran)
+    {
+        assert(value->vt == VT_EMPTY);
+    }
+    else if(index < 2)
+    {
+        assert(value->vt == VT_PTR && value->ptrVal == (index ? expected_attacker : &receiver));
+    }
+    else
+    {
+        assert(value->vt == VT_INTEGER && value->lVal == expected[index]);
+    }
+    cs->locals[index] = *value;
+}
+
+int Script_IsInitialized(Script *script) { return state[script_id(script)].enabled; }
+
+int Script_Execute(Script *script)
+{
+    const int id = script_id(script);
+    struct callback_state *cs = &state[id];
+    assert(executed < expected_count && expected_kind[executed++] == id);
+    assert(!cs->ran && cs->set_count == key_count && !cs->clear_count);
+    assert(HEALTH(&receiver) == expected_health[id]);
+    cs->locals[key_count - 1].lVal = 99;
+    cs->ran = 1;
+    return 0;
+}
+
+#undef Script_Set_Local_Variant
+#define Script_Set_Local_Variant observe_local
+@CALLBACKS@
+#undef Script_Set_Local_Variant
+
+static void call_fall(entity *ent, entity *other, s_collision_attack *attack)
+{
+    entity *iFall = ent;
+    int force = attack->attack_force, drop = attack->attack_drop, type = attack->attack_type;
+    int noblock = attack->no_block, guardcost = attack->guardcost, jugglecost = attack->jugglecost;
+    int pauseadd = attack->pause_add, tag = attack->tag;
+    @FALL_CALL@
+}
+
+static s_collision_attack reset(int health, const entity *other)
+{
+    receiver = (entity){.scripts = &script_slots, .defense = defense, .modeldata.health = 90};
+    attacker = (entity){.offense_factors = offense};
+    HEALTH(&receiver) = health;
+    expected_attacker = other;
+    memset(state, 0, sizeof(state));
+    for(int i = 0; i < CALLBACKS; ++i)
+    {
+        state[i].enabled = 1;
+        state[i].locals[key_count - 1] = (ScriptVariant){.vt = VT_INTEGER, .lVal = 123};
+    }
+    executed = expected_count = 0;
+    return (s_collision_attack){.attack_force = 41, .attack_drop = 3, .attack_type = ATK_TIMEOVER,
+                                 .no_block = 2, .guardcost = -7, .jugglecost = 11, .pause_add = 13, .tag = -31};
+}
+
+static void verify_cleanup(void)
+{
+    assert(executed == expected_count);
+    for(int i = 0; i < CALLBACKS; ++i)
+    {
+        const struct callback_state *cs = &state[i];
+        assert(cs->set_count == (cs->ran ? key_count : 0) && cs->set_count == cs->clear_count);
+        if(cs->ran)
+        {
+            for(unsigned k = 0; k < key_count; ++k) assert(cs->locals[k].vt == VT_EMPTY);
+        }
+        else
+        {
+            assert(cs->locals[key_count - 1].vt == VT_INTEGER && cs->locals[key_count - 1].lVal == 123);
+        }
+    }
+}
+
+static void check_damage(int record)
+{
+    const struct
+    {
+        int start, raw, calculated, guarded, no_kill, invincible, damage_enabled, damage_health, final, death;
+    } cases[] = {
+        {37, 41, 10, 0, 0, 0, 1, 27, 27, 0},
+        {7, 41, 10, 0, 0, 0, 1, -3, -3, 1},
+        {7, 41, 10, 0, 0, 2, 1, -3, 1, 1},
+        {7, 41, 10, 0, 0, 3, 1, -3, 90, 1},
+        {7, 41, 10, 0, 1, 0, 1, 1, 1, 0},
+        {37, 41, 0, 1, 0, 0, 1, 37, 37, 0},
+        {85, -41, -10, 0, 0, 0, 1, 90, 90, 0},
+        {37, 41, 10, 0, 0, 0, 0, 27, 27, 0},
+    };
+    for(unsigned i = 0; i < sizeof(cases) / sizeof(*cases); ++i)
+    {
+        s_collision_attack attack = reset(cases[i].start, &attacker);
+        attack.attack_force = cases[i].raw;
+        attack.no_kill = cases[i].no_kill;
+        receiver.invincible = cases[i].invincible;
+        receiver.modeldata.guardpoints.max = cases[i].guarded;
+        state[DAMAGE].enabled = cases[i].damage_enabled;
+        expected_damage = record ? cases[i].raw : cases[i].calculated;
+        expected_health[DAMAGE] = cases[i].damage_health;
+        expected_health[DEATH] = cases[i].final;
+        if(cases[i].damage_enabled) expected_kind[expected_count++] = DAMAGE;
+        if(cases[i].death) expected_kind[expected_count++] = DEATH;
+        checkdamage(&attacker, &attack);
+        assert(HEALTH(&receiver) == cases[i].final && attack.attack_force == cases[i].raw);
+        verify_cleanup();
+    }
+}
+
+static void check_fall(void)
+{
+    for(int i = 0; i < 3; ++i)
+    {
+        entity *other = i == 1 ? NULL : &attacker;
+        s_collision_attack attack = reset(17, other);
+        state[FALL].enabled = i != 2;
+        expected_damage = 41;
+        expected_health[FALL] = 17;
+        if(state[FALL].enabled) expected_kind[expected_count++] = FALL;
+        call_fall(&receiver, other, &attack);
+        verify_cleanup();
+    }
+}
+
+int main(void)
+{
+    const struct { unsigned revision; int record, timeover; } rows[] = {@ROWS@};
+    for(unsigned i = 0; i < sizeof(rows) / sizeof(*rows); ++i)
+    {
+        obor_profile_build = rows[i].revision;
+        native_timeover = rows[i].timeover;
+        check_damage(rows[i].record);
+        check_fall();
+        printf("%u\n", obor_profile_build);
+    }
+    return 0;
+}

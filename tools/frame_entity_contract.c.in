@@ -1,0 +1,223 @@
+/* SPDX-License-Identifier: BSD-3-Clause
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me>
+ */
+#include <stdint.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include "openbor.h"
+#undef printf
+#undef assert
+#include <assert.h>
+
+#if OBOR_ENGINE_BUILD == 4432
+#define HEALTH health
+#define COST reactive
+#define PRIME ptype
+#define FLOOR_PRIME 1
+#define OTHER_PRIME 0
+#define DAMAGE_ARGUMENTS entity *other, s_collision_attack *attack
+#else
+#include "profile_ids.h"
+#define HEALTH energy_status.health_current
+#define COST deduct_ammo
+#define PRIME projectile_prime
+#define FLOOR_PRIME PROJECTILE_PRIME_BASE_FLOOR
+#define OTHER_PRIME PROJECTILE_PRIME_SOURCE_INDEX
+#define DAMAGE_ARGUMENTS entity *other, s_collision_attack *attack, int fall_flag
+#endif
+
+uint32_t obor_profile_build, obor_profile_features;
+s_videomodes videomodes;
+s_level *level;
+float advancex;
+int nodropspawn = 1;
+entity *self;
+
+static entity actor;
+static s_model model;
+static unsigned launches, action_log, cost_log;
+static unsigned debits;
+enum { THROW = 1, STAR, BOOMERANG, SHOOT, TOSS };
+
+void common_think(void) { abort(); }
+void common_spawn(void) { abort(); }
+void common_drop(void) { abort(); }
+int common_trymove(float x, float z) { abort(); }
+int common_takedamage(DAMAGE_ARGUMENTS) { abort(); }
+int biker_takedamage(DAMAGE_ARGUMENTS) { abort(); }
+int arrow_takedamage(DAMAGE_ARGUMENTS) { abort(); }
+float randf(float max) { abort(); }
+int inair(entity *e) { abort(); }
+void ent_set_anim(entity *e, int animation, int reset) { abort(); }
+void subtract_shot(void) { ++debits; }
+
+static void record_launch(unsigned action)
+{
+    action_log = action_log * 8 + action;
+    cost_log = cost_log * 2 + self->COST;
+    ++launches;
+}
+
+entity *knife_spawn(char *name, int index, float x, float z, float y, int direction, int type, int map)
+{
+    assert(!name && index == -1 && x == 13 && z == 19 && direction == DIRECTION_RIGHT && !map);
+    assert((type == 0 && y == 17) || (type == 1 && y == 12));
+    record_launch(type ? SHOOT : THROW);
+    return NULL;
+}
+
+int star_spawn(float x, float z, float y, int direction)
+{
+    assert(x == 69 && z == 19 && y == 79 && direction == DIRECTION_RIGHT);
+    record_launch(STAR);
+    return 0;
+}
+
+entity *bomb_spawn(char *name, int index, float x, float z, float y, int direction, int map)
+{
+    assert(!name && index == -1 && x == 13 && z == 19 && y == 17 && direction == DIRECTION_RIGHT && !map);
+    record_launch(TOSS);
+    return NULL;
+}
+
+#if OBOR_ENGINE_BUILD == 6391
+entity *boomerang_spawn(char *name, int index, float x, float z, float y, int direction, int map)
+{
+    assert(!name && index == -1 && x == 13 && z == 19 && y == 17 && direction == DIRECTION_RIGHT && !map);
+    record_launch(BOOMERANG);
+    return NULL;
+}
+
+void *checkAlloc(void *ptr, size_t size, const char *function, const char *file, int line)
+{
+    assert(ptr || !size);
+    return ptr;
+}
+#endif
+
+@PROFILE@
+
+static void initialize(entity *e)
+{
+    int dodrop;
+    switch(e->modeldata.type)
+    {
+        @ENEMY@
+        @SHOT@
+        default: abort();
+    }
+}
+
+static void frame_costs(s_anim *anim, unsigned int f)
+{
+    @COSTS@
+}
+#undef __trystar
+#undef __tryknife
+#undef __tryboomerang
+
+static void consume_frame_cost(void)
+{
+    @CONSUME@
+}
+
+#if OBOR_ENGINE_BUILD == 6391
+static void release_item(entity *e)
+{
+    @RELEASE@
+}
+#endif
+
+static void check_initialization(int attacking)
+{
+    actor = (entity){.direction = DIRECTION_LEFT, .modeldata.type = TYPE_ENEMY,
+                     .modeldata.subtype = SUBTYPE_BIKER, .modeldata.speed = 3};
+    initialize(&actor);
+    assert(actor.nograb && actor.nograb_default && actor.attacking == attacking);
+    assert(actor.velocity.x == -3 && actor.speedmul == 2);
+    assert(actor.think == common_think && actor.takedamage == biker_takedamage);
+
+    for(int shot = 0; shot < 2; ++shot)
+        for(int floor = 0; floor < 2; ++floor)
+            for(int from_index = 0; from_index <= !!OTHER_PRIME; ++from_index)
+            {
+                actor = (entity){.position.y = 12, .model = &model};
+                actor.modeldata.type = shot ? TYPE_SHOT : TYPE_ENEMY;
+                actor.modeldata.subtype = shot ? SUBTYPE_NONE : SUBTYPE_ARROW;
+                actor.PRIME = (floor ? FLOOR_PRIME : 0) | (from_index ? OTHER_PRIME : 0);
+                initialize(&actor);
+                assert(actor.HEALTH == 1 && actor.attacking == attacking && actor.speedmul == 2);
+                assert(actor.nograb && actor.nograb_default && actor.modeldata.speed == 2);
+                assert(actor.base == (floor ? 0 : 12));
+                assert(actor.think == common_think && actor.takedamage == arrow_takedamage);
+            }
+}
+
+static void check_costs(int throw_boomerang)
+{
+    const unsigned frame = 3;
+    for(unsigned actions = 0; actions < 8; ++actions)
+    {
+        s_anim anim = {.projectile = {.knife = -1, .flash = -1, .star = -1}};
+#if OBOR_ENGINE_BUILD == 6391
+        anim.projectile.boomerang = -1;
+#endif
+        anim.projectile.throwframe = actions & 1 ? frame : frame + 1;
+        anim.projectile.shootframe = actions & 2 ? frame : frame + 1;
+        anim.projectile.tossframe = actions & 4 ? frame : frame + 1;
+        anim.projectile.position.y = 5;
+        actor = (entity){.position = {.x = 13, .z = 19, .y = 12}, .direction = DIRECTION_RIGHT};
+        self = &actor;
+        launches = action_log = cost_log = 0;
+        frame_costs(&anim, frame);
+        assert(actor.COST == (actions != 0));
+
+        unsigned expected_log = 0, expected_costs = 0, count = 0;
+        if(actions & 1)
+        {
+            expected_log = THROW * 8 + STAR;
+            count = 2;
+            if(throw_boomerang)
+            {
+                expected_log = expected_log * 8 + BOOMERANG;
+                ++count;
+            }
+        }
+        if(actions & 2)
+        {
+            expected_log = expected_log * 8 + SHOOT;
+            expected_costs = count > 0;
+            ++count;
+        }
+        if(actions & 4)
+        {
+            expected_log = expected_log * 8 + TOSS;
+            expected_costs = expected_costs * 2 + (count > 0);
+            ++count;
+        }
+        assert(launches == count && action_log == expected_log && cost_log == expected_costs);
+        debits = 0;
+        consume_frame_cost();
+        consume_frame_cost();
+        assert(debits == (actions != 0) && actor.COST == 0);
+    }
+}
+
+int main(void)
+{
+    static const struct {uint32_t revision; int active_attack, throw_boomerang;} rows[] = {@ROWS@};
+    for(unsigned i = 0; i < sizeof(rows) / sizeof(rows[0]); ++i)
+    {
+        obor_profile_build = rows[i].revision;
+        check_initialization(rows[i].active_attack);
+        check_costs(rows[i].throw_boomerang);
+#if OBOR_ENGINE_BUILD == 6391
+        actor.item_properties = malloc(sizeof(*actor.item_properties));
+        release_item(&actor);
+        assert(!actor.item_properties);
+        release_item(&actor);
+        assert(!actor.item_properties);
+#endif
+        printf("%u\n", obor_profile_build);
+    }
+}

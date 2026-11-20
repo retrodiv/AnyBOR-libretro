@@ -1,6 +1,7 @@
 /* SPDX-License-Identifier: BSD-3-Clause
  * Copyright (c) 2026 retrodiv <retrodiv@proton.me> */
 #include <assert.h>
+#include <stdbool.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <stdarg.h>
@@ -14,6 +15,7 @@ typedef int HRESULT;
 enum {S_OK=0,E_FAIL=-1,VT_EMPTY=0,VT_INTEGER=1,VT_DECIMAL=2,VT_STR=3,VT_OTHER=4};
 typedef struct {int vt;LONG lVal;DOUBLE dblVal;const char *strVal;} ScriptVariant;
 static unsigned obor_profile_features;
+static unsigned obor_profile_build;
 static int bonus,optionsMenu,selectScreen,current_set;
 static float scrollmaxx;
 static const char *StrCache_Get(const char *value) {assert(value);return value;}
@@ -59,6 +61,7 @@ int main(void) {
     unsigned masks[]={0,OBOR_PROFILE_ATTACK_HISTORY_FOUR,OBOR_PROFILE_LNS_6330};
     for(unsigned mode=0;mode<3;++mode) {
         obor_profile_features=masks[mode];
+        obor_profile_build=mode==2?6330:6391;
         unsigned count=mode==2?sizeof(expected_lns_native)/sizeof(*expected_lns_native):_sv_in_sa_count;
         for(unsigned n=0;n<count;++n) {
             assert(obor_systemvariant_native((int)n)==(mode==2?expected_lns_native[n]:(int)n));

@@ -1,0 +1,105 @@
+/* SPDX-License-Identifier: BSD-3-Clause
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me>
+ */
+#include <stdint.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <strings.h>
+#include "scriptcommon.h"
+#undef printf
+#undef assert
+#include <assert.h>
+#ifndef stricmp
+#define stricmp strcasecmp
+#endif
+
+uint32_t obor_profile_build;
+static entity actor, parent;
+
+void *checkAlloc(void *ptr, size_t size, const char *func, const char *file, int line)
+{
+    assert(!size || ptr);
+    return ptr;
+}
+
+@CACHE@
+@SEARCH@
+@METHODS@
+
+static void check_profile(unsigned revision, bool boolean_axes)
+{
+    static const char *names[] = {@NAMES@};
+    const LONG initial[] = {7, 3, -4, 0, 2, -19, 23, 29, -31, 0};
+    const LONG update[] = {22, -3, 0, 5, 1, -70, 81, -92, 15, 0};
+    s_bind *binding = &actor.binding;
+    *binding = (s_bind){
+        .ani_bind = initial[0],
+        .bind_toggle = {.x = initial[1], .y = initial[2], .z = initial[3]},
+        .direction = initial[4],
+        .offset = {.x = initial[5], .y = initial[6], .z = initial[7]},
+        .sortid = initial[8],
+    };
+    obor_profile_build = revision;
+    ScriptVariant handle = {.vt = VT_PTR, .ptrVal = binding};
+    ScriptVariant key = {.vt = VT_EMPTY}, input = {.vt = VT_EMPTY}, value = {.vt = VT_EMPTY};
+    ScriptVariant *args[] = {&handle, &key, &input}, *out = &value;
+
+    for(LONG ordinal = 0; ordinal < (LONG)(sizeof(names) / sizeof(*names)); ++ordinal)
+    {
+        const bool axis = ordinal >= 1 && ordinal <= 3;
+        const bool target = ordinal == 9;
+        ScriptVariant_Clear(&key);
+        key.vt = VT_STR;
+        key.strVal = StrCache_CreateNewFrom(names[ordinal]);
+        assert(openbor_get_binding_property(args, &out, 2) == S_OK && out == &value);
+        assert(key.vt == VT_INTEGER && key.lVal == ordinal);
+        if(target)
+        {
+            assert(value.vt == VT_EMPTY);
+            input.vt = VT_PTR;
+            input.ptrVal = &parent;
+        }
+        else
+        {
+            const LONG expected = boolean_axes && axis ? initial[ordinal] != 0 : initial[ordinal];
+            assert(value.vt == VT_INTEGER && value.lVal == expected);
+            input.vt = VT_DECIMAL;
+            input.dblVal = update[ordinal] + (update[ordinal] < 0 ? -0.5 : 0.5);
+        }
+        assert(openbor_set_binding_property(args, &out, 3) == S_OK && out == &value);
+        assert(openbor_get_binding_property(args, &out, 2) == S_OK && out == &value);
+        if(target)
+            assert(value.vt == VT_PTR && value.ptrVal == &parent);
+        else
+        {
+            const LONG expected = boolean_axes && axis ? update[ordinal] != 0 : update[ordinal];
+            assert(value.vt == VT_INTEGER && value.lVal == expected);
+        }
+    }
+    assert(binding->bind_toggle.x == (boolean_axes ? 1 : -3));
+    assert(binding->bind_toggle.y == 0);
+    assert(binding->bind_toggle.z == (boolean_axes ? 1 : 5));
+    input.ptrVal = NULL;
+    assert(openbor_set_binding_property(args, &out, 3) == S_OK && out == &value);
+    assert(!binding->ent && openbor_get_binding_property(args, &out, 2) == S_OK);
+    assert(value.vt == VT_EMPTY);
+
+    ScriptVariant_Clear(&key);
+    key.vt = VT_STR;
+    key.strVal = StrCache_CreateNewFrom("entity");
+    assert(mapstrings_binding(args, 2) == 0 && key.vt == VT_STR);
+    ScriptVariant_Clear(&key);
+    printf("PASS %u\n", revision);
+}
+
+int main(void)
+{
+    static const struct { unsigned revision; bool boolean_axes; } profiles[] = {@PROFILES@};
+    printf("%zu %zu %zu\n", sizeof(void *), sizeof(entity), sizeof(s_bind));
+    StrCache_Init();
+    for(size_t i = 0; i < sizeof(profiles) / sizeof(*profiles); ++i)
+        check_profile(profiles[i].revision, profiles[i].boolean_axes);
+    StrCache_Clear();
+    return 0;
+}

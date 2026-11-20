@@ -1,0 +1,61 @@
+/* SPDX-License-Identifier: BSD-3-Clause
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me>
+ */
+#include <stdint.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include "openbor.h"
+#undef assert
+#undef printf
+#include <assert.h>
+
+uint32_t obor_profile_build, obor_profile_features;
+int max_follows = 3;
+static int follows[] = {ANI_FALL, ANI_FALL2, ANI_FALL3};
+int *animfollows = follows;
+
+HRESULT Interpreter_Call(Interpreter *p) { abort(); }
+HRESULT Interpreter_EvalInstruction(Interpreter *p) { abort(); }
+
+@HELPERS@
+
+enum { CMD_MODEL_FOLLOWANIM };
+
+static void select_follow(s_anim *newanim, int number)
+{
+    char value[16];
+    snprintf(value, sizeof(value), "%d", number);
+    char filename[] = "fixture", command[] = "followanim";
+    ArgList arglist = {.count = 2, .args = {command, value}};
+    int cmd = CMD_MODEL_FOLLOWANIM;
+    switch(cmd)
+    {
+        @DIRECTIVE@
+    }
+}
+
+int main(void)
+{
+    static const struct { uint32_t revision; int negative; } rows[] = {@ROWS@};
+    const int inputs[] = {-1, 0, 1, 2, max_follows, max_follows + 1};
+    for(size_t i = 0; i < sizeof(rows) / sizeof(*rows); ++i)
+    {
+        obor_profile_build = rows[i].revision;
+        const int selections[] = {rows[i].negative, 0, 1, 2, max_follows, max_follows};
+        entity actor = {0};
+        s_anim animation = {0};
+        actor.animation = &animation;
+        for(size_t j = 0; j < sizeof(inputs) / sizeof(*inputs); ++j)
+        {
+            animfollows = follows;
+            select_follow(&animation, inputs[j]);
+            assert((int)animation.followup.animation == selections[j]);
+            assert(attack_follow_animation(&actor) == (selections[j] ? follows[selections[j] - 1] : -1));
+            animfollows = NULL;
+            assert(attack_follow_animation(&actor) == -1);
+        }
+        printf("%u\n", obor_profile_build);
+    }
+    return 0;
+}

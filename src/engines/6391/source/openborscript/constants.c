@@ -5,7 +5,13 @@
  * Upstream code retains its original license and notices.
  * Expose each logical profile's native constants and translate shared
  * selectors to native values. Return the modified profile's native parser-
- * capacity constant while preserving ordinary values.
+ * capacity constant while preserving ordinary values. Preserve historical
+ * state and platform constant availability and level selector values. Select
+ * entity collision constants using their historical profile availability.
+ * Preserve the 5134 and 6119 names and values for animation and projectile
+ * request constants. Admit the animation entity collision constant only in
+ * the profiles that expose it. Preserve historical admission of the lose
+ * attack constant.
  * Existing changes recorded here; this is not their implementation date.
  * See MODIFICATIONS.md and docs/modifications/6391.md
  * at the source repository root. Original notices follow below.
@@ -55,11 +61,23 @@ else if(obor_profile_build == 6412 && stricmp(#x, constname)==0) {\
 	v.lVal = (LONG)x;\
 }
 
-#define ICMPSCONSTA(x, y) \
-else if(strnicmp(constname, #x, sizeof(#x)-1)==0 && constname[sizeof(#x)-1] >= '1' && constname[sizeof(#x)-1]<='9') \
+#define ICMPLATERCONST(x) \
+else if(!early_ids && stricmp(#x, constname)==0) {\
+    v.lVal = (LONG)x;\
+}
+
+#define ICMPCLASSICBOOMERANG(x) \
+else if((early_ids || obor_profile_build == 6330) && stricmp(#x, constname)==0) {\
+    v.lVal = (LONG)x;\
+}
+
+#define ICMPSCONSTA_IF(x, y, admitted) \
+else if((admitted) && strnicmp(constname, #x, sizeof(#x)-1)==0 && constname[sizeof(#x)-1] >= '1' && constname[sizeof(#x)-1]<='9') \
 { \
 	v.lVal = (LONG)(y[atoi(constname+(sizeof(#x)-1))-1]);\
 }
+
+#define ICMPSCONSTA(x, y) ICMPSCONSTA_IF(x, y, 1)
 
 #define ICMPSCONSTB(x, y) \
 else if(strnicmp(constname, #x, sizeof(#x)-1)==0 && constname[sizeof(#x)-1] >= '1' && constname[sizeof(#x)-1]<='9') \
@@ -77,6 +95,7 @@ int mapstrings_transconst(ScriptVariant **varlist, int paramCount)
 {
     char *constname = NULL;
     int found = TRUE;
+    const int early_ids = obor_profile_uses_5134_script_ids();
     ScriptVariant v;
 
     if(paramCount < 1)
@@ -103,10 +122,10 @@ int mapstrings_transconst(ScriptVariant **varlist, int paramCount)
         ICMPCONST6510(BINDING_MATCHING_FRAME_TARGET)
         ICMPCONST6510(BINDING_MATCHING_ANIMATION_TARGET)
         ICMPCONST6510(BINDING_MATCHING_NONE)
-        ICMPCONST6330(ANI_GETBOOMERANGINAIR)
-        ICMPCONST6330(ANI_GETBOOMERANG)
-        ICMPCONST6330(AIMOVE1_BOOMERANG)
-        ICMPCONST6330(SUBTYPE_BOOMERANG)
+        ICMPCLASSICBOOMERANG(ANI_GETBOOMERANGINAIR)
+        ICMPCLASSICBOOMERANG(ANI_GETBOOMERANG)
+        ICMPCLASSICBOOMERANG(AIMOVE1_BOOMERANG)
+        ICMPCLASSICBOOMERANG(SUBTYPE_BOOMERANG)
         ICMPCONST6412(BINDING_ANI_NONE)
         ICMPCONST6412(BINDING_ANI_ANIMATION_MATCH)
         ICMPCONST6412(BINDING_ANI_FRAME_MATCH)
@@ -252,7 +271,10 @@ int mapstrings_transconst(ScriptVariant **varlist, int paramCount)
         ICMPCONST(PROJECTILE_PRIME_BASE_Y)
         ICMPCONST(PROJECTILE_PRIME_LAUNCH_MOVING)
         ICMPCONST(PROJECTILE_PRIME_LAUNCH_STATIONARY)
-        ICMPCONST(PROJECTILE_PRIME_REQUEST_UNDEFINED)
+        else if(early_ids && stricmp("PROJECTILE_PRIME_REQUEST_CUSTOM", constname)==0)
+            v.lVal = PROJECTILE_PRIME_REQUEST_UNDEFINED;
+        else if(!early_ids && stricmp("PROJECTILE_PRIME_REQUEST_UNDEFINED", constname)==0)
+            v.lVal = PROJECTILE_PRIME_REQUEST_UNDEFINED;
         ICMPCONST(PROJECTILE_PRIME_REQUEST_FLASH)
         ICMPCONST(PROJECTILE_PRIME_REQUEST_KNIFE)
         ICMPCONST(PROJECTILE_PRIME_REQUEST_PROJECTILE)
@@ -523,7 +545,7 @@ int mapstrings_transconst(ScriptVariant **varlist, int paramCount)
         ICMPCONST(ANI_RUNSLIDE)
         ICMPCONST(ANI_BLOCKPAIN)
         ICMPCONST(ANI_DUCKATTACK)
-        ICMPCONST(ATK_LOSE)
+        else if(!early_ids && stricmp("ATK_LOSE", constname)==0) { v.lVal = ATK_LOSE; }
         ICMPCONST(MAX_ANIS)
 
         // Attacking state.
@@ -532,30 +554,30 @@ int mapstrings_transconst(ScriptVariant **varlist, int paramCount)
         ICMPCONST(ATTACKING_PREPARED)
 
         // Idling state.
-        ICMPCONST(IDLING_INACTIVE)
-        ICMPCONST(IDLING_PREPARED)
-        ICMPCONST(IDLING_ACTIVE)
+        ICMPLATERCONST(IDLING_INACTIVE)
+        ICMPLATERCONST(IDLING_PREPARED)
+        ICMPLATERCONST(IDLING_ACTIVE)
 
         // Edge type.
-        ICMPCONST(EDGE_NO)
-        ICMPCONST(EDGE_LEFT)
-        ICMPCONST(EDGE_RIGHT)
+        ICMPLATERCONST(EDGE_NO)
+        ICMPLATERCONST(EDGE_LEFT)
+        ICMPLATERCONST(EDGE_RIGHT)
 
         // Duck state.
-        ICMPCONST(DUCK_INACTIVE)
-        ICMPCONST(DUCK_PREPARED)
-        ICMPCONST(DUCK_ACTIVE)
-        ICMPCONST(DUCK_RISE)
+        ICMPLATERCONST(DUCK_INACTIVE)
+        ICMPLATERCONST(DUCK_PREPARED)
+        ICMPLATERCONST(DUCK_ACTIVE)
+        ICMPLATERCONST(DUCK_RISE)
 
         // Platform props.
-        ICMPCONST(PLATFORM_X)
-        ICMPCONST(PLATFORM_Z)
-        ICMPCONST(PLATFORM_UPPERLEFT)
-        ICMPCONST(PLATFORM_LOWERLEFT)
-        ICMPCONST(PLATFORM_UPPERRIGHT)
-        ICMPCONST(PLATFORM_LOWERRIGHT)
-        ICMPCONST(PLATFORM_DEPTH)
-        ICMPCONST(PLATFORM_HEIGHT)
+        ICMPLATERCONST(PLATFORM_X)
+        ICMPLATERCONST(PLATFORM_Z)
+        ICMPLATERCONST(PLATFORM_UPPERLEFT)
+        ICMPLATERCONST(PLATFORM_LOWERLEFT)
+        ICMPLATERCONST(PLATFORM_UPPERRIGHT)
+        ICMPLATERCONST(PLATFORM_LOWERRIGHT)
+        ICMPLATERCONST(PLATFORM_DEPTH)
+        ICMPLATERCONST(PLATFORM_HEIGHT)
 
         ICMPCONST(PLAYER_MIN_Z)
         ICMPCONST(PLAYER_MAX_Z)
@@ -669,59 +691,59 @@ int mapstrings_transconst(ScriptVariant **varlist, int paramCount)
         ICMPCONST(ANI_BACKDIE8)
         ICMPCONST(ANI_BACKDIE9)
         ICMPCONST(ANI_BACKDIE10)
-        ICMPCONST(ANI_BACKBURNPAIN)
-        ICMPCONST(ANI_BACKSHOCKPAIN)
-        ICMPCONST(ANI_BACKBURN)
-        ICMPCONST(ANI_BACKSHOCK)
-        ICMPCONST(ANI_BACKBURNDIE)
-        ICMPCONST(ANI_BACKSHOCKDIE)
-        ICMPCONST(ANI_BACKRISEB)
-        ICMPCONST(ANI_BACKRISES)
-        ICMPCONST(ANI_BACKRISE)
-        ICMPCONST(ANI_BACKRISE2)
-        ICMPCONST(ANI_BACKRISE3)
-        ICMPCONST(ANI_BACKRISE4)
-        ICMPCONST(ANI_BACKRISE5)
-        ICMPCONST(ANI_BACKRISE6)
-        ICMPCONST(ANI_BACKRISE7)
-        ICMPCONST(ANI_BACKRISE8)
-        ICMPCONST(ANI_BACKRISE9)
-        ICMPCONST(ANI_BACKRISE10)
-        ICMPCONST(ANI_BACKRISEATTACKB)
-        ICMPCONST(ANI_BACKRISEATTACKS)
-        ICMPCONST(ANI_BACKRISEATTACK)
-        ICMPCONST(ANI_BACKRISEATTACK2)
-        ICMPCONST(ANI_BACKRISEATTACK3)
-        ICMPCONST(ANI_BACKRISEATTACK4)
-        ICMPCONST(ANI_BACKRISEATTACK5)
-        ICMPCONST(ANI_BACKRISEATTACK6)
-        ICMPCONST(ANI_BACKRISEATTACK7)
-        ICMPCONST(ANI_BACKRISEATTACK8)
-        ICMPCONST(ANI_BACKRISEATTACK9)
-        ICMPCONST(ANI_BACKRISEATTACK10)
-        ICMPCONST(ANI_BACKBLOCKPAINB)
-        ICMPCONST(ANI_BACKBLOCKPAINS)
-        ICMPCONST(ANI_BACKBLOCKPAIN)
-        ICMPCONST(ANI_BACKBLOCKPAIN2)
-        ICMPCONST(ANI_BACKBLOCKPAIN3)
-        ICMPCONST(ANI_BACKBLOCKPAIN4)
-        ICMPCONST(ANI_BACKBLOCKPAIN5)
-        ICMPCONST(ANI_BACKBLOCKPAIN6)
-        ICMPCONST(ANI_BACKBLOCKPAIN7)
-        ICMPCONST(ANI_BACKBLOCKPAIN8)
-        ICMPCONST(ANI_BACKBLOCKPAIN9)
-        ICMPCONST(ANI_BACKBLOCKPAIN10)
+        ICMPLATERCONST(ANI_BACKBURNPAIN)
+        ICMPLATERCONST(ANI_BACKSHOCKPAIN)
+        ICMPLATERCONST(ANI_BACKBURN)
+        ICMPLATERCONST(ANI_BACKSHOCK)
+        ICMPLATERCONST(ANI_BACKBURNDIE)
+        ICMPLATERCONST(ANI_BACKSHOCKDIE)
+        ICMPLATERCONST(ANI_BACKRISEB)
+        ICMPLATERCONST(ANI_BACKRISES)
+        ICMPLATERCONST(ANI_BACKRISE)
+        ICMPLATERCONST(ANI_BACKRISE2)
+        ICMPLATERCONST(ANI_BACKRISE3)
+        ICMPLATERCONST(ANI_BACKRISE4)
+        ICMPLATERCONST(ANI_BACKRISE5)
+        ICMPLATERCONST(ANI_BACKRISE6)
+        ICMPLATERCONST(ANI_BACKRISE7)
+        ICMPLATERCONST(ANI_BACKRISE8)
+        ICMPLATERCONST(ANI_BACKRISE9)
+        ICMPLATERCONST(ANI_BACKRISE10)
+        ICMPLATERCONST(ANI_BACKRISEATTACKB)
+        ICMPLATERCONST(ANI_BACKRISEATTACKS)
+        ICMPLATERCONST(ANI_BACKRISEATTACK)
+        ICMPLATERCONST(ANI_BACKRISEATTACK2)
+        ICMPLATERCONST(ANI_BACKRISEATTACK3)
+        ICMPLATERCONST(ANI_BACKRISEATTACK4)
+        ICMPLATERCONST(ANI_BACKRISEATTACK5)
+        ICMPLATERCONST(ANI_BACKRISEATTACK6)
+        ICMPLATERCONST(ANI_BACKRISEATTACK7)
+        ICMPLATERCONST(ANI_BACKRISEATTACK8)
+        ICMPLATERCONST(ANI_BACKRISEATTACK9)
+        ICMPLATERCONST(ANI_BACKRISEATTACK10)
+        ICMPLATERCONST(ANI_BACKBLOCKPAINB)
+        ICMPLATERCONST(ANI_BACKBLOCKPAINS)
+        ICMPLATERCONST(ANI_BACKBLOCKPAIN)
+        ICMPLATERCONST(ANI_BACKBLOCKPAIN2)
+        ICMPLATERCONST(ANI_BACKBLOCKPAIN3)
+        ICMPLATERCONST(ANI_BACKBLOCKPAIN4)
+        ICMPLATERCONST(ANI_BACKBLOCKPAIN5)
+        ICMPLATERCONST(ANI_BACKBLOCKPAIN6)
+        ICMPLATERCONST(ANI_BACKBLOCKPAIN7)
+        ICMPLATERCONST(ANI_BACKBLOCKPAIN8)
+        ICMPLATERCONST(ANI_BACKBLOCKPAIN9)
+        ICMPLATERCONST(ANI_BACKBLOCKPAIN10)
         ICMPCONST(ANI_BACKRUN)
         ICMPCONST(ANI_HITOBSTACLE)
         ICMPCONST(ANI_HITPLATFORM)
         ICMPCONST(ANI_HITWALL)
-        ICMPCONST(ANI_EDGE)
-        ICMPCONST(ANI_BACKEDGE)
-        ICMPCONST(ANI_DUCKING)
-        ICMPCONST(ANI_DUCKRISE)
-        ICMPCONST(ANI_VICTORY)
-        ICMPCONST(ANI_FALLLOSE)
-        ICMPCONST(ANI_LOSE)
+        ICMPLATERCONST(ANI_EDGE)
+        ICMPLATERCONST(ANI_BACKEDGE)
+        ICMPLATERCONST(ANI_DUCKING)
+        ICMPLATERCONST(ANI_DUCKRISE)
+        ICMPLATERCONST(ANI_VICTORY)
+        ICMPLATERCONST(ANI_FALLLOSE)
+        ICMPLATERCONST(ANI_LOSE)
 
         // for the extra animation ids
         ICMPSCONSTC(ATK_NORMAL)
@@ -741,10 +763,10 @@ int mapstrings_transconst(ScriptVariant **varlist, int paramCount)
         ICMPSCONSTA(ANI_BACKPAIN, animbackpains)
         ICMPSCONSTA(ANI_BACKFALL, animbackfalls)
         ICMPSCONSTA(ANI_BACKDIE, animbackdies)
-        ICMPSCONSTA(ANI_BACKRISE, animbackrises)
-        ICMPSCONSTA(ANI_BACKRISEATTACK, animbackriseattacks)
-        ICMPSCONSTA(ANI_BLOCKPAIN, blkpains)
-        ICMPSCONSTA(ANI_BACKBLOCKPAIN, backblkpains)
+        ICMPSCONSTA_IF(ANI_BACKRISE, animbackrises, !early_ids)
+        ICMPSCONSTA_IF(ANI_BACKRISEATTACK, animbackriseattacks, !early_ids)
+        ICMPSCONSTA_IF(ANI_BLOCKPAIN, blkpains, !early_ids)
+        ICMPSCONSTA_IF(ANI_BACKBLOCKPAIN, backblkpains, !early_ids)
 
         // Animation properties.
         ICMPCONST(ANI_PROP_ANIMHITS)
@@ -752,7 +774,8 @@ int mapstrings_transconst(ScriptVariant **varlist, int paramCount)
         ICMPCONST(ANI_PROP_ATTACK)
         ICMPCONST(ANI_PROP_COLLISIONONE)
         ICMPCONST(ANI_PROP_BODY_COLLISION)
-        else if(obor_profile_build != 6330 && stricmp("ANI_PROP_ENTITY_COLLISION", constname)==0) { v.lVal = ANI_PROP_ENTITY_COLLISION; }
+        else if(obor_profile_has_animation_entity_collision() &&
+                stricmp("ANI_PROP_ENTITY_COLLISION", constname)==0) { v.lVal = ANI_PROP_ENTITY_COLLISION; }
         ICMPCONST(ANI_PROP_BOUNCE)
         ICMPCONST(ANI_PROP_CANCEL)
         ICMPCONST(ANI_PROP_CHARGETIME)
@@ -835,8 +858,8 @@ int mapstrings_transconst(ScriptVariant **varlist, int paramCount)
         ICMPCONST(BODY_COLLISION_PROP_TAG)
 
         // Entity Collision (ebox) properties.
-        else if(obor_profile_build != 6330 && stricmp("ENTITY_COLLISION_PROP_COORDINATES", constname)==0) { v.lVal = ENTITY_COLLISION_PROP_COORDINATES; }
-        else if(obor_profile_build != 6330 && stricmp("ENTITY_COLLISION_PROP_TAG", constname)==0) { v.lVal = ENTITY_COLLISION_PROP_TAG; }
+        else if(obor_profile_has_animation_entity_collision() && stricmp("ENTITY_COLLISION_PROP_COORDINATES", constname)==0) { v.lVal = ENTITY_COLLISION_PROP_COORDINATES; }
+        else if(obor_profile_has_animation_entity_collision() && stricmp("ENTITY_COLLISION_PROP_TAG", constname)==0) { v.lVal = ENTITY_COLLISION_PROP_TAG; }
 
         // Collision coordinate properties.
         ICMPCONST(COLLISION_COORDINATES_PROP_DEPTH_BACKGROUND)
@@ -876,6 +899,8 @@ int mapstrings_transconst(ScriptVariant **varlist, int paramCount)
         {
             if(strnicmp(constname, "ANI_PROP_", 9) == 0)
                 v.lVal = obor_animation_property_to_native(v.lVal);
+            else if(strnicmp(constname, "LEVEL_PROP_", 11) == 0)
+                v.lVal = obor_level_property_to_native(v.lVal);
             else if(strnicmp(constname, "ANI_", 4) == 0 || stricmp(constname, "MAX_ANIS") == 0)
                 v.lVal = obor_animation_to_native(v.lVal);
             else if(strnicmp(constname, "ATK_", 4) == 0 || stricmp(constname, "MAX_ATKS") == 0)
@@ -886,6 +911,8 @@ int mapstrings_transconst(ScriptVariant **varlist, int paramCount)
                 v.lVal = obor_subtype_to_native(v.lVal);
             else if(strnicmp(constname, "SPAWN_TYPE_", 11) == 0)
                 v.lVal = obor_spawn_type_to_native(v.lVal);
+            else if(strnicmp(constname, "PROJECTILE_PRIME_", 17) == 0)
+                v.lVal = (LONG)obor_projectile_prime_to_native(v.lVal);
             ScriptVariant_Copy(varlist[0], &v);
         }
         else

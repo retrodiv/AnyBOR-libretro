@@ -18,7 +18,8 @@ from native_sanitizers import sanitizer_environment
 ROOT = Path(os.environ.get('OBOR_TEST_SOURCE', Path(__file__).resolve().parents[1]))
 
 
-def check_contract(self, fixture_name='profile-classic-preprocessor.json'):
+def check_contract(self, fixture_name='profile-classic-preprocessor.json', *, engine_source=None,
+                   early_key='old_arguments'):
     data = load_contract_fixture(Path(__file__).parent / 'fixtures' / fixture_name)
     revisions = [row['revision'] for row in data['sources']]
     self.assertEqual(len(revisions), len(set(revisions)))
@@ -30,12 +31,12 @@ def check_contract(self, fixture_name='profile-classic-preprocessor.json'):
     checks = []
     for row in data['sources']:
         for index, case in enumerate(data['cases']):
-            expected = case['old' if row['old_arguments'] else 'later']
+            expected = case['old' if row[early_key] else 'later']
             checks.append('check(%du,%du,%s,%d,%s,%s,%s);' % (
                 row['revision'], index, json.dumps(case['source']), expected['accepted'],
                 json.dumps('|'.join(expected['tokens'])), json.dumps(expected['diagnostic']),
                 json.dumps(expected.get('exact', ''))))
-    engine = ROOT / 'src/engines' / data['engine']
+    engine = engine_source or ROOT / 'src/engines' / data['engine']
     text = Path(__file__).with_name('classic_preprocessor_contract.c.in').read_text()
     text = text.replace('@CHECKS@', '\n'.join(checks))
     text = bind_named_allocation_support(text, engine)

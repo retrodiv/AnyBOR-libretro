@@ -1,0 +1,249 @@
+/* SPDX-License-Identifier: BSD-3-Clause
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me>
+ */
+#include <assert.h>
+#include <stdbool.h>
+#include <stdint.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include "anybor_abi.h"
+#include "anybor_pak_name.h"
+
+#define MAX_PLAYERS 4
+#define MAX_ARG_LEN 1024
+typedef uint32_t u32;
+typedef uint64_t u64;
+enum { A_REC_STOP, A_REC_REC, A_REC_PLAY, A_REC_FREE };
+@RECORDS@
+@ORIGINALS@
+
+static u32 obor_profile_build, obor_profile_features, _time, time, interval;
+static unsigned long last_seed;
+static unsigned closed, opens, recordings;
+static a_playrecstatus live, *playrecstatus = &live;
+static FILE *input_file;
+static char expected_path[MAX_ARG_LEN + 1] = "/recordings/input.inp";
+static struct { u64 keys, newkeys, releasekeys, playkeys; } player[MAX_PLAYERS];
+
+static void srand32(unsigned long seed) { last_seed = seed; }
+static void getBasePath(char *path, const char *name, int create)
+{
+    assert(strcmp(name, "Saves") == 0 && !create);
+    strcpy(path, "/recordings/");
+}
+
+static FILE *open_recording(const char *path, const char *mode)
+{
+    assert(strcmp(path, expected_path) == 0);
+    assert(strcmp(mode, "rb+") == 0 || strcmp(mode, "wb+") == 0);
+    ++opens;
+    return input_file;
+}
+
+static int close_recording(FILE *file)
+{
+    assert(file == input_file);
+    ++closed;
+    return 0;
+}
+
+int stopRecordInputs(void);
+int freeRecordedInputs(void);
+#define fopen open_recording
+#define fclose close_recording
+@METHODS@
+#undef fclose
+#undef fopen
+
+typedef int HRESULT;
+enum { VT_INTEGER, VT_STR, S_OK = 0, E_FAIL = -1 };
+typedef struct { int vt, lVal, strVal; } ScriptVariant;
+static const char *script_folder, *script_filename;
+
+static const char *StrCache_GetIfPresent(int key)
+{
+    return key == 1 ? script_folder : script_filename;
+}
+
+static int recordInputs(void)
+{
+    assert(live.status == A_REC_REC);
+    ++recordings;
+    return 1;
+}
+
+@RECORD_INPUTS@
+
+static const u32 initial_time = 100, final_time = 125, sync_count = 3;
+static const u32 cseed = 100, seed_value = 173041, ticks = 670;
+
+static void write_header(FILE *file, unsigned seed_width)
+{
+    const u32 fields[] = {initial_time, final_time, sync_count, cseed};
+    const u64 wide_seed = seed_value;
+    assert(fwrite("INP10", 6, 1, file) == 1);
+    assert(fwrite(fields, sizeof(fields), 1, file) == 1);
+    if(seed_width == sizeof(u32)) assert(fwrite(&seed_value, sizeof(seed_value), 1, file) == 1);
+    else
+    {
+        assert(seed_width == sizeof(wide_seed));
+        assert(fwrite(&wide_seed, sizeof(wide_seed), 1, file) == 1);
+    }
+    assert(fwrite(&ticks, sizeof(ticks), 1, file) == 1);
+}
+
+static void reset(int state)
+{
+    memset(&live, 0, sizeof(live));
+    memset(player, 0, sizeof(player));
+    strcpy(live.path, "/recordings/");
+    strcpy(live.filename, "input.inp");
+    live.status = state;
+    closed = 0;
+}
+
+static void expect_equal_files(FILE *left, FILE *right)
+{
+    rewind(left);
+    rewind(right);
+    unsigned char a[512], b[512];
+    size_t size;
+    do
+    {
+        size = fread(a, 1, sizeof(a), left);
+        assert(fread(b, 1, sizeof(b), right) == size);
+        assert(memcmp(a, b, size) == 0);
+    } while(size);
+}
+
+#define CHECK_REPLAY(revision, width) do { \
+    original_rows_##revision original[4]; \
+    RecKeys native[4]; \
+    memset(original, 0, sizeof(original)); \
+    memset(native, 0, sizeof(native)); \
+    obor_profile_build = revision; \
+    const u64 high = (width == 32) ? UINT64_C(1) << 31 : UINT64_C(1) << 40; \
+    for(size_t frame = 0; frame < 4; ++frame) \
+    { \
+        native[frame].time = original[frame].time = initial_time + 5 * frame; \
+        native[frame].interval = original[frame].interval = 3 + frame; \
+        native[frame].synctime = original[frame].synctime = frame; \
+        for(size_t p = 0; p < MAX_PLAYERS; ++p) \
+        { \
+            native[frame].keys[p] = original[frame].keys[p] = high | (32 * (frame + 1) + p); \
+            native[frame].newkeys[p] = original[frame].newkeys[p] = (frame + 1) | (p << 3); \
+            native[frame].releasekeys[p] = original[frame].releasekeys[p] = (UINT64_C(1) << p) | high; \
+            native[frame].playkeys[p] = original[frame].playkeys[p] = 64 | p; \
+        } \
+    } \
+    for(unsigned seed_width = 4; seed_width <= 8; seed_width += 4) \
+    { \
+        reset(A_REC_PLAY); \
+        input_file = tmpfile(); \
+        assert(input_file); \
+        write_header(input_file, seed_width); \
+        assert(fwrite(original, sizeof(original), 1, input_file) == 1); \
+        assert(playRecordedInputs() == 1); \
+        assert(_time == initial_time && interval == 3 && last_seed == seed_value); \
+        assert(live.ticks == ticks && live.endtime == final_time); \
+        for(size_t frame = 0; frame < sync_count; ++frame) \
+        { \
+            if(frame) { _time = native[frame].time; assert(playRecordedInputs() == 1); } \
+            assert(interval == native[frame].interval); \
+            for(size_t p = 0; p < MAX_PLAYERS; ++p) \
+            { \
+                assert(player[p].keys == original[frame].keys[p]); \
+                assert(player[p].newkeys == original[frame].newkeys[p]); \
+                assert(player[p].releasekeys == original[frame].releasekeys[p]); \
+                assert(player[p].playkeys == original[frame].playkeys[p]); \
+            } \
+        } \
+        assert(live.status == A_REC_STOP && closed == 1 && !live.handle && !live.buffer); \
+        fclose(input_file); \
+    } \
+    reset(A_REC_REC); \
+    live.buffer = malloc(sizeof(native)); \
+    assert(live.buffer); \
+    memcpy(live.buffer, native, sizeof(native)); \
+    live.starttime = initial_time; \
+    live.synctime = sync_count + 2; \
+    live.seed = seed_value; \
+    live.cseed = cseed; \
+    live.ticks = ticks; \
+    _time = final_time; \
+    input_file = tmpfile(); \
+    FILE *expected = tmpfile(); \
+    assert(input_file && expected); \
+    write_header(expected, sizeof(unsigned long)); \
+    assert(fwrite(original, sizeof(original), 1, expected) == 1); \
+    stopRecordInputs(); \
+    assert(live.status == A_REC_STOP && closed == 1 && !live.handle && !live.buffer); \
+    expect_equal_files(input_file, expected); \
+    fclose(input_file); \
+    fclose(expected); \
+    printf("PASS %u\n", obor_profile_build); \
+} while(0)
+
+static void check_recording_paths(size_t field_capacity, size_t lookup_capacity)
+{
+    char component[MAX_ARG_LEN + 1];
+    memset(component, 'n', field_capacity);
+    component[field_capacity - 1] = '\0';
+    memset(&live, 0, sizeof(live));
+    assert(obor_set_replay_paths(&live, "recordings/", component));
+    assert(strlen(live.filename) == field_capacity - 1);
+    component[field_capacity - 1] = 'n';
+    component[field_capacity] = '\0';
+    assert(!obor_set_replay_paths(&live, "other/", component));
+    assert(strcmp(live.path, "recordings/") == 0 && strlen(live.filename) == field_capacity - 1);
+    assert(!obor_set_replay_paths(&live, component, "input.inp"));
+    component[field_capacity - 1] = '\0';
+    assert(obor_set_replay_paths(&live, component, "input.inp"));
+    assert(strlen(live.path) == field_capacity - 1);
+
+    script_folder = "";
+    script_filename = "input.inp";
+    ScriptVariant arguments[] = {{.vt=VT_INTEGER,.lVal=A_REC_REC}, {.vt=VT_STR,.strVal=1},
+                                  {.vt=VT_STR,.strVal=2}};
+    ScriptVariant *args[] = {arguments, arguments + 1, arguments + 2}, *ret = arguments;
+    unsigned prior = recordings;
+    assert(openbor_recordinputs(args, &ret, 3) == S_OK && !ret && recordings == prior + 1);
+    assert(!live.path[0] && strcmp(live.filename, script_filename) == 0);
+
+    input_file = tmpfile();
+    assert(input_file);
+    strcpy(expected_path, "/recordings/input.inp");
+    assert(obor_open_replay_file(&live, "rb+") == input_file);
+    assert(obor_set_replay_paths(&live, "recordings", "input.inp"));
+    strcpy(expected_path, "/input.inp");
+    assert(obor_open_replay_file(&live, "wb+") == input_file);
+
+    const char *filename = "input.inp";
+    const size_t folder_length = lookup_capacity - strlen(filename) - 1;
+    for(size_t i = 0; i + 1 < folder_length; ++i) component[i] = i % 9 == 8 ? '/' : 'r';
+    component[folder_length - 1] = '/';
+    component[folder_length] = '\0';
+    assert(obor_set_replay_paths(&live, component, filename));
+    assert(snprintf(expected_path, sizeof(expected_path), "%s%s", component, filename) == (int)lookup_capacity - 1);
+    assert(obor_open_replay_file(&live, "rb+") == input_file);
+    assert(obor_open_replay_file(&live, "wb+") == input_file);
+    component[folder_length - 1] = 'r';
+    component[folder_length] = '/';
+    component[folder_length + 1] = '\0';
+    assert(obor_set_replay_paths(&live, component, filename));
+    prior = opens;
+    assert(!obor_open_replay_file(&live, "rb+") && !obor_open_replay_file(&live, "wb+"));
+    assert(opens == prior);
+    fclose(input_file);
+    strcpy(expected_path, "/recordings/input.inp");
+}
+
+int main(void)
+{
+    @TESTS@
+    obor_profile_build = 6330;
+    obor_profile_features = OBOR_PROFILE_LNS_6330;
+    check_recording_paths(@VARIANT_FIELD@, @VARIANT_LOOKUP@);
+    return 0;
+}

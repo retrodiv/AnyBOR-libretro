@@ -1,0 +1,59 @@
+/* SPDX-License-Identifier: BSD-3-Clause
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me>
+ */
+#include <stdint.h>
+#include <stdio.h>
+#include <string.h>
+#include "Instruction.h"
+#undef assert
+#undef printf
+#include <assert.h>
+
+uint32_t obor_profile_build;
+
+@NEGATION@
+@DISPATCH@
+
+static void evaluate(Instruction *pInstruction)
+{
+    switch(pInstruction->OpCode)
+    {
+@CASE@
+    default:
+        assert(0);
+    }
+}
+
+int main(void)
+{
+    static const double decimals[] = {@VALUES@};
+    static const struct { unsigned revision; uint64_t bits[sizeof(decimals) / sizeof(*decimals)]; } rows[] = {
+@CONTEXTS@
+    };
+    for(size_t i = 0; i < sizeof(rows) / sizeof(*rows); ++i)
+    {
+        obor_profile_build = rows[i].revision;
+        ScriptVariant result;
+        Instruction operation = {.OpCode = NEG, .theRef = &result};
+        for(size_t j = 0; j < sizeof(decimals) / sizeof(*decimals); ++j)
+        {
+            result.vt = VT_DECIMAL;
+            result.dblVal = decimals[j];
+            evaluate(&operation);
+            uint64_t bits;
+            memcpy(&bits, &result.dblVal, sizeof(bits));
+            assert(result.vt == VT_DECIMAL && bits == rows[i].bits[j]);
+        }
+        const LONG integers[] = {37, -143, 0, INT32_MIN};
+        const LONG expected[] = {-37, 143, 0, INT32_MIN};
+        for(size_t j = 0; j < sizeof(integers) / sizeof(*integers); ++j)
+        {
+            result.vt = VT_INTEGER;
+            result.lVal = integers[j];
+            evaluate(&operation);
+            assert(result.vt == VT_INTEGER && result.lVal == expected[j]);
+        }
+        printf("PASS %u\n", obor_profile_build);
+    }
+    return 0;
+}

@@ -6,17 +6,20 @@ SPDX-License-Identifier: BSD-3-Clause
 Copyright (c) 2026 retrodiv <retrodiv@proton.me>
 """
 import json
+import os
 from pathlib import Path
 import re
 import sys
 import unittest
 
 from contract_fixtures import load_contract_fixture, contract_revisions
+from test_early_jump_walkoff import braced_statement
 from test_historical_common_think import ROOT, native_output
 from test_historical_player import function
 
 FIXTURE = Path(__file__).with_name('fixtures') / 'profile-frame-sampling-contracts.json'
 SPAWN_FIXTURE = Path(__file__).with_name('fixtures') / 'profile-frame-spawn-contracts.json'
+FRAME_ENTITY_FIXTURE = SPAWN_FIXTURE.with_name('profile-frame-entity-contracts.json')
 VECTORS = ('delay', 'move', 'movez', 'movea', 'seta', 'soundtoplay',
            'weaponframe', 'spawnframe', 'summonframe')
 SCALARS = ('numframes', 'flipframe', 'subentity', 'unsummonframe', 'throwframe',
@@ -74,17 +77,26 @@ def program(data):
     return text
 
 
+def spawn_program(rows, engine, engine_id):
+    source = (engine / 'openbor.c').read_text(encoding='latin-1')
+    methods = ['ent_spawn_ent', 'ent_summon_ent']
+    if engine_id == '6391':
+        methods.insert(0, 'obor_profile_has_classic_boomerang')
+    code = Path(__file__).with_name('frame_spawn_contract.c.in').read_text()
+    code = code.replace('@FUNCTIONS@', '\n'.join(function(source, name) for name in methods))
+    return code.replace('@PROFILES@', ','.join('{%du,%d,%d,{%d,%d}}' % (
+        row['revision'], row['shift_with_level'], row['shift_without_level'],
+        *row.get('spawn_reasons', (0, 0))) for row in rows))
+
+
 class FrameSamplingContracts(unittest.TestCase):
     def test_native_spawn_summon_placement_and_callback_order(self):
         data = load_contract_fixture(SPAWN_FIXTURE)
         rows = data['sources']
         self.assertEqual({r['revision'] for r in rows}, contract_revisions(data, data['expected_revisions']))
         self.assertEqual(len(rows), len({r['revision'] for r in rows}))
-        source = (ROOT / 'src/engines' / data['engine'] / 'openbor.c').read_text()
-        code = Path(__file__).with_name('frame_spawn_contract.c.in').read_text()
-        code = code.replace('@FUNCTIONS@', function(source, 'ent_spawn_ent') + function(source, 'ent_summon_ent'))
-        code = code.replace('@PROFILES@', ','.join('{%du,%d,%d}' % (
-            r['revision'], r['shift_with_level'], r['shift_without_level']) for r in rows))
+        engine = ROOT / 'src/engines' / data['engine']
+        code = spawn_program(rows, engine, data['engine'])
         actual = [json.loads(line) for line in native_output(code, data).splitlines()]
         self.assertEqual(actual, [dict(revision=r['revision'], cases=146) for r in rows])
         print(json.dumps(dict(spawn_contexts=len(rows), spawn_cases=146*len(rows))), file=sys.stderr)
@@ -110,6 +122,57 @@ class FrameSamplingContracts(unittest.TestCase):
                     self.assertEqual(next(cursor), dict(revision=row['revision'], case=i, **value))
         print(json.dumps(dict(contexts=len(rows), cases=len(rows)*len(data['cases']),
                               clock_checks=checks*len(rows))), file=sys.stderr)
+
+
+class FrameEntityContracts(unittest.TestCase):
+    def frame_entity_inputs(self, engine_id):
+        data = load_contract_fixture(FRAME_ENTITY_FIXTURE)
+        rows = [row for row in data['sources'] if row['engine'] == engine_id]
+        revisions = [row['revision'] for row in rows]
+        self.assertEqual(revisions, sorted(contract_revisions(data, data['expected_revisions'][engine_id])))
+        engine = Path(os.environ.get('OBOR_HISTORICAL_ENGINE', ROOT / 'src/engines' / engine_id))
+        return rows, revisions, engine
+
+    def check_frame_entity_spawn(self, engine_id):
+        rows, revisions, engine = self.frame_entity_inputs(engine_id)
+        code = spawn_program(rows, engine, engine_id)
+        actual = [json.loads(line) for line in native_output(code, {'engine': engine_id},
+            engine_source=engine, extra_cflags=('-fgnu89-inline',)).splitlines()]
+        self.assertEqual(actual, [dict(revision=revision, cases=146) for revision in revisions])
+
+    def test_4432_frame_entity_spawn(self):
+        self.check_frame_entity_spawn('4432')
+
+    def test_6391_frame_entity_spawn(self):
+        self.check_frame_entity_spawn('6391')
+
+    def check_frame_entity_initialization(self, engine_id):
+        rows, revisions, engine = self.frame_entity_inputs(engine_id)
+        source = (engine / 'openbor.c').read_text(encoding='latin-1')
+        init = function(source, 'ent_default_init')
+        enemy = init[init.index('case TYPE_ENEMY:'):init.index('case TYPE_TRAP:')]
+        shot = init[init.index('case TYPE_SHOT:'):init.index('case TYPE_NONE:')]
+        frame = function(source, 'update_frame')
+        costs = frame[frame.index('if(anim->projectile.throwframe == f)'):frame.index('uf_interrupted:')]
+        modern = engine_id == '6391'
+        cost_flag = 'deduct_ammo' if modern else 'reactive'
+        consume = braced_statement(function(source, 'common_attack_proc'), f'if(self->{cost_flag} == 1)')
+        values = dict(ENEMY=enemy, SHOT=shot, COSTS=costs, CONSUME=consume,
+                      PROFILE=function(source, 'obor_profile_has_classic_boomerang') if modern else '',
+                      RELEASE=braced_statement(function(source, 'free_ent'), 'if(e->item_properties)') if modern else '',
+                      ROWS=',\n'.join('{%du,%d,%d}' % (
+                          row['revision'], row['active_attack_state'], row['throw_boomerang']) for row in rows))
+        template = Path(__file__).with_name('frame_entity_contract.c.in').read_text()
+        code = re.sub(r'@([A-Z_]+)@', lambda match: values[match[1]], template)
+        output = native_output(code, {'engine': engine_id}, engine_source=engine,
+                               extra_cflags=('-fgnu89-inline',))
+        self.assertEqual([int(line) for line in output.splitlines()], revisions)
+
+    def test_4432_frame_entity_initialization(self):
+        self.check_frame_entity_initialization('4432')
+
+    def test_6391_frame_entity_initialization(self):
+        self.check_frame_entity_initialization('6391')
 
 
 if __name__ == '__main__':

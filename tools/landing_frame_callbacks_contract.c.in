@@ -1,0 +1,236 @@
+/* SPDX-License-Identifier: BSD-3-Clause
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me>
+ */
+#include <stdint.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <strings.h>
+#include "openbor.h"
+#undef assert
+#undef printf
+#include <assert.h>
+#ifndef stricmp
+#define stricmp strcasecmp
+#endif
+
+#if OBOR_ENGINE_BUILD == 4432
+#define SCALAR 1
+#else
+#define SCALAR 0
+#include "profile_ids.h"
+#endif
+
+uint32_t obor_profile_build, obor_profile_features;
+int max_animations = MAX_ANIS;
+s_savedata savedata = {.effectvol = 19};
+static entity actor, effect;
+entity *self = &actor;
+static s_anim action, landing;
+static s_anim *slots[MAX_ANIS];
+static int frame_sounds[] = {11, -1, 13};
+static char trace[8];
+static size_t trace_size;
+static int spawn_index, sound_index, tag_dust, air, spawn_succeeds;
+
+void *checkAlloc(void *ptr, size_t size, const char *name, const char *file, int line)
+{
+    assert(!size || ptr);
+    return ptr;
+}
+
+static void observe(char event)
+{
+    assert(trace_size + 1 < sizeof(trace));
+    trace[trace_size++] = event;
+    trace[trace_size] = '\0';
+}
+
+int inair(entity *ent) { assert(ent == self); return air; }
+int set_idle(entity *ent) { assert(ent == self && !ent->takeaction); observe('I'); return 1; }
+void common_jumpland(void) { abort(); }
+
+entity *spawn(float x, float z, float y, int direction, char *name, int index, s_model *model)
+{
+    assert(x == 7 && z == 8 && y == 9 && direction == (int)actor.direction && !name && !model);
+    observe('S');
+    spawn_index = index;
+    return spawn_succeeds ? &effect : NULL;
+}
+
+void execute_onspawn_script(entity *ent)
+{
+    assert(ent == &effect && ent->base == actor.position.y && ent->autokill == 2);
+#if !SCALAR
+    assert((int)ent->spawntype == (tag_dust ? SPAWN_TYPE_DUST_LAND : 0));
+#endif
+    observe('C');
+}
+
+int sound_play_sample(int index, unsigned int priority, int left, int right, unsigned int speed)
+{
+    assert(!priority && left == 19 && right == 19 && speed == 100);
+    assert(index == self->animation->soundtoplay[self->animpos]);
+    observe('F');
+    sound_index = index;
+    return 0;
+}
+
+@FRAME_SIGNATURE@
+{
+    s_anim *anim = ent ? ent->animation : NULL;
+    @FRAME_GUARD@
+    entity *previous = self;
+    self = ent;
+    @FRAME_WRITE@
+    @FRAME_SOUND@
+    self = previous;
+}
+
+@METHODS@
+
+int get_cached_model_index(char *name) { assert(!strcmp(name, "dust")); return 17; }
+
+static void parse_landframe(s_anim *newanim, int frame, int dust_name)
+{
+    char number[16];
+    char filename[] = "fixture", command[] = "landframe";
+    snprintf(number, sizeof(number), "%d", frame);
+    ArgList arglist = {.count = dust_name ? 3 : 2,
+                      .args = {command, frame == 3 ? "ThIs" : number, "dust"}};
+    char *value;
+    switch(0)
+    {
+        case 0: @DIRECTIVE@
+    }
+}
+
+static void gravity_landing(void)
+{
+#if SCALAR
+    entity *dust;
+#endif
+    @GRAVITY@
+}
+
+static void initialize(int has_directive, int frame, int dust_name)
+{
+    s_anim *newanim = &action;
+    action = (s_anim){.numframes = 3, .soundtoplay = frame_sounds, .sync = -1};
+    landing = (s_anim){.numframes = 1, .soundtoplay = frame_sounds, .sync = -1};
+    @DEFAULTS@
+#if SCALAR
+    assert(action.jumpframe.frame == -1 && action.landframe.frame == -1);
+#else
+    assert(!action.jumpframe && !action.landframe);
+#endif
+    if(has_directive)
+    {
+        parse_landframe(&action, frame, dust_name);
+#if SCALAR
+        assert(action.landframe.frame == frame && action.landframe.ent == (dust_name ? 17 : -1));
+#else
+        assert(action.landframe->frame == (unsigned int)frame && action.landframe->ent == (dust_name ? 17 : -1));
+#endif
+    }
+    slots[ANI_JUMPLAND] = &landing;
+    actor = (entity){.animation = &action, .animpos = 1, .animating = 1, .base = 9, .position.x = 7,
+                     .position.z = 8, .position.y = 9, .velocity.y = -1, .modeldata.animation = slots,
+                     .modeldata.animation_capacity = MAX_ANIS, .modeldata.dust.jump_land = 23,
+                     .takeaction = common_jump, .jumping = 1};
+    effect = (entity){0};
+    air = trace_size = 0;
+    trace[0] = '\0';
+    spawn_succeeds = 1;
+    spawn_index = sound_index = -1;
+}
+
+static void release_frames(s_anim *anim)
+{
+    @RELEASE@
+}
+
+static void check_trace(const char *expected, int model, int sample, int position)
+{
+    if(strcmp(trace, expected)) fprintf(stderr, "profile %u callback order: '%s', expected '%s'\n",
+                                       obor_profile_build, trace, expected);
+    assert(!strcmp(trace, expected));
+    assert(spawn_index == model && sound_index == sample && (int)actor.animpos == position);
+#if !SCALAR
+    release_frames(&action);
+    assert(!action.jumpframe && !action.landframe);
+#endif
+}
+
+static void check_gravity_landing(void)
+{
+    initialize(0, 0, 0);
+    gravity_landing();
+    check_trace("", -1, -1, 1);
+    initialize(1, 2, 1);
+    gravity_landing();
+    check_trace("SCF", 17, 13, 2);
+    initialize(1, 2, 0);
+    gravity_landing();
+    check_trace("F", -1, 13, 2);
+    initialize(1, 2, 1);
+    spawn_succeeds = 0;
+    gravity_landing();
+    check_trace("SF", 17, 13, 2);
+    initialize(1, 1, 1);
+    gravity_landing();
+    check_trace("", -1, -1, 1);
+    initialize(1, 4, 1);
+    gravity_landing();
+    check_trace("", -1, -1, 1);
+    initialize(1, 3, 1);
+    gravity_landing();
+    check_trace("SC", 17, -1, 1);
+}
+
+static void check_jump_landing(void)
+{
+    initialize(0, 0, 0);
+    common_jump();
+    assert(actor.takeaction == common_jumpland && actor.animation == &landing);
+    check_trace("FSC", 23, 11, 0);
+    initialize(0, 0, 0);
+    slots[ANI_JUMPLAND] = NULL;
+    common_jump();
+    check_trace("SCI", 23, -1, 1);
+    initialize(1, 2, 1);
+    common_jump();
+    assert(actor.takeaction == common_jump && !actor.jumping);
+    check_trace("", -1, -1, 1);
+    initialize(1, 2, 1);
+    actor.animating = 0;
+    common_jump();
+    check_trace("I", -1, -1, 1);
+    initialize(1, -1, 1);
+    common_jump();
+    check_trace(SCALAR ? "FSC" : "", SCALAR ? 23 : -1, SCALAR ? 11 : -1, SCALAR ? 0 : 1);
+    initialize(0, 0, 0);
+    air = 1;
+    common_jump();
+    assert(actor.jumping && actor.velocity.y == -1);
+    check_trace("", -1, -1, 1);
+}
+
+int main(void)
+{
+    static const struct { unsigned revision; int tag_dust; } rows[] = {@ROWS@};
+    for(size_t i = 0; i < sizeof(rows) / sizeof(*rows); ++i)
+    {
+        obor_profile_build = rows[i].revision;
+        tag_dust = rows[i].tag_dust;
+        check_gravity_landing();
+        check_jump_landing();
+#if !SCALAR
+        action.jumpframe = malloc(sizeof(*action.jumpframe));
+        release_frames(&action);
+        assert(!action.jumpframe);
+#endif
+        printf("%u\n", obor_profile_build);
+    }
+    return 0;
+}

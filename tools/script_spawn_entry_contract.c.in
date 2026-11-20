@@ -1,0 +1,238 @@
+/* SPDX-License-Identifier: BSD-3-Clause
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me>
+ */
+#include <stdint.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <strings.h>
+#include "openbor.h"
+#undef assert
+#undef printf
+#include <assert.h>
+
+#ifndef stricmp
+#define stricmp strcasecmp
+#endif
+
+#if OBOR_ENGINE_BUILD == 6391
+#define ITEM(member) item_properties.member
+#else
+#define ITEM(member) ITEM_##member
+#define ITEM_index itemindex
+#define ITEM_player_count itemplayer_count
+#define ITEM_health itemhealth
+#define ITEM_alias itemalias
+#define ITEM_colorset itemmap
+#endif
+
+uint32_t obor_profile_build, obor_profile_features;
+static entity actor, child;
+entity *self = &actor;
+static s_level *level;
+static s_spawn_entry spawnentry, observed_entry;
+static s_model items[] = {{.name = "first"}, {.name = "second"}};
+static const char *property;
+static int spawn_calls, available;
+static struct { float x, z, y; int direction, prime, palette, route; } shot;
+
+CHAR *StrCache_Get(int index)
+{
+    static const char *const strings[] = {NULL, "first", "second", "carry", "unknown"};
+    assert(index >= 0 && (size_t)index < sizeof(strings) / sizeof(*strings));
+    return (CHAR *)(index ? strings[index] : property);
+}
+
+CHAR *StrCache_GetIfPresent(int index) { return StrCache_Get(index); }
+void StrCache_Collect(int index) {}
+#if OBOR_ENGINE_BUILD == 6391
+int StrCache_Pop(int length) { abort(); }
+#else
+int StrCache_Pop(void) { abort(); }
+#endif
+void StrCache_Copy(int index, CHAR *value) { abort(); }
+
+s_model *findmodel(char *name)
+{
+    for(size_t i = 0; i < sizeof(items) / sizeof(*items); ++i)
+    {
+        if(!strcmp(items[i].name, name))
+        {
+            return &items[i];
+        }
+    }
+    assert(!strcmp(name, "unknown"));
+    return NULL;
+}
+
+int get_cached_model_index(char *name)
+{
+    assert(!strcmp(name, "first"));
+    return 19;
+}
+
+entity *smartspawn(s_spawn_entry *entry)
+{
+    assert(entry == &spawnentry);
+    observed_entry = *entry;
+    spawn_calls++;
+    return available ? &child : NULL;
+}
+
+static entity *observe_shot(char *name, int index, float x, float z, float y,
+                            int direction, int prime, int palette, int route)
+{
+    assert(name && !strcmp(name, "first") && index == -1);
+    shot = (__typeof__(shot)){x, z, y, direction, prime, palette, route};
+    spawn_calls++;
+    return available ? &child : NULL;
+}
+
+entity *knife_spawn(char *name, int index, float x, float z, float y, int direction, int prime, int palette)
+{
+    return observe_shot(name, index, x, z, y, direction, prime, palette, 0);
+}
+
+entity *bomb_spawn(char *name, int index, float x, float z, float y, int direction, int palette)
+{
+    return observe_shot(name, index, x, z, y, direction, -10, palette, 1);
+}
+
+@VARIANTS@
+@SEARCH@
+@MAP_MACRO@
+@ENUM@
+@METHODS@
+@SETTER@
+
+static HRESULT set(const char *name, ScriptVariant value, LONG result_value)
+{
+    ScriptVariant key = {.vt = VT_STR}, result = {.vt = VT_EMPTY}, *out = &result;
+    ScriptVariant *args[] = {&key, &value};
+    property = name;
+    HRESULT status = openbor_setspawnentry(args, &out, 2);
+    if(SUCCEEDED(status))
+    {
+        assert(out == &result && result.vt == VT_INTEGER && result.lVal == result_value);
+    }
+    return status;
+}
+
+static void inspect_spawn(void)
+{
+    ScriptVariant result = {.vt = VT_INTEGER, .lVal = 99}, *out = &result;
+    spawn_calls = 0;
+    assert(openbor_spawn(NULL, &out, 0) == S_OK && spawn_calls == 1 && out == &result);
+    assert(available ? (result.vt == VT_PTR && result.ptrVal == &child) : result.vt == VT_EMPTY);
+}
+
+static void clear_entry(void)
+{
+    ScriptVariant result = {.vt = VT_INTEGER, .lVal = 99}, *out = &result;
+    assert(openbor_clearspawnentry(NULL, &out, 0) == S_OK && !out);
+    assert(spawnentry.index == -1 && spawnentry.weaponindex == -1 && spawnentry.ITEM(index) == -1);
+    assert(!spawnentry.item && !spawnentry.itemmodel && !spawnentry.ITEM(player_count));
+    assert(!spawnentry.ITEM(health) && !spawnentry.ITEM(colorset) && !spawnentry.ITEM(alias)[0]);
+}
+
+static void check_item_entry(void)
+{
+    const ScriptVariant first = {.vt = VT_STR, .strVal = 1};
+    const ScriptVariant second = {.vt = VT_STR, .strVal = 2};
+    const ScriptVariant alias = {.vt = VT_STR, .strVal = 3};
+    const ScriptVariant unknown = {.vt = VT_STR, .strVal = 4};
+    const ScriptVariant empty = {.vt = VT_EMPTY};
+    clear_entry();
+    assert(set("item", first, 1) == S_OK);
+    assert(spawnentry.item == items[0].name && spawnentry.itemmodel == &items[0]);
+    assert(spawnentry.ITEM(index) == 19 && !spawnentry.ITEM(player_count));
+    assert(set("2pitem", unknown, 1) == S_OK);
+    assert(!spawnentry.item && spawnentry.itemmodel == &items[0] && spawnentry.ITEM(index) == 19);
+    assert(set("2pitem", second, 1) == S_OK);
+    assert(spawnentry.item == items[1].name && spawnentry.itemmodel == &items[0]);
+    assert(spawnentry.ITEM(player_count) == 1);
+    assert(set("3pitem", second, 1) == S_OK);
+    assert(spawnentry.itemmodel == &items[1] && spawnentry.ITEM(player_count) == 2);
+    assert(set("4pitem", first, 1) == S_OK);
+    assert(spawnentry.itemmodel == &items[0] && spawnentry.ITEM(player_count) == 3);
+    assert(set("itemalias", alias, 1) == S_OK);
+    assert(set("itemhealth", (ScriptVariant){.vt = VT_INTEGER, .lVal = 37}, 1) == S_OK);
+    assert(set("itemmap", (ScriptVariant){.vt = VT_INTEGER, .lVal = 4}, 1) == S_OK);
+    assert(set("itemhealth", empty, 0) == S_OK && set("itemmap", empty, 0) == S_OK);
+    assert(set("itemalias", empty, 0) == E_FAIL);
+    for(available = 0; available <= 1; ++available)
+    {
+        inspect_spawn();
+        assert(observed_entry.ITEM(index) == 19 && observed_entry.ITEM(player_count) == 3);
+        assert(observed_entry.ITEM(health) == 37 && observed_entry.ITEM(colorset) == 4);
+        assert(!strcmp(observed_entry.ITEM(alias), "carry"));
+        assert(observed_entry.item == items[1].name && observed_entry.itemmodel == &items[0]);
+    }
+    clear_entry();
+    available = 1;
+    inspect_spawn();
+    assert(observed_entry.ITEM(index) == -1 && !observed_entry.ITEM(alias)[0]);
+}
+
+static void check_shot(int zero_prime, int nonzero_prime)
+{
+    s_anim animation = {0};
+    animation.projectile.position.y = 7;
+    actor.animation = &animation;
+    actor.position.x = 100;
+    actor.position.z = 80;
+    actor.position.y = 40;
+    actor.direction = DIRECTION_LEFT;
+
+    static const int flags[] = {0, 1, -2, 7};
+    ScriptVariant mode = {.vt = VT_INTEGER, .lVal = 1};
+    ScriptVariant values[8] = {{.vt = VT_STR, .strVal = 1},
+        {.vt = VT_INTEGER, .lVal = 2}, {.vt = VT_INTEGER, .lVal = 3}, {.vt = VT_INTEGER, .lVal = 4},
+        {.vt = VT_INTEGER, .lVal = DIRECTION_RIGHT}, {.vt = VT_INTEGER}, {.vt = VT_INTEGER},
+        {.vt = VT_INTEGER, .lVal = 5}};
+    ScriptVariant *args[9] = {&mode};
+    for(size_t i = 0; i < sizeof(values) / sizeof(*values); ++i) args[i + 1] = &values[i];
+    for(int relative = 0; relative <= 1; ++relative)
+    {
+        for(int route = 0; route <= 1; ++route)
+        {
+            for(size_t i = 0; i < sizeof(flags) / sizeof(*flags); ++i)
+            {
+                values[5].lVal = flags[i];
+                values[6].lVal = route;
+                ScriptVariant result = {.vt = VT_INTEGER, .lVal = 99}, *out = &result;
+                spawn_calls = 0;
+                available = i != 3;
+                assert(openbor_projectile(args + !relative, &out, 8 + relative) == S_OK);
+                assert(spawn_calls == 1 && out == &result && result.vt == VT_PTR);
+                assert(result.ptrVal == (available ? &child : NULL));
+                assert(shot.route == route && shot.palette == 5);
+                int expected = nonzero_prime ? (flags[i] ? nonzero_prime : zero_prime) : flags[i];
+                assert(shot.prime == (route ? -10 : expected));
+                assert(shot.x == (relative ? 98 : 2) && shot.z == (relative ? 83 : 3));
+                assert(shot.y == (relative ? 44 : 4));
+                assert(shot.direction == (relative ? DIRECTION_LEFT : DIRECTION_RIGHT));
+            }
+        }
+    }
+    ScriptVariant result = {.vt = VT_EMPTY}, *out = &result;
+    spawn_calls = 0;
+    available = 1;
+    assert(openbor_projectile(args + 1, &out, 1) == S_OK && spawn_calls == 1);
+    assert(result.vt == VT_PTR && result.ptrVal == &child && !shot.route && !shot.prime && !shot.palette);
+    assert(shot.x == 100 && shot.z == 80 && shot.y == 47 && shot.direction == DIRECTION_LEFT);
+}
+
+int main(void)
+{
+    _Static_assert(sizeof(LONG) == sizeof(int) && (LONG)-1 < 0, "Native script integers are signed int width");
+    static const struct { unsigned revision; int zero_prime, nonzero_prime; } rows[] = {@ROWS@};
+    for(size_t i = 0; i < sizeof(rows) / sizeof(*rows); ++i)
+    {
+        obor_profile_build = rows[i].revision;
+        check_item_entry();
+        check_shot(rows[i].zero_prime, rows[i].nonzero_prime);
+        printf("%u\n", obor_profile_build);
+    }
+    return 0;
+}

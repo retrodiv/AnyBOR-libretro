@@ -1,0 +1,325 @@
+/* SPDX-License-Identifier: BSD-3-Clause
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me>
+ */
+#include <stdint.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <strings.h>
+#include "openbor.h"
+#undef printf
+#undef assert
+#include <assert.h>
+
+#ifndef stricmp
+#define stricmp strcasecmp
+#endif
+
+#if OBOR_ENGINE_BUILD == 4432
+#define SCALAR_ITEM 1
+#define ITEM_ALIAS itemalias
+#define ITEM_INDEX itemindex
+#define ITEM_COLOUR itemmap
+#define ITEM_HEALTH itemhealth
+#define ITEM_ALPHA itemtrans
+#define ITEM_PLAYERS itemplayer_count
+#define HEALTH health
+#define BOSS_COUNT bosses
+#else
+#define SCALAR_ITEM 0
+#define ITEM_ALIAS item_properties.alias
+#define ITEM_INDEX item_properties.index
+#define ITEM_COLOUR item_properties.colorset
+#define ITEM_HEALTH item_properties.health
+#define ITEM_ALPHA item_properties.alpha
+#define ITEM_PLAYERS item_properties.player_count
+#define HEALTH energy_status.health_current
+#define BOSS_COUNT bossescount
+#include "profile_ids.h"
+#endif
+
+uint32_t obor_profile_build, obor_profile_features;
+static s_level stage;
+s_level *level = &stage;
+s_videomodes videomodes = {.hRes = 320, .vRes = 240};
+float advancex = 50, advancey = 60;
+static entity slots[3];
+static s_spawn_entry observed;
+static s_model payload_model = {.name = "payload"};
+static int count, callback, player_count, cached, available, loads;
+enum { @COMMANDS@ };
+
+int count_ents(int types) { assert(types == TYPE_PLAYER); return player_count; }
+int music(char *name, int loop, long offset) { abort(); }
+void set_weapon(entity *ent, int number, int animation) { abort(); }
+
+void *checkAlloc(void *ptr, size_t size, const char *function, const char *file, int line)
+{
+    assert(!size || ptr);
+    return ptr;
+}
+
+s_model *findmodel(char *name)
+{
+    assert(!strcmp(name, "payload"));
+    return cached ? &payload_model : NULL;
+}
+
+s_model *load_cached_model(char *name, char *source, char unload)
+{
+    assert(!strcmp(name, "payload") && !strcmp(source, "fixture") && !unload);
+    ++loads;
+    return available ? &payload_model : NULL;
+}
+
+int get_cached_model_index(char *name)
+{
+    assert(!strcmp(name, "payload"));
+    return 17;
+}
+
+entity *spawn(float x, float z, float y, int direction, char *name, int index, s_model *model)
+{
+    assert(count < 3 && !name && !model);
+    if(index < 0) return NULL;
+    assert(index == (count == 0 ? 8 : count == 1 ? 17 : 23));
+    entity *entry = &slots[count++];
+    *entry = (entity){.position = {.x = x, .y = y, .z = z}, .direction = direction};
+    entry->modeldata.health = entry->HEALTH = 11;
+    strcpy(entry->name, "model");
+#if SCALAR_ITEM
+    entry->item = -1;
+#endif
+    return entry;
+}
+
+void ent_set_colourmap(entity *ent, unsigned int colour)
+{
+    assert(ent == &slots[1] && colour == 3);
+    ent->map = colour;
+}
+
+void execute_onspawn_script(entity *ent)
+{
+    assert(ent == &slots[callback]);
+}
+
+void execute_spawn_script(s_spawn_entry *entry, entity *ent)
+{
+    assert(ent == &slots[callback++]);
+    observed = *entry;
+}
+
+@METHODS@
+
+static void parse_item(s_spawn_entry *entry, int cmd, char *argument)
+{
+    s_spawn_entry next = *entry;
+    char filename[] = "fixture", command[] = "item";
+    ArgList arglist = {.count = 2, .args = {command, argument}};
+    s_model *cached_model, *tempmodel;
+    switch(cmd)
+    {
+        @CASES@
+        default: abort();
+    }
+    *entry = next;
+}
+
+static s_spawn_entry initial_entry(void)
+{
+    s_spawn_entry next = {0};
+    @DEFAULTS@
+    @LEVEL_REASON@
+    assert(next.index == -1 && next.ITEM_INDEX == -1 && next.weaponindex == -1);
+#if SCALAR_ITEM
+    assert(next.spawntype == 1);
+#else
+    assert(next.spawntype == SPAWN_TYPE_LEVEL && obor_spawn_type_to_native(next.spawntype) == 9);
+#endif
+    return next;
+}
+
+static void check_item_directives(void)
+{
+    char name[] = "payload";
+    const int commands[] = {CMD_LEVEL_ITEM, CMD_LEVEL_2PITEM, CMD_LEVEL_3PITEM, CMD_LEVEL_4PITEM};
+    for(int row = 0; row < 4; ++row)
+        for(int mode = 0; mode < 3; ++mode)
+        {
+            s_spawn_entry next = initial_entry();
+            cached = mode == 0;
+            available = mode != 2;
+            loads = 0;
+            parse_item(&next, commands[row], name);
+            assert(loads == !cached && next.ITEM_PLAYERS == row);
+            assert(next.ITEM_INDEX == (available ? 17 : -1));
+            assert(next.item == (available ? payload_model.name : NULL));
+        }
+}
+
+static void check_alias(const char *actual, const char *original, int length)
+{
+    assert((int)strlen(actual) == length && !memcmp(actual, original, length));
+}
+
+static void release_spawns(void)
+{
+#if !SCALAR_ITEM
+    for(unsigned i = 0; i < sizeof(slots) / sizeof(*slots); ++i)
+    {
+        free(slots[i].item_properties);
+        slots[i].item_properties = NULL;
+    }
+#endif
+}
+
+static void check_routes(int alias_limit, int item_reason, int driver_reason)
+{
+    const int lengths[] = {50, 49, 0, 51, 60};
+    const int alpha_directives[] = {CMD_LEVEL_ITEMTRANS, CMD_LEVEL_ITEMALPHA};
+    char item[] = "payload", colour[] = "3", health[] = "37", alpha[] = "6";
+    for(unsigned i = 0; i < sizeof(lengths) / sizeof(*lengths); ++i)
+    {
+        char alias[64];
+        for(int j = 0; j < lengths[i]; ++j) alias[j] = 'A' + j % 26;
+        alias[lengths[i]] = '\0';
+        const int length = lengths[i] < alias_limit ? lengths[i] : alias_limit;
+        s_spawn_entry entry = initial_entry();
+        entry.index = 8;
+        entry.position = (__typeof__(entry.position)){.x = 40, .y = 9, .z = 81};
+        entry.flip = DIRECTION_RIGHT;
+        entry.spawnplayer_count = -1;
+        cached = 1;
+        available = 1;
+        count = callback = 0;
+        player_count = 4;
+        stage.scrolldir = SCROLL_RIGHT;
+        parse_item(&entry, CMD_LEVEL_4PITEM, item);
+        parse_item(&entry, CMD_LEVEL_ITEMMAP, colour);
+        parse_item(&entry, CMD_LEVEL_ITEMHEALTH, health);
+        parse_item(&entry, CMD_LEVEL_ITEMALIAS, alias);
+        parse_item(&entry, alpha_directives[i % 2], alpha);
+        check_alias(entry.ITEM_ALIAS, alias, length);
+        assert(entry.ITEM_INDEX == 17 && entry.ITEM_PLAYERS == 3 && entry.ITEM_COLOUR == 3 &&
+               entry.ITEM_HEALTH == 37 && entry.ITEM_ALPHA == 6);
+
+        entity *holder = smartspawn(&entry);
+        assert(holder == slots && holder->spawntype == entry.spawntype && count == 1 && callback == 1);
+#if SCALAR_ITEM
+        assert(holder->item == 17 && holder->itemplayer_count == 3 && holder->itemmap == 3 &&
+               holder->itemhealth == 37 && holder->itemtrans == 6);
+        check_alias(holder->itemalias, alias, length);
+#else
+        assert(holder->item_properties);
+        check_alias(holder->item_properties->alias, alias, length);
+        assert(holder->item_properties->index == 17 && holder->item_properties->player_count == 3 &&
+               holder->item_properties->colorset == 3 && holder->item_properties->health == 37 &&
+               holder->item_properties->alpha == 6);
+#endif
+
+        player_count = i % 2 ? 4 : 1;
+        entity *dropped = drop_item(holder);
+        assert(dropped == &slots[1] && count == 2 && callback == 2);
+        assert(dropped->HEALTH == (player_count == 1 ? 37 : 11));
+        assert(dropped->map == 3 && dropped->modeldata.alpha == 6);
+        assert(dropped->position.x == holder->position.x && dropped->position.z == holder->position.z);
+        assert(observed.position.y == (float)(holder->position.y + 0.01));
+        assert(!length ? !strcmp(dropped->name, "model") : (int)strlen(dropped->name) == length);
+        if(length) check_alias(dropped->name, alias, length);
+#if SCALAR_ITEM
+        assert(dropped->spawntype == item_reason);
+#else
+        assert(obor_spawn_type_to_native(dropped->spawntype) == item_reason);
+#endif
+
+        holder->modeldata.rider = 23;
+        entity *driver = drop_driver(holder);
+        assert(driver == &slots[2] && count == 3 && callback == 3 && observed.index == 23);
+        assert(driver->HEALTH == holder->modeldata.health);
+        assert(observed.position.y == holder->position.y + 10);
+        check_alias(observed.ITEM_ALIAS, alias, length);
+        assert(observed.ITEM_INDEX == 17 && observed.ITEM_PLAYERS == 3 && observed.ITEM_COLOUR == 3 &&
+               observed.ITEM_HEALTH == 37 && observed.ITEM_ALPHA == 6);
+#if SCALAR_ITEM
+        assert(driver->spawntype == driver_reason);
+#else
+        assert(obor_spawn_type_to_native(driver->spawntype) == driver_reason && !driver->item_properties);
+#endif
+        release_spawns();
+    }
+}
+
+static void check_empty_cases(void)
+{
+    count = callback = 0;
+    player_count = 1;
+    s_spawn_entry skipped = initial_entry();
+    skipped.boss = 1;
+    skipped.spawnplayer_count = 1;
+    stage.BOSS_COUNT = 2;
+    assert(!smartspawn(&skipped) && stage.BOSS_COUNT == 1 && !count && !callback);
+
+    entity holder = {0};
+#if SCALAR_ITEM
+    holder.item = -1;
+#endif
+    assert(!drop_item(&holder) && !count && !callback);
+    holder.modeldata.rider = 23;
+    count = callback = 2;
+    assert(drop_driver(&holder) == &slots[2] && count == 3 && callback == 3);
+    assert(!observed.ITEM_ALIAS[0] && !observed.ITEM_ALPHA && !observed.ITEM_PLAYERS);
+    release_spawns();
+}
+
+#if !SCALAR_ITEM
+static void check_carry_initializer(int alias_limit)
+{
+    entity holder = {0};
+    s_spawn_entry entry = initial_entry();
+    entry.ITEM_INDEX = 17;
+    entry.ITEM_COLOUR = 3;
+    entry.ITEM_HEALTH = 37;
+    entry.ITEM_ALPHA = 6;
+    entry.ITEM_PLAYERS = 3;
+    assert(alias_limit >= 0 && (size_t)alias_limit < sizeof(entry.ITEM_ALIAS));
+    memset(entry.ITEM_ALIAS, 'a', (size_t)alias_limit);
+    entry.ITEM_ALIAS[alias_limit] = '\0';
+    initialize_item_carry(&holder, &entry);
+    assert(holder.item_properties);
+    check_alias(holder.item_properties->alias, entry.ITEM_ALIAS, alias_limit);
+    assert(holder.item_properties->index == 17 && holder.item_properties->player_count == 3);
+    assert(holder.item_properties->colorset == 3 && holder.item_properties->health == 37);
+    assert(!holder.item_properties->alpha);
+
+    entry = initial_entry();
+    entry.ITEM_INDEX = 11;
+    entry.ITEM_PLAYERS = 1;
+    initialize_item_carry(&holder, &entry);
+    assert(holder.item_properties && !holder.item_properties->alias[0]);
+    assert(holder.item_properties->index == 11 && holder.item_properties->player_count == 1);
+    assert(!holder.item_properties->colorset && !holder.item_properties->health);
+    initialize_item_carry(&holder, NULL);
+    assert(holder.item_properties && !holder.item_properties->alias[0]);
+    assert(!holder.item_properties->index && !holder.item_properties->player_count);
+    assert(!holder.item_properties->colorset && !holder.item_properties->health);
+    free(holder.item_properties);
+}
+#endif
+
+int main(void)
+{
+    const struct {uint32_t revision; int alias_limit, item_reason, driver_reason;} rows[] = {@ROWS@};
+    for(unsigned i = 0; i < sizeof(rows) / sizeof(*rows); ++i)
+    {
+        obor_profile_build = rows[i].revision;
+        check_item_directives();
+        check_routes(rows[i].alias_limit, rows[i].item_reason, rows[i].driver_reason);
+        check_empty_cases();
+#if !SCALAR_ITEM
+        check_carry_initializer(rows[i].alias_limit);
+#endif
+        printf("%u\n", obor_profile_build);
+    }
+    return 0;
+}

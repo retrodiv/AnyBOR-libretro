@@ -4,7 +4,12 @@
  * These contributions are licensed under BSD-3-Clause; see LICENSE at the root.
  * Upstream code retains its original license and notices.
  * Map native logical-profile animation, attack, subtype and spawn IDs to the
- * shared engine selectors.
+ * shared engine selectors. Preserve the 5134 and 6119 animation ID sequence
+ * and first dynamic IDs. Preserve their animation property numbering before
+ * the entity collision selector. Translate the original time-over and custom
+ * attack numbers for those profiles. Restore their native subtype numbering
+ * around boomerang. Translate their original projectile request flag order.
+ * Translate their original typed level property indices.
  * Existing changes recorded here; this is not their implementation date.
  * See MODIFICATIONS.md and docs/modifications/6391.md
  * at the source repository root. Original notices follow below.
@@ -28,6 +33,12 @@ static inline int obor_animation_from_native(int id)
         if(id >= ANI_EDGE + 2 && id < MAX_ANIS) return id - 2;
         return id;
     }
+    if(obor_profile_build == 5134 || obor_profile_build == 6119)
+    {
+        const int offset = ANI_GETBOOMERANG - ANI_BACKRUN - 1;
+        if(id <= ANI_BACKRUN) return id;
+        return id <= INT_MAX - offset ? id + offset : -1;
+    }
     if(obor_profile_build == 6510)
     {
         if(id == 0) return ANI_NONE;
@@ -45,6 +56,12 @@ static inline int obor_animation_to_native(int id)
         if(id >= ANI_EDGE && id < original_max) return id + 2;
         return id;
     }
+    if(obor_profile_build == 5134 || obor_profile_build == 6119)
+    {
+        const int offset = ANI_GETBOOMERANG - ANI_BACKRUN - 1;
+        if(id <= ANI_BACKRUN) return id;
+        return id >= ANI_GETBOOMERANG ? id - offset : -1;
+    }
     if(obor_profile_build == 6510)
     {
         if(id == ANI_NONE) return 0;
@@ -52,23 +69,42 @@ static inline int obor_animation_to_native(int id)
     }
     return id < original_max ? id : id - 2;
 }
+static inline int obor_profile_uses_5134_script_ids(void)
+{
+    return obor_profile_build == 5134 || obor_profile_build == 6119;
+}
+
+static inline int obor_profile_has_animation_entity_collision(void)
+{
+    return obor_profile_build != 6330 && !obor_profile_uses_5134_script_ids();
+}
+
 static inline int obor_animation_property_from_native(int id)
 {
-    return obor_profile_build == 6330 && id >= ANI_PROP_ENTITY_COLLISION ? (id < INT_MAX ? id + 1 : -1) : id;
+    return !obor_profile_has_animation_entity_collision() && id >= ANI_PROP_ENTITY_COLLISION ? (id < INT_MAX ? id + 1 : -1) : id;
 }
 static inline int obor_animation_property_to_native(int id)
 {
-    return obor_profile_build == 6330 && id > ANI_PROP_ENTITY_COLLISION ? id - 1 : id;
+    return !obor_profile_has_animation_entity_collision() && id > ANI_PROP_ENTITY_COLLISION ? id - 1 : id;
+}
+static inline int obor_level_property_from_native(int id)
+{
+    if(!obor_profile_uses_5134_script_ids() || id < LEVEL_PROP_NUM_BOSSES) return id;
+    return id < LEVEL_PROP_WEAPON ? id + 1 : -1;
+}
+static inline int obor_level_property_to_native(int id)
+{
+    return obor_profile_uses_5134_script_ids() && id > LEVEL_PROP_NUM_BOSSES ? id - 1 : id;
 }
 static inline int obor_subtype_from_native(int id)
 {
-    if(obor_profile_build != 6330) return id;
+    if(obor_profile_build != 6330 && !obor_profile_uses_5134_script_ids()) return id;
     if(id == SUBTYPE_TOUCH) return SUBTYPE_BOOMERANG;
     return id > SUBTYPE_TOUCH && id <= SUBTYPE_CHASE + 1 ? id - 1 : id;
 }
 static inline int obor_subtype_to_native(int id)
 {
-    if(obor_profile_build != 6330) return id;
+    if(obor_profile_build != 6330 && !obor_profile_uses_5134_script_ids()) return id;
     if(id == SUBTYPE_BOOMERANG) return SUBTYPE_TOUCH;
     return id >= SUBTYPE_TOUCH && id <= SUBTYPE_CHASE ? id + 1 : id;
 }
@@ -84,9 +120,28 @@ static inline int obor_spawn_type_to_native(int id)
     if(id == SPAWN_TYPE_PROJECTILE_BOOMERANG) return SPAWN_TYPE_STEAM;
     return id >= SPAWN_TYPE_STEAM && id <= SPAWN_TYPE_WEAPON ? id + 1 : id;
 }
+/* The request flags are a six-bit group. 6391 moves the custom request to the end. */
+static inline unsigned obor_projectile_prime_from_native(unsigned flags)
+{
+    if(!obor_profile_uses_5134_script_ids()) return flags;
+    return (flags & ~0x3f0u) | ((flags & 0x010u) << 5) | ((flags & 0x3e0u) >> 1);
+}
+
+static inline unsigned obor_projectile_prime_to_native(unsigned flags)
+{
+    if(!obor_profile_uses_5134_script_ids()) return flags;
+    return (flags & ~0x3f0u) | ((flags & 0x200u) >> 5) | ((flags & 0x1f0u) << 1);
+}
+
 static inline int obor_attack_from_native(int id)
 {
     if(id < 0) return id;
+    if(obor_profile_uses_5134_script_ids() && id >= ATK_LOSE)
+    {
+        if(id == ATK_LOSE) return ATK_TIMEOVER;
+        /* Both the lose and boss-death slots precede the physical custom range. */
+        return id <= INT_MAX - 2 ? id + 2 : -1;
+    }
     if(obor_profile_build == 6510)
     {
         switch(id)
@@ -105,6 +160,12 @@ static inline int obor_attack_from_native(int id)
 }
 static inline int obor_attack_to_native(int id)
 {
+    if(obor_profile_uses_5134_script_ids() && id >= ATK_LOSE)
+    {
+        if(id == ATK_TIMEOVER) return id - 1;
+        if(id >= MAX_ATKS) return id - 2;
+        return ATK_NONE;
+    }
     if(obor_profile_build == 6510)
     {
         switch(id)

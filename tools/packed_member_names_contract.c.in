@@ -1,0 +1,119 @@
+/* SPDX-License-Identifier: BSD-3-Clause
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me>
+ */
+#include <assert.h>
+#include <ctype.h>
+#include <stddef.h>
+#include <stdint.h>
+#include <stdarg.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <strings.h>
+#include "List.h"
+#include "anybor_abi.h"
+
+#define stricmp strcasecmp
+@CONSTANTS@
+typedef int64_t obor_pak_int;
+uint32_t obor_profile_build, obor_profile_features;
+char packfile[OBOR_CONTENT_PATH_MAX] = "members.pak";
+static unsigned char *pak_header;
+static obor_pak_int pak_headersize;
+static List *filenamelist;
+int printFileUsageStatistics;
+static int pak_vfdexists[MAXPACKHANDLES], pak_vfdreadahead[MAXPACKHANDLES];
+static obor_pak_int pak_vfdstart[MAXPACKHANDLES], pak_vfdsize[MAXPACKHANDLES],
+                    pak_vfdpos[MAXPACKHANDLES];
+static unsigned handle_updates;
+
+void *checkAlloc(void *value, size_t size, const char *fn, const char *file, int line)
+{
+    assert(value || !size);
+    return value;
+}
+
+void exitIfFalse(int value, const char *condition, const char *function,
+                 const char *file, int line)
+{
+    if(!value)
+    {
+        fprintf(stderr, "%s:%d: %s\n", function, line, condition);
+        abort();
+    }
+}
+
+void writeToLogFile(const char *format, ...)
+{
+    va_list args;
+    va_start(args, format);
+    vfprintf(stderr, format, args);
+    va_end(args);
+}
+
+static void obor_lns_freefilenamecache(void) { abort(); }
+static int obor_lns_openreadaheadpackfile(const char *filename, const char *package,
+                                         int readahead, int prebuffer)
+{
+    abort();
+}
+
+static void update_filecache_vfd(int fd)
+{
+    assert(fd == 0);
+    ++handle_updates;
+}
+
+static void filecache_wait_for_prebuffer(int fd, int blocks) { abort(); }
+
+#include "List.c"
+@FUNCTIONS@
+
+static unsigned char image[] = { @IMAGE@ };
+static const char *names[] = { @NAMES@ };
+
+static void check_member(size_t index, size_t capacity)
+{
+    const char *name = names[index];
+    const size_t size = strlen(name);
+    char alternate[PACKFILE_PATH_MAX + 1];
+    assert(size < sizeof(alternate));
+    for(size_t i = 0; i < size; ++i)
+        alternate[i] = name[i] == '/' ? '\\' : (char)toupper((unsigned char)name[i]);
+    alternate[size] = '\0';
+    const char *requests[] = {name, alternate};
+    for(size_t i = 0; i < sizeof(requests) / sizeof(*requests); ++i)
+    {
+        const unsigned previous = handle_updates;
+        const int handle = openPackfileCached(requests[i], packfile);
+        if(size >= capacity)
+        {
+            assert(handle == -1 && handle_updates == previous);
+            continue;
+        }
+        assert(handle == 0 && handle_updates == previous + 1);
+        assert(pak_vfdsize[handle] == 1 && pak_vfdstart[handle] >= 0);
+        assert((size_t)pak_vfdstart[handle] < sizeof(image));
+        assert(image[pak_vfdstart[handle]] == index + 1);
+        pak_vfdexists[handle] = 0;
+    }
+}
+
+int main(void)
+{
+    static const struct { uint32_t revision; size_t capacity; } profiles[] = { @PROFILES@ };
+    const size_t directory = readlsb32(image + sizeof(image) - 4);
+    pak_header = image + directory;
+    pak_headersize = sizeof(image) - directory - 4;
+    for(size_t i = 0; i < sizeof(profiles) / sizeof(*profiles); ++i)
+    {
+        obor_profile_build = profiles[i].revision;
+        for(size_t j = 0; j < sizeof(names) / sizeof(*names); ++j)
+            check_member(j, profiles[i].capacity);
+        assert(filenamelist && filenamelist->size == 2);
+        freefilenamecache();
+        assert(!filenamelist);
+        fprintf(stdout, "%u\n", obor_profile_build);
+    }
+    return 0;
+}

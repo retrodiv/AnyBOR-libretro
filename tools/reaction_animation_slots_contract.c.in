@@ -1,0 +1,183 @@
+/* SPDX-License-Identifier: BSD-3-Clause
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me>
+ */
+#include <math.h>
+#include <stdint.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include "openbor.h"
+#include "profile_ids.h"
+#undef printf
+#undef assert
+#include <assert.h>
+
+uint32_t obor_profile_build, obor_profile_features;
+static int max_animations;
+typedef struct {
+    int **table;
+    const int *defaults;
+    int base;
+} AnimationSeries;
+@DECLARATIONS@
+
+void *checkAlloc(void *p, size_t size, const char *name, const char *file, int line)
+{
+    assert(!size || p);
+    return p;
+}
+
+@DEFAULT_FUNCTION@
+
+static void release_tables(void)
+{
+@RELEASE@
+}
+
+static int allocate_tables(int extra)
+{
+    int i, maxanim = MAX_ANIS;
+    max_animations = MAX_ANIS;
+@RESET@
+    release_tables();
+@ALLOCATION@
+    return maxanim;
+}
+
+static void check_allocation(uint32_t revision, int first_native, const AnimationSeries *order, int family_count)
+{
+    obor_profile_build = revision;
+    assert(allocate_tables(0) == MAX_ANIS && max_animations == MAX_ANIS);
+    assert(allocate_tables(2) == MAX_ANIS + 2 * family_count);
+    assert(max_animations == MAX_ANIS + 2 * family_count);
+    for(int family = 0; family < family_count; ++family)
+    {
+        const AnimationSeries *series = &order[family];
+        assert(*series->table);
+        if(series->base != MAX_ATKS)
+        {
+            assert(!memcmp(*series->table, series->defaults, (size_t)series->base * sizeof(int)));
+        }
+        const int start = MAX_ANIS + 2 * family;
+        for(int i = 0; i < 2; ++i)
+        {
+            const int animation = (*series->table)[series->base + i];
+            const int native = first_native + 2 * family + i;
+            assert(animation == start + i);
+            assert(obor_animation_to_native(animation) == native);
+            assert(obor_animation_from_native(native) == animation);
+        }
+    }
+    const int extended = family_count == 20;
+    assert(!!animbackrises == extended && !!animbackriseattacks == extended && !!animbackblkpains == extended);
+}
+
+typedef struct {
+    int **table;
+    int count;
+    int expected[MAX_ATKS];
+} FixedSeries;
+
+@FIXED_DEFAULTS@
+
+static void check_fixed(uint32_t revision, const FixedSeries *families, size_t count)
+{
+    obor_profile_build = revision;
+    assert(allocate_tables(0) == MAX_ANIS);
+    for(size_t family = 0; family < count; ++family)
+    {
+        const FixedSeries *series = &families[family];
+        assert(!!*series->table == (series->count > 0));
+        for(int attack = 0; attack < series->count; ++attack)
+        {
+            const int physical_attack = obor_attack_from_native(attack);
+            assert(physical_attack >= 0 && physical_attack < MAX_ATKS);
+            const int actual = (*series->table)[physical_attack];
+            if(actual != series->expected[attack])
+            {
+                fprintf(stderr, "%u table %zu attack %d gives animation %d instead of %d\n",
+                        revision, family, attack, actual, series->expected[attack]);
+            }
+            assert(actual == series->expected[attack]);
+        }
+    }
+}
+
+#define CHECK_FIXED(revision) check_fixed(revision, fixed_##revision, sizeof(fixed_##revision) / sizeof(FixedSeries))
+
+static entity subject, controller;
+entity *self = &controller;
+static int observed[2], reaction_ready[2], calls;
+void common_block(void) {}
+
+void ent_set_anim(entity *actor, int id, int reset)
+{
+    assert(actor == &subject && reset == 1 && calls < 2);
+    observed[calls] = id;
+    reaction_ready[calls++] = actor->takeaction == common_block && actor->inpain && controller.blocking;
+}
+
+@BLOCK@
+
+enum { FRONT_NORMAL = 0, FRONT_TYPED, BACK_NORMAL, BACK_TYPED };
+static const struct {
+    uint32_t revision;
+    int type, rear, present;
+    int first, second, end_rear, flips;
+} block_cases[] = {
+@BLOCK_CASES@
+};
+
+static void check_block(void)
+{
+    s_anim clip = {.numframes = 1};
+    int front[] = {FRONT_NORMAL, FRONT_TYPED};
+    int back[] = {BACK_NORMAL, BACK_TYPED};
+    max_attack_types = 2;
+    animblkpains = front;
+    for(size_t i = 0; i < sizeof(block_cases) / sizeof(*block_cases); ++i)
+    {
+        obor_profile_build = block_cases[i].revision;
+        animbackblkpains = obor_profile_uses_5134_script_ids() ? NULL : back;
+        s_anim *animations[4] = {NULL};
+        for(int id = 0; id < 4; ++id)
+            if(block_cases[i].present & (1 << id)) animations[id] = &clip;
+        subject = (entity){
+            .modeldata = {.animation = animations, .animation_capacity = 4},
+            .inbackpain = block_cases[i].rear,
+            .direction = DIRECTION_LEFT, .normaldamageflipdir = DIRECTION_RIGHT,
+            .velocity = {.x = 3}, .rising = 1, .riseattacking = 1, .ducking = DUCK_ACTIVE
+        };
+        controller = (entity){0};
+        controller.idling = 1;
+        calls = 0;
+        const int selected = block_cases[i].first >= 0;
+        assert(set_blockpain(&subject, block_cases[i].type, 1) == selected);
+        assert(calls == selected + (block_cases[i].second >= 0));
+        if(selected)
+        {
+            assert(observed[0] == block_cases[i].first && reaction_ready[0] == (calls == 1));
+        }
+        if(calls == 2) assert(observed[1] == block_cases[i].second && reaction_ready[1]);
+        assert(subject.inpain == selected && controller.blocking == selected && controller.idling == !selected);
+        assert(subject.takeaction == (selected ? common_block : NULL));
+        const int newer_reaction = calls == 2;
+        assert(subject.rising == !newer_reaction && subject.riseattacking == !newer_reaction);
+        assert(subject.ducking == (newer_reaction ? DUCK_INACTIVE : DUCK_ACTIVE));
+        assert(subject.inbackpain == block_cases[i].end_rear);
+        assert(subject.direction == (block_cases[i].flips ? DIRECTION_RIGHT : DIRECTION_LEFT));
+        assert(subject.velocity.x == (block_cases[i].flips ? -3 : 3));
+    }
+    animblkpains = NULL;
+    animbackblkpains = NULL;
+}
+
+int main(void)
+{
+    @TABLE_CHECKS@
+    @FIXED_CHECKS@
+    release_tables();
+    check_block();
+    puts("PASS reaction animations");
+    return 0;
+}

@@ -1,0 +1,165 @@
+/* SPDX-License-Identifier: BSD-3-Clause
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me>
+ */
+#include <stdint.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include "openbor.h"
+#undef assert
+#undef printf
+#include <assert.h>
+
+uint32_t obor_profile_build;
+int holez;
+static entity actor = {.position.x = 20.75f, .position.z = 30.25f};
+entity *self = &actor;
+static float platform_frame[1][8] = {{ [PLATFORM_DEPTH] = 10, [PLATFORM_HEIGHT] = 3,
+                                      [PLATFORM_UPPERRIGHT] = 10, [PLATFORM_LOWERRIGHT] = 10 }};
+static s_anim platform_animation = {.numframes = 1, .platform = platform_frame};
+static entity stand = {.exists = 1, .position.x = 25, .position.z = 35, .animation = &platform_animation};
+static entity *slots[] = {&stand};
+entity **ent_list = slots;
+int ent_max = 1;
+static s_terrain hole = {.x = 19, .z = 32, .depth = 4, .upperright = 3, .lowerright = 3};
+static s_terrain wall = {.x = 25, .z = 35, .depth = 10, .upperright = 10, .lowerright = 10};
+static float heights[] = {19.5f, 12.25f};
+static s_basemap maps[] = {
+    {.position.x = 20, .position.z = 30, .size.x = 1, .size.z = 1, .map = &heights[0]},
+    {.position.x = 30, .position.z = 33, .size.x = 1, .size.z = 1, .map = &heights[1]},
+};
+static s_level scene = {.holes = &hole, .walls = &wall, .basemaps = maps};
+s_level *level = &scene;
+
+void StrCache_Collect(int index) { abort(); }
+@VARIANTS@
+@BACKENDS@
+@WRAPPERS@
+
+typedef HRESULT (*query)(ScriptVariant **, ScriptVariant **, int);
+enum registry_name { HEIGHT, INDEX, BASE, GENERATE, NAME_COUNT };
+static const char *const names[] = {"checkbasemap", "checkbasemapindex", "checkbase", "generatebasemap"};
+static query bindings[NAME_COUNT];
+static int order[NAME_COUNT], count;
+
+HRESULT openbor_generatebasemap(ScriptVariant **args, ScriptVariant **out, int argc) { abort(); }
+
+static void add_function(void *callee, const char *name)
+{
+    for(int i = 0; i < NAME_COUNT; ++i)
+    {
+        if(strcmp(names[i], name)) continue;
+        assert(!bindings[i] && count < NAME_COUNT);
+        bindings[i] = (query)callee;
+        order[count++] = i;
+        return;
+    }
+    abort();
+}
+
+#undef List_InsertAfter
+#define List_InsertAfter(list, function, name) add_function(function, name)
+static void register_queries(void)
+{
+    @FORWARD@
+}
+#undef List_InsertAfter
+
+static const char *query_name(void *functionRef)
+{
+    @REVERSE@
+    @FALLBACK@
+}
+
+static void check_registry(int has_base, int alias)
+{
+    memset(bindings, 0, sizeof(bindings));
+    count = 0;
+    register_queries();
+    assert(count == 3 + has_base);
+    assert(order[0] == HEIGHT && order[1] == INDEX && order[count - 1] == GENERATE);
+    assert(!has_base || order[2] == BASE);
+    assert(bindings[HEIGHT] == openbor_checkbasemap && bindings[GENERATE] == openbor_generatebasemap);
+    assert(bindings[INDEX] == (alias ? openbor_checkbasemap : openbor_checkbasemapindex));
+    assert(bindings[BASE] == (has_base ? openbor_checkbase : NULL));
+    assert(!strcmp(query_name((void *)bindings[INDEX]), alias ? "checkbasemap" : "checkbasemapindex"));
+    assert(!strcmp(query_name((void *)openbor_checkbasemapindex), "checkbasemapindex"));
+    assert(!strcmp(query_name((void *)openbor_checkbase), has_base ? "checkbase" : "<unknown function>"));
+}
+
+static double value(query run, ScriptVariant **args, int argc)
+{
+    ScriptVariant result, *out = &result;
+    ScriptVariant_Init(&result);
+    assert(run(args, &out, argc) == S_OK && out == &result && result.vt == VT_DECIMAL);
+    return result.dblVal;
+}
+
+static void check_basemap_results(int alias)
+{
+    ScriptVariant x = {.vt = VT_DECIMAL, .dblVal = 30.75}, z = {.vt = VT_DECIMAL, .dblVal = 33.25};
+    ScriptVariant *args[] = {&x, &z};
+    scene.numbasemaps = 2;
+    assert(value(bindings[HEIGHT], args, 2) == 12.25);
+    assert(value(bindings[INDEX], args, 2) == (alias ? 12.25 : 1));
+    ++z.dblVal;
+    assert(value(bindings[INDEX], args, 2) == (alias ? -1000 : -1));
+}
+
+static void check_base_results(void)
+{
+    static const struct {
+        int hole, basemap, platform;
+        double wall_height, limit, expected, excluded;
+    } cases[] = {
+        {0, 0, 0, 0, 40, 0, 0},
+        {1, 0, 0, 0, 40, -1, -1},
+        {1, 1, 0, 0, 40, 19.5, 19.5},
+        {1, 0, 0, 24, 10, 24, 24},
+        {1, 1, 1, 24, 30, 30, 24},
+        {1, 1, 1, 24, 29, 24, 24},
+        {1, 1, 1, 31, 30, 31, 31},
+        {1, 1, 1, 12, 30, 30, 19.5},
+        {1, 0, 0, 9999999, 40, 9999999, 9999999},
+        {1, 0, 0, 10000000, 40, -1, -1},
+    };
+    ScriptVariant x = {.vt = VT_DECIMAL, .dblVal = 30.75}, z = {.vt = VT_DECIMAL, .dblVal = 33.25};
+    ScriptVariant y = {.vt = VT_DECIMAL}, none = {.vt = VT_EMPTY}, omit = {.vt = VT_PTR, .ptrVal = &stand};
+    ScriptVariant *args[] = {&x, &z, &y, &none};
+    stand.position.y = 27;
+    for(unsigned i = 0; i < sizeof(cases) / sizeof(*cases); ++i)
+    {
+        scene.numholes = cases[i].hole;
+        scene.numbasemaps = cases[i].basemap;
+        scene.numwalls = cases[i].wall_height > 0;
+        wall.height = cases[i].wall_height;
+        stand.exists = cases[i].platform;
+        y.dblVal = cases[i].limit;
+        holez = -10;
+        assert(value(bindings[BASE], args, 3) == cases[i].expected);
+        assert(holez == (cases[i].hole ? 0 : -10));
+        args[3] = &none;
+        assert(value(bindings[BASE], args, 4) == cases[i].expected);
+        args[3] = &omit;
+        assert(value(bindings[BASE], args, 4) == cases[i].excluded);
+    }
+    ScriptVariant result = {.vt = VT_INTEGER, .lVal = 77}, *out = &result;
+    assert(bindings[BASE](args, &out, 2) == E_FAIL && !out && result.vt == VT_INTEGER && result.lVal == 77);
+    args[2] = &none;
+    holez = -10;
+    assert(value(bindings[BASE], args, 3) == -1 && holez == -10);
+}
+
+int main(void)
+{
+    static const struct { unsigned revision; int has_base, alias; } rows[] = {@ROWS@};
+    for(unsigned i = 0; i < sizeof(rows) / sizeof(*rows); ++i)
+    {
+        obor_profile_build = rows[i].revision;
+        check_registry(rows[i].has_base, rows[i].alias);
+        check_basemap_results(rows[i].alias);
+        if(rows[i].has_base) check_base_results();
+        printf("%u\n", rows[i].revision);
+    }
+    return 0;
+}

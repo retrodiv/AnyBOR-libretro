@@ -4,6 +4,10 @@
 s_anim_list *anim_list;
 void StrCache_Collect(int index) { abort(); }
 int StrCache_Pop(void) { abort(); }
+int obor_allocation_contains(const void *pointer, size_t size)
+{
+    return pointer && (size == sizeof(s_collision_body) || size == sizeof(s_defense));
+}
 
 #include "anybor_attack_query.h"
 @READERS@
@@ -28,6 +32,74 @@ static void set_tag(native_query change, void *handle, int selector, int tag)
     ScriptVariant result = {.vt = VT_EMPTY};
     ScriptVariant *arguments[] = {&object, &property, &value}, *out = &result;
     CHECK(change(arguments, &out, 3) == S_OK);
+}
+
+static void refuse_body_index(void *handle, LONG index)
+{
+    ScriptVariant object = {.vt = VT_PTR, .ptrVal = handle};
+    ScriptVariant selector = {.vt = VT_INTEGER, .lVal = index};
+    ScriptVariant result = {.vt = VT_EMPTY};
+    ScriptVariant *arguments[] = {&object, &selector}, *out = &result;
+    CHECK(openbor_get_body_collision_instance(arguments, &out, 2) == E_FAIL);
+    CHECK(!out && result.vt == VT_EMPTY);
+}
+
+static void set_body_pointer(s_collision_body *body, LONG ordinal, void *target)
+{
+    ScriptVariant object = {.vt = VT_PTR, .ptrVal = body};
+    ScriptVariant selector = {.vt = VT_INTEGER, .lVal = ordinal};
+    ScriptVariant input = {.vt = target ? VT_PTR : VT_EMPTY, .ptrVal = target};
+    ScriptVariant result = {.vt = VT_EMPTY};
+    ScriptVariant *arguments[] = {&object, &selector, &input}, *out = &result;
+    CHECK(openbor_set_body_collision_property(arguments, &out, 3) == S_OK && out == &result);
+}
+
+static void check_body_properties(s_anim *source, s_anim_list *source_node, s_hitbox box)
+{
+    s_anim peer = {0};
+    s_anim_list peer_node = {.anim = &peer, .next = source_node};
+    s_collision_body prototype = {.tag = 311};
+    s_collision_attack no_attack = {0};
+    s_damage_recursive recursive = {0};
+    s_drawmethod draw = {0};
+    s_axis_i_2d offset = {0};
+    s_hitbox empty = {0};
+    s_defense defense = {.pain = 2.0f};
+    float platform[8] = {0};
+    int shadow[2] = {0};
+
+    anim_list = &peer_node;
+    CHECK(addframe(&peer, 0, 1, 1, 0, &prototype, &no_attack, NULL, platform, -1,
+                   shadow, -1, &draw, &offset, &recursive, &empty, &box) == 1);
+    CHECK(peer.collision_body && peer.collision_body[0] && peer.collision_body[0]->instance);
+    CHECK(source->collision_body && source->collision_body[1] && source->collision_body[1]->instance);
+    s_collision_body *other = peer.collision_body[0]->instance[0];
+    s_collision_body *origin = source->collision_body[1]->instance[0];
+    s_hitbox *original = get(openbor_get_body_collision_property, origin, 0).ptrVal;
+    s_hitbox *retained = get(openbor_get_body_collision_property, other, 0).ptrVal;
+    CHECK(original && retained && original != retained);
+    CHECK(get(openbor_get_body_collision_property, other, 2).lVal == 311);
+    set_tag(openbor_set_body_collision_property, other, 2, 173);
+    CHECK(other->tag == 173);
+    CHECK(get(openbor_get_body_collision_property, other, 1).vt == VT_EMPTY);
+    set_body_pointer(other, 1, &defense);
+    ScriptVariant reference = get(openbor_get_body_collision_property, other, 1);
+    CHECK(reference.vt == VT_PTR && reference.ptrVal == &defense);
+    set_body_pointer(other, 1, NULL);
+    CHECK(get(openbor_get_body_collision_property, other, 1).vt == VT_EMPTY);
+
+    set_body_pointer(other, 0, original);
+    reference = get(openbor_get_body_collision_property, other, 0);
+    CHECK(reference.vt == VT_PTR && reference.ptrVal == original);
+    free_frames(source);
+    CHECK(get(openbor_get_body_collision_property, other, 0).ptrVal == original);
+    CHECK(other->coords->width == box.width && other->coords->y == box.y);
+    set_body_pointer(other, 0, retained);
+    CHECK(get(openbor_get_body_collision_property, other, 0).ptrVal == retained);
+    set_body_pointer(other, 0, NULL);
+    CHECK(get(openbor_get_body_collision_property, other, 0).vt == VT_EMPTY);
+    free_frames(&peer);
+    anim_list = source_node;
 }
 
 static void observe(void)
@@ -66,9 +138,30 @@ static void observe(void)
     // The native placeholder does not select an instance. Both valid indices
     // retain the same pointer identity and pointer variant tag.
     ScriptVariant attack_alias = get(openbor_get_attack_instance, attack_handle.ptrVal, 1);
-    ScriptVariant body_alias = get(openbor_get_body_collision_instance, body_handle.ptrVal, 1);
     CHECK(attack_alias.vt == VT_PTR && attack_alias.ptrVal == attack_handle.ptrVal);
-    CHECK(body_alias.vt == VT_PTR && body_alias.ptrVal == body_handle.ptrVal);
+    ScriptVariant body_alias;
+    if(obor_profile_build >= 4905)
+    {
+        ScriptVariant vector = get(openbor_get_body_collision_instance, body_handle.ptrVal, 0);
+        CHECK(vector.vt == VT_PTR && vector.ptrVal == first_body->instance);
+        CHECK(first_body->obor_instance_capacity == 2);
+        body_alias = get(openbor_get_body_collision_instance, vector.ptrVal, 1);
+        CHECK(body_alias.vt == VT_PTR && body_alias.ptrVal == first_body->instance[1]);
+        CHECK(body_alias.ptrVal != first_body->instance[0]);
+        CHECK(get(openbor_get_body_collision_instance, vector.ptrVal, 0).ptrVal == first_body->instance[0]);
+        s_collision_body *saved = first_body->instance[1];
+        first_body->instance[1] = NULL;
+        CHECK(get(openbor_get_body_collision_instance, vector.ptrVal, 1).vt == VT_EMPTY);
+        first_body->instance[1] = saved;
+        refuse_body_index(body_handle.ptrVal, 1);
+        refuse_body_index(vector.ptrVal, -1);
+        refuse_body_index(vector.ptrVal, 2);
+    }
+    else
+    {
+        body_alias = get(openbor_get_body_collision_instance, body_handle.ptrVal, 1);
+        CHECK(body_alias.vt == VT_PTR && body_alias.ptrVal == body_handle.ptrVal);
+    }
 
     int attack_route = attack_handle.ptrVal == first_attack ? 3 :
                        attack_handle.ptrVal == first_attack->instance[0] ? 1 :
@@ -99,7 +192,10 @@ static void observe(void)
 
     printf("[%u,%d,%d,%d,%d,%d,%d]\n", obor_profile_build, attack_route, body_route,
            attack_tag, body_tag, first_attack->instance[0]->tag, first_body->instance[0]->tag);
-    free_frames(&anim);
+    if(obor_profile_build >= 4905)
+        check_body_properties(&anim, &owner, box);
+    else
+        free_frames(&anim);
     CHECK(!anim.collision_attack && !anim.collision_body);
     anim_list = NULL;
 }

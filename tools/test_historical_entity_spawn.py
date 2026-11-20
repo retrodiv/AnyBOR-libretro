@@ -19,11 +19,120 @@ import unittest
 
 from historical_entity_spawn import render_entity_spawn
 from native_sanitizers import sanitizer_environment
-from test_historical_player import function
+from test_early_jump_walkoff import braced_statement
+from test_historical_player import function, switch_cases
 from test_historical_common_think import native_output
 
 SOURCE = Path(os.environ.get('OBOR_TEST_SOURCE', Path(__file__).resolve().parents[1]))
 CONTRACT_PATH = Path(__file__).parent / 'fixtures/profile-entity-spawn-contracts.json'
+
+
+class ItemSpawnRecordContracts(unittest.TestCase):
+    def check_item_spawn_record(self, physical):
+        data = load_contract_fixture(CONTRACT_PATH.with_name('profile-item-spawn-record.json'))
+        rows = [row for row in data['sources'] if row['engine'] == physical]
+        revisions = [row['revision'] for row in rows]
+        self.assertEqual(revisions, sorted(contract_revisions(data, data['expected_revisions'][physical])))
+        engine = Path(os.environ.get('OBOR_HISTORICAL_ENGINE', SOURCE / 'src/engines' / physical))
+        core = (engine / 'openbor.c').read_text(encoding='latin-1')
+        loader, cases = switch_cases(core, 'load_level', 'cmd', outermost=True)
+        commands = ('ITEM', '2PITEM', '3PITEM', '4PITEM', 'ITEMMAP', 'ITEMHEALTH', 'ITEMALIAS', 'ITEMTRANS', 'ITEMALPHA')
+        methods = ('isNumeric', 'getValidInt')
+        methods += (('obor_profile_name_limit', 'obor_profile_copy_name') if physical == '4432'
+                    else ('initialize_item_carry',))
+        methods += ('smartspawn', 'drop_item', 'drop_driver')
+        values = {
+            'DEFAULTS': re.search(r'next\.index = next\.(?:itemindex|item_properties\.index) = next\.weaponindex = -1;', loader)[0],
+            'LEVEL_REASON': re.search(r'next\.spawntype = (?:1|SPAWN_TYPE_LEVEL);', loader)[0],
+            'COMMANDS': ', '.join('CMD_LEVEL_' + n for n in commands),
+            'CASES': '\n'.join('case CMD_LEVEL_' + n + ':' + cases['CMD_LEVEL_' + n]['body'] for n in commands),
+            'METHODS': '\n'.join(function(core, name) for name in methods),
+            'ROWS': ','.join('{%du,%d,%d,%d}' % (row['revision'], row['alias_limit'], row['item_reason'],
+                                                      row['driver_reason']) for row in rows),
+        }
+        template = Path(__file__).with_name('item_spawn_record_contract.c.in').read_text()
+        code = re.sub(r'@([A-Z_]+)@', lambda match: values[match[1]], template)
+        output = native_output(code, {'engine': physical}, engine_source=engine,
+                               extra_cflags=('-fgnu89-inline',))
+        self.assertEqual([int(line) for line in output.splitlines()], revisions)
+
+    def test_4432_item_spawn_record(self):
+        self.check_item_spawn_record('4432')
+
+    def test_6391_item_spawn_record(self):
+        self.check_item_spawn_record('6391')
+
+
+class PlayerAndWeaponSpawnContracts(unittest.TestCase):
+    def check_player_and_weapon_spawn(self, physical):
+        data = load_contract_fixture(CONTRACT_PATH.with_name('profile-player-weapon-spawn.json'))
+        rows = [row for row in data['sources'] if row['engine'] == physical]
+        revisions = [row['revision'] for row in rows]
+        self.assertEqual(revisions, sorted(contract_revisions(data, data['expected_revisions'][physical])))
+        engine = Path(os.environ.get('OBOR_HISTORICAL_ENGINE', SOURCE / 'src/engines' / physical))
+        source = (engine / 'openbor.c').read_text(encoding='latin-1')
+        methods = ['spawnplayer', 'spawnexample']
+        if physical == '4432':
+            methods[:0] = ['obor_profile_name_limit', 'obor_profile_copy_name']
+        selection = function(source, 'selectplayer')
+        conditions = re.findall(r'(?m)^\s*const int (?:saved_selection|historical_resume)\s*=.*?;', selection)
+        reset, = re.findall(r'(?m)^\s*if\([^;]*?\)\s*(?:\{\s*)?reset_playable_list\(1\);\s*(?:\})?',
+                            selection[selection.index('selectScreen = 1;'):selection.index('memset(player,')])
+        weapon = braced_statement(function(source, 'smartspawn'), 'if(props->weapon)')
+        fields = ('revision', 'weapon_reason', 'main_reason', 'preview_reason', 'allow_keyword', 'preview_origin')
+        values = dict(METHODS='\n'.join(function(source, method) for method in methods),
+                      RESET='\n'.join([*conditions, reset]),
+                      WEAPON=weapon,
+                      ROWS=',\n'.join('{' + ','.join(str(row[k]) for k in fields) + '}' for row in rows))
+        template = Path(__file__).with_name('player_weapon_spawn_contract.c.in').read_text()
+        code = re.sub(r'@([A-Z_]+)@', lambda match: values[match[1]], template)
+        output = native_output(code, {'engine': physical}, engine_source=engine,
+                               extra_cflags=('-fgnu89-inline',))
+        self.assertEqual([int(line) for line in output.splitlines()], revisions)
+
+    def test_4432_player_and_weapon_spawn(self):
+        self.check_player_and_weapon_spawn('4432')
+
+    def test_6391_player_and_weapon_spawn(self):
+        self.check_player_and_weapon_spawn('6391')
+
+
+class BossCompletionContracts(unittest.TestCase):
+    def check_boss_completion(self, physical):
+        data = load_contract_fixture(CONTRACT_PATH.with_name('profile-boss-completion.json'))
+        rows = [row for row in data['sources'] if row['engine'] == physical]
+        revisions = [row['revision'] for row in rows]
+        self.assertEqual(revisions, sorted(contract_revisions(data, data['expected_revisions'][physical])))
+        engine = Path(os.environ.get('OBOR_HISTORICAL_ENGINE', SOURCE / 'src/engines' / physical))
+        source = (engine / 'openbor.c').read_text(encoding='latin-1')
+        poses = ('tryvictorypose', 'check_victory_pose') if physical == '6391' else ()
+        finish = ''
+        reset = []
+        if poses:
+            play = function(source, 'playlevel')
+            start = play.rindex('if(level_completed)', 0, play.index('check_victory_pose();'))
+            finish = braced_statement(play[start:], 'if(level_completed)')
+            reset = re.findall(r'(?m)^\s*level_completed(?:_defeating_boss)?\s*=\s*0;',
+                               function(source, 'unload_level'))
+            self.assertEqual(len(reset), 2)
+        script = (engine / 'openborscript.c').read_text(encoding='latin-1') if poses else ''
+        values = dict(CHECK_DEATH=function(source, 'checkdeath'), SUICIDE=function(source, 'suicide'),
+                      VICTORY='\n'.join(function(source, name) for name in poses),
+                      FINISH=finish, RESET='\n'.join(reset),
+                      CLEAR_ENEMIES=function(source, 'kill_all_enemies') if poses else '',
+                      SCRIPT_SPAWN=function(script, 'openbor_spawn') if poses else '',
+                      ROWS=',\n'.join('{%du,%d}' % (row['revision'], row['later_completion']) for row in rows))
+        template = Path(__file__).with_name('boss_completion_contract.c.in').read_text()
+        code = re.sub(r'@([A-Z_]+)@', lambda match: values[match[1]], template)
+        raw = native_output(code, {'engine': physical}, engine_source=engine,
+                            extra_cflags=('-fgnu89-inline',))
+        self.assertEqual([int(line) for line in raw.splitlines()], revisions)
+
+    def test_4432_boss_completion(self):
+        self.check_boss_completion('4432')
+
+    def test_6391_boss_completion(self):
+        self.check_boss_completion('6391')
 
 
 class MusicSpawnContracts(unittest.TestCase):

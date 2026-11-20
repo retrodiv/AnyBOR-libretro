@@ -1,0 +1,231 @@
+/* SPDX-License-Identifier: BSD-3-Clause
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me>
+ */
+#include <math.h>
+#include <stdint.h>
+#include <stdio.h>
+#include <string.h>
+#include "openbor.h"
+#include "profile_ids.h"
+#undef assert
+#undef printf
+#include <assert.h>
+
+uint32_t obor_profile_build, obor_profile_features;
+u32 _time;
+static entity actor, other;
+entity *self = &actor, *textbox, *smartbomber;
+s_player player[MAX_PLAYERS];
+static s_level level_data, *level = &level_data;
+static s_anim clip = {.numframes = 1};
+static s_anim *clips[MAX_ANIS];
+static int in_the_air, special_result, nocost, healthcheat, can_pay, unlinks;
+static int events, animation, resets, jumps, idle_calls, colour_changes, checks;
+
+void common_walkoff(void) {}
+void common_grabbed(void) {}
+void common_prejump(void) {}
+void common_attack_proc(void) {}
+
+int check_energy(e_cost_check which, int id)
+{
+    assert(id == ANI_SPECIAL && (which == COST_CHECK_HP || which == COST_CHECK_MP));
+    return can_pay;
+}
+
+void ent_unlink(entity *ent)
+{
+    assert(ent == self);
+    ++unlinks;
+}
+
+int inair(entity *ent) { assert(ent == self); return in_the_air; }
+float get_platform_base(entity *ent) { assert(ent == &other); return ent->base; }
+float diff(float a, float b) { return fabsf(a - b); }
+int player_check_special(void) { ++checks; return special_result; }
+
+int common_idle_anim(entity *ent)
+{
+    assert(ent == self);
+    ++idle_calls;
+    return 1;
+}
+
+void ent_set_anim(entity *ent, int id, int reset)
+{
+    assert(ent == self);
+    ++events;
+    animation = id;
+    resets = reset;
+}
+
+void dojump(float y, float x, float z, int id)
+{
+    assert(y == 4 && x == -2 && z == 3 && id == ANI_JUMP);
+    ++jumps;
+}
+
+void ent_set_colourmap(entity *ent, unsigned int which)
+{
+    assert(ent == &other && which == 7 && ent->frozen && ent->freezetime == 90);
+    ++colour_changes;
+}
+
+@METHODS@
+
+static int depart(entity *cplat)
+{
+    entity *plat = &other;
+    @WALKOFF@
+    return plat == NULL;
+}
+
+static void prepare(void)
+{
+    memset(clips, 0, sizeof(clips));
+    actor = (entity){
+        .modeldata = {.animation = clips, .animation_capacity = MAX_ANIS, .type = TYPE_PLAYER},
+        .ducking = DUCK_ACTIVE, .rising = 1, .riseattacking = 1,
+        .inpain = 1, .inbackpain = 1, .idling = IDLING_ACTIVE,
+        .landed_on_platform = &other, .position = {.y = 10}, .velocity = {.x = 3, .z = 4}
+    };
+    other = (entity){.modeldata = {.type = TYPE_ENEMY}, .base = 10};
+    in_the_air = special_result = 0;
+    can_pay = unlinks = healthcheat = 0;
+    nocost = 1;
+    level_data.nospecial = 0;
+    player[0].keys = 0;
+    events = resets = jumps = idle_calls = colour_changes = checks = 0;
+    animation = -1;
+    _time = 20;
+    textbox = smartbomber = NULL;
+}
+
+static void check_frozen(void)
+{
+    prepare();
+    assert(!is_frozen(&other));
+    other.frozen = 1;
+    other.freezetime = 90;
+    assert(!is_frozen(&other));
+    actor.frozen = 1;
+    actor.freezetime = 21;
+    assert(is_frozen(&other));
+    actor.freezetime = 20;
+    assert(!is_frozen(&other));
+    textbox = &other;
+    assert(is_frozen(&other));
+    other.modeldata.type = TYPE_TEXTBOX;
+    assert(!is_frozen(&other));
+    textbox = NULL;
+    smartbomber = &actor;
+    assert(!is_frozen(&actor));
+    assert(!is_frozen(&other));
+    other.modeldata.type = TYPE_ENEMY;
+    assert(is_frozen(&other));
+    other.map = 7;
+    unfrozen(&other);
+    assert(colour_changes == 1 && !other.frozen && !other.freezetime && other.map == 7);
+}
+
+static void check(unsigned revision, int stateful)
+{
+    obor_profile_build = revision;
+    const int original_stance = stateful ? DUCK_INACTIVE : DUCK_ACTIVE;
+    for(int linked = 0; linked < 2; ++linked)
+    {
+        for(int block = 0; block < 2; ++block)
+        {
+            prepare();
+            actor.link = linked ? &other : NULL;
+            actor.blocking = block;
+            actor.animating = 1;
+            common_pain();
+            assert(actor.inpain && !events && !idle_calls && actor.ducking == DUCK_ACTIVE);
+            actor.animating = 0;
+            in_the_air = 1;
+            common_pain();
+            assert(actor.inpain && !idle_calls && actor.ducking == DUCK_ACTIVE);
+            in_the_air = 0;
+            common_pain();
+            assert(!actor.inpain && !actor.inbackpain && actor.ducking == original_stance);
+            assert(actor.rising == !stateful && actor.riseattacking == !stateful);
+            assert(actor.takeaction == (linked ? common_grabbed : block ? common_block : NULL));
+            assert(idle_calls == (!linked && !block) && events == (!linked && block));
+            if(events) assert(animation == ANI_BLOCK && resets == 1);
+        }
+    }
+    prepare();
+    player_pain_check();
+    assert(checks == 1 && actor.inpain && actor.ducking == DUCK_ACTIVE);
+    special_result = 1;
+    player_pain_check();
+    assert(checks == 2 && !actor.inpain && !actor.inbackpain && actor.ducking == original_stance);
+    assert(actor.rising == !stateful && actor.riseattacking == !stateful);
+
+    prepare();
+    actor.modeldata.holdblock = 2;
+    actor.blocking = 1;
+    actor.takeaction = common_block;
+    player[0].keys = FLAG_SPECIAL;
+    clips[ANI_BLOCK] = &clip;
+    common_block();
+    assert(!actor.inpain && !actor.inbackpain && actor.blocking && actor.takeaction == common_block);
+    assert(actor.rising == !stateful && actor.riseattacking == !stateful);
+    assert(events == 1 && animation == ANI_BLOCK && resets == 0 && !idle_calls);
+
+    for(int airborne = 0; airborne < 2; ++airborne)
+    {
+        prepare();
+        actor.takeaction = common_prejump;
+        clips[ANI_SPECIAL] = &clip;
+        assert(!check_costmove(ANI_SPECIAL, 0, airborne));
+        assert(actor.rising && actor.riseattacking && actor.inpain && !events && !unlinks);
+        can_pay = 1;
+        assert(check_costmove(ANI_SPECIAL, 0, airborne));
+        assert(actor.rising == !stateful && actor.riseattacking == !stateful);
+        assert(!actor.inpain && !actor.inbackpain && !actor.velocity.x && !actor.velocity.z);
+        assert(actor.attacking && actor.takeaction == (airborne ? common_prejump : common_attack_proc));
+        assert(events == 1 && animation == ANI_SPECIAL && resets == 0 && unlinks == 1);
+    }
+
+    for(int delay = 0; delay < 2; ++delay)
+    {
+        prepare();
+        if(delay) clips[ANI_JUMPDELAY] = &clip;
+        tryjump(4, -2, 3, ANI_JUMP);
+        assert(actor.ducking == original_stance && events == delay && jumps == !delay);
+        assert(actor.jump.animation_id == ANI_JUMP && actor.jump.velocity.y == 4 &&
+               actor.jump.velocity.x == -2 && actor.jump.velocity.z == 3);
+        if(delay)
+        {
+            assert(animation == ANI_JUMPDELAY && actor.takeaction == common_prejump);
+            assert(!actor.velocity.x && !actor.velocity.z && actor.idling == IDLING_INACTIVE);
+        }
+    }
+    prepare();
+    assert(!depart(&other) && actor.landed_on_platform == &other && !events && actor.ducking == DUCK_ACTIVE);
+    assert(depart(NULL) && !actor.landed_on_platform && actor.ducking == original_stance);
+    assert(animation == ANI_WALKOFF && actor.takeaction == common_walkoff && actor.idling == IDLING_INACTIVE);
+
+    prepare();
+    set_jumping(self);
+    assert(actor.jumping && actor.idling == IDLING_INACTIVE && actor.ducking == original_stance);
+    prepare();
+    set_charging(self);
+    assert(actor.charging && actor.idling == IDLING_INACTIVE && actor.ducking == original_stance);
+    prepare();
+    set_getting(self);
+    assert(actor.getting && actor.idling == IDLING_INACTIVE && actor.ducking == original_stance);
+    prepare();
+    set_turning(self);
+    assert(actor.turning && actor.idling == IDLING_INACTIVE && actor.ducking == original_stance);
+    check_frozen();
+    printf("PASS %u\n", revision);
+}
+
+int main(void)
+{
+    @CASES@
+    return 0;
+}

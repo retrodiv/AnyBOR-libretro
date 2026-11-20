@@ -1,0 +1,261 @@
+/* SPDX-License-Identifier: BSD-3-Clause
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me>
+ */
+#include <stdint.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <strings.h>
+#include "openbor.h"
+#undef printf
+#undef assert
+#include <assert.h>
+
+#ifndef stricmp
+#define stricmp strcasecmp
+#endif
+
+#if OBOR_ENGINE_BUILD == 4432
+#define SCALAR_JUMP_FRAME 1
+#define JUMP_FIELD(member) action.jumpframe.member
+#else
+#define SCALAR_JUMP_FRAME 0
+#define JUMP_FIELD(member) action.jumpframe->member
+#include "profile_ids.h"
+#endif
+
+uint32_t obor_profile_build, obor_profile_features;
+s_savedata savedata = {.effectvol = 19};
+static entity actor, effect, caller;
+entity *self = &caller;
+static s_anim action;
+static s_model model;
+static int sound_frames[] = {11, 12, 13};
+static char trace[8];
+static size_t events;
+static int expected_frame, expected_reason, effect_available;
+enum { DIVE, DIVE1, DIVE2, JUMPFRAME };
+
+void *checkAlloc(void *ptr, size_t size, const char *name, const char *file, int line)
+{
+    assert(!size || ptr);
+    return ptr;
+}
+
+static void observe(char event)
+{
+    assert(events + 1 < sizeof(trace));
+    trace[events++] = event;
+    trace[events] = '\0';
+}
+
+void toss(entity *ent, float lift)
+{
+    assert(ent == &actor && self == ent && ent->animpos == expected_frame);
+    assert(ent->velocity.x == 31 && ent->velocity.y == 32 && ent->velocity.z == 33);
+    assert(lift == JUMP_FIELD(velocity.y));
+    ent->velocity.y = lift;
+    observe('T');
+}
+
+int get_cached_model_index(char *name)
+{
+    assert(!strcmp(name, "dust") || !strcmp(name, "absent"));
+    return !strcmp(name, "dust") ? 17 : -1;
+}
+
+entity *spawn(float x, float z, float y, int direction, char *name, int index, s_model *override)
+{
+    assert(x == 7 && z == 8 && y == 9 && direction == (int)actor.direction && !name && !override);
+    assert(self == &actor && actor.velocity.y == JUMP_FIELD(velocity.y));
+    assert(actor.velocity.x == (direction == DIRECTION_RIGHT ? 1 : -1) * JUMP_FIELD(velocity.x));
+    assert(actor.velocity.z == JUMP_FIELD(velocity.z) && index == 17);
+    observe('S');
+    return effect_available ? &effect : NULL;
+}
+
+void execute_onspawn_script(entity *ent)
+{
+    assert(ent == &effect && self == &actor && ent->base == 9 && ent->autokill == 2);
+#if SCALAR_JUMP_FRAME
+    assert(ent->spawntype == expected_reason);
+#else
+    assert(ent->spawntype == SPAWN_TYPE_DUST_JUMP);
+    assert(obor_spawn_type_to_native(ent->spawntype) == expected_reason);
+#endif
+    observe('C');
+}
+
+int sound_play_sample(int index, unsigned int priority, int left, int right, unsigned int speed)
+{
+    assert(self == &actor && self->animpos == expected_frame && index == sound_frames[expected_frame]);
+    assert(!priority && left == 19 && right == 19 && speed == 100);
+    observe('F');
+    return 0;
+}
+
+@METHODS@
+
+@FRAME_SIGNATURE@
+{
+    s_anim *anim = ent ? ent->animation : NULL;
+    @FRAME_GUARD@
+    entity *previous = self;
+    self = ent;
+    @FRAME_WRITE@
+    @FRAME_SOUND@
+#if SCALAR_JUMP_FRAME
+    entity *dust;
+#endif
+    @FRAME_JUMP@
+    self = previous;
+}
+
+static void release_record(void)
+{
+    s_anim *anim = &action;
+    @RELEASE@
+#if !SCALAR_JUMP_FRAME
+    assert(!action.jumpframe);
+#endif
+}
+
+static void reset_record(void)
+{
+    release_record();
+    action = (s_anim){.numframes = 3, .soundtoplay = sound_frames};
+    s_anim *newanim = &action;
+    @DEFAULTS@
+#if SCALAR_JUMP_FRAME
+    assert(JUMP_FIELD(frame) == -1 && !JUMP_FIELD(velocity.y));
+#else
+    assert(!action.jumpframe);
+#endif
+}
+
+static void directive(int which, int type, const char *frame, const char *y,
+                      const char *x, const char *z, const char *effect_name)
+{
+    s_anim *newanim = &action;
+    s_model *newchar = &model;
+    newchar->type = type;
+    newchar->jumpheight = 7.5f;
+    char filename[] = "fixture", command[] = "jumpframe";
+    ArgList arglist = {.count = 6, .args = {command, (char *)frame, (char *)y,
+                        (char *)x, (char *)z, (char *)effect_name}};
+    char *value;
+    switch(which)
+    {
+        @DIRECTIVES@
+        default: abort();
+    }
+}
+
+static void check_record(int frame, float x, float y, float z, int ent, int anti)
+{
+    assert(JUMP_FIELD(frame) == (__typeof__(JUMP_FIELD(frame)))frame);
+    assert(JUMP_FIELD(velocity.x) == x && JUMP_FIELD(velocity.y) == y && JUMP_FIELD(velocity.z) == z);
+    assert(JUMP_FIELD(ent) == ent && action.antigrav == anti);
+}
+
+static void check_directives(void)
+{
+    reset_record();
+    directive(DIVE, TYPE_PLAYER, "1.5", "2.25", "", "", "");
+    check_record(0, 1.5f, -2.25f, 0, -1, 1);
+    reset_record();
+    directive(DIVE1, TYPE_PLAYER, "3", "", "", "", "");
+    check_record(0, 3, 0, 0, -1, 1);
+    reset_record();
+    directive(DIVE2, TYPE_PLAYER, "4", "", "", "", "");
+    check_record(0, 0, -4, 0, -1, 1);
+
+    const int types[] = {TYPE_PLAYER, TYPE_ENEMY, TYPE_NPC, TYPE_OBSTACLE};
+    for(unsigned i = 0; i < sizeof(types) / sizeof(*types); ++i)
+    {
+        reset_record();
+        directive(JUMPFRAME, types[i], "1", "", "", "", "");
+        check_record(1, i ? 0 : 2, i ? 7.5f : 3.75f, 0, -1, 0);
+        reset_record();
+        directive(JUMPFRAME, types[i], "ThIs", "4.5", "", "", "absent");
+        check_record(3, i == 1 || i == 2 ? 1.3f : 0, 4.5f, 0, -1, 0);
+    }
+    reset_record();
+    directive(JUMPFRAME, TYPE_PLAYER, "2", "-2.5", "1.25", "3.5", "dust");
+    check_record(2, 1.25f, -2.5f, 3.5f, 17, 0);
+#if !SCALAR_JUMP_FRAME
+    s_onframe_move *record = action.jumpframe;
+#endif
+    directive(DIVE1, TYPE_PLAYER, "3", "", "", "", "");
+    check_record(0, 3, SCALAR_JUMP_FRAME ? -2.5f : 0, SCALAR_JUMP_FRAME ? 3.5f : 0, -1, 1);
+    directive(DIVE2, TYPE_PLAYER, "4", "", "", "", "");
+    check_record(0, SCALAR_JUMP_FRAME ? 3 : 0, -4, SCALAR_JUMP_FRAME ? 3.5f : 0, -1, 1);
+    directive(DIVE, TYPE_PLAYER, "1.5", "2.25", "", "", "");
+    check_record(0, 1.5f, -2.25f, SCALAR_JUMP_FRAME ? 3.5f : 0, -1, 1);
+    directive(JUMPFRAME, TYPE_PLAYER, "-1", "2", "0", "", "");
+    check_record(-1, 0, 2, 0, -1, 1);
+#if !SCALAR_JUMP_FRAME
+    assert(action.jumpframe == record);
+#endif
+}
+
+static void check_update(int frame, int direction, int reason, const char *wanted)
+{
+    actor = (entity){.animation = &action, .animpos = 2, .direction = direction,
+                    .position = {.x = 7, .y = 9, .z = 8}, .velocity = {.x = 31, .y = 32, .z = 33}};
+    effect = (entity){0};
+    expected_frame = frame;
+    expected_reason = reason;
+    events = 0;
+    trace[0] = '\0';
+    update_frame(&actor, frame);
+    assert(self == &caller && !strcmp(trace, wanted));
+    if(strchr(wanted, 'T'))
+    {
+        assert(actor.velocity.x == (direction == DIRECTION_RIGHT ? 1 : -1) * JUMP_FIELD(velocity.x));
+        assert(actor.velocity.y == JUMP_FIELD(velocity.y) && actor.velocity.z == JUMP_FIELD(velocity.z));
+    }
+    else
+    {
+        assert(actor.velocity.x == 31 && actor.velocity.y == 32 && actor.velocity.z == 33);
+    }
+}
+
+static void check_frame_consumer(int reason)
+{
+    reset_record();
+    check_update(1, DIRECTION_RIGHT, reason, "F");
+    check_update(-1, DIRECTION_RIGHT, reason, "");
+    check_update(3, DIRECTION_RIGHT, reason, "");
+    directive(JUMPFRAME, TYPE_PLAYER, "1", "4.5", "1.75", "6.25", "dust");
+    for(effect_available = 0; effect_available <= 1; ++effect_available)
+    {
+        check_update(0, DIRECTION_RIGHT, reason, "F");
+        check_update(1, DIRECTION_RIGHT, reason, effect_available ? "FTSC" : "FTS");
+        check_update(1, DIRECTION_LEFT, reason, effect_available ? "FTSC" : "FTS");
+        check_update(2, DIRECTION_LEFT, reason, "F");
+    }
+    directive(JUMPFRAME, TYPE_PLAYER, "1", "4.5", "1.75", "6.25", "");
+    check_update(1, DIRECTION_RIGHT, reason, "FT");
+    directive(DIVE1, TYPE_PLAYER, "3", "", "", "", "");
+    check_update(0, DIRECTION_LEFT, reason, "FT");
+    directive(DIVE2, TYPE_PLAYER, "4", "", "", "", "");
+    check_update(0, DIRECTION_RIGHT, reason, "FT");
+    directive(DIVE, TYPE_PLAYER, "1.5", "2.25", "", "", "");
+    check_update(0, DIRECTION_LEFT, reason, "FT");
+    check_update(1, DIRECTION_RIGHT, reason, "F");
+    release_record();
+}
+
+int main(void)
+{
+    const struct {uint32_t revision; int reason;} rows[] = {@ROWS@};
+    for(unsigned i = 0; i < sizeof(rows) / sizeof(*rows); ++i)
+    {
+        obor_profile_build = rows[i].revision;
+        check_directives();
+        check_frame_consumer(rows[i].reason);
+        printf("%u\n", obor_profile_build);
+    }
+    return 0;
+}

@@ -137,7 +137,7 @@ class ModernLegacyDrawingContracts(unittest.TestCase):
         revisions = {row['revision'] for row in rows}
         self.assertEqual(len(revisions), len(rows))
         self.assertEqual(revisions, contract_revisions(data, data['expected_revisions']))
-        engine = ROOT / 'src/engines' / data['engine']
+        engine = Path(os.environ.get('OBOR_HISTORICAL_ENGINE', ROOT / 'src/engines' / data['engine']))
         video = function((engine / 'openbor.c').read_text(), 'init_videomodes')
         defaults = re.search(r'(?ms)^    if\(.*?screenformat = PIXEL_32;.*?^    \}', video)[0]
         colour = re.search(r'(?ms)^                if\(([^\n]+)\)\n[^\n]+\n[^\n]+Colordepth is depreciated',
@@ -148,7 +148,7 @@ class ModernLegacyDrawingContracts(unittest.TestCase):
                                                 json.dumps(row['completion'])) for row in rows))
         template = Path(__file__).with_name('video_initialization_report_contract.c.in').read_text()
         probe = re.sub(r'@([A-Z_]+)@', lambda match: values[match[1]], template)
-        output = native_output(probe, data, extra_cflags=('-fgnu89-inline',))
+        output = native_output(probe, data, engine_source=engine, extra_cflags=('-fgnu89-inline',))
         self.assertEqual([json.loads(line) for line in output.splitlines()],
                          [dict(revision=row['revision'], status='PASS') for row in rows])
 

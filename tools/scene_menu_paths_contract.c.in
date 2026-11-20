@@ -1,0 +1,219 @@
+/* SPDX-License-Identifier: BSD-3-Clause
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me>
+ */
+#include <assert.h>
+#include <stdbool.h>
+#include <stdint.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <strings.h>
+#include "anybor_abi.h"
+
+#define stricmp strcasecmp
+#define WEBM 1
+#define GET_ARG(index) (arglist.count > (index) ? arglist.args[index] : "")
+#define GET_INT_ARG(index) atoi(GET_ARG(index))
+enum { FLAG_ESC = 1 };
+@LIMITS@
+@ARGUMENTS@
+
+static uint32_t obor_profile_build, obor_profile_features, bothnewkeys;
+static char *currentScene;
+static struct { unsigned disablekeys, newkeys, playkeys; } player[MAX_PLAYERS];
+static char script[MAX_BUFFER_LEN + 48];
+static char requested[MAX_BUFFER_LEN];
+static unsigned scene_opens, pak_lookups, animations, videos, silence, diagnostics;
+static unsigned backgrounds, cached_backgrounds;
+static int fade_mode, scene_exists;
+static const char packfile[] = "fixture.pak";
+
+static void remember(const char *path)
+{
+    assert(strlen(path) < sizeof(requested));
+    strcpy(requested, path);
+}
+
+static int buffer_pakfile(const char *name, char **data, size_t *size)
+{
+    ++scene_opens;
+    remember(name);
+    if(strcmp(name, "fixture.txt")) return 0;
+    *data = strdup(script);
+    assert(*data);
+    *size = strlen(script);
+    return 1;
+}
+
+static int testpackfile(const char *name, const char *package)
+{
+    assert(package == packfile);
+    ++pak_lookups;
+    remember(name);
+    return scene_exists ? 1 : -1;
+}
+
+static int playgif(char *name, int x, int y, int noskip)
+{
+    assert(x == 2 && y == 3 && noskip == 1);
+    ++animations;
+    remember(name);
+    return 1;
+}
+
+static int playwebm(char *name, int noskip)
+{
+    assert(noskip == 1);
+    ++videos;
+    remember(name);
+    return 1;
+}
+
+static void music(const char *name, int repeat, long offset) { abort(); }
+static void sound_close_music(void) { ++silence; }
+
+static void load_background(const char *name, int fade)
+{
+    ++backgrounds;
+    fade_mode = fade;
+    remember(name);
+}
+
+static void load_cached_background(const char *name, int fade)
+{
+    ++cached_backgrounds;
+    fade_mode = fade;
+    remember(name);
+}
+
+static void borShutdown(int status, const char *message, ...)
+{
+    assert(status == 1 && *message);
+    ++diagnostics;
+}
+
+@PARSER@
+@PATHS@
+@SCENE@
+
+static int gameover_scene(const char *custScenes)
+{
+    int done = 0;
+    char tmpBuff[MAX_BUFFER_LEN] = "";
+    @GAMEOVER@
+    return done;
+}
+
+static void hallfame_background(const char *custBkgrds)
+{
+    char tmpBuff[MAX_BUFFER_LEN] = "";
+    const int hiscorebg = 1;
+    @HALLFAME@
+}
+
+static void completion_background(const char *custBkgrds)
+{
+    char tmpBuff[MAX_BUFFER_LEN] = "";
+    const int completebg = 1;
+    @COMPLETE@
+}
+
+static int unlocked_background(const char *custBkgrds)
+{
+    char string[MAX_BUFFER_LEN] = "";
+    const int unlockbg = 1, bonus = 1;
+    @UNLOCK@
+    return 1;
+}
+
+static void check_media(size_t capacity)
+{
+    char path[MAX_BUFFER_LEN], name[MAX_BUFFER_LEN + 1];
+    memset(name, 'm', capacity);
+    name[capacity] = '\0';
+    assert(!scene_media_path(path, name));
+    name[capacity - 1] = '\0';
+    assert(scene_media_path(path, name) && strcmp(path, name) == 0);
+
+    const size_t lengths[] = {30, 255, 256, 480};
+    for(size_t i = 0; i < sizeof(lengths) / sizeof(*lengths); ++i)
+    {
+        for(int video = 0; video < 2; ++video)
+        {
+            const char *extension = video ? ".webm" : ".gif";
+            memset(name, 'm', lengths[i] - strlen(extension));
+            strcpy(name + lengths[i] - strlen(extension), extension);
+            const int used = snprintf(script, sizeof(script), video ? "video %s 1 1\nsilence\n"
+                                                 : "animation %s 2 3 1 1\nsilence\n", name);
+            assert(used > 0 && (size_t)used < sizeof(script));
+            animations = videos = silence = 0;
+            playscene("fixture.txt");
+            const unsigned played = lengths[i] < capacity;
+            assert(animations == (video ? 0 : played) && videos == (video ? played : 0));
+            assert(silence == 1 && currentScene == NULL);
+            if(played) assert(strcmp(requested, name) == 0);
+        }
+    }
+}
+
+static void check_resources(const size_t capacities[4])
+{
+    const char *names[] = {"gameover.txt", "hiscore", "complete", "unlockbg"};
+    const char *defaults[] = {"data/scenes/gameover.txt", "data/bgs/hiscore",
+                             "data/bgs/complete", "data/bgs/unlockbg"};
+    char prefix[MAX_BUFFER_LEN + 1];
+    for(size_t i = 0; i < sizeof(names) / sizeof(*names); ++i)
+    {
+        const size_t prefix_bytes = capacities[i] - strlen(names[i]) - 1;
+        memset(prefix, 'p', prefix_bytes + 1);
+        prefix[prefix_bytes - 1] = '/';
+        prefix[prefix_bytes] = '\0';
+        for(int attempt = 0; attempt < 3; ++attempt)
+        {
+            const char *folder = attempt == 0 ? NULL : prefix;
+            if(attempt == 2)
+            {
+                prefix[prefix_bytes - 1] = 'p';
+                prefix[prefix_bytes] = '/';
+                prefix[prefix_bytes + 1] = '\0';
+            }
+            scene_exists = 1;
+            scene_opens = pak_lookups = backgrounds = cached_backgrounds = diagnostics = 0;
+            if(i == 0) assert(gameover_scene(folder) == (attempt < 2));
+            else if(i == 1) hallfame_background(folder);
+            else if(i == 2) completion_background(folder);
+            else assert(unlocked_background(folder) == (attempt < 2));
+
+            assert(scene_opens == (unsigned)(i == 0 && attempt < 2));
+            assert(pak_lookups == scene_opens);
+            assert(cached_backgrounds == (unsigned)(i != 0 && attempt == 0));
+            assert(backgrounds == (unsigned)(i != 0 && attempt == 1));
+            assert(diagnostics == (unsigned)(i != 0 && attempt == 2));
+            if(i != 0 && attempt < 2) assert(fade_mode == (i == 3));
+            if(attempt == 0) assert(strcmp(requested, defaults[i]) == 0);
+            if(attempt == 1)
+            {
+                assert(strlen(requested) == capacities[i] - 1);
+                assert(memcmp(requested, prefix, prefix_bytes) == 0);
+                assert(strcmp(requested + prefix_bytes, names[i]) == 0);
+            }
+        }
+    }
+    scene_exists = 0;
+    assert(!gameover_scene("custom/") && !scene_opens && pak_lookups == 1);
+    assert(strcmp(requested, "custom/gameover.txt") == 0);
+}
+
+int main(void)
+{
+    static const struct { uint32_t revision; size_t media_capacity, resource_capacities[4]; }
+        profiles[] = { @PROFILES@ };
+    for(size_t i = 0; i < sizeof(profiles) / sizeof(*profiles); ++i)
+    {
+        obor_profile_build = profiles[i].revision;
+        check_media(profiles[i].media_capacity);
+        check_resources(profiles[i].resource_capacities);
+        printf("PASS %u\n", obor_profile_build);
+    }
+    return 0;
+}

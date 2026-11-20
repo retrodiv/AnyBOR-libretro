@@ -1,0 +1,230 @@
+/* SPDX-License-Identifier: BSD-3-Clause
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me>
+ */
+#include <stdint.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include "openbor.h"
+#undef printf
+#undef assert
+#include <assert.h>
+
+#if OBOR_ENGINE_BUILD == 4432
+#define LAND_FORCE damage_on_landing
+#define LAND_TYPE damage_on_landing_type
+#else
+#define LAND_FORCE damage_on_landing.attack_force
+#define LAND_TYPE damage_on_landing.attack_type
+#endif
+
+uint32_t obor_profile_build;
+static entity actor, target;
+entity *self = &actor;
+int autoland;
+static s_anim animation = {.numframes = 1};
+static s_anim *actor_animations[MAX_ANIS], *target_animations[MAX_ANIS];
+static int changes, selected, idles, throws, throw_stage, active_state;
+static int expected_force;
+static float expected_lift;
+
+void common_grabattack(void) { abort(); }
+void common_fall(void) { abort(); }
+void common_throw(void) { abort(); }
+void dothrow(void);
+void common_prethrow(void);
+void common_throw_wait(void);
+
+void ent_set_anim(entity *ent, int id, int reset)
+{
+    assert(ent == &actor && !reset);
+    ++changes;
+    selected = id;
+    if(throw_stage)
+    {
+        assert(throw_stage == 3 && id == ANI_THROW);
+        ++throw_stage;
+    }
+}
+
+int set_idle(entity *ent)
+{
+    assert((ent == &actor || ent == &target) && !ent->takeaction);
+    ++idles;
+    return 1;
+}
+
+void toss(entity *ent, float lift)
+{
+    assert(ent == &target && lift == expected_lift && !throw_stage);
+    assert(!actor.velocity.x && !actor.velocity.z && actor.link == &target);
+    ++throw_stage;
+}
+
+void ent_unlink(entity *ent)
+{
+    assert(ent == &target && actor.link == ent && ent->link == &actor);
+    assert(ent->direction == actor.direction && ent->projectile == 2);
+    assert(ent->velocity.x == (actor.direction == DIRECTION_RIGHT ? -4.5f : 4.5f));
+    assert(ent->LAND_FORCE == expected_force && ent->LAND_TYPE == ATK_BURN);
+    assert(throw_stage == 1);
+    actor.link = ent->link = NULL;
+    ++throw_stage;
+}
+
+@DEFAULTS@
+
+#if OBOR_ENGINE_BUILD == 4432
+int set_fall(entity *ent, int type, int reset, entity *other, int force, int drop,
+             int noblock, int guardcost, int jugglecost, int pauseadd, int tag)
+{
+    assert(type == ATK_NORMAL && !force && !drop && !noblock && !guardcost && !jugglecost && !pauseadd && !tag);
+#else
+int set_fall(entity *ent, entity *other, s_collision_attack *attack, int reset)
+{
+    assert(attack != &emptyattack);
+    assert(attack->attack_type == ATK_NORMAL && !attack->attack_force && !attack->attack_drop);
+    assert(!attack->no_block && !attack->guardcost && !attack->jugglecost && !attack->pause_add && !attack->tag);
+    assert(attack->blocksound == -1 && !attack->coords);
+#endif
+    assert(ent == &target && other == &actor && !reset);
+    assert(!other->link && !ent->link && other->takeaction == common_throw && ent->takeaction == common_fall);
+    assert(ent->LAND_FORCE == expected_force && ent->LAND_TYPE == ATK_BURN);
+    assert(throw_stage == 2);
+    ++throw_stage;
+    ++throws;
+    return 1;
+}
+
+@METHODS@
+
+static void reset_pair(void)
+{
+    actor = (entity){0};
+    target = (entity){0};
+    actor.link = &target;
+    target.link = &actor;
+    actor.modeldata.animation = actor_animations;
+    target.modeldata.animation = target_animations;
+    actor.modeldata.animation_capacity = target.modeldata.animation_capacity = MAX_ANIS;
+    memset(actor_animations, 0, sizeof(actor_animations));
+    memset(target_animations, 0, sizeof(target_animations));
+    actor.velocity.x = 1;
+    actor.velocity.y = 2;
+    actor.velocity.z = 3;
+    target.velocity.x = 4;
+    target.velocity.y = 5;
+    target.velocity.z = 6;
+    self = &actor;
+    changes = idles = throws = throw_stage = 0;
+    selected = -1;
+}
+
+static void check_grab(void)
+{
+    for(int which = -1; which <= 5; ++which)
+    {
+        for(int scenario = 0; scenario < 5; ++scenario)
+        {
+            reset_pair();
+            const int in_combo = which >= 0 && which < 5;
+            const int slot = in_combo ? which : 0;
+            const int starter = grab_attacks[slot][0], finisher = grab_attacks[slot][1];
+            const int opens = scenario == 0 && in_combo;
+            for(int i = 0; i < 5; ++i) actor.combostep[i] = i + 7;
+            actor.combostep[slot] = scenario == 1 ? 2 : 1;
+            if(scenario <= 1) actor_animations[starter] = &animation;
+            if(scenario <= 2) actor_animations[finisher] = &animation;
+            if(scenario <= 3) actor_animations[ANI_ATTACK3] = &animation;
+            const int expected = opens ? starter : scenario <= 2 ? finisher : scenario == 3 ? ANI_ATTACK3 : -1;
+            dograbattack(which);
+            assert(actor.takeaction == common_grabattack && (int)actor.attacking == active_state);
+            assert(actor.link == &target && target.link == &actor);
+            assert(!actor.velocity.x && !actor.velocity.z && !target.velocity.x && !target.velocity.z);
+            assert(actor.velocity.y == 2 && target.velocity.y == 5);
+            assert(selected == expected && changes == (expected >= 0) && !idles && !throws);
+            for(int i = 0; i < 5; ++i)
+            {
+                const unsigned expected_step = opens ? (i == slot ? 2 : i + 7) : 0;
+                assert(actor.combostep[i] == expected_step);
+            }
+        }
+    }
+
+#if OBOR_ENGINE_BUILD != 4432
+    for(int available = 0; available < 3; ++available)
+    {
+        reset_pair();
+        actor.combostep[2] = 2;
+        const int expected = available == 2 ? ANI_GRABUP2 : available == 1 ? ANI_ATTACK3 : ANI_NONE;
+        if(available) actor_animations[expected] = &animation;
+        assert((int)do_grab_attack_finish(&actor, 2) == expected);
+        assert(changes == !!available && (!available || selected == expected) && !actor.combostep[2]);
+    }
+#endif
+}
+
+static void check_throw(void)
+{
+    reset_pair();
+    actor.link = NULL;
+    actor.takeaction = common_throw_wait;
+    dothrow();
+    assert(idles == 1 && !throws && !changes && !actor.velocity.x && !actor.velocity.z && actor.velocity.y == 2);
+
+    for(int from_wait = 0; from_wait <= 1; ++from_wait)
+    {
+        for(int mode = 0; mode < 6; ++mode)
+        {
+            reset_pair();
+            actor.direction = mode % 2 ? DIRECTION_RIGHT : DIRECTION_LEFT;
+            actor.modeldata.throwdamage = 17;
+            target.modeldata.throwdist = 4.5f;
+            target.modeldata.jumpheight = 6;
+            target.modeldata.throwheight = mode % 2 ? 9 : 0;
+            autoland = mode / 2;
+            if(mode % 2) target_animations[ANI_LAND] = &animation;
+            expected_force = mode == 3 ? -1 : 17;
+            expected_lift = mode % 2 ? 9 : 6;
+            target.LAND_TYPE = ATK_BURN;
+            if(from_wait)
+            {
+                doprethrow();
+                assert(actor.takeaction == common_throw_wait && target.takeaction == common_prethrow);
+                assert(changes == 1 && selected == ANI_THROW && actor.link == &target && !throw_stage);
+                assert(!actor.velocity.x && !actor.velocity.y && !actor.velocity.z);
+                assert(!target.velocity.x && !target.velocity.y && !target.velocity.z);
+                target.running = 1;
+                self = &target;
+                common_prethrow();
+                assert(!target.running && target.takeaction == common_prethrow && !idles);
+                self = &actor;
+                actor.modeldata.throwframewait = 1;
+                common_throw_wait();
+                assert(actor.releasetime == THINK_SPEED && !throw_stage);
+                actor.animpos = 1;
+                common_throw_wait();
+                assert(actor.releasetime == 2 * THINK_SPEED);
+            }
+            else
+            {
+                dothrow();
+            }
+            assert(throw_stage == 4 && !idles && changes == 1 + from_wait && selected == ANI_THROW && throws == 1);
+        }
+    }
+}
+
+int main(void)
+{
+    const struct {uint32_t revision; int active;} rows[] = {@PROFILES@};
+    for(unsigned i = 0; i < sizeof(rows) / sizeof(*rows); ++i)
+    {
+        obor_profile_build = rows[i].revision;
+        active_state = rows[i].active;
+        check_grab();
+        check_throw();
+        printf("%u\n", obor_profile_build);
+    }
+    return 0;
+}

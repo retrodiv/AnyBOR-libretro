@@ -73,7 +73,11 @@
  * recognition, comment handling and generated script composition. Preserve
  * source-defined menu layouts, selection order, legacy options and menu
  * context flags by profile. Select native projectile terrain checks, star
- * launch velocities and sprite ordering by profile.
+ * launch velocities and sprite ordering by profile. Preserve the original
+ * horizontal backpain velocity precision before and from 4905. Draw credit
+ * rows in their source-defined order and positions for each historical
+ * layout. Keep the original body hitbox ownership and retain coordinate
+ * aliases across animation unload.
  * Existing changes recorded here; this is not their implementation date.
  * See MODIFICATIONS.md and docs/modifications/4432.md
  * at the source repository root. Original notices follow below.
@@ -3344,7 +3348,7 @@ static void obor_unpack_settings_4432(const unsigned char *data)
 
 static void obor_write_settings(FILE *handle)
 {
-    if(obor_profile_build >= 4453 && obor_profile_build <= 4750)
+    if(obor_profile_build >= 4453 && obor_profile_build <= 4905)
     {
         fwrite(&savedata, 1, sizeof(savedata), handle);
     }
@@ -3358,7 +3362,7 @@ static void obor_write_settings(FILE *handle)
 
 static size_t obor_read_settings(FILE *handle)
 {
-    if(obor_profile_build >= 4453 && obor_profile_build <= 4750)
+    if(obor_profile_build >= 4453 && obor_profile_build <= 4905)
     {
         return fread(&savedata, 1, sizeof(savedata), handle);
     }
@@ -4219,7 +4223,7 @@ int getValidInt(char *text, char *file, char *cmd)
     else
     {
         printf(WARN_NUMBER_EXPECTED, file,
-               obor_profile_build >= 4574 && obor_profile_build <= 4750 ? "-" : "", cmd, text);
+               obor_profile_build >= 4574 && obor_profile_build <= 4905 ? "-" : "", cmd, text);
         return 0;
     }
 
@@ -4243,7 +4247,7 @@ float getValidFloat(char *text, char *file, char *cmd)
     else
     {
         printf(WARN_NUMBER_EXPECTED, file,
-               obor_profile_build >= 4574 && obor_profile_build <= 4750 ? "-" : "", cmd, text);
+               obor_profile_build >= 4574 && obor_profile_build <= 4905 ? "-" : "", cmd, text);
         return 0.0f;
     }
 }
@@ -6058,14 +6062,24 @@ void free_frames(s_anim *anim)
                         // First free any pointers allocated
                         // for sub structures.
 
-                        // Coords.
-                        if(anim->collision_body[i]->instance[instance]->coords)
+                        s_collision_body *body = anim->collision_body[i]->instance[instance];
+                        if(body->obor_owned_coords)
                         {
-                            free(anim->collision_body[i]->instance[instance]->coords);
-                            anim->collision_body[i]->instance[instance]->coords = NULL;
+                            s_hitbox *coordinates[] = {
+                                body->obor_owned_coords,
+                                body->coords == body->obor_owned_coords ? NULL : body->coords
+                            };
+                            for(size_t slot = 0; slot < sizeof(coordinates) / sizeof(*coordinates); ++slot)
+                            {
+                                s_body_hitbox *storage = (s_body_hitbox *)coordinates[slot];
+                                if(storage && --storage->references == 0) free(storage);
+                            }
                         }
-
-                        free(anim->collision_body[i]->instance[instance]);
+                        else if(body->coords)
+                        {
+                            free(body->coords);
+                        }
+                        free(body);
                         anim->collision_body[i]->instance[instance] = NULL;
                     }
                 }
@@ -6617,6 +6631,7 @@ s_collision_body *collision_alloc_body_instance(s_collision_body *properties)
     }
 
     // return result.
+    if(result) result->obor_owned_coords = NULL;
     return result;
 }
 
@@ -6776,7 +6791,16 @@ int addframe(s_anim             *a,
             // Now let's allocate sub-properties.
 
             // Coordinates.
-            if(!collision_body->coords)
+            if(obor_profile_build >= 4905)
+            {
+                s_body_hitbox *storage = malloc(sizeof(*storage));
+                if(!storage) shutdown(1, "Not enough memory for body collision coordinates.");
+                storage->box = collision_body->coords ? *collision_body->coords : *body_coords;
+                storage->references = 1;
+                collision_body->coords = &storage->box;
+                collision_body->obor_owned_coords = &storage->box;
+            }
+            else if(!collision_body->coords)
             {
                 collision_body->coords = collision_alloc_coords(body_coords);
             }
@@ -9291,7 +9315,7 @@ static unsigned char *obor_load_model_palette(char *filename, int alternate, cha
     }
 
     free(palette);
-    if(obor_profile_build >= 4574 && obor_profile_build <= 4750)
+    if(obor_profile_build >= 4574 && obor_profile_build <= 4905)
     {
         if(alternate ? obor_profile_build < 4665 : obor_profile_build == 4574)
         {
@@ -10612,7 +10636,7 @@ s_model *load_cached_model(char *name, char *owner, char unload)
                     if(obor_profile_build == 4574) printf("\t\t\tPalette - \t");
                     value = GET_ARG(1);
                     if((obor_profile_build < 4465 ||
-                        (obor_profile_build >= 4574 && obor_profile_build <= 4750)) && !stricmp(value, "none"))
+                        (obor_profile_build >= 4574 && obor_profile_build <= 4905)) && !stricmp(value, "none"))
                     {
                         nopalette = 1;
                         if(obor_profile_build == 4574)
@@ -11736,7 +11760,7 @@ s_model *load_cached_model(char *name, char *owner, char unload)
                 pattack = (!newanim && newchar->smartbomb) ? newchar->smartbomb : &attack;
                 pattack->damage_on_landing = GET_INT_ARG(1);
                 pattack->blast = GET_INT_ARG(2);
-                if(obor_profile_build >= 4642 && obor_profile_build <= 4750)
+                if(obor_profile_build >= 4642 && obor_profile_build <= 4905)
                 {
                     pattack->damage_on_landing_type = obor_landing_damage_type(GET_ARG(3));
                 }
@@ -11887,7 +11911,7 @@ s_model *load_cached_model(char *name, char *owner, char unload)
                             newchar->palette = malloc(PAL_BYTES);
                             if(loadimagepalette(value, packfile, newchar->palette) == 0)
                             {
-                                if(obor_profile_build < 4574 || obor_profile_build > 4750)
+                                if(obor_profile_build < 4574 || obor_profile_build > 4905)
                                     shutdownmessage = "Failed to load palette!";
                                 goto lCleanup;
                             }
@@ -13463,7 +13487,7 @@ void load_levelorder()
 #define CHKDEF if(!set) { errormessage = (char*) defaulterr; goto lCleanup; }
     char filename[128] = "";
     int i = 0, j = 0;
-    const int line_diagnostics = obor_profile_build >= 4682 && obor_profile_build <= 4750;
+    const int line_diagnostics = obor_profile_build >= 4682 && obor_profile_build <= 4905;
     int warned_unknown = 0;
     char *buf;
     size_t size;
@@ -15808,7 +15832,7 @@ void load_level(char *filename)
                 if(level->spawn[i].y < 0)
                 {
                     if(obor_profile_build < 4495) level->spawn[i].y = 300;
-                    else if(obor_profile_build >= 4580 && obor_profile_build <= 4750)
+                    else if(obor_profile_build >= 4580 && obor_profile_build <= 4905)
                         level->spawn[i].y = videomodes.vRes + 60;
                 }
             }
@@ -18194,7 +18218,7 @@ void ent_default_init(entity *e)
         {
             const int player_index = e->playerindex;
             if(time && player_index >= 0 && player_index < MAX_PLAYERS &&
-               ((obor_profile_build < 4583 || obor_profile_build > 4750) ||
+               ((obor_profile_build < 4583 || obor_profile_build > 4905) ||
                 (player_index < level->player_spawn_count && player_index < obor_level_spawn_count())) &&
                obor_level_player_spawn(level, player_index)->y > e->position.y)
             {
@@ -21284,7 +21308,7 @@ void check_gravity(entity *e)
                 }
 
                 // takedamage if thrown or basted
-                if(obor_profile_build >= 4665 && obor_profile_build <= 4750)
+                if(obor_profile_build >= 4665 && obor_profile_build <= 4905)
                 {
                     obor_check_deferred_landing();
                 }
@@ -21985,7 +22009,7 @@ void update_health()
 
 void common_dot()
 {
-    const int recursive = obor_profile_build >= 4596 && obor_profile_build <= 4750;
+    const int recursive = obor_profile_build >= 4596 && obor_profile_build <= 4905;
     entity *target = self;
     //common_dot
     //Damon V. Caskey
@@ -23279,8 +23303,10 @@ int reset_backpain(entity *ent)
         if (ent->normaldamageflipdir == DIRECTION_RIGHT) ent->direction = DIRECTION_RIGHT;
         else ent->direction = DIRECTION_LEFT;
 
-        if(ent->direction == DIRECTION_RIGHT) ent->velocity.x = -1*fabsf(ent->velocity.x);
-        else ent->velocity.x = fabsf(ent->velocity.x);
+        const float speed = fabsf(ent->velocity.x);
+        const float velocity = ent->direction == DIRECTION_RIGHT ? -speed : speed;
+        /* Earlier builds computed the result with integer arithmetic. */
+        ent->velocity.x = obor_profile_build < 4905 ? truncf(velocity) + 0.0f : velocity;
 
         return 1;
     }
@@ -25082,7 +25108,7 @@ int arrow_takedamage(entity *other, s_collision_attack *attack)
 
 int common_takedamage(entity *other, s_collision_attack *attack)
 {
-    const int deferred_landing = obor_profile_build >= 4665 && obor_profile_build <= 4750;
+    const int deferred_landing = obor_profile_build >= 4665 && obor_profile_build <= 4905;
     const int confirmed_landing = deferred_landing && obor_profile_build >= 4682;
     if(self->dead)
     {
@@ -25245,7 +25271,7 @@ int common_takedamage(entity *other, s_collision_attack *attack)
         }
         else
         {
-            if(obor_profile_build >= 4642 && obor_profile_build <= 4750 && attack->obor_landing_hit)
+            if(obor_profile_build >= 4642 && obor_profile_build <= 4905 && attack->obor_landing_hit)
             {
                 return 1;
             }
@@ -29144,7 +29170,7 @@ void player_die()
                                             player[2].credits < 1 && player[3].credits < 1;
             int nobody_joining = !player[0].joining && !player[1].joining;
             int no_credits = noshare ? no_personal_credits : credits < 1;
-            if(obor_profile_build >= 4682 && obor_profile_build <= 4750)
+            if(obor_profile_build >= 4682 && obor_profile_build <= 4905)
             {
                 nobody_joining = nobody_joining && !player[2].joining && !player[3].joining;
                 no_credits = (!noshare && credits < 1) || no_personal_credits;
@@ -34215,43 +34241,89 @@ void display_credits()
     {
         m = 2;
 
+        const int revised = obor_profile_build >= 4905;
         font_printf(_strmidx(2, "Credits"), s,  2, 0, "Credits");
-        font_printf(_strmidx(1, "Beats Of Rage"), s + v * m,  1, 0, "Beats Of Rage"); ++m;
-        font_printf(_strmidx(0, "Senile Team"), s + v * m,  0, 0, "Senile Team"); m+=2;
-
+        if(!revised)
+        {
+            font_printf(_strmidx(1, "Beats Of Rage"), s + v * m,  1, 0, "Beats Of Rage"); ++m;
+            font_printf(_strmidx(0, "Senile Team"), s + v * m,  0, 0, "Senile Team"); m+=2;
+        }
         font_printf(_strmidx(1, "OpenBOR"), s + v * m,  1, 0, "OpenBOR"); ++m;
-        font_printf(_strmidx(0, "SX"), s + v * m,  0, 0, "SX"); ++m;
-        font_printf(col1,  s + v * m,  0, 0, "CGRemakes");
-        font_printf(col2, s + v * m,  0, 0, "Fugue"); ++m;
-        font_printf(col1,  s + v * m,  0, 0, "uTunnels");
-        font_printf(col2, s + v * m,  0, 0, "Kirby"); ++m;
-        font_printf(col1,  s + v * m,  0, 0, "LordBall");
-        font_printf(col2, s + v * m,  0, 0, "Tails"); ++m;
-        font_printf(col1,  s + v * m, 0, 0, "KBAndressen");
-        font_printf(col2, s + v * m, 0, 0, "Damon Caskey"); ++m;
-        font_printf(col1,  s + v * m, 0, 0, "Plombo");
-        font_printf(col2, s + v * m, 0, 0, "Orochi_X");  ++m;
-        font_printf(col1, s + v * m, 0, 0, "White Dragon");  ++m;
+        if(revised)
+        {
+            font_printf(col1,  s + v * m,  0, 0, "Caskey, Damon V.");
+            font_printf(col2, s + v * m,  0, 0, "Project Lead"); ++m;
+            font_printf(col1,  s + v * m,  0, 0, "White Dragon");
+            font_printf(col2, s + v * m,  0, 0, "Developer"); ++m;
+            font_printf(col1,  s + v * m,  0, 0, "Plombo");
+            font_printf(col2, s + v * m,  0, 0, "Developer"); ++m;
+            font_printf(_strmidx(1, "Former Staff"), s + v * m,  1, 0, "Former Staff"); ++m;
+            font_printf(col1, s + v * m, 0, 0, "Fightn Words");
+            font_printf(col2, s + v * m,  0, 0, "Fugue"); ++m;
+            font_printf(col1,  s + v * m, 0, 0, "KBAndressen");
+            font_printf(col2, s + v * m,  0, 0, "Kirby"); ++m;
+            font_printf(col1,  s + v * m,  0, 0, "LordBall");
+            font_printf(col2, s + v * m, 0, 0, "Orochi_X");  ++m;
+            font_printf(col1, s + v * m, 0, 0, "SX");
+            font_printf(col2, s + v * m,  0, 0, "Tails"); ++m;
+            font_printf(col1,  s + v * m,  0, 0, "uTunnels"); ++m;
+        }
+        else
+        {
+            font_printf(_strmidx(0, "SX"), s + v * m,  0, 0, "SX"); ++m;
+            font_printf(col1,  s + v * m,  0, 0, "CGRemakes");
+            font_printf(col2, s + v * m,  0, 0, "Fugue"); ++m;
+            font_printf(col1,  s + v * m,  0, 0, "uTunnels");
+            font_printf(col2, s + v * m,  0, 0, "Kirby"); ++m;
+            font_printf(col1,  s + v * m,  0, 0, "LordBall");
+            font_printf(col2, s + v * m,  0, 0, "Tails"); ++m;
+            font_printf(col1,  s + v * m, 0, 0, "KBAndressen");
+            font_printf(col2, s + v * m, 0, 0, "Damon Caskey"); ++m;
+            font_printf(col1,  s + v * m, 0, 0, "Plombo");
+            font_printf(col2, s + v * m, 0, 0, "Orochi_X");  ++m;
+            font_printf(col1, s + v * m, 0, 0, "White Dragon");  ++m;
+        }
 
         font_printf(_strmidx(1, "Ports"), s + v * m,  1, 0, "Ports"); ++m;
         font_printf(col1,  s + v * m, 0, 0, "PSP/Linux/OSX");
         font_printf(col2, s + v * m, 0, 0, "SX"); ++m;
         font_printf(col1,  s + v * m, 0, 0, "OpenDingux");
         font_printf(col2, s + v * m, 0, 0, "Shin-NiL"); ++m;
-        font_printf(col1,  s + v * m, 0, 0, "Windows");
-        font_printf(col2, s + v * m, 0, 0, "SX & Nazo"); ++m;
-        font_printf(col1,  s + v * m, 0, 0, "GamePark");
-        font_printf(col2, s + v * m, 0, 0, "SX & Lemon"); ++m;
-        font_printf(col1,  s + v * m, 0, 0, "DreamCast");
-        font_printf(col2, s + v * m, 0, 0, "SX & Neill Corlett"); ++m;
-        font_printf(col1,  s + v * m, 0, 0, "Wii");
-        font_printf(col2, s + v * m, 0, 0, "SX & Plombo"); ++m;
-        font_printf(col1,  s + v * m, 0, 0, "Android");
-        font_printf(col2, s + v * m, 0, 0, "uTunnels & CRxTRDude"); ++m;
-
-        font_printf(_strmidx(1, "Menu Design"), s + v * m,  1, 0, "Menu Design"); ++m;
-        font_printf(col1, s + v * m,  0, 0, "SX");
-        font_printf(col2, s + v * m, 0, 0, "Fightn Words");
+        if(!revised)
+        {
+            font_printf(col1,  s + v * m, 0, 0, "Windows");
+            font_printf(col2, s + v * m, 0, 0, "SX & Nazo"); ++m;
+            if(obor_profile_build < 4454)
+            {
+                font_printf(col1,  s + v * m, 0, 0, "GamePark");
+                font_printf(col2, s + v * m, 0, 0, "SX & Lemon"); ++m;
+            }
+        }
+        font_printf(col1, s + v * m, 0, 0, "DreamCast");
+        font_printf(col2, s + v * m, 0, 0, "%s", revised ? "Neill Corlett, SX" : "SX & Neill Corlett"); ++m;
+        font_printf(col1, s + v * m, 0, 0, "Wii");
+        font_printf(col2, s + v * m, 0, 0, "%s", revised ? "Plombo, SX" : "SX & Plombo"); ++m;
+        font_printf(col1, s + v * m, 0, 0, "Android");
+        if(revised)
+        {
+            font_printf(col2, s + v * m, 0, 0, "CRxTRDude, Plombo,"); ++m;
+            font_printf(col2, s + v * m, 0, 0, "uTunnels, White Dragon"); ++m;
+        }
+        else
+        {
+            font_printf(col2, s + v * m, 0, 0, "uTunnels & CRxTRDude"); ++m;
+        }
+        if(obor_profile_build >= 4454)
+        {
+            font_printf(col1, s + v * m, 0, 0, "PS Vita");
+            font_printf(col2, s + v * m, 0, 0, "Plombo"); ++m;
+        }
+        if(!revised)
+        {
+            font_printf(_strmidx(1, "Menu Design"), s + v * m, 1, 0, "Menu Design"); ++m;
+            font_printf(col1, s + v * m, 0, 0, "SX");
+            font_printf(col2, s + v * m, 0, 0, "Fightn Words");
+        }
 
         update(2, 0);
 
@@ -35299,7 +35371,7 @@ void savelevelinfo()
 
 static void obor_apply_level_gameover(void)
 {
-    if(obor_profile_build < 4642 || obor_profile_build > 4750 || !level->force_gameover)
+    if(obor_profile_build < 4642 || obor_profile_build > 4905 || !level->force_gameover)
     {
         return;
     }
@@ -35552,7 +35624,7 @@ int selectplayer(int *players, char *filename, int useSavedGame)
     const int saved_selection = obor_profile_build < 4283 || obor_profile_build >= 4391;
     s_savelevel *save = saved_selection && savelevel ? savelevel + current_set : NULL;
     int load_count = 0, saved_select_screen = 0;
-    const int historical_resume = obor_profile_build >= 4682 && obor_profile_build <= 4750;
+    const int historical_resume = obor_profile_build >= 4682 && obor_profile_build <= 4905;
 
     savelevelinfo();
 
@@ -36550,7 +36622,7 @@ void init_videomodes(int log)
     ArgList arglist;
     char argbuf[MAX_ARG_LEN + 1] = "";
 
-    if(obor_profile_build >= 4453 && obor_profile_build <= 4750)
+    if(obor_profile_build >= 4453 && obor_profile_build <= 4905)
     {
         /* 4453 dropped screenformat: its framebuffer is always PIXEL_32,
          * while model images retain their individual indexed palettes. */
@@ -36661,7 +36733,7 @@ readfile:
             }
             else if(stricmp(command, "colourdepth") == 0)
             {
-                if(obor_profile_build >= 4453 && obor_profile_build <= 4750)
+                if(obor_profile_build >= 4453 && obor_profile_build <= 4905)
                 {
                     printf("\nColordepth is depreciated. All modules are displayed with a 32bit color screen.\n\n");
                     pos += getNewLineStart(buf + pos);
@@ -36697,7 +36769,7 @@ readfile:
             else if(command && command[0])
             {
                 printf("Command '%s' not understood in file '%s'!%s", command, filename,
-                       obor_profile_build >= 4682 && obor_profile_build <= 4750 ? "\n" : "");
+                       obor_profile_build >= 4682 && obor_profile_build <= 4905 ? "\n" : "");
             }
         }
         // Go to next line
@@ -36854,7 +36926,7 @@ VIDEOMODES:
 
     if(log)
     {
-        if(obor_profile_build >= 4701 && obor_profile_build <= 4750)
+        if(obor_profile_build >= 4701 && obor_profile_build <= 4905)
         {
             printf("Initialized video.............\t%dx%d (Mode: %d)\n\n", videomodes.hRes, videomodes.vRes, videoMode);
         }
@@ -36887,7 +36959,7 @@ void safe_set(int *arr, int index, int newkey, int oldkey)
 
 void keyboard_setup(int player)
 {
-    const int btnnum = (obor_profile_build >= 4453 && obor_profile_build <= 4750) ? MAX_BTN_NUM : 12;
+    const int btnnum = (obor_profile_build >= 4453 && obor_profile_build <= 4905) ? MAX_BTN_NUM : 12;
     int quit = 0, sdid,
         selector = 0,
         setting = -1,
@@ -36916,7 +36988,7 @@ void keyboard_setup(int player)
     strncpy(buttonnames[SDID_START], "Start", 16);
     strncpy(buttonnames[SDID_SCREENSHOT], "Screenshot", 16);
     strncpy(buttonnames[SDID_ESC], "Exit", 16);
-    if(obor_profile_build >= 4453 && obor_profile_build <= 4750) disabledkey[SDID_ESC] = 1;
+    if(obor_profile_build >= 4453 && obor_profile_build <= 4905) disabledkey[SDID_ESC] = 1;
 
     savesettings();
     bothnewkeys = 0;

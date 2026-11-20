@@ -1,0 +1,259 @@
+/* SPDX-License-Identifier: BSD-3-Clause
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me>
+ */
+#include <stdint.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include "openbor.h"
+#undef printf
+#undef assert
+#include <assert.h>
+
+#if OBOR_ENGINE_BUILD == 4432
+#define HEALTH health
+#define FORCE_ON_LANDING damage_on_landing
+#define TYPE_ON_LANDING damage_on_landing_type
+#define OUTGOING_ID attack_id
+#define LAST_DAMAGE_TYPE damagetype
+#define LAND_CALL obor_check_deferred_landing
+#define RECORD_ARGS 0
+#else
+#define HEALTH energy_status.health_current
+#define FORCE_ON_LANDING damage_on_landing.attack_force
+#define TYPE_ON_LANDING damage_on_landing.attack_type
+#define OUTGOING_ID attack_id_outgoing
+#define LAST_DAMAGE_TYPE last_damage_type
+#define LAND_CALL checkdamageonlanding
+#define RECORD_ARGS 1
+#endif
+
+uint32_t obor_profile_build, obor_profile_features;
+static entity actor, opponent;
+entity *self = &actor;
+s_lasthit lasthit;
+int autoland;
+static s_anim animation;
+static entity *expected_source;
+static int cancel_hit, block_grab;
+static char trace[20];
+static unsigned steps;
+
+static void event(char marker)
+{
+    assert(steps + 1 < sizeof(trace));
+    trace[steps++] = marker;
+    trace[steps] = '\0';
+}
+
+static void exchange(entity *subject, entity *other, int recipient, int attack_id)
+{
+    assert(subject == (recipient ? &actor : expected_source));
+    assert(other == (recipient ? expected_source : &actor));
+    assert(attack_id == expected_source->OUTGOING_ID);
+    assert(lasthit.position.x == 11 && lasthit.position.z == 22 && lasthit.position.y == 33);
+    assert(lasthit.confirm && lasthit.attack && lasthit.attack->attack_type == ATK_LAND);
+    assert(lasthit.attack->attack_force == 16);
+    event(recipient ? 'A' : 'B');
+    if(!recipient)
+    {
+        lasthit.confirm = !cancel_hit;
+        lasthit.attack->attack_force = 19;
+        lasthit.attack->attack_drop = 1;
+        lasthit.attack->attack_type = ATK_BURN;
+        lasthit.attack->no_block = 1;
+        lasthit.attack->guardcost = 2;
+        lasthit.attack->jugglecost = 3;
+        lasthit.attack->pause_add = 4;
+        lasthit.attack->tag = 5;
+    }
+}
+
+static void hit(entity *subject, entity *other, int force, int drop, int type,
+                int noblock, int guard, int juggle, int pause, int blocked, int tag)
+{
+    assert(subject == expected_source && other == &actor);
+    assert(force == 19 && drop == 1 && noblock == 1);
+    assert(guard == 2 && juggle == 3 && pause == 4 && tag == 5 && !blocked);
+    assert(type == (RECORD_ARGS ? ATK_BURN : expected_source->modeldata.subtype));
+    event('H');
+}
+
+#if OBOR_ENGINE_BUILD == 4432
+void execute_ondoattack_script(entity *ent, entity *other, int force, int drop, int type,
+                             int noblock, int guard, int juggle, int pause, int route, int id, int tag)
+{
+    assert(force == 16 && type == ATK_LAND);
+    exchange(ent, other, !route, id);
+}
+
+void execute_didhit_script(entity *ent, entity *other, int force, int drop, int type,
+                          int noblock, int guard, int juggle, int pause, int blocked, int tag)
+{
+    hit(ent, other, force, drop, type, noblock, guard, juggle, pause, blocked, tag);
+}
+
+int common_takedamage(entity *other, s_collision_attack *attack) { abort(); }
+int obor_force_damage(entity *other, s_collision_attack *attack) { abort(); }
+int checkhit(entity *ent, entity *other) { abort(); }
+#else
+void execute_ondoattack_script(entity *ent, entity *other, s_collision_attack *attack,
+                             e_exchange route, int id)
+{
+    assert(attack == lasthit.attack);
+    assert(route == EXCHANGE_RECIPIANT || route == EXCHANGE_CONFERRER);
+    exchange(ent, other, route == EXCHANGE_RECIPIANT, id);
+}
+
+void execute_didhit_script(entity *ent, entity *other, s_collision_attack *attack, int blocked)
+{
+    assert(attack == lasthit.attack);
+    hit(ent, other, attack->attack_force, attack->attack_drop, attack->attack_type,
+        attack->no_block, attack->guardcost, attack->jugglecost, attack->pause_add, blocked, attack->tag);
+}
+#endif
+
+int checkgrab(entity *other, s_collision_attack *attack)
+{
+    assert(other == expected_source && attack == lasthit.attack);
+    event('G');
+    return !block_grab;
+}
+void set_opponent(entity *ent, entity *other)
+{
+    assert(ent == &actor && other == &opponent);
+    event('O');
+}
+void checkdamagedrop(s_collision_attack *attack) { assert(attack == lasthit.attack); event('P'); }
+void checkdamageeffects(s_collision_attack *attack) { assert(attack == lasthit.attack); event('E'); }
+void checkmpadd(void) { event('M'); }
+void checkhitscore(entity *other, s_collision_attack *attack)
+{
+    assert(other == expected_source && attack == lasthit.attack);
+    event('S');
+}
+void checkdamage(entity *other, s_collision_attack *attack)
+{
+    assert(other == expected_source && attack == lasthit.attack && attack->attack_force == 19);
+    event('D');
+}
+void checkdeath(void) { event('X'); }
+void dropweapon(int flag) { abort(); }
+
+static void landing_kill(entity *ent)
+{
+    assert(ent == &actor && self == ent && actor.die_on_landing);
+    event('K');
+}
+
+static int landing_takedamage(entity *other, s_collision_attack *attack
+#if OBOR_ENGINE_BUILD == 6391
+                              , int fall_flag
+#endif
+)
+{
+#if OBOR_ENGINE_BUILD == 6391
+    assert(fall_flag == 1);
+#endif
+    assert(other == expected_source && attack->attack_type == ATK_LAND && !attack->attack_force);
+    event('L');
+    return 1;
+}
+
+int set_riseattack(entity *ent, int type, int reset)
+{
+    assert(ent == &actor && type == ATK_BURN && !reset);
+    event('R');
+    return 1;
+}
+int set_death(entity *ent, int type, int reset)
+{
+    assert(ent == &actor && type == ATK_BURN && !reset);
+    event('F');
+    return 1;
+}
+int set_rise(entity *ent, int type, int reset)
+{
+    assert(ent == &actor && type == ATK_BURN && !reset);
+    event('U');
+    return 1;
+}
+
+@DEFAULT@
+#undef kill
+#define kill landing_kill
+#define kill_entity landing_kill
+@METHODS@
+#undef kill_entity
+#undef kill
+
+static void prepare(int use_opponent, int stopped)
+{
+    actor = (entity){.position = {.x = 11, .z = 22, .y = 33}, .exists = 1, .animation = &animation};
+    actor.HEALTH = stopped ? 0 : 70;
+    actor.modeldata.subtype = SUBTYPE_BIKER;
+    actor.modeldata.weaploss[0] = WEAPLOSS_TYPE_KNOCKDOWN;
+    actor.OUTGOING_ID = 31;
+    actor.FORCE_ON_LANDING = 16;
+    actor.TYPE_ON_LANDING = ATK_BURN;
+    opponent = (entity){.exists = 1, .modeldata.subtype = SUBTYPE_ARROW};
+    opponent.HEALTH = use_opponent ? 90 : 0;
+    opponent.OUTGOING_ID = 32;
+    actor.opponent = &opponent;
+    expected_source = use_opponent ? &opponent : &actor;
+    lasthit = (s_lasthit){0};
+    steps = 0;
+    trace[0] = '\0';
+}
+
+static void check_damage_state_calls(void)
+{
+    prepare(0, 0);
+    actor.LAST_DAMAGE_TYPE = ATK_BURN;
+    @DAMAGE_STATE@
+    assert(!strcmp(trace, "RFU"));
+}
+
+static void check_terminal_landing(void)
+{
+    for(int with_handler = 0; with_handler <= 1; ++with_handler)
+    {
+        prepare(1, 0);
+        actor.die_on_landing = 1;
+        actor.FORCE_ON_LANDING = 0;
+        actor.takedamage = with_handler ? landing_takedamage : NULL;
+        LAND_CALL();
+        assert(!strcmp(trace, with_handler ? "L" : "K"));
+        assert(!actor.FORCE_ON_LANDING && actor.TYPE_ON_LANDING == -1 && !actor.die_on_landing);
+    }
+}
+
+int main(void)
+{
+    static const struct {uint32_t revision; int record;} rows[] = {@ROWS@};
+    for(unsigned i = 0; i < sizeof(rows) / sizeof(rows[0]); ++i)
+    {
+        obor_profile_build = rows[i].revision;
+        assert(rows[i].record == RECORD_ARGS);
+        for(int valid = 0; valid <= 1; ++valid)
+            for(cancel_hit = 0; cancel_hit <= 1; ++cancel_hit)
+                for(block_grab = 0; block_grab <= 1; ++block_grab)
+                {
+                    prepare(valid, 0);
+                    LAND_CALL();
+                    const char *expected = block_grab ? "ABG" :
+                        cancel_hit ? (valid ? "ABGO" : "ABG") :
+                        valid ? "ABGOPEMSDXH" : "ABGPEMSDXH";
+                    assert(!strcmp(trace, expected));
+                    assert(actor.FORCE_ON_LANDING == (block_grab ? 16 : 0));
+                }
+        prepare(1, 1);
+        cancel_hit = block_grab = 0;
+        LAND_CALL();
+        assert(!steps && actor.FORCE_ON_LANDING == 16);
+        check_terminal_landing();
+        check_damage_state_calls();
+        printf("%u\n", obor_profile_build);
+    }
+    return 0;
+}

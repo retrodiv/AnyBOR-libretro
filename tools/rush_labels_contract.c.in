@@ -1,0 +1,108 @@
+/* SPDX-License-Identifier: BSD-3-Clause
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me>
+ */
+#include <assert.h>
+#include <stdarg.h>
+#include <stdint.h>
+#include <stdio.h>
+#include <string.h>
+
+@NAME_LENGTH@
+@RUSH_NAMES@
+
+static uint32_t obor_profile_build;
+static int rush[6], prush[1][8], _time;
+static struct { int shiftpos[1]; } videomodes;
+static struct { struct { struct { int current, max; } count; int time; } rush; } entity;
+static struct { typeof(entity) *ent; } player[] = { { &entity } };
+static char rendered[2][MAX_NAME_LEN + 1];
+static int rendered_numbers[2];
+static int labels, numbers;
+
+static void font_printf(int x, int y, int font, int shift, const char *format, ...)
+{
+    (void)x;
+    (void)y;
+    (void)font;
+    (void)shift;
+    va_list args;
+    va_start(args, format);
+    if(strcmp(format, "%s") == 0)
+    {
+        assert(labels < 2);
+        assert(snprintf(rendered[labels++], sizeof(rendered[0]), "%s",
+                        va_arg(args, char *)) <= MAX_NAME_LEN);
+    }
+    else
+    {
+        assert(strcmp(format, "%i") == 0);
+        assert(numbers < 2);
+        rendered_numbers[numbers++] = va_arg(args, int);
+    }
+    va_end(args);
+}
+
+#define GET_ARG(index) label_inputs[index]
+#define GET_INT_ARG(index) numeric_inputs[index]
+
+static void parse(const char *combo, const char *maximum)
+{
+    enum { CMD_LEVELORDER_RUSH };
+    const char *label_inputs[] = { [3] = combo, [6] = maximum };
+    const int numeric_inputs[] = { 0, 1, 36, 0, 2, 3, 0, 4, 5 };
+    switch(CMD_LEVELORDER_RUSH)
+    {
+        @PARSE_RUSH@
+    }
+}
+
+static void draw(void)
+{
+    const int i = 0;
+    labels = numbers = 0;
+    @DRAW_RUSH@
+}
+
+static const struct { uint32_t revision; size_t label_bytes; } cases[] = {
+    @ROWS@
+};
+
+int main(void)
+{
+    char combo[MAX_NAME_LEN + 8], maximum[MAX_NAME_LEN + 8];
+    memset(combo, 'C', sizeof(combo) - 1);
+    memset(maximum, 'M', sizeof(maximum) - 1);
+    combo[sizeof(combo) - 1] = maximum[sizeof(maximum) - 1] = '\0';
+    entity.rush.time = 10;
+    _time = 10;
+    for(size_t i = 0; i < sizeof(cases) / sizeof(*cases); ++i)
+    {
+        obor_profile_build = cases[i].revision;
+        entity.rush.count.current = 3;
+        entity.rush.count.max = 4;
+        parse(combo, maximum);
+        draw();
+        assert(labels == 2 && numbers == 2);
+        assert(rendered_numbers[0] == 3 && rendered_numbers[1] == 4);
+        assert(strlen(rendered[0]) == cases[i].label_bytes);
+        assert(strlen(rendered[1]) == cases[i].label_bytes);
+        assert(memcmp(rendered[0], combo, cases[i].label_bytes) == 0);
+        assert(memcmp(rendered[1], maximum, cases[i].label_bytes) == 0);
+        parse("Combo", "Best");
+        draw();
+        assert(labels == 2 && numbers == 2);
+        assert(strcmp(rendered[0], "Combo") == 0);
+        assert(strcmp(rendered[1], "Best") == 0);
+        rush[0] = 2;
+        draw();
+        assert(labels == 2 && numbers == 2);
+        assert(strcmp(rendered[1], "Best") == 0);
+        entity.rush.count.current = 1;
+        draw();
+        assert(labels == 1 && numbers == 1);
+        assert(rendered_numbers[0] == 4);
+        assert(strcmp(rendered[0], "Best") == 0);
+        printf("PASS %u\n", obor_profile_build);
+    }
+    return 0;
+}

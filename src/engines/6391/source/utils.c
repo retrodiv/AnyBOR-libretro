@@ -8,7 +8,8 @@
  * declarations without the glibc-only <malloc.h>, and report memory usage at
  * exit on macOS through the port's own accounting instead of mallinfo().
  * Derive output names from the content basename with explicit destination
- * capacities, and reject overflowing output path joins.
+ * capacities, and reject overflowing output path joins. Preserve the
+ * original screenshot filename capacity for the selected profile.
  * Existing changes recorded here; this is not their implementation date.
  * See MODIFICATIONS.md and docs/modifications/6391.md
  * at the source repository root. Original notices follow below.
@@ -383,15 +384,27 @@ void screenshot(s_screen *vscreen, unsigned char *pal, int ingame)
     if(dirExists("ms0:/PICTURE/", 1) && dirExists("ms0:/PICTURE/Beats Of Rage/", 1))
     {
 #endif
+#ifdef LIBRETRO
+        const size_t capacity = (obor_profile_build == 5134 || obor_profile_build == 6119)
+                                ? 128 : sizeof(shotname);
+#else
+        const size_t capacity = sizeof(shotname);
+#endif
         do
         {
+            int length;
 #if PSP
-            sprintf(shotname, "ms0:/PICTURE/Beats Of Rage/%s - ScreenShot - %02u.png", modname, shotnum);
+            length = snprintf(shotname, capacity, "ms0:/PICTURE/Beats Of Rage/%s - ScreenShot - %02u.png", modname, shotnum);
 #elif SDL || WII
-            sprintf(shotname, "%s/%s - %04u.png", screenShotsDir, modname, shotnum);
+            length = snprintf(shotname, capacity, "%s/%s - %04u.png", screenShotsDir, modname, shotnum);
 #else
-            sprintf(shotname, "./ScreenShots/%s - %04u.png", modname, shotnum);
+            length = snprintf(shotname, capacity, "./ScreenShots/%s - %04u.png", modname, shotnum);
 #endif
+            if(length < 0 || (size_t)length >= capacity)
+            {
+                if(ingame) debug_printf("Screenshot name exceeds the profile path capacity.");
+                return;
+            }
             ++shotnum;
         }
         while(fileExists(shotname) && shotnum < 10000);

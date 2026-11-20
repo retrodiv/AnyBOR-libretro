@@ -1,7 +1,7 @@
 {
   "core_name": "AnyBOR",
   "core_basename": "anybor_libretro",
-  "version": "0.2.41",
+  "version": "0.2.42",
   "fallback_build": "6391",
   "profiles": [
     {
@@ -3565,9 +3565,42 @@
       "covers": "4743-4750 automatically; exact filename tag or core option"
     },
     {
+      "build": "4905",
+      "engine": "4432",
+      "major": "v3.0",
+      "automatic": true,
+      "tagged": true,
+      "upstream_commit": "85383d01c4c6833b0d36eed9f08b94a782f331a5",
+      "upstream_date": "2018-04-04",
+      "upstream_branch": "official tag v4905",
+      "covers": "4751-4905 automatically; exact filename tag or core option"
+    },
+    {
+      "build": "5134",
+      "engine": "6391",
+      "major": "v3.0",
+      "automatic": true,
+      "tagged": true,
+      "upstream_commit": "c673698d104c20229c30e68a77d0eead5d2f74e1",
+      "upstream_date": "2018-05-06",
+      "upstream_branch": "official tag v5134",
+      "covers": "4906-5134 automatically; exact filename tag or core option"
+    },
+    {
+      "build": "6119",
+      "engine": "6391",
+      "major": "v3.0",
+      "automatic": true,
+      "tagged": true,
+      "upstream_commit": "46a500b46f7fdbe3f4e644917582f86ec88f2d24",
+      "upstream_date": "2018-05-13",
+      "upstream_branch": "official tag v6119",
+      "covers": "5135-6119 automatically; exact filename tag or core option"
+    },
+    {
       "build": "6330",
       "engine": "6391",
-      "covers": "4457-6330 automatically; exact filename tag or core option",
+      "covers": "6120-6330 automatically; exact filename tag or core option",
       "automatic": true,
       "major": "v3.0",
       "auto_until": 6330

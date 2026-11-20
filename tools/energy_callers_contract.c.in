@@ -1,0 +1,182 @@
+/* SPDX-License-Identifier: BSD-3-Clause
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me>
+ */
+#include <stdint.h>
+#include <stdio.h>
+#include "openbor.h"
+#undef assert
+#undef printf
+#include <assert.h>
+
+static u32 sample_tick;
+static entity actor, opponent;
+entity *self = &actor;
+uint32_t obor_profile_build;
+int magic_type = 1;
+int current_set;
+static s_set_entry levelset;
+s_set_entry *levelsets = &levelset;
+s_player player[MAX_PLAYERS];
+int nomaxrushreset[5];
+
+static unsigned ticks_applied, callbacks;
+static int callback_force, callback_health;
+
+void damage_recursive(entity *target)
+{
+    assert(target == self);
+    ++ticks_applied;
+}
+
+#if OBOR_ENGINE_BUILD == 4432
+#undef time
+#define time sample_tick
+#define HEALTH(item) ((item).health)
+#define HEALTH_OLD(item) ((item).oldhealth)
+#define MP(item) ((item).mp)
+#define MP_OLD(item) ((item).oldmp)
+
+void common_dot(void) { damage_recursive(self); }
+
+int obor_force_damage(entity *other, s_collision_attack *attack)
+{
+    assert(other == &opponent && attack->attack_force == 13);
+    return 7;
+}
+
+void execute_takedamage_script(entity *ent, entity *other, int force, int drop, int type,
+                              int noblock, int guardcost, int jugglecost, int pauseadd, int tag)
+{
+    assert(ent == self && other == &opponent && type == ATK_NORMAL && tag == 19);
+    callback_force = force;
+    callback_health = HEALTH(*ent);
+    ++callbacks;
+}
+#else
+#include "profile_ids.h"
+#define _time sample_tick
+#define HEALTH(item) ((item).energy_status.health_current)
+#define HEALTH_OLD(item) ((item).energy_status.health_old)
+#define MP(item) ((item).energy_status.mp_current)
+#define MP_OLD(item) ((item).energy_status.mp_old)
+
+int calculate_force_damage(entity *other, s_collision_attack *attack)
+{
+    assert(other == &opponent && attack->attack_force == 13);
+    return 7;
+}
+
+void execute_takedamage_script(entity *ent, entity *other, s_collision_attack *attack)
+{
+    assert(ent == self && other == &opponent && attack->attack_type == ATK_NORMAL && attack->tag == 19);
+    callback_force = attack->attack_force;
+    callback_health = HEALTH(*ent);
+    ++callbacks;
+}
+#endif
+
+@CHARGE@
+@UPDATE@
+
+static void save_level_exit(void)
+{
+    int i;
+    @LEVEL_EXIT@
+}
+
+static void apply_damage(entity *other, s_collision_attack *attack)
+{
+    @DAMAGE@
+}
+
+static void check_charge(void)
+{
+    actor = (entity){.mpchargetime = 100};
+    actor.modeldata.mp = 20;
+    actor.modeldata.chargerate = 8;
+    HEALTH(actor) = 17;
+    HEALTH_OLD(actor) = 12;
+    MP(actor) = 15;
+    MP_OLD(actor) = 22;
+    ticks_applied = 0;
+
+    sample_tick = 99;
+    actor.charging = 1;
+    update_health();
+    assert(MP(actor) == 15 && actor.mpchargetime == 100);
+    assert(HEALTH_OLD(actor) == 13 && MP_OLD(actor) == 21);
+
+    sample_tick = 100;
+    update_health();
+    assert(MP(actor) == 20 && actor.mpchargetime == 150);
+    assert(HEALTH_OLD(actor) == 14 && MP_OLD(actor) == 20);
+
+    sample_tick = 149;
+    MP(actor) = 2;
+    update_health();
+    assert(MP(actor) == 2 && actor.mpchargetime == 150);
+    sample_tick = 150;
+    update_health();
+    assert(MP(actor) == 10 && actor.mpchargetime == 200);
+
+    sample_tick = 250;
+    actor.charging = 0;
+    HEALTH_OLD(actor) = 20;
+    MP_OLD(actor) = 3;
+    update_health();
+    assert(MP(actor) == 10 && actor.mpchargetime == 200);
+    assert(HEALTH_OLD(actor) == 19 && MP_OLD(actor) == 4);
+    assert(ticks_applied == 5);
+}
+
+static void check_level_exit(int reset_weapon)
+{
+    levelset.maxplayers = 2;
+    player[0] = (s_player){.ent = &actor, .weapnum = 7};
+    player[1] = (s_player){.spawnhealth = 5, .spawnmp = 6, .weapnum = 9};
+    player[2] = (s_player){.ent = &opponent, .weapnum = 11};
+    actor.rush.count.max = 12;
+    save_level_exit();
+    assert(player[0].spawnhealth == 17 && player[0].spawnmp == 10 && nomaxrushreset[0] == 12);
+    assert(player[1].spawnhealth == 5 && player[1].spawnmp == 6);
+    assert(player[0].weapnum == (reset_weapon ? 0 : 7));
+    assert(player[1].weapnum == (reset_weapon ? 0 : 9));
+    assert(player[2].weapnum == 11);
+}
+
+static void check_damage(int raw_damage)
+{
+    s_collision_attack attack = {.attack_force = 13, .attack_type = ATK_NORMAL, .tag = 19};
+    callbacks = 0;
+    HEALTH(actor) = 17;
+    actor.modeldata.health = 20;
+    apply_damage(&opponent, &attack);
+    assert(callbacks == 1 && callback_health == 10 && callback_force == (raw_damage ? 13 : 7));
+    HEALTH(actor) = 4;
+    attack.no_kill = 1;
+    apply_damage(&opponent, &attack);
+    assert(callbacks == 2 && callback_health == 1 && callback_force == (raw_damage ? 13 : 7));
+}
+
+int main(void)
+{
+    const struct { unsigned revision; int reset_weapon, raw_damage, timeover, custom; } profiles[] = {@ROWS@};
+    for(size_t i = 0; i < sizeof(profiles) / sizeof(*profiles); ++i)
+    {
+        obor_profile_build = profiles[i].revision;
+        check_charge();
+        check_level_exit(profiles[i].reset_weapon);
+        check_damage(profiles[i].raw_damage);
+#if OBOR_ENGINE_BUILD == 6391
+        assert(obor_attack_to_native(ATK_TIMEOVER) == profiles[i].timeover);
+        assert(obor_attack_from_native(profiles[i].timeover) == ATK_TIMEOVER);
+        for(int number = 0; number < 10; ++number)
+        {
+            assert(obor_attack_to_native(MAX_ATKS + number) == profiles[i].custom + number);
+            assert(obor_attack_from_native(profiles[i].custom + number) == MAX_ATKS + number);
+        }
+#endif
+        printf("%u\n", obor_profile_build);
+    }
+    return 0;
+}

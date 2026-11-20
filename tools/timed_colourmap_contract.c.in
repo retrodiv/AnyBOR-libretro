@@ -1,0 +1,154 @@
+/* SPDX-License-Identifier: BSD-3-Clause
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me>
+ */
+#include <stdint.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include "openbor.h"
+#undef assert
+#undef printf
+#include <assert.h>
+
+uint32_t obor_profile_build, obor_profile_features;
+#if OBOR_ENGINE_BUILD == 4432
+u32 time;
+#define CLOCK_NOW time
+#else
+u32 _time;
+#define CLOCK_NOW _time
+#endif
+
+static entity actor, owner;
+static unsigned char base_palette, first_map, second_map, temporary_map;
+static unsigned char *maps[] = {&first_map, &second_map};
+
+@METHODS@
+@INTEGER@
+
+static void expiry_call(entity *self)
+{
+    @EXPIRY@
+}
+
+@EFFECT_MACROS@
+static void force_map(entity *self, s_collision_attack *attack)
+{
+    @FORCED_MAP@
+}
+#undef _remap
+#undef _freeze
+#undef _maptime
+
+static void write_maptime(entity *ent, ScriptVariant value)
+{
+    ScriptVariant *varlist[] = {NULL, NULL, &value};
+    LONG ltemp;
+    switch(0)
+    {
+        case 0: @MAPTIME_SETTER@
+    }
+}
+
+static void reset(u32 deadline, unsigned map)
+{
+    actor = (entity){.maptime = deadline, .map = map, .colourmap = &temporary_map, .owner = &owner,
+                     .modeldata.maps_loaded = 2, .modeldata.colourmap = maps, .modeldata.palette = &base_palette};
+    owner = (entity){.map = 1};
+    CLOCK_NOW = 20;
+}
+
+static void check_deadlines(int clear_timer)
+{
+    static const struct { u32 now, deadline; unsigned map, restored_map; int expired; } cases[] = {
+        {20, 0, 2, 2, 0},
+        {20, 21, 2, 2, 0},
+        {20, 20, 2, 2, 1},
+        {20, 19, 1, 1, 1},
+        {20, 20, 0, 0, 1},
+        {20, 20, 3, 0, 1},
+        {UINT32_MAX - 1, UINT32_MAX, 2, 2, 0},
+        {UINT32_MAX, UINT32_MAX, 1, 1, 1},
+    };
+    unsigned char *const restored[] = {&base_palette, &first_map, &second_map};
+    for(unsigned i = 0; i < sizeof(cases) / sizeof(*cases); ++i)
+    {
+        reset(cases[i].deadline, cases[i].map);
+        CLOCK_NOW = cases[i].now;
+        expiry_call(&actor);
+        assert(actor.map == cases[i].restored_map);
+        assert(actor.colourmap == (cases[i].expired ? restored[cases[i].restored_map] : &temporary_map));
+        const u32 expected_deadline = (cases[i].expired && clear_timer) ? 0 : cases[i].deadline;
+        assert(actor.maptime == expected_deadline);
+        actor.colourmap = &temporary_map;
+        expiry_call(&actor);
+        assert(actor.colourmap == (cases[i].expired && !clear_timer ? restored[cases[i].restored_map] : &temporary_map));
+        assert(actor.maptime == expected_deadline);
+#if OBOR_ENGINE_BUILD != 4432
+        reset(cases[i].deadline, cases[i].map);
+        CLOCK_NOW = cases[i].now;
+        assert(colorset_timed_expire(&actor) == cases[i].expired);
+        assert(actor.maptime == expected_deadline);
+#endif
+    }
+}
+
+static void check_attack_producer(int clear_timer)
+{
+    s_collision_attack attack = {.forcemap = 1, .maptime = 5};
+    reset(0, 2);
+    force_map(&actor, &attack);
+    assert(actor.maptime == 25 && actor.colourmap == &first_map && actor.map == 2);
+    CLOCK_NOW = 24;
+    expiry_call(&actor);
+    assert(actor.maptime == 25 && actor.colourmap == &first_map);
+    CLOCK_NOW = 25;
+    expiry_call(&actor);
+    assert(actor.maptime == (clear_timer ? 0u : 25u) && actor.colourmap == &second_map);
+
+    reset(17, 2);
+    attack.freeze = 1;
+    force_map(&actor, &attack);
+    assert(actor.maptime == 17 && actor.colourmap == &temporary_map && actor.map == 2);
+
+    attack.freeze = 0;
+    attack.forcemap = 0;
+    force_map(&actor, &attack);
+    assert(actor.maptime == 17 && actor.colourmap == &temporary_map && actor.map == 2);
+
+    attack.forcemap = 3;
+    attack.maptime = 0;
+    force_map(&actor, &attack);
+    assert(actor.maptime == 20 && actor.colourmap == &base_palette && actor.map == 2);
+    expiry_call(&actor);
+    assert(actor.maptime == (clear_timer ? 0u : 20u) && actor.colourmap == &second_map);
+}
+
+static void check_script_producer(int clear_timer)
+{
+    reset(21, 2);
+    write_maptime(&actor, (ScriptVariant){.vt = VT_PTR, .ptrVal = &actor});
+    assert(actor.maptime == 21);
+    write_maptime(&actor, (ScriptVariant){.vt = VT_INTEGER, .lVal = 0});
+    expiry_call(&actor);
+    assert(actor.maptime == 0 && actor.colourmap == &temporary_map);
+    write_maptime(&actor, (ScriptVariant){.vt = VT_INTEGER, .lVal = -1});
+    expiry_call(&actor);
+    assert(actor.maptime == UINT32_MAX && actor.colourmap == &temporary_map);
+    CLOCK_NOW = UINT32_MAX;
+    expiry_call(&actor);
+    assert(actor.maptime == (clear_timer ? 0 : UINT32_MAX) && actor.colourmap == &second_map);
+}
+
+int main(void)
+{
+    const struct { unsigned revision; int clearing; } rows[] = {@ROWS@};
+    for(unsigned i = 0; i < sizeof(rows) / sizeof(*rows); ++i)
+    {
+        obor_profile_build = rows[i].revision;
+        check_deadlines(rows[i].clearing);
+        check_attack_producer(rows[i].clearing);
+        check_script_producer(rows[i].clearing);
+        printf("%u\n", rows[i].revision);
+    }
+    return 0;
+}

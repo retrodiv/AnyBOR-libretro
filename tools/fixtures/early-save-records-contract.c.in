@@ -1,0 +1,200 @@
+/* SPDX-License-Identifier: BSD-3-Clause
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me>
+ */
+#include <assert.h>
+#include <stdbool.h>
+#include <stddef.h>
+#include <stdint.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include @ABI@
+@LIMITS@
+@RECORDS@
+@ORIGINALS@
+
+static unsigned obor_profile_features;
+static s_savescore savescore, *savescore_modes;
+static unsigned short savescore_modes_count, savescore_difficulty_count;
+static FILE *selected_score;
+static s_savelevel progress[2];
+
+static void borExit(int status) { (void)status; abort(); }
+static void borShutdown(int status, const char *message, ...)
+{
+    (void)message;
+    borExit(status);
+}
+
+static void getBasePath(char *path, const char *dir, int create)
+{
+    assert(strcmp(dir, "Saves") == 0 && create == 0);
+    path[0] = '\0';
+}
+
+static void getPakName(char *name, size_t capacity, int score)
+{
+    assert(capacity == MAX_BUFFER_LEN && score == 1);
+    name[0] = '\0';
+}
+
+static int obor_pak_path_append(char *path, size_t capacity, const char *name)
+{
+    assert(!*path && !*name && capacity == MAX_BUFFER_LEN);
+    return 1;
+}
+
+static FILE *open_score(const char *path, const char *mode)
+{
+    assert(!*path && (strcmp(mode, "wb") == 0 || strcmp(mode, "rb") == 0));
+    return selected_score;
+}
+
+static int close_score(FILE *file)
+{
+    assert(file == selected_score);
+    return 0;
+}
+
+@LEVEL_IO@
+
+static void check_difficulty_names(unsigned revision, size_t progress_width,
+                                   size_t first_menu_width, size_t second_menu_width)
+{
+    obor_profile_build = revision;
+    char name[MAX_NAME_LEN + 16];
+    struct level_set { char *name; } levelsets[] = {{name}};
+    const size_t saveslot = 0;
+    s_savelevel savelevel[1], *save = savelevel;
+    const size_t lengths[] = {4, MAX_NAME_LEN - 1, MAX_NAME_LEN, MAX_NAME_LEN + 1, sizeof(name) - 1};
+    const size_t widths[] = {progress_width, first_menu_width, second_menu_width};
+    const struct level_set *set = levelsets;
+
+    for(size_t text = 0; text < sizeof(lengths) / sizeof(*lengths); ++text)
+    {
+        memset(name, 'D', lengths[text]);
+        name[lengths[text]] = '\0';
+        for(size_t writer = 0; writer < sizeof(widths) / sizeof(*widths); ++writer)
+        {
+            char expected[sizeof(save->dName)];
+            memset(save->dName, '-', sizeof(save->dName));
+            memset(expected, '-', sizeof(expected));
+            for(size_t byte = 0; byte < widths[writer]; ++byte)
+                expected[byte] = byte < lengths[text] ? 'D' : '\0';
+            if(writer == 0) { @PROGRESS_NAME@ }
+            else if(writer == 1) { @MENU_NAME_FIRST@ }
+            else { @MENU_NAME_SECOND@ }
+            assert(memcmp(save->dName, expected, sizeof(expected)) == 0);
+        }
+    }
+}
+
+#define fopen open_score
+#define fclose close_score
+@SCORE_IO@
+#undef fclose
+#undef fopen
+
+static void compare_file(FILE *file, const void *reference, size_t bytes)
+{
+    const unsigned char *expected = reference;
+    unsigned char actual[4096];
+    rewind(file);
+    while(bytes)
+    {
+        size_t chunk = bytes > sizeof(actual) ? sizeof(actual) : bytes;
+        assert(fread(actual, 1, chunk, file) == chunk);
+        assert(memcmp(actual, expected, chunk) == 0);
+        expected += chunk;
+        bytes -= chunk;
+    }
+    assert(fgetc(file) == EOF);
+    rewind(file);
+}
+
+#define SEED_LEVEL(record, tag) do { \
+    (record).compatibleversion = CV_SAVED_GAME; \
+    strcpy((record).dName, (tag) ? "Hard" : "Normal"); \
+    (record).level = (tag) + 2; \
+    (record).stage = (tag) + 3; \
+    (record).pLives[3] = 5; \
+    (record).pCredits[1] = 6; \
+    (record).pScores[2] = 200; \
+    (record).credits = 11; \
+    (record).times_completed = (tag) + 1; \
+    (record).which_set = (tag); \
+    (record).flag = 2; \
+    strcpy((record).pName[0], "Player"); \
+    strcpy((record).pName[3], "Companion"); \
+    (record).pSpawnhealth[0] = 44; \
+    (record).pSpawnmp[2] = 15; \
+    (record).pWeapnum[1] = 2; \
+    (record).pColourmap[3] = 1; \
+    (record).selectFlag = 1; \
+    strcpy((record).allowSelectArgs, "allowselect Player Companion"); \
+    strcpy((record).selectMusic, "music track 1"); \
+    strcpy((record).selectBackground, "background select"); \
+    strcpy((record).selectLoad[0], "load Player"); \
+    strcpy((record).selectLoad[1], "load Companion"); \
+    (record).selectLoadCount = 2; \
+    strcpy((record).selectSkipSelect, "skipselect Player Companion"); \
+} while(0)
+
+#define CHECK_RECORDS(revision) do { \
+    static s_savelevel_##revision expected[2]; \
+    static s_savescore_##revision scores; \
+    obor_profile_build = revision; \
+    assert(obor_profile_savelevel_size() == sizeof(expected[0])); \
+    memset(progress, 0, sizeof(progress)); \
+    for(size_t row = 0; row < 2; ++row) \
+    { \
+        SEED_LEVEL(expected[row], row); \
+        SEED_LEVEL(progress[row], row); \
+        const size_t final_character = sizeof(expected[row].selectMusic) - 2; \
+        memset(expected[row].selectMusic, 'T', final_character + 1); \
+        memset(progress[row].selectMusic, 'T', final_character + 1); \
+    } \
+    if(sizeof(expected[1].dName) > MAX_NAME_LEN) \
+    { \
+        memset(expected[1].dName, 'D', sizeof(expected[1].dName)); \
+        memcpy(progress[1].dName, expected[1].dName, sizeof(expected[1].dName)); \
+    } \
+    FILE *output = tmpfile(); \
+    assert(output && obor_profile_savelevels_io(output, progress, 2, 1) == 2); \
+    compare_file(output, expected, sizeof(expected)); \
+    memset(progress, 0, sizeof(progress)); \
+    assert(obor_profile_savelevels_io(output, progress, 2, 0) == 2); \
+    fclose(output); \
+    assert(strcmp(progress[1].pName[3], expected[1].pName[3]) == 0); \
+    assert(strcmp(progress[1].selectMusic, expected[1].selectMusic) == 0); \
+    assert(memcmp(progress[1].dName, expected[1].dName, sizeof(expected[1].dName)) == 0); \
+    assert(progress[1].dName[sizeof(expected[1].dName)] == '\0'); \
+    assert(progress[0].pSpawnhealth[0] == 44 && progress[1].selectLoadCount == 2); \
+    output = tmpfile(); \
+    assert(output && obor_profile_savelevels_io(output, progress, 2, 1) == 2); \
+    compare_file(output, expected, sizeof(expected)); \
+    fclose(output); \
+    memset(&savescore, 0, sizeof(savescore)); \
+    savescore.compatibleversion = scores.compatibleversion = CV_HIGH_SCORE; \
+    for(size_t row = 0; row < 10; ++row) \
+    { \
+        savescore.highsc[row] = scores.highsc[row] = 1000 - 10 * row; \
+        snprintf(scores.hscoren[row], sizeof(scores.hscoren[row]), "Player %zu", row + 1); \
+        strcpy(savescore.hscoren[row], scores.hscoren[row]); \
+    } \
+    selected_score = tmpfile(); \
+    assert(selected_score && saveHighScoreFile() == 1); \
+    compare_file(selected_score, &scores, sizeof(scores)); \
+    memset(&savescore, 0, sizeof(savescore)); \
+    assert(loadHighScoreFile() == 1); \
+    assert(memcmp(savescore.highsc, scores.highsc, sizeof(scores.highsc)) == 0); \
+    for(size_t row = 0; row < 10; ++row) \
+        assert(strcmp(savescore.hscoren[row], scores.hscoren[row]) == 0); \
+    fclose(selected_score); \
+} while(0)
+
+int main(void)
+{
+    @TESTS@
+    return 0;
+}

@@ -1,0 +1,162 @@
+/* SPDX-License-Identifier: BSD-3-Clause
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me>
+ */
+#include <stdint.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include "openbor.h"
+#undef printf
+#undef assert
+#include <assert.h>
+
+uint32_t obor_profile_build, obor_profile_features;
+int multihitcheat;
+
+#if OBOR_ENGINE_BUILD == 4432
+HRESULT Interpreter_Call(Interpreter *interpreter) { abort(); }
+HRESULT Interpreter_EvalInstruction(Interpreter *interpreter) { abort(); }
+#endif
+
+@HELPERS@
+
+static void load_default(s_anim *newanim)
+{
+    @DEFAULT@
+}
+
+static void load_argument(s_anim *newanim, int value)
+{
+#undef GET_INT_ARG
+#define GET_INT_ARG(count) value
+    @DIRECTIVE@
+#undef GET_INT_ARG
+}
+
+static int permits_target(entity *e, entity *target, s_anim *current_anim)
+{
+    for(int slot = 0; slot < 1; ++slot)
+    {
+        @TARGET@
+        return 1;
+    }
+    return 0;
+}
+
+static int apply_counter(entity *self)
+{
+    int current_follow_id = 0;
+    @COUNTER@
+    return self->modeldata.animation[0]->attackone;
+}
+
+static int apply_follow(entity *e)
+{
+    int current_follow_id = 0;
+    @FOLLOW@
+    return e->modeldata.animation[0]->attackone;
+}
+
+static int passive_block_busy(entity *self)
+{
+    return @BUSY@;
+}
+
+static int attack_identity(entity *e, unsigned int *sequence)
+{
+    unsigned int new_attack_id = *sequence;
+    int current_attack_id;
+    @ID_SETUP@
+    *sequence = new_attack_id;
+    return current_attack_id;
+}
+
+static void remember_counter(entity *self, int current_attack_id)
+{
+    @COUNTER_WRITE@
+}
+
+static void remember_hit(entity *self, int current_attack_id)
+{
+    @HIT_WRITE@
+}
+
+static int permits_repeat(entity *target, s_collision_attack *attack, int current_attack_id)
+{
+    for(int slot = 0; slot < 1; ++slot)
+    {
+        @REPEAT@
+        return 1;
+    }
+    return 0;
+}
+
+static void check_target_selection(int default_value, int boolean)
+{
+    s_anim active = {0}, followup = {0};
+    s_anim *animations[] = {&followup};
+    entity actor = {.animation = &active, .modeldata.animation = animations};
+    entity first = {0}, another = {0};
+    load_default(&active);
+    assert(active.attackone == default_value);
+    const int inputs[] = {-3, -1, 0, 1, 4};
+    for(size_t i = 0; i < sizeof(inputs) / sizeof(*inputs); ++i)
+    {
+        const int input = inputs[i];
+        load_argument(&active, input);
+        assert(active.attackone == (boolean ? input != 0 : input));
+        actor.lasthit = NULL;
+        assert(permits_target(&actor, &first, &active));
+        actor.lasthit = &first;
+        assert(permits_target(&actor, &first, &active));
+        assert(permits_target(&actor, &another, &active) == (boolean ? input == 0 : input <= 0));
+
+        load_argument(&active, 4);
+        load_argument(&followup, input);
+        int expected = input == default_value ? (boolean ? 1 : 4) : boolean ? input != 0 : input;
+        assert(apply_counter(&actor) == expected);
+        load_argument(&followup, input);
+        assert(apply_follow(&actor) == expected);
+    }
+    for(int idling = 0; idling <= 1; ++idling)
+    {
+        actor.idling = idling;
+        for(int state = -1; state <= 2; ++state)
+        {
+            actor.attacking = state;
+            assert(passive_block_busy(&actor) == (!idling && (boolean ? state != 0 : state >= 0)));
+        }
+    }
+}
+
+static void check_attack_identity(void)
+{
+    entity attacker = {0}, other = {0}, target = {0};
+    s_collision_attack attack = {0};
+    unsigned int sequence = 10;
+    int first = attack_identity(&attacker, &sequence);
+    assert(first == 11 && sequence == 11);
+    assert(attack_identity(&attacker, &sequence) == first && sequence == 11);
+    int second = attack_identity(&other, &sequence);
+    assert(second == 12 && sequence == 12);
+    assert(permits_repeat(&target, &attack, first));
+    remember_counter(&target, first);
+    assert(!permits_repeat(&target, &attack, first) && permits_repeat(&target, &attack, second));
+    attack.ignore_attack_id = 1;
+    assert(permits_repeat(&target, &attack, first));
+    attack.ignore_attack_id = 0;
+    remember_hit(&target, second);
+    assert(permits_repeat(&target, &attack, first) && !permits_repeat(&target, &attack, second));
+}
+
+int main(void)
+{
+    const struct { unsigned revision; int default_value, boolean; } rows[] = {@PROFILES@};
+    for(size_t i = 0; i < sizeof(rows) / sizeof(*rows); ++i)
+    {
+        obor_profile_build = rows[i].revision;
+        check_target_selection(rows[i].default_value, rows[i].boolean);
+        check_attack_identity();
+        printf("%u\n", obor_profile_build);
+    }
+    return 0;
+}

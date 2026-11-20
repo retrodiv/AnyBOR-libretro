@@ -4,7 +4,8 @@
  * These contributions are licensed under BSD-3-Clause; see LICENSE at the root.
  * Upstream code retains its original license and notices.
  * Read host memory statistics through mach on macOS instead of the glibc-
- * only <malloc.h>.
+ * only <malloc.h>. Use the native Windows memory report selected by the
+ * profile.
  * Existing changes recorded here; this is not their implementation date.
  * See MODIFICATIONS.md and docs/modifications/6391.md
  * at the source repository root. Original notices follow below.
@@ -63,6 +64,13 @@
 
 static u64 systemRam = 0x00000000;
 
+#if WIN
+static int obor_profile_uses_legacy_windows_memory_report(void)
+{
+    return obor_profile_build == 5134 || obor_profile_build == 6119;
+}
+#endif
+
 #if !(defined(WIN) || defined(LINUX) || defined(DARWIN))
 static unsigned long elfOffset = 0x00000000;
 static unsigned long stackSize = 0x00000000;
@@ -89,6 +97,13 @@ extern unsigned long start;
 u64 getFreeRam(int byte_size)
 {
 #if WIN
+    if(obor_profile_uses_legacy_windows_memory_report())
+    {
+        MEMORYSTATUS stat = {0};
+        stat.dwLength = sizeof(stat);
+        GlobalMemoryStatus(&stat);
+        return stat.dwAvailPhys / byte_size;
+    }
     MEMORYSTATUSEX stat;
     memset(&stat, 0, sizeof(MEMORYSTATUSEX));
     stat.dwLength = sizeof(MEMORYSTATUSEX);
@@ -143,11 +158,20 @@ u64 getFreeRam(int byte_size)
 void setSystemRam()
 {
 #if WIN
-    MEMORYSTATUSEX stat;
-    memset(&stat, 0, sizeof(MEMORYSTATUSEX));
-    stat.dwLength = sizeof(MEMORYSTATUSEX);
-    GlobalMemoryStatusEx(&stat);
-    systemRam = stat.ullTotalPhys;
+    if(obor_profile_uses_legacy_windows_memory_report())
+    {
+        MEMORYSTATUS stat = {0};
+        stat.dwLength = sizeof(stat);
+        GlobalMemoryStatus(&stat);
+        systemRam = stat.dwTotalPhys;
+    }
+    else
+    {
+        MEMORYSTATUSEX stat = {0};
+        stat.dwLength = sizeof(stat);
+        GlobalMemoryStatusEx(&stat);
+        systemRam = stat.ullTotalPhys;
+    }
 #elif DARWIN
     u64 mem;
     size_t len = sizeof(mem);

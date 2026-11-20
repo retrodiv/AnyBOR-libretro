@@ -1,0 +1,121 @@
+/* SPDX-License-Identifier: BSD-3-Clause
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me>
+ */
+#include <stdint.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <strings.h>
+#include "openbor.h"
+#undef printf
+#undef assert
+#include <assert.h>
+#ifndef stricmp
+#define stricmp strcasecmp
+#endif
+
+uint32_t obor_profile_build = @REVISION@;
+static entity actor, parent;
+
+void *checkAlloc(void *ptr, size_t size, const char *func, const char *file, int line)
+{
+    assert(!size || ptr);
+    return ptr;
+}
+
+int obor_allocation_contains(const void *ptr, size_t size)
+{
+    return (ptr == &actor.binding && size == sizeof(s_bind)) ||
+           (ptr == &parent && size == sizeof(entity));
+}
+
+@CACHE@
+@SEARCH@
+@PROPERTIES@
+@SELECTORS@
+@METHODS@
+
+static HRESULT extract_handle(entity *ent, LONG property, ScriptVariant **pretvar)
+{
+    switch(property)
+    {
+@HANDLE_CASES@
+    default: return E_FAIL;
+    }
+    return S_OK;
+}
+
+int main(void)
+{
+    static const char *names[] = {@NAMES@};
+    const LONG expected[] = {7, 11, 13, 17, 2, 0, -19, 23, 29, -31};
+    s_bind *binding = &actor.binding;
+    binding->ani_bind = 7;
+    binding->offset_flag = (s_axis_i){.x = 11, .y = 13, .z = 17};
+    binding->direction = 2;
+    binding->offset = (s_axis_i){.x = -19, .y = 23, .z = 29};
+    binding->sortid = -31;
+
+    ScriptVariant handle = {.vt = VT_EMPTY};
+    ScriptVariant key = {.vt = VT_EMPTY};
+    ScriptVariant input = {.vt = VT_EMPTY};
+    ScriptVariant value = {.vt = VT_EMPTY}, *out = &value, *handle_out = &handle;
+    ScriptVariant *args[] = {&handle, &key, &input};
+    StrCache_Init();
+    assert(extract_handle(&actor, _ep_binding, &handle_out) == S_OK);
+    assert(handle.vt == VT_PTR && handle.ptrVal == binding);
+    assert(extract_handle(&actor, _ep_bound, &out) == S_OK);
+    assert(value.vt == VT_PTR && !value.ptrVal);
+
+    for(LONG ordinal = 0; ordinal < (LONG)(sizeof(names) / sizeof(*names)); ++ordinal)
+    {
+        ScriptVariant_ChangeType(&key, VT_INTEGER);
+        key.lVal = ordinal;
+        assert(openbor_get_binding_property(args, &out, 2) == S_OK && out == &value);
+        if(ordinal == 5)
+        {
+            assert(value.vt == VT_EMPTY);
+            input.vt = VT_PTR;
+            input.ptrVal = &parent;
+        }
+        else
+        {
+            assert(value.vt == VT_INTEGER && value.lVal == expected[ordinal]);
+            input.vt = VT_DECIMAL;
+            input.dblVal = -40.75 - ordinal;
+        }
+        ScriptVariant_ChangeType(&key, VT_STR);
+        StrCache_Copy(key.strVal, (char *)names[ordinal]);
+        assert(openbor_set_binding_property(args, &out, 3) == S_OK && out == &value);
+        assert(key.vt == VT_INTEGER && key.lVal == ordinal);
+        assert(openbor_get_binding_property(args, &out, 2) == S_OK && out == &value);
+        if(ordinal == 5)
+            assert(value.vt == VT_PTR && value.ptrVal == &parent);
+        else
+            assert(value.vt == VT_INTEGER && value.lVal == -40 - ordinal);
+    }
+    assert(binding->ani_bind == -40 && binding->sortid == -49);
+    assert(binding->offset_flag.x == -41 && binding->offset_flag.y == -42 && binding->offset_flag.z == -43);
+    assert((LONG)binding->direction == -44 && binding->ent == &parent);
+    assert(binding->offset.x == -46 && binding->offset.y == -47 && binding->offset.z == -48);
+    assert(extract_handle(&actor, _ep_bound, &out) == S_OK);
+    assert(value.vt == VT_PTR && value.ptrVal == &parent);
+    key.lVal = 5;
+    ScriptVariant_Clear(&input);
+    assert(openbor_set_binding_property(args, &out, 3) == S_OK && out == &value);
+    assert(!binding->ent && openbor_get_binding_property(args, &out, 2) == S_OK);
+    assert(value.vt == VT_EMPTY);
+    key.lVal = 0;
+    assert(openbor_set_binding_property(args, &out, 3) == S_OK && binding->ani_bind == -40);
+    key.lVal = 10;
+    assert(openbor_set_binding_property(args, &out, 3) == E_FAIL && out == &value);
+    assert(openbor_get_binding_property(args, &out, 2) == E_FAIL && !out);
+    out = &value;
+    ScriptVariant_ChangeType(&key, VT_STR);
+    StrCache_Copy(key.strVal, "unrecognized");
+    assert(openbor_get_binding_property(args, &out, 2) == E_FAIL && !out && key.vt == VT_STR);
+    ScriptVariant_Clear(&key);
+    StrCache_Clear();
+    puts("scalar_binding_4905");
+    return 0;
+}

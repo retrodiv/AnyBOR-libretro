@@ -1,3 +1,15 @@
+/* AnyBOR modification record: 2026-10-05.
+ * Port maintained by retrodiv <retrodiv@proton.me>.
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me> (original contributions).
+ * These contributions are licensed under BSD-3-Clause; see LICENSE at the root.
+ * Upstream code retains its original license and notices.
+ * Restore the pragma pack state the script headers rely on instead of
+ * leaving it set for every includer.
+ * Existing changes recorded here; this is not their implementation date.
+ * See MODIFICATIONS.md and docs/modifications/6391.md
+ * at the source repository root. Original notices follow below.
+ */
+
 /*
  * OpenBOR - http://www.chronocrash.com
  * -----------------------------------------------------------------------
@@ -68,6 +80,19 @@ typedef void VOID;
 
 #define MAX_STR_LEN    128
 #define MAX_STR_VAR_LEN    64
+
+/* Select native script limits independently of the shared storage sizes. */
+static inline unsigned obor_script_text_limit(unsigned shared_limit)
+{
+#if defined(OBOR_ENGINE_BUILD) && OBOR_ENGINE_BUILD == 6391
+    extern DWORD obor_profile_build;
+    if(obor_profile_build == 5134 || obor_profile_build == 6119)
+    {
+        return shared_limit - 1;
+    }
+#endif
+    return shared_limit;
+}
 
 //#pragma pack(4)
 

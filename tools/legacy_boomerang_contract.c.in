@@ -1,0 +1,220 @@
+/* SPDX-License-Identifier: BSD-3-Clause
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me>
+ */
+#include <stdint.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <strings.h>
+#include "scriptcommon.h"
+#include "profile_ids.h"
+#undef printf
+#undef assert
+#include <assert.h>
+#ifndef stricmp
+#define stricmp strcasecmp
+#endif
+
+uint32_t obor_profile_build;
+uint32_t obor_profile_features;
+int max_animations = MAX_ANIS;
+static unsigned frame_calls;
+
+void update_frame(entity *actor, int frame)
+{
+    assert(actor->animation && frame == 0);
+    ++frame_calls;
+    actor->animpos = frame;
+}
+
+void *checkAlloc(void *ptr, size_t size, const char *func, const char *file, int line)
+{
+    assert(!size || ptr);
+    return ptr;
+}
+
+@DECLARATIONS@
+@CACHE@
+@SEARCH@
+@METHODS@
+@SELECTOR@
+
+typedef struct { const char *name; int selector, named; } property_entry;
+@TABLES@
+
+static ScriptVariant text(const char *name)
+{
+    return (ScriptVariant){.vt = VT_STR, .strVal = StrCache_CreateNewFrom(name)};
+}
+
+static ScriptVariant integer(int value)
+{
+    return (ScriptVariant){.vt = VT_INTEGER, .lVal = value};
+}
+
+static LONG lookup(ScriptVariant *value)
+{
+    ScriptVariant handle = {.vt = VT_EMPTY};
+    ScriptVariant *args[] = {&handle, value};
+    if(!mapstrings_entityproperty(args, 2))
+    {
+        assert(value->vt == VT_STR);
+        ScriptVariant_Clear(value);
+        return -1;
+    }
+    assert(value->vt == VT_INTEGER);
+    return value->lVal;
+}
+
+static DOUBLE read_boomerang(entity *actor, LONG ordinal, ScriptVariant flag)
+{
+    ScriptVariant handle = {.vt = VT_PTR, .ptrVal = actor};
+    ScriptVariant property = integer(ordinal);
+    ScriptVariant value = {.vt = VT_EMPTY}, *out = &value;
+    ScriptVariant *args[] = {&handle, &property, &flag};
+    assert(openbor_getentityproperty(args, &out, 3) == S_OK);
+    assert(out == &value && value.vt == VT_DECIMAL);
+    return value.dblVal;
+}
+
+static void check_boomerang(LONG ordinal, bool old)
+{
+    entity actor = {0};
+    actor.modeldata.boomerang_prop.acceleration = 1.25f;
+    actor.modeldata.boomerang_prop.hdistance = 7.5f;
+    ScriptVariant handle = {.vt = VT_PTR, .ptrVal = &actor};
+    ScriptVariant value = {.vt = VT_EMPTY}, *out = &value;
+    ScriptVariant key = text("boomerang");
+    ScriptVariant first = old ? (ScriptVariant){.vt = VT_DECIMAL, .dblVal = -2.25} : text("acceleration");
+    ScriptVariant second = {.vt = VT_DECIMAL, .dblVal = 14.5};
+    ScriptVariant *args[] = {&handle, &key, &first, &second};
+
+    if(old)
+    {
+        assert(read_boomerang(&actor, ordinal, integer(0)) == 1.25);
+        assert(read_boomerang(&actor, ordinal, integer(-2)) == 7.5);
+        assert(read_boomerang(&actor, ordinal, (ScriptVariant){.vt = VT_DECIMAL, .dblVal = 0.75}) == 1.25);
+        assert(openbor_getentityproperty(args, &out, 2) == E_FAIL && out == NULL);
+        out = &value;
+        assert(openbor_changeentityproperty(args, &out, 3) == E_FAIL && out == NULL);
+        assert(actor.modeldata.boomerang_prop.acceleration == 1.25f);
+        assert(actor.modeldata.boomerang_prop.hdistance == 7.5f);
+    }
+    else
+    {
+        assert(read_boomerang(&actor, ordinal, text("acceleration")) == 1.25);
+        assert(read_boomerang(&actor, ordinal, text("hdistance")) == 7.5);
+    }
+
+    out = &value;
+    assert(openbor_changeentityproperty(args, &out, 4) == S_OK && out == NULL);
+    assert(read_boomerang(&actor, ordinal, integer(0)) == (old ? -2.25 : 14.5));
+    assert(read_boomerang(&actor, ordinal, integer(1)) == (old ? 14.5 : 7.5));
+}
+
+static void check_landing_force(LONG ordinal)
+{
+    entity actor = {.damage_on_landing = {.attack_force = 17, .attack_type = ATK_SHOCK}};
+    ScriptVariant handle = {.vt = VT_PTR, .ptrVal = &actor};
+    ScriptVariant property = integer(ordinal);
+    ScriptVariant input = {.vt = VT_DECIMAL, .dblVal = -5.25};
+    ScriptVariant extra = integer(1);
+    ScriptVariant result = {.vt = VT_EMPTY}, *out = &result;
+    ScriptVariant *getter[] = {&handle, &property, &extra};
+    ScriptVariant *setter[] = {&handle, &property, &input, &extra};
+    assert(openbor_getentityproperty(getter, &out, 3) == S_OK && out == &result);
+    assert(result.vt == VT_INTEGER && result.lVal == 17);
+    assert(openbor_changeentityproperty(setter, &out, 4) == S_OK && out == NULL);
+    assert(actor.damage_on_landing.attack_force == -5);
+    assert(actor.damage_on_landing.attack_type == ATK_SHOCK);
+}
+
+static void check_previous_animation(LONG ordinal)
+{
+    s_anim walk = {.numframes = 7, .sync = 3};
+    s_anim idle = {.numframes = 4, .sync = 3};
+    s_anim *animations[MAX_ANIS] = {[ANI_WALK] = &walk, [ANI_IDLE] = &idle};
+    ScriptVariant property = integer(ordinal);
+    ScriptVariant result = {.vt = VT_EMPTY};
+    const struct {
+        s_anim *previous;
+        int position, reset, sync, expected_position;
+        unsigned expected_calls;
+    } cases[] = {
+        {&idle, 2, 0,  3, 2, 0},
+        {&walk, 2, 0,  3, 2, 0},
+        {&walk, 5, 0,  3, 0, 0},
+        {&walk, 2, 2, -1, 2, 0},
+        {&walk, 2, 0, -1, 0, 1},
+        {NULL,  2, 0,  3, 0, 1}
+    };
+    for(size_t i = 0; i < sizeof(cases) / sizeof(*cases); ++i)
+    {
+        const bool unchanged = cases[i].previous == &idle;
+        entity actor = {
+            .modeldata = {.animation = animations, .animation_capacity = MAX_ANIS},
+            .animation = cases[i].previous,
+            .animnum = unchanged ? ANI_IDLE : ANI_WALK,
+            .prevanimnum = ANI_JUMP,
+            .animpos = cases[i].position,
+            .walking = 1
+        };
+        ScriptVariant handle = {.vt = VT_PTR, .ptrVal = &actor}, *out = &result;
+        ScriptVariant *args[] = {&handle, &property};
+        idle.sync = cases[i].sync;
+        frame_calls = 0;
+        ent_set_anim(&actor, ANI_IDLE, cases[i].reset);
+        assert(actor.animation == &idle && actor.animnum == ANI_IDLE);
+        assert(actor.animpos == cases[i].expected_position && actor.walking == unchanged);
+        assert(frame_calls == cases[i].expected_calls);
+        if(ordinal >= 0)
+        {
+            assert(openbor_getentityproperty(args, &out, 2) == S_OK && out == &result);
+            assert(result.vt == VT_INTEGER && result.lVal == (unchanged ? 2 : 1));
+        }
+    }
+}
+
+int main(void)
+{
+    const struct { unsigned revision; const property_entry *table; size_t count; int boomerang; } profiles[] = {
+        @PROFILES@
+    };
+    StrCache_Init();
+    for(size_t p = 0; p < sizeof(profiles) / sizeof(*profiles); ++p)
+    {
+        obor_profile_build = profiles[p].revision;
+        LONG boomerang = -1;
+        LONG previous_animation = -1;
+        for(size_t n = 0; n < profiles[p].count; ++n)
+        {
+            const property_entry *entry = &profiles[p].table[n];
+            ScriptVariant name = text(entry->name);
+            LONG mapped = lookup(&name);
+            if(mapped != entry->named)
+                fprintf(stderr, "%u %s expected %d, got %ld\n", obor_profile_build,
+                        entry->name, entry->named, (long)mapped);
+            assert(mapped == entry->named);
+            assert(obor_entityproperty((int)n) == entry->selector);
+            if(entry->selector == _ep_boomerang) boomerang = (LONG)n;
+            if(entry->selector == _ep_damage_on_landing) check_landing_force((LONG)n);
+            if(entry->selector == _ep_prevanimationid) previous_animation = (LONG)n;
+        }
+        assert(obor_entityproperty((int)profiles[p].count) == _ep_the_end);
+        const char *sentinels[] = {@CONTROLS@};
+        for(size_t n = 0; n < sizeof(sentinels) / sizeof(*sentinels); ++n)
+        {
+            LONG expected = -1;
+            for(size_t i = 0; i < profiles[p].count; ++i)
+                if(!strcmp(sentinels[n], profiles[p].table[i].name)) expected = profiles[p].table[i].named;
+            ScriptVariant name = text(sentinels[n]);
+            assert(lookup(&name) == expected);
+        }
+        if(profiles[p].boomerang) check_boomerang(boomerang, profiles[p].boomerang == 1);
+        else assert(boomerang < 0);
+        check_previous_animation(previous_animation);
+        printf("PASS %u\n", obor_profile_build);
+    }
+    StrCache_Clear();
+    return 0;
+}

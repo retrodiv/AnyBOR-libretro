@@ -1,0 +1,69 @@
+/* SPDX-License-Identifier: BSD-3-Clause
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me>
+ */
+#include <stdarg.h>
+#include <stdio.h>
+#include <string.h>
+#include "openbor.h"
+#include "profile_ids.h"
+#include "translation.h"
+#undef printf
+#undef assert
+#include <assert.h>
+
+uint32_t obor_profile_build;
+static s_player player[MAX_PLAYERS];
+static s_videomodes videomodes;
+s_savedata savedata;
+static int pnameJ[MAX_PLAYERS][7];
+static int credits, noshare, nojoin, CONTINUES, calls;
+static u32 _time;
+static char message[64];
+
+char *ob_gettrans(char *text) { return text; }
+
+void font_printf(int x, int y, int which, int layer, char *format, ...)
+{
+    assert(x == 51 && y == 14 && which == 3 && layer == 0);
+    va_list args;
+    va_start(args, format);
+    const int count = vsnprintf(message, sizeof(message), format, args);
+    va_end(args);
+    assert(count >= 0 && (size_t)count < sizeof(message));
+    ++calls;
+}
+
+static void prompt(int i)
+{
+@CREDIT_BRANCH@
+}
+
+static void check(unsigned revision, int personal, int shared, int hasplayed, int separate,
+                  int blocked, int blink, const char *expected)
+{
+    obor_profile_build = revision;
+    player[1].credits = personal;
+    player[1].hasplayed = hasplayed;
+    credits = shared;
+    noshare = separate;
+    nojoin = blocked;
+    CONTINUES = 6;
+    _time = GAME_SPEED * 2 * blink;
+    videomodes.shiftpos[1] = 44;
+    savedata.windowpos = 9;
+    pnameJ[1][4] = 7;
+    pnameJ[1][5] = 5;
+    pnameJ[1][6] = 3;
+    const int previous_calls = calls;
+    prompt(1);
+    if(strcmp(message, expected))
+        fprintf(stderr, "%u HUD displayed '%s' instead of '%s'\n", revision, message, expected);
+    assert(calls == previous_calls + 1 && !strcmp(message, expected));
+}
+
+int main(void)
+{
+    @CHECKS@
+    printf("PASS %d\n", calls);
+    return 0;
+}

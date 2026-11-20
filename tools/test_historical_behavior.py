@@ -69,6 +69,18 @@ def system_variant_methods(source):
 
 
 class HistoricalBehaviorTests(unittest.TestCase):
+    def test_6391_windows_memory_reports(self):
+        from test_historical_common_think import native_output
+
+        engine = Path(os.environ.get('OBOR_HISTORICAL_ENGINE', ROOT / 'src/engines/6391'))
+        source = (engine / 'source/ramlib/ram.c').read_text()
+        methods = '\n'.join(function(source, name)
+                            for name in ('obor_profile_uses_legacy_windows_memory_report',
+                                         'getFreeRam', 'setSystemRam', 'getSystemRam'))
+        template = Path(__file__).with_name('windows_memory_report_contract.c.in').read_text()
+        native_output(template.replace('@METHODS@', methods), {'engine': '6391'},
+                      engine_source=engine, extra_cflags=('-fgnu89-inline',))
+
     def test_classic_entity_declarations_keep_mapper_without_animation_bodies(self):
         from historical_classic_entities import entity_declarations
         source = ('enum _axis_enum { axis };\n'
@@ -608,6 +620,480 @@ int main(void) {
     def test_classic_macro_parameter_scope_nested_arguments_and_concatenation(self):
         from historical_classic_preprocessor import check_contract
         check_contract(self, 'profile-classic-macro-scope.json')
+
+    def test_6391_original_preprocessor_token_lengths(self):
+        from historical_classic_preprocessor import check_contract
+        engine = Path(os.environ.get('OBOR_HISTORICAL_ENGINE', ROOT / 'src/engines/6391'))
+        check_contract(self, 'profile-6391-script-text-widths.json', engine_source=engine,
+                       early_key='legacy_widths')
+
+    def test_6391_original_script_text_value_lengths(self):
+        from test_historical_common_think import native_output
+        data = load_contract_fixture(Path(__file__).parent / 'fixtures/profile-6391-script-text-widths.json')
+        rows = data['sources']
+        self.assertEqual({row['revision'] for row in rows}, contract_revisions(data, data['expected_revisions']))
+        engine = Path(os.environ.get('OBOR_HISTORICAL_ENGINE', ROOT / 'src/engines' / data['engine']))
+        script = (engine / 'openborscript.c').read_text()
+        variants = (engine / 'source/scriptlib/ScriptVariant.c').read_text()
+        definitions = '\n'.join(function(script, name) for name in (
+            'obor_textobj_store', 'obor_textobj_format', 'openbor_fademusic'))
+        game = (engine / 'openbor.c').read_text()
+        music = re.search(r'(?ms)^            else if\(level->spawnpoints\[current_spawn\]\.music\[0\]\)\n'
+                          r'            (\{.*?^            \})', game)[1]
+        definitions += '\nstatic void set_spawn_music(s_level *level, int current_spawn)\n' + music
+        conversions = '\n'.join(function(variants, name) for name in (
+            'ScriptVariant_IntegerValue', 'ScriptVariant_DecimalValue'))
+        lexer = (engine / 'source/scriptlib/Lexer.c').read_text()
+        conversions += '\n' + function(lexer, 'Token_InitFromPreprocessor')
+        utilities = (engine / 'source/utils.c').read_text()
+        conversions += '\n' + function(utilities, 'safe_strncpy')
+        checks = '\n    '.join('check(%du, %d, %d, %d);' % (
+            row['revision'], row['token_capacity'], row['value_capacity'], row['fade_copy_bytes'])
+            for row in rows)
+        template = Path(__file__).with_name('script_text_width_contract.c.in').read_text()
+        music_method = function(game, 'music')
+        cache = re.search(r'(?m)^    if\(obor_profile_uses_5134_script_ids\(\)\) safe_strncpy\(currentmusic,.*\n'
+                          r'    else strncpy\(currentmusic,.*$', music_method)[0]
+        command = re.search(r'(?ms)^        case CMD_LEVEL_MUSIC:\n.*?(?=^        case CMD_LEVEL_ALLOWSELECT:)', game)[0]
+        previous = re.search(r'(?ms)^                    int previousLoop = musicloop;\n'
+                             r'.*?(?=^                    if\(custScenes != NULL\))', game)[0]
+        restore = re.search(r'(?ms)^                    if\(stricmp\(previousMusic, currentmusic\) != 0\)\n'
+                            r'.*?^                    \}', game)[0]
+        code = (template.replace('@FUNCTIONS@', conversions + '\n' + definitions)
+                .replace('@MUSIC_CACHE@', cache).replace('@MUSIC_COMMAND@', command)
+                .replace('@BEFORE_SCENE@', previous).replace('@AFTER_SCENE@', restore)
+                .replace('@CHECKS@', checks))
+        self.assertEqual(native_output(code, data, engine_source=engine),
+                         ''.join(f'PASS {row["revision"]}\n' for row in rows))
+
+    def test_6391_original_unary_negation(self):
+        from test_historical_common_think import native_output
+        data = load_contract_fixture(Path(__file__).parent / 'fixtures/profile-6391-unary-negation.json')
+        rows = data['sources']
+        self.assertEqual({row['revision'] for row in rows}, contract_revisions(data, data['expected_revisions']))
+        engine = Path(os.environ.get('OBOR_HISTORICAL_ENGINE', ROOT / 'src/engines' / data['engine']))
+        source = (engine / 'source/scriptlib/ScriptVariant.c').read_text()
+        interpreter = (engine / 'source/scriptlib/Interpreter.c').read_text()
+        macro = re.search(r'(?m)^#define UNARYOP\(x\) \\\n[^\n]+', interpreter)[0]
+        branch = re.search(r'(?m)^        case NEG:\n            UNARYOP\(ScriptVariant_Neg\);\n            break;',
+                           interpreter)[0]
+        cases = ',\n'.join('{%du,{%s}}' % (
+            row['revision'], ','.join('UINT64_C(0x' + value + ')' for value in row['result_bits']))
+            for row in rows)
+        values = ','.join(repr(value) for value in data['decimals'])
+        template = Path(__file__).with_name('unary_negation_contract.c.in').read_text()
+        code = (template.replace('@NEGATION@', function(source, 'ScriptVariant_Neg'))
+                .replace('@DISPATCH@', macro).replace('@CASE@', branch)
+                .replace('@VALUES@', values).replace('@CONTEXTS@', cases))
+        self.assertEqual(native_output(code, data, engine_source=engine),
+                         ''.join(f'PASS {row["revision"]}\n' for row in rows))
+
+    def test_6391_original_level_mask_and_entity_alias(self):
+        from test_historical_common_think import native_output
+        data = load_contract_fixture(Path(__file__).parent / 'fixtures/profile-6391-level-mask-alias.json')
+        rows = data['sources']
+        self.assertEqual({row['revision'] for row in rows}, contract_revisions(data, data['expected_revisions']))
+        engine = Path(os.environ.get('OBOR_HISTORICAL_ENGINE', ROOT / 'src/engines' / data['engine']))
+        game = (engine / 'openbor.c').read_text()
+        level = function(game, 'load_level')
+        commands = '\n'.join(re.search(r'(?ms)^        case CMD_LEVEL_' + name + r':\n.*?(?=^        case )', level)[0]
+                             for name in ('ALPHAMASK', 'ALIAS', 'BOSS'))
+        utility = function((engine / 'source/utils.c').read_text(), 'safe_strncpy')
+        alias = re.search(r'(?ms)^    if\(props->alias\[0\]\)\n.*?^    \}', function(game, 'smartspawn'))[0]
+        name_copy = re.search(r'(?m)^            (?:safe_)?strncpy\(e->name, e->modeldata.name,[^;]+;',
+                              function(game, 'spawn'))[0]
+        counts = re.search(r'(?m)^    level->bossescount\s*= 0;\n    level->numbosses\s*= 0;', level)[0]
+        checks = '\n    '.join('check(%du,%d,%d,%d);' %
+                               (row['revision'], row['mask_bytes'], row['alias_bytes'], row['model_name_bytes'])
+                               for row in rows)
+        template = Path(__file__).with_name('level_mask_alias_contract.c.in').read_text()
+        code = (template.replace('@NATIVE@', utility + function(game, 'load_layer')).replace('@COUNTS@', counts)
+                .replace('@COMMANDS@', commands).replace('@ALIAS@', alias)
+                .replace('@MODEL_NAME@', name_copy).replace('@CHECKS@', checks))
+        self.assertEqual(native_output(code, data, engine_source=engine),
+                         ''.join(f'PASS {row["revision"]}\n' for row in rows))
+
+    def test_6391_script_drawing_and_log_values(self):
+        from test_historical_common_think import native_output
+        data = load_contract_fixture(Path(__file__).with_name('fixtures') / 'profile-6391-script-display-text.json')
+        rows = data['sources']
+        revisions = [row['revision'] for row in rows]
+        self.assertEqual(revisions, sorted(contract_revisions(data, data['expected_revisions'])))
+        engine = Path(os.environ.get('OBOR_HISTORICAL_ENGINE', ROOT / 'src/engines' / data['engine']))
+        scripts = (engine / 'openborscript.c').read_text(encoding='latin-1')
+        variants = (engine / 'source/scriptlib/ScriptVariant.c').read_text()
+        header = (engine / 'source/globals.h').read_text()
+        profile_ids = (engine / 'source/openborscript/profile_ids.h').read_text()
+        values = {
+            'LIMIT': re.search(r'(?m)^#define\s+MAX_BUFFER_LEN\b[^\n]*', header)[0],
+            'PROFILE': function(profile_ids, 'obor_profile_uses_5134_script_ids'),
+            'FORMAT': function(variants, 'ScriptVariant_ToString'),
+            'NATIVE': '\n'.join(function(scripts, name) for name in ('obor_script_display_text',
+                'openbor_drawstring', 'openbor_drawstringtoscreen', 'openbor_log')),
+            'PROFILES': ',\n'.join('{%du,%d,%d}' % (r['revision'], r['text_capacity'], r['integer_bits'])
+                for r in rows),
+        }
+        template = Path(__file__).with_name('script_display_text_contract.c.in').read_text()
+        code = re.sub(r'@([A-Z_]+)@', lambda match: values[match[1]], template)
+        self.assertEqual(native_output(code, data, engine_source=engine),
+                         ''.join(f'PASS {revision}\n' for revision in revisions))
+
+    def test_6391_startup_resource_paths(self):
+        from test_historical_common_think import native_output
+        data = load_contract_fixture(Path(__file__).parent / 'fixtures/profile-6391-startup-assets.json')
+        rows = data['sources']
+        self.assertEqual({row['revision'] for row in rows}, contract_revisions(data, data['expected_revisions']))
+        engine = Path(os.environ.get('OBOR_HISTORICAL_ENGINE', ROOT / 'src/engines' / data['engine']))
+        game = (engine / 'openbor.c').read_text()
+        main = function(game, 'openborMain')
+        for loader, folder, name in data['startup_requests']:
+            self.assertIn(f'{loader}(tmpBuff, {folder}, "{name}");', main)
+        native = '\n'.join(function(game, name) for name in
+                           ('startup_asset_path', 'load_startup_background', 'play_startup_scene'))
+        image = function((engine / 'source/gamelib/loadimg.c').read_text(), 'openimage_mode')
+        checks = '\n    '.join('check(%du, %d, %d);' %
+                               (row['revision'], row['startup_name_bytes'], row['image_stem_bytes'])
+                               for row in rows)
+        template = Path(__file__).with_name('startup_assets_contract.c.in').read_text()
+        code = (template.replace('@STARTUP@', native).replace('@IMAGE@', image).replace('@CHECKS@', checks)
+                .replace('@EXTENSIONS@', ', '.join(json.dumps(ext) for ext in data['image_extensions'])))
+        self.assertEqual(native_output(code, data, engine_source=engine),
+                         ''.join(f'PASS {row["revision"]}\n' for row in rows))
+
+    def test_6391_model_level_and_script_paths(self):
+        from test_historical_common_think import native_output
+        data = load_contract_fixture(Path(__file__).with_name('fixtures') / 'profile-6391-model-level-paths.json')
+        rows = data['sources']
+        revisions = [row['revision'] for row in rows]
+        self.assertEqual(revisions, sorted(contract_revisions(data, data['expected_revisions'])))
+        engine = Path(os.environ.get('OBOR_HISTORICAL_ENGINE', ROOT / 'src/engines' / data['engine']))
+        game = (engine / 'openbor.c').read_text(encoding='latin-1')
+        globals_header = (engine / 'source/globals.h').read_text()
+        profile_ids = (engine / 'source/openborscript/profile_ids.h').read_text()
+        models = function(game, 'load_models')
+        level = function(game, 'load_levelorder')
+        level_assets = function(game, 'load_level')
+        select = function(game, 'selectplayer')
+        model = function(game, 'load_cached_model')
+        include = function(game, 'handle_txt_include')
+        custom_model = models.index('    if(custModels != NULL')
+        custom_level = level.index('    if(custLevels == NULL')
+        background = models.index('        if(custBkgrds != NULL)')
+        level_background = level_assets.index('                if(!startup_asset_path(bgPath')
+        level_loading = level_assets.index('        if(custBkgrds)')
+        select_path = select.index('if(!startup_asset_path(string, custBkgrds, "select"))')
+        select_background = select.rindex('                if(custBkgrds != NULL)', 0, select_path)
+        script = model.index('const size_t capacity = obor_profile_uses_5134_script_ids() ? 256')
+        values = {
+            'LIMIT': re.search(r'(?m)^#define\s+MAX_BUFFER_LEN[^\n]*', globals_header)[0],
+            'PATH': function(profile_ids, 'obor_profile_uses_5134_script_ids')
+                + function(game, 'startup_asset_path'),
+            'MODEL': models[custom_model:models.index('    // Read file', custom_model)],
+            'LEVEL': level[custom_level:level.index('    // Read file', custom_level)],
+            'BACKGROUND': models[background:models.index('        standard_palette', background)],
+            'LEVEL_BACKGROUND': level_assets[level_background:
+                level_assets.index('                bgl->oldtype = BGT_BACKGROUND;', level_background)],
+            'LEVEL_LOADING': level_assets[level_loading:level_assets.index('        clearscreen(', level_loading)],
+            'SELECT_BACKGROUND': select[select_background:
+                select.index('            }\n            if(!music(', select_path)],
+            'INCLUDE': re.search(r'(?ms)@filename"\) == 0\)\s*\{(.*?)^    \}', include)[1],
+            'CALL_FORMAT': re.search(r'(?ms)^    static const char call_text\[\][^{}]*\{[^{}]+\};', model)[0],
+            'CALL': model[script:model.index('                    do  //argument', script)],
+            'PROFILES': ',\n'.join('{%du,%d,%d}' %
+                   (row['revision'], row['path_capacity'], row['script_capacity']) for row in rows),
+        }
+        template = Path(__file__).with_name('model_level_paths_contract.c.in').read_text()
+        code = re.sub(r'@([A-Z_]+)@', lambda match: values[match[1]], template)
+        self.assertEqual(native_output(code, data, engine_source=engine),
+                         ''.join(f'PASS {revision}\n' for revision in revisions))
+
+    def test_6391_scene_media_and_menu_paths(self):
+        from test_early_jump_walkoff import braced_statement
+        from test_historical_common_think import native_output
+        data = load_contract_fixture(Path(__file__).with_name('fixtures') / 'profile-6391-scene-menu-paths.json')
+        rows = data['sources']
+        revisions = [row['revision'] for row in rows]
+        self.assertEqual(revisions, sorted(contract_revisions(data, data['expected_revisions'])))
+        engine = Path(os.environ.get('OBOR_HISTORICAL_ENGINE', ROOT / 'src/engines' / data['engine']))
+        game = (engine / 'openbor.c').read_text(encoding='latin-1')
+        headers = '\n'.join((engine / name).read_text() for name in
+                            ('openbor.h', 'source/globals.h', 'source/savedata.h'))
+        profile_ids = (engine / 'source/openborscript/profile_ids.h').read_text()
+        gameover = function(game, 'gameover')
+        values = {
+            'LIMITS': '\n'.join(re.search(r'(?m)^#define\s+' + name + r'\b[^\n]*', headers)[0]
+                for name in ('MAX_BUFFER_LEN', 'MAX_ARG_LEN', 'MAX_ARG_COUNT', 'MAX_PLAYERS')),
+            'ARGUMENTS': re.search(r'typedef struct ArgList\s*\{[^}]+\}\s*ArgList;', headers)[0],
+            'PARSER': function(game, 'ParseArgs') + function((engine / 'source/utils.c').read_text(), 'getNewLineStart'),
+            'PATHS': function(profile_ids, 'obor_profile_uses_5134_script_ids')
+                + function(game, 'startup_asset_path') + function(game, 'scene_media_path'),
+            'SCENE': function(game, 'playscene'),
+            'GAMEOVER': gameover[gameover.index('    if(custScenes != NULL)'):gameover.index('    while(!done)')],
+            'HALLFAME': braced_statement(function(game, 'hallfame'), 'if(hiscorebg)'),
+            'COMPLETE': braced_statement(function(game, 'showcomplete'), 'if(completebg)'),
+            'UNLOCK': braced_statement(function(game, 'selectplayer'), 'if(unlockbg && bonus)'),
+            'PROFILES': ',\n'.join('{%du,%d,{%s}}' % (row['revision'], row['media_capacity'],
+                ','.join(map(str, row['resource_capacities']))) for row in rows),
+        }
+        template = Path(__file__).with_name('scene_menu_paths_contract.c.in').read_text()
+        code = re.sub(r'@([A-Z_]+)@', lambda match: values[match[1]], template)
+        actual = native_output(code, data, engine_source=engine,
+                               extra_cflags=('-Wno-implicit-fallthrough',))
+        self.assertEqual(actual, ''.join(f'PASS {revision}\n' for revision in revisions))
+
+    def test_6391_saved_name_and_script_file_paths(self):
+        from test_historical_common_think import native_output
+        data = load_contract_fixture(Path(__file__).with_name('fixtures') / 'profile-6391-save-display-stream.json')
+        rows = data['sources']
+        revisions = [row['revision'] for row in rows]
+        self.assertEqual(revisions, sorted(contract_revisions(data, data['expected_revisions'])))
+        engine = Path(os.environ.get('OBOR_HISTORICAL_ENGINE', ROOT / 'src/engines' / data['engine']))
+        game = (engine / 'openbor.c').read_text(encoding='latin-1')
+        scripts = (engine / 'openborscript.c').read_text(encoding='latin-1')
+        globals_header = (engine / 'source/globals.h').read_text()
+        profile_ids = (engine / 'source/openborscript/profile_ids.h').read_text()
+        utility = (engine / 'source/utils.c').read_text(encoding='latin-1')
+        display = function(game, 'load_saved_game')
+        opening = function(scripts, 'openbor_openfilestream')
+        saving = function(scripts, 'openbor_savefilestream')
+        self.assertIn('handle = fopen(path, "rb");', opening)
+        self.assertIn('handle = fopen(path, "wb");', saving)
+        values = {
+            'LIMIT': re.search(r'(?m)^#define\s+MAX_BUFFER_LEN\b[^\n]*', globals_header)[0],
+            'PROFILE': function(profile_ids, 'obor_profile_uses_5134_script_ids')
+                + function(game, 'obor_profile_early_save_layout'),
+            'NAME_PROVIDER': function(utility, 'getPakName'),
+            'SAVED_NAME': re.search(r'getPakName\(name,[^;]+;', display)[0],
+            'LABEL': re.search(r'_menutext\(0, col2, -2, [^;]+\bname\);', display)[0],
+            'OPEN_PATH': opening[opening.index('const size_t capacity'):opening.index('#ifndef DC')],
+            'SAVE_PATH': saving[saving.index('const size_t capacity'):saving.index('    for(i = strlen(path)')],
+            'PROFILES': ',\n'.join('{%du,%d,%d,%d}' % (row['revision'], row['display_capacity'],
+                row['read_capacity'], row['write_capacity']) for row in rows),
+        }
+        template = Path(__file__).with_name('save_display_stream_contract.c.in').read_text()
+        code = re.sub(r'@([A-Z_]+)@', lambda match: values[match[1]], template)
+        self.assertEqual(native_output(code, data, engine_source=engine),
+                         ''.join(f'PASS {revision}\n' for revision in revisions))
+
+    def test_6391_host_paths_and_screenshot_names(self):
+        from test_historical_common_think import native_output
+        data = load_contract_fixture(Path(__file__).with_name('fixtures') / 'profile-6391-host-paths.json')
+        rows = data['sources']
+        revisions = [row['revision'] for row in rows]
+        self.assertEqual(revisions, sorted(contract_revisions(data, data['expected_revisions'])))
+        engine = Path(os.environ.get('OBOR_HISTORICAL_ENGINE', ROOT / 'src/engines' / data['engine']))
+        utils = (engine / 'source/utils.c').read_text(encoding='latin-1')
+        header = (engine / 'source/globals.h').read_text()
+        pak_names = (ROOT / 'src/port/libretro/anybor_pak_name.h').read_text()
+        values = {
+            'LIMITS': '\n'.join(re.search(r'(?m)^#define\s+' + name + r'[^\n]*', header)[0]
+                for name in ('MAX_BUFFER_LEN', 'MAX_LABEL_LEN', 'MAX_FILENAME_LEN')),
+            'MACROS': '\n'.join(re.findall(r'(?m)^#define ' + name + r'\(buf, name\)[^\n]*', utils)[-1]
+                for name in ('COPY_ROOT_PATH', 'COPY_PAKS_PATH')),
+            'NAMES': function(pak_names, 'obor_pak_name') + function(utils, 'getPakName'),
+            'METHODS': '\n'.join(function(utils, name) for name in ('getBasePath', 'dirExists', 'screenshot')),
+            'ROWS': ',\n'.join('{%du,%d,%d}' %
+                (row['revision'], row['screenshot_capacity'], row['stem_capacity']) for row in rows),
+        }
+        template = Path(__file__).with_name('host_paths_contract.c.in').read_text()
+        code = re.sub(r'@([A-Z_]+)@', lambda match: values[match[1]], template)
+        self.assertEqual(native_output(code, data, engine_source=engine),
+                         ''.join(f'PASS {revision}\n' for revision in revisions))
+
+    def test_6391_player_duck_controls(self):
+        from test_historical_common_think import native_output
+        data = load_contract_fixture(Path(__file__).parent / 'fixtures/profile-6391-player-duck-controls.json')
+        rows = data['sources']
+        self.assertEqual([row['revision'] for row in rows],
+                         sorted(contract_revisions(data, data['expected_revisions'])))
+        engine = Path(os.environ.get('OBOR_HISTORICAL_ENGINE', ROOT / 'src/engines' / data['engine']))
+        game = (engine / 'openbor.c').read_text(encoding='latin-1')
+        player = function(game, 'player_think')
+        attack = player.index('    if((pl->playkeys & FLAG_ATTACK) && notinair)')
+        start = player.index('    if(PLAYER_MIN_Z != PLAYER_MAX_Z', attack)
+        left = player.index('    if((pl->keys & FLAG_MOVELEFT)', start)
+        right = player.index('    else if((pl->keys & FLAG_MOVERIGHT)', left)
+        release = player.index('    if(!legacy_ducking && (self->ducking & DUCK_ACTIVE))', right)
+        values = {
+            'PROFILE': re.search(r'(?m)^    const int legacy_ducking = [^;]+;', player)[0],
+            'ACTIONS': '\n'.join(function(game, name) for name in ('tryduck', 'tryduckrise', 'doduck')),
+            'ATTACK': player[attack:player.index('        if(self->running &&', attack)] + '    }',
+            'MOVEMENT': player[start:left],
+            'LEFT': player[left:player.index('\n', left)],
+            'RIGHT': player[right:player.index('\n', right)],
+            'RELEASE': player[release:player.index('    //White Dragon:', release)],
+            'CASES': '\n    '.join('check(%du, %d);' % (row['revision'], row['stateful']) for row in rows),
+        }
+        template = Path(__file__).with_name('player_duck_controls_contract.c.in').read_text()
+        code = re.sub(r'@([A-Z_]+)@', lambda match: values[match[1]], template)
+        self.assertEqual(native_output(code, data, engine_source=engine),
+                         ''.join(f'PASS {row["revision"]}\n' for row in rows))
+
+    def test_6391_ai_stance_and_attack_recovery(self):
+        from test_historical_common_think import native_output
+        data = load_contract_fixture(Path(__file__).parent / 'fixtures/profile-6391-ai-duck-actions.json')
+        rows = data['sources']
+        self.assertEqual([row['revision'] for row in rows],
+                         sorted(contract_revisions(data, data['expected_revisions'])))
+        engine = Path(os.environ.get('OBOR_HISTORICAL_ENGINE', ROOT / 'src/engines' / data['engine']))
+        game = (engine / 'openbor.c').read_text(encoding='latin-1')
+        prepare = function(game, 'normal_prepare')
+        start = prepare.index('    if(self->modeldata.chainlength > 1)')
+        end = prepare.index('    else // dont have a chain', start)
+        motion = function(game, 'common_move')
+        turn = re.search(r'(?ms)^\s*if\(self->direction != predir && validanim\(self, ANI_TURN\).*?(?=\n\s*\{)', motion)[0]
+        think = function(game, 'common_think')
+        gate = re.search(r'(?ms)^    if\([^\n]*ai_check_ducking\(\)[^\n]*\n    \{\s*return;\s*}', think)[0]
+        methods = ('set_idle', 'doduck', 'common_preduck', 'common_idle', 'tryduck', 'tryduckrise',
+                   'upper_prepare', 'common_try_upper', 'common_try_duckattack', 'normal_attack',
+                   'ai_check_ducking', 'common_attack_finish')
+        values = {
+            'ACTIONS': '\n'.join(function(game, name) for name in methods),
+            'THINK_GATE': gate.replace('return;', 'return 1;'),
+            'TURN_GATE': turn,
+            'PREPARE_GATE': prepare[start:end],
+            'CASES': '\n    '.join('check(%du, %d);' % (row['revision'], row['stateful']) for row in rows),
+        }
+        template = Path(__file__).with_name('ai_duck_actions_contract.c.in').read_text()
+        code = re.sub(r'@([A-Z_]+)@', lambda match: values[match[1]], template)
+        self.assertEqual(native_output(code, data, engine_source=engine),
+                         ''.join(f'PASS {row["revision"]}\n' for row in rows))
+
+    def test_6391_stance_reset_and_freeze_transitions(self):
+        from test_early_jump_walkoff import braced_statement
+        from test_historical_common_think import native_output
+        data = load_contract_fixture(Path(__file__).parent / 'fixtures/profile-6391-posture-resets.json')
+        rows = data['sources']
+        self.assertEqual([row['revision'] for row in rows],
+                         sorted(contract_revisions(data, data['expected_revisions'])))
+        engine = Path(os.environ.get('OBOR_HISTORICAL_ENGINE', ROOT / 'src/engines' / data['engine']))
+        game = (engine / 'openbor.c').read_text(encoding='latin-1')
+        gravity = function(game, 'check_gravity')
+        names = ('is_frozen', 'unfrozen', 'set_idle', 'common_pain', 'player_pain_check', 'tryjump',
+                 'common_block', 'check_costmove')
+        values = {
+            'METHODS': '\n'.join(function(game, name) for name in names),
+            'WALKOFF': braced_statement(gravity, 'if ( !cplat || (cplat && diff(get_platform_base(cplat)'),
+            'CASES': '\n    '.join('check(%du, %d);' % (row['revision'], row['stateful']) for row in rows),
+        }
+        template = Path(__file__).with_name('stance_reset_contract.c.in').read_text()
+        code = re.sub(r'@([A-Z_]+)@', lambda match: values[match[1]], template)
+        self.assertEqual(native_output(code, data, engine_source=engine),
+                         ''.join(f'PASS {row["revision"]}\n' for row in rows))
+
+    def test_6391_script_save_text(self):
+        from test_historical_common_think import native_output
+        data = load_contract_fixture(Path(__file__).parent / 'fixtures/profile-6391-script-save-text.json')
+        rows = data['sources']
+        revisions = [row['revision'] for row in rows]
+        self.assertEqual(revisions, sorted(contract_revisions(data, data['expected_revisions'])))
+        engine = Path(os.environ.get('OBOR_HISTORICAL_ENGINE', ROOT / 'src/engines' / data['engine']))
+        source = (engine / 'openbor.c').read_text(encoding='latin-1')
+        methods = '\n'.join(function(source, name) for name in ('vardump', 'saveScriptFile', 'loadScriptFile'))
+        template = Path(__file__).with_name('script_save_text_contract.c.in').read_text()
+        code = (template.replace('@METHODS@', methods)
+                .replace('@SOURCE_TEXT@', json.dumps(data['input_string']))
+                .replace('@EXPECTED@', json.dumps(data['file_text']))
+                .replace('@PROFILES@', ', '.join(f'{revision}u' for revision in revisions)))
+        self.assertEqual(native_output(code, data, engine_source=engine),
+                         ''.join(f'PASS {revision}\n' for revision in revisions))
+
+    def test_6391_model_attack_selectors(self):
+        from test_historical_common_think import native_output
+        from test_historical_model_defaults import model_command_functions
+        data = load_contract_fixture(Path(__file__).parent / 'fixtures/profile-6391-model-attack-choices.json')
+        rows = data['sources']
+        revisions = [row['revision'] for row in rows]
+        self.assertEqual(revisions, sorted(contract_revisions(data, data['expected_revisions'])))
+        engine = Path(os.environ.get('OBOR_HISTORICAL_ENGINE', ROOT / 'src/engines' / data['engine']))
+        source = (engine / 'openbor.c').read_text(encoding='latin-1')
+        loader = function(source, 'load_cached_model')
+        begin = loader.index('case CMD_MODEL_DEFENSE:')
+        end = loader.index('case CMD_MODEL_HEIGHT:', loader.index('#undef tempoff', begin))
+        lose_case = re.search(r'(?m)^                case CMD_MODEL_LOSE:\n(?:.*\n){3}', loader)[0]
+        tables = []
+        for row in rows:
+            for name, slots in row['choices'].items():
+                self.assertTrue(all(re.fullmatch(r'ATK_[A-Z0-9_]+|MAX_ATKS(?:\+1)?', slot) for slot in slots))
+                mask = ' | '.join(f'(UINT64_C(1) << ({slot}))' for slot in slots) or '0'
+                tables.append(f'{{{row["revision"]}u, {json.dumps(name)}, {mask}}}')
+        values = {
+            'COMMANDS': model_command_functions((engine / 'source/openborscript/commands.c').read_text(),
+                                                (engine / 'source/utils.c').read_text()),
+            'ATTACK_TYPE': function(source, 'translate_attack_type'),
+            'DEFAULT_DEFENSE': re.search(r'(?ms)^const s_defense default_defense\s*=\s*\{[^}]+\};', source)[0],
+            'MODEL_CHOICES': loader[begin:end],
+            'LOSE_CASE': lose_case,
+            'TESTS': ',\n'.join(tables),
+            'PROFILES': '\n    '.join(f'check_profile({row["revision"]}u, {int(row["has_lose"])});' for row in rows),
+        }
+        template = Path(__file__).with_name('model_attack_choices_contract.c.in').read_text()
+        code = re.sub(r'@([A-Z_]+)@', lambda match: values[match[1]], template)
+        self.assertEqual(native_output(code, data, engine_source=engine),
+                         ''.join(f'PASS {revision}\n' for revision in revisions))
+
+    def test_6391_original_input_replay_records(self):
+        from test_historical_common_think import native_output
+        data = load_contract_fixture(Path(__file__).with_name('fixtures') / 'profile-6391-early-replay.json')
+        rows = data['sources']
+        revisions = [row['revision'] for row in rows]
+        self.assertEqual(revisions, sorted(contract_revisions(data, data['expected_revisions'])))
+        engine = Path(os.environ.get('OBOR_HISTORICAL_ENGINE', ROOT / 'src/engines' / data['engine']))
+        source = (engine / 'openbor.c').read_text(encoding='latin-1')
+        header = (engine / 'openbor.h').read_text(encoding='latin-1')
+        profiles = (engine / 'source/openborscript/profile_ids.h').read_text()
+        script = (engine / 'openborscript.c').read_text(encoding='latin-1')
+        records = [
+            re.search(r'typedef struct\s+' + tag + r'\s*\{[^{}]*\}\s*' + name + r'\s*;', header)[0]
+            for tag, name in (('InputKeys', 'RecKeys'), ('PlayRecStatus', 'a_playrecstatus'))
+        ]
+        records.append(re.search(r'typedef struct\s*\{[^{}]*\}\s*obor_early_replay_row\s*;', source)[0])
+        values = {
+            'RECORDS': '\n'.join(records),
+            'ORIGINALS': '\n'.join(re.sub(r'\bRecKeys\b', f'original_rows_{row["revision"]}',
+                                           row['record']) for row in rows),
+            'METHODS': function(profiles, 'obor_profile_uses_5134_script_ids') + '\n'
+                + '\n'.join(function(source, name) for name in (
+                    'obor_read_replay', 'obor_write_early_replay_rows', 'obor_set_replay_paths',
+                    'obor_open_replay_file', 'playRecordedInputs', 'stopRecordInputs',
+                    'freeRecordedInputs')),
+            'RECORD_INPUTS': function(script, 'openbor_recordinputs'),
+            'TESTS': '\n'.join(f'CHECK_REPLAY({r["revision"]}, {r["key_width"]});\n'
+                f'check_recording_paths({r["path_field_capacity"]}, {r["path_lookup_capacity"]});'
+                for r in rows),
+            'VARIANT_FIELD': str(data['lns_path_control']['field_capacity']),
+            'VARIANT_LOOKUP': str(data['lns_path_control']['lookup_capacity']),
+        }
+        template = Path(__file__).with_name('early_replay_contract.c.in').read_text()
+        code = re.sub(r'@([A-Z_]+)@', lambda match: values[match[1]], template)
+        self.assertEqual(native_output(code, data, engine_source=engine),
+                         ''.join(f'PASS {revision}\n' for revision in revisions))
+
+    def test_6391_rush_hud_labels(self):
+        from test_historical_common_think import native_output
+        data = load_contract_fixture(Path(__file__).parent / 'fixtures/profile-6391-rush-labels.json')
+        rows = data['sources']
+        revisions = [row['revision'] for row in rows]
+        self.assertEqual(revisions, sorted(contract_revisions(data, data['expected_revisions'])))
+        engine = Path(os.environ.get('OBOR_HISTORICAL_ENGINE', ROOT / 'src/engines' / data['engine']))
+        source = (engine / 'openbor.c').read_text(encoding='latin-1')
+        header = (engine / 'openbor.h').read_text(encoding='latin-1')
+        loader = function(source, 'load_levelorder')
+        start = loader.index('case CMD_LEVELORDER_RUSH:')
+        stop = loader.index('case CMD_LEVELORDER_MAXWALLHEIGHT:', start)
+        hud_start = source.index('if(rush[0] && player[i].ent->rush.count.current')
+        hud_stop = source.index('if(player[i].ent->opponent', hud_start)
+        values = {
+            'NAME_LENGTH': re.search(r'^#define\s+MAX_NAME_LEN\s+\d+', header, re.M)[0],
+            'RUSH_NAMES': re.search(r'^char\s+rush_names\[2\][^;]+;', source, re.M)[0],
+            'PARSE_RUSH': loader[start:stop],
+            'DRAW_RUSH': source[hud_start:hud_stop],
+            'ROWS': ', '.join(f'{{{row["revision"]}u, {row["label_bytes"]}u}}' for row in rows),
+        }
+        template = Path(__file__).with_name('rush_labels_contract.c.in').read_text()
+        code = re.sub(r'@([A-Z_]+)@', lambda match: values[match[1]], template)
+        self.assertEqual(native_output(code, data, engine_source=engine),
+                         ''.join(f'PASS {revision}\n' for revision in revisions))
 
     def test_classic_spawn_coordinate_storage_loading_and_player_positions(self):
         from historical_classic_spawn_storage import program

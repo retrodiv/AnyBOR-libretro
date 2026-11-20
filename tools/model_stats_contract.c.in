@@ -1,0 +1,67 @@
+/* SPDX-License-Identifier: BSD-3-Clause
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me>
+ */
+#include <ctype.h>
+#include <stdint.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <strings.h>
+#include "openbor.h"
+#include "commands.h"
+#undef assert
+#undef printf
+#include <assert.h>
+#ifndef stricmp
+#define stricmp strcasecmp
+#endif
+
+uint32_t obor_profile_build;
+
+void *checkAlloc(void *p, size_t size, const char *func, const char *file, int line)
+{
+    assert(!size || p);
+    return p;
+}
+
+void borExit(int status) { abort(); }
+
+#include "List.c"
+
+@NUMBERS@
+@COMMANDS@
+
+static void load_stats(s_model *newchar, List *commands, char *slot, char *amount)
+{
+    char filename[] = "fixture", command[] = "stats";
+    char *values[] = {command, slot, amount};
+    char *value;
+#undef GET_ARG
+#define GET_ARG(z) values[z]
+    switch(getModelCommand(commands, command))
+    {
+        @ARM@
+        default: assert(0);
+    }
+#undef GET_ARG
+}
+
+int main(void)
+{
+    const unsigned revisions[] = {@REVISIONS@};
+    _Static_assert(sizeof(((s_model *)0)->stats) == 20 * sizeof(float), "model stats extent");
+    _Static_assert(sizeof(((entity *)0)->stats) == 20 * sizeof(float), "entity stats extent");
+    for(size_t i = 0; i < sizeof(revisions) / sizeof(*revisions); ++i)
+    {
+        obor_profile_build = revisions[i];
+        List *commands = createModelCommandList();
+        s_model model = {0};
+        char first[] = "0", last[] = "19", positive[] = "2.5", negative[] = "-4.25";
+        load_stats(&model, commands, first, positive);
+        load_stats(&model, commands, last, negative);
+        assert(model.stats[0] == 2.5f && model.stats[19] == -4.25f && model.stats[1] == 0);
+        freeCommandList(commands);
+        printf("PASS %u\n", obor_profile_build);
+    }
+    return 0;
+}

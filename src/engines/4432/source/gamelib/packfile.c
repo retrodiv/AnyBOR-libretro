@@ -306,7 +306,7 @@ cont:
 
 static size_t packfile_path_capacity(void)
 {
-    return obor_profile_build >= 4682 && obor_profile_build <= 4750
+    return obor_profile_build >= 4682 && obor_profile_build <= 4905
         ? PACKFILE_PATH_MAX : 256;
 }
 
@@ -501,7 +501,7 @@ int openPackfile(const char *filename, const char *packfilename)
     pnamestruct pn;
     const size_t name_offset = offsetof(pnamestruct, namebuf);
     const size_t name_capacity = obor_profile_build >= 4701 &&
-        obor_profile_build <= 4750 ? sizeof(pn.namebuf) : 80;
+        obor_profile_build <= 4905 ? sizeof(pn.namebuf) : 80;
     int entry_bytes;
 #if defined(LINUX) || defined(DARWIN)
     char *fspath;

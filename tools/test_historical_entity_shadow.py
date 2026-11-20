@@ -4,6 +4,7 @@ SPDX-License-Identifier: BSD-3-Clause
 Copyright (c) 2026 retrodiv <retrodiv@proton.me>
 """
 import json
+import os
 from pathlib import Path
 import re
 import unittest
@@ -13,6 +14,7 @@ from test_historical_common_think import ROOT, native_output
 from test_historical_player import function
 
 FIXTURE = Path(__file__).with_name('fixtures') / 'profile-entity-shadow-contracts.json'
+BINDING_TRANSITION = FIXTURE.with_name('profile-binding-axis-consumers.json')
 FIELDS = (
     'route', 'shadowbase', 'subject', 'platform', 'tile_height', 'old_hole', 'new_hole',
     'pair', 'bound', 'owner', 'grab', 'context_move', 'actor_move', 'dying', 'health', 'late_flash',
@@ -44,7 +46,38 @@ def program(data, previous=None):
     return re.sub(r'@([A-Z_]+)@', lambda match: values[match[1]], template)
 
 
+def binding_program(engine, rows):
+    source = (engine / 'openbor.c').read_text(encoding='latin-1')
+    script = (engine / 'openborscript.c').read_text(encoding='latin-1')
+    variant = (engine / 'source/scriptlib/ScriptVariant.c').read_text(encoding='latin-1')
+    values = dict(
+        METHODS='\n'.join((function(variant, 'ScriptVariant_IntegerValue'),
+                           function(source, 'adjust_bind'), function(script, 'openbor_bindentity'))),
+        PROFILES=',\n'.join('{%du,%d,%d}' % (row['revision'], row['has_sort'], row.get('axis_enable', 1))
+                            for row in rows))
+    template = Path(__file__).with_name('entity_binding_contract.c.in').read_text()
+    return re.sub(r'@([A-Z_]+)@', lambda item: values[item[1]], template)
+
+
 class HistoricalEntityShadowTests(unittest.TestCase):
+    def check_binding_axis_consumers(self, engine_id):
+        data = load_contract_fixture(BINDING_TRANSITION)
+        rows = [row for row in data['sources'] if row['engine'] == engine_id]
+        self.assertEqual([row['revision'] for row in rows],
+                         sorted(contract_revisions(data, data['expected_revisions'][engine_id])))
+        engine = Path(os.environ.get('OBOR_HISTORICAL_ENGINE', ROOT / 'src/engines' / engine_id))
+        # The shared validanim macro also serves signed animation indices.
+        result = json.loads(native_output(binding_program(engine, rows), {'engine': engine_id}, engine_source=engine,
+                                          extra_cflags=('-fgnu89-inline', '-Wno-error=type-limits',
+                                                        '-DOBOR_BINDING_AXIS_MATRIX=1')))
+        self.assertEqual(result, {'contexts': len(rows), 'checks': 123 * len(rows)})
+
+    def test_4432_binding_axis_consumers(self):
+        self.check_binding_axis_consumers('4432')
+
+    def test_6391_binding_axis_consumers(self):
+        self.check_binding_axis_consumers('6391')
+
     def test_native_binding_positions_animation_and_script_sort_argument(self):
         fixture = FIXTURE.with_name('profile-4432-entity-binding-contracts.json')
         data = load_contract_fixture(fixture)
@@ -57,17 +90,9 @@ class HistoricalEntityShadowTests(unittest.TestCase):
         for profile in contract_profiles(data, pin['profiles'], source_range=data['range']):
             if profile['engine'] == data['engine']:
                 self.assertIn(int(profile.get('revision', profile['build'])), revisions)
-        engine = ROOT / 'src/engines' / data['engine']
-        source = (engine / 'openbor.c').read_text()
-        script = (engine / 'openborscript.c').read_text()
-        variant = (engine / 'source/scriptlib/ScriptVariant.c').read_text()
-        values = dict(
-            METHODS='\n'.join((function(variant, 'ScriptVariant_IntegerValue'),
-                               function(source, 'adjust_bind'), function(script, 'openbor_bindentity'))),
-            PROFILES=',\n'.join('{%du,%d}' % (row['revision'], row['has_sort']) for row in rows))
-        template = Path(__file__).with_name('entity_binding_contract.c.in').read_text()
-        probe = re.sub(r'@([A-Z_]+)@', lambda item: values[item[1]], template)
-        result = json.loads(native_output(probe, data, extra_cflags=('-fgnu89-inline',)))
+        engine = Path(os.environ.get('OBOR_HISTORICAL_ENGINE', ROOT / 'src/engines' / data['engine']))
+        result = json.loads(native_output(binding_program(engine, rows), data, engine_source=engine,
+                                         extra_cflags=('-fgnu89-inline',)))
         self.assertEqual(result, {'contexts': len(rows), 'checks': 23 * len(rows)})
 
     def test_native_shadows_remaps_and_queue_order(self):

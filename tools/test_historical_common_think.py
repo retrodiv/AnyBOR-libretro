@@ -16,10 +16,13 @@ import unittest
 
 from contract_fixtures import load_contract_fixture, contract_revisions
 from native_sanitizers import sanitizer_environment
-from test_historical_player import function
+from test_early_jump_walkoff import braced_statement
+from test_historical_player import function, switch_cases
 
 ROOT = Path(os.environ.get('OBOR_TEST_SOURCE', Path(__file__).resolve().parents[1]))
 FIXTURE = Path(__file__).with_name('fixtures') / 'profile-common-think-contracts.json'
+ANIMATION_RANGE = FIXTURE.with_name('profile-6391-animation-range.json')
+TIMED_COLOURMAP = FIXTURE.with_name('profile-timed-colourmap-expiry.json')
 
 
 def program(data):
@@ -80,6 +83,32 @@ def script_program(data):
         raise ValueError('Unresolved script registry dependency')
     return text
 
+def timed_colourmap_program(data, engine):
+    core = (engine / 'openbor.c').read_text(encoding='latin-1')
+    script = (engine / 'openborscript.c').read_text(encoding='latin-1')
+    variant = (engine / 'source/scriptlib/ScriptVariant.c').read_text(encoding='latin-1')
+    update = function(core, 'update_animation')
+    effects = function(core, 'checkdamageeffects')
+    _, setters = switch_cases(script, 'openbor_changeentityproperty', 'propind', outermost=True)
+    names = ('ent_set_colourmap', 'model_get_colourmap')
+    if data['engine'] == '4432':
+        expiry = braced_statement(update, 'if(self->maptime && time >= self->maptime)')
+    else:
+        expiry = re.search(r'(?m)^\s*(colorset_timed_expire\(self\);)', update)[1]
+        names += ('colorset_timed_expire',)
+    values = {
+        'METHODS': '\n'.join(function(core, name) for name in names),
+        'EXPIRY': expiry,
+        'EFFECT_MACROS': '\n'.join(re.findall(r'(?m)^#define\s+_(?:remap|freeze|maptime)\b[^\n]+', effects)),
+        'FORCED_MAP': braced_statement(effects, 'if(_remap > 0 && !_freeze)'),
+        'INTEGER': function(variant, 'ScriptVariant_IntegerValue'),
+        'MAPTIME_SETTER': setters['_ep_maptime']['body'],
+        'ROWS': ','.join('{%du,%d}' % (row['revision'], row['clear_timer']) for row in data['sources']),
+    }
+    template = Path(__file__).with_name('timed_colourmap_contract.c.in').read_text()
+    return re.sub(r'@([A-Z_]+)@', lambda token: values[token[1]], template)
+
+
 def ogg_configuration(template):
     """Configure the vendored Ogg integer types without host development headers."""
     values = dict(INCLUDE_INTTYPES_H='1', INCLUDE_STDINT_H='1', INCLUDE_SYS_TYPES_H='1',
@@ -130,6 +159,57 @@ def native_output(code, data, *, extra_includes=(), extra_cflags=(), configure_o
     return raw
 
 class CommonThinkContracts(unittest.TestCase):
+    def check_timed_colourmap(self, engine_id):
+        data = load_contract_fixture(TIMED_COLOURMAP)
+        rows = [row for row in data['sources'] if row['engine'] == engine_id]
+        revisions = [row['revision'] for row in rows]
+        self.assertEqual(revisions, sorted(contract_revisions(data, data['expected_revisions'][engine_id])))
+        data = data | {'engine': engine_id, 'sources': rows}
+        engine = Path(os.environ.get('OBOR_HISTORICAL_ENGINE', ROOT / 'src/engines' / engine_id))
+        output = native_output(timed_colourmap_program(data, engine), data, engine_source=engine,
+                               extra_cflags=('-fgnu89-inline',))
+        self.assertEqual([int(line) for line in output.splitlines()], revisions)
+
+    def test_4432_timed_colourmap(self):
+        self.check_timed_colourmap('4432')
+
+    def test_6391_timed_colourmap(self):
+        self.check_timed_colourmap('6391')
+
+    def test_6391_animation_range_arithmetic(self):
+        data = load_contract_fixture(ANIMATION_RANGE)
+        rows = data['sources']
+        revisions = [row['revision'] for row in rows]
+        self.assertEqual(revisions, sorted(set(revisions)))
+        self.assertEqual(set(revisions), contract_revisions(data, data['expected_revisions']))
+        engine = Path(os.environ.get('OBOR_HISTORICAL_ENGINE', ROOT / 'src/engines' / data['engine']))
+        source = (engine / 'openbor.c').read_text()
+        names = ('obor_check_range_5134', 'check_range_target_all', 'check_range_target_base',
+                 'check_range_target_x', 'check_range_target_y', 'check_range_target_z')
+        cases = []
+        for row in data['cases']:
+            points = [','.join(float(n).hex() + 'f' for n in row[key]) for key in ('from', 'to')]
+            bounds = [','.join(str(int(n)) for n in row[key]) for key in ('min', 'max')]
+            cases.append('{%d,%d,' % (row['right'], row['present']) +
+                         ','.join('{' + values + '}' for values in points + bounds) + '}')
+        values = {
+            'DECLARATIONS': '\n'.join('int ' + name + '(entity *,entity *,s_anim *);' for name in names[2:]) +
+                            '\n' + '\n'.join(function(source, name) for name in names),
+            'SET_RANGES': '\n    '.join(
+                f'animation.range.{axis}.{limit} = input->{limit}[{i}];'
+                for i, axis in enumerate(('x', 'y', 'z', 'base')) for limit in ('min', 'max')),
+            'EVALUATE': 'check_range_target_all(origin, target, 0)',
+            'PROFILES': ','.join(str(n) for n in revisions),
+            'CASES': ',\n'.join(cases),
+        }
+        template = Path(__file__).with_name('animation_range_contract.c.in').read_text()
+        program_text = re.sub(r'@([A-Z_]+)@', lambda match: values[match[1]], template)
+        result = native_output(program_text, data, engine_source=engine,
+                               extra_cflags=('-fgnu89-inline',), libraries=('m',))
+        expected = [dict(revision=row['revision'], results=data['contracts'][row['contract']])
+                    for row in rows]
+        self.assertEqual(json.loads(result), {'status': 'PASS', 'profiles': expected})
+
     def test_native_calls_visible_state_and_continuation_writes(self):
         data = load_contract_fixture(FIXTURE)
         revisions = {row['revision'] for row in data['sources']}

@@ -477,7 +477,7 @@ pp_token *pp_parser_emit_token(pp_parser *self)
         else // lex the next token if no token is obtained from the subparser
             if(FAILED(pp_parser_lex_token(self, false)))
             {
-                break;
+                return NULL;
             }
 
         if(self->token.theType == PP_TOKEN_DIRECTIVE ||
@@ -713,6 +713,7 @@ HRESULT pp_parser_readline(pp_parser *self, char *buf, int bufsize)
  */
 HRESULT pp_parser_stringify(pp_parser *self)
 {
+    const unsigned limit = obor_script_text_limit(MAX_TOKEN_LENGTH);
     TEXTPOS lexerPosition = {1, 0};
     char *contents = (char *)List_Retrieve(&self->ctx->macros);
     pp_parser parser;
@@ -742,7 +743,7 @@ HRESULT pp_parser_stringify(pp_parser *self)
                 strncat(self->token.theSource, source, 1);
             }
 
-            if(strlen(self->token.theSource) + 2 > MAX_TOKEN_LENGTH)
+            if(strlen(self->token.theSource) + 2 > limit)
             {
                 return pp_error(self, "sequence is too long to stringify");
             }
@@ -848,7 +849,7 @@ HRESULT pp_parser_parse_directive(pp_parser *self)
     }
     case PP_TOKEN_DEFINE:
     {
-        char name[MAX_TOKEN_LENGTH];
+        char name[sizeof(self->token.theSource)];
 
         if(FAILED(pp_parser_lex_token(self, true)))
         {

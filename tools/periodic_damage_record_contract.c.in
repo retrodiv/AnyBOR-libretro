@@ -1,0 +1,201 @@
+/* SPDX-License-Identifier: BSD-3-Clause
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me>
+ */
+#include <stdint.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include "openbor.h"
+#include "profile_ids.h"
+#undef assert
+#undef printf
+#include <assert.h>
+
+uint32_t obor_profile_build, obor_profile_features;
+u32 _time;
+static entity actor, owner, observer;
+entity *self;
+static float offense[ATK_TIMEOVER + 1];
+static s_defense defense[ATK_TIMEOVER + 1];
+static Script script;
+static s_scripts script_slots = {.takedamage_script = &script};
+static int native_type, expected_force, expected_hp, expected_mp;
+static int finishing_force, finishing_hp, finishing_result;
+static unsigned installed, cleared;
+static char events[4];
+static unsigned event_count;
+
+@DEFAULTS@
+
+void StrCache_Collect(int index) { abort(); }
+@VARIANTS@
+
+static void observe(char event)
+{
+    assert(event_count + 1 < sizeof(events));
+    events[event_count++] = event;
+    events[event_count] = '\0';
+}
+
+static void set_local(Script *selected, const char *name, ScriptVariant *value)
+{
+    static const char *const keys[] = {"self", "attacker", "damage", "drop", "attacktype", "noblock",
+                                       "guardcost", "jugglecost", "pauseadd", "tag"};
+    const LONG expected[] = {0, 0, expected_force, 0, native_type, 0, 0, 0, 0, 0};
+    assert(selected == &script);
+    if(value->vt == VT_EMPTY)
+    {
+        assert(event_count && events[event_count - 1] == 'S');
+        assert(cleared < 10 && !strcmp(keys[cleared++], name));
+        return;
+    }
+    assert(installed < 10 && !strcmp(keys[installed], name));
+    if(installed < 2)
+    {
+        assert(value->vt == VT_PTR && value->ptrVal == (installed ? &owner : &actor));
+    }
+    else
+    {
+        assert(value->vt == VT_INTEGER && value->lVal == expected[installed]);
+    }
+    ++installed;
+}
+
+int Script_IsInitialized(Script *selected) { return selected == &script; }
+
+int Script_Execute(Script *selected)
+{
+    assert(selected == &script && installed == 10 && !cleared);
+    assert(actor.energy_status.health_current == expected_hp && actor.energy_status.mp_current == expected_mp);
+    observe('S');
+    self = &observer;
+    return 1;
+}
+
+static int finish_damage(entity *other, s_collision_attack *attack, int flags)
+{
+    assert(other == &owner && !flags && actor.energy_status.health_current == finishing_hp);
+    assert(attack->attack_type == ATK_TIMEOVER && attack->attack_force == finishing_force);
+    assert(!attack->attack_drop && !attack->no_block && !attack->guardcost && !attack->jugglecost);
+    assert(!attack->pause_add && !attack->tag);
+    assert(attack->dropv.x == default_model_dropv.x && attack->dropv.y == default_model_dropv.y &&
+           attack->dropv.z == default_model_dropv.z);
+    observe('F');
+    actor.energy_status.health_current = finishing_result;
+    attack->tag = 77;
+    return 1;
+}
+
+void kill_entity(entity *victim)
+{
+    assert(victim == &actor && actor.energy_status.health_current == finishing_hp);
+    observe('K');
+    actor.energy_status.health_current = 0;
+}
+
+#undef Script_Set_Local_Variant
+#define Script_Set_Local_Variant set_local
+@FUNCTIONS@
+#undef Script_Set_Local_Variant
+
+static void reset(int hp, int mp, int factors, int handler)
+{
+    actor = (entity){.scripts = &script_slots, .defense = defense};
+    owner = (entity){.offense_factors = offense};
+    observer = (entity){.energy_status.mp_current = 63};
+    actor.energy_status.health_current = hp;
+    actor.energy_status.mp_current = mp;
+    actor.takedamage = handler ? finish_damage : NULL;
+    offense[ATK_TIMEOVER] = factors ? 1.5f : 0;
+    defense[ATK_TIMEOVER].factor = factors ? 0.5f : 0;
+    self = &actor;
+    _time = 20;
+    event_count = installed = cleared = 0;
+    events[0] = '\0';
+    finishing_hp = hp;
+    finishing_result = 0;
+}
+
+static void set_slot(int slot, int mode, int expiry, int next, int force)
+{
+    actor.dot[slot] = mode;
+    actor.dot_atk[slot] = ATK_TIMEOVER;
+    actor.dot_rate[slot] = 3;
+    actor.dot_owner[slot] = &owner;
+    actor.dot_time[slot] = expiry;
+    actor.dot_cnt[slot] = next;
+    actor.dot_force[slot] = force;
+}
+
+static void check_cases(void)
+{
+    static const struct {
+        int mode, hp, mp, factors, handler, guarded, expiry, next, final_hp, final_mp, final_next;
+        const char *events;
+    } cases[] = {
+        {DOT_MODE_HP, 25, 20, 1, 0, 0, 20, 20, 16, 20, 26, "S"},
+        {DOT_MODE_HP_MP, 25, 20, 1, 0, 1, 40, 20, 16, 8, 26, "S"},
+        {DOT_MODE_NON_LETHAL_HP, 6, 20, 1, 0, 0, 40, 20, 1, 20, 26, "S"},
+        {DOT_MODE_NON_LETHAL_HP_MP, 6, 7, 1, 0, 0, 40, 20, 1, 0, 26, "S"},
+        {DOT_MODE_HP, 9, 20, 1, 1, 0, 40, 20, 0, 20, 26, "F"},
+        {DOT_MODE_HP_MP, 6, 20, 1, 1, 0, 40, 20, 0, 8, 26, "F"},
+        {DOT_MODE_HP_MP, 6, 7, 1, 0, 0, 40, 20, 0, 0, 26, "K"},
+        {DOT_MODE_HP, 20, 20, 0, 0, 0, 40, 20, 8, 20, 26, "S"},
+        {DOT_MODE_MP, 25, 7, 1, 0, 0, 40, 20, 25, 0, 26, ""},
+        {DOT_MODE_HP, 25, 20, 1, 0, 0, 19, 20, 25, 20, 0, ""},
+        {DOT_MODE_HP, 25, 20, 1, 0, 0, 40, 21, 25, 20, 21, ""},
+        {DOT_MODE_HP, 0, 20, 1, 0, 0, 40, 20, 0, 20, 20, ""},
+        {DOT_MODE_OFF, 25, 20, 1, 0, 0, 0, 20, 25, 20, 20, ""},
+    };
+    for(unsigned i = 0; i < sizeof(cases) / sizeof(*cases); ++i)
+    {
+        const int slot = i % 2 ? MAX_DOTS - 1 : 0;
+        reset(cases[i].hp, cases[i].mp, cases[i].factors, cases[i].handler);
+        set_slot(slot, cases[i].mode, cases[i].expiry, cases[i].next, 12);
+        actor.modeldata.guardpoints.max = cases[i].guarded;
+        expected_force = finishing_force = 12;
+        expected_hp = cases[i].final_hp;
+        expected_mp = cases[i].mp;
+        damage_recursive(&actor);
+        assert(!strcmp(events, cases[i].events));
+        assert(installed == (*cases[i].events == 'S' ? 10u : 0u) && cleared == installed);
+        assert(actor.energy_status.health_current == cases[i].final_hp && actor.energy_status.mp_current == cases[i].final_mp);
+        assert(observer.energy_status.mp_current == 63 && actor.dot_owner[slot] == &owner);
+        assert(actor.dot_cnt[slot] == cases[i].final_next);
+        const int expired = cases[i].expiry && cases[i].expiry < 20;
+        assert(actor.dot[slot] == (expired ? DOT_MODE_OFF : cases[i].mode));
+        assert(actor.dot_time[slot] == (expired ? 0 : cases[i].expiry));
+        assert(actor.dot_atk[slot] == (expired ? 0 : ATK_TIMEOVER));
+        assert(actor.dot_rate[slot] == (expired ? 0 : 3) && actor.dot_force[slot] == (expired ? 0 : 12));
+    }
+}
+
+static void check_consecutive_slots(void)
+{
+    reset(5, 20, 1, 1);
+    set_slot(0, DOT_MODE_HP, 40, 20, 12);
+    set_slot(MAX_DOTS - 1, DOT_MODE_NON_LETHAL_HP_MP, 40, 20, 2);
+    finishing_force = 12;
+    finishing_result = 7;
+    expected_force = 2;
+    expected_hp = 6;
+    expected_mp = 20;
+    damage_recursive(&actor);
+    assert(!strcmp(events, "FS") && installed == 10 && cleared == 10);
+    assert(actor.energy_status.health_current == 6 && actor.energy_status.mp_current == 18);
+    assert(actor.dot_cnt[0] == 26 && actor.dot_cnt[MAX_DOTS - 1] == 26);
+}
+
+int main(void)
+{
+    static const struct { unsigned revision; int type; } rows[] = {@ROWS@};
+    for(unsigned i = 0; i < sizeof(rows) / sizeof(*rows); ++i)
+    {
+        obor_profile_build = rows[i].revision;
+        native_type = rows[i].type;
+        check_cases();
+        check_consecutive_slots();
+        printf("%u\n", obor_profile_build);
+    }
+    return 0;
+}
