@@ -65,9 +65,11 @@ class ProfileGroupsTests(unittest.TestCase):
     def test_each_workflow_path_requires_complete_bounded_groups(self):
         profiles = [dict(build=str(n)) for n in range(27)]
         lines = []
-        for script in ('test_rewind', 'test_state_options', 'regression'):
+        for script in ('test_rewind', 'test_state_options', 'regression', 'smoke'):
             for flags in ('', '--windows --runner wine', '--core anybor_libretro.dylib'):
                 if script == 'regression' and '--windows' in flags:
+                    continue
+                if script == 'smoke' and '--windows' not in flags:
                     continue
                 for group in range(1, 5):
                     lines.append('python3 tools/' + script + '.py ' + flags +
@@ -130,9 +132,11 @@ class ProfileGroupsTests(unittest.TestCase):
     def test_count_budget_boundaries_keep_every_platform_covered(self):
         def workflow(size, native_count):
             lines = []
-            for script in ('test_rewind', 'test_state_options', 'regression'):
+            for script in ('test_rewind', 'test_state_options', 'regression', 'smoke'):
                 for flags in ('', '--windows --runner wine', '--core anybor_libretro.dylib'):
                     if script == 'regression' and '--windows' in flags:
+                        continue
+                    if script == 'smoke' and '--windows' not in flags:
                         continue
                     platform = 'windows' if '--windows' in flags else 'linux'
                     limit = PROFILE_COUNT_LIMITS[platform]

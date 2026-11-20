@@ -89,7 +89,7 @@
     "NOTICE.txt": "2cf25660377c9f3ff1c8ac4ea1d34d6f6b239b0e2dd55bdce00be80727608fcc",
     "PROVENANCE.md": "d8dd863938ceaee539a53d3ab4f436ae4b2348e185fad98afcc792d7b2295582",
     "README.md": "eb69bd975661a0abc93c0a51f8fe373628cc8b2bde0b171e3382be63affa05b7",
-    "SBOM.spdx.json": "acb57f1aadccc8176f58282732ceb5a6d942a798fdedf44915d05100c636803d",
+    "SBOM.spdx.json": "6255147847d10fea1d3dad07c7569756cbd7c15f3ce4f680f653a88fae84e566",
     "SECURITY.md": "3aaf7f8f89ef7abc1cac8d4f25f358a5529410673fa04d97ddc123ae21f96f4b",
     "anybor_libretro.info": "083a01051f0c5a610372ffe4d6f45b23cb94c6b652c4e17b556da59de7a19f95",
     "docs/ANYBOR.md": "ae2b6e4125abc6ba47b87ae7a0aa316b3ff98405c3eecfa0eeb25e4e1cb99aa3",
@@ -2978,7 +2978,7 @@
     "src/glue/anybor_engine_executables.h": "7614b46be69675b8213800e3e7da388a7c37c1cffb57d3f1cb5fb7bcc2163805",
     "src/glue/anybor_engine_identity.h": "5419b31620c56e859365c3845c7d318ca77840a5c89e2b1f65e26dc9b4ea0773",
     "src/glue/anybor_engine_resources.h": "8196f17ba5110e51c4b71388f005e3beb26c2cc72aaf0fb559a255c10842223b",
-    "src/glue/anybor_engines.h": "bfa5be171735e3509194442fc176380b1e1e1a67725413fda9a5d7e1b374d3c2",
+    "src/glue/anybor_engines.h": "41ebfcd7862c73b602cf062350ac491173a753f5374900f32a1cf986f757f254",
     "src/glue/anybor_error_screen.h": "15c6d9c150494aaa425086d41b74277f3472fe2b2b749611632f4d85cfa3aeb0",
     "src/glue/anybor_file64.h": "cc85ee17c861670ba08272bbd80495c34fb262f7be31f711b769af4ee210780a",
     "src/glue/anybor_game_content.h": "e20106cfbfb443afa760098c8a72d3dbdeb7723da1c01445ac714deb6d2f528d",
@@ -3025,7 +3025,7 @@
     "src/glue/exports.macho": "97150280ad24c4636b55e7fa760bbb3060bd9b200716547c5b939899751fde31",
     "src/glue/exports.map": "6313cbda366a9d3f60c42ace4a660baf39b6037f40a92bf486741a424c754c50",
     "src/glue/libretro.cpp": "6ccf4c6ea1a6b1fa0d66bab84012b00ffbaaa575d07ce909042cc19c45bc5813",
-    "src/pin.json": "f4ada520170484c4a49dea9ad58c482667361060cf00962dca44ef1d3fc36b16",
+    "src/pin.json": "115897d4aec661f9f077a16810cba0c75186e2257c25f33eee84f0230771ec09",
     "src/port/libretro/anybor_abi.h": "82c90c7e8eef4d3545ab3b468ba4cd26c0425b58b85b0e9650c70c9344ce162a",
     "src/port/libretro/anybor_adpcm.c": "40eed9f1f6f51f7b3a8d06083b7033945c014d763b896e6319e5e637b475ccc6",
     "src/port/libretro/anybor_alloc.c": "3e20df23a318d294581c29b46035eb0dcada030c9990e7b8bd43266a5b566f79",
@@ -5195,7 +5195,7 @@
     "tools/test_primitive_api.py": "14964d4ef5400817863fece42d261f59b8f1c8bbc5b9edda9a00cdd7b4e03f67",
     "tools/test_primitive_queue.py": "084ab05b72dc72e2ac01c92bc37bb89a25e2029abc3826cb8e37b2e931ea621b",
     "tools/test_primitive_raster.py": "75140497728055603fb92af1bceca486085110d6f657abb5d04a967e36c8422c",
-    "tools/test_profile_groups.py": "2ddd501b72d43c6000bd4afec451acc880a9d123bea235e48caeef418b63cfaa",
+    "tools/test_profile_groups.py": "738aa3fd79a2d9b0d1b0a444233359a3ab377e41890e454acdc57e2521a9c050",
     "tools/test_profile_identity.py": "d25f9eef351ae2d2c1b01127bd32a2667770de6ae40faccde4786250e78561b2",
     "tools/test_profile_palettes.py": "b65d850114e643cfc0c5021863ddd0fe0c687e55c85e48bce24027b0a756230f",
     "tools/test_projectile_terminal_health.py": "89ebf0088c6fca1251919df372b712deba21bf4ca456b42a8d44c0534920e282",
@@ -5297,5 +5297,5 @@
     "tools/zoom_pixels.c.in": "b1964154c7ee6eb28300e75a8cfff5bc7cc59d1e8f544e42bfa7f1fd3ba21763"
   },
   "schema": 1,
-  "version": "0.2.47"
+  "version": "0.2.48"
 }
