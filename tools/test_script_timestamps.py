@@ -3,6 +3,7 @@
 SPDX-License-Identifier: BSD-3-Clause
 Copyright (c) 2026 retrodiv <retrodiv@proton.me>
 """
+import json
 import os
 from pathlib import Path
 import re
@@ -32,10 +33,14 @@ class ProfileScriptBoundariesTests(unittest.TestCase):
         header = (ENGINE / 'openbor.h').read_text()
         header = re.sub(r'/\*.*?\*/|//[^\n]*', '', header, flags=re.S)
         families = {'e_animations', 'e_animation_properties', 'e_entity_type_sub',
-                    'e_spawn_type', 'e_attack_types'}
+                    'e_spawn_type', 'e_attack_types', 'e_level_properties'}
         enums = '\n'.join('typedef enum {' + body + '} ' + name + ';'
             for body, name in re.findall(r'typedef\s+enum[^{}]*\{([^{}]*)\}\s*(\w+)\s*;', header, re.S)
             if name in families)
+        pins = json.loads((SOURCE / 'src/pin.json').read_text())
+        revisions = [str(row.get('revision', row['build'])) for row in pins['profiles']
+                     if row['engine'] == '6391']
+        assert revisions
         getter = property_body(source, 'openbor_getentityproperty', '_ep_nextanim')
         setter = property_body(source, 'openbor_changeentityproperty', '_ep_nextanim')
         program = r'''
@@ -65,9 +70,9 @@ static void set_timestamp(entity *ent, LONG timestamp) {
     do SETTER while(0);
 }
 int main(void) {
-    const unsigned profiles[]={6330,6391,6412,6510};
+    const unsigned profiles[]={PROFILES};
     const unsigned ticks[]={0,1,236,237,238,239,240,241,4096,1000000,1000000000};
-    for(unsigned p=0;p<4;++p) {
+    for(unsigned p=0;p<sizeof(profiles)/sizeof(*profiles);++p) {
         obor_profile_build=profiles[p];
         for(unsigned t=0;t<sizeof(ticks)/sizeof(*ticks);++t) {
             /* Check each boundary independently: inverse mistakes can hide in a round trip. */
@@ -80,7 +85,7 @@ int main(void) {
     }
     return 0;
 }
-'''.replace('ENUMS', enums).replace('GETTER', getter).replace('SETTER', setter)
+'''.replace('ENUMS', enums).replace('GETTER', getter).replace('SETTER', setter).replace('PROFILES', ','.join(revisions))
         with tempfile.TemporaryDirectory(prefix='anybor-profile-timestamps-') as temporary:
             work = Path(temporary)
             (work / 'probe.c').write_text(program)

@@ -85,7 +85,8 @@
  * and corresponding movement events. Initialize the complete platform
  * variant before retaining its native decimal-tagged pointer representation.
  * Preserve native platform-relative entity sort order, shadow geometry and
- * depth, and height-aware shadow hole tests by profile.
+ * depth, and height-aware shadow hole tests by profile. Receive layer screen
+ * outputs in naturally aligned storage before assigning the packed member.
  * Existing changes recorded here; this is not their implementation date.
  * See MODIFICATIONS.md and docs/modifications/4086.md
  * at the source repository root. Original notices follow below.
@@ -4737,7 +4738,11 @@ void load_layer(char *filename, char *maskfilename, int index)
             // use screen for water effect for now, it should be faster than sprite
             // otherwise, a screen should be fine, especially in 8bit mode, it is super fast,
             //            or, at least it is not slower than a sprite
-            if(loadscreen(filename, packfile, NULL, pixelformat, &level->layers[index].gfx.screen))
+            /* Use a naturally aligned output slot for the screen loader. */
+            s_screen *loaded_screen = level->layers[index].gfx.screen;
+            const int screen_loaded = loadscreen(filename, packfile, NULL, pixelformat, &loaded_screen);
+            level->layers[index].gfx.screen = loaded_screen;
+            if(screen_loaded)
             {
                 level->layers[index].size.y = level->layers[index].gfx.screen->height;
                 level->layers[index].size.x = level->layers[index].gfx.screen->width;

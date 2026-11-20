@@ -14,7 +14,7 @@
 #include <assert.h>
 
 uint32_t obor_profile_build;
-static s_model model = {.name = "Display"};
+static s_model model;
 static s_modelcache entry = {.path = "models/unit.txt"};
 static jmp_buf failure;
 static char log_text[256];
@@ -130,6 +130,7 @@ static void check(void)
 
 int main(void)
 {
+    model.name = "Display";
     static const struct { unsigned revision; int early; } rows[] = {@PROFILES@};
     for(size_t i = 0; i < sizeof(rows) / sizeof(*rows); ++i)
     {

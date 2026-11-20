@@ -31,7 +31,7 @@ static entity actor, child;
 entity *self = &actor;
 static s_level *level;
 static s_spawn_entry spawnentry, observed_entry;
-static s_model items[] = {{.name = "first"}, {.name = "second"}};
+static s_model items[2];
 static const char *property;
 static int spawn_calls, available;
 static struct { float x, z, y; int direction, prime, palette, route; } shot;
@@ -225,6 +225,8 @@ static void check_shot(int zero_prime, int nonzero_prime)
 
 int main(void)
 {
+    items[0].name = "first";
+    items[1].name = "second";
     _Static_assert(sizeof(LONG) == sizeof(int) && (LONG)-1 < 0, "Native script integers are signed int width");
     static const struct { unsigned revision; int zero_prime, nonzero_prime; } rows[] = {@ROWS@};
     for(size_t i = 0; i < sizeof(rows) / sizeof(*rows); ++i)

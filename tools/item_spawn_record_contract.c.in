@@ -45,7 +45,7 @@ s_videomodes videomodes = {.hRes = 320, .vRes = 240};
 float advancex = 50, advancey = 60;
 static entity slots[3];
 static s_spawn_entry observed;
-static s_model payload_model = {.name = "payload"};
+static s_model payload_model;
 static int count, callback, player_count, cached, available, loads;
 enum { @COMMANDS@ };
 
@@ -309,6 +309,7 @@ static void check_carry_initializer(int alias_limit)
 
 int main(void)
 {
+    payload_model.name = "payload";
     const struct {uint32_t revision; int alias_limit, item_reason, driver_reason;} rows[] = {@ROWS@};
     for(unsigned i = 0; i < sizeof(rows) / sizeof(*rows); ++i)
     {

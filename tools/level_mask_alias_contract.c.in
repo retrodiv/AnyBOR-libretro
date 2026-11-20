@@ -1,6 +1,7 @@
 /* SPDX-License-Identifier: BSD-3-Clause
  * Copyright (c) 2026 retrodiv <retrodiv@proton.me>
  */
+#include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -35,8 +36,8 @@ int loadscreen(char *filename, char *archive, unsigned char *palette, int format
     ++screen_loads;
     screen.width = 32;
     screen.height = 16;
-    s_screen *loaded = &screen;
-    memcpy(output, &loaded, sizeof(loaded));
+    assert((uintptr_t)output % _Alignof(s_screen *) == 0);
+    *output = &screen;
     return 1;
 }
 
@@ -106,6 +107,7 @@ static void check(unsigned revision, size_t mask_bytes, size_t alias_bytes, size
     assert(!memcmp(requested_mask, long_mask, mask_length));
     load_layer("floor.png", maskPath, 1);
     assert(sprite_loads == 2 && screen_loads == 1);
+    assert(layers[1].gfx.screen == &screen && layers[1].size.x == 32 && layers[1].size.y == 16);
     parse_command(CMD_LEVEL_ALPHAMASK, "pattern.png", maskPath, &entry);
     load_layer("front.png", maskPath, 0);
     assert(!strcmp(maskPath, "pattern.png") && sprite_loads == 2);
