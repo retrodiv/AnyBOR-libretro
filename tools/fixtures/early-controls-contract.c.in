@@ -52,15 +52,30 @@ static void check_file(const void *reference, size_t size)
     fclose(file);
 }
 
-static void check_rumble(int port, bool enabled)
+static void check_event(int port, bool enabled, int expected_duration)
 {
     int32_t ratio, duration;
-    control_rumble(port, 1, 125);
     obor_get_rumble(port, &ratio, &duration);
-    assert(ratio == (enabled ? 1 : 0));
-    assert(duration == (enabled ? 125 : 0));
+    assert(ratio == (enabled ? 100 : 0));
+    assert(duration == (enabled ? expected_duration : 0));
     obor_get_rumble(port, &ratio, &duration);
     assert(!ratio && !duration);
+}
+
+static void check_rumble_events(int port, bool has_output, bool configured)
+{
+    struct actor {
+        int playerindex;
+        struct { float y; } velocity;
+        struct actor *opponent;
+    } target = {.playerindex = port}, actor = {port, {.y = 6}, &target};
+    struct { int attack_force; } hit = {.attack_force = 7}, *attack = &hit;
+    struct actor *self = &actor, *opp = &target;
+    int playerindex = port, i = port;
+    bool enabled = has_output && configured;
+    static const int durations[] = {300, 225, 14, 21, 21, 125, 100, 75};
+    savedata.joyrumble[port] = configured;
+    @EVENTS@
 }
 
 static void check_default_fallback(bool enabled)
@@ -82,7 +97,7 @@ static void check_default_fallback(bool enabled)
     assert(controller[1].keyflags == 0);
 }
 
-#define CHECK_CONTROLS(revision, haptics, fallback, seed) do { \
+#define CHECK_CONTROLS(revision, haptics, output, resets, fallback, seed) do { \
     obor_profile_build = revision; \
     memset(&original_##revision, 0, sizeof(original_##revision)); \
     original_##revision.gamma = 3; \
@@ -106,7 +121,9 @@ static void check_default_fallback(bool enabled)
     for(int p = MAX_PLAYERS - 1; p >= 0; --p) \
     { \
         assert(savedata.joyrumble[p] == haptics); \
-        check_rumble(p, haptics); \
+        check_rumble_events(p, output, false); \
+        check_rumble_events(p, output, true); \
+        savedata.joyrumble[p] = haptics; \
         binding_count = 0; \
         clearbuttons_##revision(p); \
         size_t expected_count = binding_count; \
@@ -114,7 +131,7 @@ static void check_default_fallback(bool enabled)
         memcpy(expected, bindings, sizeof(expected)); \
         binding_count = 0; \
         clearbuttons(p); \
-        assert(!savedata.joyrumble[p] && binding_count == expected_count); \
+        assert(savedata.joyrumble[p] == (haptics && !resets) && binding_count == expected_count); \
         for(size_t i = 0; i < binding_count; ++i) \
         { \
             assert(bindings[i].flag == expected[i].flag); \

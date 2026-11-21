@@ -5,7 +5,8 @@
  * Upstream code retains its original license and notices.
  * Drop the glibc-only <malloc.h> and rely on the standard library
  * declarations the parser already includes. Bound active preprocessing
- * nesting to 128 levels.
+ * nesting to 128 levels. Route script preprocessing diagnostics to the
+ * original output destination by profile.
  * Existing changes recorded here; this is not their implementation date.
  * See MODIFICATIONS.md and docs/modifications/6391.md
  * at the source repository root. Original notices follow below.
@@ -53,6 +54,10 @@
 extern char *get_full_path(char *filename);
 #else // otherwise, we can use OpenBOR functionality like writeToLogFile
 #include "packfile.h"
+#ifdef LIBRETRO
+#include "libretroport.h"
+#include "utils.h"
+#endif
 #define tellpackfile(hnd)            seekpackfile(hnd, 0, SEEK_CUR)
 #endif
 
@@ -212,13 +217,22 @@ pp_parser* pp_parser_alloc_macro(pp_parser* parent, char* macroContents, List* p
  * @param messageType the type of message ("error" or "warning")
  * @param message the actual message to display
  */
+#if defined(LIBRETRO) && !PP_TEST
+#define PP_MESSAGE_OUTPUT(...) do { \
+    if(obor_profile_build && obor_profile_build < 6330) writeToLogFile(__VA_ARGS__); \
+    else printf(__VA_ARGS__); \
+} while(0)
+#else
+#define PP_MESSAGE_OUTPUT printf
+#endif
+
 void pp_message(pp_parser *self, char *messageType, char *message)
 {
     pp_parser *parser = self;
     char buf[1024] = {""}, *linePtr;
     int bufPos, i;
 
-    printf("\n\n");
+    PP_MESSAGE_OUTPUT("\n\n");
 
     // print a backtrace of #includes to make it clear exactly where this error/warning is occurring
     while(parser->parent)
@@ -227,12 +241,12 @@ void pp_message(pp_parser *self, char *messageType, char *message)
     }
     while(parser->child && parser->child->type == PP_INCLUDE)
     {
-        printf("In file included from %s, line %d:\n", parser->filename, parser->lexer.theTokenPosition.row);
+        PP_MESSAGE_OUTPUT("In file included from %s, line %d:\n", parser->filename, parser->lexer.theTokenPosition.row);
         parser = parser->child;
     }
 
     // print the error/warning and its location
-    printf("Script %s: %s, line %d: %s\n", messageType, parser->filename, parser->lexer.theTokenPosition.row, message);
+    PP_MESSAGE_OUTPUT("Script %s: %s, line %d: %s\n", messageType, parser->filename, parser->lexer.theTokenPosition.row, message);
 
     // find the start of the line that the error occurred on
     linePtr = parser->lexer.pcurChar - strlen(parser->lexer.theTokenSource);
@@ -254,15 +268,17 @@ void pp_message(pp_parser *self, char *messageType, char *message)
         }
     }
     buf[bufPos] = '\0';
-    printf("\n%s\n", buf);
+    PP_MESSAGE_OUTPUT("\n%s\n", buf);
 
     // print a position marker to show where in the line the error/warning occurred, just for completeness :)
     for(i = 0; i < parser->token.theTextPosition.col; i++)
     {
-        printf(" ");
+        PP_MESSAGE_OUTPUT(" ");
     }
-    printf("^\n\n");
+    PP_MESSAGE_OUTPUT("^\n\n");
 }
+
+#undef PP_MESSAGE_OUTPUT
 
 /**
  * Writes an error message to the log.

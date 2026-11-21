@@ -69,7 +69,13 @@ class TerrainGeometryContracts(unittest.TestCase):
                                   for row in data['sources']])
 
     def test_6391_original_platform_walkoff_height(self):
-        data = load_contract_fixture(FIXTURE.with_name('profile-6391-platform-walkoff.json'))
+        self.check_platform_walkoff_height(FIXTURE.with_name('profile-6391-platform-walkoff.json'))
+
+    def test_6391_platform_walkoff_height_boundary(self):
+        self.check_platform_walkoff_height(FIXTURE.with_name('profile-6391-platform-height-boundary.json'))
+
+    def check_platform_walkoff_height(self, fixture):
+        data = load_contract_fixture(fixture)
         rows = data['sources']
         self.assertEqual({row['revision'] for row in rows}, contract_revisions(data, data['expected_revisions']))
         engine = Path(os.environ.get('OBOR_HISTORICAL_ENGINE', ROOT / 'src/engines' / data['engine']))

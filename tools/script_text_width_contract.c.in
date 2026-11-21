@@ -22,7 +22,7 @@
 uint32_t obor_profile_build;
 s_savedata savedata;
 float musicfade[2];
-char musicname[MAX_BUFFER_LEN];
+char musicname[MAX_BUFFER_LEN + 1];
 static char currentmusic[MAX_BUFFER_LEN];
 int musicloop;
 u32 musicoffset;
@@ -56,7 +56,7 @@ int obor_allocation_query(const void *address, const void **base, size_t *remain
 #endif
 @FUNCTIONS@
 
-static char played_name[MAX_BUFFER_LEN];
+static char played_name[MAX_BUFFER_LEN + 1];
 static int played_loop;
 static long played_offset;
 
@@ -71,7 +71,7 @@ int music(char *filename, int loop, long offset)
 
 static void load_music_name(char *filename, int loadingmusic, int event_music, size_t expected_length)
 {
-    char string[MAX_BUFFER_LEN] = {0}, musicPath[MAX_BUFFER_LEN] = {0};
+    char string[MAX_BUFFER_LEN + 1] = {0}, musicPath[MAX_BUFFER_LEN + 1] = {0};
     char buf[] = "music line\nat line\n", argbuf2[16];
     char *command, *value;
     size_t pos = 0, oldpos, size = sizeof(buf) - 1;
@@ -100,7 +100,13 @@ static void load_music_name(char *filename, int loadingmusic, int event_music, s
     assert(strlen(name) == expected_length && !memcmp(name, filename, expected_length));
     assert(pos == 0 && musicOffset == 17);
     if(loadingmusic) assert(played_loop == 1 && played_offset == 17);
-    if(event_music) assert(next.musicoffset == 17);
+    if(event_music)
+    {
+        s_level stage = {.spawnpoints = &next};
+        assert(next.musicoffset == 17);
+        set_spawn_music(&stage, 0);
+        assert(strlen(musicname) == expected_length && !memcmp(musicname, filename, expected_length));
+    }
 }
 
 static void restore_music_after_scene(char *replacement)
@@ -113,9 +119,20 @@ static void restore_music_after_scene(char *replacement)
 #pragma GCC diagnostic pop
 #endif
 
-static void check(unsigned revision, unsigned token_capacity, unsigned text_capacity, unsigned fade_copy_bytes)
+static void check_text(unsigned revision, unsigned token_capacity, unsigned text_capacity)
 {
     obor_profile_build = revision;
+    static const struct { LONG number; const char *text; } integers[] = {
+        {INT32_MIN, "-2147483648"}, {-117, "-117"}, {0, "0"}, {INT32_MAX, "2147483647"},
+    };
+    for(size_t i = 0; i < sizeof(integers) / sizeof(*integers); ++i)
+    {
+        ScriptVariant value = {.vt = VT_INTEGER, .lVal = integers[i].number};
+        char formatted[16];
+        ScriptVariant_ToString(&value, formatted);
+        assert(!strcmp(formatted, integers[i].text));
+        assert(ScriptVariant_LengthAsString(&value) == (int)strlen(integers[i].text));
+    }
     pp_token raw = {.theType = PP_TOKEN_IDENTIFIER, .theTextPosition = {7, 4}, .charOffset = 23};
     memset(raw.theSource, 'a', token_capacity);
     Token token;
@@ -142,13 +159,20 @@ static void check(unsigned revision, unsigned token_capacity, unsigned text_capa
     assert(fits ? !strcmp(output, input) : !output[0]);
     free(object.text);
     live_text = NULL;
+    printf("TEXT %u\n", revision);
+}
 
+static void check_music(unsigned revision, size_t fade_copy_bytes, size_t stage_width,
+                        size_t cache_width, size_t stage_parse_bytes)
+{
+    obor_profile_build = revision;
     memset(input, 't', 124);
     memcpy(input + 124, ".ogg", 5);
     memset(musicname, 0, sizeof(musicname));
     ScriptVariant fade = {.vt = VT_DECIMAL, .dblVal = 0.75};
     ScriptVariant loop = {.vt = VT_INTEGER, .lVal = 1};
     ScriptVariant offset = {.vt = VT_INTEGER, .lVal = 22};
+    ScriptVariant text = {.vt = VT_STR, .strVal = 0};
     ScriptVariant result, *ret = &result, *args[] = {&fade, &text, &loop, &offset};
     savedata.musicvol = 80;
     assert(openbor_fademusic(args, &ret, 4) == S_OK && !ret);
@@ -161,7 +185,7 @@ static void check(unsigned revision, unsigned token_capacity, unsigned text_capa
     memset(stage_music.music, 'k', 150);
     memcpy(stage_music.music + 150, ".ogg", 5);
     set_spawn_music(&stage, 0);
-    const size_t spawn_copy_bytes = fade_copy_bytes == 128 ? 128 : 154;
+    const size_t spawn_copy_bytes = stage_width < 154 ? stage_width : 154;
     assert(strlen(musicname) == spawn_copy_bytes && !memcmp(musicname, stage_music.music, spawn_copy_bytes));
     assert(musicoffset == 17 && musicloop == 1);
 
@@ -169,18 +193,37 @@ static void check(unsigned revision, unsigned token_capacity, unsigned text_capa
     load_music_name(stage_music.music, 0, 1, spawn_copy_bytes);
     load_music_name(stage_music.music, 0, 0, spawn_copy_bytes);
     music(stage_music.music, 1, 31);
-    const size_t stored_length = fade_copy_bytes == 128 ? 127 : 154;
+    const size_t stored_length = cache_width - 1 < 154 ? cache_width - 1 : 154;
     assert(strlen(currentmusic) == stored_length && !memcmp(currentmusic, stage_music.music, stored_length));
     musicloop = 1;
     char scene_track[] = "scene.ogg";
     restore_music_after_scene(scene_track);
     assert(strlen(played_name) == stored_length && !memcmp(played_name, stage_music.music, stored_length));
     assert(played_loop == 1 && played_offset == 0);
-    printf("PASS %u\n", revision);
+
+    if(stage_parse_bytes)
+    {
+        char track[MAX_BUFFER_LEN + 2];
+        const size_t lengths[] = {127, 128, 129, 511, 512, 513};
+        for(size_t i = 0; i < sizeof(lengths) / sizeof(*lengths); ++i)
+        {
+            const size_t length = lengths[i];
+            const size_t expected = length < stage_parse_bytes ? length : stage_parse_bytes;
+            memset(track, 'm', length);
+            track[length] = '\0';
+            load_music_name(track, 1, 0, expected);
+            const size_t cached = expected < cache_width - 1 ? expected : cache_width - 1;
+            assert(strlen(currentmusic) == cached && !memcmp(currentmusic, track, cached));
+            load_music_name(track, 0, 1, expected);
+            load_music_name(track, 0, 0, expected);
+        }
+    }
+    printf("MUSIC %u\n", revision);
 }
 
 int main(void)
 {
     @CHECKS@
+    @MUSIC_CHECKS@
     return 0;
 }

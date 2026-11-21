@@ -21,6 +21,7 @@ typedef struct { union { LONG lVal; DOUBLE dblVal; void *ptrVal; int strVal; }; 
 
 typedef struct {
     @MEMBERS@
+    int edge;
     struct { int animation_id; } jump;
     struct {
         struct { float x,z; } edgerange;
@@ -102,7 +103,7 @@ struct profile {
     uint32_t revision;
     size_t count;
     const char *names[32];
-    int decimal_factor, edge_count;
+    int decimal_factor, edge_count, has_edge;
 };
 
 static void check_profile(const struct profile *profile, uint32_t features)
@@ -123,16 +124,16 @@ static void check_profile(const struct profile *profile, uint32_t features)
         assert(result.vt == VT_INTEGER && result.lVal == 1);
         assert(write_field(_ep_aiflag, &field, &zero) == S_OK && !*value);
     }
-    if(profile->count == 24)
+    const char *additions[] = {"ducking", "riseattacking", "rising"};
+    for(size_t i=0; i<sizeof(additions)/sizeof(*additions); ++i)
     {
-        const char *absent[] = {"ducking", "riseattacking", "rising"};
-        for(size_t i=0; i<sizeof(absent)/sizeof(*absent); ++i)
-        {
-            ScriptVariant field = named(absent[i]);
-            assert(!map_field(_ep_aiflag, "aiflag", &field) && field.vt == VT_STR);
-            assert(read_field(_ep_aiflag, &field, &out) == E_FAIL);
-            assert(write_field(_ep_aiflag, &field, &zero) == E_FAIL);
-        }
+        size_t found=0;
+        while(found<profile->count && strcmp(additions[i], profile->names[found])) ++found;
+        if(found<profile->count) continue;
+        ScriptVariant field = named(additions[i]);
+        assert(!map_field(_ep_aiflag, "aiflag", &field) && field.vt == VT_STR);
+        assert(read_field(_ep_aiflag, &field, &out) == E_FAIL);
+        assert(write_field(_ep_aiflag, &field, &zero) == E_FAIL);
     }
     const LONG invalid[] = {-1, (LONG)profile->count, INT_MAX};
     for(size_t i=0; i<sizeof(invalid)/sizeof(*invalid); ++i)
@@ -142,9 +143,21 @@ static void check_profile(const struct profile *profile, uint32_t features)
         assert(write_field(_ep_aiflag, &field, &zero) == E_FAIL);
     }
 
-    int edge_parent=0;
-    for(int id=0; id<_ep_the_end; ++id) if(obor_entityproperty(id)==_ep_edgerange) ++edge_parent;
-    assert(edge_parent==(profile->edge_count>0));
+    int edge_properties=0, range_properties=0;
+    for(int id=0; id<_ep_the_end; ++id)
+    {
+        const int property = obor_entityproperty(id);
+        edge_properties += property == _ep_edge;
+        range_properties += property == _ep_edgerange;
+    }
+    assert(edge_properties == profile->has_edge);
+    assert(range_properties == (profile->edge_count > 0));
+    if(edge_properties)
+    {
+        ScriptVariant edge = {.vt=VT_INTEGER,.lVal=2};
+        assert(write_field(_ep_edge, &edge, &zero) == S_OK && subject.edge == 2);
+        assert(read_field(_ep_edge, &edge, &out) == S_OK && result.vt == VT_INTEGER && result.lVal == 2);
+    }
     const char *axes[] = {"x", "z"};
     for(int i=0; i<profile->edge_count; ++i)
     {

@@ -1,0 +1,109 @@
+/* SPDX-License-Identifier: BSD-3-Clause
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me>
+ */
+#include <stdint.h>
+#include <stdio.h>
+#include "openbor.h"
+#include "profile_ids.h"
+#undef assert
+#undef printf
+#include <assert.h>
+
+uint32_t obor_profile_build, obor_profile_features;
+s_savedata savedata;
+const s_drawmethod plainmethod = {0};
+static s_hitbox shape = {.x = -3, .y = 7, .width = 11, .height = 19};
+static s_collision_body body_box = {.coords = &shape};
+static s_collision_attack attack_box = {.coords = &shape};
+static s_collision_entity entity_box = {.coords = &shape};
+static s_collision_body *body_boxes[] = {&body_box};
+static s_collision_attack *attack_boxes[] = {&attack_box};
+static s_collision_entity *entity_boxes[] = {&entity_box};
+static s_collision_body_list body_list = {.instance = body_boxes};
+static s_collision_attack_list attack_list = {.instance = attack_boxes};
+static s_collision_entity_list entity_list = {.instance = entity_boxes};
+static s_collision_body_list *body_frames[] = {&body_list};
+static s_collision_attack_list *attack_frames[] = {&attack_list};
+static s_collision_entity_list *entity_frames[] = {&entity_list};
+static s_anim animation = {
+    .collision_body = body_frames,
+    .collision_attack = attack_frames,
+    .collision_entity = entity_frames,
+    .numframes = 1,
+};
+static entity actor = {.animation = &animation, .position = {.z = 53}};
+static entity *actors[] = {&actor};
+entity **ent_list = actors;
+int ent_max = 1, max_collisons = 1;
+static unsigned entries, drawn;
+static int colours[3];
+
+int _makecolour(int red, int green, int blue)
+{
+    return (red << 16) | (green << 8) | blue;
+}
+
+void draw_position_entity(entity *target, int offset_z, int colour, s_drawmethod *method)
+{
+    assert(0);
+}
+
+void draw_features_entity(entity *target, int offset_z, int colour, s_drawmethod *method)
+{
+    assert(0);
+}
+
+void draw_box_on_entity(entity *target, int x, int y, int z, int w, int h,
+                        int thickness, int colour, s_drawmethod *method)
+{
+    assert(target == &actor && x == shape.x && y == shape.y && z == 54);
+    assert(w == shape.width && h == shape.height && thickness == 2);
+    assert(method && method->alpha == 1 && drawn < 3);
+    colours[drawn++] = colour;
+}
+
+@DRAW@
+
+static void enter_visual_debug(void)
+{
+    ++entries;
+    draw_visual_debug();
+}
+
+static void draw_requested_overlay(void)
+{
+#define draw_visual_debug enter_visual_debug
+@ENTRY@
+#undef draw_visual_debug
+}
+
+static void check(unsigned revision, unsigned entity_boxes_visible)
+{
+    obor_profile_build = revision;
+    savedata.debug_collision_body = 0;
+    savedata.debug_collision_attack = 0;
+    savedata.debug_collision_entity = 0;
+    entries = drawn = 0;
+    draw_requested_overlay();
+    assert(entries == 0 && drawn == 0);
+
+    savedata.debug_collision_entity = 1;
+    draw_requested_overlay();
+    assert(entries == entity_boxes_visible && drawn == entity_boxes_visible);
+    if(entity_boxes_visible) assert(colours[0] == 0xFF6400);
+
+    entries = drawn = 0;
+    savedata.debug_collision_body = 1;
+    savedata.debug_collision_attack = 1;
+    draw_requested_overlay();
+    assert(entries == 1 && drawn == 2 + entity_boxes_visible);
+    assert(colours[0] == 0x0000FF && colours[1 + entity_boxes_visible] == 0xFF00FF);
+    if(entity_boxes_visible) assert(colours[1] == 0xFF6400);
+    printf("PASS %u\n", revision);
+}
+
+int main(void)
+{
+    @CASES@
+    return 0;
+}

@@ -1,0 +1,50 @@
+/* SPDX-License-Identifier: BSD-3-Clause
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me>
+ */
+#include <stdio.h>
+#include "openbor.h"
+#include "profile_ids.h"
+#undef printf
+#undef assert
+#include <assert.h>
+
+uint32_t obor_profile_build;
+
+@FAMILIES@
+
+int main(void)
+{
+    const struct { uint32_t revision; const int *fixed; int count, classic; } profiles[] = {
+@PROFILES@
+    };
+    for(size_t i = 0; i < sizeof(profiles) / sizeof(*profiles); ++i)
+    {
+        obor_profile_build = profiles[i].revision;
+        const int count = profiles[i].count;
+        bool present[MAX_ANIS] = {false};
+        assert(obor_animation_from_native(-1) == -1);
+        assert(obor_animation_to_native(ANI_NONE) == -1);
+        for(int native = 0; native < count; ++native)
+        {
+            const int animation = profiles[i].fixed[native];
+            assert(animation >= 0 && animation < MAX_ANIS && !present[animation]);
+            present[animation] = true;
+            assert(obor_animation_from_native(native) == animation);
+            assert(obor_animation_to_native(animation) == native);
+        }
+        if(profiles[i].classic)
+        {
+            for(int animation = 0; animation < MAX_ANIS; ++animation)
+            {
+                if(!present[animation]) assert(obor_animation_to_native(animation) == -1);
+            }
+        }
+        for(int offset = 0; offset < 32; ++offset)
+        {
+            assert(obor_animation_from_native(count + offset) == MAX_ANIS + offset);
+            assert(obor_animation_to_native(MAX_ANIS + offset) == count + offset);
+        }
+        printf("%u\n", obor_profile_build);
+    }
+    return 0;
+}

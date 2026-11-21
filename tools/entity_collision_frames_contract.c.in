@@ -36,9 +36,24 @@ void exitIfFalse(int value, const char *expression, const char *func, const char
 
 void setDrawMethod(s_anim *animation, ptrdiff_t frame, s_drawmethod *value) { abort(); }
 s_drawmethod *getDrawMethod(s_anim *animation, ptrdiff_t frame) { abort(); }
+void ScriptVariant_ChangeType(ScriptVariant *value, VARTYPE type) { value->vt = type; }
 
 @INITIALIZER@
 @METHODS@
+
+static HRESULT read_entity_collision(s_anim *handle, ScriptVariant *value)
+{
+    ScriptVariant **pretvar = &value;
+    value->vt = VT_EMPTY;
+    switch(obor_animation_property_from_native(ANI_PROP_ENTITY_COLLISION))
+    {
+        @COLLISION_PROPERTY@
+    }
+    return S_OK;
+
+unsupported_property:
+    return E_FAIL;
+}
 
 static void append(s_anim *animation, int capacity, s_hitbox ebox,
                    s_collision_entity ebox_con, s_axis_plane_vertical_int offset)
@@ -77,16 +92,20 @@ static void check_frame(const s_collision_entity_list *list, int count, int tag,
     }
 }
 
-static void check_animation(int enabled, int count)
+static void check_animation(int enabled, int getter, int count)
 {
     s_anim animation = {0};
     s_hitbox ebox = {0};
     s_collision_entity ebox_con = empty_entity_collision;
     const s_axis_plane_vertical_int shifted = {.x = 2, .y = 4};
+    const HRESULT property_status = enabled && !getter ? E_FAIL : S_OK;
+    ScriptVariant property = {0};
     max_collisons = count;
     CHECK(!ebox_con.coords && ebox_con.index == 0 && ebox_con.tag == 0);
     append(&animation, 5, ebox, ebox_con, shifted);
     CHECK(!animation.collision_entity);
+    CHECK(read_entity_collision(&animation, &property) == property_status);
+    CHECK(property.vt == VT_EMPTY);
 
     ebox = (s_hitbox){.x = 12, .y = 16, .width = 8, .height = 6, .z1 = -3, .z2 = 5};
     ebox_con.tag = 41;
@@ -107,6 +126,11 @@ static void check_animation(int enabled, int count)
         CHECK(animation.vulnerable[frame] && animation.sprite[frame] == 5 + frame);
         CHECK(animation.collision_body[frame]->instance[0]->tag == 13);
     }
+    CHECK(read_entity_collision(&animation, &property) == property_status);
+    if(getter)
+        CHECK(property.vt == VT_PTR && property.ptrVal == animation.collision_entity);
+    else
+        CHECK(property.vt == VT_EMPTY);
     if(enabled)
     {
         CHECK(animation.collision_entity && !animation.collision_entity[0]);
@@ -128,12 +152,12 @@ static void check_animation(int enabled, int count)
 
 int main(void)
 {
-    static const struct { uint32_t revision; int enabled; } rows[] = { @ROWS@ };
+    static const struct { uint32_t revision; int enabled, getter; } rows[] = { @ROWS@ };
     for(size_t i = 0; i < sizeof(rows) / sizeof(*rows); ++i)
     {
         obor_profile_build = rows[i].revision;
-        check_animation(rows[i].enabled, 1);
-        check_animation(rows[i].enabled, 2);
+        check_animation(rows[i].enabled, rows[i].getter, 1);
+        check_animation(rows[i].enabled, rows[i].getter, 2);
         printf("%u\n", obor_profile_build);
     }
     return 0;

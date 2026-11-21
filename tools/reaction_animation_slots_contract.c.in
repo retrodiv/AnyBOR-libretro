@@ -68,8 +68,12 @@ static void check_allocation(uint32_t revision, int first_native, const Animatio
             assert(obor_animation_from_native(native) == animation);
         }
     }
-    const int extended = family_count == 20;
-    assert(!!animbackrises == extended && !!animbackriseattacks == extended && !!animbackblkpains == extended);
+    const int has_back_rise = family_count >= 19;
+    const int has_back_block = family_count == 20;
+    assert(!!animbackrises == has_back_rise && !!animbackriseattacks == has_back_rise);
+    assert(!!animbackblkpains == has_back_block);
+    @REACTION_RELEASE@
+    assert(!animbackrises && !animbackriseattacks && !animbackblkpains);
 }
 
 typedef struct {
@@ -92,6 +96,7 @@ static void check_fixed(uint32_t revision, const FixedSeries *families, size_t c
         {
             const int physical_attack = obor_attack_from_native(attack);
             assert(physical_attack >= 0 && physical_attack < MAX_ATKS);
+            assert(obor_attack_to_native(physical_attack) == attack);
             const int actual = (*series->table)[physical_attack];
             if(actual != series->expected[attack])
             {
@@ -122,7 +127,7 @@ void ent_set_anim(entity *actor, int id, int reset)
 enum { FRONT_NORMAL = 0, FRONT_TYPED, BACK_NORMAL, BACK_TYPED };
 static const struct {
     uint32_t revision;
-    int type, rear, present;
+    int has_back_block, type, rear, present;
     int first, second, end_rear, flips;
 } block_cases[] = {
 @BLOCK_CASES@
@@ -138,7 +143,7 @@ static void check_block(void)
     for(size_t i = 0; i < sizeof(block_cases) / sizeof(*block_cases); ++i)
     {
         obor_profile_build = block_cases[i].revision;
-        animbackblkpains = obor_profile_uses_5134_script_ids() ? NULL : back;
+        animbackblkpains = block_cases[i].has_back_block ? back : NULL;
         s_anim *animations[4] = {NULL};
         for(int id = 0; id < 4; ++id)
             if(block_cases[i].present & (1 << id)) animations[id] = &clip;

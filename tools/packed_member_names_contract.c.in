@@ -3,6 +3,7 @@
  */
 #include <assert.h>
 #include <ctype.h>
+#include <dirent.h>
 #include <stddef.h>
 #include <stdint.h>
 #include <stdarg.h>
@@ -14,6 +15,7 @@
 #include "anybor_abi.h"
 
 #define stricmp strcasecmp
+#define LINUX 1
 @CONSTANTS@
 typedef int64_t obor_pak_int;
 uint32_t obor_profile_build, obor_profile_features;
@@ -71,12 +73,13 @@ static void filecache_wait_for_prebuffer(int fd, int blocks) { abort(); }
 
 static unsigned char image[] = { @IMAGE@ };
 static const char *names[] = { @NAMES@ };
+static const char *loose_names[] = { @LOOSE_NAMES@ };
 
 static void check_member(size_t index, size_t capacity)
 {
     const char *name = names[index];
     const size_t size = strlen(name);
-    char alternate[PACKFILE_PATH_MAX + 1];
+    char alternate[PACKFILE_PATH_STORAGE];
     assert(size < sizeof(alternate));
     for(size_t i = 0; i < size; ++i)
         alternate[i] = name[i] == '/' ? '\\' : (char)toupper((unsigned char)name[i]);
@@ -99,6 +102,26 @@ static void check_member(size_t index, size_t capacity)
     }
 }
 
+static void check_loose_paths(size_t capacity)
+{
+    for(size_t i = 0; i < sizeof(loose_names) / sizeof(*loose_names); ++i)
+    {
+        char requested[PACKFILE_PATH_STORAGE], expected[PACKFILE_PATH_STORAGE];
+        const char *name = loose_names[i];
+        assert(strlen(name) < sizeof(requested));
+        const int length = snprintf(expected, sizeof(expected), "%s/%s", @LOOSE_ROOT@, name);
+        assert(length > 0 && (size_t)length < sizeof(expected));
+        for(size_t j = 0; (requested[j] = (char)tolower((unsigned char)name[j])); ++j) {}
+        const char *result = casesearch(@LOOSE_ROOT@, requested);
+        if((size_t)length < capacity)
+            assert(result && !strcmp(result, expected));
+        else
+            assert(!result);
+        const char *converted = slashback(name);
+        assert(!strcmp(slashfwd(converted), name) || strlen(name) >= capacity);
+    }
+}
+
 int main(void)
 {
     static const struct { uint32_t revision; size_t capacity; } profiles[] = { @PROFILES@ };
@@ -108,9 +131,14 @@ int main(void)
     for(size_t i = 0; i < sizeof(profiles) / sizeof(*profiles); ++i)
     {
         obor_profile_build = profiles[i].revision;
+        int accepted = 0;
         for(size_t j = 0; j < sizeof(names) / sizeof(*names); ++j)
+        {
             check_member(j, profiles[i].capacity);
-        assert(filenamelist && filenamelist->size == 2);
+            accepted += strlen(names[j]) < profiles[i].capacity;
+        }
+        assert(filenamelist && filenamelist->size == accepted);
+        check_loose_paths(profiles[i].capacity);
         freefilenamecache();
         assert(!filenamelist);
         fprintf(stdout, "%u\n", obor_profile_build);

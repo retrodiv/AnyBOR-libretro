@@ -239,6 +239,9 @@ static void check_model(int syntax, int boomerang_id, int touch_id)
     if(syntax == 2)
     {
         assert(model.boomerang == 17 && model.boomerang_prop.acceleration == 0);
+        char none[] = "NoNe";
+        arguments[1] = none;
+        assert(model_command(commands, &model, arguments) == 1 && model.boomerang == -1);
         arguments[0] = values;
         arguments[1] = acceleration;
         assert(model_command(commands, &model, arguments) == 1);
@@ -275,11 +278,14 @@ static void check_model(int syntax, int boomerang_id, int touch_id)
     freeCommandList(commands);
 }
 
-static void check_motion(int syntax)
+static void check_motion(int syntax, int reset_ducking, int owner_present, int direction)
 {
-    parent = (entity){.position = {.x = 20, .z = 10}, .direction = DIRECTION_RIGHT, .sortid = 8};
-    owner = (entity){.position = {.x = 70, .z = 30, .y = 6}, .direction = DIRECTION_LEFT, .sortid = 50};
-    projectile = (entity){.parent = &parent, .owner = &owner};
+    const int follows_owner = syntax == 2 && owner_present;
+    const int launch_direction = direction > 0 ? DIRECTION_RIGHT : DIRECTION_LEFT;
+    const int opposite_direction = direction > 0 ? DIRECTION_LEFT : DIRECTION_RIGHT;
+    parent = (entity){.position = {.x = 20, .z = 10}, .direction = opposite_direction, .sortid = 8};
+    owner = (entity){.position = {.x = 70, .z = 30, .y = 6}, .direction = opposite_direction, .sortid = 50};
+    projectile = (entity){.parent = &parent, .owner = owner_present ? &owner : NULL};
     projectile.modeldata.speed = 8;
     projectile.modeldata.boomerang_prop.hdistance = 45;
     projectile.modeldata.boomerang_prop.acceleration = 1;
@@ -289,10 +295,10 @@ static void check_motion(int syntax)
         return;
     }
 
-    entity *reference = syntax == 1 ? &parent : &owner;
-    reference->modeldata.type = TYPE_NPC;
-    projectile.modeldata.hostile = TYPE_NPC;
-    int direction = reference->direction == DIRECTION_RIGHT ? 1 : -1;
+    entity *reference = follows_owner ? &owner : &parent;
+    reference->direction = launch_direction;
+    reference->modeldata.type = direction > 0 ? TYPE_NPC : TYPE_ENEMY;
+    projectile.modeldata.hostile = reference->modeldata.type;
     projectile.position.x = reference->position.x + direction * 10;
     catches = deflections = 0;
     assert(move_dispatch(AIMOVE1_BOOMERANG) == 1);
@@ -301,7 +307,7 @@ static void check_motion(int syntax)
     assert(projectile.position.z == reference->position.z && projectile.position.y == reference->position.y);
     assert(projectile.modeldata.noflip && projectile.modeldata.antigrab);
     assert(projectile.modeldata.grabforce == -99999 && projectile.modeldata.offscreenkill == 80);
-    assert(projectile.modeldata.hostile == TYPE_ENEMY);
+    assert(projectile.modeldata.hostile == (direction > 0 ? TYPE_ENEMY : TYPE_PLAYER | TYPE_NPC));
     assert(deflections == 1 && catches == 0);
 
     projectile.position.x = reference->position.x + direction * 45;
@@ -310,22 +316,40 @@ static void check_motion(int syntax)
     assert(projectile.velocity.x == 0 && projectile.boomerang_loop == 2);
     assert(projectile.sortid == reference->sortid - 1 && deflections == 2 && catches == 0);
 
+    projectile.position.x = reference->position.x - direction * 45;
+    projectile.velocity.x = -direction;
+    assert(move_dispatch(AIMOVE1_BOOMERANG) == 1);
+    assert(projectile.velocity.x == 0 && projectile.boomerang_loop == 3);
+    assert(projectile.sortid == reference->sortid + 1 && deflections == 3 && catches == 0);
+
     animations[ANI_GETBOOMERANG] = animations[ANI_GETBOOMERANGINAIR] = &catch_animation;
     reference->modeldata.animation = animations;
     reference->modeldata.animation_capacity = MAX_ANIS;
     reference->ducking = 1;
     expected_catcher = reference;
-    expected_animation = syntax == 1 ? ANI_GETBOOMERANG : ANI_GETBOOMERANGINAIR;
+    expected_animation = follows_owner ? ANI_GETBOOMERANGINAIR : ANI_GETBOOMERANG;
     projectile.position.x = reference->position.x;
     projectile.velocity.x = -direction * 2;
     assert(boomerang_catch(&projectile, 0) == 0);
     projectile.position.x += direction * 10;
+    projectile.velocity.x = direction * 2;
+    assert(boomerang_catch(&projectile, 10) == 0);
+    projectile.velocity.x = -direction * 2;
+    projectile.boomerang_loop = 1;
+    assert(boomerang_catch(&projectile, 10) == 0);
+    projectile.boomerang_loop = 2;
     reference->inpain = 1;
     assert(boomerang_catch(&projectile, 10) == 0);
     reference->inpain = 0;
+    reference->falling = 1;
+    assert(boomerang_catch(&projectile, 10) == 0);
+    reference->falling = 0;
+    reference->dead = 1;
+    assert(boomerang_catch(&projectile, 10) == 0);
+    reference->dead = 0;
     assert(move_dispatch(AIMOVE1_BOOMERANG) == 1);
     assert(catches == 1 && reference->takeaction == common_animation_normal);
-    assert(reference->ducking == (syntax == 1));
+    assert(reference->ducking == (reset_ducking ? DUCK_INACTIVE : 1));
     if(syntax == 1)
     {
         projectile.parent = NULL;
@@ -351,13 +375,20 @@ static void check_motion(int syntax)
 
 int main(void)
 {
-    const struct { unsigned revision; int syntax, boomerang_id, touch_id; } rows[] = {@PROFILES@};
+    const struct { unsigned revision; int syntax, boomerang_id, touch_id, reset_ducking; } rows[] = {@PROFILES@};
     for(size_t i = 0; i < sizeof(rows) / sizeof(*rows); ++i)
     {
         obor_profile_build = rows[i].revision;
         check_model(rows[i].syntax, rows[i].boomerang_id, rows[i].touch_id);
         check_callers(!!rows[i].syntax);
-        check_motion(rows[i].syntax);
+        check_motion(rows[i].syntax, rows[i].reset_ducking, 1, 1);
+        if(rows[i].syntax)
+            check_motion(rows[i].syntax, rows[i].reset_ducking, 1, -1);
+        if(rows[i].syntax == 2)
+        {
+            check_motion(rows[i].syntax, rows[i].reset_ducking, 0, 1);
+            check_motion(rows[i].syntax, rows[i].reset_ducking, 0, -1);
+        }
         printf("%u\n", obor_profile_build);
     }
     return 0;

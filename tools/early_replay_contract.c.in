@@ -117,8 +117,8 @@ static void expect_equal_files(FILE *left, FILE *right)
     } while(size);
 }
 
-#define CHECK_REPLAY(revision, width) do { \
-    original_rows_##revision original[4]; \
+#define CHECK_REPLAY(original_type, revision, width) do { \
+    original_type original[4]; \
     RecKeys native[4]; \
     memset(original, 0, sizeof(original)); \
     memset(native, 0, sizeof(native)); \
@@ -185,9 +185,11 @@ static void expect_equal_files(FILE *left, FILE *right)
     printf("PASS %u\n", obor_profile_build); \
 } while(0)
 
+@REPLAY_FUNCTIONS@
+
 static void check_recording_paths(size_t field_capacity, size_t lookup_capacity)
 {
-    char component[MAX_ARG_LEN + 1];
+    char component[MAX_ARG_LEN + 2];
     memset(component, 'n', field_capacity);
     component[field_capacity - 1] = '\0';
     memset(&live, 0, sizeof(live));

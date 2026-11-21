@@ -72,7 +72,6 @@ static int log_result(const char *format, ...)
     return 0;
 }
 
-@PROFILE@
 @FORMAT@
 #define printf log_result
 @NATIVE@

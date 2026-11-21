@@ -18,7 +18,7 @@ s_level *level = &scene;
 static s_layer layers[3];
 static s_sprite sprites[4];
 static s_screen screen;
-static char requested_mask[MAX_BUFFER_LEN];
+static char requested_mask[MAX_BUFFER_LEN + 1];
 static unsigned sprite_loads, screen_loads;
 
 s_sprite *loadsprite2(char *filename, int *width, int *height)
@@ -83,7 +83,20 @@ static void apply_model_name(entity *e)
 @MODEL_NAME@
 }
 
-static void check(unsigned revision, size_t mask_bytes, size_t alias_bytes, size_t model_name_bytes)
+static void apply_item_alias(entity *ent, s_spawn_entry *spawn_entry)
+{
+    s_item_properties item = {0};
+    s_spawn_entry p = {0};
+    entity *e = ent;
+    ent->item_properties = &item;
+@CARRY_ALIAS@
+@DROP_ALIAS@
+    apply_alias(ent, &p);
+    ent->item_properties = NULL;
+}
+
+static void check(unsigned revision, size_t mask_bytes, size_t alias_bytes, size_t model_name_bytes,
+                  size_t item_alias_bytes)
 {
     obor_profile_build = revision;
     memset(&scene, 0, sizeof(scene));
@@ -91,10 +104,10 @@ static void check(unsigned revision, size_t mask_bytes, size_t alias_bytes, size
     memset(sprites, 0, sizeof(sprites));
     sprite_loads = screen_loads = 0;
     scene.layers = layers;
-    char long_mask[165];
-    memset(long_mask, 'g', 160);
-    memcpy(long_mask + 160, ".png", 5);
-    char maskPath[MAX_BUFFER_LEN] = {0};
+    char long_mask[MAX_BUFFER_LEN + 32];
+    memset(long_mask, 'g', sizeof(long_mask) - sizeof(".png"));
+    memcpy(long_mask + sizeof(long_mask) - sizeof(".png"), ".png", sizeof(".png"));
+    char maskPath[MAX_BUFFER_LEN + 1] = {0};
     s_spawn_entry entry = {0};
     parse_command(CMD_LEVEL_ALPHAMASK, long_mask, maskPath, &entry);
     const size_t mask_length = mask_bytes < strlen(long_mask) ? mask_bytes : strlen(long_mask);
@@ -132,13 +145,16 @@ static void check(unsigned revision, size_t mask_bytes, size_t alias_bytes, size
     apply_alias(&actor, &entry);
     assert(!strcmp(actor.name, "Pilot"));
 
+    parse_command(CMD_LEVEL_ITEMALIAS, alias, maskPath, &entry);
+    apply_item_alias(&actor, &entry);
+    assert(strlen(actor.name) == item_alias_bytes && !memcmp(actor.name, alias, item_alias_bytes));
+    parse_command(CMD_LEVEL_ITEMALIAS, "Pilot", maskPath, &entry);
+    apply_item_alias(&actor, &entry);
+    assert(!strcmp(actor.name, "Pilot"));
+
     level->bossescount = level->numbosses = 8;
 @COUNTS@
     assert(!level->bossescount && !level->numbosses);
-    parse_command(CMD_LEVEL_BOSS, "1", maskPath, &entry);
-    assert(entry.boss == 1 && level->bossescount == 1 && level->numbosses == 1);
-    parse_command(CMD_LEVEL_BOSS, "0", maskPath, &entry);
-    assert(!entry.boss && level->bossescount == 1 && level->numbosses == 1);
     printf("PASS %u\n", revision);
 }
 

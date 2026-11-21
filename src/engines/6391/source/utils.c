@@ -379,14 +379,23 @@ void screenshot(s_screen *vscreen, unsigned char *pal, int ingame)
     char shotname[1024] = {""};
     char modname[MAX_FILENAME_LEN]  = {""};
 
-    getPakName(modname, sizeof(modname), 99);
+    const size_t stem_capacity = obor_profile_build && obor_profile_build < 6208 ? 128 : sizeof(modname);
+    if(!obor_pak_name(modname, stem_capacity, packfile, 99))
+    {
+        if(ingame) debug_printf("Screenshot name exceeds the profile path capacity.");
+        return;
+    }
 #ifdef PSP
     if(dirExists("ms0:/PICTURE/", 1) && dirExists("ms0:/PICTURE/Beats Of Rage/", 1))
     {
 #endif
 #ifdef LIBRETRO
-        const size_t capacity = (obor_profile_build == 5134 || obor_profile_build == 6119)
-                                ? 128 : sizeof(shotname);
+        size_t capacity = sizeof(shotname);
+        if(obor_profile_build && obor_profile_build < 6208)
+        {
+            capacity = obor_profile_build < 6186 || (obor_profile_build >= 6190 && obor_profile_build < 6192)
+                ? 128 : 512;
+        }
 #else
         const size_t capacity = sizeof(shotname);
 #endif

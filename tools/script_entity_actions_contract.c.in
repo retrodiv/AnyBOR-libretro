@@ -18,7 +18,7 @@ unsigned int time = 100;
 uint32_t obor_profile_build, obor_profile_features;
 static entity actor;
 entity *self = &actor;
-static int expected_action, expected_active, keep_flags, expected_animation, callbacks;
+static int expected_action, expected_active, keep_flags, keep_duck, expected_animation, callbacks;
 
 void common_animation_normal(void) {}
 void common_attack_proc(void) {}
@@ -34,7 +34,7 @@ static void check_actor(void)
 #if OBOR_ENGINE_BUILD == 6391
     assert(actor.rising == keep_flags && actor.riseattacking == keep_flags);
     assert((int)actor.edge == keep_flags);
-    assert((int)actor.ducking == (keep_flags || expected_action == 1));
+    assert((int)actor.ducking == (keep_duck || expected_action == 1));
 #endif
     if(expected_action == 2)
     {
@@ -72,7 +72,7 @@ static void prepare(void)
 
 int main(void)
 {
-    static const struct { uint32_t revision; int active, keep, animation, native; } rows[] = {@ROWS@};
+    static const struct { uint32_t revision; int active, keep, duck, animation, native; } rows[] = {@ROWS@};
     static HRESULT (*const actions[])(ScriptVariant **, ScriptVariant **, int) = {
         openbor_executeanimation, openbor_performattack, openbor_setidle,
     };
@@ -81,6 +81,7 @@ int main(void)
         obor_profile_build = rows[i].revision;
         expected_active = rows[i].active;
         keep_flags = rows[i].keep;
+        keep_duck = rows[i].duck;
         expected_animation = rows[i].animation;
         ScriptVariant entity_arg = {.vt = VT_PTR, .ptrVal = &actor};
         ScriptVariant animation = {.vt = VT_INTEGER, .lVal = rows[i].native};

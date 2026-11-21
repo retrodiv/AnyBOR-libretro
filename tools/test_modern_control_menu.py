@@ -46,7 +46,8 @@ class ClassicControlMenuContracts(unittest.TestCase):
         self.assertEqual(revisions, sorted(contract_revisions(data, data['expected_revisions'][engine_id])))
         engine = Path(os.environ.get('OBOR_HISTORICAL_ENGINE', ROOT / 'src/engines' / engine_id))
         source = (engine / 'openbor.c').read_text(encoding='latin-1')
-        fields = ('revision', 'has_default', 'label_input_length', 'label_display_length')
+        fields = ('revision', 'has_default', 'has_default_keyboard', 'label_input_length',
+                  'label_display_length', 'stretch_default')
         values = dict(MENU=function(source, 'keyboard_setup'),
                       TRANSLATE=function(source, 'translate_SDID'),
                       DEFAULTS=function(source, 'clearbuttons') if engine_id == '6391' else '',

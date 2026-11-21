@@ -1,0 +1,34 @@
+/* SPDX-License-Identifier: BSD-3-Clause
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me>
+ */
+#include "openbor.h"
+#undef assert
+#undef printf
+#include <assert.h>
+
+uint32_t obor_profile_build, obor_profile_features;
+s_savedata savedata;
+static int cleared;
+
+void clearbuttons(int player)
+{
+    assert(player == cleared);
+    ++cleared;
+}
+
+@DEFAULTS@
+
+int main(void)
+{
+    const struct { unsigned revision; int stretch; } cases[] = {@CONTEXTS@};
+    for(size_t i = 0; i < sizeof(cases) / sizeof(*cases); ++i)
+    {
+        obor_profile_build = cases[i].revision;
+        savedata.stretch = -1;
+        cleared = 0;
+        clearsettings();
+        assert(cleared == MAX_PLAYERS && savedata.stretch == cases[i].stretch);
+        printf("PASS %u\n", obor_profile_build);
+    }
+    return 0;
+}

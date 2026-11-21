@@ -5,11 +5,11 @@
  * Upstream code retains its original license and notices.
  * Convert the command-list lookup result to its command enumeration
  * explicitly instead of through a plain pointer cast. Register modified 6330
- * LNS model and level-order commands only in that profile. Admit the
- * original boomerang model command in 5134 and 6119. Register the edge range
- * directive only in profiles that support it. Select entity collision and
- * pushing directives by profile. Register the lose attack directive only in
- * profiles that define it.
+ * LNS model and level-order commands only in that profile. Select historical
+ * boomerang model commands by profile. Register the edge range directive
+ * only in profiles that support it. Select entity collision and pushing
+ * directives by profile. Register the lose attack directive only in profiles
+ * that define it.
  * Existing changes recorded here; this is not their implementation date.
  * See MODIFICATIONS.md and docs/modifications/6391.md
  * at the source repository root. Original notices follow below.
@@ -18,6 +18,8 @@
 #include <string.h>
 #include "commands.h"
 #include "globals.h"
+#include "openbor.h"
+#include "profile_ids.h"
 
 void freeCommandList(List *list)
 {
@@ -124,7 +126,8 @@ List *createModelstxtCommandList(void)
 
 List *createModelCommandList(void)
 {
-    const int entity_collision = obor_profile_build != 6330 && obor_profile_build != 5134 && obor_profile_build != 6119;
+    const int entity_collision = obor_profile_has_animation_entity_collision();
+    const int entity_pushing = !obor_profile_build || obor_profile_build >= 6335;
     int i, amax = 99;
     char buf[64] ;
     List *result = prepareList();
@@ -231,9 +234,12 @@ List *createModelCommandList(void)
     LIST_ADD(CMD_MODEL_BLOCKODDS, "blockodds");
     LIST_ADD(CMD_MODEL_BLOCKPAIN, "blockpain");
     LIST_ADD(CMD_MODEL_BOMB, "bomb");
-    if(obor_profile_build == 6330) LIST_ADD(CMD_MODEL_CUSTBOOMERANG, "custboomerang");
-    if(obor_profile_build == 6330) LIST_ADD(CMD_MODEL_BOOMERANGVALUES, "boomerangvalues");
-    if(obor_profile_build == 5134 || obor_profile_build == 6119 || obor_profile_build == 6330)
+    if(obor_profile_has_custom_boomerang())
+    {
+        LIST_ADD(CMD_MODEL_CUSTBOOMERANG, "custboomerang");
+        LIST_ADD(CMD_MODEL_BOOMERANGVALUES, "boomerangvalues");
+    }
+    if(obor_profile_has_classic_boomerang())
         LIST_ADD(CMD_MODEL_BOOMERANG, "boomerang");
     LIST_ADD(CMD_MODEL_BOUNCE, "bounce");
     LIST_ADD(CMD_MODEL_BOUNCEFACTOR, "bouncefactor");
@@ -283,10 +289,9 @@ List *createModelCommandList(void)
     if(entity_collision) LIST_ADD(CMD_MODEL_EBOX_SIZE_Z_2, "ebox.size.z.2");
     if(entity_collision) LIST_ADD(CMD_MODEL_EBOXZ, "eboxz");
     LIST_ADD(CMD_MODEL_EDELAY, "edelay");
-    if(obor_profile_build != 5134 && obor_profile_build != 6119)
-        LIST_ADD(CMD_MODEL_EDGERANGE, "edgerange");
+    if(obor_profile_has_edge_range()) LIST_ADD(CMD_MODEL_EDGERANGE, "edgerange");
     LIST_ADD(CMD_MODEL_ENERGYCOST, "energycost");
-    if(entity_collision) LIST_ADD(CMD_MODEL_ENTITYPUSHING, "entitypushing");
+    if(entity_pushing) LIST_ADD(CMD_MODEL_ENTITYPUSHING, "entitypushing");
     LIST_ADD(CMD_MODEL_ESCAPEHITS, "escapehits");
     LIST_ADD(CMD_MODEL_FACING, "facing");
     LIST_ADD(CMD_MODEL_FALLDIE, "falldie");
@@ -356,9 +361,9 @@ List *createModelCommandList(void)
     LIST_ADD(CMD_MODEL_LIFESPAN, "lifespan");
     LIST_ADD(CMD_MODEL_LOAD, "load");
     LIST_ADD(CMD_MODEL_LOOP, "loop");
-    if(obor_profile_build != 5134 && obor_profile_build != 6119)
+    if(obor_profile_has_lose_attack_slot())
     {
-        LIST_ADD(CMD_MODEL_LOSE, "lose");
+        LIST_ADD(CMD_MODEL_LOSE, obor_profile_uses_loose_attack_name() ? "loose" : "lose");
     }
     LIST_ADD(CMD_MODEL_MAKEINV, "makeinv");
     LIST_ADD(CMD_MODEL_MODELFLAG, "modelflag");
@@ -399,7 +404,7 @@ List *createModelCommandList(void)
     LIST_ADD(CMD_MODEL_ONDEATHSCRIPT, "ondeathscript");
     LIST_ADD(CMD_MODEL_ONDOATTACKSCRIPT, "ondoattackscript");
     LIST_ADD(CMD_MODEL_ONDRAWSCRIPT, "ondrawscript");
-    if(entity_collision) LIST_ADD(CMD_MODEL_ONENTITYCOLLISIONSCRIPT, "onentitycollisionscript");
+    if(entity_pushing) LIST_ADD(CMD_MODEL_ONENTITYCOLLISIONSCRIPT, "onentitycollisionscript");
     LIST_ADD(CMD_MODEL_ONFALLSCRIPT, "onfallscript");
     LIST_ADD(CMD_MODEL_ONKILLSCRIPT, "onkillscript");
     LIST_ADD(CMD_MODEL_ONMODELCOPYSCRIPT, "onmodelcopyscript");
@@ -428,7 +433,7 @@ List *createModelCommandList(void)
     LIST_ADD(CMD_MODEL_PSHOTFRAME, "pshotframe");
     LIST_ADD(CMD_MODEL_PSHOTFRAMENO, "pshotframeno");
     LIST_ADD(CMD_MODEL_PSHOTFRAMEW, "pshotframew");
-    if(entity_collision) LIST_ADD(CMD_MODEL_PUSHINGFACTOR, "pushingfactor");
+    if(entity_pushing) LIST_ADD(CMD_MODEL_PUSHINGFACTOR, "pushingfactor");
     LIST_ADD(CMD_MODEL_QUAKEFRAME, "quakeframe");
     LIST_ADD(CMD_MODEL_RANGE, "range");
     LIST_ADD(CMD_MODEL_RANGEA, "rangea");

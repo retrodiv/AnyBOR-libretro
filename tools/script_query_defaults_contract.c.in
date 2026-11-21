@@ -70,7 +70,10 @@ static void check_player(int empty)
         property = integer(unknown[i]);
         value = integer(32);
         result = &value;
-        assert(openbor_getplayerproperty(args, &result, 2) == (empty ? S_OK : E_FAIL));
+        const HRESULT status = openbor_getplayerproperty(args, &result, 2);
+        if(status != (empty ? S_OK : E_FAIL))
+            fprintf(stderr, "%u returned %d for an unknown numeric player property\n", obor_profile_build, status);
+        assert(status == (empty ? S_OK : E_FAIL));
         assert(result == (empty ? &value : NULL));
         assert(value.vt == VT_EMPTY);
     }

@@ -1,0 +1,60 @@
+/* SPDX-License-Identifier: BSD-3-Clause
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me>
+ */
+#include <stdint.h>
+#include <stdio.h>
+#include <string.h>
+#include "openbor.h"
+#include "source/openborscript/profile_ids.h"
+#undef printf
+#undef assert
+#include <assert.h>
+
+uint32_t obor_profile_build;
+s_player player[MAX_PLAYERS];
+int noshare, credits;
+
+@METHOD@
+
+static void reset_at_site(unsigned site, int i)
+{
+    switch(site)
+    {
+        @RESETS@
+        default: assert(0);
+    }
+}
+
+int main(void)
+{
+    static const struct { unsigned revision; int resets, losing_prevents_continue; } rows[] = {@ROWS@};
+    for(size_t row = 0; row < sizeof(rows) / sizeof(*rows); ++row)
+    {
+        obor_profile_build = rows[row].revision;
+        for(unsigned site = 0; site < @RESET_COUNT@; ++site)
+        {
+            memset(player, 0, sizeof(player));
+            player[0].status = PLAYER_WINNING;
+            player[1].status = PLAYER_LOOSING;
+            reset_at_site(site, 1);
+            assert(player[0].status == PLAYER_WINNING);
+            assert(player[1].status == (rows[row].resets ? PLAYER_NO_STATUS : PLAYER_LOOSING));
+        }
+
+        memset(player, 0, sizeof(player));
+        entity actor = {.energy_status.health_current = 30};
+        noshare = 1;
+        player[0] = (s_player){.ent = &actor, .lives = 2, .credits = 3};
+        for(int status = 0; status <= (PLAYER_LOOSING | PLAYER_WINNING); ++status)
+        {
+            player[0].status = status;
+            assert(no_player_alive_to_join() == (rows[row].losing_prevents_continue && (status & PLAYER_LOOSING)));
+        }
+        player[0].ent = NULL;
+        assert(!no_player_alive_to_join());
+        player[0].credits = 0;
+        assert(no_player_alive_to_join());
+        printf("%u\n", obor_profile_build);
+    }
+    return 0;
+}

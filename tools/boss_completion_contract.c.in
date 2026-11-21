@@ -160,6 +160,20 @@ static void check_scripted_boss_spawn(int later)
     level = &stage;
 }
 
+static void check_level_boss_count(int separate_total)
+{
+    s_spawn_entry next = {0};
+    stage.bossescount = 3;
+    stage.numbosses = 0;
+    for(int boss = 0; boss <= 1; ++boss)
+    {
+        next.boss = boss;
+        @LEVEL_COUNT@
+        assert(stage.bossescount == 3 + boss);
+        assert(stage.numbosses == (separate_total ? 3 + boss : 0));
+    }
+}
+
 s_player player[MAX_PLAYERS];
 int endgame;
 static entity winner;
@@ -232,7 +246,7 @@ static void check_item_gate(void)
             }
 }
 
-static void check_boss_gate(int later)
+static void check_boss_gate(int inclusive, int defeat_flag, int duck_reset)
 {
     const int types[] = {TYPE_ENEMY, TYPE_NPC};
     for(unsigned i = 0; i < sizeof(types) / sizeof(types[0]); ++i)
@@ -242,12 +256,12 @@ static void check_boss_gate(int later)
             actor.boss = 1;
             stage.BOSS_COUNT = count;
             checkdeath();
-            const int finish = types[i] == TYPE_ENEMY && (later ? count <= 1 : count == 1);
+            const int finish = types[i] == TYPE_ENEMY && (inclusive ? count <= 1 : count == 1);
             assert(actor.dead && !actor.boss && stage.BOSS_COUNT == count - 1);
             assert(enemies_killed == finish && level_completed == finish);
-            assert(level_completed_defeating_boss == (finish && later));
+            assert(level_completed_defeating_boss == (finish && defeat_flag));
 #if OBOR_ENGINE_BUILD == 6391
-            assert(actor.ducking == (later ? DUCK_INACTIVE : DUCK_ACTIVE));
+            assert(actor.ducking == (duck_reset ? DUCK_INACTIVE : DUCK_ACTIVE));
 #endif
             checkdeath();
             assert(stage.BOSS_COUNT == count - 1 && enemies_killed == finish);
@@ -318,18 +332,22 @@ static void check_victory(int later)
 
 int main(void)
 {
-    const struct {uint32_t revision; int later_completion;} rows[] = {@ROWS@};
+    const struct {
+        uint32_t revision;
+        int inclusive, defeat_flag, duck_reset, victory_pose, scripted_total, enemy_clear_attack;
+    } rows[] = {@ROWS@};
     for(unsigned i = 0; i < sizeof(rows) / sizeof(rows[0]); ++i)
     {
         obor_profile_build = rows[i].revision;
-        check_boss_gate(rows[i].later_completion);
+        check_boss_gate(rows[i].inclusive, rows[i].defeat_flag, rows[i].duck_reset);
         check_item_gate();
         check_health_and_rewards();
-        check_delayed_suicide(rows[i].later_completion);
+        check_delayed_suicide(rows[i].defeat_flag);
 #if OBOR_ENGINE_BUILD == 6391
-        check_victory(rows[i].later_completion);
-        check_clear_enemies(rows[i].later_completion ? ATK_NORMAL : MAX_ATKS - 2);
-        check_scripted_boss_spawn(rows[i].later_completion);
+        check_victory(rows[i].victory_pose);
+        check_clear_enemies(rows[i].enemy_clear_attack < 0 ? MAX_ATKS - 2 : rows[i].enemy_clear_attack);
+        check_scripted_boss_spawn(rows[i].scripted_total);
+        check_level_boss_count(rows[i].scripted_total);
 #endif
         printf("%u\n", obor_profile_build);
     }

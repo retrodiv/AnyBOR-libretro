@@ -122,12 +122,12 @@ extern int            *animbackfalls;
 extern int            *animbackdies;
 extern int            *animbackrises;
 extern int            *animbackriseattacks;
-extern int            *blkpains;
-extern int            *backblkpains;
+extern int            *animblkpains;
+extern int            *animbackblkpains;
 
 extern int            noshare;
 extern int            credits;
-extern char           musicname[MAX_BUFFER_LEN];
+extern char           musicname[MAX_BUFFER_LEN + 1];
 extern float          musicfade[2];
 extern int            musicloop;
 extern u32            musicoffset;

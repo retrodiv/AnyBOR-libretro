@@ -77,11 +77,9 @@ def program(data):
     return text
 
 
-def spawn_program(rows, engine, engine_id):
+def spawn_program(rows, engine):
     source = (engine / 'openbor.c').read_text(encoding='latin-1')
     methods = ['ent_spawn_ent', 'ent_summon_ent']
-    if engine_id == '6391':
-        methods.insert(0, 'obor_profile_has_classic_boomerang')
     code = Path(__file__).with_name('frame_spawn_contract.c.in').read_text()
     code = code.replace('@FUNCTIONS@', '\n'.join(function(source, name) for name in methods))
     return code.replace('@PROFILES@', ','.join('{%du,%d,%d,{%d,%d}}' % (
@@ -96,7 +94,7 @@ class FrameSamplingContracts(unittest.TestCase):
         self.assertEqual({r['revision'] for r in rows}, contract_revisions(data, data['expected_revisions']))
         self.assertEqual(len(rows), len({r['revision'] for r in rows}))
         engine = ROOT / 'src/engines' / data['engine']
-        code = spawn_program(rows, engine, data['engine'])
+        code = spawn_program(rows, engine)
         actual = [json.loads(line) for line in native_output(code, data).splitlines()]
         self.assertEqual(actual, [dict(revision=r['revision'], cases=146) for r in rows])
         print(json.dumps(dict(spawn_contexts=len(rows), spawn_cases=146*len(rows))), file=sys.stderr)
@@ -135,7 +133,7 @@ class FrameEntityContracts(unittest.TestCase):
 
     def check_frame_entity_spawn(self, engine_id):
         rows, revisions, engine = self.frame_entity_inputs(engine_id)
-        code = spawn_program(rows, engine, engine_id)
+        code = spawn_program(rows, engine)
         actual = [json.loads(line) for line in native_output(code, {'engine': engine_id},
             engine_source=engine, extra_cflags=('-fgnu89-inline',)).splitlines()]
         self.assertEqual(actual, [dict(revision=revision, cases=146) for revision in revisions])
@@ -158,7 +156,6 @@ class FrameEntityContracts(unittest.TestCase):
         cost_flag = 'deduct_ammo' if modern else 'reactive'
         consume = braced_statement(function(source, 'common_attack_proc'), f'if(self->{cost_flag} == 1)')
         values = dict(ENEMY=enemy, SHOT=shot, COSTS=costs, CONSUME=consume,
-                      PROFILE=function(source, 'obor_profile_has_classic_boomerang') if modern else '',
                       RELEASE=braced_statement(function(source, 'free_ent'), 'if(e->item_properties)') if modern else '',
                       ROWS=',\n'.join('{%du,%d,%d}' % (
                           row['revision'], row['active_attack_state'], row['throw_boomerang']) for row in rows))

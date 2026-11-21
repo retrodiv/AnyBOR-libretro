@@ -19,6 +19,7 @@ FIXTURE = Path(__file__).with_name('fixtures') / 'profile-boomerang-motion-contr
 TERRAIN = FIXTURE.with_name('profile-4432-projectile-terrain.json')
 RICOCHET = FIXTURE.with_name('profile-6391-projectile-ricochet.json')
 CLASSIC = FIXTURE.with_name('profile-6391-classic-boomerang.json')
+OWNER_MOTION = FIXTURE.with_name('profile-6391-boomerang-owner-motion.json')
 ENTITY_LOSS = FIXTURE.with_name('profile-entity-loss.json')
 PROJECTILE_ORIGINS = FIXTURE.with_name('profile-projectile-origins.json')
 INPUTS = (
@@ -169,7 +170,7 @@ class BoomerangMotionTests(unittest.TestCase):
         self.check_projectile_launch(data, revisions)
 
     def test_6391_classic_boomerang(self):
-        data = load_contract_fixture(CLASSIC)
+        data = load_contract_fixture(OWNER_MOTION)
         rows = data['sources']
         revisions = [row['revision'] for row in rows]
         self.assertEqual(revisions, sorted(set(revisions)))
@@ -185,7 +186,7 @@ class BoomerangMotionTests(unittest.TestCase):
         def selector(method, word):
             return braced_statement(function(core, method),
                 f'else if(obor_profile_has_classic_boomerang() && stricmp(value, "{word}") == 0)')
-        methods = ('obor_profile_has_classic_boomerang', 'isNumeric', 'getValidFloat',
+        methods = ('isNumeric', 'getValidFloat',
                    'diff', 'inair', 'sort_invert_by_parent', 'do_catch', 'boomerang_catch',
                    'boomerang_initialize', 'boomerang_move', 'ent_spawn_ent', 'ent_summon_ent')
         model_cases = {'CMD_MODEL_BOOMERANGVALUES', 'CMD_MODEL_BOOMERANG',
@@ -209,13 +210,74 @@ class BoomerangMotionTests(unittest.TestCase):
             'DROP': re.search(r'(?m)^\s*dodrop = \(e->modeldata.subtype[^\n]+;', initialize)[0],
             'LAND': braced_statement(gravity, 'else if((!self->animation->move[self->animpos]->base'),
             'DRAW': braced_statement(function(core, 'display_ents'), 'if(e->owner)\n                    {'),
-            'PROFILES': ','.join('{%du,%d,%d,%d}' % (row['revision'], row['syntax'],
-                                                    row['boomerang_id'], row['touch_id']) for row in rows),
+            'PROFILES': ','.join('{%du,%d,%d,%d,%d}' % (row['revision'], row['syntax'],
+                        row['boomerang_id'], row['touch_id'], row['reset_ducking']) for row in rows),
         }
         template = Path(__file__).with_name('classic_boomerang_contract.c.in').read_text()
         code = re.sub(r'@([A-Z_]+)@', lambda match: values[match[1]], template)
         raw = native_output(code, data, engine_source=engine, extra_cflags=('-fgnu89-inline',))
         self.assertEqual([int(line) for line in raw.splitlines()], revisions)
+
+    def test_6391_custom_boomerang_launch(self):
+        data = load_contract_fixture(OWNER_MOTION.with_name('profile-6391-boomerang-model-directives.json'))
+        rows = data['sources']
+        revisions = [row['revision'] for row in rows]
+        self.assertEqual(revisions, sorted(contract_revisions(data, data['expected_revisions'])))
+        engine = source_engine(data)
+        source = (engine / 'openbor.c').read_text(encoding='latin-1')
+        update = function(source, 'update_frame')
+        loader, cases = switch_cases(source, 'load_cached_model', 'cmd', outermost=True)
+        spawn = function(source, 'boomerang_spawn')
+        split = spawn.index('    if(e == NULL)')
+        initializer = function(source, 'init_model')
+        values = {
+            'THROW': braced_statement(update, 'if(anim->projectile.throwframe == f)'),
+            'SPAWN': spawn[spawn.index('    entity *e = NULL;'):split],
+            'SPAWN_FINISH': spawn[split:spawn.rindex('}')],
+            'MODEL_DEFAULTS': '\n'.join(re.findall(
+                r'(?m)^\s*(newchar->boomerang(?:_prop\.\w+)?\s*=[^;]+;)', initializer)),
+            'INHERIT': braced_statement(function(source, 'set_model_ex'),
+                'if(obor_profile_build >= 6212 && obor_profile_has_custom_boomerang()'),
+            'DEFAULT': re.search(r'(?m)^\s*(newanim->projectile\.boomerang = [^;]+;)', loader)[1],
+            'CUSTOM': 'case CMD_MODEL_CUSTBOOMERANG:' + cases['CMD_MODEL_CUSTBOOMERANG']['body'],
+            'PROFILES': ','.join(
+                '{%du,%d,%d,%d,%d}' % (row['revision'], row['classic'], row['custom'],
+                                      row['inherits'], row['initial_projectile'])
+                for row in rows
+            ),
+        }
+        template = Path(__file__).with_name('custom_boomerang_launch_contract.c.in').read_text()
+        code = re.sub(r'@([A-Z_]+)@', lambda match: values[match[1]], template)
+        actual = native_output(code, data, engine_source=engine)
+        self.assertEqual([int(line) for line in actual.splitlines()], revisions)
+
+    def test_6391_projectile_selector_ordinals(self):
+        fixture = CLASSIC.with_name('profile-6391-projectile-selector-ordinals.json')
+        data = load_contract_fixture(fixture)
+        rows = data['sources']
+        revisions = [row['revision'] for row in rows]
+        self.assertEqual(revisions, sorted(contract_revisions(data, data['expected_revisions'])))
+        tables = []
+        for index, group in enumerate(data['groups']):
+            spawn = group['spawn']
+            self.assertTrue(all(re.fullmatch(r'SPAWN_TYPE_[A-Z_]+', item) for item in spawn))
+            tables.append(f'static const int spawn_{index}[] = {{' + ','.join(spawn) + '};')
+            flags = []
+            for symbol, value in group['flags']:
+                self.assertRegex(symbol, r'^PROJECTILE_PRIME_[A-Z_]+$')
+                if symbol == 'PROJECTILE_PRIME_REQUEST_CUSTOM':
+                    symbol = 'PROJECTILE_PRIME_REQUEST_UNDEFINED'
+                flags.append(f'{{{symbol}, {int(value, 16)}u}}')
+            tables.append(f'static const flag_pair flags_{index}[] = {{' + ','.join(flags) + '};')
+        runs = []
+        for row in rows:
+            group = row['group']
+            self.assertIn(group, range(len(data['groups'])))
+            runs.append(f'CHECK({row["revision"]}u, spawn_{group}, flags_{group});')
+        template = Path(__file__).with_name('projectile_selector_ordinals_contract.c.in').read_text()
+        code = template.replace('@TABLES@', '\n'.join(tables)).replace('@RUNS@', '\n    '.join(runs))
+        actual = native_output(code, data, engine_source=source_engine(data))
+        self.assertEqual([int(line) for line in actual.splitlines()], revisions)
 
     def test_6391_projectile_ricochet(self):
         data = load_contract_fixture(RICOCHET)
@@ -224,13 +286,14 @@ class BoomerangMotionTests(unittest.TestCase):
         self.assertEqual(set(revisions), contract_revisions(data, data['expected_revisions']))
         engine = source_engine(data)
         source = (engine / 'openbor.c').read_text(encoding='latin-1')
-        methods = ('diff', 'toss', 'checkwall_index', 'obor_profile_uses_legacy_ricochet',
-                   'check_block_wall', 'check_block_obstacle', 'projectile_wall_deflect',
+        methods = ('diff', 'toss', 'checkwall_index', 'check_block_wall',
+                   'check_block_obstacle', 'projectile_wall_deflect',
                    'arrow_move', 'star_move', 'boomerang_move')
         values = {
             'METHODS': '\n'.join(function(source, name) for name in methods),
             'DEFAULT_ATTACK': re.search(r'(?ms)^const s_collision_attack emptyattack\s*=\s*\{.*?^\};', source)[0],
-            'PROFILES': ','.join('{%du,%d}' % (row['revision'], row['legacy']) for row in data['sources']),
+            'PROFILES': ','.join('{%du,%d,%d,%d}' % (row['revision'], row['zero_wall_hit'],
+                                 row['keeps_wall_index'], row['basemap_on_bounce']) for row in data['sources']),
             'CASES': ',\n'.join('{' + ','.join(str(int(value)) for value in row) + '}'
                                for row in data['cases']),
         }

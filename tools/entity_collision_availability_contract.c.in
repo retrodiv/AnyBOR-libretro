@@ -37,10 +37,7 @@ void borExit(int status) { abort(); }
 #include "List.c"
 @COMMANDS@
 
-HRESULT openbor_get_entity_collision_collection(ScriptVariant **a, ScriptVariant **r, int n) { abort(); }
-HRESULT openbor_get_entity_collision_instance(ScriptVariant **a, ScriptVariant **r, int n) { abort(); }
-HRESULT openbor_get_entity_collision_property(ScriptVariant **a, ScriptVariant **r, int n) { abort(); }
-HRESULT openbor_set_entity_collision_property(ScriptVariant **a, ScriptVariant **r, int n) { abort(); }
+@COLLECTION_API@
 
 static const char *collision_function_name(void *functionRef)
 {
@@ -165,7 +162,7 @@ static size_t read_model_command(List *commands, char *name, s_model *newchar, s
     return pos;
 }
 
-static void check_model(int supported)
+static void check_model(int supported, int pushing)
 {
     static const char *const names[] = {"ebox", "ebox.index", "ebox.position.x", "ebox.position.y",
         "ebox.size.x", "ebox.size.y", "ebox.size.z.1", "ebox.size.z.2", "eboxz",
@@ -180,7 +177,8 @@ static void check_model(int supported)
     {
         assert(strlen(names[i]) < sizeof(name));
         strcpy(name, names[i]);
-        assert(getModelCommand(commands, name) == (supported ? ids[i] : 0));
+        const int available = i < 9 ? supported : pushing;
+        assert(getModelCommand(commands, name) == (available ? ids[i] : 0));
     }
     Script script = {0};
     s_scripts scripts = {.onentitycollision_script = &script};
@@ -195,13 +193,51 @@ static void check_model(int supported)
     assert(result.height == 9 * supported && result.z1 == 9 * supported && result.z2 == 7 * supported);
     read_model_command(commands, strcpy(name, "entitypushing"), &model, &result, "1", "");
     read_model_command(commands, strcpy(name, "pushingfactor"), &model, &result, "0.5", "");
-    assert(model.entitypushing == supported && model.pushingfactor == (supported ? 0.5f : 0));
+    assert(model.entitypushing == pushing && model.pushingfactor == (pushing ? 0.5f : 0));
     assert(read_model_command(commands, strcpy(name, "onentitycollisionscript"), &model, &result, "", "") ==
-           (supported ? 4u : 1u));
+           (pushing ? 4u : 1u));
     freeCommandList(commands);
 }
 
-static void check_script(int supported)
+static void check_collection_api(void)
+{
+    s_hitbox bounds = {.width = 9}, replacement = {.width = 5};
+    s_collision_entity item = {.coords = &bounds, .tag = 17};
+    s_collision_entity *entries[] = {&item, NULL};
+    ScriptVariant handle = {.vt = VT_PTR, .ptrVal = entries};
+    ScriptVariant property = {.vt = VT_INTEGER, .lVal = 0};
+    ScriptVariant value = {.vt = VT_EMPTY};
+    ScriptVariant argument = {.vt = VT_DECIMAL, .dblVal = -3.75};
+    ScriptVariant *result = &value, *args[] = {&handle, &property, &argument};
+
+    assert(openbor_get_entity_collision_collection(args, &result, 2) == S_OK);
+    assert(result == &value && value.vt == VT_PTR && value.ptrVal == &item);
+    assert(openbor_get_entity_collision_instance(args, &result, 2) == S_OK);
+    assert(result == &value && value.vt == VT_PTR && value.ptrVal == &item);
+    property.lVal = 1;
+    assert(openbor_get_entity_collision_instance(args, &result, 2) == S_OK);
+    assert(result == &value && value.vt == VT_EMPTY);
+
+    handle.ptrVal = &item;
+    property.lVal = ENTITY_COLLISION_PROP_TAG;
+    assert(openbor_get_entity_collision_property(args, &result, 2) == S_OK);
+    assert(value.vt == VT_INTEGER && value.lVal == 17);
+    assert(openbor_set_entity_collision_property(args, &result, 3) == S_OK);
+    result = &value;
+    assert(openbor_get_entity_collision_property(args, &result, 2) == S_OK);
+    assert(value.vt == VT_INTEGER && value.lVal == -3);
+
+    property.lVal = ENTITY_COLLISION_PROP_COORDINATES;
+    assert(openbor_get_entity_collision_property(args, &result, 2) == S_OK);
+    assert(value.vt == VT_PTR && value.ptrVal == &bounds);
+    argument = (ScriptVariant){.vt = VT_PTR, .ptrVal = &replacement};
+    assert(openbor_set_entity_collision_property(args, &result, 3) == S_OK);
+    result = &value;
+    assert(openbor_get_entity_collision_property(args, &result, 2) == S_OK);
+    assert(value.vt == VT_PTR && value.ptrVal == &replacement);
+}
+
+static void check_script(int supported, int collection_api)
 {
     static const char *const names[] = {"get_entity_collision_collection", "get_entity_collision_instance",
                                        "get_entity_collision_property", "set_entity_collision_property"};
@@ -212,10 +248,11 @@ static void check_script(int supported)
     for(size_t i = 0; i < sizeof(ids) / sizeof(*ids); ++i)
     {
         Node *row = List_GetNodeByName(&theFunctionList, names[i]);
-        assert(supported ? (row && row->value == ids[i]) : !row);
-        assert(!strcmp(collision_function_name(ids[i]), supported ? names[i] : "<unknown function>"));
+        assert(collection_api ? (row && row->value == ids[i]) : !row);
+        assert(!strcmp(collision_function_name(ids[i]), collection_api ? names[i] : "<unknown function>"));
     }
     List_Clear(&theFunctionList);
+    if(collection_api) check_collection_api();
     assert(collision_constant("ENTITY_COLLISION_PROP_COORDINATES") == (supported ? ENTITY_COLLISION_PROP_COORDINATES : -1));
     assert(collision_constant("ENTITY_COLLISION_PROP_TAG") == (supported ? ENTITY_COLLISION_PROP_TAG : -1));
     assert(show_debug_row() == supported);
@@ -270,13 +307,14 @@ static void check_phases(int supported)
 
 int main(void)
 {
-    static const struct { unsigned revision; int supported; } rows[] = {@ROWS@};
+    static const struct { unsigned revision; int supported, pushing, collection_api; } rows[] = {@ROWS@};
     for(size_t i = 0; i < sizeof(rows) / sizeof(*rows); ++i)
     {
         obor_profile_build = rows[i].revision;
-        check_model(rows[i].supported);
-        check_script(rows[i].supported);
-        check_phases(rows[i].supported);
+        check_model(rows[i].supported, rows[i].pushing);
+        check_script(rows[i].supported, rows[i].collection_api);
+        if(!rows[i].supported || rows[i].pushing)
+            check_phases(rows[i].supported);
         printf("%u\n", rows[i].revision);
     }
     return 0;

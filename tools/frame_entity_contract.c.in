@@ -95,7 +95,6 @@ void *checkAlloc(void *ptr, size_t size, const char *function, const char *file,
 }
 #endif
 
-@PROFILE@
 
 static void initialize(entity *e)
 {

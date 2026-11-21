@@ -1,0 +1,174 @@
+/* SPDX-License-Identifier: BSD-3-Clause
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me>
+ */
+#include <stdarg.h>
+#include <stdint.h>
+#include <stdio.h>
+#include <string.h>
+#include "scriptcommon.h"
+#undef assert
+#undef printf
+#include <assert.h>
+
+uint32_t obor_profile_build;
+uint32_t obor_profile_features;
+#undef player
+#define player test_players
+#undef savescore
+#define savescore test_score
+#undef videomodes
+#define videomodes test_video
+#undef levelsets
+#define levelsets test_sets
+#undef current_set
+#define current_set 0
+#undef scoreformat
+#define scoreformat 0
+#undef _colx
+#define _colx(font, x) (x)
+
+static s_player player[MAX_PLAYERS];
+static s_savescore savescore;
+static s_savelevel progress;
+static s_set_entry levelsets[1];
+static struct { int vRes, vShift; } videomodes = {240, 0};
+static char displayed[10][MAX_NAME_LEN + 10];
+static unsigned lines, saves;
+
+int saveHighScoreFile(void)
+{
+    ++saves;
+    return 1;
+}
+
+void font_printf(int x, int y, int which, int layeroffset, char *format, ...)
+{
+    if(x == -8)
+    {
+        va_list arguments;
+        assert(lines < 10 && y >= 56 && layeroffset == 0);
+        va_start(arguments, format);
+        int written = vsnprintf(displayed[lines++], sizeof(displayed[0]), format, arguments);
+        va_end(arguments);
+        assert(written > 0 && (size_t)written < sizeof(displayed[0]));
+    }
+    else
+    {
+        assert(x == 6);
+    }
+}
+
+@SUPPORT@
+
+static void retain_joined_name(char *input)
+{
+    int i = 0;
+    s_model example = {.name = input};
+    s_model *model = &example;
+    @JOIN_NAME@
+}
+
+static void retain_skipselect_name(char *input)
+{
+    int i = 0;
+    char *skipselect[] = {input};
+    @SKIP_NAME@
+}
+
+static void retain_model_selection(char *input)
+{
+    int i = 0;
+    s_model selected = {.name = input};
+    entity actor = {.model = &selected};
+    entity *example[] = {&actor};
+    @SELECT_NAME@
+}
+
+static void retain_restored_name(void)
+{
+    int i = 0;
+    s_savelevel *save = &progress;
+    @RESTORE_NAME@
+}
+
+static void store_current_name(void)
+{
+    int i = 0;
+    s_savelevel *save = &progress;
+    @SAVE_NAME@
+}
+
+static int change_script_name(int index, const char *tempstr)
+{
+    void *result = NULL;
+    void **pretvar = &result;
+    @SCRIPT_NAME@
+    return 1;
+}
+
+static void add_and_show_scores(int addtoscore)
+{
+    int topten[10] = {0};
+    int i, p, y = 56, col1 = -8, col2 = 6;
+    u32 score;
+    char name[MAX_NAME_LEN + 1];
+    @RANKING@
+    @DISPLAY@
+}
+
+static void check(unsigned revision, size_t player_bytes, size_t score_bytes)
+{
+    char input[MAX_NAME_LEN + 1];
+    memset(input, 'A', sizeof(input) - 2);
+    input[sizeof(input) - 2] = 'Z';
+    input[sizeof(input) - 1] = '\0';
+    obor_profile_build = revision;
+
+    void (*const copies[])(char *) = {retain_joined_name, retain_skipselect_name, retain_model_selection};
+    for(size_t route = 0; route < sizeof(copies) / sizeof(copies[0]); ++route)
+    {
+        memset(player[0].name, '?', sizeof(player[0].name));
+        copies[route](input);
+        assert(strlen(player[0].name) == player_bytes);
+        assert(memcmp(player[0].name, input, player_bytes) == 0);
+    }
+
+    memset(progress.pName[0], 0, sizeof(progress.pName[0]));
+    memcpy(progress.pName[0], input, player_bytes);
+    memset(player[0].name, '?', sizeof(player[0].name));
+    retain_restored_name();
+    assert(strlen(player[0].name) == player_bytes);
+    assert(memcmp(player[0].name, input, player_bytes) == 0);
+    memset(progress.pName[0], '?', sizeof(progress.pName[0]));
+    store_current_name();
+    assert(memcmp(progress.pName[0], input, player_bytes) == 0);
+
+    assert(change_script_name(0, input) == (player_bytes == MAX_NAME_LEN ? 1 : E_FAIL));
+    input[player_bytes] = '\0';
+    assert(change_script_name(0, input) == 1 && strcmp(player[0].name, input) == 0);
+    assert(change_script_name(0, NULL) == E_FAIL);
+    assert(change_script_name(1, "Pilot") == 1);
+
+    clearHighScore();
+    levelsets[0].maxplayers = 2;
+    player[0].score = 100;
+    player[1].score = 50;
+    savescore.highsc[0] = 75;
+    memset(obor_profile_score_name(0), 'R', score_bytes);
+    obor_profile_score_name(0)[score_bytes] = '\0';
+    lines = saves = 0;
+    add_and_show_scores(1);
+    assert(lines == 10 && saves == 1);
+    assert(savescore.highsc[0] == 100 && savescore.highsc[1] == 75 && savescore.highsc[2] == 50);
+    assert(strncmp(displayed[0], " 1.  ", 5) == 0 && strcmp(displayed[0] + 5, input) == 0);
+    assert(strncmp(displayed[1], " 2.  ", 5) == 0 && strlen(displayed[1] + 5) == score_bytes);
+    assert(strspn(displayed[1] + 5, "R") == score_bytes);
+    assert(strcmp(displayed[2], " 3.  Pilot") == 0);
+    printf("PASS %u\n", revision);
+}
+
+int main(void)
+{
+    @CASES@
+    return 0;
+}

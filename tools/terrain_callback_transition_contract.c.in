@@ -6,6 +6,9 @@
 #include <stdlib.h>
 #include <string.h>
 #include "openbor.h"
+#if OBOR_ENGINE_BUILD == 6391
+#include "profile_ids.h"
+#endif
 #undef assert
 #undef printf
 #include <assert.h>

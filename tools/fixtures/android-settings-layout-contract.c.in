@@ -1,0 +1,47 @@
+/* SPDX-License-Identifier: BSD-3-Clause
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me>
+ */
+#include <assert.h>
+#include <stdbool.h>
+#include <stddef.h>
+#include <stdint.h>
+#include <stdio.h>
+#include <string.h>
+#include @ABI@
+
+@LIMITS@
+@RECORD@
+@ORIGINALS@
+static uint32_t obor_profile_build, obor_profile_features;
+static s_savedata savedata;
+@METHODS@
+
+static void check(uint32_t profile, size_t size)
+{
+    obor_profile_build = profile;
+    unsigned char original[sizeof(savedata)], actual[sizeof(savedata)];
+    assert(size <= sizeof(original));
+    for(size_t i = 0; i < size; ++i) original[i] = (unsigned char)(17 + 37 * i);
+
+    FILE *input = tmpfile();
+    assert(input && fwrite(original, 1, size, input) == size);
+    rewind(input);
+    memset(&savedata, 0x5a, sizeof(savedata));
+    obor_profile_read_settings(input);
+    assert(ftell(input) == (long)size);
+    fclose(input);
+
+    FILE *output = tmpfile();
+    assert(output);
+    obor_profile_write_settings(output);
+    assert(ftell(output) == (long)size);
+    rewind(output);
+    assert(fread(actual, 1, size, output) == size && memcmp(original, actual, size) == 0);
+    fclose(output);
+}
+
+int main(void)
+{
+    @TESTS@
+    return 0;
+}

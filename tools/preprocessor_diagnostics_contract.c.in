@@ -1,0 +1,71 @@
+/* SPDX-License-Identifier: BSD-3-Clause
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me>
+ */
+#include <stdarg.h>
+#include <stdint.h>
+#include <stdio.h>
+#include <string.h>
+#include "pp_parser.h"
+#undef printf
+#undef assert
+#include <assert.h>
+
+uint32_t obor_profile_build;
+static char output[256];
+static size_t length;
+static unsigned console_calls, log_calls;
+
+static void capture(const char *format, va_list arguments)
+{
+    const size_t capacity = sizeof(output) - length;
+    const int written = vsnprintf(output + length, capacity, format, arguments);
+    assert(written >= 0 && (size_t)written < capacity);
+    length += (size_t)written;
+}
+
+static void console_print(const char *format, ...)
+{
+    va_list arguments;
+    va_start(arguments, format);
+    capture(format, arguments);
+    va_end(arguments);
+    ++console_calls;
+}
+
+void writeToLogFile(const char *format, ...)
+{
+    va_list arguments;
+    va_start(arguments, format);
+    capture(format, arguments);
+    va_end(arguments);
+    ++log_calls;
+}
+
+#define printf console_print
+@ROUTING@
+@MESSAGE@
+#undef PP_MESSAGE_OUTPUT
+#undef printf
+
+int main(void)
+{
+    const struct { unsigned revision; int engine_log; } profiles[] = {@PROFILES@};
+    char source[] = " load frame\n";
+    pp_parser parser = {.filename = "example.txt"};
+    parser.lexer.ptheSource = source + 1;
+    parser.lexer.pcurChar = source + 5;
+    strcpy(parser.lexer.theTokenSource, "load");
+    parser.lexer.theTokenPosition.row = 4;
+    parser.token.theTextPosition.col = 2;
+    for(size_t i = 0; i < sizeof(profiles) / sizeof(*profiles); ++i)
+    {
+        obor_profile_build = profiles[i].revision;
+        length = console_calls = log_calls = 0;
+        pp_message(&parser, "warning", "example message");
+        assert(!strcmp(output, "\n\nScript warning: example.txt, line 4: example message\n\nload frame\n  ^\n\n"));
+        assert(console_calls == (profiles[i].engine_log ? 0 : 6u));
+        assert(log_calls == (profiles[i].engine_log ? 6u : 0));
+        printf("%u\n", obor_profile_build);
+    }
+    return 0;
+}

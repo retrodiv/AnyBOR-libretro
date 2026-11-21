@@ -2,6 +2,7 @@
  * Copyright (c) 2026 retrodiv <retrodiv@proton.me>
  */
 #include <stdint.h>
+#include <stdio.h>
 #include <string.h>
 #include "openbor.h"
 #undef assert
@@ -44,7 +45,8 @@ static int GlobalMemoryStatusEx(MEMORYSTATUSEX *stat)
 int main(void)
 {
     const struct {uint32_t revision; int legacy;} cases[] = {
-        {5134,1}, {6119,1}, {6330,0}, {6391,0}, {6510,0}
+        @CASES@,
+        {6510u, 0}
     };
     for(unsigned i = 0; i < sizeof(cases) / sizeof(cases[0]); ++i)
     {
@@ -52,7 +54,11 @@ int main(void)
         legacy_calls = extended_calls = status_calls = 0;
         setSystemRam();
         assert(status_calls == 1);
-        assert(getSystemRam(KBYTES) == (cases[i].legacy ? 2097152 : 12582912));
+        const u64 total = getSystemRam(KBYTES);
+        const u64 expected = cases[i].legacy ? 2097152 : 12582912;
+        if(total != expected)
+            fprintf(stderr, "%u used the wrong Windows system report\n", obor_profile_build);
+        assert(total == expected);
         assert(getFreeRam(KBYTES) == (cases[i].legacy ? 2097152 : 6291456));
         assert(legacy_calls == (cases[i].legacy ? 2u : 0u));
         assert(extended_calls == (cases[i].legacy ? 0u : 2u));

@@ -55,7 +55,7 @@ typedef struct pnamestruct
     unsigned int pns_len;	    // Length of the struct in bytes
     unsigned int filestart;	    // Start position of referenced file
     unsigned int filesize;	    // Size of referenced file
-    char		 namebuf[MAX_FILENAME_LEN];	// Buffer to hold the file's name
+    char		 namebuf[MAX_BUFFER_LEN];	// Buffer to hold the file's name
 } pnamestruct;
 
 typedef struct fileliststruct

@@ -101,6 +101,25 @@ def program(data):
 
 
 class ScriptGrammarContracts(unittest.TestCase):
+    def test_6391_preprocessor_diagnostic_output(self):
+        data = load_contract_fixture(FIXTURE.with_name('profile-6391-preprocessor-diagnostics.json'))
+        rows = data['sources']
+        revisions = [row['revision'] for row in rows]
+        self.assertEqual(revisions, sorted(contract_revisions(data, data['expected_revisions'])))
+        engine = source_engine(data)
+        source = (engine / 'source/preprocessorlib/pp_parser.c').read_text()
+        routing = re.search(r'(?ms)^#if defined\(LIBRETRO\) && !PP_TEST\n'
+                            r'#define PP_MESSAGE_OUTPUT.*?^#endif\n', source)[0]
+        values = {
+            'ROUTING': routing,
+            'MESSAGE': function(source, 'pp_message'),
+            'PROFILES': ','.join('{%du,%d}' % (row['revision'], row['engine_log']) for row in rows),
+        }
+        template = Path(__file__).with_name('preprocessor_diagnostics_contract.c.in').read_text()
+        code = re.sub(r'@([A-Z_]+)@', lambda match: values[match[1]], template)
+        output = native_output(code, data, engine_source=engine)
+        self.assertEqual([int(line) for line in output.splitlines()], revisions)
+
     def test_complete_memberships_native_emission_and_error_recovery(self):
         data = fixture_data()
         output = native_output(program(data), data, engine_source=source_engine(data))

@@ -11,6 +11,8 @@
 #undef printf
 #undef assert
 #include <assert.h>
+
+_Static_assert(ATTACKING_PREPARED == 1 && IDLING_INACTIVE == 0, "Original state values");
 #ifndef stricmp
 #define stricmp strcasecmp
 #endif
@@ -175,6 +177,96 @@ static void check_previous_animation(LONG ordinal)
     }
 }
 
+static void check_collision_property(LONG ordinal, int selector)
+{
+    entity contacted = {0}, replacement = {0};
+    entity actor = {.collided_entity = &contacted, .movex = 2.25f, .movez = -3.5f};
+    actor.modeldata.entitypushing = 1;
+    actor.modeldata.pushingfactor = 0.5f;
+    ScriptVariant handle = {.vt = VT_PTR, .ptrVal = &actor};
+    ScriptVariant property = integer(ordinal);
+    ScriptVariant value = {.vt = VT_DECIMAL, .dblVal = -1.25};
+    ScriptVariant result = {.vt = VT_EMPTY}, *out = &result;
+    ScriptVariant *args[] = {&handle, &property, &value};
+    assert(openbor_getentityproperty(args, &out, 2) == S_OK && out == &result);
+    switch(selector)
+    {
+    case _ep_collidedentity:
+        assert(result.vt == VT_PTR && result.ptrVal == &actor.collided_entity);
+        value = (ScriptVariant){.vt = VT_PTR, .ptrVal = &replacement};
+        break;
+    case _ep_entitypushing:
+        assert(result.vt == VT_INTEGER && result.lVal == 1);
+        value = integer(0);
+        break;
+    case _ep_pushingfactor:
+        assert(result.vt == VT_DECIMAL && result.dblVal == 0.5);
+        break;
+    case _ep_movex:
+    case _ep_movez:
+        assert(result.vt == VT_DECIMAL && result.dblVal == 2.25);
+        break;
+    }
+    assert(openbor_changeentityproperty(args, &out, 3) == S_OK && out == NULL);
+    assert(actor.collided_entity == (selector == _ep_collidedentity ? &replacement : &contacted));
+    assert(actor.modeldata.entitypushing == (selector != _ep_entitypushing));
+    assert(actor.modeldata.pushingfactor == (selector == _ep_pushingfactor ? -1.25f : 0.5f));
+    assert(actor.movex == (selector == _ep_movex ? -1.25f : 2.25f));
+    assert(actor.movez == (selector == _ep_movez ? -1.25f : -3.5f));
+}
+
+static void check_direction(LONG ordinal)
+{
+    entity actor = {.direction = DIRECTION_LEFT};
+    ScriptVariant handle = {.vt = VT_PTR, .ptrVal = &actor};
+    ScriptVariant property = integer(ordinal);
+    ScriptVariant value = {.vt = VT_DECIMAL, .dblVal = 3.75};
+    ScriptVariant result = {.vt = VT_EMPTY}, *out = &result;
+    ScriptVariant *args[] = {&handle, &property, &value};
+    assert(openbor_changeentityproperty(args, &out, 3) == S_OK && out == NULL);
+    assert(actor.direction == 3);
+    out = &result;
+    assert(openbor_getentityproperty(args, &out, 2) == S_OK && result.vt == VT_INTEGER && result.lVal == 3);
+
+    value = text("right");
+    assert(openbor_changeentityproperty(args, &out, 3) == S_OK && out == NULL);
+    assert(actor.direction == 3);
+    ScriptVariant_Clear(&value);
+    value = integer(DIRECTION_RIGHT);
+    assert(openbor_changeentityproperty(args, &out, 3) == S_OK && out == NULL);
+    assert(actor.direction == DIRECTION_RIGHT);
+}
+
+static void check_combat_factor(LONG ordinal, int selector)
+{
+    s_defense defense[MAX_ATKS] = {0};
+    float offense[MAX_ATKS] = {0};
+    entity actor = {.defense = defense, .offense_factors = offense};
+    ScriptVariant handle = {.vt = VT_PTR, .ptrVal = &actor};
+    ScriptVariant property = integer(ordinal);
+    ScriptVariant type = integer(1);
+    ScriptVariant value[] = {
+        {.vt = VT_DECIMAL, .dblVal = 0.1}, {.vt = VT_DECIMAL, .dblVal = 0.2},
+        {.vt = VT_DECIMAL, .dblVal = 0.3}, {.vt = VT_DECIMAL, .dblVal = 1.1},
+        {.vt = VT_DECIMAL, .dblVal = 1.2}, {.vt = VT_DECIMAL, .dblVal = 0.7},
+    };
+    ScriptVariant *args[] = {&handle, &property, &type, &value[0], &value[1],
+                             &value[2], &value[3], &value[4], &value[5]};
+    ScriptVariant *out = NULL;
+    int count = selector == _ep_defense ? 9 : 4;
+    assert(openbor_changeentityproperty(args, &out, count) == S_OK && out == NULL);
+    if(selector == _ep_defense)
+    {
+        const s_defense result = defense[ATK_NORMAL2];
+        assert(result.factor == (float)value[0].dblVal && result.pain == (float)value[1].dblVal);
+        assert(result.knockdown == (float)value[2].dblVal && result.blockpower == (float)value[3].dblVal);
+        assert(result.blockthreshold == (float)value[4].dblVal && result.blockratio == (float)value[5].dblVal);
+    }
+    else
+        assert(offense[ATK_NORMAL2] == (float)value[0].dblVal);
+    assert(defense[ATK_NORMAL].factor == 0 && offense[ATK_NORMAL] == 0);
+}
+
 int main(void)
 {
     const struct { unsigned revision; const property_entry *table; size_t count; int boomerang; } profiles[] = {
@@ -199,6 +291,13 @@ int main(void)
             if(entry->selector == _ep_boomerang) boomerang = (LONG)n;
             if(entry->selector == _ep_damage_on_landing) check_landing_force((LONG)n);
             if(entry->selector == _ep_prevanimationid) previous_animation = (LONG)n;
+            if(entry->selector == _ep_direction) check_direction((LONG)n);
+            if(entry->selector == _ep_defense || entry->selector == _ep_offense)
+                check_combat_factor((LONG)n, entry->selector);
+            if(entry->selector == _ep_collidedentity || entry->selector == _ep_movex ||
+                entry->selector == _ep_movez || entry->selector == _ep_entitypushing ||
+                entry->selector == _ep_pushingfactor)
+                check_collision_property((LONG)n, entry->selector);
         }
         assert(obor_entityproperty((int)profiles[p].count) == _ep_the_end);
         const char *sentinels[] = {@CONTROLS@};

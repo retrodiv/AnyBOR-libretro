@@ -75,6 +75,9 @@ static void check(int extra_types)
     obor_profile_build = active->revision;
     max_attack_types = MAX_ATKS + extra_types;
     assert(obor_attack_to_native(max_attack_types) == active->native_maximum + extra_types);
+    s_collision_attack attack = emptyattack;
+    @REMOVAL_TYPE@
+    assert(obor_attack_to_native(attack.attack_type) == active->native_maximum + extra_types - active->last_slot);
     s_defense *defenses = calloc((size_t)max_attack_types, sizeof(*defenses));
     assert(defenses);
     defenses[ATK_NORMAL].knockdown = 2;

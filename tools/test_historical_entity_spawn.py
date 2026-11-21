@@ -108,6 +108,7 @@ class BossCompletionContracts(unittest.TestCase):
         poses = ('tryvictorypose', 'check_victory_pose') if physical == '6391' else ()
         finish = ''
         reset = []
+        level_count = ''
         if poses:
             play = function(source, 'playlevel')
             start = play.rindex('if(level_completed)', 0, play.index('check_victory_pose();'))
@@ -115,13 +116,20 @@ class BossCompletionContracts(unittest.TestCase):
             reset = re.findall(r'(?m)^\s*level_completed(?:_defeating_boss)?\s*=\s*0;',
                                function(source, 'unload_level'))
             self.assertEqual(len(reset), 2)
+            load = function(source, 'load_level')
+            level_count = re.search(r'(?m)^\s*level->bossescount \+= next.boss \? 1 : 0;\n'
+                                    r'^\s*[^\n]*level->numbosses = level->bossescount;', load)[0]
         script = (engine / 'openborscript.c').read_text(encoding='latin-1') if poses else ''
+        policy_fields = ('revision', 'inclusive_completion', 'defeat_flag', 'duck_reset',
+                         'victory_pose', 'scripted_total', 'enemy_clear_attack')
         values = dict(CHECK_DEATH=function(source, 'checkdeath'), SUICIDE=function(source, 'suicide'),
                       VICTORY='\n'.join(function(source, name) for name in poses),
                       FINISH=finish, RESET='\n'.join(reset),
+                      LEVEL_COUNT=level_count,
                       CLEAR_ENEMIES=function(source, 'kill_all_enemies') if poses else '',
                       SCRIPT_SPAWN=function(script, 'openbor_spawn') if poses else '',
-                      ROWS=',\n'.join('{%du,%d}' % (row['revision'], row['later_completion']) for row in rows))
+                      ROWS=',\n'.join('{' + ','.join(str(row[field]) for field in policy_fields) + '}'
+                                      for row in rows))
         template = Path(__file__).with_name('boss_completion_contract.c.in').read_text()
         code = re.sub(r'@([A-Z_]+)@', lambda match: values[match[1]], template)
         raw = native_output(code, {'engine': physical}, engine_source=engine,

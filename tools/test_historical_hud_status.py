@@ -14,6 +14,7 @@ from test_historical_common_think import ROOT, native_output
 from test_historical_player import function
 
 FIXTURE = Path(__file__).with_name('fixtures') / 'profile-hud-status-contracts.json'
+HUD_VARIANTS = FIXTURE.with_name('profile-6391-hud-variants.json')
 
 
 def program(data, source=None):
@@ -53,7 +54,13 @@ class HistoricalHudStatusTests(unittest.TestCase):
                 self.assertEqual(actual['join'], expected['join'])
 
     def test_6391_original_join_credit_prompt(self):
-        data = load_contract_fixture(FIXTURE.with_name('profile-6391-join-credit-prompt.json'))
+        self.check_join_credit_prompt(FIXTURE.with_name('profile-6391-join-credit-prompt.json'))
+
+    def test_6391_join_credit_boundaries(self):
+        self.check_join_credit_prompt(HUD_VARIANTS)
+
+    def check_join_credit_prompt(self, fixture):
+        data = load_contract_fixture(fixture)
         rows = data['sources']
         self.assertEqual({row['revision'] for row in rows}, contract_revisions(data, data['expected_revisions']))
         engine = Path(os.environ.get('OBOR_HISTORICAL_ENGINE', ROOT / 'src/engines' / data['engine']))
@@ -72,8 +79,14 @@ class HistoricalHudStatusTests(unittest.TestCase):
         self.assertEqual(native_output(code, data, engine_source=engine), f'PASS {count}\n')
 
     def test_6391_original_performance_overlay(self):
+        self.check_performance_overlay(FIXTURE.with_name('profile-6391-performance-overlay.json'))
+
+    def test_6391_performance_layer_and_unit_boundaries(self):
+        self.check_performance_overlay(HUD_VARIANTS)
+
+    def check_performance_overlay(self, fixture):
         from test_early_jump_walkoff import braced_statement
-        data = load_contract_fixture(FIXTURE.with_name('profile-6391-performance-overlay.json'))
+        data = load_contract_fixture(fixture)
         rows = data['sources']
         self.assertEqual({row['revision'] for row in rows}, contract_revisions(data, data['expected_revisions']))
         engine = Path(os.environ.get('OBOR_HISTORICAL_ENGINE', ROOT / 'src/engines' / data['engine']))
@@ -89,6 +102,23 @@ class HistoricalHudStatusTests(unittest.TestCase):
                 .replace('@CONTEXTS@', contexts).replace('@FREE_BYTES@', str(data['free_bytes']))
                 .replace('@USED_BYTES@', str(data['used_bytes'])))
         self.assertEqual(native_output(code, data, engine_source=engine), f'PASS {len(rows)}\n')
+
+    def test_6391_original_entity_collision_overlay(self):
+        from test_early_jump_walkoff import braced_statement
+        data = load_contract_fixture(HUD_VARIANTS)
+        rows = data['sources']
+        revisions = [row['revision'] for row in rows]
+        self.assertEqual(revisions, sorted(contract_revisions(data, data['expected_revisions'])))
+        engine = Path(os.environ.get('OBOR_HISTORICAL_ENGINE', ROOT / 'src/engines' / data['engine']))
+        source = (engine / 'openbor.c').read_text(encoding='latin1')
+        gate = braced_statement(function(source, 'predrawstatus'), 'if(savedata.debug_position')
+        cases = '\n    '.join('check(%du, %du);' % (row['revision'], row['entity_collision_draw'])
+                             for row in rows)
+        template = Path(__file__).with_name('entity_collision_overlay_contract.c.in').read_text()
+        code = (template.replace('@DRAW@', function(source, 'draw_visual_debug'))
+                .replace('@ENTRY@', gate).replace('@CASES@', cases))
+        self.assertEqual(native_output(code, data, engine_source=engine),
+                         ''.join(f'PASS {revision}\n' for revision in revisions))
 
 
 if __name__ == '__main__':

@@ -6,7 +6,8 @@
  * Select the native 6330 decimal negation fallthrough. Preserve native
  * signed32 integer conversion and truncated decimal results; refuse
  * unavailable arguments and non-representable decimal results before
- * conversion without changing result storage.
+ * conversion without changing result storage. Preserve the original decimal
+ * unary minus through build 6389.
  * Existing changes recorded here; this is not their implementation date.
  * See MODIFICATIONS.md and docs/modifications/6391.md
  * at the source repository root. Original notices follow below.
@@ -959,7 +960,7 @@ void ScriptVariant_Neg( ScriptVariant *svar)
     {
     case VT_DECIMAL:
         svar->dblVal = -(svar->dblVal);
-        if(obor_profile_build != 5134 && obor_profile_build != 6119 && obor_profile_build != 6330) break;
+        if(obor_profile_build != 5134 && (obor_profile_build < 6119 || obor_profile_build >= 6390)) break;
         /* fall through */
     case VT_INTEGER:
         if(svar->lVal != INT32_MIN) svar->lVal = -(svar->lVal);

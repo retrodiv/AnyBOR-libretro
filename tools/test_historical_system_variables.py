@@ -156,6 +156,41 @@ class SystemVariableContracts(unittest.TestCase):
         output = native_output(probe, data, engine_source=engine, extra_cflags=('-fgnu89-inline',))
         self.assertEqual([int(line) for line in output.splitlines()], revisions)
 
+    def test_6391_native_boss_music_and_pak_text(self):
+        from test_early_jump_walkoff import braced_statement
+
+        data = load_contract_fixture(FIXTURE.with_name('profile-6391-boss-music-and-pak-label.json'))
+        rows = data['sources']
+        revisions = [row['revision'] for row in rows]
+        self.assertEqual(revisions, sorted(contract_revisions(data, data['expected_revisions'])))
+        engine = source_engine(data)
+        core = (engine / 'openbor.c').read_text(encoding='latin-1')
+        scripts = (engine / 'openborscript.c').read_text(encoding='latin-1')
+        level = (engine / 'source/openborscript/level.c').read_text(encoding='latin-1')
+
+        def arm(source, method, symbol):
+            text = function(source, method)
+            return re.search(r'(?ms)^\s*(case ' + symbol + r':.*?)(?=^\s*case )', text)[1]
+
+        values = {
+            'PARSE_MUSIC': arm(core, 'load_level', 'CMD_LEVEL_BOSSMUSIC'),
+            'SET_MUSIC': arm(level, 'openbor_set_level_property', 'LEVEL_PROP_BOSS_MUSIC_NAME'),
+            'GET_MUSIC': arm(level, 'openbor_get_level_property', 'LEVEL_PROP_BOSS_MUSIC_NAME'),
+            'SET_COUNT': arm(level, 'openbor_set_level_property', 'LEVEL_PROP_BOSS_COUNT'),
+            'GET_COUNT': arm(level, 'openbor_get_level_property', 'LEVEL_PROP_BOSS_COUNT'),
+            'PLAY_MUSIC': braced_statement(function(core, 'smartspawn'),
+                                            'if(props->boss && level != NULL && level->bossmusic[0])'),
+            'GET_PAK_LABEL': arm(scripts, 'getsyspropertybyindex', '_sv_pakname'),
+            'LABELS': ',\n'.join('{' + json.dumps(path) + ',' + json.dumps(label) + '}'
+                                 for path, label in data['labels']),
+            'PROFILES': ',\n'.join('{%du,%du,%du}' % (row['revision'], row['boss_music_capacity'],
+                                                       row['pak_label_capacity']) for row in rows),
+        }
+        template = Path(__file__).with_name('boss_music_and_pak_label_contract.c.in').read_text()
+        probe = re.sub(r'@([A-Z_]+)@', lambda item: values[item[1]], template)
+        output = native_output(probe, data, engine_source=engine)
+        self.assertEqual([int(line) for line in output.splitlines()], revisions)
+
 
 if __name__ == '__main__':
     unittest.main()

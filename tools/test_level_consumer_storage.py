@@ -38,7 +38,7 @@ def program(engine, profiles, *, short_display=False, omit_release=False):
         display_limit = '(obor_profile_build >= 4283 && obor_profile_build < 4429 ? 48 : 51)'
     if any('obor_profile_early_save_layout()' in statement for statement in statements):
         display_helpers = function(source, 'obor_profile_early_save_layout')
-        display_limit = '(obor_profile_build == 5134 || obor_profile_build == 6119 ? 51 : 50)'
+        display_limit = '(obor_profile_build && obor_profile_build < 6210 ? 51 : 50)'
     if short_display:
         statements = [s.replace('(int)sizeof(savelevel[saveslot].dName)',
                                 '(int)sizeof(savelevel[saveslot].dName)-1') for s in statements]

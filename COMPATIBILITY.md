@@ -35,7 +35,7 @@ v3.0 4404-dev, v3.0 4406, v3.0 4411, v3.0 4412, v3.0 4413, v3.0 4414, v3.0 4417,
 v3.0 4420, v3.0 4421-dev, v3.0 4423, v3.0 4424, v3.0 4426, v3.0 4429, v3.0 4430, v3.0 4431,
 v3.0 4432, v3.0 4453, v3.0 4454-dev, v3.0 4456, v3.0 4510-dev, v3.0 4574, v3.0 4580, v3.0 4583,
 v3.0 4596, v3.0 4624, v3.0 4626, v3.0 4642, v3.0 4665, v3.0 4682, v3.0 4701, v3.0 4742, v3.0 4750,
-v3.0 4905, v3.0 5134, v3.0 6119, v3.0 6330, v3.0 6330-lns-010g, v3.0 6391, v3.0 6391-mod,
+v3.0 4905, v3.0 5134, v3.0 6119, v3.0 6175, v3.0 6196, v3.0 6203, v3.0 6212, v3.0 6223, v3.0 6240, v3.0 6245, v3.0 6258, v3.0 6271, v3.0 6276, v3.0 6291, v3.0 6297, v3.0 6301-dev, v3.0 6315, v3.0 6325, v3.0 6330, v3.0 6330-lns-010g, v3.0 6385, v3.0 6390, v3.0 6391, v3.0 6391-mod,
 v3.0 6392-dev, v3.0 6412-dev, v3.0 6510-dev, v3.0 7086-dev, v3.0 7123-dev, v4.0 7142-alpha,
 v4.0 7530, v4.0 7533, v4.0 7555, v4.0 7556, v4.0 7735 and v4.0 8023-dev.
 
@@ -61,9 +61,10 @@ profile at or above the declaration. Exact Build 4088, 4161, 4183, 4283,
 4367, 4404 and 4421 tags select their development profiles. Imprecise numeric tags
 and content-based replacement use the automatic profiles.
 Automatic routing includes v3.0 4453 for declared builds 4433–4453,
-and v3.0 4456 for 4454–4456. From 4457 through 6330, automatic selection
+and v3.0 4456 for 4454–4456. From 4457 through 6390, automatic selection
 uses the first official profile at or above the declared build. Exact Build
-4454 and Build 4510 tags select their development profiles. Profile v3.0 6391 covers 6331–6412, except that an
+4454, Build 4510 and Build 6301 tags select their development profiles.
+Profile v3.0 6391 covers 6391–6412, except that an
 exact filename Build 6392 or Build 6412 tag selects the corresponding test
 profile. Manual selection remains available. Profile v3.0 4453 uses 32-bit
 color, ignores `colourdepth` and removes legacy `remap` palette conversion;

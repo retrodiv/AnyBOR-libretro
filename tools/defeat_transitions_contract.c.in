@@ -1,0 +1,103 @@
+/* SPDX-License-Identifier: BSD-3-Clause
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me>
+ */
+#include <stdint.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include "openbor.h"
+#include "source/openborscript/profile_ids.h"
+#undef printf
+#undef assert
+#include <assert.h>
+
+uint32_t obor_profile_build;
+int max_attack_types = 1;
+static int death_animation[] = {ANI_DIE}, fall_animation[] = {ANI_FALL};
+int *animdies = death_animation, *animbackdies = death_animation;
+int *animfalls = fall_animation, *animbackfalls = fall_animation;
+static entity actor, attacker;
+static s_anim motion = {.numframes = 1};
+static s_anim *animations[MAX_ANIS];
+static s_collision_attack strike = {.attack_type = ATK_NORMAL};
+static unsigned thaws, falls, observed_fall_posture;
+static int selected;
+
+enum { PAIN = 1, FALLING = 2, RISING = 4, RISEATTACK = 8, EDGE = 16, DUCKING = 32, ALL = 63 };
+
+static unsigned posture(const entity *ent)
+{
+    return (ent->inpain ? PAIN : 0) | (ent->falling ? FALLING : 0) |
+           (ent->rising ? RISING : 0) | (ent->riseattacking ? RISEATTACK : 0) |
+           (ent->edge != EDGE_NO ? EDGE : 0) | (ent->ducking != DUCK_INACTIVE ? DUCKING : 0);
+}
+
+void ent_set_anim(entity *ent, int animation, int reset)
+{
+    assert(ent == &actor && selected == -1 && reset == 1);
+    selected = animation;
+}
+
+int reset_backpain(entity *ent) { abort(); }
+
+void unfrozen(entity *ent)
+{
+    assert(ent == &actor && ent->frozen);
+    ent->frozen = 0;
+    ++thaws;
+}
+
+void execute_onfall_script(entity *ent, entity *other, s_collision_attack *attack)
+{
+    assert(ent == &actor && other == &attacker && attack == &strike && selected == ANI_FALL);
+    observed_fall_posture = posture(ent);
+    assert(!ent->frozen && ent->drop && ent->nograb);
+    ++falls;
+}
+
+@METHODS@
+
+static void initialize(int animation)
+{
+    memset(animations, 0, sizeof(animations));
+    if(animation >= 0) animations[animation] = &motion;
+    actor = (entity){.modeldata.animation = animations, .modeldata.animation_capacity = MAX_ANIS,
+                     .inpain = 1, .falling = 1, .rising = 1, .riseattacking = 1,
+                     .edge = EDGE_LEFT, .ducking = DUCK_ACTIVE, .frozen = 1};
+    actor.blocking = animation == ANI_CHIPDEATH;
+    selected = -1;
+    thaws = falls = observed_fall_posture = 0;
+}
+
+static void check(unsigned revision, unsigned death_clears, unsigned fall_clears)
+{
+    obor_profile_build = revision;
+    const int choices[] = {ANI_DIE, ANI_CHIPDEATH};
+    for(size_t i = 0; i < sizeof(choices) / sizeof(*choices); ++i)
+    {
+        initialize(choices[i]);
+        assert(set_death(&actor, ATK_NORMAL, 1) == 1 && selected == choices[i]);
+        assert(posture(&actor) == (ALL & ~death_clears));
+        assert(thaws == (choices[i] == ANI_DIE) && !falls && !actor.blocking);
+    }
+
+    initialize(ANI_FALL);
+    actor.falling = 0;
+    assert(set_fall(&actor, &attacker, &strike, 1) == 1 && selected == ANI_FALL);
+    assert(falls == 1 && thaws == 1 && observed_fall_posture == (ALL & ~fall_clears));
+    assert(posture(&actor) == observed_fall_posture);
+
+    initialize(-1);
+    assert(set_death(&actor, ATK_NORMAL, 1) == 0);
+    assert(set_fall(&actor, &attacker, &strike, 1) == 0);
+    assert(posture(&actor) == ALL && selected == -1 && !falls && !thaws);
+    printf("%u\n", revision);
+}
+
+int main(void)
+{
+    static const struct {unsigned revision, death_clears, fall_clears;} rows[] = {@ROWS@};
+    for(size_t i = 0; i < sizeof(rows) / sizeof(*rows); ++i)
+        check(rows[i].revision, rows[i].death_clears, rows[i].fall_clears);
+    return 0;
+}

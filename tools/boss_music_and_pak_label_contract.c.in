@@ -1,0 +1,181 @@
+/* SPDX-License-Identifier: BSD-3-Clause
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me>
+ */
+#include <stdint.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include "scriptcommon.h"
+#include "profile_ids.h"
+#include "commands.h"
+#include "anybor_pak_name.h"
+#undef assert
+#undef printf
+#undef packfile
+#include <assert.h>
+
+uint32_t obor_profile_build;
+static s_level stage;
+s_level *level = &stage;
+static char fixture_packfile[MAX_BUFFER_LEN];
+#define packfile fixture_packfile
+static char track[MAX_BUFFER_LEN + 1];
+static char captured[MAX_BUFFER_LEN];
+static unsigned music_calls;
+static size_t observed_label_capacity;
+
+CHAR *StrCache_GetIfPresent(int index)
+{
+    return index == 1 ? track : NULL;
+}
+
+int StrCache_CreateNewFrom(const CHAR *value)
+{
+    assert(strlen(value) < sizeof(captured));
+    strcpy(captured, value);
+    return 2;
+}
+
+void ScriptVariant_ChangeType(ScriptVariant *var, VARTYPE type)
+{
+    var->vt = type;
+}
+
+HRESULT ScriptVariant_IntegerValue(ScriptVariant *var, LONG *value)
+{
+    if(var->vt != VT_INTEGER) return E_FAIL;
+    *value = var->lVal;
+    return S_OK;
+}
+
+void writeToLogFile(const char *message, ...)
+{
+    abort();
+}
+
+void borExit(int reset)
+{
+    abort();
+}
+
+int music(char *name, int loop, long offset)
+{
+    assert(loop == 1 && offset == 13);
+    assert(strcmp(name, level->bossmusic) == 0);
+    ++music_calls;
+    return 1;
+}
+
+static void parse_music(void)
+{
+    const char *volatile command_path = track;
+#undef GET_ARG
+#define GET_ARG(n) ((n) == 1 ? command_path : "13")
+    switch(CMD_LEVEL_BOSSMUSIC)
+    {
+        @PARSE_MUSIC@
+    }
+#undef GET_ARG
+}
+
+static int write_property(s_level *handle, int property, ScriptVariant *arg_value)
+{
+    LONG temp_int;
+    switch(property)
+    {
+        @SET_COUNT@
+        @SET_MUSIC@
+    }
+    return 1;
+error_local:
+    return 0;
+}
+
+static void read_property(s_level *handle, int property, ScriptVariant **pretvar)
+{
+    switch(property)
+    {
+        @GET_COUNT@
+        @GET_MUSIC@
+    }
+}
+
+static void play_music(s_spawn_entry *props)
+{
+    @PLAY_MUSIC@
+}
+
+static int record_label(char *output, size_t capacity, const char *source)
+{
+    observed_label_capacity = capacity;
+    return obor_pak_label(output, capacity, source);
+}
+
+static int read_pak_label(ScriptVariant *var)
+{
+#define obor_pak_label record_label
+    switch(_sv_pakname)
+    {
+        @GET_PAK_LABEL@
+    }
+#undef obor_pak_label
+    return 1;
+}
+
+static void check(unsigned revision, size_t music_capacity, size_t label_capacity)
+{
+    obor_profile_build = revision;
+    stage = (s_level){0};
+    ScriptVariant input = {.vt = VT_STR, .strVal = 1};
+    ScriptVariant output = {0}, *result = &output;
+    s_spawn_entry props = {0};
+    music_calls = 0;
+    memset(track, 'a', sizeof(track) - 1);
+    track[sizeof(track) - 1] = '\0';
+    parse_music();
+    assert(strlen(level->bossmusic) == 255 && level->bossmusic_offset == 13);
+    play_music(&props);
+    assert(!music_calls);
+    props.boss = 1;
+    play_music(&props);
+    assert(music_calls == 1);
+
+    track[music_capacity - 1] = '\0';
+    assert(write_property(&stage, LEVEL_PROP_BOSS_MUSIC_NAME, &input));
+    read_property(&stage, LEVEL_PROP_BOSS_MUSIC_NAME, &result);
+    assert(output.vt == VT_STR && output.strVal == 2 && strcmp(captured, track) == 0);
+    play_music(&props);
+    assert(music_calls == 2);
+    track[music_capacity - 1] = 'a';
+    track[music_capacity] = '\0';
+    assert(!write_property(&stage, LEVEL_PROP_BOSS_MUSIC_NAME, &input));
+    assert(strcmp(stage.bossmusic, captured) == 0);
+
+    stage.numbosses = 8;
+    input = (ScriptVariant){.vt = VT_INTEGER, .lVal = 3};
+    assert(write_property(&stage, LEVEL_PROP_BOSS_COUNT, &input));
+    read_property(&stage, LEVEL_PROP_BOSS_COUNT, &result);
+    assert(output.vt == VT_INTEGER && output.lVal == 3 && stage.numbosses == 8);
+
+    static const struct { const char *path, *label; } paths[] = {@LABELS@};
+    for(size_t i = 0; i < sizeof(paths) / sizeof(*paths); ++i)
+    {
+        strcpy(packfile, paths[i].path);
+        assert(read_pak_label(&output) && output.vt == VT_STR && output.strVal == 2);
+        assert(observed_label_capacity == label_capacity);
+        assert(strcmp(captured, paths[i].label) == 0);
+    }
+    printf("%u\n", revision);
+}
+
+int main(void)
+{
+    _Static_assert(MAX_BUFFER_LEN == 512 && MAX_FILENAME_LEN == 256, "original path capacities");
+    _Static_assert(MAX_LABEL_LEN == 128 && MAX_MODS_NUM == 100, "original declarations");
+    static const struct { unsigned revision; size_t music_capacity, label_capacity; } profiles[] = {@PROFILES@};
+    for(size_t i = 0; i < sizeof(profiles) / sizeof(*profiles); ++i)
+    {
+        check(profiles[i].revision, profiles[i].music_capacity, profiles[i].label_capacity);
+    }
+    return 0;
+}

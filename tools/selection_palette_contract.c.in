@@ -26,7 +26,7 @@ static s_set_entry settings;
 s_set_entry *levelsets = &settings;
 s_player player[MAX_PLAYERS];
 int current_set, colourselect;
-enum { ROUTE_COUNT = 6, POLICY_COUNT = 3 };
+enum { ROUTE_COUNT = 6, POLICY_COUNT = 5 };
 static unsigned scenario;
 
 @METHODS@

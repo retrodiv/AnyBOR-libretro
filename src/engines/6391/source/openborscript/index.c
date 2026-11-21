@@ -6,9 +6,9 @@
  * Register native functions according to each logical profile's upstream
  * API. Expose the reconstructed 6392 test profile's earlier backtotitle
  * alias only in that profile. Expose entity collision script functions only
- * in profiles that define them. Preserve the 5134 and 6119 basemap query
- * alias and terrain query availability. Expose axis property functions only
- * in profiles whose original script API includes them.
+ * in profiles that define them. Preserve historical basemap query bindings
+ * and terrain query availability. Expose axis property functions only in
+ * profiles whose original script API includes them.
  * Existing changes recorded here; this is not their implementation date.
  * See MODIFICATIONS.md and docs/modifications/6391.md
  * at the source repository root. Original notices follow below.
@@ -24,12 +24,13 @@
  */
 
 #include "scriptcommon.h"
+#include "profile_ids.h"
 
 //return name of function from pointer to function
 const char *Script_GetFunctionName(void *functionRef)
 {
     const bool axis_properties = obor_profile_build != 5134 && obor_profile_build != 6119;
-    const int entity_collision = obor_profile_build != 6330 && obor_profile_build != 5134 && obor_profile_build != 6119;
+    const int entity_collision = obor_profile_has_entity_collision_collection();
     if (functionRef == ((void *)system_isempty))
     {
         return "isempty";
@@ -539,7 +540,7 @@ const char *Script_GetFunctionName(void *functionRef)
         return "checkbasemapindex";
     }
     else if (functionRef == ((void *)openbor_checkbase) &&
-             obor_profile_build != 5134 && obor_profile_build != 6119)
+             obor_profile_has_checkbase())
     {
         return "checkbase";
     }
@@ -1180,7 +1181,7 @@ void Script_LoadSystemFunctions()
                      (void *)openbor_set_body_collision_property, "set_body_collision_property");
 
     // Entity collision (ebox) properties.
-    if(obor_profile_build != 6330 && obor_profile_build != 5134 && obor_profile_build != 6119)
+    if(obor_profile_has_entity_collision_collection())
     {
         List_InsertAfter(&theFunctionList,
                          (void *)openbor_get_entity_collision_collection, "get_entity_collision_collection");
@@ -1315,11 +1316,11 @@ void Script_LoadSystemFunctions()
                      (void *)openbor_checkplatformbetween, "checkplatformbetween");
     List_InsertAfter(&theFunctionList,
                      (void *)openbor_checkbasemap, "checkbasemap");
-    const bool legacy_basemap_query = obor_profile_build == 5134 || obor_profile_build == 6119;
+    const bool has_checkbase = obor_profile_has_checkbase();
     List_InsertAfter(&theFunctionList,
-                     (void *)(legacy_basemap_query ? openbor_checkbasemap : openbor_checkbasemapindex),
+                     (void *)(has_checkbase ? openbor_checkbasemapindex : openbor_checkbasemap),
                      "checkbasemapindex");
-    if(!legacy_basemap_query)
+    if(has_checkbase)
     {
         List_InsertAfter(&theFunctionList,
                          (void *)openbor_checkbase, "checkbase");

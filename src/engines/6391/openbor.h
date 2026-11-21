@@ -1462,22 +1462,22 @@ if(n<1) n = 1;
 
 #define set_jumping(e)   e->jumping = 1;\
 						 e->idling = IDLING_INACTIVE; \
-						 if(!obor_profile_uses_5134_script_ids()) e->ducking = DUCK_INACTIVE;
+						 if(!obor_profile_build || obor_profile_build >= 6293) e->ducking = DUCK_INACTIVE;
 
 #define set_charging(e)  e->charging = 1;\
 						 e->idling = IDLING_INACTIVE; \
-						 if(!obor_profile_uses_5134_script_ids()) e->ducking = DUCK_INACTIVE;
+						 if(!obor_profile_build || obor_profile_build >= 6293) e->ducking = DUCK_INACTIVE;
 
 #define set_getting(e)   e->getting = 1;\
 						 e->idling = IDLING_INACTIVE; \
-						 if(!obor_profile_uses_5134_script_ids()) e->ducking = DUCK_INACTIVE;
+						 if(!obor_profile_build || obor_profile_build >= 6293) e->ducking = DUCK_INACTIVE;
 
 #define set_blocking(e)  e->blocking = 1;\
 						 e->idling = IDLING_INACTIVE;
 
 #define set_turning(e)  e->turning = 1;\
 						e->idling = IDLING_INACTIVE; \
-						 if(!obor_profile_uses_5134_script_ids()) e->ducking = DUCK_INACTIVE;
+						 if(!obor_profile_build || obor_profile_build >= 6293) e->ducking = DUCK_INACTIVE;
 
 #define expand_time(e)   if(e->stalltime>0) e->stalltime++;\
 						 if(e->releasetime>0)e->releasetime++;\
@@ -1498,7 +1498,17 @@ if(n<1) n = 1;
 
 #define freezeall        (smartbomber || textbox)
 
-#define is_projectile(e) (e->modeldata.type == TYPE_SHOT || e->model->subtype == SUBTYPE_ARROW || ((obor_profile_build == 5134 || obor_profile_build == 6119 || obor_profile_build == 6330) && e->model->subtype == SUBTYPE_BOOMERANG) || e->owner)
+static inline int obor_profile_has_classic_boomerang(void)
+{
+    return obor_profile_build == 5134 || (obor_profile_build >= 6119 && obor_profile_build < 6345);
+}
+
+static inline int obor_profile_has_custom_boomerang(void)
+{
+    return obor_profile_build >= 6204 && obor_profile_build < 6345;
+}
+
+#define is_projectile(e) (e->modeldata.type == TYPE_SHOT || e->model->subtype == SUBTYPE_ARROW || (obor_profile_has_classic_boomerang() && e->model->subtype == SUBTYPE_BOOMERANG) || e->owner)
 
 #define screeny (level?((level->scrolldir == SCROLL_UP || level->scrolldir == SCROLL_DOWN )? 0:advancey ):0)
 #define screenx (level?advancex:0)
@@ -2607,9 +2617,14 @@ typedef struct entity
 } entity;
 
 
+static inline size_t obor_profile_name_width(void)
+{
+    return obor_profile_build && obor_profile_build < 6210 ? MAX_NAME_LEN : MAX_NAME_LEN - 1;
+}
+
 typedef struct
 {
-    char name[MAX_NAME_LEN];
+    char name[MAX_NAME_LEN + 1];
     int colourmap;
     unsigned score;
     unsigned lives;
@@ -2619,7 +2634,7 @@ typedef struct
     u64 newkeys;
     u64 playkeys;
     u64 releasekeys;
-    u32 combokey[MAX_SPECIAL_INPUTS];
+    u64 combokey[MAX_SPECIAL_INPUTS];
     u32 inputtime[MAX_SPECIAL_INPUTS];
     u64 disablekeys;
     u64 prevkeys; // used for play/rec mode
@@ -2650,7 +2665,7 @@ typedef struct
     int shadowcolor; // -1 no shadow
     int shadowalpha;
     int shadowopacity;
-    char music[MAX_BUFFER_LEN];
+    char music[MAX_BUFFER_LEN + 1];
     float musicfade;
     u32 musicoffset;
     char *name; // must be a name in the model list, so just reference

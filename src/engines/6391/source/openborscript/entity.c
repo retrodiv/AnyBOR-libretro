@@ -152,7 +152,7 @@ int mapstrings_entity_property(ScriptVariant **varlist, int paramCount)
         return 1;
     }
 
-    if(obor_profile_build == 6330)
+    if(obor_profile_has_classic_boomerang())
     {
         static const char *names[] = {
             "ai_target_entity",
@@ -192,7 +192,7 @@ int mapstrings_entity_property(ScriptVariant **varlist, int paramCount)
             "spawn_type",
         };
         MAPSTRINGS(varlist[ARG_PROPERTY], names, sizeof(names)/sizeof(*names),
-                   "Unknown entity property '%s'.\n");
+                   "\n\n Error: '%s' is not a known entity property.\n");
         return 1;
     }
 
@@ -225,7 +225,7 @@ static e_entity_properties profile_entity_property(LONG property)
         return property - 31 < (LONG)(sizeof(tail) / sizeof(*tail))
             ? tail[property - 31] : _ENTITY_END;
     }
-    if(obor_profile_build == 6330)
+    if(obor_profile_has_classic_boomerang())
     {
         if(property == 13) return _ENTITY_BOOMERANG_LOOP;
         if(property > 13) --property;
@@ -657,7 +657,7 @@ HRESULT openbor_set_entity_property(ScriptVariant **varlist, ScriptVariant **pre
 
             if(SUCCEEDED(ScriptVariant_IntegerValue(varlist[ARG_VALUE], &temp_int)))
             {
-                handle->animating = (obor_profile_build == 5134 || obor_profile_build == 6119) ? (temp_int != 0) : temp_int;
+                handle->animating = (obor_profile_build && obor_profile_build < 6255) ? (temp_int != 0) : temp_int;
             }
 
             break;

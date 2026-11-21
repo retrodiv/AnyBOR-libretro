@@ -31,9 +31,10 @@
  * container pointer slots with byte copies, preserving record layout,
  * pointer values and native copy/cleanup order. Pointer-slot allocation and
  * release accept byte storage without imposing pointer alignment on a packed
- * field. Traverse binding script callbacks in their native profile order
- * without moving shared fields. Release each sprite owner once and complete
- * cleanup independently of alias counts. Preserve native sprite-map capacity
+ * field. Preserve the native stretch setting default in 6385. Traverse
+ * binding script callbacks in their native profile order without moving
+ * shared fields. Release each sprite owner once and complete cleanup
+ * independently of alias counts. Preserve native sprite-map capacity
  * policies, check allocation extents and retain existing storage and
  * capacity when growth is unavailable. Validate sprite-node allocations and
  * release partial resources without changing existing owners. Check cached
@@ -45,55 +46,58 @@
  * Draw credit rows in their source-defined order and positions for each
  * historical layout. Select native animation range arithmetic for fractional
  * positions in 5134 and 6119. Preserve the 5134 and 6119 model attack-type
- * lookup before the lose type. Preserve those profiles' projectile wall
- * eligibility and base state after deflection. Preserve their boomerang
- * model arguments, parent movement and catch state. Select their original
- * attack callback participant local and falling-state juggle rule. Preserve
- * their recovery flags through idle, death and fall transitions. Preserve
- * their boolean walking animation direction when selecting the next frame.
- * Preserve their time-over damage, countdown display and tick callback
- * order. Preserve their original obstacle contact boundaries and collision
- * callback locals. Preserve their platform callback axis and original wall
- * search altitude for movement and jumps. Select their native rise
- * animations and preserve pain, jump and grab recovery state. Select
- * historical edge detection, model animation names and idle and movement
- * state by profile. Run entity collision and expose its debug view only in
- * profiles that implement it. Create entity collision frames only for
- * profiles that define them. Retain the original model, level and included
- * filename capacities. Initialize the periodic damage callback arguments for
- * every HP tick and retain the finishing hit velocity. Preserve historical
- * summoned-entity attack types, player target filters and palette choices.
- * Select fall animations within the available slots and return the typed
- * grab-finisher sentinel. Reset the animation’s owned jump-frame record when
- * a later directive replaces it. Preserve historical model display-name and
- * alias widths when spawning entities and items, with item alpha applied to
- * an existing carry record. Preserve each profile's startup, level-loading,
- * scene media, and game-menu path capacities and pass complete resource
- * names to the loaders. Retain the native saved-game filename display width
- * without changing the save lookup. Open input recordings with the original
- * field and combined path capacities. Admit backward shock, burn, rise and
- * block animation names only in profiles that define them. Allocate the
- * original dynamic animation families in their original order and preserve
- * block reaction selection. Install each profile's original reaction
- * defaults without replacing the shared defaults. Preserve the historical
- * player duck attack, movement and release controls. Preserve original AI
- * duck decisions, uppercut timing, and attack recovery. Preserve the
- * original posture changes on pain, blocks, specials, jumps and platform
- * departures. Write script save values directly to the file while retaining
- * the original text format. Use the native attack labels and group selectors
- * for model defense and offense. Retain the profile's combo label width for
- * the HUD. Read and write the original 5134 and 6119 game progress and high-
- * score layouts. Retain the original control reset and settings records in
- * 5134 and 6119. Read and write the original input recording rows for 5134
- * and 6119. Apply the historical alpha mask path length to level layers.
- * Show the original first-join prompt in 5134 and 6119 when personal and
- * shared credits are empty. Use the original platform height tolerance in
- * 5134 and 6119. Preserve the 16-character control-menu label prefix in 5134
- * and 6119 and terminate renamed labels in every profile. Preserve the
- * original boss-count threshold and death state in 5134 and 6119. Preserve
- * the original attack type when a boss defeat clears the remaining enemies.
- * Receive layer screen outputs in naturally aligned storage before assigning
- * the packed member.
+ * lookup before the lose type. Preserve original projectile wall eligibility
+ * and base state after deflection. Preserve original boomerang model
+ * arguments, projectile reference and catch state by profile. Select the
+ * original attack callback participant and juggle rule by profile. Preserve
+ * original idle, death and fall state transitions. Preserve their boolean
+ * walking animation direction when selecting the next frame. Preserve the
+ * native edge detection, idle reaction and walking selection for historical
+ * profiles. Preserve original time-over damage, countdown display and tick
+ * callback order by profile. Preserve original boss completion, death state
+ * and victory poses by profile. Preserve their original obstacle contact
+ * boundaries and collision callback locals. Preserve their platform callback
+ * axis and original wall search altitude for movement and jumps. Select
+ * their native rise animations and preserve pain, jump and grab recovery
+ * state. Select historical edge detection, model animation names and idle
+ * and movement state by profile. Run entity collision and expose its debug
+ * view only in profiles that implement it. Create entity collision frames
+ * only for profiles that define them. Retain the original model, level and
+ * included filename capacities. Initialize the periodic damage callback
+ * arguments for every HP tick and retain the finishing hit velocity.
+ * Preserve historical summoned-entity attack types, player target filters
+ * and palette choices. Use each profile's original palette occupancy and
+ * initial selection rules. Select fall animations within the available slots
+ * and return the typed grab-finisher sentinel. Reset the animation’s owned
+ * jump-frame record when a later directive replaces it. Preserve historical
+ * model display-name and alias widths when spawning entities and items, with
+ * item alpha applied to an existing carry record. Preserve each profile's
+ * startup, level-loading, scene media, and game-menu path capacities and
+ * pass complete resource names to the loaders. Retain the native saved-game
+ * filename display width without changing the save lookup. Open input
+ * recordings with the original field and combined path capacities. Admit
+ * backward shock, burn, rise and block animation names only in profiles that
+ * define them. Allocate the original dynamic animation families in their
+ * original order and preserve block reaction selection. Install each
+ * profile's original reaction defaults without replacing the shared
+ * defaults. Preserve the historical player duck attack, movement and release
+ * controls. Preserve original AI duck decisions, uppercut timing, and attack
+ * recovery. Preserve the original posture changes on pain, blocks, specials,
+ * jumps and platform departures. Write script save values directly to the
+ * file while retaining the original text format. Use the native attack
+ * labels and group selectors for model defense and offense. Retain the
+ * profile's combo label width for the HUD. Read and write the original 5134
+ * and 6119 game progress and high-score layouts. Retain historical
+ * controller defaults and settings records by profile. Read and write the
+ * original input recording rows for 5134 and 6119. Apply the historical
+ * alpha mask path length to level layers. Show the original first-join
+ * prompt in 5134 and 6119 when personal and shared credits are empty. Use
+ * the original platform height tolerance in 5134 and 6119. Preserve the
+ * original control-menu label width by profile. Preserve the original boss-
+ * count threshold and death state in 5134 and 6119. Preserve the original
+ * attack type when a boss defeat clears the remaining enemies. Receive layer
+ * screen outputs in naturally aligned storage before assigning the packed
+ * member.
  * Existing changes recorded here; this is not their implementation date.
  * See MODIFICATIONS.md and docs/modifications/6391.md
  * at the source repository root. Original notices follow below.
@@ -713,7 +717,7 @@ int                 psmenu[MAX_PLAYERS][4]        = {{0, 0, 0, 0}, {0, 0, 0, 0},
 int                 mpcolourtable[11]   = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
 int                 hpcolourtable[11]   = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
 int                 ldcolourtable[11]   = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
-char                musicname[MAX_BUFFER_LEN]      = {""};
+char                musicname[MAX_BUFFER_LEN + 1]  = {""};
 char                currentmusic[MAX_BUFFER_LEN]    = {""};
 float               musicfade[2]        = {0, 0};
 int                 musicloop           = 0;
@@ -1141,7 +1145,7 @@ int handle_txt_include(char *command, ArgList *arglist, char **fn, char *namebuf
     else if(stricmp(command, "@filename") == 0)
     {
         const char *name = GET_ARGP(1);
-        const size_t capacity = obor_profile_uses_5134_script_ids() ? 128 : MAX_BUFFER_LEN;
+        const size_t capacity = obor_profile_uses_legacy_path_sizes() ? 128 : MAX_BUFFER_LEN;
         const size_t length = strlen(name);
         if(length >= capacity) return 0;
         memmove(namebuf, name, length + 1);
@@ -1867,7 +1871,7 @@ void execute_onblocko_script(entity *ent, int plane, entity *other)
     Script *cs = ent->scripts->onblocko_script;
     if(Script_IsInitialized(cs))
     {
-        const bool use_plane = obor_profile_build != 5134 && obor_profile_build != 6119;
+        const bool use_plane = obor_profile_has_obstacle_plane();
 
         ScriptVariant_Init(&tempvar);
         ScriptVariant_ChangeType(&tempvar, VT_PTR);
@@ -2131,7 +2135,7 @@ void execute_ondoattack_script(entity *ent, entity *other, s_collision_attack *a
         Script_Set_Local_Variant(cs, "self",        &tempvar);
 
         tempvar.ptrVal = (VOID *)other;
-        Script_Set_Local_Variant(cs, obor_profile_uses_5134_script_ids() ? "attacker" : "other",
+        Script_Set_Local_Variant(cs, obor_profile_build && obor_profile_build < 6218 ? "attacker" : "other",
                                  &tempvar);
 
         ScriptVariant_ChangeType(&tempvar, VT_INTEGER);
@@ -2528,8 +2532,7 @@ void execute_pdie_script(int index)
 
 void clearbuttons(int player)
 {
-    const bool early = obor_profile_build == 5134 || obor_profile_build == 6119;
-    if(!early) savedata.joyrumble[player] = 0;
+    if(!obor_profile_build || obor_profile_build >= 6229) savedata.joyrumble[player] = 0;
 
     if (player == 0)
     {
@@ -2549,7 +2552,7 @@ void clearbuttons(int player)
             //savedata.keys[0][SDID_ESC]       = CONTROL_DEFAULT1_ESC;
         #endif
 
-        if(!early)
+        if(!obor_profile_build || obor_profile_build >= 6250)
         {
             /* *************** SET DEFAULT KEYS *************** */
             // White Dragon: These are default keys: for Android is the touchpad and for Win/Linux etc. is the keyboard
@@ -2673,7 +2676,7 @@ void clearsettings()
 	#if WII
     savedata.stretch = 1;
 	#else
-    savedata.stretch = 0;
+    savedata.stretch = obor_profile_build >= 6383 && obor_profile_build < 6388;
 	#endif
 
     savedata.swfilter = 0;
@@ -2716,21 +2719,23 @@ static void obor_profile_settings_bytes(FILE *file, size_t start, size_t end, bo
 
 static void obor_profile_settings_io(FILE *file, bool writing)
 {
-    const bool early = obor_profile_build == 5134 || obor_profile_build == 6119;
     size_t start = 0;
     size_t end = (obor_profile_features & OBOR_PROFILE_LNS_6330)
         ? sizeof(savedata) : offsetof(s_savedata, vsync);
-    if(early)
+    if(obor_profile_build && obor_profile_build < 6228)
     {
         obor_profile_settings_bytes(file, 0, offsetof(s_savedata, joyrumble), writing);
         start = offsetof(s_savedata, showtitles);
         if(!writing) memset(savedata.joyrumble, 0, sizeof(savedata.joyrumble));
+    }
 #if ANDROID
+    if(obor_profile_build && obor_profile_build < 6226)
+    {
         end = offsetof(s_savedata, is_touchpad_vibration_enabled);
         if(!writing) savedata.is_touchpad_vibration_enabled = 0;
-#endif
     }
-    if(early || obor_profile_build == 6330)
+#endif
+    if(obor_profile_build && obor_profile_build < 6332)
     {
         obor_profile_settings_bytes(file, start, offsetof(s_savedata, debug_collision_entity), writing);
         start = offsetof(s_savedata, debug_collision_range);
@@ -2768,13 +2773,21 @@ void savesettings()
 #endif
 }
 
+#ifndef DC
+static int default_settings_path(char path[MAX_BUFFER_LEN])
+{
+    char directory[MAX_BUFFER_LEN] = "";
+    getBasePath(directory, "Saves", 0);
+    return startup_asset_path(path, directory, "default.cfg");
+}
+#endif
+
 void saveasdefault()
 {
 #ifndef DC
     FILE *handle = NULL;
-    char path[MAX_BUFFER_LEN] = {""};
-    getBasePath(path, "Saves", 0);
-    strcat(path, "default.cfg");
+    char path[MAX_BUFFER_LEN];
+    if(!default_settings_path(path)) return;
     handle = fopen(path, "wb");
     if(handle == NULL)
     {
@@ -2821,10 +2834,10 @@ void loadfromdefault()
 {
 #ifndef DC
     FILE *handle = NULL;
-    char path[MAX_BUFFER_LEN] = {""};
-    getBasePath(path, "Saves", 0);
-    strcat(path, "default.cfg");
+    char path[MAX_BUFFER_LEN];
+    const int has_path = default_settings_path(path);
     clearsettings();
+    if(!has_path) return;
     handle = fopen(path, "rb");
     if(handle == NULL)
     {
@@ -2863,7 +2876,7 @@ typedef struct {
 
 static bool obor_profile_early_save_layout(void)
 {
-    return obor_profile_build == 5134 || obor_profile_build == 6119;
+    return obor_profile_build && obor_profile_build < 6210;
 }
 
 static void obor_profile_early_savelevel_copy(s_savelevel *current, obor_early_savelevel *original,
@@ -2985,6 +2998,22 @@ void clearSavedGame()
 
 
 
+static char obor_early_score_names[10][MAX_NAME_LEN + 1];
+
+static char *obor_profile_score_name(size_t row)
+{
+    return obor_profile_early_save_layout() ? obor_early_score_names[row] : savescore.hscoren[row];
+}
+
+static void obor_copy_display_name(char *destination, const char *source)
+{
+    const size_t width = obor_profile_name_width();
+    size_t length = 0;
+    while(length < width && source[length]) ++length;
+    memcpy(destination, source, length);
+    destination[length] = '\0';
+}
+
 void clearHighScore()
 {
     int i;
@@ -2992,7 +3021,7 @@ void clearHighScore()
     for(i = 0; i < 10; i++)
     {
         savescore.highsc[i] = 0;    // Resets all the highscores to 0
-        strcpy(savescore.hscoren[i], "None");    // Resets all the highscore names to "None"
+        strcpy(obor_profile_score_name(i), "None");
     }
 }
 
@@ -3007,8 +3036,7 @@ static void obor_profile_early_savescore_io(FILE *file, s_savescore *score, int 
     obor_early_savescore original = {0};
     original.compatibleversion = score->compatibleversion;
     memcpy(original.highsc, score->highsc, sizeof(original.highsc));
-    for(size_t i = 0; i < sizeof(original.hscoren) / sizeof(original.hscoren[0]); ++i)
-        memcpy(original.hscoren[i], score->hscoren[i], sizeof(score->hscoren[i]));
+    memcpy(original.hscoren, obor_early_score_names, sizeof(original.hscoren));
     if(writing)
     {
         fwrite(&original, 1, sizeof(original), file);
@@ -3018,8 +3046,7 @@ static void obor_profile_early_savescore_io(FILE *file, s_savescore *score, int 
         fread(&original, 1, sizeof(original), file);
         score->compatibleversion = original.compatibleversion;
         memcpy(score->highsc, original.highsc, sizeof(score->highsc));
-        for(size_t i = 0; i < sizeof(original.hscoren) / sizeof(original.hscoren[0]); ++i)
-            memcpy(score->hscoren[i], original.hscoren[i], sizeof(score->hscoren[i]));
+        memcpy(obor_early_score_names, original.hscoren, sizeof(obor_early_score_names));
     }
 }
 
@@ -3479,7 +3506,7 @@ int music(char *filename, int loop, long offset)
             debug_printf("");
         }
     }
-    if(obor_profile_uses_5134_script_ids()) safe_strncpy(currentmusic, filename, 127);
+    if(obor_profile_uses_legacy_path_sizes()) safe_strncpy(currentmusic, filename, 127);
     else strncpy(currentmusic, filename, sizeof(currentmusic) - 1);
     return res;
 }
@@ -5369,7 +5396,8 @@ int nextcolourmap(s_model *model, int c)
     return c;
 }
 
-static int obor_select_colourmap(s_model *model, int c, int p, int (*step)(s_model *, int))
+static int obor_select_colourmap(s_model *model, int c, int p,
+                                 int (*step)(s_model *, int), int use_default)
 {
     const int natural = step(model, c);
     s_set_entry *set = levelsets + current_set;
@@ -5378,7 +5406,7 @@ static int obor_select_colourmap(s_model *model, int c, int p, int (*step)(s_mod
         return natural;
     }
 
-    int maps_count = model->maps_loaded + !obor_profile_uses_5134_script_ids();
+    int maps_count = model->maps_loaded + (!obor_profile_build || obor_profile_build >= 6279);
     if(model->maps.frozen > 0) --maps_count;
     if(model->maps.hide_start > 0)
     {
@@ -5391,6 +5419,7 @@ static int obor_select_colourmap(s_model *model, int c, int p, int (*step)(s_mod
     {
         if(i != p && stricmp(player[p].name, player[i].name) == 0)
         {
+            if(use_default) return 0;
             occupied[count++] = player[i].colourmap;
             if(count >= maps_count) return natural;
         }
@@ -5409,7 +5438,7 @@ static int obor_select_colourmap(s_model *model, int c, int p, int (*step)(s_mod
 
 int nextcolourmapn(s_model *model, int c, int p)
 {
-    return obor_select_colourmap(model, c, p, nextcolourmap);
+    return obor_select_colourmap(model, c, p, nextcolourmap, 0);
 }
 
 int prevcolourmap(s_model *model, int c)
@@ -5432,7 +5461,15 @@ int prevcolourmap(s_model *model, int c)
 
 int prevcolourmapn(s_model *model, int c, int p)
 {
-    return obor_select_colourmap(model, c, p, prevcolourmap);
+    return obor_select_colourmap(model, c, p, prevcolourmap, 0);
+}
+
+static int obor_initial_colourmap(s_model *model, int p, int initial)
+{
+    if(!obor_profile_build || obor_profile_build >= 6272)
+        return nextcolourmapn(model, initial, p);
+    return obor_select_colourmap(model, player[p].colourmap, p, nextcolourmap,
+                                 obor_profile_build >= 6269);
 }
 
 // Use by player select menus
@@ -7264,7 +7301,7 @@ static int translate_attack_type(char *command)
         atk_id  = ATK_ITEM;
         break;
     case CMD_MODEL_LOSE:
-        if(!obor_profile_uses_5134_script_ids()) atk_id = ATK_LOSE;
+        if(obor_profile_has_lose_attack_slot()) atk_id = ATK_LOSE;
         break;
     case CMD_MODEL_COLLISION_ETC:
         tempInt = atoi(command + 6); // White Dragon: 6 is "ATTACK" string length
@@ -7281,15 +7318,11 @@ static int translate_attack_type(char *command)
     return atk_id;
 }
 
-static int obor_profile_has_classic_boomerang(void)
-{
-    return obor_profile_build == 6330 || obor_profile_uses_5134_script_ids();
-}
-
 //move here to ease animation name to id logic
 static int translate_ani_id(const char *value, s_model *newchar, s_anim *newanim, s_collision_attack *attack)
 {
-    const int has_extended_back_animations = !obor_profile_uses_5134_script_ids();
+    const int has_back_rise = obor_profile_has_back_rise_animations();
+    const int has_back_block = obor_profile_has_back_block_animations();
     int ani_id = -1, tempInt;
     //those are dummy values to simplify code
     static s_model mdl;
@@ -7489,11 +7522,11 @@ static int translate_ani_id(const char *value, s_model *newchar, s_anim *newanim
     {
         ani_id = ANI_BURNPAIN;
     }
-    else if(has_extended_back_animations && stricmp(value, "backspain") == 0)   // If shock attacks don't knock opponent down, play this
+    else if((!obor_profile_build || obor_profile_build >= 6287) && stricmp(value, "backspain") == 0)
     {
         ani_id = ANI_BACKSHOCKPAIN;
     }
-    else if(has_extended_back_animations && stricmp(value, "backbpain") == 0)   // If burn attacks don't knock opponent down, play this
+    else if((!obor_profile_build || obor_profile_build >= 6287) && stricmp(value, "backbpain") == 0)
     {
         ani_id = ANI_BACKBURNPAIN;
     }
@@ -7608,7 +7641,7 @@ static int translate_ani_id(const char *value, s_model *newchar, s_anim *newanim
         ani_id = ANI_SHOCK;
         newanim->bounce = 4;
     }
-    else if(has_extended_back_animations && stricmp(value, "backshock") == 0)   // If shock attacks do knock opponent down, play this
+    else if(has_back_rise && stricmp(value, "backshock") == 0)   // If shock attacks do knock opponent down, play this
     {
         ani_id = ANI_BACKSHOCK;
         newanim->bounce = 4;
@@ -7618,7 +7651,7 @@ static int translate_ani_id(const char *value, s_model *newchar, s_anim *newanim
         ani_id = ANI_BURN;
         newanim->bounce = 4;
     }
-    else if(has_extended_back_animations && stricmp(value, "backburn") == 0)   // If burn attacks do knock opponent down, play this
+    else if(has_back_rise && stricmp(value, "backburn") == 0)   // If burn attacks do knock opponent down, play this
     {
         ani_id = ANI_BACKBURN;
         newanim->bounce = 4;
@@ -7735,11 +7768,11 @@ static int translate_ani_id(const char *value, s_model *newchar, s_anim *newanim
     {
         ani_id = ANI_BURNDIE;
     }
-    else if(has_extended_back_animations && stricmp(value, "backsdie") == 0)
+    else if(has_back_block && stricmp(value, "backsdie") == 0)
     {
         ani_id = ANI_BACKSHOCKDIE;
     }
-    else if(has_extended_back_animations && stricmp(value, "backbdie") == 0)
+    else if(has_back_block && stricmp(value, "backbdie") == 0)
     {
         ani_id = ANI_BACKBURNDIE;
     }
@@ -7755,7 +7788,7 @@ static int translate_ani_id(const char *value, s_model *newchar, s_anim *newanim
     {
         ani_id = ANI_RISEB;
     }
-    else if(has_extended_back_animations && stricmp(value, "backriseb") == 0)
+    else if(has_back_rise && stricmp(value, "backriseb") == 0)
     {
         ani_id = ANI_BACKRISEB;
     }
@@ -7763,7 +7796,7 @@ static int translate_ani_id(const char *value, s_model *newchar, s_anim *newanim
     {
         ani_id = ANI_RISES;
     }
-    else if(has_extended_back_animations && stricmp(value, "backrises") == 0)
+    else if(has_back_rise && stricmp(value, "backrises") == 0)
     {
         ani_id = ANI_BACKRISES;
     }
@@ -7819,7 +7852,7 @@ static int translate_ani_id(const char *value, s_model *newchar, s_anim *newanim
             ani_id = animrises[obor_attack_from_native(tempInt + obor_attack_to_native(MAX_ATKS) - 11)];
         }
     }
-    else if(has_extended_back_animations && starts_with_num(value, "backrise"))
+    else if(has_back_rise && starts_with_num(value, "backrise"))
     {
         get_tail_number(tempInt, value, "backrise");
         if(tempInt == 1)
@@ -7875,7 +7908,7 @@ static int translate_ani_id(const char *value, s_model *newchar, s_anim *newanim
     {
         ani_id = ANI_RISEATTACKB;
     }
-    else if(has_extended_back_animations && stricmp(value, "backriseattackb") == 0)
+    else if(has_back_rise && stricmp(value, "backriseattackb") == 0)
     {
         ani_id = ANI_BACKRISEATTACKB;
     }
@@ -7883,7 +7916,7 @@ static int translate_ani_id(const char *value, s_model *newchar, s_anim *newanim
     {
         ani_id = ANI_RISEATTACKS;
     }
-    else if(has_extended_back_animations && stricmp(value, "backriseattacks") == 0)
+    else if(has_back_rise && stricmp(value, "backriseattacks") == 0)
     {
         ani_id = ANI_BACKRISEATTACKS;
     }
@@ -7939,7 +7972,7 @@ static int translate_ani_id(const char *value, s_model *newchar, s_anim *newanim
             ani_id = animriseattacks[obor_attack_from_native(tempInt + obor_attack_to_native(MAX_ATKS) - 11)];
         }
     }
-    else if(has_extended_back_animations && starts_with_num(value, "backriseattack"))
+    else if(has_back_rise && starts_with_num(value, "backriseattack"))
     {
         get_tail_number(tempInt, value, "backriseattack");
         if(tempInt == 1)
@@ -8358,15 +8391,15 @@ static int translate_ani_id(const char *value, s_model *newchar, s_anim *newanim
             ani_id = animblkpains[obor_attack_from_native(tempInt + obor_attack_to_native(MAX_ATKS) - 11)];
         }
     }
-    else if(has_extended_back_animations && stricmp(value, "backblockpainb") == 0)
+    else if(has_back_block && stricmp(value, "backblockpainb") == 0)
     {
         ani_id = ANI_BACKBLOCKPAINB;
     }
-    else if(has_extended_back_animations && stricmp(value, "backblockpains") == 0)
+    else if(has_back_block && stricmp(value, "backblockpains") == 0)
     {
         ani_id = ANI_BACKBLOCKPAINS;
     }
-    else if(has_extended_back_animations && starts_with_num(value, "backblockpain"))
+    else if(has_back_block && starts_with_num(value, "backblockpain"))
     {
         get_tail_number(tempInt, value, "backblockpain");
         if(tempInt == 1)
@@ -8426,33 +8459,35 @@ static int translate_ani_id(const char *value, s_model *newchar, s_anim *newanim
     {
         ani_id = ANI_WALKOFF;
     }
-    else if(!obor_profile_uses_5134_script_ids())
+    else if(obor_profile_has_edge_animations() && stricmp(value, "edge") == 0)
     {
-        if(stricmp(value, "edge") == 0)
-        {
-            ani_id = ANI_EDGE;
-        }
-        else if(stricmp(value, "backedge") == 0)
-        {
-            ani_id = ANI_BACKEDGE;
-        }
-        else if(stricmp(value, "ducking") == 0)
-        {
-            ani_id = ANI_DUCKING;
-        }
-        else if(stricmp(value, "duckrise") == 0)
-        {
-            ani_id = ANI_DUCKRISE;
-        }
-        else if(stricmp(value, "victory") == 0)
-        {
-            ani_id = ANI_VICTORY;
-        }
-        else if(stricmp(value, "lose") == 0)
-        {
-            ani_id = ANI_LOSE;
-        }
+        ani_id = ANI_EDGE;
     }
+    else if(obor_profile_has_edge_animations() && stricmp(value, "backedge") == 0)
+    {
+        ani_id = ANI_BACKEDGE;
+    }
+    else if((!obor_profile_build || obor_profile_build >= 6295) && stricmp(value, "ducking") == 0)
+    {
+        ani_id = ANI_DUCKING;
+    }
+    else if((!obor_profile_build || obor_profile_build >= 6295) && stricmp(value, "duckrise") == 0)
+    {
+        ani_id = ANI_DUCKRISE;
+    }
+    else if((!obor_profile_build || obor_profile_build >= 6301) && stricmp(value, "victory") == 0)
+    {
+        ani_id = ANI_VICTORY;
+    }
+    else if((!obor_profile_build || obor_profile_build >= 6301) &&
+            stricmp(value, obor_profile_build && obor_profile_build < 6310 ? "loose" : "lose") == 0)
+    {
+        ani_id = ANI_LOSE;
+    }
+
+    if(obor_profile_build >= 6175 && obor_profile_build <= 6325 &&
+       ani_id >= 0 && ani_id < MAX_ANIS && obor_animation_to_native(ani_id) < 0)
+        return -1;
 
     return ani_id;
 
@@ -10268,7 +10303,7 @@ s_model *load_cached_model(char *name, char *owner, char unload)
                 break;
 
             case CMD_MODEL_BOOMERANG:
-                if(!obor_profile_uses_5134_script_ids())
+                if(obor_profile_has_custom_boomerang())
                 {
                     value = GET_ARG(1);
                     if(stricmp(value, "none") == 0)
@@ -10453,9 +10488,9 @@ s_model *load_cached_model(char *name, char *owner, char unload)
                 break;
             case CMD_MODEL_DEFENSE:
 #define tempdef(x, y) \
-					x(stricmp(value, #y)==0 && \
+					x(stricmp(value, ATK_##y == ATK_LOSE && obor_profile_uses_loose_attack_name() ? "LOOSE" : #y)==0 && \
 					  (obor_profile_build == 6510 || ATK_##y != ATK_BOSS_DEATH) && \
-					  (!obor_profile_uses_5134_script_ids() || ATK_##y != ATK_LOSE))\
+					  (ATK_##y != ATK_LOSE || obor_profile_has_lose_attack_slot()))\
 					{\
 						newchar->defense[ATK_##y] = defense;\
 					}
@@ -10550,9 +10585,9 @@ s_model *load_cached_model(char *name, char *owner, char unload)
             break;
             case CMD_MODEL_OFFENSE:
 #define tempoff(x, y, z) \
-					x(stricmp(value, #y)==0 && \
+					x(stricmp(value, ATK_##y == ATK_LOSE && obor_profile_uses_loose_attack_name() ? "LOOSE" : #y)==0 && \
 					  (obor_profile_build == 6510 || ATK_##y != ATK_BOSS_DEATH) && \
-					  (!obor_profile_uses_5134_script_ids() || ATK_##y != ATK_LOSE))\
+					  (ATK_##y != ATK_LOSE || obor_profile_has_lose_attack_slot()))\
 					{\
 					newchar->z[ATK_##y] = GET_FLOAT_ARG(2);\
 					/*newchar->z[ATK_##y] /= 100;*/\
@@ -11382,7 +11417,7 @@ s_model *load_cached_model(char *name, char *owner, char unload)
                 newanim->animhits               = 0; //OX counts hits on a per anim basis for cancels.
                 newanim->subentity              = newanim->projectile.bomb = newanim->projectile.knife =
                                                   newanim->projectile.star = newanim->projectile.flash = -1;
-                newanim->projectile.boomerang = -1;
+                newanim->projectile.boomerang = obor_profile_has_custom_boomerang() && obor_profile_build < 6212 ? 0 : -1;
                 newanim->quakeframe.framestart  = 0;
                 newanim->sync                   = -1;
 
@@ -12820,7 +12855,7 @@ s_model *load_cached_model(char *name, char *owner, char unload)
                         scriptbuf[scriptlen - strclen(endif_return_text)] = 0; // cut last chars
                         scriptlen = strlen(scriptbuf);
                     }
-                    const size_t capacity = obor_profile_uses_5134_script_ids() ? 256 : sizeof(namebuf);
+                    const size_t capacity = obor_profile_uses_legacy_path_sizes() ? 256 : sizeof(namebuf);
                     const int length = snprintf(namebuf, capacity, call_text, value);
                     if(length < 0 || (size_t)length >= capacity)
                     {
@@ -13533,8 +13568,10 @@ void load_model_constants()
     }
 
     // calculate max animations
-    const int has_extended_reactions = !obor_profile_uses_5134_script_ids();
-    max_animations += (max_attack_types - MAX_ATKS) * (has_extended_reactions ? 12 : 9) +
+    const int has_back_rise = obor_profile_has_back_rise_animations();
+    const int has_back_block = obor_profile_has_back_block_animations();
+    const int reaction_families = 9 + 2 * has_back_rise + has_back_block;
+    max_animations += (max_attack_types - MAX_ATKS) * reaction_families +
                       (max_follows - MAX_FOLLOWS) +
                       (max_freespecials - MAX_SPECIALS) +
                       (max_attacks - MAX_ATTACKS) +
@@ -13557,11 +13594,11 @@ void load_model_constants()
     animfalls = malloc(sizeof(*animfalls) * max_attack_types);
     animbackfalls = malloc(sizeof(*animbackfalls) * max_attack_types);
     animrises = malloc(sizeof(*animrises) * max_attack_types);
-    if(has_extended_reactions) animbackrises = malloc(sizeof(*animbackrises) * max_attack_types);
+    if(has_back_rise) animbackrises = malloc(sizeof(*animbackrises) * max_attack_types);
     animriseattacks = malloc(sizeof(*animriseattacks) * max_attack_types);
-    if(has_extended_reactions) animbackriseattacks = malloc(sizeof(*animbackriseattacks) * max_attack_types);
+    if(has_back_rise) animbackriseattacks = malloc(sizeof(*animbackriseattacks) * max_attack_types);
     animblkpains = malloc(sizeof(*animblkpains) * max_attack_types);
-    if(has_extended_reactions) animbackblkpains = malloc(sizeof(*animbackblkpains) * max_attack_types);
+    if(has_back_block) animbackblkpains = malloc(sizeof(*animbackblkpains) * max_attack_types);
     animattacks = malloc(sizeof(*animattacks) * max_attacks);
     animfollows = malloc(sizeof(*animfollows) * max_follows);
     animspecials = malloc(sizeof(*animspecials) * max_freespecials);
@@ -13632,7 +13669,7 @@ void load_model_constants()
     {
         animrises[i] = maxanim++;
     }
-    if(has_extended_reactions)
+    if(has_back_rise)
     {
         memcpy(animbackrises,    backrises,          sizeof(*animbackrises)*MAX_ATKS);
         for(i = MAX_ATKS; i < max_attack_types; i++)
@@ -13645,7 +13682,7 @@ void load_model_constants()
     {
         animriseattacks[i] = maxanim++;
     }
-    if(has_extended_reactions)
+    if(has_back_rise)
     {
         memcpy(animbackriseattacks,    backriseattacks,          sizeof(*animbackriseattacks)*MAX_ATKS);
         for(i = MAX_ATKS; i < max_attack_types; i++)
@@ -13658,7 +13695,7 @@ void load_model_constants()
     {
         animblkpains[i] = maxanim++;
     }
-    if(has_extended_reactions)
+    if(has_back_block)
     {
         memcpy(animbackblkpains,    backblkpains,    sizeof(*animbackblkpains)*MAX_ATKS);
         for(i = MAX_ATKS; i < max_attack_types; i++)
@@ -13677,14 +13714,22 @@ void load_model_constants()
         animbackdies[i] = maxanim++;
     }
 
-    if(!has_extended_reactions)
+    if(!has_back_rise)
     {
         animbackfalls[ATK_BURN] = ANI_BURN;
         animbackfalls[ATK_SHOCK] = ANI_SHOCK;
         animbackpains[ATK_BURN] = ANI_BURNPAIN;
         animbackpains[ATK_SHOCK] = ANI_SHOCKPAIN;
+    }
+    if(!has_back_block)
+    {
         animbackdies[ATK_BURN] = ANI_BURNDIE;
         animbackdies[ATK_SHOCK] = ANI_SHOCKDIE;
+    }
+    if(obor_profile_build >= 6303 && obor_profile_build < 6306)
+    {
+        animfalls[ATK_LOSE] = ANI_FALL;
+        animbackfalls[ATK_LOSE] = ANI_BACKFALL;
     }
     obor_profile_attack_defaults();
 
@@ -15244,7 +15289,7 @@ void load_levelorder()
             break;
         case CMD_LEVELORDER_RUSH:
         {
-            const size_t label_length = (obor_profile_build == 5134 || obor_profile_build == 6119)
+            const size_t label_length = (obor_profile_build && obor_profile_build < 6210)
                                       ? MAX_NAME_LEN : MAX_NAME_LEN - 1;
             rush[0] = GET_INT_ARG(1);
             rush[1] = GET_INT_ARG(2);
@@ -15890,7 +15935,7 @@ void load_level(char *filename)
     char *command;
     char *value;
     char *scriptbuf = NULL;
-    char string[MAX_BUFFER_LEN] = {""};
+    char string[MAX_BUFFER_LEN + 1] = {""};
     s_spawn_entry next;
     s_model *tempmodel, *cached_model;
 
@@ -15899,7 +15944,7 @@ void load_level(char *filename)
     int usemap[MAX_BLENDINGS];
     char bgPath[MAX_BUFFER_LEN] = {""}, fnbuf[MAX_BUFFER_LEN];
     s_loadingbar bgPosi = {0, 0, {0,0}, {0,0}, 0, 0};
-    char musicPath[MAX_BUFFER_LEN] = {""};
+    char musicPath[MAX_BUFFER_LEN + 1] = {""};
     u32 musicOffset = 0;
 
     ArgList arglist;
@@ -15920,7 +15965,7 @@ void load_level(char *filename)
     int *order = NULL;
     int panelcount = 0;
     int exit_blocked = 0, exit_hole = 0;
-    char maskPath[MAX_BUFFER_LEN] = {""};
+    char maskPath[MAX_BUFFER_LEN + 1] = {""};
 
     obor_preload_begin();
     unload_level();
@@ -16049,10 +16094,11 @@ void load_level(char *filename)
             break;
         case CMD_LEVEL_MUSIC:
         {
-            const int legacy_music = obor_profile_uses_5134_script_ids();
+            size_t width = MAX_BUFFER_LEN - 1;
+            if(obor_profile_uses_legacy_path_sizes()) width = 128;
+            else if(obor_profile_build && obor_profile_build < 6210) width = MAX_BUFFER_LEN;
             value = GET_ARG(1);
-            if(legacy_music) safe_strncpy(string, value, 128);
-            else strncpy(string, value, MAX_BUFFER_LEN - 1);
+            safe_strncpy(string, value, width);
             musicOffset = atol(GET_ARG(2));
             if(loadingmusic)
             {
@@ -16082,14 +16128,12 @@ void load_level(char *filename)
                     {
                         memset(&next, 0, sizeof(next));
                     }
-                    if(legacy_music) safe_strncpy(next.music, string, 128);
-                    else strncpy(next.music, string, MAX_BUFFER_LEN);
+                    safe_strncpy(next.music, string, width);
                     next.musicoffset = musicOffset;
                 }
                 else
                 {
-                    if(legacy_music) safe_strncpy(musicPath, string, 128);
-                    else strncpy(musicPath, string, MAX_BUFFER_LEN);
+                    safe_strncpy(musicPath, string, width);
                 }
                 pos = oldpos;
 #undef GET_ARG2
@@ -16115,9 +16159,13 @@ void load_level(char *filename)
             }
             break;
         case CMD_LEVEL_ALPHAMASK:
-            if(obor_profile_uses_5134_script_ids()) safe_strncpy(maskPath, GET_ARG(1), 128);
-            else strncpy(maskPath, GET_ARG(1), MAX_BUFFER_LEN - 1);
+        {
+            size_t width = MAX_BUFFER_LEN - 1;
+            if(obor_profile_uses_legacy_path_sizes()) width = 128;
+            else if(obor_profile_build && obor_profile_build < 6210) width = MAX_BUFFER_LEN;
+            safe_strncpy(maskPath, GET_ARG(1), width);
             break;
+        }
         case CMD_LEVEL_BACKGROUND:
         case CMD_LEVEL_BGLAYER:
         case CMD_LEVEL_LAYER:
@@ -16757,7 +16805,7 @@ void load_level(char *filename)
         case CMD_LEVEL_BOSS:
             next.boss = GET_INT_ARG(1);
             level->bossescount += next.boss ? 1 : 0;
-            level->numbosses = level->bossescount;
+            if(obor_profile_has_boss_counters()) level->numbosses = level->bossescount;
             break;
         case CMD_LEVEL_FLIP:
             next.flip = GET_INT_ARG(1);
@@ -16800,8 +16848,7 @@ void load_level(char *filename)
             break;
         case CMD_LEVEL_ALIAS:
             // Alias (name displayed) of entry to be spawned
-            safe_strncpy(next.alias, GET_ARG(1),
-                         obor_profile_uses_5134_script_ids() ? MAX_NAME_LEN : MAX_NAME_LEN - 1);
+            safe_strncpy(next.alias, GET_ARG(1), obor_profile_name_width());
             break;
         case CMD_LEVEL_MAP:
             // Colourmap for new entry
@@ -16869,7 +16916,7 @@ void load_level(char *filename)
             break;
         case CMD_LEVEL_ITEMALIAS:
         {
-            const size_t limit = obor_profile_uses_5134_script_ids() ? MAX_NAME_LEN : MAX_NAME_LEN - 1;
+            const size_t limit = obor_profile_name_width();
             strncpy(next.item_properties.alias, GET_ARG(1), limit);
             next.item_properties.alias[limit] = '\0';
             break;
@@ -17545,6 +17592,7 @@ void updatestatus()
                 player[i].hasplayed = 1;
                 player[i].spawnhealth = model->health;
                 player[i].spawnmp = model->mp;
+                if(obor_profile_has_player_status()) player[i].status = PLAYER_NO_STATUS;
 
                 spawnplayer(i);
 
@@ -17568,9 +17616,9 @@ void updatestatus()
                 model = ((player[i].playkeys & FLAG_MOVELEFT) ? prevplayermodeln : nextplayermodeln)(model, i);
                 /* AnyBOR: keep unresolved selections outside model storage. */
                 if(!model) continue;
-                strcpy(player[i].name, model->name);
+                obor_copy_display_name(player[i].name, model->name);
 
-                player[i].colourmap = (colourselect && (set->nosame & 2)) ? nextcolourmapn(model, obor_profile_uses_5134_script_ids() ? player[i].colourmap : -1, i) : 0;
+                player[i].colourmap = (colourselect && (set->nosame & 2)) ? obor_initial_colourmap(model, i, -1) : 0;
 
                 player[i].playkeys = 0;
             }
@@ -17579,7 +17627,7 @@ void updatestatus()
                 if(!model) continue;
                 model = ((player[i].playkeys & FLAG_MOVEUP) ? prevplayermodelcoln : nextplayermodelcoln)(model, i);
                 if(!model) continue;
-                strcpy(player[i].name, model->name);
+                obor_copy_display_name(player[i].name, model->name);
                 player[i].colourmap = (colourselect && (set->nosame & 2)) ? nextcolourmapn(model, -1, i) : 0;
                 player[i].playkeys = 0;
             }
@@ -17595,7 +17643,7 @@ void updatestatus()
             {
                 model = selectrandomplayer(model);
                 if(!model) continue;
-                strcpy(player[i].name, model->name);
+                obor_copy_display_name(player[i].name, model->name);
                 player[i].colourmap = colourselect ? selectrandomcolourmap(model, i) : 0;
                 player[i].playkeys = 0;
             }
@@ -17627,10 +17675,10 @@ void updatestatus()
                 else model = skipselect[i][0] ? findmodel(skipselect[i]) : nextplayermodeln(NULL, i);
                 /* AnyBOR: keep unresolved selections outside model storage. */
                 if(!model) continue;
-                strncpy(player[i].name, model->name, MAX_NAME_LEN);
+                safe_strncpy(player[i].name, model->name, obor_profile_name_width());
 
                 player[i].colourmap = (colourselect && (set->nosame & 2)) ?
-                    nextcolourmapn(model, obor_profile_uses_5134_script_ids() ? player[i].colourmap : (lns ? prev_color : 0) - 1, i) : (lns ? prev_color : 0);
+                    obor_initial_colourmap(model, i, (lns ? prev_color : 0) - 1) : (lns ? prev_color : 0);
 
                 player[i].joining = 1;
                 player[i].disablekeys = player[i].playkeys = player[i].newkeys = player[i].releasekeys = 0;
@@ -17686,18 +17734,22 @@ void updatestatus()
         oldtime = 99;
     }
 
-    if(obor_profile_build == 5134 || obor_profile_build == 6119)
+    if(obor_profile_build && obor_profile_build <= 6301)
     {
         if(dt < oldtime || oldtime == 0)
         {
             execute_timetick_script(dt, go_time);
             oldtime = dt;
         }
-        timetoshow = dt;
-
-        if(dt < 99)
+        if(obor_profile_build == 6301)
         {
-            showtimeover = 0;
+            timetoshow = is_total_timeover ? dt : 0;
+            if(dt > 0 && !is_total_timeover) showtimeover = 0;
+        }
+        else
+        {
+            timetoshow = dt;
+            if(dt < 99) showtimeover = 0;
         }
     }
     else
@@ -18370,7 +18422,8 @@ void predrawstatus()
             {
                 font_printf(videomodes.shiftpos[i] + pnameJ[i][4], savedata.windowpos + pnameJ[i][5], pnameJ[i][6], 0, Tr("Credit %i"), credits);
             }
-            else if(!obor_profile_uses_5134_script_ids() && !player[i].hasplayed && ((_time / (GAME_SPEED * 2)) & 1))
+            else if(!player[i].hasplayed && ((_time / (GAME_SPEED * 2)) & 1) &&
+                    (!obor_profile_build || obor_profile_build >= 6301))
             {
                 int showcredits = (!noshare) ? credits : CONTINUES;
 
@@ -18440,10 +18493,10 @@ void predrawstatus()
     // Performance info.
     if(savedata.debuginfo)
     {
-        const int legacy_performance = obor_profile_uses_5134_script_ids() || obor_profile_build == 6330;
-        const int box_layer = legacy_performance ? 0x0FFFFFFE : LAYER_Z_LIMIT_BOX_MAX;
-        const int text_layer = legacy_performance ? 0 : LAYER_Z_LIMIT_MAX;
-        const int byte_divisor = legacy_performance ? 1000 : KBYTES;
+        const int legacy_layers = obor_profile_build && obor_profile_build < 6344;
+        const int box_layer = legacy_layers ? 0x0FFFFFFE : LAYER_Z_LIMIT_BOX_MAX;
+        const int text_layer = legacy_layers ? 0 : LAYER_Z_LIMIT_MAX;
+        const int byte_divisor = obor_profile_build && obor_profile_build < 6337 ? 1000 : KBYTES;
         spriteq_add_box(0, videomodes.dOffset - 12, videomodes.hRes, videomodes.dOffset + 12, box_layer, 0, NULL);
         font_printf(2, videomodes.dOffset - 10, 0, text_layer, Tr("FPS: %03d"), getFPS());
         font_printf(videomodes.hRes / 2, videomodes.dOffset - 10, 0, text_layer, Tr("Free Ram: %s KB"), commaprint(freeram / byte_divisor));
@@ -18819,8 +18872,8 @@ static int common_anim_series(entity *ent, int arraya[], int maxa, int forcemode
     int i, b, e;                                                                    //Loop counter.
     int iAni;                                                                       //Animation.
 
-    const int legacy = obor_profile_uses_5134_script_ids();
-    const int legacy_walk = defaulta == ANI_WALK || defaulta == ANI_UP || defaulta == ANI_DOWN;
+    const bool resets_ducking = !obor_profile_build || obor_profile_build >= 6293;
+    const bool has_walking_series = !obor_profile_build || obor_profile_build >= 6290;
 
     b = forcemode ? forcemode - 1 : 0;
     e = forcemode ? forcemode : maxa;
@@ -18833,9 +18886,11 @@ static int common_anim_series(entity *ent, int arraya[], int maxa, int forcemode
         {
             if (forcemode || normal_find_target(iAni, 0))                           //Opponent in range of current animation?
             {
-                if(!legacy) ent->ducking = DUCK_INACTIVE;
+                if(resets_ducking) ent->ducking = DUCK_INACTIVE;
                 ent_set_anim(ent, iAni, 0);                                         //Set animation.
-                if(legacy ? legacy_walk : is_walking(iAni)) ent->walking = 1; // set walking prop
+                const int walk = obor_profile_build && obor_profile_build < 6254 ? defaulta : iAni;
+                if(has_walking_series ? is_walking(iAni) : walk == ANI_WALK || walk == ANI_UP || walk == ANI_DOWN)
+                    ent->walking = 1;
 
                 return 1;                                                           //Return 1 and exit.
             }
@@ -18844,9 +18899,11 @@ static int common_anim_series(entity *ent, int arraya[], int maxa, int forcemode
 
     if (validanim(ent, defaulta))
     {
-        if(!legacy) ent->ducking = DUCK_INACTIVE;
+        if(resets_ducking) ent->ducking = DUCK_INACTIVE;
         ent_set_anim(ent, defaulta, 0);                                             //No alternates were set. Set default..
-        if(legacy ? legacy_walk : is_walking(defaulta)) ent->walking = 1; // set walking prop
+        if(has_walking_series ? is_walking(defaulta) :
+           defaulta == ANI_WALK || defaulta == ANI_UP || defaulta == ANI_DOWN)
+            ent->walking = 1;
 
         return 1;                                                                   //Return 1 and exit.
     }
@@ -18867,7 +18924,7 @@ int common_idle_anim(entity *ent)
 
     self = ent;
 
-    if(!obor_profile_uses_5134_script_ids()) self->ducking = DUCK_INACTIVE;
+    if(!obor_profile_build || obor_profile_build >= 6293) self->ducking = DUCK_INACTIVE;
     if(self->idling)
     {
         self->idling |= IDLING_ACTIVE;
@@ -18888,10 +18945,15 @@ int common_idle_anim(entity *ent)
         ent_set_anim(ent, ANI_SLEEP, 0);                                                //Set sleep anim.
         goto found;                                                                     //Return 1 and exit.
     }
-    else if(!obor_profile_uses_5134_script_ids() && validanim(ent, ANI_EDGE) && ent->edge &&
-             (ent->idling & IDLING_ACTIVE) && ent->ducking == DUCK_INACTIVE)
+    else if(obor_profile_has_edge_animations() && validanim(ent, ANI_EDGE) && ent->edge &&
+            (!obor_profile_has_edge_range() || ((ent->idling & IDLING_ACTIVE) && ent->ducking == DUCK_INACTIVE)))
     {
-        if ( (ent->edge & EDGE_RIGHT) && (ent->edge & EDGE_LEFT) )
+        if(obor_profile_build >= 6292 && obor_profile_build < 6298)
+        {
+            const int animation = (ent->edge & EDGE_RIGHT) || !validanim(ent, ANI_BACKEDGE) ? ANI_EDGE : ANI_BACKEDGE;
+            ent_set_anim(ent, animation, 0);
+        }
+        else if ( (ent->edge & EDGE_RIGHT) && (ent->edge & EDGE_LEFT) )
         {
             ent_set_anim(ent, ANI_EDGE, 0);
         }
@@ -19584,7 +19646,7 @@ void update_frame(entity *ent, unsigned int f)
             attack.dropv.x = default_model_dropv.x;
             attack.dropv.z = default_model_dropv.z;
             attack.attack_force = self->energy_status.health_current;
-            attack.attack_type = obor_profile_uses_5134_script_ids() ? max_attack_types
+            attack.attack_type = obor_profile_uses_early_summon_damage_type() ? max_attack_types
                 : obor_attack_from_native(obor_attack_to_native(max_attack_types) - 1);
             if(self->takedamage)
             {
@@ -19635,7 +19697,7 @@ void update_frame(entity *ent, unsigned int f)
         #define __tryknife knife_spawn(NULL, -1, self->position.x, self->position.z, self->position.y + anim->projectile.position.y, self->direction, 0, 0)
         #define __tryboomerang boomerang_spawn(NULL, -1, self->position.x, self->position.z, self->position.y + anim->projectile.position.y, self->direction, 0)
 
-        if(obor_profile_build == 6330)
+        if(obor_profile_has_custom_boomerang())
         {
 
         if(anim->projectile.knife >= 0 || anim->projectile.flash >= 0)
@@ -20034,7 +20096,7 @@ static s_model *obor_lns_changed_model(char *name, int index, s_model *model)
 
 static int obor_spawn_excludes_player_targets(const s_level *stage)
 {
-    return stage && stage->nohit == (obor_profile_uses_5134_script_ids()
+    return stage && stage->nohit == (obor_profile_build && obor_profile_build < 6182
         ? DAMAGE_FROM_PLAYER_ON : DAMAGE_FROM_PLAYER_OFF);
 }
 
@@ -20152,8 +20214,7 @@ entity *spawn(float x, float z, float a, int direction, char *name, int index, s
                 textbox = e;
             }
 
-            safe_strncpy(e->name, e->modeldata.name,
-                         obor_profile_uses_5134_script_ids() ? MAX_NAME_LEN : MAX_NAME_LEN - 1);
+            safe_strncpy(e->name, e->modeldata.name, obor_profile_name_width());
             // copy back the value
             e->sortid = id;
             e->defense = dfs;
@@ -20224,7 +20285,7 @@ void kill_entity(entity *victim)
     if(victim->modeldata.summonkill)
     {
         attack = emptyattack;
-        attack.attack_type = obor_profile_uses_5134_script_ids() ? max_attack_types
+        attack.attack_type = obor_profile_uses_early_summon_damage_type() ? max_attack_types
             : obor_attack_from_native(obor_attack_to_native(max_attack_types) - 1);
         attack.dropv.y = default_model_dropv.y;
         attack.dropv.x = default_model_dropv.x;
@@ -20987,7 +21048,7 @@ entity *check_platform_below_entity(entity *e)
         {
             plat = ent_list[i];
             a = plat->position.y + plat->animation->platform[plat->animpos][PLATFORM_HEIGHT];
-            const int within_height = obor_profile_uses_5134_script_ids()
+            const int within_height = obor_profile_build && obor_profile_build < 6292
                 ? a < e->position.y + 4 : a < e->position.y + T_WALKOFF;
             if(within_height && plat->position.y < e->position.y && a > maxa)
             {
@@ -21082,7 +21143,7 @@ entity *get_platform_on(entity *ent)
 
 static float movement_wall_altitude(void)
 {
-    return (obor_profile_build == 5134 || obor_profile_build == 6119) ? 999999.0f : T_MAX_CHECK_ALTITUDE;
+    return obor_profile_has_checkbase() ? T_MAX_CHECK_ALTITUDE : 999999.0f;
 }
 
 // for adjust grab position function, test if an entity can move from a to b
@@ -21789,7 +21850,7 @@ void do_attack(entity *e)
             }
         }
 
-        const int juggle_on_fall = obor_profile_build == 6330 || obor_profile_uses_5134_script_ids();
+        const int juggle_on_fall = obor_profile_build && obor_profile_build < 6342;
         if(juggle_on_fall ? target->falling == 1 : inair(target))
         {
             if(attack->jugglecost > target->modeldata.jugglepoints.current)
@@ -22436,8 +22497,73 @@ bool check_landframe(entity *ent)
     return 1;
 }
 
+static int obor_classify_supported_edge(int left, int right, int vertical,
+                                        bool directional, e_direction direction)
+{
+    if(directional && vertical) return EDGE_LEFT | EDGE_RIGHT;
+    if(left && (!directional || direction == DIRECTION_LEFT)) return EDGE_LEFT;
+    if(right && (!directional || direction == DIRECTION_RIGHT)) return EDGE_RIGHT;
+    return vertical ? EDGE_LEFT | EDGE_RIGHT : EDGE_NO;
+}
+
+static bool obor_platform_leaves_edge(entity *standing, entity *nearby, float height)
+{
+    if(!nearby) return true;
+    const float surface = get_platform_base(nearby);
+    return standing != nearby && (surface < height - 1.0f || surface > height + 1.0f);
+}
+
+static int obor_check_classic_edge(entity *ent)
+{
+    const bool directional = !obor_profile_has_edge_range();
+    const float x = ent->position.x, z = ent->position.z, y = ent->position.y;
+    const float range_x = !directional && ent->modeldata.edgerange.x > 8.0f ? ent->modeldata.edgerange.x : 8.0f;
+    const float range_z = (!directional && ent->modeldata.edgerange.z > 8.0f ? ent->modeldata.edgerange.z : 8.0f) / 2;
+    if(!checkhole_in(x, z, y))
+    {
+        const int left = checkhole_in(x - range_x, z, y);
+        const int right = checkhole_in(x + range_x, z, y);
+        const int up = checkhole_in(x, z - range_z, y);
+        const int down = checkhole_in(x, z + range_z, y);
+        const int edge = obor_classify_supported_edge(left, right, up || down, directional, ent->direction);
+        if(edge) return edge;
+    }
+
+    const int wall = checkwall_index(x, z);
+    if(wall >= 0 && level->walls[wall].height > 0 && ent->base == level->walls[wall].height)
+    {
+        const int left = checkwall_index(x - range_x, z);
+        const int right = checkwall_index(x + range_x, z);
+        const int up = checkwall_index(x, z - range_z);
+        const int down = checkwall_index(x, z + range_z);
+        const bool vertical = (up >= 0 && level->walls[up].height < ent->base) ||
+                              (down >= 0 && level->walls[down].height < ent->base);
+        const int edge = obor_classify_supported_edge(left >= 0 && level->walls[left].height < ent->base,
+            right >= 0 && level->walls[right].height < ent->base, vertical, directional, ent->direction);
+        if(edge) return edge;
+    }
+
+    entity *platform = get_platform_on(self);
+    if(platform)
+    {
+        entity *right = check_platform(x + range_x, z, self);
+        entity *left = check_platform(x - range_x, z, self);
+        entity *up = check_platform(x, z - range_z, self);
+        entity *down = check_platform(x, z + range_z, self);
+        const bool right_edge = obor_platform_leaves_edge(platform, right, y);
+        const bool left_edge = obor_platform_leaves_edge(platform, left, y);
+        const bool up_edge = obor_platform_leaves_edge(platform, up, y);
+        const bool down_edge = obor_platform_leaves_edge(platform, down, y);
+        return obor_classify_supported_edge(left_edge, right_edge, up_edge || down_edge, directional, ent->direction);
+    }
+    return EDGE_NO;
+}
+
 int check_edge(entity *ent)
 {
+    if(obor_profile_build && obor_profile_build < 6317)
+        return obor_profile_has_edge_animations() ? obor_check_classic_edge(ent) : EDGE_NO;
+
     float x = ent->position.x;
     float z = ent->position.z;
     float y = ent->position.y;
@@ -22503,7 +22629,8 @@ void check_gravity(entity *e)
 
     adjust_base(self, &plat);
 
-    if(!obor_profile_uses_5134_script_ids() && self->position.y <= self->base)
+    if(obor_profile_has_edge_animations() && self->position.y <= self->base &&
+       (obor_profile_has_edge_range() || (self->idling & IDLING_ACTIVE)))
         self->edge = check_edge(self);
     else
         self->edge = EDGE_NO;
@@ -22603,10 +22730,9 @@ void check_gravity(entity *e)
                 if ( !cplat || (cplat && diff(get_platform_base(cplat),self->position.y) > T_WALKOFF) )
                 {
                     self->idling = IDLING_INACTIVE;
-                    if(!obor_profile_uses_5134_script_ids())
-                    {
+                    obor_clear_classic_edge(self);
+                    if(!obor_profile_build || obor_profile_build >= 6293)
                         self->ducking = DUCK_INACTIVE;
-                    }
                     self->takeaction = common_walkoff;
                     ent_set_anim(self, ANI_WALKOFF, 0);
                     self->landed_on_platform = plat = NULL;
@@ -24780,12 +24906,9 @@ int set_idle(entity *ent)
     ent->idling = IDLING_PREPARED;
     ent->attacking = ATTACKING_INACTIVE;
     ent->inpain = 0;
-    if(!obor_profile_uses_5134_script_ids())
-    {
-        ent->rising = 0;
-        ent->riseattacking = 0;
-        ent->ducking = DUCK_INACTIVE;
-    }
+    obor_clear_recovery_state(ent);
+    obor_clear_classic_edge(ent);
+    if(!obor_profile_build || obor_profile_build >= 6293) ent->ducking = DUCK_INACTIVE;
     ent->inbackpain = 0;
     ent->falling = 0;
     ent->jumping = 0;
@@ -24808,14 +24931,7 @@ int set_death(entity *iDie, int type, int reset)
         iDie->charging = 0;
         iDie->attacking = ATTACKING_INACTIVE;
         iDie->blocking = 0;
-        if(!obor_profile_uses_5134_script_ids())
-        {
-            iDie->inpain = 0;
-            iDie->falling = 0;
-            iDie->rising = 0;
-            iDie->riseattacking = 0;
-            iDie->ducking = DUCK_INACTIVE;
-        }
+        obor_clear_death_state(iDie);
         return 1;
     }
 
@@ -24858,14 +24974,7 @@ int set_death(entity *iDie, int type, int reset)
     iDie->charging = 0;
     iDie->attacking = ATTACKING_INACTIVE;
     iDie->blocking = 0;
-    if(!obor_profile_uses_5134_script_ids())
-    {
-        iDie->inpain = 0;
-        iDie->falling = 0;
-        iDie->rising = 0;
-        iDie->riseattacking = 0;
-        iDie->ducking = DUCK_INACTIVE;
-    }
+    obor_clear_death_state(iDie);
     if(iDie->frozen)
     {
         unfrozen(iDie);
@@ -24915,15 +25024,12 @@ int set_fall(entity *ent, entity *other, s_collision_attack *attack, int reset)
 
     ent->drop = 1;
     ent->inpain = 0;
-    if(!obor_profile_uses_5134_script_ids())
-    {
-        ent->rising = 0;
-        ent->riseattacking = 0;
-    }
+    obor_clear_recovery_state(ent);
+    if(obor_profile_build >= 6292 && obor_profile_build < 6303) ent->edge = EDGE_NO;
     ent->idling = IDLING_INACTIVE;
     ent->falling = 1;
     ent->jumping = 0;
-    if(!obor_profile_uses_5134_script_ids()) ent->ducking = DUCK_INACTIVE;
+    if(!obor_profile_build || obor_profile_build >= 6293) ent->ducking = DUCK_INACTIVE;
     ent->getting = 0;
     ent->charging = 0;
     ent->attacking = ATTACKING_INACTIVE;
@@ -24942,21 +25048,21 @@ int set_fall(entity *ent, entity *other, s_collision_attack *attack, int reset)
 int set_rise(entity *iRise, int type, int reset)
 {
     int rise = 0;
-    const int legacy = obor_profile_uses_5134_script_ids();
+    const int front_only = obor_profile_build && obor_profile_build < 6285;
 
-    if(type < 0 || type >= max_attack_types || (legacy && !validanim(iRise, animrises[type])))
+    if(type < 0 || type >= max_attack_types || (front_only && !validanim(iRise, animrises[type])))
     {
         type = 0;
     }
 
-    if(!legacy && iRise->inbackpain) rise = animbackrises[type];
+    if(!front_only && iRise->inbackpain) rise = animbackrises[type];
     else rise = animrises[type];
 
     if(validanim(iRise, rise))
     {
         ent_set_anim(iRise, rise, reset);
     }
-    else if(legacy)
+    else if(front_only)
     {
         return 0;
     }
@@ -24985,15 +25091,9 @@ int set_rise(entity *iRise, int type, int reset)
     // Get up again
     iRise->drop = 0;
     iRise->falling = 0;
-    if(legacy)
-    {
-        iRise->inbackpain = 0;
-    }
-    else
-    {
-        iRise->rising = 1;
-        iRise->riseattacking = 0;
-    }
+    if(!obor_profile_build || obor_profile_build >= 6281) iRise->rising = 1;
+    if(!obor_profile_build || obor_profile_build >= 6282) iRise->riseattacking = 0;
+    if(obor_profile_build && obor_profile_build < 6286) iRise->inbackpain = 0;
     iRise->projectile = 0;
     iRise->nograb = iRise->nograb_default; //iRise->nograb = 0;
     iRise->velocity.x = self->velocity.z = self->velocity.y = 0;
@@ -25004,11 +25104,11 @@ int set_rise(entity *iRise, int type, int reset)
 int set_riseattack(entity *iRiseattack, int type, int reset)
 {
     int riseattack = 0;
-    const int legacy = obor_profile_uses_5134_script_ids();
+    const int front_only = obor_profile_build && obor_profile_build < 6285;
     /* AnyBOR: validate rise selectors before native table reads. */
     if(!iRiseattack || !animriseattacks || max_attack_types <= 0) return 0;
     if(type < 0 || type >= max_attack_types) type = 0;
-    if(!legacy && iRiseattack->inbackpain && !animbackriseattacks) return 0;
+    if(!front_only && iRiseattack->inbackpain && !animbackriseattacks) return 0;
     /* AnyBOR: native rise action follows. */
 
 
@@ -25021,21 +25121,21 @@ int set_riseattack(entity *iRiseattack, int type, int reset)
         type = 0;
     }
 
-    if(!legacy && (obor_profile_features & OBOR_PROFILE_LNS_6330) && (!validanim(iRiseattack, animriseattacks[type]) ||
+    if(!front_only && (obor_profile_features & OBOR_PROFILE_LNS_6330) && (!validanim(iRiseattack, animriseattacks[type]) ||
         (iRiseattack->inbackpain && !validanim(iRiseattack, animbackriseattacks[type]) && !validanim(iRiseattack, animriseattacks[type]))) &&
        iRiseattack->modeldata.riseattacktype == 3 )
     {
         return 0;
     }
 
-    if(!legacy && iRiseattack->inbackpain) riseattack = animbackriseattacks[type];
+    if(!front_only && iRiseattack->inbackpain) riseattack = animbackriseattacks[type];
     else riseattack = animriseattacks[type];
 
     if(validanim(iRiseattack, riseattack))
     {
-        if(!legacy) ent_set_anim(iRiseattack, riseattack, reset);
+        if(!front_only) ent_set_anim(iRiseattack, riseattack, reset);
     }
-    else if(legacy)
+    else if(front_only)
     {
         return 0;
     }
@@ -25063,26 +25163,27 @@ int set_riseattack(entity *iRiseattack, int type, int reset)
     iRiseattack->takeaction = common_attack_proc;
     self->staydown.riseattack_stall = 0;			//Reset riseattack delay.
     set_attacking(iRiseattack);
-    if(!legacy)
+    if(!obor_profile_build || obor_profile_build >= 6286)
     {
         iRiseattack->inpain = 0;
         iRiseattack->falling = 0;
-        iRiseattack->ducking = DUCK_INACTIVE;
-        iRiseattack->rising = 0;
-        iRiseattack->riseattacking = 1;
     }
+    if(obor_profile_build >= 6293 && obor_profile_build < 6303) iRiseattack->edge = EDGE_NO;
+    if(!obor_profile_build || obor_profile_build >= 6293) iRiseattack->ducking = DUCK_INACTIVE;
+    if(!obor_profile_build || obor_profile_build >= 6281) iRiseattack->rising = 0;
+    if(!obor_profile_build || obor_profile_build >= 6282) iRiseattack->riseattacking = 1;
     iRiseattack->drop = 0;
-    if(!legacy && (obor_profile_features & OBOR_PROFILE_LNS_6330)) iRiseattack->projectile = 0;
+    if(!front_only && (obor_profile_features & OBOR_PROFILE_LNS_6330)) iRiseattack->projectile = 0;
     iRiseattack->nograb = iRiseattack->nograb_default; //iRiseattack->nograb = 0;
     iRiseattack->modeldata.jugglepoints.current = iRiseattack->modeldata.jugglepoints.max; //reset jugglepoints
-    if(legacy) ent_set_anim(iRiseattack, riseattack, 0);
+    if(front_only) ent_set_anim(iRiseattack, riseattack, 0);
     return 1;
 }
 
 int set_blockpain(entity *iBlkpain, int type, int reset)
 {
     int blockpain = 0;
-    const int legacy = obor_profile_uses_5134_script_ids();
+    const int legacy = !obor_profile_has_back_block_animations();
 
     if(type < 0 || type >= max_attack_types || (legacy && !validanim(iBlkpain, animblkpains[type])))
     {
@@ -25221,12 +25322,9 @@ int set_pain(entity *iPain, int type, int reset)
 
 	iPain->idling = IDLING_INACTIVE;
 	iPain->falling = 0;
-	if(!obor_profile_uses_5134_script_ids())
-	{
-	    iPain->rising = 0;
-	    iPain->riseattacking = 0;
-	    iPain->ducking = DUCK_INACTIVE;
-	}
+	if(!obor_profile_build || obor_profile_build >= 6282) obor_clear_recovery_state(iPain);
+	if(obor_profile_build >= 6292 && obor_profile_build < 6303) iPain->edge = EDGE_NO;
+	if(!obor_profile_build || obor_profile_build >= 6293) iPain->ducking = DUCK_INACTIVE;
 	iPain->projectile = 0;
 	iPain->drop = 0;
 	iPain->attacking = ATTACKING_INACTIVE;
@@ -25240,12 +25338,9 @@ int set_pain(entity *iPain, int type, int reset)
     if(pain == ANI_GRABBED)
     {
         iPain->inpain = 0;
-        if(!obor_profile_uses_5134_script_ids())
-        {
-            iPain->rising = 0;
-            iPain->riseattacking = 0;
-            iPain->ducking = DUCK_INACTIVE;
-        }
+        obor_clear_recovery_state(iPain);
+        if(obor_profile_build >= 6292 && obor_profile_build < 6303) iPain->edge = EDGE_NO;
+        if(!obor_profile_build || obor_profile_build >= 6293) iPain->ducking = DUCK_INACTIVE;
         if ( iPain->inbackpain ) reset_backpain(iPain);
         iPain->inbackpain = 0;
     }
@@ -25364,7 +25459,7 @@ void set_model_ex(entity *ent, char *modelname, int index, s_model *newmodel, in
         {
             newmodel->star          = model->star;
         }
-        if(obor_profile_build == 6330 && newmodel->boomerang < 0)
+        if(obor_profile_build >= 6212 && obor_profile_has_custom_boomerang() && newmodel->boomerang < 0)
         {
             newmodel->boomerang = model->boomerang;
         }
@@ -25886,7 +25981,7 @@ void normal_prepare()
             return;
         }
     }
-    else if(!obor_profile_uses_5134_script_ids() && (self->ducking & DUCK_ACTIVE))
+    else if((!obor_profile_build || obor_profile_build >= 6293) && (self->ducking & DUCK_ACTIVE))
     {
         self->takeaction = common_attack_proc;
         set_attacking(self);
@@ -25956,7 +26051,8 @@ void common_jump()
         self->position.y = self->base;
 
         self->jumping = 0;
-        if(!obor_profile_uses_5134_script_ids()) self->ducking = DUCK_INACTIVE;
+        if(obor_profile_build >= 6292 && obor_profile_build < 6303) self->edge = EDGE_NO;
+        if(!obor_profile_build || obor_profile_build >= 6293) self->ducking = DUCK_INACTIVE;
         self->attacking = ATTACKING_INACTIVE;
 
         if(!self->modeldata.runhold)
@@ -26235,12 +26331,9 @@ void common_pain()
     }
 
     self->inpain = 0;
-    if(!obor_profile_uses_5134_script_ids())
-    {
-        self->rising = 0;
-        self->riseattacking = 0;
-        self->ducking = DUCK_INACTIVE;
-    }
+    obor_clear_recovery_state(self);
+    obor_clear_classic_edge(self);
+    if(!obor_profile_build || obor_profile_build >= 6293) self->ducking = DUCK_INACTIVE;
     self->inbackpain = 0;
     if(self->link)
     {
@@ -26456,11 +26549,8 @@ void common_block()
     if(self->inpain && (self->modeldata.holdblock & 2) && !self->animating && validanim(self, ANI_BLOCK))
     {
         self->inpain = 0;
-        if(!obor_profile_uses_5134_script_ids())
-        {
-            self->rising = 0;
-            self->riseattacking = 0;
-        }
+        obor_clear_recovery_state(self);
+        obor_clear_classic_edge(self);
         self->inbackpain = 0;
         ent_set_anim(self, ANI_BLOCK, 0);
     }
@@ -26605,7 +26695,6 @@ void checkdeath()
     {
         return;
     }
-    const int legacy = obor_profile_uses_5134_script_ids();
     self->dead = 1;
     //be careful, since the opponent can be other types
     if(self->opponent && (self->opponent->modeldata.type & TYPE_PLAYER))
@@ -26614,7 +26703,7 @@ void checkdeath()
     }
     self->nograb = 1;
     self->idling = IDLING_INACTIVE;
-    if(!legacy) self->ducking = DUCK_INACTIVE;
+    if(!obor_profile_build || obor_profile_build >= 6293) self->ducking = DUCK_INACTIVE;
 
     if(self->modeldata.diesound >= 0)
     {
@@ -26635,11 +26724,12 @@ void checkdeath()
     {
         self->boss = 0;
         const int remaining = --level->bossescount;
-        if((legacy ? remaining == 0 : remaining <= 0) && (self->modeldata.type & TYPE_ENEMY))
+        const bool exact_count = !obor_profile_has_boss_counters();
+        if((exact_count ? remaining == 0 : remaining <= 0) && (self->modeldata.type & TYPE_ENEMY))
         {
             kill_all_enemies();
             level_completed = 1;
-            if(!legacy) level_completed_defeating_boss |= 1;
+            if(!obor_profile_build || obor_profile_build >= 6308) level_completed_defeating_boss |= 1;
         }
     }
 }
@@ -27718,7 +27808,7 @@ int common_try_upper(entity *target)
     // Target jumping? Try uppercut!
     if(target && target->jumping)
     {
-        if(obor_profile_uses_5134_script_ids())
+        if(obor_profile_build && obor_profile_build < 6296)
         {
             self->takeaction = common_attack_proc;
             set_attacking(self);
@@ -27819,7 +27909,7 @@ int normal_attack()
     //int rnum;
 
     //rnum = rand32()&7;
-    if( (!obor_profile_uses_5134_script_ids() && common_try_duckattack(NULL)) ||
+    if( ((!obor_profile_build || obor_profile_build >= 6296) && common_try_duckattack(NULL)) ||
         common_try_grab(NULL) ||
         common_try_upper(NULL) ||
         common_try_block(NULL) ||
@@ -28109,11 +28199,9 @@ int dograb(entity *attacker, entity *target, e_dograb_adjustcheck adjustcheck)
         target->attacking = ATTACKING_INACTIVE;
         attacker->idling = IDLING_INACTIVE;
         attacker->running = 0;
-        if(!obor_profile_uses_5134_script_ids())
-        {
-            attacker->ducking = DUCK_INACTIVE;
-            attacker->inbackpain = 0;
-        }
+        if(obor_profile_build >= 6292 && obor_profile_build < 6303) attacker->edge = EDGE_NO;
+        if(!obor_profile_build || obor_profile_build >= 6293) attacker->ducking = DUCK_INACTIVE;
+        if(!obor_profile_build || obor_profile_build >= 6288) attacker->inbackpain = 0;
 
         /* Stop all movement. */
         attacker->velocity.x = 0;
@@ -28566,7 +28654,7 @@ int common_trymove(float xdir, float zdir)
     //--------------obstacle checking ------------------
     if(self->modeldata.subject_to_obstacle > 0 /*&& !inair(self)*/)
     {
-        const bool strict_obstacle_side = obor_profile_build == 5134 || obor_profile_build == 6119;
+        const bool strict_obstacle_side = !obor_profile_has_obstacle_plane();
         int hit = 0;
 
         //TODO, check once instead of twice
@@ -28630,7 +28718,7 @@ int common_trymove(float xdir, float zdir)
         {
             xdir = 0;
             if ( self->falling ) hit |= 1;
-            const int plane = (obor_profile_build == 5134 || obor_profile_build == 6119) ? 1 : PLANE_X;
+            const int plane = obor_profile_has_obstacle_plane() ? PLANE_X : 1;
             execute_onblockp_script(self, plane, other);
         }
         if(zdir && (other = check_platform_between(self->position.x, z, self->position.y, self->position.y + heightvar, self))  )
@@ -28802,13 +28890,13 @@ void common_attack_finish()
 {
     entity *target;
     int stall;
-    const int legacy = obor_profile_uses_5134_script_ids();
+    const int has_duck_recovery = !obor_profile_build || obor_profile_build >= 6295;
 
     self->velocity.x = self->velocity.z = 0;
 
     if(self->modeldata.type & TYPE_PLAYER)
     {
-        if(!legacy && (self->ducking & DUCK_ACTIVE))
+        if(has_duck_recovery && (self->ducking & DUCK_ACTIVE))
         {
             doduck(self);
         }
@@ -28822,7 +28910,7 @@ void common_attack_finish()
 
     target = self->opponent;
 
-    if(target && !self->modeldata.nomove && (legacy || self->ducking == DUCK_INACTIVE) && diff(self->position.x, target->position.x) < 80 && (rand32() & 3))
+    if(target && !self->modeldata.nomove && ((obor_profile_build && obor_profile_build < 6296) || self->ducking == DUCK_INACTIVE) && diff(self->position.x, target->position.x) < 80 && (rand32() & 3))
     {
         self->takeaction = NULL;//common_runoff;
         self->destx = self->position.x > target->position.x ? MIN(self->position.x + 40, target->position.x + 80) : MAX(self->position.x - 40, target->position.x - 80);
@@ -28834,7 +28922,7 @@ void common_attack_finish()
     }
     else
     {
-        if(!legacy && (self->ducking & DUCK_ACTIVE))
+        if(has_duck_recovery && (self->ducking & DUCK_ACTIVE))
         {
             doduck(self);
         }
@@ -29139,7 +29227,7 @@ void adjust_walk_animation(entity *other)
     if(((self->direction == DIRECTION_RIGHT ? self->velocity.x < 0 : self->velocity.x > 0) && dir == 1) ||
             (dir == 2 && self->velocity.z > 0) || (dir == 3 && self->velocity.z < 0) )
     {
-        self->animating = (obor_profile_build == 5134 || obor_profile_build == 6119) ? 1 : -1;
+        self->animating = (obor_profile_build && obor_profile_build < 6255) ? 1 : -1;
     }
     else
     {
@@ -30445,11 +30533,6 @@ int arrow_move()
     return 1;
 }
 
-static int obor_profile_uses_legacy_ricochet(void)
-{
-    return obor_profile_build == 5134 || obor_profile_build == 6119;
-}
-
 // Caskey, Damon V.
 // 2018-04-07
 //
@@ -30457,7 +30540,7 @@ static int obor_profile_uses_legacy_ricochet(void)
 // and no-wall result depend on the logical profile.
 int check_block_wall(entity *entity)
 {
-    const int first_wall = obor_profile_uses_legacy_ricochet();
+    const int first_wall = obor_profile_build && obor_profile_build < 6264;
     int wall = -1;
 
     // Target entity affected by walls?
@@ -30481,7 +30564,7 @@ int check_block_wall(entity *entity)
     }
 
     // Got this far? Then there's no wall blocking our way.
-    return first_wall ? 0 : wall;
+    return obor_profile_build && obor_profile_build < 6279 ? 0 : wall;
 }
 
 // Caskey, Damon V.
@@ -30536,7 +30619,7 @@ int projectile_wall_deflect(entity *ent)
     #define RICHOCHET_VELOCITY_Y        2.5     // Base Y velocity applied when projectile bounces off wall.
     #define RICHOCHET_VELOCITY_Y_RAND   1       // Random seed for Y variance added to base Y velocity when bouncing off wall.
 
-    const int legacy_ricochet = obor_profile_uses_legacy_ricochet();
+    const int require_positive_wall = obor_profile_build && obor_profile_build < 6272;
     float richochet_velocity_x;
     s_collision_attack attack;
 
@@ -30548,7 +30631,7 @@ int projectile_wall_deflect(entity *ent)
         blocking_wall = check_block_wall(self);
         blocking_obstacle = check_block_obstacle(self);
 
-        if((legacy_ricochet ? blocking_wall > 0 : blocking_wall >= 0) || blocking_obstacle) {
+        if((require_positive_wall ? blocking_wall > 0 : blocking_wall >= 0) || blocking_obstacle) {
 
             // Use the projectiles speed and our factor to see how
             // hard it will bounce off wall.
@@ -30563,10 +30646,10 @@ int projectile_wall_deflect(entity *ent)
             ent->damage_on_landing.attack_type = ATK_NONE;
             toss(ent, RICHOCHET_VELOCITY_Y + randf(RICHOCHET_VELOCITY_Y_RAND));
 
-            if(!legacy_ricochet)
+            if(!obor_profile_build || obor_profile_build >= 6264)
             {
                 // Reset base detection
-                ent->modeldata.subject_to_basemap = 1;
+                ent->modeldata.subject_to_basemap = !obor_profile_build || obor_profile_build >= 6271;
                 ent->modeldata.no_adjust_base = 0;
                 ent->modeldata.subject_to_hole = 1;
                 ent->base = 0;
@@ -30798,7 +30881,7 @@ int do_catch(entity *ent, entity *target, int animation_catch)
             ent->takeaction = common_animation_normal;
             ent->attacking = ATTACKING_INACTIVE;
             ent->idling = IDLING_INACTIVE;
-            if(!obor_profile_uses_5134_script_ids()) ent->ducking = DUCK_INACTIVE;
+            if(obor_profile_build == 0 || obor_profile_build >= 6293) ent->ducking = DUCK_INACTIVE;
             ent_set_anim(ent, animation_catch, 0);
             kill_entity(target);
 
@@ -30815,7 +30898,7 @@ int boomerang_catch(entity *ent, float distance_x_current)
     int animation_catch; // Animation for owner catching boomerang.
     entity* owner = NULL;
 
-    if(!obor_profile_uses_5134_script_ids() && ent->owner) owner = ent->owner;
+    if(obor_profile_has_custom_boomerang() && ent->owner) owner = ent->owner;
     else owner = ent->parent;
     if(!owner) return 0;
 
@@ -30901,7 +30984,7 @@ void boomerang_initialize(entity *ent)
 
     entity* owner = NULL;
 
-    if(!obor_profile_uses_5134_script_ids() && ent->owner) owner = ent->owner;
+    if(obor_profile_has_custom_boomerang() && ent->owner) owner = ent->owner;
     else owner = ent->parent;
 
     // We don't want our directional facing
@@ -30978,7 +31061,7 @@ int boomerang_move()
         // need to use some default values instead.
         entity* owner = NULL;
 
-        if(!obor_profile_uses_5134_script_ids() && self->owner) owner = self->owner;
+        if(obor_profile_has_custom_boomerang() && self->owner) owner = self->owner;
         else owner = self->parent;
 
         // Acceleration.
@@ -31441,7 +31524,7 @@ int common_move()
         //turn back if we have a turn animation
         // TODO, make a function for ai script
         if(self->direction != predir && validanim(self, ANI_TURN) &&
-           (obor_profile_uses_5134_script_ids() || self->ducking == DUCK_INACTIVE))
+           ((obor_profile_build && obor_profile_build < 6296) || self->ducking == DUCK_INACTIVE))
         {
             self->takeaction = common_turn;
             self->direction = !self->direction;
@@ -32084,7 +32167,7 @@ void common_think()
     }
 
     // target is ducking? try to ducking..
-    if(!obor_profile_uses_5134_script_ids() && ai_check_ducking())
+    if((!obor_profile_build || obor_profile_build >= 6296) && ai_check_ducking())
     {
         return;
     }
@@ -32101,7 +32184,7 @@ void suicide()
         return;
     }
     level_completed |= self->boss;
-    if(!obor_profile_uses_5134_script_ids()) level_completed_defeating_boss |= self->boss;
+    if(!obor_profile_build || obor_profile_build >= 6308) level_completed_defeating_boss |= self->boss;
     kill_entity(self);
 }
 
@@ -32681,7 +32764,7 @@ void common_idle()
         return;
     }
     self->takeaction = NULL;
-    self->attacking = ATTACKING_INACTIVE;
+    if(!obor_profile_build || obor_profile_build >= 6312) self->attacking = ATTACKING_INACTIVE;
     self->idling = IDLING_PREPARED;
     common_idle_anim(self);
 }
@@ -32689,6 +32772,7 @@ void common_idle()
 
 void tryduck(entity *ent)
 {
+    if(obor_profile_build && obor_profile_build < 6303) ent->edge = EDGE_NO;
     ent->running = 0;
     if(validanim(ent, ANI_DUCKING))
     {
@@ -32707,6 +32791,7 @@ void tryduck(entity *ent)
 
 void tryduckrise(entity *ent)
 {
+    if(obor_profile_build && obor_profile_build < 6303) ent->edge = EDGE_NO;
     ent->running = 0;
     if(validanim(ent, ANI_DUCKRISE))
     {
@@ -32752,10 +32837,8 @@ void tryjump(float jumpv, float jumpx, float jumpz, int animation_id)
     self->jump.velocity.z = jumpz;
     self->jump.animation_id = animation_id;
 
-    if(!obor_profile_uses_5134_script_ids())
-    {
-        self->ducking = DUCK_INACTIVE;
-    }
+    obor_clear_classic_edge(self);
+    if(!obor_profile_build || obor_profile_build >= 6293) self->ducking = DUCK_INACTIVE;
     if(validanim(self, ANI_JUMPDELAY))
     {
         self->takeaction = common_prejump;
@@ -33554,12 +33637,9 @@ void player_pain_check()
     if(player_check_special())
     {
         self->inpain = 0;
-        if(!obor_profile_uses_5134_script_ids())
-        {
-            self->rising = 0;
-            self->riseattacking = 0;
-            self->ducking = DUCK_INACTIVE;
-        }
+        obor_clear_recovery_state(self);
+        obor_clear_classic_edge(self);
+        if(!obor_profile_build || obor_profile_build >= 6293) self->ducking = DUCK_INACTIVE;
         self->inbackpain = 0;
     }
 }
@@ -33628,11 +33708,8 @@ int check_costmove(int s, int fs, int jumphack)
         self->velocity.x = self->velocity.z = 0;
         set_attacking(self);
         self->inpain = 0;
-        if(!obor_profile_uses_5134_script_ids())
-        {
-            self->rising = 0;
-            self->riseattacking = 0;
-        }
+        obor_clear_recovery_state(self);
+        obor_clear_classic_edge(self);
         self->inbackpain = 0;
         memset(self->combostep, 0, sizeof(*self->combostep) * 5);
         ent_unlink(self);
@@ -33645,14 +33722,16 @@ int check_costmove(int s, int fs, int jumphack)
 int match_combo(int a[], s_player *p, int l)
 {
     int j, step;
+    const bool wide_combo_keys = obor_profile_build >= 6173 && obor_profile_build < 6181;
 
     for(j = 0; j < l; j++)
     {
+        const int key = a[l - 1 - j];
+        const u64 required = wide_combo_keys ? (u64)key : (u32)key;
         step = p->combostep - 1 - j;
         step = (step + MAX_SPECIAL_INPUTS) % MAX_SPECIAL_INPUTS;
 
-        // old: !(a[l - 1 - j]&p->combokey[step])
-        if( ((a[l - 1 - j]&p->combokey[step]) ^ a[l - 1 - j]) ) // if input&combokey == 0 then not good btn
+        if((p->combokey[step] & required) != required)
         {
             return 0;
         }
@@ -33724,7 +33803,7 @@ int player_preinput()
 
 void player_think()
 {
-    const int legacy_ducking = obor_profile_uses_5134_script_ids();
+    const int legacy_ducking = obor_profile_build && obor_profile_build < 6295;
     int action = 0;		// 1=walking, 2=up, 3=down, 4=running
     int bkwalk = 0;   //backwalk
     int runx, runz, movex, movez;
@@ -34351,6 +34430,7 @@ void player_think()
         {
             ent_set_anim(self, ANI_DUCK, 0);
             self->velocity.x = self->velocity.z = 0;
+            if(obor_profile_build >= 6293) self->ducking = DUCK_ACTIVE;
         }
         else
         {
@@ -34768,8 +34848,12 @@ void kill_all_enemies()
     entity *tmpself = NULL;
 
     attack = emptyattack;
-    attack.attack_type = obor_profile_uses_5134_script_ids() ? max_attack_types
-        : obor_profile_build == 6510 ? ATK_BOSS_DEATH : ATK_NORMAL;
+    attack.attack_type = ATK_NORMAL;
+    if(obor_profile_build && obor_profile_build < 6303)
+    {
+        attack.attack_type = obor_profile_build < 6220 ? max_attack_types : ATK_TIMEOVER;
+    }
+    else if(obor_profile_build == 6510) attack.attack_type = ATK_BOSS_DEATH;
     attack.dropv.y = default_model_dropv.y;
     attack.dropv.x = default_model_dropv.x;
     attack.dropv.z = default_model_dropv.z;
@@ -35599,8 +35683,7 @@ entity *smartspawn(s_spawn_entry *props)      // 7-1-2005 Entire section replace
     // Alias?
     if(props->alias[0])
     {
-        memset(e->name, 0, sizeof(e->name));
-        strcpy(e->name, props->alias);
+        safe_strncpy(e->name, props->alias, obor_profile_name_width());
     }
 
     // If we have item properties in spawn entry, then prepare a set of
@@ -35919,7 +36002,8 @@ int no_player_alive_to_join()
     for(i = 0; i < MAX_PLAYERS; i++)
     {
         if( ((!player[i].ent || player[i].lives <= 0 || (player[i].lives <= 1 && player[i].ent->energy_status.health_current <= 0)) &&
-            ((noshare && player[i].credits <= 0) || (!noshare && credits <= 0)))
+            ((noshare && player[i].credits <= 0) || (!noshare && credits <= 0))) ||
+            (obor_profile_has_player_status() && player[i].ent && (player[i].status & PLAYER_LOOSING))
         )
         {
             ++no_alive_players;
@@ -35960,7 +36044,8 @@ void kill_all_players_by_timeover()
             endgame = 0;
 
             attack_lose.attack_force = self->energy_status.health_current;
-            if (inair(self) && validanim(self, ANI_FALLLOSE))
+            if ((!obor_profile_build || obor_profile_build >= 6306) &&
+                    inair(self) && validanim(self, ANI_FALLLOSE))
             {
                 attack_lose.dropv.y = default_model_dropv.y;
                 attack_lose.dropv.x = default_model_dropv.x;
@@ -35985,21 +36070,23 @@ void time_over()
     }
     else if(!level_completed)
     {
-        const bool classic = (obor_profile_build == 5134 || obor_profile_build == 6119);
-        if(classic)
+        const bool classic = obor_profile_build && obor_profile_build < 6301;
+        if(obor_profile_build && obor_profile_build < 6305)
         {
             s_collision_attack attack = emptyattack;
+            const bool use_local_entity = obor_profile_build >= 6303;
             attack.attack_type = ATK_TIMEOVER;
             attack.dropv = default_model_dropv;
             endgame = 1;
             for(int i = 0; i < MAX_PLAYERS; ++i)
             {
-                if(player[i].ent)
+                entity *participant = player[i].ent;
+                if(participant && (!use_local_entity || !validanim(participant, ANI_LOSE)))
                 {
                     endgame = 0;
-                    self = player[i].ent;
-                    attack.attack_force = self->energy_status.health_current;
-                    self->takedamage(self, &attack, 0);
+                    if(!use_local_entity) self = participant;
+                    attack.attack_force = participant->energy_status.health_current;
+                    participant->takedamage(participant, &attack, 0);
                 }
             }
         }
@@ -36097,9 +36184,8 @@ void update_scroller()
             }
             else if(level->spawnpoints[current_spawn].music[0])
             {
-                const size_t copy_length = obor_profile_uses_5134_script_ids() ? 128 : sizeof(musicname);
-                strncpy(musicname, level->spawnpoints[current_spawn].music, copy_length);
-                if(copy_length < sizeof(musicname)) musicname[copy_length] = '\0';
+                const size_t copy_length = obor_profile_uses_legacy_path_sizes() ? 128 : MAX_BUFFER_LEN;
+                safe_strncpy(musicname, level->spawnpoints[current_spawn].music, copy_length);
                 musicoffset = level->spawnpoints[current_spawn].musicoffset;
                 musicloop = 1;
             }
@@ -36930,7 +37016,7 @@ void inputrefresh(int playrecmode)
                 }
             }
             pl->inputtime[pl->combostep] = _time;
-            pl->combokey[pl->combostep] = k;
+            pl->combokey[pl->combostep] = (obor_profile_build >= 6173 && obor_profile_build < 6181) ? k : (u32)k;
             pl->combostep++;
             pl->combostep %= MAX_SPECIAL_INPUTS;
         }
@@ -37194,7 +37280,7 @@ int obor_set_replay_paths(a_playrecstatus *record, const char *folder, const cha
     if(!record || !folder || !filename) return 0;
     const size_t capacity = (obor_profile_features & OBOR_PROFILE_LNS_6330)
                           ? sizeof(record->filename)
-                          : (obor_profile_uses_5134_script_ids() ? 513 : 512);
+                          : (obor_profile_build && obor_profile_build < 6210 ? 513 : 512);
     const size_t folder_bytes = strlen(folder);
     const size_t name_bytes = strlen(filename);
     if(folder_bytes >= capacity || name_bytes >= capacity) return 0;
@@ -38514,7 +38600,7 @@ quit:
 
 static int scene_media_path(char path[MAX_BUFFER_LEN], const char *name)
 {
-    const size_t capacity = obor_profile_uses_5134_script_ids() ? 256 : MAX_BUFFER_LEN;
+    const size_t capacity = obor_profile_uses_legacy_path_sizes() ? 256 : MAX_BUFFER_LEN;
     const size_t length = strlen(name);
     if(length >= capacity) return 0;
     memcpy(path, name, length + 1);
@@ -39115,18 +39201,18 @@ void hallfame(int addtoscore)
             if(player[p].score > savescore.highsc[9])
             {
                 savescore.highsc[9] = player[p].score;
-                strcpy(savescore.hscoren[9], player[p].name);
+                obor_copy_display_name(obor_profile_score_name(9), player[p].name);
                 topten[9] = 1;
 
                 for(i = 8; i >= 0 && player[p].score > savescore.highsc[i]; i--)
                 {
                     score = savescore.highsc[i];
-                    strcpy(name, savescore.hscoren[i]);
+                    obor_copy_display_name(name, obor_profile_score_name(i));
                     savescore.highsc[i] = player[p].score;
-                    strcpy(savescore.hscoren[i], player[p].name);
+                    obor_copy_display_name(obor_profile_score_name(i), player[p].name);
                     topten[i] = 1;
                     savescore.highsc[i + 1] = score;
-                    strcpy(savescore.hscoren[i + 1], name);
+                    obor_copy_display_name(obor_profile_score_name(i + 1), name);
                     topten[i + 1] = 0;
                 }
             }
@@ -39146,7 +39232,8 @@ void hallfame(int addtoscore)
 
         for(i = 0; i < 10; i++)
         {
-            font_printf(_colx(topten[i], col1), y + videomodes.vShift, topten[i], 0, "%2i.  %s", i + 1, savescore.hscoren[i]);
+            font_printf(_colx(topten[i], col1), y + videomodes.vShift, topten[i], 0, "%2i.  %.*s",
+                        i + 1, (int)obor_profile_name_width(), obor_profile_score_name(i));
             font_printf(_colx(topten[i], col2), y + videomodes.vShift, topten[i], 0, (scoreformat ? "%09lu" : "%u"), savescore.highsc[i]);
             y += (videomodes.vRes - videomodes.vShift - 56 - 32) / 10; //font_heights[topten[i]] + 6;
         }
@@ -39484,7 +39571,7 @@ int playlevel(char *filename)
         if(level_completed)
         {
             endgame |= (!findent(TYPE_ENEMY) || level->type || findent(TYPE_ENDLEVEL));    // Ends when all enemies die or a bonus level
-            check_victory_pose();
+            if(!obor_profile_build || obor_profile_build >= 6309) check_victory_pose();
         }
     }
     //execute a script when level finished
@@ -39540,9 +39627,9 @@ static entity *spawnexample(int i)
     entity *example;
     s_set_entry *set = levelsets + current_set;
     example = spawn((float)psmenu[i][0], (float)psmenu[i][1], 0, spdirection[i], NULL, -1, nextplayermodeln(NULL, i));
-    strcpy(player[i].name, example->model->name);
+    obor_copy_display_name(player[i].name, example->model->name);
 
-    player[i].colourmap = (colourselect && (set->nosame & 2)) ? nextcolourmapn(example->model, obor_profile_uses_5134_script_ids() ? player[i].colourmap : -1, i) : 0;
+    player[i].colourmap = (colourselect && (set->nosame & 2)) ? obor_initial_colourmap(example->model, i, -1) : 0;
 
     ent_set_colourmap(example, player[i].colourmap);
     example->spawntype = SPAWN_TYPE_PLAYER_SELECT;
@@ -39743,11 +39830,12 @@ int selectplayer(int *players, char *filename, int useSavedGame)
                 {
                     continue;
                 }
-                strncpy(player[i].name, skipselect[i], MAX_NAME_LEN);
+                safe_strncpy(player[i].name, skipselect[i], obor_profile_name_width());
 
                 if(defaultselect)
                 {
                     player[i].lives = PLAYER_LIVES;
+                    if(obor_profile_has_player_status()) player[i].status = PLAYER_NO_STATUS;
                     if(!creditscheat)
                     {
                         if(noshare)
@@ -39764,6 +39852,7 @@ int selectplayer(int *players, char *filename, int useSavedGame)
                 {
                     player[i].lives = savelevel[current_set].pLives[i];
                     player[i].score = savelevel[current_set].pScores[i];
+                    if(obor_profile_has_player_status()) player[i].status = PLAYER_NO_STATUS;
                     if(noshare) player[i].credits = savelevel[current_set].pCredits[i];
                     else credits = savelevel[current_set].credits;
                 }
@@ -39825,6 +39914,7 @@ int selectplayer(int *players, char *filename, int useSavedGame)
             if(defaultselect)
             {
                 player[i].lives = PLAYER_LIVES;
+                if(obor_profile_has_player_status()) player[i].status = PLAYER_NO_STATUS;
                 if(!creditscheat)
                 {
                     if(noshare)
@@ -39841,6 +39931,7 @@ int selectplayer(int *players, char *filename, int useSavedGame)
             {
                 player[i].lives = savelevel[current_set].pLives[i];
                 player[i].score = savelevel[current_set].pScores[i];
+                if(obor_profile_has_player_status()) player[i].status = PLAYER_NO_STATUS;
                 if(noshare) player[i].credits = savelevel[current_set].pCredits[i];
                 else credits = savelevel[current_set].credits;
             }
@@ -39882,6 +39973,7 @@ int selectplayer(int *players, char *filename, int useSavedGame)
                     }
 
                     player[i].lives = PLAYER_LIVES;
+                    if(obor_profile_has_player_status()) player[i].status = PLAYER_NO_STATUS;
                     example[i] = spawnexample(i);
                     player[i].playkeys = 0;
 
@@ -39897,8 +39989,8 @@ int selectplayer(int *players, char *filename, int useSavedGame)
                         sound_play_sample(SAMPLE_BEEP, 0, savedata.effectvol, savedata.effectvol, 100);
                     }
                     ent_set_model(example[i], ((player[i].newkeys & FLAG_MOVELEFT) ? prevplayermodeln : nextplayermodeln)(example[i]->model, i)->name, 0);
-                    strcpy(player[i].name, example[i]->model->name);
-                    player[i].colourmap = (colourselect && (set->nosame & 2)) ? nextcolourmapn(example[i]->model, obor_profile_uses_5134_script_ids() ? player[i].colourmap : -1, i) : 0;
+                    obor_copy_display_name(player[i].name, example[i]->model->name);
+                    player[i].colourmap = (colourselect && (set->nosame & 2)) ? obor_initial_colourmap(example[i]->model, i, -1) : 0;
                     ent_set_colourmap(example[i], player[i].colourmap);
                 }
 				else if(lns && player[i].newkeys & (FLAG_MOVEUP | FLAG_MOVEDOWN) && example[i])
@@ -39909,7 +40001,7 @@ int selectplayer(int *players, char *filename, int useSavedGame)
                     }
                     ent_set_model(example[i], ((player[i].newkeys & FLAG_MOVEUP) ? prevplayermodelcoln : nextplayermodelcoln)(example[i]->model,i)->name, 0);
 
-                    strcpy(player[i].name, example[i]->model->name);
+                    obor_copy_display_name(player[i].name, example[i]->model->name);
                     player[i].colourmap = (colourselect && (set->nosame & 2)) ? nextcolourmapn(example[i]->model, -1, i) : 0;
                     ent_set_colourmap(example[i], player[i].colourmap);
 				}
@@ -39926,7 +40018,7 @@ int selectplayer(int *players, char *filename, int useSavedGame)
                         sound_play_sample(SAMPLE_BEEP, 0, savedata.effectvol, savedata.effectvol, 100);
                     }
                     ent_set_model(example[i], selectrandomplayer(example[i]->model)->name, 0);
-                    strcpy(player[i].name, example[i]->model->name);
+                    obor_copy_display_name(player[i].name, example[i]->model->name);
 
                     player[i].colourmap = (colourselect) ? selectrandomcolourmap(example[i]->model, i) : 0;
                     ent_set_colourmap(example[i], player[i].colourmap);
@@ -40056,9 +40148,8 @@ void playgame(int *players,  unsigned which_set, int useSavedGame)
                 player[i].spawnmp = save->pSpawnmp[i];
                 if(obor_profile_features & OBOR_PROFILE_LNS_6330)
                     player[i].hasplayed = players[i] = save->pName[i][0] ? 1 : 0;
-                strncpy(player[i].name, save->pName[i], MAX_NAME_LEN);
-                if(!memchr(player[i].name, 0, sizeof(player[i].name)))
-                    player[i].name[sizeof(player[i].name) - 1] = 0;
+                safe_strncpy(player[i].name, save->pName[i], obor_profile_name_width());
+                if(obor_profile_has_player_status()) player[i].status = PLAYER_NO_STATUS;
             }
             credits = save->credits;
         }
@@ -40413,7 +40504,7 @@ int load_saved_game()
             _menutext(0, col1, -2, Tr("Saved File:"));
             if(savedStatus)
             {
-                _menutext(0, col2, -2, "%.*s", obor_profile_early_save_layout() ? 255 : MAX_BUFFER_LEN - 1, name);
+                _menutext(0, col2, -2, "%.*s", obor_profile_uses_legacy_path_sizes() ? 255 : MAX_BUFFER_LEN - 1, name);
             }
             else
             {
@@ -41063,7 +41154,7 @@ void keyboard_setup(int player)
                     sdid = translate_SDID(GET_ARG(1));
                     if(sdid >= 0)
                     {
-                        const int limit = obor_profile_uses_5134_script_ids()
+                        const int limit = obor_profile_build && obor_profile_build < 6279
                                         ? 16 : (int)sizeof(buttonnames[sdid]) - 1;
                         snprintf(buttonnames[sdid], sizeof(buttonnames[sdid]), "%.*s", limit, GET_ARG(2));
                     }
@@ -42715,7 +42806,7 @@ void menu_options_soundcard()
 
 static int startup_asset_path(char path[MAX_BUFFER_LEN], const char *folder, const char *name)
 {
-    const size_t capacity = obor_profile_uses_5134_script_ids() ? 128 : MAX_BUFFER_LEN;
+    const size_t capacity = obor_profile_uses_legacy_path_sizes() ? 128 : MAX_BUFFER_LEN;
     const int length = snprintf(path, capacity, "%s%s", folder, name);
     return length >= 0 && (size_t)length < capacity;
 }
@@ -42941,7 +43032,7 @@ void openborMain(int argc, char **argv)
                     char previousMusic[sizeof(currentmusic)];
 
                     memset(previousMusic, 0, sizeof(previousMusic));
-                    if(obor_profile_uses_5134_script_ids()) safe_strncpy(previousMusic, currentmusic, 127);
+                    if(obor_profile_uses_legacy_path_sizes()) safe_strncpy(previousMusic, currentmusic, 127);
                     else strcpy(previousMusic, currentmusic);
 
                     if(custScenes != NULL)

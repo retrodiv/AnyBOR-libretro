@@ -32,6 +32,12 @@ static u32 _time;
 static int chosen, chosen_duck, target_in_range;
 static unsigned gaps, bridges, base_calls, platform_calls;
 static float range_x, range_z, actor_height;
+static s_level stage;
+s_level *level = &stage;
+static s_terrain walls[2] = {{.height = 10}, {.height = 4}};
+static entity high_platform;
+static unsigned hole_points, wall_points, absent_platforms, raised_platforms;
+static bool has_wall, has_platform;
 
 void *checkAlloc(void *p, size_t size, const char *name, const char *file, int line)
 {
@@ -73,6 +79,46 @@ entity *check_platform_between(float x, float z, float amin, float amax, entity 
     return (bridges & (1u << platform_calls++)) ? &platform : NULL;
 }
 
+static unsigned edge_point(float x, float z)
+{
+    if(x == actor.position.x - range_x && z == actor.position.z) return 1u;
+    if(x == actor.position.x + range_x && z == actor.position.z) return 2u;
+    if(x == actor.position.x && z == actor.position.z - range_z) return 4u;
+    if(x == actor.position.x && z == actor.position.z + range_z) return 8u;
+    assert(x == actor.position.x && z == actor.position.z);
+    return 16u;
+}
+
+int checkhole_in(float x, float z, float y)
+{
+    assert(y == actor.position.y);
+    return !!(hole_points & edge_point(x, z));
+}
+
+int checkwall_index(float x, float z)
+{
+    return has_wall ? !!(wall_points & edge_point(x, z)) : -1;
+}
+
+entity *get_platform_on(entity *ent)
+{
+    assert(ent == &actor);
+    return has_platform ? &platform : NULL;
+}
+
+entity *check_platform(float x, float z, entity *exclude)
+{
+    assert(exclude == &actor);
+    const unsigned point = edge_point(x, z);
+    if(absent_platforms & point) return NULL;
+    return (raised_platforms & point) ? &high_platform : &platform;
+}
+
+float get_platform_base(entity *ent)
+{
+    return ent->base;
+}
+
 void ent_set_anim(entity *ent, int animation, int reset)
 {
     assert(ent == &actor && self == ent && reset == 0 && chosen == -1);
@@ -96,14 +142,17 @@ static void gravity_edge(void)
     self = previous;
 }
 
-static void check_model(int edge)
+static void check_model(int edge, int has_range, int victory, int defeat_spelling)
 {
-    static const char *const names[] = {"edge", "backedge", "ducking", "duckrise", "victory", "lose"};
-    const int ids[] = {ANI_EDGE, ANI_BACKEDGE, ANI_DUCKING, ANI_DUCKRISE, ANI_VICTORY, ANI_LOSE};
+    static const char *const names[] = {"edge", "backedge", "ducking", "duckrise"};
+    const int ids[] = {ANI_EDGE, ANI_BACKEDGE, ANI_DUCKING, ANI_DUCKRISE};
     for(size_t i = 0; i < sizeof(ids) / sizeof(*ids); ++i)
     {
         assert(model_animation(names[i]) == (edge ? ids[i] : -1));
     }
+    assert(model_animation("victory") == (victory ? ANI_VICTORY : -1));
+    assert(model_animation("loose") == (defeat_spelling == 1 ? ANI_LOSE : -1));
+    assert(model_animation("lose") == (defeat_spelling == 2 ? ANI_LOSE : -1));
     assert(model_animation("walkoff") == ANI_WALKOFF && model_animation("unknown") == -1);
 
     s_model storage = {.edgerange = {.x = 1, .z = 2}};
@@ -114,14 +163,14 @@ static void check_model(int edge)
     ArgList arglist = {.count = 3, .args = {command, "12.5", "6.25"}};
     List *model_commands = createModelCommandList();
     modelCommands id = getModelCommand(model_commands, command);
-    assert(id == (edge ? CMD_MODEL_EDGERANGE : 0));
+    assert(id == (has_range ? CMD_MODEL_EDGERANGE : 0));
     switch(id)
     {
         case CMD_MODEL_EDGERANGE: @DIRECTIVE@
         default: break;
     }
     freeCommandList(model_commands);
-    assert(newchar->edgerange.x == (edge ? 12.5f : 0) && newchar->edgerange.z == (edge ? 6.25f : 0));
+    assert(newchar->edgerange.x == (has_range ? 12.5f : 0) && newchar->edgerange.z == (has_range ? 6.25f : 0));
 }
 
 static void check_geometry(int edge)
@@ -163,7 +212,47 @@ static void check_geometry(int edge)
     }
 }
 
-static void check_idle(int edge)
+static void check_classic_geometry(bool directional)
+{
+    const struct {
+        unsigned hole, wall, absent, raised;
+        bool on_wall, on_platform, active, elevated;
+        e_direction direction;
+        int directional_edge, ranged_edge;
+    } cases[] = {
+        {5, 0, 0, 0, false, false, true, false, DIRECTION_LEFT, EDGE_LEFT | EDGE_RIGHT, EDGE_LEFT},
+        {1, 0, 0, 0, false, false, true, false, DIRECTION_RIGHT, EDGE_NO, EDGE_LEFT},
+        {3, 0, 0, 0, false, false, true, false, DIRECTION_RIGHT, EDGE_RIGHT, EDGE_LEFT},
+        {18, 0, 0, 0, false, false, true, false, DIRECTION_RIGHT, EDGE_NO, EDGE_NO},
+        {0, 6, 0, 0, true, false, true, false, DIRECTION_RIGHT, EDGE_LEFT | EDGE_RIGHT, EDGE_RIGHT},
+        {0, 0, 1, 2, false, true, true, false, DIRECTION_RIGHT, EDGE_RIGHT, EDGE_LEFT},
+        {0, 0, 0, 4, false, true, true, false, DIRECTION_LEFT, EDGE_LEFT | EDGE_RIGHT, EDGE_LEFT | EDGE_RIGHT},
+        {2, 0, 0, 0, false, false, false, false, DIRECTION_RIGHT, EDGE_NO, EDGE_RIGHT},
+        {2, 0, 0, 0, false, false, true, true, DIRECTION_RIGHT, EDGE_NO, EDGE_NO},
+    };
+    stage.walls = walls;
+    platform.base = 10;
+    high_platform.base = 13;
+    for(size_t i = 0; i < sizeof(cases) / sizeof(*cases); ++i)
+    {
+        hole_points = cases[i].hole;
+        wall_points = cases[i].wall;
+        absent_platforms = cases[i].absent;
+        raised_platforms = cases[i].raised;
+        has_wall = cases[i].on_wall;
+        has_platform = cases[i].on_platform;
+        range_x = directional ? 8 : 12;
+        range_z = directional ? 4 : 6;
+        actor = (entity){.animation = &idle, .position = {.x = 100, .z = 60, .y = 10 + cases[i].elevated},
+                        .modeldata.edgerange = {.x = 12, .z = 12},
+                        .base = 10, .direction = cases[i].direction, .edge = EDGE_RIGHT,
+                        .idling = cases[i].active ? IDLING_ACTIVE : IDLING_INACTIVE};
+        gravity_edge();
+        assert(actor.edge == (directional ? cases[i].directional_edge : cases[i].ranged_edge));
+    }
+}
+
+static void check_idle(int mode, int resets_ducking)
 {
     const struct { int flags, direction, rear, active, expected; } cases[] = {
         {EDGE_NO, DIRECTION_RIGHT, 1, 1, ANI_IDLE},
@@ -185,8 +274,13 @@ static void check_idle(int edge)
                         .ducking = DUCK_ACTIVE};
         chosen = -1;
         assert(common_idle_anim(&actor) && self == &caller);
-        assert(chosen == (edge ? cases[i].expected : ANI_IDLE));
-        assert(actor.ducking == (edge ? DUCK_INACTIVE : DUCK_ACTIVE));
+        int expected = mode ? cases[i].expected : ANI_IDLE;
+        if(mode == 1 && cases[i].flags)
+            expected = (cases[i].flags & EDGE_RIGHT) || !cases[i].rear ? ANI_EDGE : ANI_BACKEDGE;
+        if(mode == 2 && !cases[i].active && cases[i].flags)
+            expected = cases[i].rear ? ANI_BACKEDGE : ANI_EDGE;
+        assert(chosen == expected);
+        assert(actor.ducking == (resets_ducking ? DUCK_INACTIVE : DUCK_ACTIVE));
         assert(chosen_duck == actor.ducking);
         assert(actor.idling == (cases[i].active ? IDLING_PREPARED | 2 : 0));
     }
@@ -211,7 +305,7 @@ static void check_idle_priority(void)
     animations[ANI_SLEEP] = animations[ANI_FAINT] = NULL;
 }
 
-static void check_series(int modern)
+static void check_series(int mode, int resets_ducking)
 {
     const struct { int alternate, fallback, target, chosen, old_walk, new_walk; } cases[] = {
         {ANI_IDLE, ANI_WALK, 1, ANI_IDLE, 1, 0},
@@ -233,23 +327,29 @@ static void check_series(int modern)
         chosen = -1;
         assert(common_anim_series(&actor, options, 1, 0, cases[i].fallback));
         assert(chosen == cases[i].chosen);
-        assert(actor.walking == (modern ? cases[i].new_walk : cases[i].old_walk));
-        assert(chosen_duck == (modern ? DUCK_INACTIVE : DUCK_ACTIVE));
+        const int walks = chosen == ANI_WALK || chosen == ANI_UP || chosen == ANI_DOWN;
+        assert(actor.walking == (mode == 2 ? cases[i].new_walk : mode == 1 ? walks : cases[i].old_walk));
+        assert(chosen_duck == (resets_ducking ? DUCK_INACTIVE : DUCK_ACTIVE));
     }
     self = &caller;
 }
 
 int main(void)
 {
-    static const struct { unsigned revision; int edge; } rows[] = {@ROWS@};
+    static const struct {
+        unsigned revision;
+        int geometry, idle_mode, walking_mode, resets_ducking, victory, defeat_spelling;
+    } rows[] = {@ROWS@};
     for(size_t i = 0; i < sizeof(rows) / sizeof(*rows); ++i)
     {
         obor_profile_build = rows[i].revision;
-        check_model(rows[i].edge);
-        check_geometry(rows[i].edge);
-        check_idle(rows[i].edge);
+        const int geometry = rows[i].geometry;
+        check_model(geometry != 0, geometry >= 2, rows[i].victory, rows[i].defeat_spelling);
+        if(geometry == 1 || geometry == 2) check_classic_geometry(geometry == 1);
+        else check_geometry(geometry == 3);
+        check_idle(rows[i].idle_mode, rows[i].resets_ducking);
         check_idle_priority();
-        check_series(rows[i].edge);
+        check_series(rows[i].walking_mode, rows[i].resets_ducking);
         printf("%u\n", rows[i].revision);
     }
     return 0;

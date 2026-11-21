@@ -283,6 +283,8 @@ int main(void)
         compare_valid("score",MAX_PLAYERS-1,0,1,0,0,0);
 #elif defined(PLAYER_PROPERTY_HISTORY)
         check_history(c);
+#elif defined(PLAYER_STATUS_CONTRACT)
+        check_player_status(c);
 #elif defined(NAME_CAPACITY_CONTRACT)
         check_name_capacity(expected_name_limits[c]);
 #else

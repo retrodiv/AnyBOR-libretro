@@ -7,9 +7,12 @@
 #include <string.h>
 #include <strings.h>
 #include "scriptcommon.h"
+#include "profile_ids.h"
 #undef assert
 #undef printf
 #include <assert.h>
+
+_Static_assert(sizeof(LONG) == sizeof(int) && (LONG)-1 < 0, "Original signed axis input type");
 #ifndef stricmp
 #define stricmp strcasecmp
 #endif

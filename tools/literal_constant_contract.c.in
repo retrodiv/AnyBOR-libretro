@@ -21,6 +21,7 @@
 uint32_t obor_profile_build, obor_profile_features;
 @RUNTIME_GLOBALS@
 static int dynamic_animations[64];
+static int reaction_animations[sizeof(dynamic_animations) / sizeof(*dynamic_animations)];
 @ANIMATION_TABLES@
 
 void *checkAlloc(void *ptr, size_t size, const char *function, const char *file, int line)
@@ -41,7 +42,7 @@ s_level *level = &scene;
 #pragma GCC diagnostic pop
 @BACKGROUND_SPEED_METHODS@
 
-static const struct literal_case { const char *name; unsigned accepted; LONG values[3]; } cases[] = {@CASES@};
+static const struct literal_case { const char *name; unsigned accepted; LONG values[@TABLE_COUNT@]; } cases[] = {@CASES@};
 
 static void check_constant(const struct literal_case *item, unsigned table)
 {
@@ -165,18 +166,28 @@ static void check_level_background_speeds(int legacy)
 
 int main(void)
 {
-    static const struct { unsigned revision, table; int legacy_background_speed; } rows[] = {@ROWS@};
+    static const struct { unsigned revision, table; } rows[] = {@ROWS@};
+    static const struct { unsigned revision; int legacy; } backgrounds[] = {@BACKGROUND_ROWS@{0, 0}};
     for(size_t i = 0; i < sizeof(dynamic_animations) / sizeof(*dynamic_animations); ++i)
         dynamic_animations[i] = MAX_ANIS + (int)i;
     StrCache_Init();
     for(size_t i = 0; i < sizeof(rows) / sizeof(*rows); ++i)
     {
         obor_profile_build = rows[i].revision;
+        for(int slot = 0; slot < max_attack_types; ++slot)
+            reaction_animations[slot] = MAX_ANIS + obor_attack_to_native(slot);
         for(size_t j = 0; j < sizeof(cases) / sizeof(*cases); ++j)
             check_constant(&cases[j], rows[i].table);
-        check_level_properties(rows[i].table);
-        check_level_background_speeds(rows[i].legacy_background_speed);
+        if(@CHECK_LEVELS@)
+        {
+            check_level_properties(rows[i].table);
+        }
         printf("PASS %u\n", rows[i].revision);
+    }
+    for(size_t i = 0; backgrounds[i].revision; ++i)
+    {
+        obor_profile_build = backgrounds[i].revision;
+        check_level_background_speeds(backgrounds[i].legacy);
     }
     StrCache_Clear();
     return 0;

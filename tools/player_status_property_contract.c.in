@@ -1,0 +1,46 @@
+/* SPDX-License-Identifier: BSD-3-Clause
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me>
+ */
+static void check_player_status(unsigned row)
+{
+    static const struct { int status, weapnum, weapon; } ordinals[] = {@ROWS@};
+    const int status = ordinals[row].status;
+    for(int named = 0; named <= 1; ++named)
+    {
+        reset(named);
+        ScriptVariant slot = integer(0), value = integer(3), result = {0}, *returned = &result;
+        ScriptVariant property = named || status < 0 ? text("STATUS") : integer(status);
+        ScriptVariant *arguments[] = {&slot, &property, &value};
+        HRESULT expected = status >= 0 ? S_OK : E_FAIL;
+        assert(openbor_changeplayerproperty(arguments, &returned, 3) == expected && !returned);
+        assert(player[0].status == (status >= 0 ? 3 : 0));
+        property = named || status < 0 ? text("status") : integer(status);
+        returned = &result;
+        assert(openbor_getplayerproperty(arguments, &returned, 2) == expected);
+        if(status >= 0)
+        {
+            assert(property.vt == VT_INTEGER && property.lVal == status);
+            assert(returned && returned->vt == VT_INTEGER && returned->lVal == 3);
+        }
+        else
+        {
+            assert(!returned && property.vt == VT_STR);
+        }
+        ++cases;
+
+        reset(1);
+        property = named ? text("weapnum") : integer(ordinals[row].weapnum);
+        returned = &result;
+        assert(openbor_changeplayerproperty(arguments, &returned, 3) == S_OK);
+        assert(property.vt == VT_INTEGER && property.lVal == ordinals[row].weapnum);
+        assert(player[0].weapnum == 3 && !player[0].status);
+        returned = &result;
+        assert(openbor_getplayerproperty(arguments, &returned, 2) == S_OK);
+        assert(returned && returned->vt == VT_INTEGER && returned->lVal == 3);
+        property = named ? text("weapon") : integer(ordinals[row].weapon);
+        assert(openbor_changeplayerproperty(arguments, &returned, 3) == S_OK);
+        assert(property.vt == VT_INTEGER && property.lVal == ordinals[row].weapon);
+        assert(weapon_calls == 1 && weapon_number == 3 && !player[0].status);
+        ++cases;
+    }
+}

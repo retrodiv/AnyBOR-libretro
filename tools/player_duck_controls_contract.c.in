@@ -89,6 +89,7 @@ static void reset_player(int posture, int keys, int lanes)
         .modeldata = {.animation = animations, .animation_capacity = MAX_ANIS, .speed = 6, .runspeed = 10},
         .velocity = {.x = 3, .z = 4},
         .idling = IDLING_ACTIVE,
+        .edge = EDGE_RIGHT,
         .ducking = posture,
         .running = 1,
         .direction = DIRECTION_RIGHT,
@@ -100,7 +101,7 @@ static void reset_player(int posture, int keys, int lanes)
     two_lanes = lanes;
 }
 
-static void check(unsigned revision, int stateful)
+static void check(unsigned revision, int records_ducking, int stateful, int clears_edge)
 {
     obor_profile_build = revision;
     const int postures[] = {DUCK_INACTIVE, DUCK_PREPARED, DUCK_ACTIVE, DUCK_RISE};
@@ -136,7 +137,7 @@ static void check(unsigned revision, int stateful)
                     {
                         assert(animation == ANI_DUCK && !subject.velocity.x && !subject.velocity.z);
                         assert(subject.running == !stateful);
-                        assert(subject.ducking == (stateful ? DUCK_ACTIVE : posture));
+                        assert(subject.ducking == (records_ducking ? DUCK_ACTIVE : posture));
                         assert(subject.idling == (stateful ? IDLING_ACTIVE | IDLING_PREPARED : IDLING_ACTIVE));
                     }
                     else if(moves)
@@ -164,12 +165,14 @@ static void check(unsigned revision, int stateful)
     animations[ANI_DUCK] = animations[ANI_DUCKING] = &clip;
     assert(duck_movement(&controls, 1) == -1 && calls == 1);
     assert(animation == (stateful ? ANI_DUCKING : ANI_DUCK));
-    assert(subject.ducking == (stateful ? DUCK_PREPARED : DUCK_INACTIVE));
+    assert(subject.ducking == (stateful ? DUCK_PREPARED : records_ducking ? DUCK_ACTIVE : DUCK_INACTIVE));
     assert(subject.takeaction == (stateful ? common_preduck : NULL));
+    assert(subject.edge == (clears_edge ? EDGE_NO : EDGE_RIGHT));
 
     reset_player(DUCK_ACTIVE, 0, 0);
     animations[ANI_DUCKRISE] = &clip;
     assert(duck_release(&controls) == stateful && calls == stateful);
+    assert(subject.edge == (clears_edge ? EDGE_NO : EDGE_RIGHT));
     if(stateful)
     {
         assert(animation == ANI_DUCKRISE && subject.ducking == DUCK_RISE);
@@ -177,6 +180,7 @@ static void check(unsigned revision, int stateful)
     }
     reset_player(DUCK_ACTIVE, 0, 0);
     assert(duck_release(&controls) == stateful && idle_calls == stateful && !calls);
+    assert(subject.edge == (clears_edge ? EDGE_NO : EDGE_RIGHT));
     printf("PASS %u\n", revision);
 }
 

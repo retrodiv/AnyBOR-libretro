@@ -75,6 +75,8 @@ def palette_selection_program(data, rows, engine):
         methods = ('nextcolourmap', 'prevcolourmap', 'nextcolourmapn', 'prevcolourmapn')
         if 'obor_select_colourmap(' in source:
             methods = methods[:2] + ('obor_select_colourmap',) + methods[2:]
+        if 'obor_initial_colourmap(' in source:
+            methods += ('obor_initial_colourmap',)
         flag = r'player\[i\]\.colourmap = \(colourselect && \(set->nosame & 2\)\)\s*\?[^;]+;'
         horizontal, _, join = re.findall(flag, status)
         preview, = re.findall(flag, preview)
@@ -127,11 +129,14 @@ class ForwardSelectionTests(unittest.TestCase):
     def test_6391_selection_palette(self):
         self.check_selection_palette('6391')
 
-    def check_selection_cycling(self, engine_id):
-        data = load_contract_fixture(CYCLING) | {'engine': engine_id}
+    def check_selection_cycling(self, engine_id, fixture=CYCLING):
+        data = load_contract_fixture(fixture) | {'engine': engine_id}
         rows = [row for row in data['sources'] if row['engine'] == engine_id]
         revisions = [row['revision'] for row in rows]
-        self.assertEqual(revisions, sorted(contract_revisions(data, data['expected_revisions'][engine_id])))
+        expected = data['expected_revisions']
+        if isinstance(expected, dict):
+            expected = expected[engine_id]
+        self.assertEqual(revisions, sorted(contract_revisions(data, expected)))
         engine = Path(os.environ.get('OBOR_SELECTION_ENGINE', ROOT / 'src/engines' / engine_id))
         source = (engine / 'openbor.c').read_text(encoding='latin-1')
         methods = ('nextplayermodel', 'prevplayermodel', 'nextplayermodeln', 'prevplayermodeln')
@@ -159,6 +164,9 @@ class ForwardSelectionTests(unittest.TestCase):
 
     def test_6391_selection_cycling(self):
         self.check_selection_cycling('6391')
+
+    def test_6391_original_roster_cycling(self):
+        self.check_selection_cycling('6391', CYCLING.with_name('profile-6391-roster-cycling.json'))
 
     def test_native_roster_join_preview_palette_and_credit_rows(self):
         data = load_contract_fixture(FIXTURE)

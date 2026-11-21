@@ -13,6 +13,14 @@
 
 uint32_t obor_profile_build, obor_profile_features;
 static entity subject, sides[2];
+static entity *tracked[] = {&subject, &sides[0], &sides[1]};
+entity **ent_list = tracked;
+entity *self;
+int ent_max = sizeof(tracked) / sizeof(*tracked);
+enum { SWEEP_CUSTOM_LIMIT = MAX_ATKS + 5 };
+int max_attack_types = SWEEP_CUSTOM_LIMIT;
+const s_collision_attack emptyattack = {0};
+s_axis_principal_float default_model_dropv = {.x = 1, .y = 2, .z = 3};
 static Script local_script, global_script;
 static s_scripts owned_scripts, shared_scripts;
 s_scripts *global_model_scripts = &shared_scripts;
@@ -27,9 +35,20 @@ static const char *participant;
 static entity *counterpart;
 static int installed, cleared, executions, enabled = 1;
 static int native_timeover, attack_number, wants_global;
+static int sweep_calls, sweep_attack;
 
 void StrCache_Collect(int index) { abort(); }
 @VARIANTS@
+
+static int capture_enemy_clear(entity *other, s_collision_attack *attack, int fall)
+{
+    assert(self == &sides[0] && other == &subject && fall == 0);
+    assert(attack->attack_force == 60);
+    assert(attack->dropv.x == 1 && attack->dropv.y == 2 && attack->dropv.z == 3);
+    ++sweep_calls;
+    sweep_attack = attack->attack_type;
+    return 0;
+}
 
 static size_t key_index(const char *key)
 {
@@ -191,14 +210,30 @@ static void check_callbacks(void)
     assert(executions == 1 && cleared == 10);
 }
 
+static void check_enemy_clear(int expected_attack)
+{
+    subject = (entity){.exists = 1, .modeldata.type = TYPE_PLAYER,
+                       .energy_status.health_current = 40, .takedamage = capture_enemy_clear};
+    sides[0] = (entity){.exists = 1, .modeldata.type = TYPE_ENEMY,
+                        .energy_status.health_current = 60, .takedamage = capture_enemy_clear};
+    sides[1] = (entity){.exists = 1, .modeldata.type = TYPE_ENEMY};
+    self = &subject;
+    sweep_calls = 0;
+    kill_all_enemies();
+    assert(sweep_calls == 1 && sweep_attack == expected_attack);
+    assert(self == &subject && sides[0].dead && !sides[1].dead && !subject.dead);
+}
+
 int main(void)
 {
-    const struct { unsigned revision; const char *name; int timeover, falling_rule; } rows[] = {@PROFILES@};
+    const struct { unsigned revision; const char *name; int timeover, falling_rule, sweep_attack; } rows[] = {@PROFILES@};
     for(size_t i = 0; i < sizeof(rows) / sizeof(*rows); ++i)
     {
         obor_profile_build = rows[i].revision;
         participant = rows[i].name;
         native_timeover = rows[i].timeover;
+        subject = (entity){0};
+        memset(sides, 0, sizeof(sides));
         memset(locals, 0, sizeof(locals));
         check_callbacks();
         s_collision_attack attack = {.jugglecost = 2};
@@ -214,6 +249,7 @@ int main(void)
             target.modeldata.jugglepoints.current = 2;
             check_hit_gate(&target, &attack, 0);
         }
+        check_enemy_clear(rows[i].sweep_attack);
         printf("%u\n", obor_profile_build);
     }
     return 0;

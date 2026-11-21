@@ -1035,13 +1035,17 @@ HRESULT openbor_set_level_property(ScriptVariant **varlist, ScriptVariant **pret
             break;
 
         case LEVEL_PROP_BOSS_MUSIC_NAME:
+        {
+            const size_t capacity = obor_profile_uses_legacy_path_sizes() ? 256 : sizeof(handle->bossmusic);
+            const char *text = arg_value->vt == VT_STR ? StrCache_GetIfPresent(arg_value->strVal) : NULL;
 
-            if(arg_value->vt != VT_STR)
+            if(!text || strlen(text) >= capacity)
             {
                 goto error_local;
             }
-            strcpy(handle->bossmusic, (char *)StrCache_Get(arg_value->strVal));
+            memcpy(handle->bossmusic, text, strlen(text) + 1);
             break;
+        }
 
         case LEVEL_PROP_BOSS_MUSIC_OFFSET:
 
@@ -1839,7 +1843,7 @@ HRESULT openbor_getlevelproperty(ScriptVariant **varlist , ScriptVariant **pretv
     case _lp_vbgspeed:
     {
         const DOUBLE speed = varlist[0]->lVal == _lp_bgspeed ? level->bgspeed : level->vbgspeed;
-        const int legacy = obor_profile_build == 5134 || obor_profile_build == 6119 || obor_profile_build == 6330;
+        const bool legacy = obor_profile_build && obor_profile_build < 6380;
         LONG integer;
 
         if(legacy)

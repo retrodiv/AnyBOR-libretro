@@ -22,6 +22,7 @@ RECOVERY_FIXTURE = FIXTURE.with_name('profile-rise-pain-and-grab.json')
 ID_RESET_FIXTURE = FIXTURE.with_name('profile-attack-id-resets.json')
 GRAB_FINISH_FIXTURE = FIXTURE.with_name('profile-grab-finisher.json')
 FOLLOW_ANIMATION_FIXTURE = FIXTURE.with_name('profile-follow-animation-storage.json')
+WALK_DIRECTION_FIXTURE = FIXTURE.with_name('profile-walk-animation-direction.json')
 GROUPS = ('counter', 'contact', 'follow')
 
 
@@ -157,6 +158,13 @@ def recovery_program(data, engine):
     grab_geometry = ['diff', 'adjust_grabposition']
     if 'static int obor_lns_adjust_grabposition(' in source:
         grab_geometry.insert(1, 'obor_lns_adjust_grabposition')
+    recovery_fields = (
+        'revision', 'front_only', 'has_rising', 'has_riseattacking', 'rise_clears_backpain',
+        'riseattack_clears_pain', 'riseattack_clears_edge', 'riseattack_clears_ducking',
+        'pain_clears_rising', 'grabbed_pain_clears_rising', 'pain_clears_riseattacking',
+        'pain_clears_edge', 'pain_clears_ducking', 'landing_clears_edge', 'landing_clears_ducking',
+        'grab_clears_backpain', 'grab_clears_edge', 'grab_clears_ducking',
+    )
     parts = {
         'METHODS': '\n'.join(function(source, name) for name in ('set_rise', 'set_riseattack', 'set_pain')),
         'PAIN_FLAGS': continued_macro(source, 'painflags') if data['engine'] == '4432' else '',
@@ -168,7 +176,8 @@ def recovery_program(data, engine):
         'GRAB_DIRECTIVE': grab_directive,
         'GRAB_GEOMETRY': '\n'.join(function(source, name) for name in grab_geometry),
         'CHECK_GRAB': function(source, 'checkgrab'),
-        'PROFILES': ','.join('{%du,%d}' % (row['revision'], row['front_only']) for row in data['sources']),
+        'PROFILES': ',\n'.join('{' + ', '.join(f'.{field} = {row[field]}' for field in recovery_fields) + '}'
+                               for row in data['sources']),
     }
     template = Path(__file__).with_name('rise_pain_and_grab_contract.c.in').read_text()
     return re.sub(r'@([A-Z_]+)@', lambda token: parts[token[1]], template)
@@ -212,8 +221,9 @@ def grab_finish_program(rows, engine_id, engine):
 
 class HistoricalAttackRuleTests(unittest.TestCase):
     def check_walk_animation_direction(self, physical):
-        data = load_contract_fixture(FOLLOW_ANIMATION_FIXTURE)
-        revisions = [row['revision'] for row in data['sources'] if row['engine'] == physical]
+        data = load_contract_fixture(WALK_DIRECTION_FIXTURE)
+        rows = [row for row in data['sources'] if row['engine'] == physical]
+        revisions = [row['revision'] for row in rows]
         self.assertEqual(revisions, sorted(contract_revisions(data, data['expected_revisions'][physical])))
         engine = Path(os.environ.get('OBOR_HISTORICAL_ENGINE', ROOT / 'src/engines' / physical))
         core = (engine / 'openbor.c').read_text(encoding='latin-1')
@@ -232,7 +242,8 @@ class HistoricalAttackRuleTests(unittest.TestCase):
             'INTEGER_VALUE': '',
             'TYPED_READ_CASES': '',
             'TYPED_WRITE_CASES': '',
-            'ROWS': ','.join(f'{revision}u' for revision in revisions),
+            'ROWS': ',\n'.join(f"{{{row['revision']}u, {int(row['boolean_direction'])}}}"
+                              for row in rows),
         }
         if physical != '4432':
             typed = (engine / 'source/openborscript/entity.c').read_text(encoding='latin-1')

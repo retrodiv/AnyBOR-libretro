@@ -140,9 +140,11 @@ static void compare_file(FILE *file, const void *reference, size_t bytes)
     strcpy((record).selectSkipSelect, "skipselect Player Companion"); \
 } while(0)
 
-#define CHECK_RECORDS(revision) do { \
-    static s_savelevel_##revision expected[2]; \
-    static s_savescore_##revision scores; \
+#define CHECK_RECORDS(revision, layout) do { \
+    static s_savelevel_##layout expected[2]; \
+    static s_savescore_##layout scores; \
+    memset(expected, 0, sizeof(expected)); \
+    memset(&scores, 0, sizeof(scores)); \
     obor_profile_build = revision; \
     assert(obor_profile_savelevel_size() == sizeof(expected[0])); \
     memset(progress, 0, sizeof(progress)); \
@@ -154,6 +156,9 @@ static void compare_file(FILE *file, const void *reference, size_t bytes)
         memset(expected[row].selectMusic, 'T', final_character + 1); \
         memset(progress[row].selectMusic, 'T', final_character + 1); \
     } \
+    const size_t character_name_length = sizeof(expected[1].pName[0]) - 1; \
+    memset(expected[1].pName[0], 'P', character_name_length); \
+    memset(progress[1].pName[0], 'P', character_name_length); \
     if(sizeof(expected[1].dName) > MAX_NAME_LEN) \
     { \
         memset(expected[1].dName, 'D', sizeof(expected[1].dName)); \
@@ -166,6 +171,7 @@ static void compare_file(FILE *file, const void *reference, size_t bytes)
     assert(obor_profile_savelevels_io(output, progress, 2, 0) == 2); \
     fclose(output); \
     assert(strcmp(progress[1].pName[3], expected[1].pName[3]) == 0); \
+    assert(memcmp(progress[1].pName[0], expected[1].pName[0], character_name_length) == 0); \
     assert(strcmp(progress[1].selectMusic, expected[1].selectMusic) == 0); \
     assert(memcmp(progress[1].dName, expected[1].dName, sizeof(expected[1].dName)) == 0); \
     assert(progress[1].dName[sizeof(expected[1].dName)] == '\0'); \
@@ -180,18 +186,28 @@ static void compare_file(FILE *file, const void *reference, size_t bytes)
     { \
         savescore.highsc[row] = scores.highsc[row] = 1000 - 10 * row; \
         snprintf(scores.hscoren[row], sizeof(scores.hscoren[row]), "Player %zu", row + 1); \
-        strcpy(savescore.hscoren[row], scores.hscoren[row]); \
+        memset(obor_profile_score_name(row), 0, sizeof(scores.hscoren[row])); \
+        strcpy(obor_profile_score_name(row), scores.hscoren[row]); \
     } \
+    const size_t score_name_length = sizeof(scores.hscoren[0]) - 1; \
+    memset(scores.hscoren[0], 'S', score_name_length); \
+    memset(obor_profile_score_name(0), 'S', score_name_length); \
+    scores.hscoren[0][score_name_length] = '\0'; \
     selected_score = tmpfile(); \
     assert(selected_score && saveHighScoreFile() == 1); \
     compare_file(selected_score, &scores, sizeof(scores)); \
+    for(size_t row = 0; row < 10; ++row) \
+        memset(obor_profile_score_name(row), 0, sizeof(scores.hscoren[row])); \
     memset(&savescore, 0, sizeof(savescore)); \
     assert(loadHighScoreFile() == 1); \
     assert(memcmp(savescore.highsc, scores.highsc, sizeof(scores.highsc)) == 0); \
-    for(size_t row = 0; row < 10; ++row) \
-        assert(strcmp(savescore.hscoren[row], scores.hscoren[row]) == 0); \
+    assert(strcmp(obor_profile_score_name(0), scores.hscoren[0]) == 0); \
+    for(size_t row = 1; row < 10; ++row) \
+        assert(strcmp(obor_profile_score_name(row), scores.hscoren[row]) == 0); \
     fclose(selected_score); \
 } while(0)
+
+@LAYOUT_CHECKS@
 
 int main(void)
 {

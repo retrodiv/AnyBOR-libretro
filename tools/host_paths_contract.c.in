@@ -16,7 +16,7 @@ typedef struct { int unused; } s_screen;
 typedef struct { int unused; } DIR;
 static DIR handle;
 static uint32_t obor_profile_build;
-static char packfile[MAX_FILENAME_LEN], checked_name[1024];
+static char packfile[OBOR_CONTENT_PATH_MAX], checked_name[1024];
 static unsigned probes, encoded, reported, collisions, created;
 static const char *expected_directory;
 static int directory_present, create_result;
@@ -108,6 +108,22 @@ static void take(unsigned existing, int ingame)
     screenshot(&image, &palette, ingame);
 }
 
+static void check_archive_output_names(void)
+{
+    const char *sources[] = {"Story.pak", "content/Games/Story.pak", "content\\Games\\Story.pak"};
+    const char *names[] = {"Story", "Story.sav", "Story.hi", "Story.scr", "Story.inp", "Story.cfg"};
+    char name[MAX_FILENAME_LEN];
+    for(size_t i = 0; i < sizeof(sources) / sizeof(*sources); ++i)
+    {
+        strcpy(packfile, sources[i]);
+        for(int type = -1; type <= 4; ++type)
+        {
+            getPakName(name, sizeof(name), type);
+            assert(!strcmp(name, names[type + 1]));
+        }
+    }
+}
+
 static void check_screenshots(size_t capacity, size_t stem_capacity)
 {
     strcpy(packfile, "Example.pak");
@@ -123,19 +139,16 @@ static void check_screenshots(size_t capacity, size_t stem_capacity)
 
     const size_t decoration = sizeof("./ScreenShots/ - 0000.png") - 1;
     const size_t longest_path = capacity - decoration - 1;
-    size_t length = stem_capacity - sizeof(".pak");
+    size_t length = stem_capacity - 1;
     if(length > longest_path) length = longest_path;
     memset(packfile, 'A', length + 1);
     memcpy(packfile + length, ".pak", sizeof(".pak"));
     take(0, 0);
     assert(probes == 1 && encoded == 1 && strlen(checked_name) == decoration + length);
-    if(length == longest_path)
-    {
-        packfile[length++] = 'A';
-        memcpy(packfile + length, ".pak", sizeof(".pak"));
-        take(0, 1);
-        assert(!probes && !encoded && reported == 1);
-    }
+    packfile[length++] = 'A';
+    memcpy(packfile + length, ".pak", sizeof(".pak"));
+    take(0, 1);
+    assert(!probes && !encoded && reported == 1);
 }
 
 int main(void)
@@ -145,6 +158,7 @@ int main(void)
     {
         obor_profile_build = profiles[i].revision;
         check_directories();
+        check_archive_output_names();
         check_screenshots(profiles[i].screenshot, profiles[i].stem);
         printf("PASS %u\n", obor_profile_build);
     }

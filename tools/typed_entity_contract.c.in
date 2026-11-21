@@ -95,7 +95,16 @@ static ScriptVariant call(SCRIPTFUNCTION function, void *record, LONG ordinal, S
 
 typedef struct { const char *name; e_entity_properties physical; bool named; } selector_entry;
 static const selector_entry historical[] = {@HISTORICAL@};
+static const selector_entry with_loop[] = {@WITH_LOOP@};
 static const selector_entry control[] = {@CONTROL@};
+
+typedef enum { SCALAR_POSITIONS, COORDINATES_WITH_LOOP, COORDINATES } entity_selector_table;
+
+static const struct { const selector_entry *entries; size_t size; } tables[] = {
+    [SCALAR_POSITIONS] = {historical, sizeof(historical) / sizeof(*historical)},
+    [COORDINATES_WITH_LOOP] = {with_loop, sizeof(with_loop) / sizeof(*with_loop)},
+    [COORDINATES] = {control, sizeof(control) / sizeof(*control)},
+};
 
 static void check_mapping(SCRIPTFUNCTION getter, SCRIPTFUNCTION setter,
                           const selector_entry *table, size_t size)
@@ -233,9 +242,10 @@ static void check_entity_state(SCRIPTFUNCTION getter, SCRIPTFUNCTION setter,
     }
 }
 
-static void check_profile(unsigned revision, bool old)
+static void check_profile(unsigned revision, entity_selector_table table)
 {
     obor_profile_build = revision;
+    const bool old = table == SCALAR_POSITIONS;
     actor = (entity){.boomerang_loop = 7, .altbase = 1.5f, .base = 2.25f,
                      .position = {.x = 3.25f, .y = -4.5f, .z = 5.75f},
                      .attacking = ATTACKING_PREPARED, .attack_id_incoming = 24,
@@ -244,6 +254,7 @@ static void check_profile(unsigned revision, bool old)
     SCRIPTFUNCTION getter = lookup("get_entity_property");
     SCRIPTFUNCTION setter = lookup("set_entity_property");
     assert(getter == openbor_get_entity_property && setter == openbor_set_entity_property);
+    check_mapping(getter, setter, tables[table].entries, tables[table].size);
     assert(strcmp(reverse_lookup((void *)getter), "get_entity_property") == 0);
     assert(strcmp(reverse_lookup((void *)setter), "set_entity_property") == 0);
     LONG landing_ordinal = selector(getter, "damage_on_landing");
@@ -255,21 +266,14 @@ static void check_profile(unsigned revision, bool old)
     assert(actor.damage_on_landing.attack_force == 0);
     if(old)
     {
-        check_mapping(getter, setter, historical, sizeof(historical) / sizeof(*historical));
         check_scalar(getter, setter, "position_alternate_base", &actor.altbase, 8.125f);
         check_scalar(getter, setter, "position_base", &actor.base, -2.375f);
         check_scalar(getter, setter, "position_x", &actor.position.x, -5.25f);
         check_scalar(getter, setter, "position_y", &actor.position.y, 1.75f);
         check_scalar(getter, setter, "position_z", &actor.position.z, 9.5f);
-        ScriptVariant result = call(getter, &actor, 13, NULL);
-        assert(result.vt == VT_INTEGER && result.lVal == 7);
-        ScriptVariant input = {.vt = VT_DECIMAL, .dblVal = 18.75};
-        call(setter, &actor, 13, &input);
-        assert(actor.boomerang_loop == 18);
     }
     else
     {
-        check_mapping(getter, setter, control, sizeof(control) / sizeof(*control));
         check_scalar(getter, setter, "position_base_alternate", &actor.altbase, 8.125f);
         check_scalar(getter, setter, "position_base_default", &actor.base, -2.375f);
         LONG ordinal = selector(getter, "position_coordinates");
@@ -279,6 +283,18 @@ static void check_profile(unsigned revision, bool old)
         call(setter, &actor, ordinal, &input);
         assert(actor.position.x == 3.25f && actor.position.y == -4.5f && actor.position.z == 5.75f);
     }
+    if(table != COORDINATES)
+    {
+        LONG ordinal = selector(getter, "boomerang_loop");
+        assert(ordinal == 13);
+        ScriptVariant result = call(getter, &actor, ordinal, NULL);
+        assert(result.vt == VT_INTEGER && result.lVal == 7);
+        ScriptVariant input = {.vt = VT_DECIMAL, .dblVal = 18.75};
+        call(setter, &actor, ordinal, &input);
+        assert(actor.boomerang_loop == 18);
+    }
+    else
+        assert(selector(getter, "boomerang_loop") == -1);
     LONG direction = selector(getter, "position_direction");
     actor.direction = DIRECTION_RIGHT;
     ScriptVariant current = call(getter, &actor, direction, NULL);
@@ -286,7 +302,8 @@ static void check_profile(unsigned revision, bool old)
     ScriptVariant left = {.vt = VT_INTEGER, .lVal = DIRECTION_LEFT};
     call(setter, &actor, direction, &left);
     assert(actor.direction == DIRECTION_LEFT);
-    check_animation(getter, setter, old);
+    if(old || revision == 6391)
+        check_animation(getter, setter, old);
     ScriptVariant incoming = {.vt = VT_INTEGER, .lVal = 39};
     call(setter, &actor, 7, &incoming);
     current = call(getter, &actor, 7, NULL);
@@ -298,21 +315,18 @@ static void check_profile(unsigned revision, bool old)
     assert(actor.spawntype == SPAWN_TYPE_LEVEL && current.vt == VT_INTEGER && current.lVal == SPAWN_TYPE_LEVEL);
     check_projectile_requests(getter, setter, old);
     check_energy_callbacks(getter, setter);
-    if(old)
-        check_entity_state(getter, setter, historical, sizeof(historical) / sizeof(*historical));
-    else
-        check_entity_state(getter, setter, control, sizeof(control) / sizeof(*control));
+    check_entity_state(getter, setter, tables[table].entries, tables[table].size);
     printf("PASS %u\n", revision);
 }
 
 int main(void)
 {
-    const struct { unsigned revision; bool old; } rows[] = {@REVISIONS@};
+    const struct { unsigned revision; entity_selector_table table; } rows[] = {@REVISIONS@};
     load_properties();
     assert(registered == 4);
     StrCache_Init();
     for(size_t i = 0; i < sizeof(rows) / sizeof(*rows); ++i)
-        check_profile(rows[i].revision, rows[i].old);
+        check_profile(rows[i].revision, rows[i].table);
     StrCache_Clear();
     return 0;
 }

@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.2.49
+
+- Add 17 selectable OpenBOR profiles from v3.0 6175 through v3.0 6390, including v3.0 6301-dev.
+- Preserve the original script, animation, projectile, controller and save behavior for each profile.
+
 ## 0.2.42
 
 - Added selectable OpenBOR profiles v3.0 4905, v3.0 5134 and v3.0 6119.

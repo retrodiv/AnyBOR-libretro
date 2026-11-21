@@ -1,7 +1,7 @@
 {
   "core_name": "AnyBOR",
   "core_basename": "anybor_libretro",
-  "version": "0.2.48",
+  "version": "0.2.49",
   "fallback_build": "6391",
   "profiles": [
     {
@@ -3598,9 +3598,176 @@
       "covers": "5135-6119 automatically; exact filename tag or core option"
     },
     {
+      "build": "6175",
+      "engine": "6391",
+      "major": "v3.0",
+      "automatic": true,
+      "tagged": true,
+      "upstream_commit": "fde195a9f77f7a9dfd9c453911452a8da024b916",
+      "upstream_date": "2018-05-22",
+      "upstream_branch": "official package Build 6175",
+      "covers": "6120-6175 automatically; exact filename tag or core option"
+    },
+    {
+      "build": "6196",
+      "engine": "6391",
+      "major": "v3.0",
+      "automatic": true,
+      "tagged": true,
+      "upstream_commit": "46be35bf6de8447a86c0f2c7cc41f396639efc46",
+      "upstream_date": "2018-06-03",
+      "upstream_branch": "official package Build 6196",
+      "covers": "6176-6196 automatically; exact filename tag or core option"
+    },
+    {
+      "build": "6203",
+      "engine": "6391",
+      "major": "v3.0",
+      "automatic": true,
+      "tagged": true,
+      "upstream_commit": "76cb652d08822dcf84e61f9711e9bef36f6f43b1",
+      "upstream_date": "2018-06-06",
+      "upstream_branch": "official package Build 6203",
+      "covers": "6197-6203 automatically; exact filename tag or core option"
+    },
+    {
+      "build": "6212",
+      "engine": "6391",
+      "major": "v3.0",
+      "automatic": true,
+      "tagged": true,
+      "upstream_commit": "5e7cfcd4b2c6bf443f13218ead89c5266a8aebaa",
+      "upstream_date": "2018-06-19",
+      "upstream_branch": "official package Build 6212",
+      "covers": "6204-6212 automatically; exact filename tag or core option"
+    },
+    {
+      "build": "6223",
+      "engine": "6391",
+      "major": "v3.0",
+      "automatic": true,
+      "tagged": true,
+      "upstream_commit": "2ada9fc9db85e378c33ecd55b09b9846e99bcf85",
+      "upstream_date": "2018-06-30",
+      "upstream_branch": "official package Build 6223",
+      "covers": "6213-6223 automatically; exact filename tag or core option"
+    },
+    {
+      "build": "6240",
+      "engine": "6391",
+      "major": "v3.0",
+      "automatic": true,
+      "tagged": true,
+      "upstream_commit": "f3c98eeedcc2d6810232ea9d8fb69dc9056c9554",
+      "upstream_date": "2018-07-03",
+      "upstream_branch": "official package Build 6240",
+      "covers": "6224-6240 automatically; exact filename tag or core option"
+    },
+    {
+      "build": "6245",
+      "engine": "6391",
+      "major": "v3.0",
+      "automatic": true,
+      "tagged": true,
+      "upstream_commit": "7a5f0b7c0d0d914ec81f91981fdd04de5a2df5a9",
+      "upstream_date": "2018-07-03",
+      "upstream_branch": "official package Build 6245",
+      "covers": "6241-6245 automatically; exact filename tag or core option"
+    },
+    {
+      "build": "6258",
+      "engine": "6391",
+      "major": "v3.0",
+      "automatic": true,
+      "tagged": true,
+      "upstream_commit": "691299b6eb41052d8b755cf8c6d03e0bd7d75e64",
+      "upstream_date": "2018-07-05",
+      "upstream_branch": "official package Build 6258",
+      "covers": "6246-6258 automatically; exact filename tag or core option"
+    },
+    {
+      "build": "6271",
+      "engine": "6391",
+      "major": "v3.0",
+      "automatic": true,
+      "tagged": true,
+      "upstream_commit": "9da1ba9a5c1f6b401f09669a6b7aceee853e5c95",
+      "upstream_date": "2018-07-08",
+      "upstream_branch": "official package Build 6271",
+      "covers": "6259-6271 automatically; exact filename tag or core option"
+    },
+    {
+      "build": "6276",
+      "engine": "6391",
+      "major": "v3.0",
+      "automatic": true,
+      "tagged": true,
+      "upstream_commit": "bb7ac714c0a50978ec0204824ed28c99604cc1af",
+      "upstream_date": "2018-07-09",
+      "upstream_branch": "official package Build 6276",
+      "covers": "6272-6276 automatically; exact filename tag or core option"
+    },
+    {
+      "build": "6291",
+      "engine": "6391",
+      "major": "v3.0",
+      "automatic": true,
+      "tagged": true,
+      "upstream_commit": "3d1dd3c33d84324b86d51221508a1434f58e7600",
+      "upstream_date": "2018-07-11",
+      "upstream_branch": "official package Build 6291",
+      "covers": "6277-6291 automatically; exact filename tag or core option"
+    },
+    {
+      "build": "6297",
+      "engine": "6391",
+      "major": "v3.0",
+      "automatic": true,
+      "tagged": true,
+      "upstream_commit": "87245656d4c21fc963f9f6fd67cdf1a81120e6c0",
+      "upstream_date": "2018-07-13",
+      "upstream_branch": "official package Build 6297",
+      "covers": "6292-6297 automatically; exact filename tag or core option"
+    },
+    {
+      "build": "6301",
+      "engine": "6391",
+      "major": "v3.0",
+      "automatic": false,
+      "tagged": true,
+      "triage": false,
+      "upstream_commit": "9df7c94774e26c117a52149c97ae89f449c53665",
+      "upstream_date": "2018-07-13",
+      "upstream_branch": "upstream development revision 6301",
+      "covers": "explicit Build 6301 filename tag or core option",
+      "stage": "dev"
+    },
+    {
+      "build": "6315",
+      "engine": "6391",
+      "major": "v3.0",
+      "automatic": true,
+      "tagged": true,
+      "upstream_commit": "f9aa79cb2fa46c633f076dc48cca64566a6af70e",
+      "upstream_date": "2018-07-15",
+      "upstream_branch": "official package Build 6315",
+      "covers": "6298-6315 automatically; exact filename tag or core option"
+    },
+    {
+      "build": "6325",
+      "engine": "6391",
+      "major": "v3.0",
+      "automatic": true,
+      "tagged": true,
+      "upstream_commit": "5feeccd952c572dcd0a81265746975f09eed67ea",
+      "upstream_date": "2018-07-16",
+      "upstream_branch": "official package Build 6325",
+      "covers": "6316-6325 automatically; exact filename tag or core option"
+    },
+    {
       "build": "6330",
       "engine": "6391",
-      "covers": "6120-6330 automatically; exact filename tag or core option",
+      "covers": "6326-6330 automatically; exact filename tag or core option",
       "automatic": true,
       "major": "v3.0",
       "auto_until": 6330
@@ -3627,9 +3794,31 @@
       }
     },
     {
+      "build": "6385",
+      "engine": "6391",
+      "major": "v3.0",
+      "automatic": true,
+      "tagged": true,
+      "upstream_commit": "be0a5fe4603c934ba9fa101cf8744b9425f330fa",
+      "upstream_date": "2018-08-08",
+      "upstream_branch": "official package Build 6385",
+      "covers": "6331-6385 automatically; exact filename tag or core option"
+    },
+    {
+      "build": "6390",
+      "engine": "6391",
+      "major": "v3.0",
+      "automatic": true,
+      "tagged": true,
+      "upstream_commit": "26afcd6e5e2ee8bb542571835d3a10fe2e211ca5",
+      "upstream_date": "2018-08-14",
+      "upstream_branch": "official package Build 6390",
+      "covers": "6386-6390 automatically; exact filename tag or core option"
+    },
+    {
       "build": "6391",
       "engine": "6391",
-      "covers": "6331-6412 automatically; default fallback",
+      "covers": "6391-6412 automatically; default fallback",
       "auto_until": "6412",
       "major": "v3.0"
     },

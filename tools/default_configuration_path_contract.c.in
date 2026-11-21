@@ -1,0 +1,92 @@
+/* SPDX-License-Identifier: BSD-3-Clause
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me>
+ */
+#include <stdint.h>
+#include <stdio.h>
+#include <string.h>
+#include "openbor.h"
+#include "source/openborscript/profile_ids.h"
+#undef printf
+#undef assert
+#include <assert.h>
+
+uint32_t obor_profile_build;
+s_savedata savedata;
+static char root[MAX_BUFFER_LEN];
+static char expected_path[MAX_BUFFER_LEN];
+static unsigned opened, read_count, write_count, cleared;
+static int reading;
+
+void getBasePath(char *out, char *name, int type)
+{
+    assert(type == 0 && !strcmp(name, "Saves"));
+    strcpy(out, root);
+}
+
+void clearsettings(void) { ++cleared; }
+
+static void obor_profile_write_settings(FILE *handle)
+{
+    assert(handle && !reading && !cleared);
+    ++write_count;
+}
+
+static void obor_profile_read_settings(FILE *handle)
+{
+    assert(handle && reading && cleared == 1);
+    savedata.compatibleversion = COMPATIBLEVERSION;
+    ++read_count;
+}
+
+static FILE *observe_open(const char *path, const char *mode)
+{
+    assert(!strcmp(path, expected_path));
+    assert(!strcmp(mode, reading ? "rb" : "wb"));
+    ++opened;
+    FILE *file = tmpfile();
+    assert(file);
+    return file;
+}
+
+#undef fopen
+#define fopen observe_open
+@METHODS@
+#undef fopen
+
+static void check_attempt(unsigned fits)
+{
+    opened = read_count = write_count = cleared = 0;
+    reading = 0;
+    saveasdefault();
+    assert(opened == fits && write_count == fits && !cleared);
+    reading = 1;
+    loadfromdefault();
+    assert(opened == 2 * fits && read_count == fits && cleared == 1);
+}
+
+static void check(unsigned revision, size_t capacity)
+{
+    obor_profile_build = revision;
+    strcpy(root, "./Saves/");
+    strcpy(expected_path, "./Saves/default.cfg");
+    check_attempt(1);
+
+    const size_t prefix = capacity - sizeof("default.cfg");
+    memset(root, 's', prefix + 1);
+    root[prefix - 1] = '/';
+    root[prefix] = '\0';
+    assert(snprintf(expected_path, sizeof(expected_path), "%sdefault.cfg", root) == (int)capacity - 1);
+    check_attempt(1);
+
+    root[prefix - 1] = 's';
+    root[prefix] = '/';
+    root[prefix + 1] = '\0';
+    check_attempt(0);
+    printf("PASS %u\n", revision);
+}
+
+int main(void)
+{
+    @CHECKS@
+    return 0;
+}

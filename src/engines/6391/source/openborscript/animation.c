@@ -109,6 +109,7 @@ HRESULT openbor_get_animation_property(ScriptVariant **varlist, ScriptVariant **
 
         case ANI_PROP_ENTITY_COLLISION:
 
+            if(obor_profile_build && obor_profile_build < 6336) goto unsupported_property;
             // Verify animation has any bbox.
             if(handle->collision_entity)
             {
@@ -155,6 +156,7 @@ HRESULT openbor_get_animation_property(ScriptVariant **varlist, ScriptVariant **
             break;
 
         default:
+        unsupported_property:
 
             printf("Unsupported property.\n");
             goto error_local;

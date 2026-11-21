@@ -30,7 +30,7 @@ int default_keys[MAX_BTN_NUM];
 
 static const struct context {
     uint32_t revision;
-    int has_default, label_input_length, label_display_length;
+    int has_default, has_default_keyboard, label_input_length, label_display_length, stretch_default;
 } contexts[] = {@ROWS@};
 
 static const struct context *active;
@@ -93,7 +93,8 @@ static void check_all_player_defaults(void)
         assert(savedata.usemusic == 1 && savedata.musicvol == 100 && savedata.effectvol == 120);
         assert(savedata.usejoy == 1 && savedata.mode == 0 && savedata.showtitles == 0);
         assert(savedata.windowpos == 0 && savedata.logo == 0 && savedata.uselog == 1);
-        assert(!savedata.debuginfo && !savedata.fullscreen && !savedata.stretch && !savedata.swfilter);
+        assert(!savedata.debuginfo && !savedata.fullscreen && !savedata.swfilter);
+        assert(savedata.stretch == active->stretch_default);
         for(int player = 0; player < MAX_PLAYERS; ++player)
         {
             for(unsigned i = 0; i < sizeof(bindings) / sizeof(bindings[0]); ++i)
@@ -113,8 +114,8 @@ static void restore_defaults(int player)
     clearbuttons(player);
     assert(savedata.keys[0][SDID_MOVEUP] == CONTROL_DEFAULT1_UP);
     assert(savedata.keys[0][SDID_ATTACK] == CONTROL_DEFAULT1_FIRE1);
-    assert(default_keys[SDID_MOVEUP] == (obor_profile_uses_5134_script_ids()
-           ? previous_default : CONTROL_DEFAULT1_UP));
+    assert(default_keys[SDID_MOVEUP] == (active->has_default_keyboard
+           ? CONTROL_DEFAULT1_UP : previous_default));
 }
 #endif
 

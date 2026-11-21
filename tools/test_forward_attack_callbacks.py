@@ -151,6 +151,7 @@ class ForwardAttackCallbackTests(unittest.TestCase):
         engine = Path(os.environ.get('OBOR_ATTACK_CALLBACKS_ENGINE', ROOT / 'src/engines' / '6391'))
         core = (engine / 'openbor.c').read_text(encoding='latin-1')
         frame = braced_statement(function(core, 'update_frame'), 'if(anim->unsummonframe == f)')
+        removal = braced_statement(function(core, 'kill_entity'), 'if(victim->modeldata.summonkill)')
         damage = function(core, 'common_takedamage')
         store = re.search(r'(?ms)^    if\(attack->attack_type >= 0 && attack->attack_type < max_attack_types\)'
                           r'\s*\{[^{}]+\}\s*else\s*\{[^{}]+\}', damage)[0]
@@ -161,31 +162,61 @@ class ForwardAttackCallbackTests(unittest.TestCase):
         defaults = re.search(r'(?ms)^const s_collision_attack emptyattack\s*=\s*\{.*?^\};', core)[0]
         checks = ',\n'.join('{%du,%d,%d}' % (row['revision'], row['native_maximum'], row['last_slot'])
                            for row in rows)
-        values = dict(UNSUMMON=frame, STORE=store, PAIN=pain,
+        removal_type = re.search(r'(?m)^\s*(attack\.attack_type\s*=[^;]+;)', removal)[1]
+        values = dict(UNSUMMON=frame, REMOVAL_TYPE=removal_type, STORE=store, PAIN=pain,
                       DROP=function(core, 'checkdamagedrop'), DEFAULTS=defaults, CONTROLS=checks)
         template = Path(__file__).with_name('unsummon_frame_contract.c.in').read_text()
         code = re.sub(r'@([A-Z_]+)@', lambda token: values[token[1]], template)
         self.assertEqual(native_output(code, data, engine_source=engine), f'PASS {len(rows)}\n')
 
     def test_6391_timeover_status_and_tick_order(self):
-        data = load_contract_fixture(RECORD_FIXTURE)
+        data = load_contract_fixture(FIXTURE.with_name('profile-6391-timeover-boundaries.json'))
         revisions = [row['revision'] for row in data['sources']]
         self.assertEqual(revisions, sorted(contract_revisions(data, data['expected_revisions'])))
         engine = Path(os.environ.get('OBOR_ATTACK_CALLBACKS_ENGINE', ROOT / 'src/engines' / '6391'))
         source = (engine / 'openbor.c').read_text(encoding='latin-1')
         status = function(source, 'updatestatus')
+        unload = function(source, 'unload_level')
         start = status.index('dt = timeleft / COUNTER_SPEED;')
         end = status.index('if(go_time > _time)', start)
         parts = {
             'METHODS': '\n'.join(function(source, name) for name in (
                 'kill_all_players_by_timeover', 'no_player_alive_to_join', 'time_over')),
             'COUNTDOWN': status[start:end],
-            'ROWS': ','.join(f'{revision}u' for revision in revisions),
+            'UNLOAD_TIMER_RESET': re.search(r'(?m)^    is_total_timeover\s*=\s*0;\s*$', unload)[0].strip(),
+            'ROWS': ','.join('{%du,%d,%d,%d,%d,%d}' % (row['revision'], row['countdown'],
+                             row['total_timeover'], row['selects_lose'], row['selects_fall_lose'], row['local_actor'])
+                             for row in data['sources']),
         }
         template = Path(__file__).with_name('timeover_status_contract.c.in').read_text()
         code = re.sub(r'@([A-Z_]+)@', lambda token: parts[token[1]], template)
         output = native_output(code, {'engine': '6391'}, engine_source=engine,
                                extra_cflags=('-fgnu89-inline',))
+        self.assertEqual([int(line) for line in output.splitlines()], revisions)
+
+    def test_6391_player_status_reset_and_continue(self):
+        data = load_contract_fixture(FIXTURE.with_name('profile-6391-player-status.json'))
+        rows = data['sources']
+        revisions = [row['revision'] for row in rows]
+        self.assertEqual(revisions, sorted(contract_revisions(data, data['expected_revisions'])))
+        engine = Path(os.environ.get('OBOR_ATTACK_CALLBACKS_ENGINE', ROOT / 'src/engines' / data['engine']))
+        source = (engine / 'openbor.c').read_text(encoding='latin-1')
+        assignments = []
+        for name, count in (('updatestatus', 1), ('selectplayer', 5), ('playgame', 1)):
+            resets = re.findall(r'if\(obor_profile_has_player_status\(\)\) player\[i\]\.status = PLAYER_NO_STATUS;',
+                                function(source, name))
+            self.assertEqual(len(resets), count, name)
+            assignments.extend(resets)
+        parts = {
+            'METHOD': function(source, 'no_player_alive_to_join'),
+            'RESETS': '\n'.join(f'case {index}: {statement} break;' for index, statement in enumerate(assignments)),
+            'RESET_COUNT': str(len(assignments)),
+            'ROWS': ',\n'.join('{%du,%d,%d}' % (row['revision'], row['resets'], row['losing_prevents_continue'])
+                               for row in rows),
+        }
+        template = Path(__file__).with_name('player_status_runtime_contract.c.in').read_text()
+        code = re.sub(r'@([A-Z_]+)@', lambda token: parts[token[1]], template)
+        output = native_output(code, data, engine_source=engine)
         self.assertEqual([int(line) for line in output.splitlines()], revisions)
 
     def check_damage_recovery(self, engine_id):
@@ -216,6 +247,23 @@ class ForwardAttackCallbackTests(unittest.TestCase):
 
     def test_6391_damage_recovery(self):
         self.check_damage_recovery('6391')
+
+    def test_6391_defeat_state_changes(self):
+        data = load_contract_fixture(FIXTURE.with_name('profile-6391-defeat-transitions.json'))
+        rows = data['sources']
+        revisions = [row['revision'] for row in rows]
+        self.assertEqual(revisions, sorted(contract_revisions(data, data['expected_revisions'])))
+        engine = Path(os.environ.get('OBOR_ATTACK_CALLBACKS_ENGINE', ROOT / 'src/engines' / data['engine']))
+        source = (engine / 'openbor.c').read_text(encoding='latin-1')
+        parts = {
+            'METHODS': '\n'.join(function(source, name) for name in ('set_death', 'set_fall')),
+            'ROWS': ',\n'.join('{%du,%du,%du}' % (row['revision'], row['death_clears'], row['fall_clears'])
+                               for row in rows),
+        }
+        template = Path(__file__).with_name('defeat_transitions_contract.c.in').read_text()
+        code = re.sub(r'@([A-Z_]+)@', lambda token: parts[token[1]], template)
+        output = native_output(code, data, engine_source=engine)
+        self.assertEqual([int(line) for line in output.splitlines()], revisions)
 
     def check_damage_fall_death(self, engine_id):
         data = load_contract_fixture(DAMAGE_FALL_DEATH_FIXTURE)
@@ -259,7 +307,7 @@ class ForwardAttackCallbackTests(unittest.TestCase):
         core = (engine / 'openbor.c').read_text(encoding='latin-1')
         variants = (engine / 'source/scriptlib/ScriptVariant.c').read_text()
         names = ('execute_ondoattack_script', '_execute_didhit_script', 'execute_didhit_script',
-                 'execute_takedamage_script', 'execute_didblock_script', 'diff', 'inair')
+                 'execute_takedamage_script', 'execute_didblock_script', 'diff', 'inair', 'kill_all_enemies')
         caller = function(core, 'do_attack')
         # Extract the enclosing decision, including the early continue.
         comparison = caller.index('if(attack->jugglecost > target->modeldata.jugglepoints.current)')
@@ -267,13 +315,16 @@ class ForwardAttackCallbackTests(unittest.TestCase):
         condition_end = caller.index('\n', condition)
         prior_line = caller[:condition].splitlines()[-1]
         declaration = prior_line + '\n' if 'juggle_on_fall' in prior_line else ''
+        sweep_selectors = {'max_attack_types': 'SWEEP_CUSTOM_LIMIT', 'ATK_TIMEOVER': 'ATK_TIMEOVER',
+                           'ATK_NORMAL': 'ATK_NORMAL'}
         values = {
             'METHODS': '\n'.join(function(core, name) for name in names),
             'VARIANTS': '\n'.join(function(variants, name) for name in
                                   ('ScriptVariant_Init', 'ScriptVariant_Clear', 'ScriptVariant_ChangeType')),
             'JUGGLE': declaration + braced_statement(caller, caller[condition:condition_end]),
-            'PROFILES': ','.join('{%du,%s,%d,%d}' % (row['revision'], json.dumps(row['participant']),
-                                                    row['timeover'], row['juggle_by_falling'])
+            'PROFILES': ','.join('{%du,%s,%d,%d,%s}' % (row['revision'], json.dumps(row['participant']),
+                                                    row['timeover'], row['juggle_by_falling'],
+                                                    sweep_selectors[row['enemy_clear_attack']])
                                  for row in rows),
         }
         template = Path(__file__).with_name('combat_record_callbacks_contract.c.in').read_text()

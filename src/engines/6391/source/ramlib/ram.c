@@ -67,7 +67,7 @@ static u64 systemRam = 0x00000000;
 #if WIN
 static int obor_profile_uses_legacy_windows_memory_report(void)
 {
-    return obor_profile_build == 5134 || obor_profile_build == 6119;
+    return obor_profile_build && obor_profile_build < 6250;
 }
 #endif
 

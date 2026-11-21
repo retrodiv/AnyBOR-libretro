@@ -1,0 +1,242 @@
+/* SPDX-License-Identifier: BSD-3-Clause
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me>
+ */
+#include <stdio.h>
+#include <string.h>
+#include "openbor.h"
+#include "commands.h"
+#undef printf
+#undef assert
+#include <assert.h>
+
+uint32_t obor_profile_build, obor_profile_features;
+u32 _time = 120;
+static s_level arena;
+s_level *level = &arena;
+s_savedata savedata;
+static entity actor;
+entity *self = &actor;
+static char trace[4], successful_launch;
+static size_t attempts;
+static int selected_model;
+static unsigned applied_map;
+
+void common_think(void) {}
+int common_takedamage(entity *other, s_collision_attack *attack, int fall) { return 0; }
+void ent_set_colourmap(entity *projectile, unsigned map) { applied_map = map; }
+
+static int launch(char kind)
+{
+    assert(attempts + 1 < sizeof(trace));
+    trace[attempts++] = kind;
+    trace[attempts] = '\0';
+    return kind == successful_launch;
+}
+
+int star_spawn(float x, float z, float a, int direction)
+{
+    assert(x == 68 && z == 5 && a == 70 && direction == DIRECTION_RIGHT);
+    return launch('s');
+}
+
+entity *knife_spawn(char *name, int index, float x, float z, float a, int direction, int type, int map)
+{
+    assert(!name && index == -1 && x == 12 && z == 5 && a == 7);
+    assert(direction == DIRECTION_RIGHT && !type && !map);
+    return launch('k') ? self : NULL;
+}
+
+entity *boomerang_spawn(char *name, int index, float x, float z, float a, int direction, int map)
+{
+    assert(!name && index == -1 && x == 12 && z == 5 && a == 7);
+    assert(direction == DIRECTION_RIGHT && !map);
+    return launch('b') ? self : NULL;
+}
+
+entity *spawn(float x, float z, float a, int direction, char *name, int index, s_model *model)
+{
+    assert(!model);
+    selected_model = name ? 11 : index;
+    return self;
+}
+
+int get_cached_model_index(char *name)
+{
+    assert(strcmp(name, "replacement") == 0);
+    return 17;
+}
+
+static void update_projectile(s_anim *anim, int f)
+{
+    @THROW@
+}
+#undef __trystar
+#undef __tryknife
+#undef __tryboomerang
+
+static entity *select_boomerang(char *name, int index, float x, float z, float a, int direction)
+{
+    @SPAWN@
+    return e;
+}
+
+static entity *finish_boomerang(entity *e, float a, int map)
+{
+    @SPAWN_FINISH@
+}
+
+static void init_boomerang_model(s_model *newchar)
+{
+    @MODEL_DEFAULTS@
+}
+
+static void check_spawn_finish(void)
+{
+    assert(!finish_boomerang(NULL, 7, 5));
+    actor.modeldata.type = TYPE_PLAYER;
+    actor.modeldata.hostile = TYPE_PLAYER | TYPE_ENEMY;
+    actor.modeldata.candamage = TYPE_PLAYER | TYPE_NPC;
+    arena.nohit = DAMAGE_FROM_PLAYER_OFF;
+    s_model source = {0};
+    entity projectile = {.model = &source};
+    projectile.modeldata.hostile = projectile.modeldata.candamage = -1;
+    assert(finish_boomerang(&projectile, 7, 5) == &projectile);
+    assert(projectile.owner == self && projectile.modeldata.type == TYPE_NPC);
+    assert(projectile.nograb && projectile.attacking == ATTACKING_ACTIVE);
+    assert(projectile.spawntype == SPAWN_TYPE_PROJECTILE_BOOMERANG);
+    assert(projectile.think == common_think && projectile.takedamage == common_takedamage);
+    assert(projectile.nextthink == _time + 1 && !projectile.trymove && !projectile.takeaction);
+    assert(projectile.modeldata.aimove == AIMOVE1_BOOMERANG && projectile.modeldata.aiattack == AIATTACK1_NOATTACK);
+    assert(projectile.speedmul == 2 && projectile.modeldata.speed == 2 && applied_map == 5);
+    assert(projectile.modeldata.offscreenkill == 200 && projectile.base == 7);
+    assert(projectile.modeldata.hostile == TYPE_ENEMY && projectile.modeldata.candamage == TYPE_NPC);
+    assert(!projectile.modeldata.subject_to_hole && !projectile.modeldata.subject_to_basemap);
+    assert(!projectile.modeldata.subject_to_wall && !projectile.modeldata.subject_to_platform);
+    assert(!projectile.modeldata.subject_to_screen && projectile.modeldata.subject_to_gravity);
+    assert(projectile.modeldata.subject_to_minz && projectile.modeldata.subject_to_maxz);
+    assert(projectile.modeldata.no_adjust_base);
+
+    actor.modeldata.type = TYPE_ENEMY;
+    projectile = (entity){.model = &source, .projectile_prime = PROJECTILE_PRIME_BASE_FLOOR};
+    projectile.modeldata.nomove = 1;
+    projectile.modeldata.offscreenkill = 51;
+    projectile.modeldata.remove = 1;
+    projectile.modeldata.hostile = TYPE_PLAYER;
+    assert(finish_boomerang(&projectile, 7, 6) == &projectile);
+    assert(projectile.modeldata.type == TYPE_ENEMY && projectile.modeldata.hostile == TYPE_PLAYER);
+    assert(projectile.autokill && projectile.remove_on_attack && projectile.modeldata.offscreenkill == 51);
+    assert(!projectile.base && !projectile.modeldata.speed && applied_map == 6);
+}
+
+static void inherit_boomerang(s_model *newmodel, s_model *model)
+{
+    @INHERIT@
+}
+
+static int configured_boomerang(s_anim *newanim, int cmd, char *name)
+{
+    @DEFAULT@
+#undef GET_ARG
+#define GET_ARG(n) name
+    switch(cmd)
+    {
+        @CUSTOM@
+        default: break;
+    }
+#undef GET_ARG
+    return newanim->projectile.boomerang;
+}
+
+static void check_throw(s_anim *animation, int frame, char success, const char *expected)
+{
+    trace[0] = '\0';
+    attempts = 0;
+    successful_launch = success;
+    self->deduct_ammo = 0;
+    update_projectile(animation, frame);
+    assert(strcmp(trace, expected) == 0);
+    assert(self->deduct_ammo == (frame == animation->projectile.throwframe));
+}
+
+static void check_profile(bool classic, bool custom, bool inherits, int initial_projectile)
+{
+    s_anim animation = {0};
+    animation.projectile.position.y = 4;
+    actor.position = (s_axis_principal_float){.x = 12, .y = 3, .z = 5};
+    actor.direction = DIRECTION_RIGHT;
+    s_model original = {.boomerang = 29}, destination = {.boomerang = 3};
+    entity projectile = {.model = &destination};
+    destination.subtype = SUBTYPE_BOOMERANG;
+    assert(!!is_projectile((&projectile)) == classic);
+    destination.subtype = SUBTYPE_ARROW;
+    assert(is_projectile((&projectile)));
+    destination.boomerang_prop.acceleration = 8;
+    destination.boomerang_prop.hdistance = 9;
+    init_boomerang_model(&destination);
+    assert(destination.boomerang == -1);
+    assert(!destination.boomerang_prop.acceleration && !destination.boomerang_prop.hdistance);
+    inherit_boomerang(&destination, &original);
+    assert(destination.boomerang == (inherits ? 29 : -1));
+    destination.boomerang = 31;
+    inherit_boomerang(&destination, &original);
+    assert(destination.boomerang == 31);
+
+    char replacement[] = "replacement";
+    assert(configured_boomerang(&animation, -1, replacement) == initial_projectile);
+    animation.projectile.throwframe = 3;
+    animation.projectile.knife = animation.projectile.star = animation.projectile.flash = -1;
+    self->jumping = 0;
+    check_throw(&animation, 4, 0, "");
+    check_throw(&animation, 3, 0, initial_projectile == 0 ? "b" : custom ? "ksb" : "ks");
+    if(initial_projectile == 0)
+    {
+        self->animation = &animation;
+        assert(select_boomerang(NULL, -1, 0, 0, 0, 0) == self && selected_model == 0);
+        self->animation = NULL;
+        check_spawn_finish();
+    }
+    if(custom) assert(configured_boomerang(&animation, CMD_MODEL_CUSTBOOMERANG, replacement) == 17);
+    check_throw(&animation, 3, 0, custom ? "b" : "ks");
+    animation.projectile.boomerang = -1;
+    check_throw(&animation, 3, 0, custom ? "ksb" : "ks");
+    check_throw(&animation, 3, 's', "ks");
+    check_throw(&animation, 3, 'k', "k");
+    self->jumping = 1;
+    check_throw(&animation, 3, 0, custom ? "skb" : "sk");
+    check_throw(&animation, 3, 's', "s");
+    animation.projectile.star = 5;
+    check_throw(&animation, 3, 0, "s");
+    animation.projectile.flash = 3;
+    check_throw(&animation, 3, 0, "k");
+
+    if(custom)
+    {
+        entity weapon = {.modeldata = {.subtype = SUBTYPE_PROJECTILE, .project = 13}};
+        self->animation = &animation;
+        self->weapent = &weapon;
+        self->modeldata.boomerang = 19;
+        animation.projectile.boomerang = 17;
+        assert(select_boomerang(replacement, -1, 0, 0, 0, 0) == self && selected_model == 11);
+        assert(select_boomerang(NULL, 12, 0, 0, 0, 0) == self && selected_model == 12);
+        assert(select_boomerang(NULL, -1, 0, 0, 0, 0) == self && selected_model == 13);
+        self->weapent = NULL;
+        assert(select_boomerang(NULL, -1, 0, 0, 0, 0) == self && selected_model == 17);
+        animation.projectile.boomerang = -1;
+        assert(select_boomerang(NULL, -1, 0, 0, 0, 0) == self && selected_model == 19);
+        self->modeldata.boomerang = -1;
+        assert(select_boomerang(NULL, -1, 0, 0, 0, 0) == NULL);
+        self->animation = NULL;
+    }
+}
+
+int main(void)
+{
+    const struct { uint32_t profile; bool classic, custom, inherits; int initial_projectile; } rows[] = {@PROFILES@};
+    for(size_t i = 0; i < sizeof(rows) / sizeof(*rows); ++i)
+    {
+        obor_profile_build = rows[i].profile;
+        check_profile(rows[i].classic, rows[i].custom, rows[i].inherits, rows[i].initial_projectile);
+        printf("%u\n", obor_profile_build);
+    }
+    return 0;
+}

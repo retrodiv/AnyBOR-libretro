@@ -59,9 +59,15 @@ class EarlyPackfileTests(unittest.TestCase):
             'profile-early-pack-header.json')), header=True)
 
     def test_direct_member_name_capacity(self):
+        self.check_direct_member_name_capacity('profile-4432-pack-member-names.json')
+
+    def test_6391_direct_member_name_capacity(self):
+        self.check_direct_member_name_capacity('profile-6391-packed-members.json')
+
+    def check_direct_member_name_capacity(self, fixture_name):
         from make_fixture import write_pak
 
-        fixture = load_contract_fixture(FIXTURE.with_name('profile-4432-pack-member-names.json'))
+        fixture = load_contract_fixture(FIXTURE.with_name(fixture_name))
         revisions = {row['revision'] for row in fixture['sources']}
         self.assertEqual(len(fixture['sources']), len(revisions))
         self.assertEqual(revisions, contract_revisions(fixture, fixture['expected_revisions']))
@@ -71,12 +77,13 @@ class EarlyPackfileTests(unittest.TestCase):
             revision = int(profile.get('revision', profile['build']))
             if profile['engine'] == fixture['engine'] and 4510 <= revision <= fixture['range'][1]:
                 self.assertIn(revision, revisions)
-        engine = Path(os.environ.get('OBOR_PACK_MEMBER_ENGINE',
+        engine_variable = 'OBOR_PACK_MEMBER_ENGINE' if fixture['engine'] == '4432' else 'OBOR_HISTORICAL_ENGINE'
+        engine = Path(os.environ.get(engine_variable,
                                      ROOT / 'src/engines' / fixture['engine']))
         gamelib = engine / 'source/gamelib'
         unit = (gamelib / 'packfile.c').read_text(encoding='latin-1')
         definitions = '\n'.join(re.findall(
-            r'(?m)^#define[ \t]+(?:MAXPACKHANDLES|PACKMAGIC|PACKVERSION|PACKFILE_PATH_MAX)\b[^\n]*'
+            r'(?m)^#define[ \t]+(?:MAXPACKHANDLES|PACKMAGIC|PACKVERSION|PACKFILE_PATH_MAX|PACKFILE_PATH_STORAGE)\b[^\n]*'
             r'|^static [^\n]*\b(?:packhandle|packfilepointer|packfilesize)\[MAXPACKHANDLES\][^\n]*;', unit))
         names = ('packfile_path_capacity', 'slashback', 'slashfwd', 'getFreeHandle', 'openPackfile',
                  'readPackfile', 'closePackfile')
@@ -86,6 +93,7 @@ class EarlyPackfileTests(unittest.TestCase):
 #include <fcntl.h>
 #include <stddef.h>
 #include <stdint.h>
+#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <strings.h>
@@ -94,6 +102,15 @@ class EarlyPackfileTests(unittest.TestCase):
 #define stricmp strcasecmp
 uint32_t obor_profile_build;
 static int obor_loose_may_exist(const char *path) { (void)path; return 0; }
+void writeToLogFile(const char *message, ...) { (void)message; abort(); }
+void exitIfFalse(int value, const char *assertion, const char *fn, const char *file, int line)
+{
+    if(!value)
+    {
+        fprintf(stderr, "%s:%d: %s: %s\n", file, line, fn, assertion);
+        abort();
+    }
+}
 @DEFINITIONS@
 @FUNCTIONS@
 int main(int argc, char **argv)
@@ -122,6 +139,8 @@ int main(int argc, char **argv)
 '''.replace('@DEFINITIONS@', definitions).replace('@FUNCTIONS@', bodies)
         filenames = ['data/' + c * (length - len('data/.bin')) + '.bin'
                      for c, length in [('a', 79), ('b', 80), ('c', 255)]]
+        if fixture['engine'] == '6391':
+            filenames = [filenames[0], filenames[2], 'data/' + 'Scenery/' * 48 + 'Actor.bin']
         filenames.append('data/z.bin')
         with tempfile.TemporaryDirectory(prefix='pack-member-names-') as name:
             work = Path(name)
@@ -133,14 +152,16 @@ int main(int argc, char **argv)
             build = subprocess.run(compiler + ['-std=gnu99', '-O1', '-UNDEBUG',
                 '-Wall', '-Wextra', '-Werror', '-Wno-sign-compare',
                 '-Wno-error=deprecated-declarations', '-fsanitize=address,undefined',
-                '-fno-sanitize-recover=all', '-I', str(gamelib), '-I', str(ROOT / 'src/port/libretro'),
+                '-fno-sanitize-recover=all', '-I', str(gamelib), '-I', str(engine / 'source'),
+                '-I', str(ROOT / 'src/port/libretro'),
                 str(source), *links, '-o', str(binary)],
                 capture_output=True, text=True, timeout=45)
             self.assertEqual(build.returncode, 0, build.stdout + build.stderr)
             for row in fixture['sources']:
                 with self.subTest(revision=row['revision']):
                     self.assertEqual(row['engine'], fixture['engine'])
-                    run = subprocess.run([str(binary), str(row['revision']), str(row['capacity']),
+                    capacity = row['capacity'] if fixture['engine'] == '4432' else row['direct_capacity']
+                    run = subprocess.run([str(binary), str(row['revision']), str(capacity),
                         str(pak), *(filename.upper() for filename in filenames)],
                         cwd=work, env=sanitizer_environment(), capture_output=True, text=True, timeout=10)
                     self.assertEqual(run.returncode, 0, run.stdout + run.stderr)
@@ -218,27 +239,36 @@ int main(int argc, char **argv)
         unit = (gamelib / 'packfile.c').read_text(encoding='latin-1')
         header = (gamelib / 'packfile.h').read_text(encoding='latin-1')
         utils = (engine / 'source/utils.c').read_text(encoding='latin-1')
-        constants = re.findall(r'(?m)^#define\s+(?:MAXPACKHANDLES|CACHEBLOCKSIZE|PACKFILE_PATH_MAX)\b[^\n]*'
+        constants = re.findall(r'(?m)^#define\s+(?:MAXPACKHANDLES|CACHEBLOCKSIZE|PACKFILE_PATH_MAX|PACKFILE_PATH_STORAGE)\b[^\n]*'
                               r'|^static const size_t USED_FLAG[^\n]*;', unit + '\n' + header)
         prefix = 'Data/' + 'Scenery/' * 61
-        filenames = ('Data/Actors/Walk.bin', prefix + 'SceneFragments.bin', prefix + 'ScreenFragments.bin')
-        self.assertEqual([len(name) for name in filenames], [20, 511, 512])
+        filenames = ('Data/Actors/Walk.bin', prefix + 'SceneFragments.bin', prefix + 'ScreenFragments.bin',
+                     'Data/' + 'Scenery/' * 220 + 'DistantScene.bin')
+        self.assertEqual([len(name) for name in filenames[:3]], [20, 511, 512])
+        functions = ('tolowerOneChar', 'fnlc', 'myfilenamecmp', 'packfile_path_capacity', 'slashback',
+                     'slashfwd', 'casesearch', 'pak_header_entry', 'makefilenamecache',
+                     'freefilenamecache', 'openreadaheadpackfile', 'openPackfileCached')
         with tempfile.TemporaryDirectory(prefix='packed-member-names-') as work:
-            path = Path(work) / 'members.pak'
+            directory = Path(work)
+            path = directory / 'members.pak'
             write_pak(path, {tag: bytes([index + 1]) for index, tag in enumerate(filenames)})
             image = path.read_bytes()
-        functions = ('tolowerOneChar', 'fnlc', 'myfilenamecmp', 'pak_header_entry', 'makefilenamecache',
-                     'freefilenamecache', 'openreadaheadpackfile', 'openPackfileCached')
-        fields = {
-            'CONSTANTS': '\n'.join(constants),
-            'FUNCTIONS': function(utils, 'readlsb32') + '\n'.join(function(unit, name) for name in functions),
-            'IMAGE': ','.join(str(byte) for byte in image),
-            'NAMES': ',\n'.join(json.dumps(name) for name in filenames),
-            'PROFILES': ',\n'.join('{%du,%d}' % (r['revision'], r['member_capacity']) for r in rows),
-        }
-        template = Path(__file__).with_name('packed_member_names_contract.c.in').read_text()
-        code = re.sub(r'@([A-Z_]+)@', lambda match: fields[match[1]], template)
-        actual = native_output(bind_named_allocation_support(code, engine), data, engine_source=engine)
+            loose_names = (Path('Assets', 'Actor.bin'), Path('Assets', *('ScenerySection' for _ in range(40)), 'Actor.bin'))
+            for loose in loose_names:
+                (directory / loose).parent.mkdir(parents=True, exist_ok=True)
+                (directory / loose).write_bytes(b'asset')
+            fields = {
+                'CONSTANTS': '\n'.join(constants),
+                'FUNCTIONS': function(utils, 'readlsb32') + '\n'.join(function(unit, name) for name in functions),
+                'IMAGE': ','.join(str(byte) for byte in image),
+                'NAMES': ',\n'.join(json.dumps(name) for name in filenames),
+                'LOOSE_ROOT': json.dumps(work),
+                'LOOSE_NAMES': ','.join(json.dumps(loose.as_posix()) for loose in loose_names),
+                'PROFILES': ',\n'.join('{%du,%d}' % (r['revision'], r['member_capacity']) for r in rows),
+            }
+            template = Path(__file__).with_name('packed_member_names_contract.c.in').read_text()
+            code = re.sub(r'@([A-Z_]+)@', lambda match: fields[match[1]], template)
+            actual = native_output(bind_named_allocation_support(code, engine), data, engine_source=engine)
         self.assertEqual([int(line) for line in actual.splitlines()], revisions)
 
     def _exercise(self, fixture, lookup=False, header=False):

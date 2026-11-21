@@ -5,6 +5,7 @@
 #include <stdio.h>
 #include <string.h>
 #include "openbor.h"
+#include "source/openborscript/profile_ids.h"
 #undef printf
 #undef assert
 #include <assert.h>
@@ -23,6 +24,8 @@ int timeleft, oldtime, timetoshow, showtimeover;
 int SAMPLE_TIMEOVER = 7;
 static unsigned go_time = 21;
 static int samples, hits, hit_type, hit_force, ticks, tick_value, display_at_tick;
+static s_axis_principal_float hit_velocity;
+static entity *self_at_hit;
 
 int sound_play_sample(int sample, unsigned int priority, int lvol, int rvol, unsigned int speed)
 {
@@ -35,10 +38,11 @@ int inair(entity *ent) { return ent->position.y > 0; }
 
 static int damage(entity *other, s_collision_attack *attack, int fall)
 {
-    assert(self == &actor && other == self && fall == 0);
-    assert(attack->dropv.x == 1.5f && attack->dropv.y == -2.5f && attack->dropv.z == 3.5f);
+    assert(other == &actor && fall == 0);
+    self_at_hit = self;
     hit_type = attack->attack_type;
     hit_force = attack->attack_force;
+    hit_velocity = attack->dropv;
     actor.energy_status.health_current = 0;
     ++hits;
     return 1;
@@ -76,7 +80,13 @@ static void reset(void)
     samples = hits = ticks = 0;
 }
 
-static void check_timeover(bool classic, bool lose, int lives)
+typedef struct {
+    unsigned revision;
+    int countdown;
+    bool total, lose, fall_lose, local_actor;
+} timeover_profile;
+
+static void check_timeover(const timeover_profile *profile, bool lose, bool airborne, int lives)
 {
     static s_anim lose_animation = {.numframes = 1}, fall_animation = {.numframes = 1};
     static s_anim *animations[MAX_ANIS];
@@ -85,64 +95,83 @@ static void check_timeover(bool classic, bool lose, int lives)
     animations[ANI_FALLLOSE] = lose ? &fall_animation : NULL;
     actor.modeldata.animation = animations;
     actor.modeldata.animation_capacity = MAX_ANIS;
-    actor.position.y = 1;
+    actor.position.y = airborne ? 1 : 0;
     player[0].ent = &actor;
     player[0].lives = lives;
     time_over();
-    assert(hits == 1 && hit_force == 40 && hit_type == (classic || !lose ? ATK_TIMEOVER : ATK_LOSE));
-    assert(actor.modeldata.falldie == (classic || !lose ? 0 : 2));
-    assert(self == (classic ? &actor : &observer));
-    assert(samples == 1 && !endgame && showtimeover && timeleft == 100 * COUNTER_SPEED);
-    assert(nojoin == (!classic && lives == 1) && nojoin == is_total_timeover);
+    const bool has_hit = !profile->local_actor || !lose;
+    const bool uses_lose = profile->lose && lose;
+    const bool uses_fall_lose = uses_lose && profile->fall_lose && airborne;
+    assert(hits == has_hit);
+    if(has_hit)
+    {
+        assert(self_at_hit == (profile->local_actor ? &observer : &actor));
+        assert(hit_force == 40 && hit_type == (uses_lose ? ATK_LOSE : ATK_TIMEOVER));
+        const s_axis_principal_float expected = !uses_lose || uses_fall_lose
+                                               ? default_model_dropv : (s_axis_principal_float){0};
+        assert(hit_velocity.x == expected.x && hit_velocity.y == expected.y && hit_velocity.z == expected.z);
+    }
+    assert(actor.modeldata.falldie == (uses_lose ? 1 + uses_fall_lose : 0));
+    assert(self == (profile->lose || profile->local_actor ? &observer : &actor));
+    assert(samples == 1 && endgame == !has_hit && showtimeover && timeleft == 100 * COUNTER_SPEED);
+    const bool total_timeover = profile->total && has_hit && lives == 1;
+    assert(nojoin == total_timeover && nojoin == is_total_timeover);
 
     player[0].ent = NULL;
     time_over();
-    assert(hits == 1 && endgame);
-    assert(samples == (classic || lives != 1 ? 2 : 1));
-    assert(nojoin == !classic && is_total_timeover == !classic);
+    assert(hits == has_hit && endgame);
+    assert(samples == (total_timeover ? 1 : 2));
+    assert(nojoin == profile->total && is_total_timeover == profile->total);
+    @UNLOAD_TIMER_RESET@
+    assert(!is_total_timeover);
 }
 
-static void check_status(bool classic)
+enum { CLASSIC_COUNTDOWN, FIRST_TOTAL_COUNTDOWN, NATIVE_COUNTDOWN };
+
+static void check_status(int mode)
 {
+    const bool classic = mode == CLASSIC_COUNTDOWN;
+    const bool first_total = mode == FIRST_TOTAL_COUNTDOWN;
+    const bool native = mode == NATIVE_COUNTDOWN;
     reset();
     timeleft = 42 * COUNTER_SPEED;
     update_countdown();
-    assert(ticks == 1 && tick_value == 42 && display_at_tick == (classic ? 17 : 42));
-    assert(timetoshow == 42 && oldtime == 42 && !showtimeover);
+    assert(ticks == 1 && tick_value == 42 && display_at_tick == (native ? 42 : 17));
+    assert(timetoshow == (first_total ? 0 : 42) && oldtime == 42 && !showtimeover);
 
     reset();
     timeleft = 100 * COUNTER_SPEED;
     update_countdown();
-    assert(ticks == 0 && timetoshow == 99 && oldtime == 99 && showtimeover == classic);
+    assert(ticks == 0 && timetoshow == (first_total ? 0 : 99) && oldtime == 99 && showtimeover == classic);
 
     reset();
     update_countdown();
-    assert(ticks == 1 && tick_value == 0 && display_at_tick == (classic ? 17 : 0));
+    assert(ticks == 1 && tick_value == 0 && display_at_tick == (native ? 0 : 17));
     assert(timetoshow == 0 && oldtime == 0 && showtimeover == !classic);
 
     reset();
     timeleft = 37 * COUNTER_SPEED;
     is_total_timeover = !classic;
     update_countdown();
-    assert(ticks == 1 && tick_value == (classic ? 37 : 0));
-    assert(timetoshow == (classic ? 37 : 0) && showtimeover == !classic);
+    assert(ticks == 1 && tick_value == (native ? 0 : 37));
+    assert(timetoshow == (native ? 0 : 37) && showtimeover == !classic);
 }
 
 int main(void)
 {
-    const unsigned revisions[] = {@ROWS@};
-    for(size_t i = 0; i < sizeof(revisions) / sizeof(*revisions); ++i)
+    const timeover_profile profiles[] = {@ROWS@};
+    for(size_t i = 0; i < sizeof(profiles) / sizeof(*profiles); ++i)
     {
-        obor_profile_build = revisions[i];
-        const bool classic = obor_profile_build == 5134 || obor_profile_build == 6119;
+        obor_profile_build = profiles[i].revision;
         for(int lose = 0; lose <= 1; ++lose)
             for(int lives = 1; lives <= 2; ++lives)
-                check_timeover(classic, lose, lives);
+                for(int airborne = 0; airborne <= 1; ++airborne)
+                    check_timeover(&profiles[i], lose, airborne, lives);
         reset();
         stage.type = 1;
         time_over();
         assert(level_completed && !hits && !samples && !endgame && !nojoin);
-        check_status(classic);
+        check_status(profiles[i].countdown);
         printf("%u\n", obor_profile_build);
     }
     return 0;

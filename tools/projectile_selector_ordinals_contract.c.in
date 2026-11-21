@@ -1,0 +1,45 @@
+/* SPDX-License-Identifier: BSD-3-Clause
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me>
+ */
+#include <stdio.h>
+#include "openbor.h"
+#include "profile_ids.h"
+#undef printf
+#undef assert
+#include <assert.h>
+
+uint32_t obor_profile_build;
+typedef struct { unsigned physical, native; } flag_pair;
+@TABLES@
+
+static void check(unsigned revision, const int *spawn, size_t spawn_count, const flag_pair *flags, size_t flag_count)
+{
+    obor_profile_build = revision;
+    for(size_t i = 0; i < spawn_count; ++i)
+    {
+        assert(obor_spawn_type_from_native((int)i) == spawn[i]);
+        assert(obor_spawn_type_to_native(spawn[i]) == (int)i);
+    }
+    assert(obor_projectile_prime_from_native(0) == 0);
+    assert(obor_projectile_prime_to_native(0) == 0);
+    for(size_t i = 0; i < flag_count; ++i)
+    {
+        for(size_t other = i; other < flag_count; ++other)
+        {
+            const unsigned native = flags[i].native | flags[other].native;
+            const unsigned physical = flags[i].physical | flags[other].physical;
+            assert(obor_projectile_prime_from_native(native) == physical);
+            assert(obor_projectile_prime_to_native(physical) == native);
+        }
+    }
+    printf("%u\n", revision);
+}
+
+#define CHECK(revision, spawn, flags) \
+    check(revision, spawn, sizeof(spawn) / sizeof(*spawn), flags, sizeof(flags) / sizeof(*flags))
+
+int main(void)
+{
+    @RUNS@
+    return 0;
+}

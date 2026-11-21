@@ -14,11 +14,12 @@
 #define CONTINUES 4
 #define OBOR_LNS_QUICK_MODEL 67
 #define ANI_PICK 2
+enum { PLAYER_NO_STATUS };
 @KEYS@
 typedef struct {char *name;int health,mp;} s_model;
 typedef struct {s_model *model;unsigned stalltime;} entity;
 typedef struct {char name[MAX_NAME_LEN];int colourmap;unsigned score,lives,credits;entity *ent;
- uint64_t newkeys,playkeys,releasekeys,disablekeys;int spawnhealth,spawnmp,joining,hasplayed;} s_player;
+ uint64_t newkeys,playkeys,releasekeys,disablekeys;int spawnhealth,spawnmp,joining,hasplayed,status;} s_player;
 typedef struct {int maxplayers,nosame,continuescore;} s_set_entry;
 static s_player player[4];
 static s_model models[5]={{"one",11,12},{"two",21,22},{"three",31,32},{"four",41,42},{"five",51,52}};

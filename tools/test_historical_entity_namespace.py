@@ -19,9 +19,13 @@ BOOLEAN_BINDING = FIXTURE.with_name('profile-6391-boolean-binding.json')
 TYPED_ENTITY = FIXTURE.with_name('profile-6391-typed-entity.json')
 TYPED_SCRIPT_IDS = FIXTURE.with_name('profile-6391-typed-script-ids.json')
 LEGACY_ENTITY = FIXTURE.with_name('profile-legacy-entity-stats.json')
+LEGACY_ENTITY_SELECTORS = ('obor_entityproperty_legacy_count', 'obor_entityproperty_legacy_index',
+                           'obor_entityproperty')
 ENTITY_COLLISION = FIXTURE.with_name('profile-6391-entity-collision.json')
 AXIS_PROPERTIES = FIXTURE.with_name('profile-6391-axis-properties.json')
 LITERAL_CONSTANTS = FIXTURE.with_name('profile-6391-literal-constants.json')
+ANIMATION_CONSTANTS = FIXTURE.with_name('profile-6391-animation-constants.json')
+BACKGROUND_SPEEDS = FIXTURE.with_name('profile-6391-background-speeds.json')
 SCRIPT_ACTIONS = FIXTURE.with_name('profile-script-entity-actions.json')
 SCRIPT_STATUS = FIXTURE.with_name('profile-script-entity-status.json')
 
@@ -151,7 +155,6 @@ def legacy_boomerang_program(engine, rows, tables, controls):
     variants = (engine / 'source/scriptlib/ScriptVariant.c').read_text()
     arrays = ('obor_entityproperty6330', 'obor_entityproperty6330lns', 'eplist',
               'obor_eplist6330', 'obor_eplist6330lns', 'eplist_boomerang')
-    symbols = ('obor_entityproperty_5134_index', 'obor_entityproperty')
     declarations = [declaration(script, rf'^enum {name}[^;]+;')
                     for name in ('entityproperty_enum', 'boomerang_enum')]
     declarations.extend(declaration(script, rf'^static const (?:int|char \*)\s*{name}\[\][^;]+;')
@@ -164,8 +167,13 @@ def legacy_boomerang_program(engine, rows, tables, controls):
     method_parts = []
     for name in ('openbor_getentityproperty', 'openbor_changeentityproperty'):
         method, cases = switch_cases(script, name, 'propind')
+        properties = ('_ep_boomerang', '_ep_damage_on_landing', '_ep_prevanimationid',
+                      '_ep_collidedentity', '_ep_movex', '_ep_movez', '_ep_entitypushing',
+                      '_ep_pushingfactor', '_ep_direction', 'default')
+        if name == 'openbor_changeentityproperty':
+            properties += ('_ep_defense', '_ep_offense')
         for label, case in reversed(tuple(cases.items())):
-            if label not in ('_ep_boomerang', '_ep_damage_on_landing', '_ep_prevanimationid', 'default'):
+            if label not in properties:
                 method = method[:case['label_start']] + method[case['end']:]
         if name == 'openbor_changeentityproperty':
             method = method[:method.index('    static const')] + method[method.index('    *pretvar = NULL;\n\n'):]
@@ -174,7 +182,7 @@ def legacy_boomerang_program(engine, rows, tables, controls):
         'DECLARATIONS': '\n'.join(declarations),
         'CACHE': variants[variants.index('#define STRCACHE_INC'):variants.index('BOOL ScriptVariant_IsTrue(')],
         'SEARCH': function((engine / 'source/utils.c').read_text(), 'searchList'),
-        'METHODS': '\n'.join([*(function(script, name) for name in symbols), mapping, *method_parts]),
+        'METHODS': '\n'.join([*(function(script, name) for name in LEGACY_ENTITY_SELECTORS), mapping, *method_parts]),
         'SELECTOR': function(game, 'ent_set_anim'),
         'TABLES': '\n'.join(f'static const property_entry table_{key}[] = {{' +
                            ',\n'.join('{%s,%s,%d}' % (json.dumps(name), selector, original_entity_name_lookup(items, name))
@@ -227,9 +235,13 @@ def constant_mapper_parts(engine):
     variants = (engine / 'source/scriptlib/ScriptVariant.c').read_text()
     mapper = function(constants, 'mapstrings_transconst')
     macros = constants[constants.index('#define IICMPCONST('):constants.index('int mapstrings_transconst(')]
-    arrays = re.findall(r'(?m)^\s*ICMPSCONST(?:A(?:_IF)?|B)\(\w+,\s*(\w+)', mapper)
+    arrays = set(re.findall(r'(?m)^\s*ICMPSCONST(?:A(?:_IF)?|B)\(\w+,\s*(\w+)', mapper))
+    reaction_arrays = set(re.findall(r'(?m)^\s*ICMPREACTION_SERIES\(\w+,\s*(\w+)', mapper))
+    table_declarations = ['int max_attack_types = sizeof(dynamic_animations) / sizeof(*dynamic_animations);']
+    table_declarations += [f'int *{name} = dynamic_animations;' for name in sorted(arrays)]
+    table_declarations += [f'int *{name} = reaction_animations;' for name in sorted(reaction_arrays)]
     return {
-        'ANIMATION_TABLES': '\n'.join('int *' + name + ' = dynamic_animations;' for name in sorted(set(arrays))),
+        'ANIMATION_TABLES': '\n'.join(table_declarations),
         'VARIANTS': variants[variants.index('#define STRCACHE_INC'):variants.index('BOOL ScriptVariant_IsTrue(')] +
                     '\n' + function(variants, 'ScriptVariant_Copy'),
         'MAPPER': macros + '\n' + mapper,
@@ -276,17 +288,24 @@ class EntityNamespaceContracts(unittest.TestCase):
         script = (engine / 'openborscript.c').read_text(encoding='latin-1')
         variants = (engine / 'source/scriptlib/ScriptVariant.c').read_text()
         ids = (engine / 'source/openborscript/profile_ids.h').read_text()
-        player, cases = switch_cases(script, 'openbor_getplayerproperty', 'prop')
+        native_switch = 'switch(obor_player_property_native(prop))'
+        plain_switch = 'switch(prop)'
+        getter = function(script, 'openbor_getplayerproperty')
+        self.assertEqual(getter.count(native_switch), 1)
+        player, cases = switch_cases(getter.replace(native_switch, plain_switch), 'openbor_getplayerproperty', 'prop')
         for label, case in reversed(tuple(cases.items())):
             if label not in ('_pp_ent', '_pp_entity', '_pp_lives', 'default'):
                 player = player[:case['label_start']] + player[case['end']:]
         _, direction = switch_cases(script, 'openbor_changeentityproperty', 'propind')
         values = {
             'PLAYER_ENUM': declaration(script, r'^enum playerproperty_enum\s*\{[^}]+\};'),
-            'PROFILE': function(ids, 'obor_profile_uses_5134_script_ids'),
+            'PROFILE': '\n'.join(function(ids, name) for name in ('obor_profile_uses_5134_script_ids',
+                                 'obor_profile_has_player_status', 'obor_profile_has_player_status_property'))
+                + function(script, 'obor_player_property_native'),
             'VARIANTS': '\n'.join(function(variants, name) for name in ('ScriptVariant_ChangeType',
                 'ScriptVariant_Clear', 'ScriptVariant_IntegerValue', 'ScriptVariant_DecimalValue')),
-            'PLAYER': player, 'DIRECTION': 'case _ep_direction:' + direction['_ep_direction']['body'],
+            'PLAYER': player.replace(plain_switch, native_switch),
+            'DIRECTION': 'case _ep_direction:' + direction['_ep_direction']['body'],
             'RANGE': function(script, 'openbor_checkrange'),
             'PROFILES': ',\n'.join('{%du,%d,%d}' % (r['revision'], r['unknown_numeric_is_empty'],
                 r['direction_conversion'] == 'Decimal') for r in rows),
@@ -318,8 +337,9 @@ class EntityNamespaceContracts(unittest.TestCase):
             return '\n'.join('case ' + label + ':' + source[label]['body'] for label in labels)
 
         def expected(r):
-            return '{%du,%d,{%s},%d,%d}' % (r['revision'], len(r['names']),
-                ','.join(map(json.dumps, r['names'])), r['decimal_factor'], len(r['edge_names']))
+            return '{%du,%d,{%s},%d,%d,%d}' % (r['revision'], len(r['names']),
+                ','.join(map(json.dumps, r['names'])), r['decimal_factor'], len(r['edge_names']),
+                r['clears_recovery'])
 
         fields = sorted({name for row in rows for name in row['names']} - {'jumpid'})
         flags = ('_ep_aiflag', '_ep_edgerange')
@@ -327,22 +347,21 @@ class EntityNamespaceContracts(unittest.TestCase):
                  ('entityproperty_enum', 'aiflag_enum', 'edgerange_enum', 'gep_edelay_enum')]
         decls.extend(declaration(script, rf'^static const (?:int|char \*)\s*{name}\[\][^;]+;') for name in
                      ('obor_entityproperty6330', 'obor_entityproperty6330lns', 'eplist_aiflag', 'eplist_edgerange'))
-        decls.extend(declaration(script, pattern) for pattern in (
-            r'^enum\s*\{\s*OBOR_6330_ENTITY_EDGE_ORDINAL[^;]+;',
-            r'^enum\s*\{\s*OBOR_EARLY_AIFLAG_COUNT[^;]+;'))
+        decls.append(declaration(script, r'^enum\s*\{\s*OBOR_6330_ENTITY_EDGE_ORDINAL[^;]+;'))
         values = {
             'DECLARATIONS': '\n'.join(decls),
             'MACRO': continued_macro(macros, 'MAPSTRINGS'),
             'HELPERS': function(profiles, 'obor_profile_uses_5134_script_ids') + '\n'
-                + '\n'.join(function(script, name) for name in ('obor_aiflag_from_native',
-                            'obor_entityproperty_5134_index', 'obor_entityproperty')),
+                + function((engine / 'openbor.h').read_text(), 'obor_profile_has_classic_boomerang') + '\n'
+                + '\n'.join(function(script, name) for name in ('obor_aiflag_count',
+                    'obor_aiflag_from_native', *LEGACY_ENTITY_SELECTORS)),
             'VARIANTS': '\n'.join(function(variants, name) for name in ('ScriptVariant_ChangeType',
                 'ScriptVariant_Clear', 'ScriptVariant_IntegerValue', 'ScriptVariant_DecimalValue')),
             'SEARCH': function(utils, 'searchList'),
             'MEMBERS': 'int ' + ','.join(fields) + ';',
             'FIELDS': ',\n'.join('{"%s", &subject.%s}' % (name, name) for name in fields),
-            'MAP': cases(mapping, flags), 'GET': cases(getters, (*flags, '_ep_edelay')),
-            'SET': cases(setters, flags), 'PROFILES': ',\n'.join(map(expected, rows)),
+            'MAP': cases(mapping, flags), 'GET': cases(getters, (*flags, '_ep_edelay', '_ep_edge')),
+            'SET': cases(setters, (*flags, '_ep_edge')), 'PROFILES': ',\n'.join(map(expected, rows)),
             'LNS': expected(data['lns_control'] | {'revision': 6330}),
         }
         template = Path(__file__).with_name('script_posture_ids_contract.c.in').read_text()
@@ -379,7 +398,7 @@ class EntityNamespaceContracts(unittest.TestCase):
                                              'obor_eplist6330', 'obor_eplist6330lns'))
             declarations.append(declaration(script, r'^enum\s*\{\s*OBOR_6330_ENTITY_EDGE_ORDINAL[^;]+;'))
             namespace = '\n'.join(declarations + [function(script, name) for name in
-                                                   ('obor_entityproperty_5134_index', 'obor_entityproperty')])
+                                                   LEGACY_ENTITY_SELECTORS])
             macros = (engine / 'source/openborscript/scriptcommon.h').read_text()
         mapper, cases = switch_cases(script, 'mapstrings_entityproperty', 'ep')
         mapping = (mapper[:mapper.index('    static const')] +
@@ -444,7 +463,7 @@ class EntityNamespaceContracts(unittest.TestCase):
             'METHODS': '\n'.join(function(script, name) for name in
                                  ('openbor_executeanimation', 'openbor_performattack', 'openbor_setidle')),
             'INTEGER': function(variants, 'ScriptVariant_IntegerValue'),
-            'ROWS': ','.join('{%du,%d,%d,%s,%d}' % (row['revision'], row['active'], row['keep_flags'],
+            'ROWS': ','.join('{%du,%d,%d,%d,%s,%d}' % (row['revision'], row['active'], row['keep_flags'], row['keep_duck'],
                                                    row['port_animation'], row['native_animation']) for row in rows),
         }
         template = Path(__file__).with_name('script_entity_actions_contract.c.in').read_text()
@@ -480,8 +499,12 @@ class EntityNamespaceContracts(unittest.TestCase):
         overlay = function(source, 'draw_visual_debug')
         reverse_start = reverse.index('    // Entity collision (ebox)')
         forward_start = forward.index('    // Entity collision (ebox) properties.')
+        collision = (modules / 'collision_entity.c').read_text()
         values = {
             'COMMANDS': model_command_functions(commands, utility),
+            'COLLECTION_API': '\n'.join(function(collision, f'openbor_{name}_entity_collision_{part}')
+                for name, part in (('get', 'collection'), ('get', 'instance'),
+                                   ('get', 'property'), ('set', 'property'))),
             'MODEL_CASES': ''.join('case ' + name + ':' + cases[name]['body'] for name in cases
                                    if name.startswith('CMD_MODEL_EBOX') or name in
                                    ('CMD_MODEL_ENTITYPUSHING', 'CMD_MODEL_PUSHINGFACTOR',
@@ -497,11 +520,13 @@ class EntityNamespaceContracts(unittest.TestCase):
             'DEBUG_ENTRY': re.search(r'(?ms)^    if\((savedata.debug_position.*?)(?=\)\s*\{)', draw)[1],
             'DEBUG_ENTITY_BOXES': re.search(r'(?m)^\s*if\(([^\n]*savedata\.debug_collision_entity)\)', overlay)[1],
             'VARIANTS': '\n'.join(function(variant, name) for name in
-                                  ('ScriptVariant_Init', 'ScriptVariant_Clear', 'ScriptVariant_ChangeType')),
+                                  ('ScriptVariant_Init', 'ScriptVariant_Clear', 'ScriptVariant_ChangeType',
+                                   'ScriptVariant_IntegerValue')),
             'METHODS': '\n'.join(function(source, name) for name in ('isNumeric', 'getValidInt', 'getValidFloat',
                                   'diff', 'execute_onentitycollision_script', 'check_entity_collision',
                                   'check_entity_collision_for', 'ent_post_update')),
-            'ROWS': ','.join('{%du,%d}' % (row['revision'], row['entity_collision']) for row in rows),
+            'ROWS': ','.join('{%du,%d,%d,%d}' % (row['revision'], row['entity_collision'],
+                                                row['pushing'], row['collection_api']) for row in rows),
         }
         template = Path(__file__).with_name('entity_collision_availability_contract.c.in').read_text()
         code = re.sub(r'@([A-Z_]+)@', lambda match: values[match[1]], template)
@@ -515,6 +540,8 @@ class EntityNamespaceContracts(unittest.TestCase):
         self.assertEqual(revisions, sorted(contract_revisions(data, data['expected_revisions'])))
         engine = Path(os.environ.get('OBOR_HISTORICAL_ENGINE', ROOT / 'src/engines' / data['engine']))
         source = (engine / 'openbor.c').read_text(encoding='latin-1')
+        properties = (engine / 'source/openborscript/animation.c').read_text()
+        getter = function(properties, 'openbor_get_animation_property')
         initializer = re.search(r'(?ms)^const s_collision_entity empty_entity_collision =\s*\{[^{}]*\};', source)[0]
         _, loader = switch_cases(source, 'load_cached_model', 'cmd', outermost=True)
         animation = loader['CMD_MODEL_ANIM']['body']
@@ -532,7 +559,9 @@ class EntityNamespaceContracts(unittest.TestCase):
             'RESET': reset,
             'TRANSFORM': transform,
             'METHODS': '\n'.join(function(source, name) for name in methods),
-            'ROWS': ','.join('{%du,%d}' % (row['revision'], row['entity_collision']) for row in rows),
+            'COLLISION_PROPERTY': re.search(r'(?ms)^\s*(case ANI_PROP_ENTITY_COLLISION:.*?)(?=^\s*case )', getter)[1],
+            'ROWS': ','.join('{%du,%d,%d}' % (row['revision'], row['entity_collision'],
+                                             row['getter']) for row in rows),
         }
         template = Path(__file__).with_name('entity_collision_frames_contract.c.in').read_text()
         code = re.sub(r'@([A-Z_]+)@', lambda match: values[match[1]], template)
@@ -663,9 +692,9 @@ class EntityNamespaceContracts(unittest.TestCase):
             'METHODS': '\n'.join(methods),
             'REGISTRY': '\n    '.join(registrations),
             'ANIMATION_IDS': ','.join(str(int(value)) for value in data['animation_ids']),
-            'REVISIONS': ','.join('{%du,%d}' % (row['revision'], row['scalar_positions']) for row in rows),
+            'REVISIONS': ','.join('{%du,%s}' % (row['revision'], row['selector_table']) for row in rows),
         })
-        for tag, key in (('HISTORICAL', '5134'), ('CONTROL', '6391')):
+        for tag, key in (('HISTORICAL', '5134'), ('WITH_LOOP', '6175'), ('CONTROL', '6391')):
             refused = data['rejected_names'][key]
             parts[tag] = ',\n'.join('{%s,%s,%d}' % (json.dumps(name), enum, name not in refused)
                                    for name, enum in data['selector_tables'][key])
@@ -673,10 +702,15 @@ class EntityNamespaceContracts(unittest.TestCase):
         code = re.sub(r'@([A-Z_]+)@', lambda match: parts[match[1]], template)
         result = native_output(code, data, engine_source=engine, extra_cflags=('-fgnu89-inline',))
         self.assertEqual(re.findall(r'(?m)^PASS \d+$', result), [f'PASS {revision}' for revision in revisions])
+        selector_tables = {'SCALAR_POSITIONS': '5134', 'COORDINATES_WITH_LOOP': '6175', 'COORDINATES': '6391'}
+        diagnostics = []
+        for row in rows:
+            family = selector_tables[row['selector_table']]
+            diagnostics.extend(name for name in data['rejected_names'][family] for _ in range(2))
+            if family == '6391':
+                diagnostics.append('boomerang_loop')
         self.assertEqual(re.findall(r"(?m)^ Error: '([^']+)' is not a known entity property\.$", result),
-                         [name for row in rows
-                          for name in data['rejected_names']['5134' if row['scalar_positions'] else '6391']
-                          for _ in range(2)])
+                         diagnostics)
 
     def test_4905_precedes_typed_script_flags(self):
         engine = Path(os.environ.get('OBOR_HISTORICAL_ENGINE', ROOT / 'src/engines' / '4432'))
@@ -726,13 +760,14 @@ class EntityNamespaceContracts(unittest.TestCase):
                           for name, value in data['cases']['early' if row['early_ids'] else 'base'].items()
                           if value is None])
 
-    def test_6391_original_literal_constants(self):
-        data = load_contract_fixture(LITERAL_CONSTANTS)
+    def check_6391_literal_constants(self, fixture, *, background_fixture=None):
+        data = load_contract_fixture(fixture)
         rows = data['sources']
         self.assertEqual([r['revision'] for r in rows], sorted(contract_revisions(data, data['expected_revisions'])))
         engine = Path(os.environ.get('OBOR_HISTORICAL_ENGINE', ROOT / 'src/engines' / data['engine']))
         names = data['names']
-        tables = [data['values'][family] for family in ('6119', '6330', '6391')]
+        tables = list(data['values'].values())
+        self.assertLessEqual(len(tables), 32)
         self.assertTrue(all(len(t) == len(names) for t in tables))
         cases = []
         for name, values in zip(names, zip(*tables, strict=True), strict=True):
@@ -741,6 +776,12 @@ class EntityNamespaceContracts(unittest.TestCase):
                                           ','.join(str(value if value is not None else 0) for value in values)))
         variants = (engine / 'source/scriptlib/ScriptVariant.c').read_text()
         script = (engine / 'source/openborscript/constants.c').read_text()
+        background_rows = []
+        if background_fixture is not None:
+            background = load_contract_fixture(background_fixture)
+            background_rows = background['sources']
+            self.assertEqual([row['revision'] for row in background_rows],
+                             sorted(contract_revisions(background, background['expected_revisions'])))
         parts = constant_mapper_parts(engine) | {
             'WRAPPER': function(variants, 'ScriptVariant_ToString') + '\n' + function(script, 'openbor_transconst'),
             'LEVEL_METHODS': constant_level_methods(engine),
@@ -748,8 +789,11 @@ class EntityNamespaceContracts(unittest.TestCase):
             'RUNTIME_GLOBALS': '\n'.join('int %s = %d;' % (name, value)
                                         for name, value in data['runtime_globals'].items()),
             'CASES': ',\n'.join(cases),
-            'ROWS': ','.join('{%du,%d,%d}' % (row['revision'], row['table'], row['legacy_background_speed'])
-                             for row in rows),
+            'TABLE_COUNT': str(len(tables)),
+            'CHECK_LEVELS': str(int(data.get('check_levels', True))),
+            'ROWS': ','.join('{%du,%d}' % (row['revision'], row['table']) for row in rows),
+            'BACKGROUND_ROWS': ''.join('{%du,%d},\n' % (row['revision'], row['legacy_background_speed'])
+                                       for row in background_rows),
         }
         template = Path(__file__).with_name('literal_constant_contract.c.in').read_text()
         code = re.sub(r'@([A-Z_]+)@', lambda match: parts[match[1]], template)
@@ -760,12 +804,18 @@ class EntityNamespaceContracts(unittest.TestCase):
                                          for name, value in zip(names, tables[row['table']], strict=True)
                                          if value is None), f'PASS {row["revision"]}']])
 
+    def test_6391_original_literal_constants(self):
+        self.check_6391_literal_constants(LITERAL_CONSTANTS, background_fixture=BACKGROUND_SPEEDS)
+
+    def test_6391_original_animation_constants(self):
+        self.check_6391_literal_constants(ANIMATION_CONSTANTS)
+
     def test_6391_legacy_entity_names_ordinals_and_boomerang(self):
         data = load_contract_fixture(LEGACY_ENTITY)
         rows = [row for row in data['sources'] if row['engine'] == '6391']
         revisions = [row['revision'] for row in rows]
         self.assertEqual(revisions, sorted(set(revisions)))
-        self.assertEqual(set(revisions), set(data['expected_revisions']['6391']))
+        self.assertEqual(set(revisions), contract_revisions(data, data['expected_revisions']['6391']))
         engine = Path(os.environ.get('OBOR_HISTORICAL_ENGINE', ROOT / 'src/engines/6391'))
         commands = (engine / 'source/openborscript/commands.c').read_text()
         core = (engine / 'openbor.c').read_text()

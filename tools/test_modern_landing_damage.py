@@ -177,10 +177,13 @@ class ModernLandingDamageContracts(unittest.TestCase):
                                              function(code, 'init_model'))),
             'DIRECTIVE': cases['CMD_MODEL_EDGERANGE']['body'],
             'METHODS': '\n'.join(function(code, name) for name in
-                                 ('isNumeric', 'getValidFloat', 'check_edge', 'is_walking',
-                                  'common_anim_series', 'common_idle_anim')),
+                                 ('isNumeric', 'getValidFloat', 'obor_classify_supported_edge',
+                                  'obor_platform_leaves_edge', 'obor_check_classic_edge', 'check_edge',
+                                  'is_walking', 'common_anim_series', 'common_idle_anim')),
             'COMMANDS': model_command_functions(commands, utility),
-            'ROWS': ','.join('{%du,%d}' % (row['revision'], row['has_edge']) for row in rows),
+            'ROWS': ','.join('{%du,%d,%d,%d,%d,%d,%d}' % (row['revision'], row['geometry'],
+                             row['idle_mode'], row['walking_mode'], row['resets_ducking'],
+                             row['victory'], row['defeat_spelling']) for row in rows),
         }
         template = Path(__file__).with_name('edge_animation_contract.c.in').read_text()
         generated = re.sub(r'@([A-Z_]+)@', lambda match: values[match[1]], template)
@@ -207,7 +210,7 @@ class ModernLandingDamageContracts(unittest.TestCase):
                 self.assertRegex(str(animation), r'^(?:ANI_[A-Z0-9]+|-?\d+)$')
                 cases.append('    {%du, %s, %s, %d}' %
                              (row['revision'], json.dumps(query), animation, bounce))
-        values = {'TRANSLATOR': function(source, 'obor_profile_has_classic_boomerang') + translator,
+        values = {'TRANSLATOR': translator,
                   'CASES': ',\n'.join(cases),
                   'TABLES': '\n'.join(f'static int {name}[SERIES_SLOTS];' for name in slots),
                   'DYNAMIC_IDS': '\n'.join(setups)}

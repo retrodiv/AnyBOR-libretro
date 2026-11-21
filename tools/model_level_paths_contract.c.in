@@ -94,6 +94,18 @@ static int observe_select_background(const char *custBkgrds)
     return 1;
 }
 
+static void observe_mask(const char *value)
+{
+    char maskPath[MAX_BUFFER_LEN] = {0};
+#define GET_ARG(n) value
+    do
+    {
+        @MASK@
+    } while(0);
+#undef GET_ARG
+    observe(maskPath);
+}
+
 static int update_include_name(char **fn, char *namebuf, const char *argument)
 {
 #define GET_ARGP(n) argument
@@ -194,6 +206,11 @@ static void check_paths(size_t capacity)
     make_name(name, capacity, ".txt");
     assert(update_include_name(&selected, path, name) == 0);
     assert(selected == path && strcmp(path, expected) == 0);
+
+    make_name(name, MAX_BUFFER_LEN, ".png");
+    observe_mask(name);
+    assert(strlen(observed) == (capacity < MAX_BUFFER_LEN ? capacity : capacity - 1));
+    assert(strncmp(name, observed, strlen(observed)) == 0);
 }
 
 static void check_script_calls(size_t capacity)

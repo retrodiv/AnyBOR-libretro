@@ -77,14 +77,18 @@ static const struct {
 @TESTS@
 };
 
-static void check_profile(uint32_t revision, int has_lose)
+static void check_profile(uint32_t revision, const char *lose_name)
 {
     obor_profile_build = revision;
     modelcmdlist = createModelCommandList();
-    char lose[40] = "lose";
-    assert((getModelCommand(modelcmdlist, lose) == CMD_MODEL_LOSE) == has_lose);
-    assert(translate_attack_type(lose) == (has_lose ? ATK_LOSE : -1));
-    if(has_lose) check_lose_case();
+    char spelling[][6] = {"lose", "loose"};
+    for(size_t i = 0; i < sizeof(spelling) / sizeof(*spelling); ++i)
+    {
+        int available = lose_name && !strcmp(spelling[i], lose_name);
+        assert((getModelCommand(modelcmdlist, spelling[i]) == CMD_MODEL_LOSE) == available);
+        assert(translate_attack_type(spelling[i]) == (available ? ATK_LOSE : -1));
+    }
+    if(lose_name) check_lose_case();
     freeCommandList(modelcmdlist);
 
     s_defense defense[MAX_ATKS + 2];

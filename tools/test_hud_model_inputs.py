@@ -58,6 +58,12 @@ def program(engine, profiles, *, alter_lookup=False):
     if 'obor_profile_copy_name(' in core:
         bodies.extend(function(core, name) for name in
                       ('obor_profile_name_limit', 'obor_profile_copy_name'))
+    if 'obor_copy_display_name(' in core:
+        bodies.append(function(core, 'obor_copy_display_name'))
+        bodies.append(function((engine / 'source/utils.c').read_text(), 'safe_strncpy'))
+    if 'obor_initial_colourmap(' in core:
+        bodies.extend(rename_identifiers(function(core, name), providers) for name in
+                      ('obor_select_colourmap', 'obor_initial_colourmap'))
     for label in ('original', 'checked'):
         names = {name: label + '_' + name for name in original}
         for name, baseline in original.items():

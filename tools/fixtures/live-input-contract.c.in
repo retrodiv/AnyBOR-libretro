@@ -14,13 +14,14 @@
 typedef uint32_t u32;
 typedef uint64_t u64;
 typedef int32_t LONG;
-typedef struct { LONG value; bool valid; } ScriptVariant;
+enum { VT_EMPTY, VT_INTEGER };
+typedef struct { LONG lVal; int vt; } ScriptVariant;
 static uint32_t obor_profile_build, obor_profile_features;
 @FLAGS@
 @CODES@
 
 enum { A_REC_STOP, A_REC_PLAY, ANI_BLOCK };
-enum { _pp_disablekeys, _pp_playkeys, _pp_keys, _pp_newkeys, _pp_releasekeys };
+enum { _pp_disablekeys, _pp_playkeys, _pp_keys, _pp_newkeys, _pp_releasekeys, _pp_combokey };
 
 typedef struct { int settings[JOY_MAX_INPUTS]; u64 keyflags, newkeyflags; int kb_break; } s_playercontrols;
 static s_playercontrols controls[MAX_PLAYERS], default_control;
@@ -32,8 +33,9 @@ static unsigned char obor_pad[MAX_PLAYERS][16];
 typedef struct { u32 movetime; int playerindex, direction, stalltime; } entity;
 typedef struct {
     @PLAYER_FIELDS@
-    u32 combokey[MAX_SPECIAL_INPUTS], inputtime[MAX_SPECIAL_INPUTS];
-    unsigned combostep;
+    @COMBO_HISTORY@
+    u32 inputtime[MAX_SPECIAL_INPUTS];
+    int combostep;
     entity *ent;
 } s_player;
 static s_player player[MAX_PLAYERS];
@@ -53,23 +55,40 @@ static bool validanim(entity *ent, int anim)
 static bool check_special(void) { return special_allowed; }
 
 #define SUCCEEDED(result) ((result) == 0)
+#define E_FAIL 0
 static int ScriptVariant_IntegerValue(const ScriptVariant *value, LONG *out)
 {
-    if(!value->valid) return -1;
-    *out = value->value;
+    if(value->vt != VT_INTEGER) return -1;
+    *out = value->lVal;
     return 0;
 }
 
 static int set_input(int property, LONG value, bool valid)
 {
     const int index = 0;
-    ScriptVariant argument = {value, valid}, *arg = &argument;
+    ScriptVariant argument = {value, valid ? VT_INTEGER : VT_EMPTY}, *arg = &argument;
     LONG ltemp;
     @PROFILE_WIDTH@
     switch(property)
     {
         @SETTERS@
         default: goto cpperror;
+    }
+    return 1;
+cpperror:
+    return 0;
+}
+
+static int set_combo_key(LONG slot, LONG key)
+{
+    const int index = 0;
+    ScriptVariant slot_arg = {slot, VT_INTEGER}, key_arg = {key, VT_INTEGER};
+    ScriptVariant *arg = &slot_arg, **pretvar = &arg;
+    ScriptVariant *varlist[] = {NULL, NULL, &slot_arg, &key_arg};
+    LONG ltemp;
+    switch(_pp_combokey)
+    {
+        @COMBO_SETTER@
     }
     return 1;
 cpperror:
@@ -117,7 +136,7 @@ static void check_script_writes(unsigned width)
     }
 }
 
-static void check_held_and_released(unsigned width)
+static void check_held_and_released(unsigned width, unsigned combo_width)
 {
     const u64 high_bit = width == 64 ? (UINT64_C(1) << 40) : 0;
     controls[0].settings[40] = OBOR_KEY(0, 0);
@@ -127,14 +146,14 @@ static void check_held_and_released(unsigned width)
     inputrefresh(A_REC_STOP);
     assert(player[0].keys == (FLAG_ATTACK | high_bit) && player[1].keys == FLAG_JUMP);
     assert(bothkeys == (FLAG_ATTACK | FLAG_JUMP | high_bit) && bothnewkeys == bothkeys);
-    assert(player[0].combokey[0] == FLAG_ATTACK);
+    assert(player[0].combokey[0] == (FLAG_ATTACK | (combo_width == 64 ? high_bit : 0)));
     obor_pad[0][0] = obor_pad[0][1] = 0;
     inputrefresh(A_REC_STOP);
     assert(bothkeys == FLAG_JUMP && bothnewkeys == 0);
     assert(player[0].releasekeys == (FLAG_ATTACK | high_bit));
 }
 
-static void check_replay_and_special(unsigned width)
+static void check_replay_and_special(unsigned width, unsigned combo_width)
 {
     const u64 mask = width == 32 ? UINT32_MAX : UINT64_MAX;
     assert(set_input(_pp_keys, -1, true));
@@ -145,7 +164,8 @@ static void check_replay_and_special(unsigned width)
     _time = 42;
     inputrefresh(A_REC_PLAY);
     assert(bothkeys == mask && bothnewkeys == mask && player[0].releasekeys == mask);
-    assert(player[0].combokey[0] == UINT32_MAX && player[0].inputtime[0] == _time);
+    assert(player[0].combokey[0] == (combo_width == 64 ? UINT64_MAX : UINT32_MAX));
+    assert(player[0].inputtime[0] == _time);
     ajspecial = 0;
     special_allowed = false;
     assert(!player_check_special() && player[0].playkeys == mask);
@@ -158,7 +178,29 @@ static void check_replay_and_special(unsigned width)
     assert(player[0].playkeys == (mask & ~((u64)FLAG_SPECIAL | FLAG_JUMP)));
 }
 
-static const struct { u32 revision; unsigned width; } profiles[] = {
+static void check_backward_attack(unsigned combo_width)
+{
+    int backward_attack[] = {FLAG_BACKWARD, FLAG_ATTACK};
+    player[0].ent = self;
+    self->direction = 1;
+    controls[0].settings[key_slot(FLAG_MOVELEFT)] = OBOR_KEY(0, 0);
+    controls[0].settings[key_slot(FLAG_ATTACK)] = OBOR_KEY(0, 1);
+    obor_pad[0][0] = 1;
+    inputrefresh(A_REC_STOP);
+    obor_pad[0][0] = 0;
+    obor_pad[0][1] = 1;
+    inputrefresh(A_REC_STOP);
+    assert(player[0].combostep == 2);
+    assert(player[0].combokey[0] == (FLAG_BACKWARD | FLAG_MOVELEFT));
+    assert(match_combo(backward_attack, &player[0], 2) == (combo_width == 32));
+
+    const LONG script_key = INT32_MIN;
+    assert(set_combo_key(0, script_key));
+    assert(player[0].combokey[0] == (combo_width == 64 ? (u64)script_key : (u32)script_key));
+    assert(match_combo(backward_attack, &player[0], 2));
+}
+
+static const struct { u32 revision; unsigned width, combo_width; } profiles[] = {
     @PROFILES@
 };
 
@@ -168,11 +210,13 @@ int main(void)
     {
         obor_profile_build = profiles[i].revision;
         reset_input();
+        check_backward_attack(profiles[i].combo_width);
+        reset_input();
         check_script_writes(profiles[i].width);
         reset_input();
-        check_held_and_released(profiles[i].width);
+        check_held_and_released(profiles[i].width, profiles[i].combo_width);
         reset_input();
-        check_replay_and_special(profiles[i].width);
+        check_replay_and_special(profiles[i].width, profiles[i].combo_width);
     }
     return 0;
 }

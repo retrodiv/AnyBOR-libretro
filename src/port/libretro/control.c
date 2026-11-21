@@ -279,13 +279,13 @@ void control_update(s_playercontrols **playercontrols, int numplayers)
 #if OBOR_ENGINE_BUILD == 6391
         if (player == 0 && !k &&
             ((obor_profile_features & OBOR_PROFILE_LNS_6330) ? allow_default_keys() :
-             (obor_profile_build == 6330 || obor_profile_build == 6391))) {
+             (obor_profile_build >= 6250 && obor_profile_build <= 6391))) {
             for (int i = 0; i < JOY_MAX_INPUTS; i++) {
                 if (key_down(default_control.settings[i]))
                     k |= ((u64)1 << i);
             }
         }
-        if (obor_profile_build == 5134 || obor_profile_build == 6119)
+        if (obor_profile_build && obor_profile_build < 6173)
             k &= UINT32_MAX;
 #endif
         pcontrols->kb_break = 0;
@@ -353,8 +353,12 @@ void obor_get_rumble(int32_t player, int32_t *ratio, int32_t *msec)
 void control_rumble(int port, int ratio, int msec)
 {
 #if OBOR_ENGINE_BUILD == 6391
-    if (obor_profile_build == 5134 || obor_profile_build == 6119)
+    if (obor_profile_build && obor_profile_build < 6229)
         return;
+    if (ratio <= 0)
+        return;
+    /* The original SDL haptic ratio is normalized to [0, 1]. */
+    ratio = 100;
 #endif
     if (port < 0 || port >= 4 || msec <= 0)
         return;

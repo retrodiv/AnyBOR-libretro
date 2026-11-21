@@ -31,6 +31,17 @@ int max_attack_types = 2;
 static int selected, reset_argument, drop_at_animation, attack_at_animation;
 static int resets, thaws, pains, pain_type, pain_state;
 
+struct recovery_profile
+{
+    unsigned revision;
+    int front_only, has_rising, has_riseattacking, rise_clears_backpain;
+    int riseattack_clears_pain, riseattack_clears_edge, riseattack_clears_ducking;
+    int pain_clears_rising, grabbed_pain_clears_rising, pain_clears_riseattacking;
+    int pain_clears_edge, pain_clears_ducking;
+    int landing_clears_edge, landing_clears_ducking;
+    int grab_clears_backpain, grab_clears_edge, grab_clears_ducking;
+};
+
 void common_rise(void) { abort(); }
 void common_attack_proc(void) { abort(); }
 int reset_backpain(entity *ent) { assert(ent == &actor && ent->inbackpain); ++resets; return 0; }
@@ -104,6 +115,7 @@ static void initialize(unsigned mask)
     actor.rising = 1;
     actor.riseattacking = 1;
     actor.ducking = 1;
+    actor.edge = EDGE_LEFT;
 #endif
     selected = -1;
     resets = thaws = pains = 0;
@@ -116,8 +128,16 @@ static void recovery_flags(int rising, int riseattacking, int ducking)
 #endif
 }
 
-static void check_rise(int early)
+static void check_recovery_edge(int clears_edge)
 {
+#if !LEGACY_STRUCT
+    assert(actor.edge == (clears_edge ? EDGE_NO : EDGE_LEFT));
+#endif
+}
+
+static void check_rise(const struct recovery_profile *profile)
+{
+    const int early = profile->front_only;
     const unsigned masks[] = {15, 13, 4, 2, 1, 0};
     const int early_ids[] = {ANI_FALL, ANI_IDLE, -1, ANI_FALL, ANI_IDLE, -1};
     const int later_ids[] = {ANI_RUN, ANI_RUN, ANI_BLOCK, ANI_FALL, ANI_IDLE, -1};
@@ -138,14 +158,16 @@ static void check_rise(int early)
         assert(actor.takeaction == common_rise && !actor.drop && !actor.falling && !actor.projectile);
         assert(actor.nograb && actor.modeldata.jugglepoints.current == 9);
         assert(!actor.velocity.x && !other.velocity.y && !other.velocity.z && other.velocity.x == 7);
-        assert(actor.inbackpain == (!early && i < 3));
+        assert(actor.inbackpain == (!profile->rise_clears_backpain && i < 3));
         assert(resets == (!early && (i == 3 || i == 4)));
-        recovery_flags(!early, early, 1);
+        recovery_flags(profile->has_rising, !profile->has_riseattacking, 1);
+        check_recovery_edge(0);
     }
 }
 
-static void check_riseattack(int early)
+static void check_riseattack(const struct recovery_profile *profile)
 {
+    const int early = profile->front_only;
     const unsigned masks[] = {15, 13, 9, 15, 1, 0};
     const int modes[] = {1, 1, 2, 0, 2, 1};
     const int early_ids[] = {ANI_FALL, ANI_IDLE, -1, ANI_IDLE, -1, -1};
@@ -167,15 +189,17 @@ static void check_riseattack(int early)
         assert(reset_argument == !early && drop_at_animation == !early);
         assert(attack_at_animation == (early ? 1 : 2));
         assert(actor.takeaction == common_attack_proc && !actor.drop && actor.attacking == 1);
-        assert(actor.inpain == early && actor.falling == early && actor.projectile);
+        assert(actor.inpain == !profile->riseattack_clears_pain);
+        assert(actor.falling == !profile->riseattack_clears_pain && actor.projectile);
         assert(!other.staydown.riseattack_stall && actor.nograb && actor.modeldata.jugglepoints.current == 9);
         assert(actor.inbackpain == (early || i != 4));
         assert(resets == (!early && i == 4));
-        recovery_flags(early, !early, early);
+        recovery_flags(!profile->has_rising, profile->has_riseattacking, !profile->riseattack_clears_ducking);
+        check_recovery_edge(profile->riseattack_clears_edge);
     }
 }
 
-static void check_pain(int early)
+static void check_pain(const struct recovery_profile *profile)
 {
     for(int mode = 0; mode < 3; ++mode)
     {
@@ -189,7 +213,9 @@ static void check_pain(int early)
         assert(thaws == 1 && !actor.falling && !actor.attacking && !actor.drop && !actor.projectile);
         assert(actor.inbackpain == (mode != 1));
         assert(actor.modeldata.guardpoints.current == (mode == 2 ? 7 : 0));
-        recovery_flags(early, early, early);
+        const int clears_rising = mode == 1 ? profile->grabbed_pain_clears_rising : profile->pain_clears_rising;
+        recovery_flags(!clears_rising, !profile->pain_clears_riseattacking, !profile->pain_clears_ducking);
+        check_recovery_edge(profile->pain_clears_edge);
     }
 }
 
@@ -203,20 +229,22 @@ static void grab_state(entity *attacker, entity *target)
     @GRAB@
 }
 
-static void check_landing_and_grab(int early)
+static void check_landing_and_grab(const struct recovery_profile *profile)
 {
     initialize(0);
     self = &actor;
     jump_landing();
     assert(!actor.attacking && !actor.jumping);
-    recovery_flags(1, 1, early);
+    recovery_flags(1, 1, !profile->landing_clears_ducking);
+    check_recovery_edge(profile->landing_clears_edge);
 
     initialize(0);
     other.attacking = 1;
     grab_state(&actor, &other);
     assert(!other.attacking && !actor.idling && !actor.running);
-    assert(actor.inbackpain == early);
-    recovery_flags(1, 1, early);
+    assert(actor.inbackpain == !profile->grab_clears_backpain);
+    recovery_flags(1, 1, !profile->grab_clears_ducking);
+    check_recovery_edge(profile->grab_clears_edge);
 }
 
 static void grab_attack_write(unsigned operation)
@@ -328,7 +356,7 @@ static void check_grab_distance(void)
 
 int main(void)
 {
-    const struct { unsigned revision; int early; } rows[] = {@PROFILES@};
+    const struct recovery_profile rows[] = {@PROFILES@};
     if(LEGACY_STRUCT)
     {
         obor_profile_build = 4750;
@@ -337,10 +365,10 @@ int main(void)
     for(size_t i = 0; i < sizeof(rows) / sizeof(*rows); ++i)
     {
         obor_profile_build = rows[i].revision;
-        check_rise(rows[i].early);
-        check_riseattack(rows[i].early);
-        check_pain(rows[i].early);
-        check_landing_and_grab(rows[i].early);
+        check_rise(&rows[i]);
+        check_riseattack(&rows[i]);
+        check_pain(&rows[i]);
+        check_landing_and_grab(&rows[i]);
         check_grab_attacks();
         check_grab_distance();
         printf("%u\n", obor_profile_build);

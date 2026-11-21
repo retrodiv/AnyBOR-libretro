@@ -67,15 +67,22 @@ def saved_record_helpers(source, record, names):
             + '\n'.join(function(source, name) for name in names))
 
 
+def early_score_name_storage(source):
+    return re.search(r'(?m)^static char obor_early_score_names\[[^;]+;', source)[0] + '\n'
+
+
 def profile_id_support(code):
-    names = ('obor_profile_uses_5134_script_ids', 'obor_profile_has_animation_entity_collision')
+    early = 'obor_profile_uses_5134_script_ids'
+    back_rise = 'obor_profile_has_back_rise_animations'
+    names = (early, 'obor_profile_has_animation_entity_collision', back_rise,
+             'obor_profile_uses_legacy_path_sizes', 'obor_profile_has_checkbase')
     selected = [name for name in names if name + '(' in code]
     if not selected:
         return code
+    if back_rise in selected and early not in selected:
+        selected.insert(0, early)
     header = (ENGINE / 'source/openborscript/profile_ids.h').read_text()
-    if selected[-1] == names[1]:
-        selected = names
-    return ''.join(function(header, name) for name in selected) + code
+    return '\n'.join([*(function(header, name) for name in selected), code])
 
 
 def original_keys(context, code):
@@ -327,8 +334,6 @@ int main(void) {
         candidate = rename_identifiers('\n'.join(function(source, name) for name in names),
             {name:'candidate_' + name for name in names})
         display_code = '\n'.join(display)
-        if 'obor_profile_has_classic_boomerang(' in candidate + display_code:
-            candidate = function(source, 'obor_profile_has_classic_boomerang') + candidate
         candidate = profile_id_support(candidate + display_code)
         program = (FIXTURE.parent / 'lns-6330-entity-actions-contract.c.in').read_text()
         includes = (ABI.parent, READER_HEADER.parent, ENGINE, ENGINE / 'source',
@@ -363,9 +368,8 @@ int main(void) {
         original = '\n'.join(row['function'].replace('projectile_wall_deflect(', key + '_deflect(', 1)
             for key, row in data['contexts'].items())
         candidate = function(source, 'projectile_wall_deflect').replace('projectile_wall_deflect(', 'candidate_deflect(', 1)
-        if 'obor_profile_uses_legacy_ricochet(' in candidate:
-            candidate = ('static uint32_t obor_profile_build = 6330;\n'
-                         + function(source, 'obor_profile_uses_legacy_ricochet') + candidate)
+        if 'obor_profile_build' in candidate:
+            candidate = 'static uint32_t obor_profile_build = 6330;\n' + candidate
         program = (FIXTURE.parent / 'lns-6330-deflect-contract.c.in').read_text()
         native(program.replace('@ABI@', json.dumps(str(ABI))).replace('@CANDIDATE@', candidate)
             .replace('@ORIGINAL@', original), extra_flags=('-Wno-unused-parameter',))
@@ -382,7 +386,7 @@ int main(void) {
         code = rename_identifiers(code, {name:'candidate_' + name for name in names})
         if 'movement_wall_altitude(' in code:
             code = ('static uint32_t obor_profile_build = 6330;\n'
-                    + function(source, 'movement_wall_altitude') + code)
+                    + profile_id_support(function(source, 'movement_wall_altitude') + code))
         program = (FIXTURE.parent / 'lns-6330-movement-contract.c.in').read_text()
         native(program.replace('@ABI@', json.dumps(str(ABI))).replace('@CANDIDATE@', code)
             .replace('@ORIGINAL@', '\n'.join(originals)))
@@ -580,6 +584,7 @@ int main(void) {
                 'clearbuttons': f'clearbuttons_{revision}'}))
             seed_rumble = (f'original_{revision}.joyrumble[p] = 1;' if row['has_haptics'] else '(void)p;')
             cases.append(f'CHECK_CONTROLS({revision}, {int(row["has_haptics"])}, '
+                         f'{int(row["has_rumble_output"])}, {int(row["resets_rumble"])}, '
                          f'{int(row["has_default_keyboard"])}, {seed_rumble});')
         limits = '\n'.join(re.search(r'^#define\s+' + name + r'[^\r\n]*', savedata, re.M)[0]
                            for name in ('MAX_PLAYERS', 'MAX_BTN_NUM'))
@@ -592,6 +597,11 @@ int main(void) {
         overlay = CONTROL_SOURCE.read_text()
         input_code = overlay[overlay.index('static int flag_to_index('):]
         rumble = overlay[overlay.rindex('void obor_get_rumble('):]
+        callers = ('check_gravity', 'checkhitscore', 'common_takedamage', 'player_die',
+                   'bike_crash', 'obstacle_takedamage')
+        events = [line.strip() for name in callers for line in function(source, name).splitlines()
+                  if 'control_rumble(' in line]
+        self.assertEqual(len(events), 8)
         values = {
             'ABI': json.dumps(str(ABI)), 'LIMITS': limits, 'KEYS': keys, 'CONTROL_CODES': control_codes,
             'RECORD': saved_record_type(savedata, 's_savedata'), 'ORIGINALS': '\n'.join(contracts),
@@ -600,11 +610,38 @@ int main(void) {
                 'obor_profile_read_settings', 'obor_profile_write_settings')),
             'BACKEND': (function(input_code, 'key_down') + function(input_code, 'control_update')
                         + function(rumble, 'obor_get_rumble') + function(rumble, 'control_rumble')),
+            'EVENTS': '\n'.join(line + f'\n    check_event(port, enabled, durations[{i}]);'
+                                for i, line in enumerate(events)),
             'TESTS': '\n'.join(cases),
         }
         template = (Path(__file__).with_name('fixtures') / 'early-controls-contract.c.in').read_text()
         native(re.sub(r'@([A-Z_]+)@', lambda match: values[match[1]], template),
                extra_flags=('-DSDL=1', '-DOBOR_ENGINE_BUILD=6391'))
+
+    def test_6391_android_settings_records(self):
+        source = (ENGINE / 'openbor.c').read_text()
+        savedata = (ENGINE / 'source/savedata.h').read_text()
+        data = load_contract_fixture(Path(__file__).with_name('fixtures') / 'profile-6391-early-controls.json')
+        rows = data['sources']
+        revisions = [row['revision'] for row in rows]
+        self.assertEqual(revisions, sorted(contract_revisions(data, data['expected_revisions'])))
+        records = []
+        for row in rows:
+            record = data['contracts'][row['contract']]['settings']
+            records.append(rename_identifiers(record, {'s_savedata': f'savedata_{row["revision"]}'}))
+        parts = {
+            'ABI': json.dumps(str(ABI)),
+            'LIMITS': '\n'.join(re.search(r'^#define\s+' + name + r'[^\r\n]*', savedata, re.M)[0]
+                                for name in ('MAX_PLAYERS', 'MAX_BTN_NUM')),
+            'RECORD': saved_record_type(savedata, 's_savedata'),
+            'ORIGINALS': '\n'.join(records),
+            'METHODS': '\n'.join(function(source, name) for name in ('obor_profile_settings_bytes',
+                'obor_profile_settings_io', 'obor_profile_read_settings', 'obor_profile_write_settings')),
+            'TESTS': '\n    '.join(f'check({revision}u, sizeof(savedata_{revision}));' for revision in revisions),
+        }
+        template = (Path(__file__).with_name('fixtures') / 'android-settings-layout-contract.c.in').read_text()
+        native(re.sub(r'@([A-Z_]+)@', lambda match: parts[match[1]], template),
+               extra_flags=('-DANDROID=1', '-DSDL=1'))
 
     def test_6391_live_input_widths(self):
         source = (ENGINE / 'openbor.c').read_text()
@@ -626,11 +663,14 @@ int main(void) {
             'CODES': '\n'.join(line for line in CONTROL_HEADER.read_text().splitlines()
                 if re.match(r'^#define (?:OBOR_KEY(?:BASE|SPAN)?\b|JOY_MAX_INPUTS\b)', line)),
             'PLAYER_FIELDS': native_player_fields,
+            'COMBO_HISTORY': re.search(r'(?m)^\s*u(?:32|64) combokey\[MAX_SPECIAL_INPUTS\];', header)[0].strip(),
             'METHODS': '\n'.join(function(control, name) for name in ('key_down', 'control_update'))
-                + function(source, 'inputrefresh') + function(source, 'player_check_special'),
+                + '\n'.join(function(source, name) for name in ('inputrefresh', 'player_check_special', 'match_combo')),
             'PROFILE_WIDTH': re.search(r'(?m)^\s*const bool early_input_masks = [^;]+;', setter)[0],
             'SETTERS': '\n'.join(outer_case(setter, '_pp_' + name) for name in properties),
-            'PROFILES': ',\n'.join(f'{{{row["revision"]}u, {row["key_width"]}u}}' for row in rows),
+            'COMBO_SETTER': outer_case(setter, '_pp_combokey'),
+            'PROFILES': ',\n'.join(f'{{{row["revision"]}u, {row["key_width"]}u, {row["combo_width"]}u}}'
+                                  for row in rows),
         }
         template = (Path(__file__).with_name('fixtures') / 'live-input-contract.c.in').read_text()
         native(re.sub(r'@([A-Z_]+)@', lambda match: parts[match[1]], template),
@@ -749,11 +789,13 @@ int main(void) {
         names = ('_strmidx', '_colx', '_liney', '_menutextm', '_menutext')
         macros = '\n'.join(re.search(r'^#define ' + name + r'\([^\r\n]+', header, re.M).group() for name in names)
         program = (FIXTURE.parent / 'lns-6330-saved-menu-contract.c.in').read_text()
+        ids = (ENGINE / 'source/openborscript/profile_ids.h').read_text()
         native(program.replace('@ABI@', json.dumps(str(ABI))).replace('@LIMITS@', declarations)
             .replace('@KEYS@', profile_keys(header))
             .replace('@MACROS@', macros).replace('@CANDIDATE@',
                 'static uint32_t obor_profile_build;\n'
                 + function(source, 'obor_profile_early_save_layout') + '\n'
+                + function(ids, 'obor_profile_uses_legacy_path_sizes') + '\n'
                 + function(source, 'load_saved_game'))
             .replace('@ORIGINALS@', '\n'.join(originals)), extra_flags=('-Wno-sign-compare',))
 
@@ -907,6 +949,11 @@ int main(void) {
         if 'startup_asset_path(' in candidate:
             candidate = ('static uint32_t obor_profile_build = 6330;\n'
                          'static void borShutdown(int mode, const char *format, ...) { (void)mode; (void)format; abort(); }\n'
+                         + function(source, 'obor_profile_early_save_layout')
+                         + function(header, 'obor_profile_name_width')
+                         + early_score_name_storage(source)
+                         + function(source, 'obor_profile_score_name')
+                         + function(source, 'obor_copy_display_name')
                          + profile_id_support(function(source, 'startup_asset_path') + candidate))
         program = (FIXTURE.parent / 'lns-6330-hof-ui-contract.c.in').read_text()
         native(program.replace('@ABI@', json.dumps(str(ABI))).replace('@LIMITS@', declarations)
@@ -1030,7 +1077,8 @@ int main(void) {
                 functions.append(rename_identifiers(body, mapping))
             originals.append('#define ' + key + '_CV_HIGH_SCORE ' + row['score_version']['literal'] + '\n'
                 + '\n'.join(functions))
-        candidate = saved_record_helpers(source, 'obor_early_savescore', ('clearHighScore',
+        candidate = early_score_name_storage(source) + saved_record_helpers(
+            source, 'obor_early_savescore', ('obor_profile_score_name', 'clearHighScore',
             'obor_profile_early_savescore_io', 'obor_profile_savescore_size', 'initHighScore',
             'saveHighScoreFile', 'loadHighScoreFile'))
         declarations = '\n'.join(re.search(r'^#define\s+' + name + r'[^\r\n]*', header, re.M).group()
@@ -1103,13 +1151,13 @@ int main(void) {
         header = '\n'.join((ENGINE / name).read_text()
                            for name in ('openbor.h', 'source/savedata.h', 'source/globals.h'))
         fixtures = Path(__file__).with_name('fixtures')
-        data = load_contract_fixture(fixtures / 'profile-6391-early-save-records.json')
+        data = load_contract_fixture(fixtures / 'profile-6391-save-record-boundaries.json')
         rows = data['sources']
         revisions = [row['revision'] for row in rows]
         self.assertEqual(revisions, sorted(contract_revisions(data, data['expected_revisions'])))
         originals = [
-            rename_identifiers(row['records'][name], {name: f'{name}_{row["revision"]}'})
-            for row in rows for name in ('s_savelevel', 's_savescore')
+            rename_identifiers(record[name], {name: f'{name}_{index}'})
+            for index, record in enumerate(data['layouts']) for name in ('s_savelevel', 's_savescore')
         ]
         progress_name = re.findall(r'strncpy\(save->dName,[^;]+;', function(source, 'savelevelinfo'))
         menu_names = re.findall(r'strncpy\(savelevel\[saveslot\]\.dName,[^;]+;',
@@ -1126,19 +1174,64 @@ int main(void) {
             'LEVEL_IO': saved_record_helpers(source, 'obor_early_savelevel',
                 ('obor_profile_early_savelevel_copy', 'obor_profile_early_savelevels_io',
                  'obor_profile_savelevel_size', 'obor_profile_savelevels_io')),
-            'SCORE_IO': saved_record_type(source, 'obor_early_savescore') + '\n'
-                + '\n'.join(function(source, name) for name in ('clearHighScore',
+            'SCORE_IO': early_score_name_storage(source) + saved_record_type(source, 'obor_early_savescore') + '\n'
+                + '\n'.join(function(source, name) for name in ('obor_profile_score_name', 'clearHighScore',
                     'obor_profile_early_savescore_io', 'obor_profile_savescore_size',
                     'saveHighScoreFile', 'loadHighScoreFile')),
             'PROGRESS_NAME': progress_name[0],
             'MENU_NAME_FIRST': menu_names[0],
             'MENU_NAME_SECOND': menu_names[1],
-            'TESTS': '\n'.join(f'CHECK_RECORDS({row["revision"]});\n'
+            'LAYOUT_CHECKS': '\n'.join(f'static void check_layout_{index}(unsigned revision) '
+                                       f'{{ CHECK_RECORDS(revision, {index}); }}'
+                                       for index in range(len(data['layouts']))),
+            'TESTS': '\n'.join(f'check_layout_{row["layout"]}({row["revision"]});\n'
                 f'check_difficulty_names({row["revision"]}, {row["progress_name_width"]}, '
                 f'{row["menu_name_widths"][0]}, {row["menu_name_widths"][1]});' for row in rows),
         }
         template = (fixtures / 'early-save-records-contract.c.in').read_text()
         native(re.sub(r'@([A-Z_]+)@', lambda match: values[match[1]], template))
+
+    def test_6391_original_player_and_score_display_names(self):
+        fixtures = Path(__file__).with_name('fixtures')
+        data = load_contract_fixture(fixtures / 'profile-6391-player-and-score-display.json')
+        rows = data['sources']
+        revisions = [row['revision'] for row in rows]
+        self.assertEqual(revisions, sorted(contract_revisions(data, data['expected_revisions'])))
+        engine_source = (ENGINE / 'openbor.c').read_text(encoding='latin-1')
+        script_source = (ENGINE / 'openborscript.c').read_text(encoding='latin-1')
+        select = function(engine_source, 'selectplayer')
+        hall = function(engine_source, 'hallfame')
+        setter = function(script_source, 'openbor_changeplayerproperty')
+
+        def name_copy(body, origin):
+            return re.search(r'(?:safe_strncpy|obor_copy_display_name)\(player\[i\]\.name, '
+                             + re.escape(origin) + r'(?:, obor_profile_name_width\(\))?\);', body)[0]
+
+        values = {
+            'SUPPORT': function((ENGINE / 'source/utils.c').read_text(), 'safe_strncpy')
+                + function(engine_source, 'obor_profile_early_save_layout')
+                + early_score_name_storage(engine_source)
+                + function(engine_source, 'obor_profile_score_name')
+                + function(engine_source, 'obor_copy_display_name')
+                + function(engine_source, 'clearHighScore'),
+            'JOIN_NAME': name_copy(function(engine_source, 'updatestatus'), 'model->name'),
+            'SKIP_NAME': name_copy(select, 'skipselect[i]'),
+            'SELECT_NAME': name_copy(select, 'example[i]->model->name'),
+            'RESTORE_NAME': name_copy(function(engine_source, 'playgame'), 'save->pName[i]'),
+            'SAVE_NAME': re.search(r'strncpy\(save->pName\[i\], player\[i\]\.name, MAX_NAME_LEN\);',
+                                   function(engine_source, 'savelevelinfo'))[0],
+            'SCRIPT_NAME': re.search(r'(?ms)^        if\(!tempstr \|\| strlen\(tempstr\) > obor_profile_name_width\(\)\)'
+                                     r'\n.*?^        strcpy\(player\[index\]\.name, tempstr\);', setter)[0],
+            'RANKING': re.search(r'(?ms)^    if\(addtoscore\)\n.*?^    \}', hall)[0],
+            'DISPLAY': re.search(r'(?ms)^        for\(i = 0; i < 10; i\+\+\)\n.*?^        \}', hall)[0],
+            'CASES': '\n    '.join('check(%du, %du, %du);' %
+                                   (row['revision'], row['player_name_bytes'], row['score_name_bytes'])
+                                   for row in rows),
+        }
+        template = (fixtures / 'player-score-display-contract.c.in').read_text()
+        code = re.sub(r'@([A-Z_]+)@', lambda match: values[match[1]], template)
+        self.assertEqual(native_output(code, data, engine_source=ENGINE),
+                         ''.join(f'PASS {revision}\n' for revision in revisions))
 
     def test_saved_selection_wire_layout_and_partial_reads_match_originals(self):
         source = (ENGINE / 'openbor.c').read_text()
@@ -1202,9 +1295,23 @@ int main(void) {
         for key, context in data['contexts'].items():
             originals.append(original_keys(key, fragments('\n'.join(context['functions'].values()), key)))
         program = (FIXTURE.parent / 'lns-6330-selection-input-contract.c.in').read_text()
+        palette = palette_profile_context(source)
+        if 'obor_profile_has_player_status()' in source:
+            ids = (ENGINE / 'source/openborscript/profile_ids.h').read_text()
+            palette += '\n' + function(ids, 'obor_profile_has_player_status')
+        if 'obor_initial_colourmap(' in source:
+            palette += """
+static int nextcolourmap(s_model *model, int colour) { assert(0); return -1; }
+static int obor_select_colourmap(s_model *model, int colour, int slot,
+                                 int (*step)(s_model *, int), int use_default)
+{
+    assert(0);
+    return -1;
+}
+""" + function(source, 'obor_initial_colourmap')
         native(program.replace('@ABI@', json.dumps(str(ABI)))
                .replace('@KEYS@', profile_keys(header))
-               .replace('@CANDIDATE@', palette_profile_context(source) + fragments(source, 'candidate', True))
+               .replace('@CANDIDATE@', palette + fragments(source, 'candidate', True))
                .replace('@ORIGINALS@', '\n'.join(originals)),
                extra_flags=('-Wno-unused-parameter', '-Wno-unused-variable', '-Wno-sign-compare'))
 
@@ -1439,10 +1546,12 @@ int main(void) {
                                   'ScriptVariant_ChangeType', 'ScriptVariant_DecimalValue', 'ScriptVariant_IntegerValue')),
             'SEARCH': function(utility, 'searchList'),
             'COORDINATES': ','.join(json.dumps(name) for name in coordinates),
-            'ROWS': ','.join('{%du,%d}' % (row['revision'], row['integer_coordinates']) for row in rows),
+            'ROWS': ','.join('{%du,%d,%d}' % (row['revision'], row['integer_coordinates'],
+                                            row['pak_label_capacity']) for row in rows),
         }
         for family in ('6119', '6391'):
             values['NAMES_' + family] = ',\n'.join('{"%s",_sv_%s}' % (name, name) for name in data['names'][family])
+            values['LEVEL_' + family] = ','.join(data['level_properties'][family])
         template = Path(__file__).with_name('systemvariant_profile_contract.c.in').read_text()
         code = re.sub(r'@([A-Z_0-9]+)@', lambda match: values[match[1]], template)
         result = native_output(code, data, engine_source=ENGINE, extra_cflags=('-fgnu89-inline',))
@@ -1747,9 +1856,12 @@ int main(void) {
         if 'varlist[1]->vt' in first_level:
             mapper_args = 'ScriptVariant property = {.vt = VT_STR}, *varlist[] = {NULL, &property};'
         mapping = function(source, 'obor_entityproperty')
-        if 'obor_entityproperty_5134_index(' in mapping:
+        if 'obor_entityproperty_legacy_index(' in mapping:
             declarations.append(re.search(r'enum\s*\{\s*OBOR_6330_ENTITY_EDGE_ORDINAL[^}]+\};', source).group())
-            mapping = profile_id_support(function(source, 'obor_entityproperty_5134_index') + mapping)
+            selectors = ('obor_entityproperty_legacy_count', 'obor_entityproperty_legacy_index')
+            header = (ENGINE / 'openbor.h').read_text()
+            classic = function(header, 'obor_profile_has_classic_boomerang')
+            mapping = '\n'.join([classic, *(function(source, name) for name in selectors), mapping])
         getters = function(source, 'openbor_getentityproperty')
         setters = function(source, 'openbor_changeentityproperty')
         get_cases = ''.join(outer_case(getters, name) for name in metadata['new_properties'])

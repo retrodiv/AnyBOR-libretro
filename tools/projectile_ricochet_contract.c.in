@@ -69,6 +69,11 @@ typedef struct {
     int preceding_wall, later_wall, preceding_hit, later_hit;
 } ricochet_case;
 
+typedef struct {
+    unsigned revision;
+    int zero_wall_hit, keeps_wall_index, basemap_on_bounce;
+} ricochet_profile;
+
 static void reset(const ricochet_case *test)
 {
     actor = (entity){0};
@@ -102,11 +107,16 @@ static void reset(const ricochet_case *test)
     fall_calls = platform_calls = kills = 0;
 }
 
-static void check_arrow(const ricochet_case *test, int preceding)
+static void check_arrow(const ricochet_case *test, const ricochet_profile *profile)
 {
-    const int hits = preceding ? test->preceding_hit : test->later_hit;
+    const int wall = profile->keeps_wall_index ? test->later_wall : test->preceding_wall;
+    int hits = test->preceding_hit;
+    if(profile->zero_wall_hit)
+    {
+        hits = profile->keeps_wall_index ? test->later_hit : test->fall;
+    }
     reset(test);
-    assert(check_block_wall(self) == (preceding ? test->preceding_wall : test->later_wall));
+    assert(check_block_wall(self) == wall);
     assert(arrow_move() == 1 && actor.autokill == (test->left ? 0 : 2));
     assert(fall_calls == hits && platform_calls == (test->fall && test->platform_enabled));
     assert(actor.velocity.x == (hits ? -2 : test->left ? -8 : 8));
@@ -117,19 +127,19 @@ static void check_arrow(const ricochet_case *test, int preceding)
     assert(actor.velocity.y == (hits ? 2.75f : 0));
     assert(actor.damage_on_landing.attack_force == (hits ? 0 : 4));
     assert(actor.damage_on_landing.attack_type == (hits ? ATK_NONE : ATK_NORMAL));
-    const int reset_base = hits && !preceding;
+    const int reset_base = hits && profile->basemap_on_bounce >= 0;
     assert(actor.base == (reset_base ? 0 : 11));
-    assert(actor.modeldata.subject_to_basemap == reset_base);
+    assert(actor.modeldata.subject_to_basemap == (reset_base && profile->basemap_on_bounce));
     assert(actor.modeldata.subject_to_hole == reset_base);
     assert(actor.modeldata.no_adjust_base == !reset_base);
 }
 
-static void check_star(int preceding)
+static void check_star(int reset_base)
 {
     const ricochet_case wall = {.wall = 1, .height = 10, .y = 6, .wall_enabled = 1, .fall = 1};
     reset(&wall);
     assert(star_move() == 1 && fall_calls == 1);
-    assert(actor.takeaction == (preceding ? common_lie : common_fall));
+    assert(actor.takeaction == (reset_base ? common_fall : common_lie));
     assert(!kills);
     reset(&wall);
     actor.position.x = 401;
@@ -156,16 +166,16 @@ static void check_boomerang_deflection(void)
 
 int main(void)
 {
-    const struct { unsigned revision; int preceding; } profiles[] = {@PROFILES@};
+    const ricochet_profile profiles[] = {@PROFILES@};
     const ricochet_case cases[] = {@CASES@};
     for(size_t i = 0; i < sizeof(profiles) / sizeof(*profiles); ++i)
     {
         obor_profile_build = profiles[i].revision;
         for(size_t j = 0; j < sizeof(cases) / sizeof(*cases); ++j)
-            check_arrow(&cases[j], profiles[i].preceding);
-        check_star(profiles[i].preceding);
+            check_arrow(&cases[j], &profiles[i]);
+        check_star(profiles[i].basemap_on_bounce >= 0);
         check_obstacle_height();
-        if(profiles[i].preceding) check_boomerang_deflection();
+        if(profiles[i].basemap_on_bounce < 0) check_boomerang_deflection();
         printf("%u\n", obor_profile_build);
     }
     return 0;

@@ -10,6 +10,7 @@ import re
 import unittest
 
 from contract_fixtures import contract_revisions, load_contract_fixture
+from test_early_jump_walkoff import braced_statement
 from test_historical_common_think import ROOT, native_output
 from test_historical_player import function
 
@@ -78,6 +79,29 @@ def program(data, engine):
 
 
 class HistoricalAnimationNamespaceTests(unittest.TestCase):
+    def test_6391_fixed_animation_ordinals(self):
+        data = load_contract_fixture(FIXTURE.with_name('profile-6391-animation-ordinals.json'))
+        rows = data['sources']
+        revisions = [row['revision'] for row in rows]
+        self.assertEqual(revisions, sorted(contract_revisions(data, data['expected_revisions'])))
+        engine = Path(os.environ.get('OBOR_HISTORICAL_ENGINE', ROOT / 'src/engines' / data['engine']))
+        families = []
+        for ordinal, names in enumerate(data['families']):
+            self.assertTrue(all(re.fullmatch(r'ANI_[A-Z0-9_]+', name) for name in names))
+            renamed = {'ANI_LOOSE': 'ANI_LOSE', 'ANI_FALLLOOSE': 'ANI_FALLLOSE'}
+            canonical = [renamed.get(name, name) for name in names]
+            families.append(f'static const int family_{ordinal}[] = {{' + ','.join(canonical) + '};')
+        profiles = []
+        for row in rows:
+            family = row['family']
+            self.assertIn(family, range(len(families)))
+            profiles.append(f'    {{{row["revision"]}u, family_{family}, {len(data["families"][family])}, '
+                            f'{int(row["classic"])}}},')
+        template = Path(__file__).with_name('fixed_animation_ordinals_contract.c.in').read_text()
+        code = template.replace('@FAMILIES@', '\n'.join(families)).replace('@PROFILES@', '\n'.join(profiles))
+        actual = native_output(code, data, engine_source=engine)
+        self.assertEqual([int(line) for line in actual.splitlines()], revisions)
+
     def test_6391_dynamic_and_block_reaction_animations(self):
         data = load_contract_fixture(FIXTURE.with_name('profile-6391-reaction-animation-slots.json'))
         fixed = load_contract_fixture(FIXTURE.with_name('profile-6391-fixed-reaction-defaults.json'))
@@ -92,6 +116,9 @@ class HistoricalAnimationNamespaceTests(unittest.TestCase):
         first = loader.index('    // calculate max animations')
         allocation = loader[first:loader.index('    if(buf)', first)]
         release = loader[loader.index('    // free old values'):loader.index('    // Read file')]
+        shutdown = function(source, 'free_models')
+        reaction_release = '\n'.join(braced_statement(shutdown, f'if({table})') for table in
+                                     ('animbackrises', 'animbackriseattacks', 'animbackblkpains'))
         tables = sorted({table for row in rows for table in row['order']})
         resets = '\n'.join(f'    {count} = {base} + extra;' for count, base in data['counts'].items())
         counts = '\n'.join(f'static int {count};' for count in data['counts'])
@@ -106,8 +133,8 @@ class HistoricalAnimationNamespaceTests(unittest.TestCase):
         table_sets = '\n    '.join('check_allocation(%du, %d, order_%d, %d);' %
                                    (row['revision'], row['first_native'], row['revision'], len(row['order']))
                                    for row in reversed(rows))
-        chosen = '\n'.join('    {%du, %d, %d, %d, %d, %d, %d, %d},' %
-                           (row['revision'], *inputs, *want)
+        chosen = '\n'.join('    {%du, %d, %d, %d, %d, %d, %d, %d, %d},' %
+                           (row['revision'], 'animbackblkpains' in row['order'], *inputs, *want)
                            for row in rows for inputs, want in zip(data['block_cases'], row['block_results'], strict=True))
         defaults = []
         for row in fixed['sources']:
@@ -119,14 +146,14 @@ class HistoricalAnimationNamespaceTests(unittest.TestCase):
                 expected.append(f'    {{&{name}, {len(values)}, {{{literals}}}}}')
             defaults.append(f'static const FixedSeries fixed_{row["revision"]}[] = {{\n'
                             + ',\n'.join(expected) + '\n};')
-        fixed_calls = '\n    '.join(
-            f'CHECK_FIXED({revision});' for revision in (6391, 6510, 5134, 6330, 6119, 6510, 6391)
-            if revision in fixed_profiles
-        )
+        fixed_order = [6391, 6510, *sorted(set(fixed_profiles) - {6391, 6510}), 6510, 6391]
+        fixed_calls = '\n    '.join(f'CHECK_FIXED({revision});' for revision in fixed_order
+                                  if revision in fixed_profiles)
         parts = {'DECLARATIONS': '\n'.join((counts, base_defs, pointers, descriptors)),
                  'DEFAULT_FUNCTION': function(source, 'obor_profile_attack_defaults'),
                  'FIXED_DEFAULTS': '\n'.join(defaults), 'FIXED_CHECKS': fixed_calls,
                  'RESET': resets, 'RELEASE': release, 'ALLOCATION': allocation, 'TABLE_CHECKS': table_sets,
+                 'REACTION_RELEASE': reaction_release,
                  'BLOCK': function(source, 'set_blockpain') + function(source, 'reset_backpain'),
                  'BLOCK_CASES': chosen}
         template = Path(__file__).with_name('reaction_animation_slots_contract.c.in').read_text()

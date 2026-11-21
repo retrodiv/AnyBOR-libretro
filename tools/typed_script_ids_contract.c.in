@@ -26,6 +26,7 @@ int SAMPLE_GO, SAMPLE_BEAT, SAMPLE_BLOCK, SAMPLE_INDIRECT, SAMPLE_FALL;
 int SAMPLE_GET, SAMPLE_GET2, SAMPLE_JUMP, SAMPLE_PUNCH, SAMPLE_1UP;
 int SAMPLE_TIMEOVER, SAMPLE_BEEP, SAMPLE_BEEP2, SAMPLE_BIKE;
 static int dynamic_animations[16];
+static int reaction_animations[sizeof(dynamic_animations) / sizeof(*dynamic_animations)];
 @ANIMATION_TABLES@
 
 void *checkAlloc(void *ptr, size_t size, const char *func, const char *file, int line)
@@ -73,6 +74,8 @@ int main(void)
     for(size_t i = 0; i < sizeof(profiles) / sizeof(*profiles); ++i)
     {
         obor_profile_build = profiles[i].revision;
+        for(int slot = 0; slot < max_attack_types; ++slot)
+            reaction_animations[slot] = MAX_ANIS + obor_attack_to_native(slot);
         if(profiles[i].early_ids) check_cases(early, sizeof(early) / sizeof(*early));
         else check_cases(base, sizeof(base) / sizeof(*base));
         printf("PASS %u\n", obor_profile_build);

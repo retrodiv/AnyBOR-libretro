@@ -86,7 +86,7 @@ static inline unsigned obor_script_text_limit(unsigned shared_limit)
 {
 #if defined(OBOR_ENGINE_BUILD) && OBOR_ENGINE_BUILD == 6391
     extern DWORD obor_profile_build;
-    if(obor_profile_build == 5134 || obor_profile_build == 6119)
+    if(obor_profile_build && obor_profile_build < 6197)
     {
         return shared_limit - 1;
     }

@@ -80,12 +80,17 @@ static int depart(entity *cplat)
     return plat == NULL;
 }
 
+static void jump_landing(void)
+{
+    @JUMP_LANDING@
+}
+
 static void prepare(void)
 {
     memset(clips, 0, sizeof(clips));
     actor = (entity){
         .modeldata = {.animation = clips, .animation_capacity = MAX_ANIS, .type = TYPE_PLAYER},
-        .ducking = DUCK_ACTIVE, .rising = 1, .riseattacking = 1,
+        .ducking = DUCK_ACTIVE, .rising = 1, .riseattacking = 1, .edge = EDGE_LEFT,
         .inpain = 1, .inbackpain = 1, .idling = IDLING_ACTIVE,
         .landed_on_platform = &other, .position = {.y = 10}, .velocity = {.x = 3, .z = 4}
     };
@@ -128,10 +133,16 @@ static void check_frozen(void)
     assert(colour_changes == 1 && !other.frozen && !other.freezetime && other.map == 7);
 }
 
-static void check(unsigned revision, int stateful)
+static void check(unsigned revision, bool recovery, bool ducking, bool edge)
 {
     obor_profile_build = revision;
-    const int original_stance = stateful ? DUCK_INACTIVE : DUCK_ACTIVE;
+    const int original_stance = ducking ? DUCK_INACTIVE : DUCK_ACTIVE;
+    const int original_edge = edge ? EDGE_NO : EDGE_LEFT;
+    prepare();
+    assert(set_idle(&actor) && idle_calls == 1);
+    assert(actor.rising == !recovery && actor.riseattacking == !recovery);
+    assert(actor.ducking == original_stance && actor.edge == original_edge);
+
     for(int linked = 0; linked < 2; ++linked)
     {
         for(int block = 0; block < 2; ++block)
@@ -149,7 +160,8 @@ static void check(unsigned revision, int stateful)
             in_the_air = 0;
             common_pain();
             assert(!actor.inpain && !actor.inbackpain && actor.ducking == original_stance);
-            assert(actor.rising == !stateful && actor.riseattacking == !stateful);
+            assert(actor.rising == !recovery && actor.riseattacking == !recovery);
+            assert(actor.edge == original_edge);
             assert(actor.takeaction == (linked ? common_grabbed : block ? common_block : NULL));
             assert(idle_calls == (!linked && !block) && events == (!linked && block));
             if(events) assert(animation == ANI_BLOCK && resets == 1);
@@ -161,7 +173,8 @@ static void check(unsigned revision, int stateful)
     special_result = 1;
     player_pain_check();
     assert(checks == 2 && !actor.inpain && !actor.inbackpain && actor.ducking == original_stance);
-    assert(actor.rising == !stateful && actor.riseattacking == !stateful);
+    assert(actor.rising == !recovery && actor.riseattacking == !recovery);
+    assert(actor.edge == original_edge);
 
     prepare();
     actor.modeldata.holdblock = 2;
@@ -171,7 +184,8 @@ static void check(unsigned revision, int stateful)
     clips[ANI_BLOCK] = &clip;
     common_block();
     assert(!actor.inpain && !actor.inbackpain && actor.blocking && actor.takeaction == common_block);
-    assert(actor.rising == !stateful && actor.riseattacking == !stateful);
+    assert(actor.rising == !recovery && actor.riseattacking == !recovery);
+    assert(actor.edge == original_edge);
     assert(events == 1 && animation == ANI_BLOCK && resets == 0 && !idle_calls);
 
     for(int airborne = 0; airborne < 2; ++airborne)
@@ -183,7 +197,8 @@ static void check(unsigned revision, int stateful)
         assert(actor.rising && actor.riseattacking && actor.inpain && !events && !unlinks);
         can_pay = 1;
         assert(check_costmove(ANI_SPECIAL, 0, airborne));
-        assert(actor.rising == !stateful && actor.riseattacking == !stateful);
+        assert(actor.rising == !recovery && actor.riseattacking == !recovery);
+        assert(actor.edge == original_edge);
         assert(!actor.inpain && !actor.inbackpain && !actor.velocity.x && !actor.velocity.z);
         assert(actor.attacking && actor.takeaction == (airborne ? common_prejump : common_attack_proc));
         assert(events == 1 && animation == ANI_SPECIAL && resets == 0 && unlinks == 1);
@@ -194,7 +209,8 @@ static void check(unsigned revision, int stateful)
         prepare();
         if(delay) clips[ANI_JUMPDELAY] = &clip;
         tryjump(4, -2, 3, ANI_JUMP);
-        assert(actor.ducking == original_stance && events == delay && jumps == !delay);
+        assert(actor.ducking == original_stance && actor.edge == original_edge);
+        assert(events == delay && jumps == !delay);
         assert(actor.jump.animation_id == ANI_JUMP && actor.jump.velocity.y == 4 &&
                actor.jump.velocity.x == -2 && actor.jump.velocity.z == 3);
         if(delay)
@@ -206,20 +222,32 @@ static void check(unsigned revision, int stateful)
     prepare();
     assert(!depart(&other) && actor.landed_on_platform == &other && !events && actor.ducking == DUCK_ACTIVE);
     assert(depart(NULL) && !actor.landed_on_platform && actor.ducking == original_stance);
+    assert(actor.edge == original_edge);
     assert(animation == ANI_WALKOFF && actor.takeaction == common_walkoff && actor.idling == IDLING_INACTIVE);
+
+    prepare();
+    actor.jumping = 1;
+    actor.attacking = ATTACKING_ACTIVE;
+    jump_landing();
+    assert(!actor.jumping && actor.attacking == ATTACKING_INACTIVE);
+    assert(actor.ducking == original_stance && actor.edge == original_edge);
 
     prepare();
     set_jumping(self);
     assert(actor.jumping && actor.idling == IDLING_INACTIVE && actor.ducking == original_stance);
+    assert(actor.edge == EDGE_LEFT);
     prepare();
     set_charging(self);
     assert(actor.charging && actor.idling == IDLING_INACTIVE && actor.ducking == original_stance);
+    assert(actor.edge == EDGE_LEFT);
     prepare();
     set_getting(self);
     assert(actor.getting && actor.idling == IDLING_INACTIVE && actor.ducking == original_stance);
+    assert(actor.edge == EDGE_LEFT);
     prepare();
     set_turning(self);
     assert(actor.turning && actor.idling == IDLING_INACTIVE && actor.ducking == original_stance);
+    assert(actor.edge == EDGE_LEFT);
     check_frozen();
     printf("PASS %u\n", revision);
 }

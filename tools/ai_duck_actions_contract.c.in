@@ -139,7 +139,7 @@ static void reset(int stance)
     animation = -1;
 }
 
-static void check_ai(int stateful)
+static void check_ai(int prepares_duck_attack, int stateful, int clears_attack)
 {
     const int postures[] = {DUCK_INACTIVE, DUCK_PREPARED, DUCK_ACTIVE, DUCK_RISE};
     for(size_t n = 0; n < sizeof(postures) / sizeof(*postures); ++n)
@@ -163,7 +163,7 @@ static void check_ai(int stateful)
         assert(turn_allowed(DIRECTION_RIGHT) == (!stateful || posture == DUCK_INACTIVE));
         assert(!turn_allowed(DIRECTION_LEFT));
         prepare_attack();
-        const int direct = stateful && posture == DUCK_ACTIVE;
+        const int direct = prepares_duck_attack && posture == DUCK_ACTIVE;
         assert(animation_calls == direct && normal_choices == !direct);
         if(direct) assert(animation == ANI_DUCKATTACK && actor.takeaction == common_attack_proc);
         reset(posture);
@@ -179,12 +179,15 @@ static void check_ai(int stateful)
     if(stateful)
     {
         assert(animation == ANI_DUCKRISE && actor.takeaction == common_idle && actor.ducking == DUCK_RISE);
+        actor.attacking = ATTACKING_PREPARED;
         actor.animating = 1;
         common_idle();
         assert(!idle_calls && actor.takeaction == common_idle);
+        assert(actor.attacking == ATTACKING_PREPARED);
         actor.animating = 0;
         common_idle();
         assert(idle_calls == 1 && !actor.takeaction && actor.idling == IDLING_PREPARED);
+        assert(actor.attacking == (clears_attack ? ATTACKING_INACTIVE : ATTACKING_PREPARED));
     }
 
     reset(DUCK_INACTIVE);
@@ -261,7 +264,7 @@ static void check_upper(int stateful)
     }
 }
 
-static void check_recovery(int stateful)
+static void check_recovery(int recovers_to_duck, int stateful)
 {
     const int postures[] = {DUCK_INACTIVE, DUCK_PREPARED, DUCK_ACTIVE, DUCK_RISE};
     for(size_t n = 0; n < sizeof(postures) / sizeof(*postures); ++n)
@@ -275,7 +278,7 @@ static void check_recovery(int stateful)
                 if(player) actor.modeldata.type = TYPE_PLAYER;
                 actor.modeldata.nomove = !moves;
                 const int away = !player && moves && (!stateful || posture == DUCK_INACTIVE);
-                const int duck = stateful && posture == DUCK_ACTIVE;
+                const int duck = recovers_to_duck && !away && posture == DUCK_ACTIVE;
                 common_attack_finish();
                 assert(random_calls == away && walk_calls == away);
                 assert(animation_calls == duck && idle_calls == (!away && !duck));
@@ -292,12 +295,12 @@ static void check_recovery(int stateful)
     assert(random_calls == 1 && !walk_calls && idle_calls == 1 && actor.stalltime == 180);
 }
 
-static void check(unsigned revision, int stateful)
+static void check(unsigned revision, int prepares_duck_attack, int recovers_to_duck, int stateful, int clears_attack)
 {
     obor_profile_build = revision;
-    check_ai(stateful);
+    check_ai(prepares_duck_attack, stateful, clears_attack);
     check_upper(stateful);
-    check_recovery(stateful);
+    check_recovery(recovers_to_duck, stateful);
     printf("PASS %u\n", revision);
 }
 

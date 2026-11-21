@@ -21,7 +21,7 @@ ROOT = Path(os.environ.get('OBOR_TEST_SOURCE', HERE.parent))
 FIXTURE = HERE / 'fixtures/player-property-native-baseline.json'
 
 
-def program(engine, profiles, *, reject_last_slot=False, history=None, name_capacity=None):
+def program(engine, profiles, *, reject_last_slot=False, history=None, name_capacity=None, player_status=None):
     core = (engine / 'openborscript.c').read_text(encoding='latin1')
     oracle = load_contract_fixture(FIXTURE)
     data = oracle['engines'][engine.name]
@@ -38,12 +38,12 @@ def program(engine, profiles, *, reject_last_slot=False, history=None, name_capa
         'openbor_getplayerproperty': 'original_get',
         'openbor_changeplayerproperty': 'original_set'})
     if engine.name == '6391':
-        # The original 5134/6119 getter falls through on a known but
-        # unhandled property, leaving its cleared result available.
+        # Before 6302 the original getter falls through for an unhandled
+        # numeric property and leaves its cleared result available.
         split = baseline.index('HRESULT original_set')
         getter, setter = baseline[:split], baseline[split:]
         getter, defaults = re.subn(r'(?m)(^    default:\r?\n    \{\n)(?=        //printf\("Property name)',
-                                   r'\g<1>        if(obor_profile_build == 5134 || obor_profile_build == 6119) break;\n',
+                                   r'\g<1>        if(obor_profile_build && obor_profile_build < 6302) break;\n',
                                    getter)
         if defaults != 1:
             raise ValueError('One frozen getter default required')
@@ -127,13 +127,21 @@ def program(engine, profiles, *, reject_last_slot=False, history=None, name_capa
         profile_support += 'int models_cached;\n'
     if engine.name == '4086' and 'models_cached' in methods:
         profile_support += 'unsigned int models_cached;\n'
-    if 'obor_profile_uses_5134_script_ids(' in methods:
+    profile_calls = methods + '\n'.join(support)
+    if ('obor_profile_uses_5134_script_ids(' in profile_calls or
+            'obor_profile_has_player_status_property(' in profile_calls):
         profile_support += '#include "source/openborscript/profile_ids.h"\n'
     if name_capacity is not None:
         contexts = ['{%du,0,0}' % row['revision'] for row in name_capacity]
         limits = ','.join(str(row['name_bytes']) for row in name_capacity)
         profile_support += ('#define NAME_CAPACITY_CONTRACT 1\n'
                             f'static const size_t expected_name_limits[] = {{{limits}}};\n')
+    if player_status is not None:
+        contexts = ['{%du,0,0}' % row['revision'] for row in player_status]
+        records = ',\n'.join('{%d,%d,%d}' % (row['status_ordinal'], row['weapnum_ordinal'], row['weapon_ordinal'])
+                              for row in player_status)
+        history_code = (HERE / 'player_status_property_contract.c.in').read_text().replace('@ROWS@', records)
+        profile_support += '#define PLAYER_STATUS_CONTRACT 1\n'
     values = dict(CONFIG='#include "config.h"' if (engine / 'config.h').is_file() else '',
         SCRIPT_HEADER='openborscript.h' if (engine / 'openborscript.h').is_file() else 'scriptcommon.h',
         POP_ARGUMENTS='int length' if 'StrCache_Pop(int length)' in header else 'void',
@@ -158,6 +166,16 @@ def program(engine, profiles, *, reject_last_slot=False, history=None, name_capa
 
 
 class PlayerPropertyInputTests(unittest.TestCase):
+    def test_6391_transient_player_status(self):
+        fixture = load_contract_fixture(HERE / 'fixtures/profile-6391-player-status.json')
+        rows = fixture['sources']
+        self.assertEqual([row['revision'] for row in rows],
+                         sorted(contract_revisions(fixture, fixture['expected_revisions'])))
+        engine = Path(os.environ.get('OBOR_HISTORICAL_ENGINE', ROOT / 'src/engines' / fixture['engine']))
+        result = run_native(engine, program(engine, [], player_status=rows))
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        self.assertEqual(json.loads(result.stdout), {'status': 'PASS', 'profiles': len(rows), 'cases': 4 * len(rows)})
+
     def test_4432_historical_player_name_lengths(self):
         fixture = load_contract_fixture(HERE / 'fixtures/profile-4432-name-capacity-contracts.json')
         engine = ROOT / 'src/engines' / fixture['engine']

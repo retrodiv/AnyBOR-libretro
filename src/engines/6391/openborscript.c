@@ -29,11 +29,11 @@
  * names within the selected profile's path capacities. Retain the original
  * AI flag names, numeric selectors and delay factor result type. Return the
  * native empty or failed result for unknown numeric player properties.
- * Preserve the 5134 and 6119 legacy entity property names, numbering and
- * boomerang dispatch. Store legacy animation direction as a boolean for 5134
- * and 6119. Preserve the original default script wall lookup altitude in
- * 5134 and 6119. Preserve the 5134 and 6119 system variable names, numeric
- * selectors and coordinate writes. Preserve the 32-bit representation of
+ * Preserve historical entity property names, numbering and boomerang
+ * arguments by profile. Store legacy animation direction as a boolean for
+ * 5134 and 6119. Preserve the original default script wall lookup altitude
+ * by profile. Preserve historical system variable names, numeric selectors
+ * and coordinate writes by profile. Preserve the 32-bit representation of
  * script-written player inputs in 5134 and 6119.
  * Existing changes recorded here; this is not their implementation date.
  * See MODIFICATIONS.md and docs/modifications/6391.md
@@ -80,6 +80,7 @@
 #include "ImportCache.h"
 #include "models.h"
 #include "scriptcommon.h"
+#include "anybor_pak_name.h"
 
 Varlist global_var_list;
 Script *pcurrentscript = NULL; //used by local script functions
@@ -1376,7 +1377,7 @@ static const char *obor_svlist6330lns[] =
 
 static bool obor_uses_6119_systemvariants(void)
 {
-    return obor_profile_build == 5134 || obor_profile_build == 6119;
+    return obor_profile_build && obor_profile_build < 6318;
 }
 
 static int obor_systemvariant_6119_native(int index)
@@ -1525,7 +1526,7 @@ changesystemvariant_error:
 
 static int obor_script_display_text(ScriptVariant *value, char buffer[MAX_BUFFER_LEN])
 {
-    const size_t capacity = obor_profile_uses_5134_script_ids() ? 256 : MAX_BUFFER_LEN;
+    const size_t capacity = obor_profile_build && obor_profile_build < 6316 ? 256 : MAX_BUFFER_LEN;
     if(value->vt == VT_STR)
     {
         const char *text = StrCache_GetIfPresent(value->strVal);
@@ -2886,14 +2887,21 @@ static const char *eplist_aiflag[] =
 
 /* Early script arguments retain their compact indices even after a name
  * has been resolved and cached as an integer. */
-enum { OBOR_EARLY_AIFLAG_COUNT = _ep_aiflag_the_end - 3 };
+static int obor_aiflag_count(void)
+{
+    if(!obor_profile_build || obor_profile_build >= 6293) return _ep_aiflag_the_end;
+    if(obor_profile_build >= 6282) return _ep_aiflag_the_end - 1;
+    if(obor_profile_build >= 6281) return _ep_aiflag_the_end - 2;
+    return _ep_aiflag_the_end - 3;
+}
 
 static int obor_aiflag_from_native(LONG native)
 {
-    if(!obor_profile_uses_5134_script_ids()) return native;
-    if(native >= OBOR_EARLY_AIFLAG_COUNT) return -1;
-    if(native >= _ep_aiflag_riseattacking - 1) return native + 3;
-    if(native >= _ep_aiflag_ducking) return native + 1;
+    const int omitted = _ep_aiflag_the_end - obor_aiflag_count();
+    if(native < 0 || native >= _ep_aiflag_the_end - omitted) return -1;
+    if(omitted >= 1 && native >= _ep_aiflag_ducking) ++native;
+    if(omitted >= 2 && native >= _ep_aiflag_riseattacking) ++native;
+    if(omitted >= 3 && native >= _ep_aiflag_rising) ++native;
     return native;
 }
 
@@ -3955,15 +3963,32 @@ static const char *obor_eplist6330lns[] =
 enum
 {
     OBOR_6330_ENTITY_EDGE_ORDINAL = 54,
+    OBOR_6330_ENTITY_EDGERANGE_ORDINAL = 55,
     OBOR_6330_ENTITY_PREVANIMATION_ORDINAL = 135,
-    OBOR_5134_ENTITY_PROPERTY_COUNT = sizeof(obor_entityproperty6330) / sizeof(*obor_entityproperty6330) - 3,
+    OBOR_6330_ENTITY_PROPERTY_COUNT = sizeof(obor_entityproperty6330) / sizeof(*obor_entityproperty6330),
+    OBOR_ENTITY_EDGE_FIRST_BUILD = 6292,
+    OBOR_ENTITY_EDGERANGE_FIRST_BUILD = 6312,
+    OBOR_ENTITY_PREVANIMATION_FIRST_BUILD = 6290,
+    OBOR_ENTITY_PUSHING_FIRST_BUILD = 6335,
+    OBOR_ENTITY_BOOMERANG_ORDINAL = 30,
 };
 
-/* 5134 and 6119 precede the edge, edgerange and prevanimationid entries. */
-static int obor_entityproperty_5134_index(int native)
+static int obor_entityproperty_legacy_count(void)
 {
-    if(native >= OBOR_6330_ENTITY_EDGE_ORDINAL) native += 2;
-    if(native >= OBOR_6330_ENTITY_PREVANIMATION_ORDINAL) ++native;
+    if(obor_profile_build >= OBOR_ENTITY_PUSHING_FIRST_BUILD) return _ep_boomerang + 1;
+    return OBOR_6330_ENTITY_PROPERTY_COUNT - (obor_profile_build < OBOR_ENTITY_EDGE_FIRST_BUILD)
+        - (obor_profile_build < OBOR_ENTITY_EDGERANGE_FIRST_BUILD)
+        - (obor_profile_build < OBOR_ENTITY_PREVANIMATION_FIRST_BUILD);
+}
+
+static int obor_entityproperty_legacy_index(int native)
+{
+    if(obor_profile_build >= OBOR_ENTITY_PUSHING_FIRST_BUILD)
+        return native == OBOR_ENTITY_BOOMERANG_ORDINAL ? _ep_boomerang
+            : native - (native > OBOR_ENTITY_BOOMERANG_ORDINAL);
+    if(obor_profile_build < OBOR_ENTITY_EDGE_FIRST_BUILD && native >= OBOR_6330_ENTITY_EDGE_ORDINAL) ++native;
+    if(obor_profile_build < OBOR_ENTITY_EDGERANGE_FIRST_BUILD && native >= OBOR_6330_ENTITY_EDGERANGE_ORDINAL) ++native;
+    if(obor_profile_build < OBOR_ENTITY_PREVANIMATION_FIRST_BUILD && native >= OBOR_6330_ENTITY_PREVANIMATION_ORDINAL) ++native;
     return native;
 }
 
@@ -3972,12 +3997,13 @@ static int obor_entityproperty(int native)
     if(obor_profile_features & OBOR_PROFILE_LNS_6330)
         return native >= 0 && native < (int)(sizeof(obor_entityproperty6330lns)/sizeof(*obor_entityproperty6330lns))
             ? obor_entityproperty6330lns[native] : _ep_the_end;
-    if(obor_profile_uses_5134_script_ids())
-        return native >= 0 && native < OBOR_5134_ENTITY_PROPERTY_COUNT
-            ? obor_entityproperty6330[obor_entityproperty_5134_index(native)] : _ep_the_end;
-    if(obor_profile_build != 6330) return native >= 0 && native < _ep_boomerang ? native : _ep_the_end;
-    return native >= 0 && native < (int)(sizeof(obor_entityproperty6330)/sizeof(*obor_entityproperty6330))
-        ? obor_entityproperty6330[native] : _ep_the_end;
+    if(obor_profile_has_classic_boomerang())
+    {
+        if(native < 0 || native >= obor_entityproperty_legacy_count()) return _ep_the_end;
+        const int index = obor_entityproperty_legacy_index(native);
+        return obor_profile_build >= OBOR_ENTITY_PUSHING_FIRST_BUILD ? index : obor_entityproperty6330[index];
+    }
+    return native >= 0 && native < _ep_boomerang ? native : _ep_the_end;
 }
 
 static const char *obor_eplist6330[] = {
@@ -4369,21 +4395,19 @@ int mapstrings_entityproperty(ScriptVariant **varlist, int paramCount)
         MAPSTRINGS(varlist[1], obor_eplist6330lns, sizeof(obor_eplist6330lns)/sizeof(*obor_eplist6330lns),
                    "Property name '%s' is not supported by function getentityproperty.\n");
     }
-    else if(obor_profile_uses_5134_script_ids())
+    else if(obor_profile_has_classic_boomerang())
     {
         if(varlist[1]->vt == VT_STR)
         {
-            const char *names[OBOR_5134_ENTITY_PROPERTY_COUNT];
-            for(int i = 0; i < OBOR_5134_ENTITY_PROPERTY_COUNT; ++i)
-                names[i] = obor_eplist6330[obor_entityproperty_5134_index(i)];
-            MAPSTRINGS(varlist[1], names, OBOR_5134_ENTITY_PROPERTY_COUNT,
+            const char *names[_ep_boomerang + 1];
+            const char *const *profile_names = obor_profile_build >= OBOR_ENTITY_PUSHING_FIRST_BUILD
+                ? eplist : obor_eplist6330;
+            const int count = obor_entityproperty_legacy_count();
+            for(int i = 0; i < count; ++i)
+                names[i] = profile_names[obor_entityproperty_legacy_index(i)];
+            MAPSTRINGS(varlist[1], names, count,
                        "Property name '%s' is not supported by function getentityproperty.\n");
         }
-    }
-    else if(obor_profile_build == 6330)
-    {
-        MAPSTRINGS(varlist[1], obor_eplist6330, sizeof(obor_eplist6330)/sizeof(*obor_eplist6330),
-                   "Property name '%s' is not supported by function getentityproperty.\n");
     }
     else
     {
@@ -4410,12 +4434,13 @@ int mapstrings_entityproperty(ScriptVariant **varlist, int paramCount)
     // map subproperties of aiflag property
     case _ep_aiflag:
     {
-        if(varlist[2]->vt == VT_STR && obor_profile_uses_5134_script_ids())
+        const int count = obor_aiflag_count();
+        if(varlist[2]->vt == VT_STR && count != _ep_aiflag_the_end)
         {
-            const char *names[OBOR_EARLY_AIFLAG_COUNT];
-            for(int i = 0; i < OBOR_EARLY_AIFLAG_COUNT; ++i)
+            const char *names[_ep_aiflag_the_end];
+            for(int i = 0; i < count; ++i)
                 names[i] = eplist_aiflag[obor_aiflag_from_native(i)];
-            MAPSTRINGS(varlist[2], names, OBOR_EARLY_AIFLAG_COUNT,
+            MAPSTRINGS(varlist[2], names, count,
                        _is_not_a_known_subproperty_of_, eps);
         }
         else
@@ -4428,7 +4453,7 @@ int mapstrings_entityproperty(ScriptVariant **varlist, int paramCount)
     // map subproperties of edgerange property
     case _ep_boomerang:
     {
-        if(obor_profile_uses_5134_script_ids()) break;
+        if(obor_profile_build < 6314) break;
         MAPSTRINGS(varlist[2], eplist_boomerang, _ep_boomerang_the_end,
                    _is_not_a_known_subproperty_of_, eps);
         break;
@@ -4982,7 +5007,7 @@ HRESULT openbor_getentityproperty(ScriptVariant **varlist , ScriptVariant **pret
     }
     case _ep_boomerang:
     {
-        if(obor_profile_uses_5134_script_ids())
+        if(obor_profile_build < 6314)
         {
             if(paramCount >= 3)
             {
@@ -5354,7 +5379,7 @@ HRESULT openbor_getentityproperty(ScriptVariant **varlist , ScriptVariant **pret
         }
         case _ep_edelay_factor:
         {
-            if(!obor_profile_uses_5134_script_ids())
+            if(!obor_profile_build || obor_profile_build >= 6312)
                 ScriptVariant_ChangeType(*pretvar, VT_DECIMAL);
             (*pretvar)->dblVal = (DOUBLE)ent->modeldata.edelay.factor;
             break;
@@ -7133,7 +7158,7 @@ HRESULT openbor_changeentityproperty(ScriptVariant **varlist , ScriptVariant **p
                 ent->toexplode = (LONG)ltemp;
                 break;
             case _ep_aiflag_animating:
-                ent->animating = (obor_profile_build == 5134 || obor_profile_build == 6119) ? (ltemp != 0) : (LONG)ltemp;
+                ent->animating = (obor_profile_build && obor_profile_build < 6255) ? (ltemp != 0) : (LONG)ltemp;
                 break;
             case _ep_aiflag_blink:
                 ent->blink = (LONG)ltemp;
@@ -7287,7 +7312,7 @@ HRESULT openbor_changeentityproperty(ScriptVariant **varlist , ScriptVariant **p
     }
     case _ep_boomerang:
     {
-        if(obor_profile_uses_5134_script_ids())
+        if(obor_profile_build < 6314)
         {
             DOUBLE distance;
             if(paramCount < 4 || FAILED(ScriptVariant_DecimalValue(varlist[2], &dbltemp)) ||
@@ -9134,15 +9159,26 @@ enum playerproperty_enum
     _pp_spawnmp,
     _pp_weapnum,
     _pp_weapon,
-    _pp_the_end
+    _pp_the_end,
+    _pp_status
 };
+
+static int obor_player_property_native(int prop)
+{
+    if(prop == _pp_status) return -1;
+    if(obor_profile_has_player_status_property() && prop >= _pp_weapnum && prop <= _pp_the_end)
+    {
+        return prop == _pp_weapnum ? _pp_status : prop - 1;
+    }
+    return prop;
+}
 
 int mapstrings_playerproperty(ScriptVariant **varlist, int paramCount)
 {
     char *propname;
     int prop;
 
-    static const char *proplist[] =
+    const char *proplist[_pp_the_end + 1] =
     {
         "colourmap",
         "combokey",
@@ -9176,8 +9212,15 @@ int mapstrings_playerproperty(ScriptVariant **varlist, int paramCount)
         return 1;
     }
 
-    // property name
-    MAPSTRINGS(varlist[1], proplist, _pp_the_end,
+    int property_count = _pp_the_end;
+    if(obor_profile_has_player_status_property() && varlist[1]->vt == VT_STR)
+    {
+        proplist[_pp_the_end] = proplist[_pp_weapon];
+        proplist[_pp_weapon] = proplist[_pp_weapnum];
+        proplist[_pp_weapnum] = "status";
+        ++property_count;
+    }
+    MAPSTRINGS(varlist[1], proplist, property_count,
                "Player property name '%s' is not supported yet.\n");
 
     return 1;
@@ -9238,7 +9281,7 @@ HRESULT openbor_getplayerproperty(ScriptVariant **varlist , ScriptVariant **pret
     }
     prop = arg->lVal;
 
-    switch(prop)
+    switch(obor_player_property_native(prop))
     {
     case _pp_ent:
     case _pp_entity:
@@ -9480,9 +9523,15 @@ HRESULT openbor_getplayerproperty(ScriptVariant **varlist , ScriptVariant **pret
         (*pretvar)->lVal = (LONG)(model_cache[cacheindex].model->maps_loaded + 1);
         break;
     }
+    case _pp_status:
+    {
+        ScriptVariant_ChangeType(*pretvar, VT_INTEGER);
+        (*pretvar)->lVal = (LONG)player[index].status;
+        break;
+    }
     default:
     {
-        if(obor_profile_uses_5134_script_ids()) break;
+        if(obor_profile_build && obor_profile_build < 6302) break;
         *pretvar = NULL;
         return E_FAIL;
     }
@@ -9499,7 +9548,7 @@ HRESULT openbor_getplayerproperty(ScriptVariant **varlist , ScriptVariant **pret
 HRESULT openbor_changeplayerproperty(ScriptVariant **varlist , ScriptVariant **pretvar, int paramCount)
 {
     LONG ltemp, ltemp2;
-    const bool early_input_masks = obor_profile_build == 5134 || obor_profile_build == 6119;
+    const bool early_input_masks = obor_profile_build && obor_profile_build < 6173;
     int index;
     entity *ent = NULL;
     int prop = -1;
@@ -9558,7 +9607,7 @@ HRESULT openbor_changeplayerproperty(ScriptVariant **varlist , ScriptVariant **p
     }
 
     //change the model
-    switch(prop)
+    switch(obor_player_property_native(prop))
     {
     case _pp_ent:
     case _pp_entity:
@@ -9618,7 +9667,7 @@ HRESULT openbor_changeplayerproperty(ScriptVariant **varlist , ScriptVariant **p
             goto cpperror;
         }
         tempstr = (char *)StrCache_GetIfPresent(arg->strVal);
-        if(!tempstr || strlen(tempstr) >= sizeof(player[index].name))
+        if(!tempstr || strlen(tempstr) > obor_profile_name_width())
         {
             *pretvar = NULL;
             return E_FAIL;
@@ -9811,7 +9860,9 @@ HRESULT openbor_changeplayerproperty(ScriptVariant **varlist , ScriptVariant **p
                 *pretvar = NULL;
                 return E_FAIL;
             }
-            player[index].combokey[ltemp] = (int)value->lVal;
+            const bool wide_combo_keys = obor_profile_build >= 6173 && obor_profile_build < 6181;
+            const int key = (int)value->lVal;
+            player[index].combokey[ltemp] = wide_combo_keys ? (u64)key : (u32)key;
         }
         else
         {
@@ -9849,6 +9900,12 @@ HRESULT openbor_changeplayerproperty(ScriptVariant **varlist , ScriptVariant **p
         {
             goto cpperror;
         }
+        break;
+    }
+    case _pp_status:
+    {
+        if(FAILED(ScriptVariant_IntegerValue(arg, &ltemp))) goto cpperror;
+        player[index].status = (LONG)ltemp;
         break;
     }
     default:
@@ -10208,8 +10265,16 @@ int getsyspropertybyindex(ScriptVariant *var, int index)
     case _sv_pakname:
     {
         char tempstr[MAX_BUFFER_LEN];
-        const size_t pak_name_capacity = obor_uses_6119_systemvariants() ? 256u : sizeof(tempstr);
-        getPakName(tempstr, pak_name_capacity, -1);
+        const size_t pak_name_capacity = obor_profile_uses_legacy_path_sizes() ? 256u : sizeof(tempstr);
+        const int valid = strlen(packfile) >= 4
+            ? obor_pak_label(tempstr, pak_name_capacity, packfile)
+            : obor_pak_name(tempstr, pak_name_capacity, packfile, -1);
+        if(!valid)
+        {
+            writeToLogFile("Content filename does not fit its output buffer.\n");
+            borExit(1);
+            return 0;
+        }
         ScriptVariant_ChangeType(var, VT_STR);
         var->strVal = StrCache_CreateNewFrom(tempstr);
         break;
@@ -10897,7 +10962,7 @@ HRESULT openbor_checkwall(ScriptVariant **varlist , ScriptVariant **pretvar, int
     ScriptVariant *arg = NULL;
     DOUBLE x, z, y;
     int wall;
-    float h = (obor_profile_build == 5134 || obor_profile_build == 6119) ? 100000.0f : T_MAX_CHECK_ALTITUDE;
+    float h = obor_profile_has_checkbase() ? T_MAX_CHECK_ALTITUDE : 100000.0f;
 
     if(paramCount < 2)
     {
@@ -11272,7 +11337,7 @@ HRESULT openbor_openfilestream(ScriptVariant **varlist , ScriptVariant **pretvar
     // Load file from saves directory if specified
     if(location)
     {
-        const size_t capacity = obor_profile_uses_5134_script_ids() ? 256 : sizeof(path);
+        const size_t capacity = obor_profile_build && obor_profile_build < 6316 ? 256 : sizeof(path);
         getBasePath(path, "Saves", 0);
         getPakName(tmpname, sizeof(tmpname), -1);
         if(!obor_pak_path_append(path, capacity, tmpname)) return E_FAIL;
@@ -11701,7 +11766,7 @@ HRESULT openbor_savefilestream(ScriptVariant **varlist , ScriptVariant **pretvar
         }
     }
 
-    const size_t capacity = obor_profile_uses_5134_script_ids() ? 256 : sizeof(path);
+    const size_t capacity = obor_profile_build && obor_profile_build < 6316 ? 256 : sizeof(path);
     // Get the saves directory
     if ( paramCount <= 2 || patharg == NULL )
     {
@@ -12606,7 +12671,7 @@ HRESULT openbor_spawn(ScriptVariant **varlist , ScriptVariant **pretvar, int par
     if(spawnentry.boss && level)
     {
         level->bossescount++;
-        if(!obor_profile_uses_5134_script_ids())
+        if(obor_profile_has_boss_counters())
         {
             level->numbosses++;
         }
@@ -13024,9 +13089,11 @@ HRESULT openbor_fademusic(ScriptVariant **varlist , ScriptVariant **pretvar, int
 
     if(paramCount == 4)
     {
-        const size_t copy_length = obor_profile_uses_5134_script_ids() ? 128 : MAX_STR_LEN - 1;
+        const unsigned build = obor_profile_build;
+        const size_t copy_length = build && build < 6199 && (build < 6185 || build >= 6190)
+                                   ? 128 : MAX_STR_LEN - 1;
         strncpy(musicname, StrCache_Get(varlist[1]->strVal), copy_length);
-        if(obor_profile_uses_5134_script_ids()) musicname[copy_length] = '\0';
+        if(obor_profile_uses_legacy_path_sizes()) musicname[copy_length] = '\0';
         if(FAILED(ScriptVariant_IntegerValue(varlist[2], &values[0])))
         {
             goto fademusic_error;
@@ -15823,13 +15890,13 @@ HRESULT openbor_executeanimation(ScriptVariant **varlist , ScriptVariant **pretv
     e->drop = 0;
     e->falling = 0;
     e->inpain = 0;
-    if(!obor_profile_uses_5134_script_ids())
+    if(!obor_profile_build || obor_profile_build >= 6292)
     {
         e->rising = 0;
         e->riseattacking = 0;
         e->edge = EDGE_NO;
-        e->ducking = DUCK_INACTIVE;
     }
+    if(!obor_profile_build || obor_profile_build >= 6293) e->ducking = DUCK_INACTIVE;
     e->inbackpain = 0;
     e->blocking = 0;
 
@@ -15842,7 +15909,7 @@ HRESULT openbor_executeanimation(ScriptVariant **varlist , ScriptVariant **pretv
     {
         goto executeanimation_error;
     }
-    if(obor_profile_uses_5134_script_ids()) anim = obor_animation_from_native(anim);
+    anim = obor_animation_from_native(anim);
     if(paramCount > 2 && FAILED(ScriptVariant_IntegerValue(varlist[2], &resetable)))
     {
         goto executeanimation_error;
@@ -15892,7 +15959,7 @@ HRESULT openbor_performattack(ScriptVariant **varlist , ScriptVariant **pretvar,
     e->drop = 0;
     e->falling = 0;
     e->inpain = 0;
-    if(!obor_profile_uses_5134_script_ids())
+    if(!obor_profile_build || obor_profile_build >= 6292)
     {
         e->rising = 0;
         e->riseattacking = 0;
@@ -15961,13 +16028,13 @@ HRESULT openbor_setidle(ScriptVariant **varlist , ScriptVariant **pretvar, int p
     e->drop = 0;
     e->falling = 0;
     e->inpain = 0;
-    if(!obor_profile_uses_5134_script_ids())
+    if(!obor_profile_build || obor_profile_build >= 6292)
     {
         e->rising = 0;
         e->riseattacking = 0;
         e->edge = EDGE_NO;
-        e->ducking = DUCK_INACTIVE;
     }
+    if(!obor_profile_build || obor_profile_build >= 6293) e->ducking = DUCK_INACTIVE;
     e->inbackpain = 0;
     e->blocking = 0;
     e->nograb = e->nograb_default; //e->nograb = 0;

@@ -7,6 +7,8 @@
 #include <string.h>
 #include <strings.h>
 #include "scriptcommon.h"
+#include "profile_ids.h"
+#include "anybor_pak_name.h"
 #undef assert
 #undef printf
 #include <assert.h>
@@ -21,30 +23,38 @@ static s_level scene;
 s_level *level = &scene;
 static CHAR label[96];
 static size_t pak_capacity;
+#undef packfile
+static const char fixture_packfile[] = "packs/test_content.pak";
+#define packfile fixture_packfile
 
 CHAR *StrCache_Get(int index) { assert(index == 0); return label; }
 void StrCache_Collect(int index) { assert(index >= 0 && index <= 2); }
 int StrCache_Pop(int length) { assert(length >= 0); return 2; }
 int StrCache_CreateNewFrom(const CHAR *text) { assert(!strcmp(text, "test_content")); return 1; }
-void getPakName(char *name, size_t capacity, int type)
+static int record_pak_label(char *name, size_t capacity, const char *source)
 {
-    assert(type == -1 && capacity >= sizeof("test_content"));
     pak_capacity = capacity;
-    memcpy(name, "test_content", sizeof("test_content"));
+    return obor_pak_label(name, capacity, source);
 }
+void writeToLogFile(const char *message, ...) { fputs(message, stderr); }
+void borExit(int status) { assert(status != 0); abort(); }
 
 @VARIANTS@
 @SEARCH@
 @TABLES@
 @NATIVE@
 @MAPPER@
+#define obor_pak_label record_pak_label
 @GETTER@
+#undef obor_pak_label
 @SETTER@
 @WRAPPERS@
 
 struct name_entry { const char *name; int native; };
 static const struct name_entry early_names[] = {@NAMES_6119@};
 static const struct name_entry later_names[] = {@NAMES_6391@};
+static const int early_level_properties[] = {@LEVEL_6119@};
+static const int later_level_properties[] = {@LEVEL_6391@};
 
 static ScriptVariant named(const char *name)
 {
@@ -130,9 +140,21 @@ static void check_bosses(int integer)
     assert(scene.bossescount == 3 && scene.numbosses == 3);
 }
 
+static void check_level_properties(int integer)
+{
+    const int *properties = integer ? early_level_properties : later_level_properties;
+    const size_t count = integer ? sizeof(early_level_properties) / sizeof(*early_level_properties)
+                                 : sizeof(later_level_properties) / sizeof(*later_level_properties);
+    for(size_t ordinal = 0; ordinal < count; ++ordinal)
+    {
+        assert(obor_level_property_from_native(ordinal) == properties[ordinal]);
+        assert(obor_level_property_to_native(properties[ordinal]) == (int)ordinal);
+    }
+}
+
 int main(void)
 {
-    static const struct { unsigned revision; int integer; } rows[] = {@ROWS@};
+    static const struct { unsigned revision; int integer; size_t pak_label_capacity; } rows[] = {@ROWS@};
     for(size_t i = 0; i < sizeof(rows) / sizeof(*rows); ++i)
     {
         obor_profile_build = rows[i].revision;
@@ -142,8 +164,9 @@ int main(void)
         check_namespace(entries, length);
         check_coordinates(entries, length, integer);
         check_bosses(integer);
+        check_level_properties(integer);
         ScriptVariant pak = get_value(named("pakname"));
-        assert(pak.vt == VT_STR && pak.strVal == 1 && pak_capacity == (integer ? 256 : 512));
+        assert(pak.vt == VT_STR && pak.strVal == 1 && pak_capacity == rows[i].pak_label_capacity);
         printf("%u\n", rows[i].revision);
     }
     return 0;
