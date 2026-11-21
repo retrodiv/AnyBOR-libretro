@@ -8,7 +8,8 @@
  * before using header dimensions. Preserve native palette-only filename
  * probing, three-plane refusals and final RGB table conversion without
  * interpreting palette bytes as sprite dimensions. Keep bitmap row reads
- * within the requested output width.
+ * within the requested output width. Preserve 6997's interlaced row layout
+ * for supported images and their original palette path.
  * Existing changes recorded here; this is not their implementation date.
  * See MODIFICATIONS.md and docs/modifications/7142.md
  * at the source repository root. Original notices follow below.
@@ -32,6 +33,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <assert.h>
+#include <limits.h>
 #include <zlib.h>
 #include "utils.h"
 #include "types.h"
@@ -335,9 +337,8 @@ static inline unsigned char png_paeth_predictor(unsigned char a, unsigned char b
 }
 
 // Decodes the image from a decompressed, non-interlaced IDAT stream.
-static void png_decode_regular(unsigned char *buf, unsigned char *inflated_data, int max_width, int max_height)
+static void png_decode_regular(unsigned char *buf, unsigned char *inflated_data, int max_width, int max_height, int width)
 {
-    int width = res[0];
     unsigned int y, x;
 
     for (y = 0; y < max_height; y++)
@@ -409,9 +410,12 @@ static void png_decode_regular(unsigned char *buf, unsigned char *inflated_data,
 }
 
 // Decodes the image from a decompressed, interlaced IDAT stream.
-static void png_decode_interlaced(unsigned char *buf, unsigned char *inflated_data, int max_width, int max_height)
+static int png_decode_interlaced(unsigned char *buf, const unsigned char *inflated_data,
+                                 int max_width, int max_height, size_t remaining,
+                                 int original_layout)
 {
-    int width = res[0], height = res[1];
+    int width = original_layout ? max_width : res[0];
+    int height = original_layout ? max_height : res[1];
     const int start_y[7] =  {0, 0, 4, 0, 2, 0, 1};
     const int start_x[7] =  {0, 4, 0, 2, 0, 1, 0};
     const int y_increment[7] = {8, 8, 8, 4, 4, 2, 2};
@@ -422,21 +426,32 @@ static void png_decode_interlaced(unsigned char *buf, unsigned char *inflated_da
     {
         unsigned int yin, yout, xin, xout;
 
-        int line_width = (width + x_increment[pass] - start_x[pass] - 1) / x_increment[pass];
-        if (line_width == 0)
+        int line_width = original_layout
+            ? width / x_increment[pass]
+            : (width + x_increment[pass] - start_x[pass] - 1) / x_increment[pass];
+        if (!original_layout && line_width == 0)
         {
             continue;
         }
 
+        const size_t stride = (size_t)line_width + 1;
+        const size_t samples = max_width > start_x[pass]
+            ? 1 + (max_width - start_x[pass] - 1) / x_increment[pass] : 0;
         for (yin = 0, yout = start_y[pass]; yout < max_height; yin++, yout += y_increment[pass])
         {
-            switch (inflated_data[yin * (line_width + 1)])
+            if (original_layout &&
+                (remaining <= samples || yin > (remaining - samples - 1) / stride))
+            {
+                return 0;
+            }
+            const unsigned char *row = inflated_data + yin * stride;
+            switch (row[0])
             {
                 case 0: // no filter, the easiest case
                 {
                     for (xin = 0, xout = start_x[pass]; xout < max_width; xin++, xout += x_increment[pass])
                     {
-                        buf[yout * max_width + xout] = inflated_data[yin * (line_width + 1) + 1 + xin];
+                        buf[yout * max_width + xout] = row[1 + xin];
                     }
                     break;
                 }
@@ -445,7 +460,7 @@ static void png_decode_interlaced(unsigned char *buf, unsigned char *inflated_da
                     unsigned char last = 0;
                     for (xin = 0, xout = start_x[pass]; xout < max_width; xin++, xout += x_increment[pass])
                     {
-                        last = buf[yout * max_width + xout] = inflated_data[yin * (line_width + 1) + 1 + xin] + last;
+                        last = buf[yout * max_width + xout] = row[1 + xin] + last;
                     }
                     break;
                 }
@@ -455,7 +470,7 @@ static void png_decode_interlaced(unsigned char *buf, unsigned char *inflated_da
                     {
                         for (xin = 0, xout = start_x[pass]; xout < max_width; xin++, xout += x_increment[pass])
                         {
-                            buf[yout * max_width + xout] = inflated_data[yin * (line_width + 1) + 1 + xin];
+                            buf[yout * max_width + xout] = row[1 + xin];
                         }
                     }
                     else
@@ -463,7 +478,7 @@ static void png_decode_interlaced(unsigned char *buf, unsigned char *inflated_da
                         unsigned int lastline = yout - y_increment[pass];
                         for (xin = 0, xout = start_x[pass]; xout < max_width; xin++, xout += x_increment[pass])
                         {
-                            buf[yout * max_width + xout] = inflated_data[yin * (line_width + 1) + 1 + xin] + buf[lastline * max_width + xout];
+                            buf[yout * max_width + xout] = row[1 + xin] + buf[lastline * max_width + xout];
                         }
                     }
                     break;
@@ -476,7 +491,7 @@ static void png_decode_interlaced(unsigned char *buf, unsigned char *inflated_da
                     {
                         unsigned char a = last;
                         unsigned char b = (yin == 0) ? 0 : buf[lastline * max_width + xout];
-                        last = buf[yout * max_width + xout] = inflated_data[yin * (line_width + 1) + 1 + xin] + ((a + b) / 2);
+                        last = buf[yout * max_width + xout] = row[1 + xin] + ((a + b) / 2);
                     }
                     break;
                 }
@@ -489,19 +504,34 @@ static void png_decode_interlaced(unsigned char *buf, unsigned char *inflated_da
                         unsigned char a = last;
                         unsigned char b = (yin == 0) ? 0 : buf[lastline * max_width + xout];
                         unsigned char c = (yin == 0 || xin == 0) ? 0 : buf[lastline * max_width + xout - x_increment[pass]];
-                        last = buf[yout * max_width + xout] = inflated_data[yin * (line_width + 1) + 1 + xin] + png_paeth_predictor(a, b, c);
+                        last = buf[yout * max_width + xout] = row[1 + xin] + png_paeth_predictor(a, b, c);
                     }
                     break;
                 }
                 default:
                 {
+                    if (original_layout)
+                    {
+                        return 0;
+                    }
                     assert(!"invalid PNG filter");
                 }
             }
         }
 
-        inflated_data += (line_width + 1) * ((height + y_increment[pass] - start_y[pass] - 1) / y_increment[pass]);
+        const size_t rows = original_layout ? height / y_increment[pass]
+            : (height + y_increment[pass] - start_y[pass] - 1) / y_increment[pass];
+        if (original_layout)
+        {
+            if (rows > remaining / stride)
+            {
+                return 0;
+            }
+            remaining -= rows * stride;
+        }
+        inflated_data += rows * stride;
     }
+    return 1;
 }
 
 static int readpng(unsigned char *buf, unsigned char *pal, int max_width, int max_height)
@@ -510,7 +540,10 @@ static int readpng(unsigned char *buf, unsigned char *pal, int max_width, int ma
     unsigned char *inflated_data = NULL;
     z_stream zlib_stream = {.zalloc = Z_NULL, .zfree = Z_NULL, .opaque = Z_NULL, .avail_in = 0, .next_in = Z_NULL,
                             .avail_out = 0, .next_out = Z_NULL};
-    int width = res[0], height = res[1];
+    const int original_dimensions = buf && obor_profile_build == 6997;
+    int width = original_dimensions ? max_width : res[0];
+    int height = original_dimensions ? max_height : res[1];
+    const int original_layout = png_is_interlaced && original_dimensions;
 
     if (inflateInit(&zlib_stream) != Z_OK)
     {
@@ -537,7 +570,23 @@ static int readpng(unsigned char *buf, unsigned char *pal, int max_width, int ma
     {
         // the "+1"s are because each scanline has an extra byte denoting the filter type
         size_t inflated_size;
-        if (png_is_interlaced)
+        if (original_dimensions && (width <= 0 || height <= 0 || width > INT_MAX / height))
+        {
+            goto readpng_abort;
+        }
+        if (original_layout)
+        {
+            const uint64_t expected =
+                (2 * (width / 8 + 1) + width / 4 + 1) * (uint64_t)(height / 8) +
+                (width / 4 + 1 + width / 2 + 1) * (uint64_t)(height / 4) +
+                (width / 2 + 1 + (uint64_t)width + 1) * (uint64_t)(height / 2);
+            if (!expected || expected > UINT_MAX)
+            {
+                goto readpng_abort;
+            }
+            inflated_size = (size_t)expected;
+        }
+        else if (png_is_interlaced)
         {
             inflated_size = ((width + 7) / 8 + 1) * ((height + 7) / 8) +
                             ((width + 3) / 8 + 1) * ((height + 7) / 8) +
@@ -549,10 +598,14 @@ static int readpng(unsigned char *buf, unsigned char *pal, int max_width, int ma
         }
         else
         {
-            inflated_size = (width + 1) * height;
+            inflated_size = ((size_t)width + 1) * height;
         }
 
         inflated_data = malloc(inflated_size);
+        if (!inflated_data)
+        {
+            goto readpng_abort;
+        }
         zlib_stream.avail_out = inflated_size;
         zlib_stream.next_out = inflated_data;
     }
@@ -612,7 +665,7 @@ static int readpng(unsigned char *buf, unsigned char *pal, int max_width, int ma
             // For very small interlaced images, we may overestimate the inflated size by a few bytes, because the
             // size calculation includes filter bytes for lines of width 0. That's harmless, but if the inflated
             // data for any other kind of image doesn't fill the buffer, then the image data is incomplete.
-            if (!(png_is_interlaced && width < 8))
+            if (original_layout || !(png_is_interlaced && width < 8))
             {
                 printf("error: incomplete compressed stream\n");
                 goto readpng_abort;
@@ -621,11 +674,15 @@ static int readpng(unsigned char *buf, unsigned char *pal, int max_width, int ma
 
         if (png_is_interlaced)
         {
-            png_decode_interlaced(buf, inflated_data, max_width, max_height);
+            if (!png_decode_interlaced(buf, inflated_data, max_width, max_height,
+                                       (size_t)zlib_stream.total_out, original_layout))
+            {
+                goto readpng_abort;
+            }
         }
         else
         {
-            png_decode_regular(buf, inflated_data, max_width, max_height);
+            png_decode_regular(buf, inflated_data, max_width, max_height, width);
         }
     }
 

@@ -4,7 +4,8 @@
  * These contributions are licensed under BSD-3-Clause; see LICENSE at the root.
  * Upstream code retains its original license and notices.
  * Translate native entity property names, numeric IDs and animation values
- * for each logical profile.
+ * for each logical profile. Preserve numeric animation properties and the
+ * original script property conversion routes for 6997, 7039 and 7091.
  * Existing changes recorded here; this is not their implementation date.
  * See MODIFICATIONS.md and docs/modifications/7142.md
  * at the source repository root. Original notices follow below.
@@ -220,7 +221,8 @@ HRESULT openbor_get_entity_property(ScriptVariant **varlist , ScriptVariant **pr
 
 	// Map string property name to a
 	// matching integer constant.
-	mapstrings_entity_property(varlist, paramCount);
+    if(!obor_profile_has_numeric_script_properties())
+        mapstrings_entity_property(varlist, paramCount);
 
     // Verify arguments. There should at least
     // be a pointer for the property handle and an integer
@@ -1277,7 +1279,8 @@ HRESULT openbor_set_entity_property(ScriptVariant **varlist, ScriptVariant **pre
 
 	// Map string property name to a
 	// matching integer constant.
-	mapstrings_entity_property(varlist, paramCount);
+    if(!obor_profile_has_numeric_script_properties())
+        mapstrings_entity_property(varlist, paramCount);
 	
     // Verify incoming arguments. There should at least
     // be a pointer for the property handle and an integer

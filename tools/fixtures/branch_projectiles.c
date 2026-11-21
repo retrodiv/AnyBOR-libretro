@@ -22,10 +22,10 @@ static void launch(s_anim *anim,int kind) {
  else {__OBOR_BOMB__}
 }
 int main(void) {
- const unsigned profiles[]={7086,7123,7142};
- for(unsigned p=0;p<3;++p)for(int explicit=0;explicit<2;++explicit)
+ const unsigned profiles[]={6997,7039,7086,7091,7123,7142};
+ for(unsigned p=0;p<sizeof(profiles)/sizeof(profiles[0]);++p)for(int explicit=0;explicit<2;++explicit)
  for(int direction=0;direction<2;++direction)for(int kind=0;kind<3;++kind) {
-  int legacy=p!=2;obor_profile_build=profiles[p];
+  obor_profile_build=profiles[p];int legacy=obor_profile_build!=7142;
   entity ent={0};s_anim anim={0};self=&ent;ent.position=(s_axis_principal_float){100,200,300};ent.direction=direction;
   anim.obor_projectile_position_explicit=explicit;
   anim.projectile.position=(s_axis_principal_int){explicit?7:0,explicit?8:legacy?0:70,explicit?9:0};

@@ -3,7 +3,9 @@
  * Copyright (c) 2026 retrodiv <retrodiv@proton.me> (original contributions).
  * These contributions are licensed under BSD-3-Clause; see LICENSE at the root.
  * Upstream code retains its original license and notices.
- * Select the native 6330 background-speed return representation.
+ * Select the native 6330 background-speed return representation. Retain ACT
+ * level palette loading and script access to level blending collections for
+ * 6997 and 7039.
  * Existing changes recorded here; this is not their implementation date.
  * See MODIFICATIONS.md and docs/modifications/7142.md
  * at the source repository root. Original notices follow below.
@@ -690,8 +692,18 @@ HRESULT openbor_get_level_property(ScriptVariant **varlist, ScriptVariant **pret
 
         case LEVEL_PROP_PALETTE_BLENDING_COLLECTION:
 
-            printf("LEVEL_PROP_PALETTE_BLENDING_COLLECTION no longer supported");
-            ScriptVariant_Clear(*pretvar);
+            if(obor_profile_6997_or_7039())
+            {
+                if(handle->obor_palette_blendings)
+                {
+                    ScriptVariant_ChangeType(*pretvar, VT_PTR);
+                    (*pretvar)->ptrVal = (VOID *)handle->obor_palette_blendings;
+                }
+            }
+            else
+            {
+                printf("LEVEL_PROP_PALETTE_BLENDING_COLLECTION no longer supported");
+            }
 
             break;
 

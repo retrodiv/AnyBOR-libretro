@@ -4,7 +4,7 @@
  * These contributions are licensed under BSD-3-Clause; see LICENSE at the root.
  * Upstream code retains its original license and notices.
  * Read host memory statistics through mach on macOS instead of the glibc-
- * only <malloc.h>.
+ * only <malloc.h>. Use the original memory report format in 6997.
  * Existing changes recorded here; this is not their implementation date.
  * See MODIFICATIONS.md and docs/modifications/7142.md
  * at the source repository root. Original notices follow below.
@@ -254,6 +254,13 @@ void getRamStatus(int byte_size)
   u64 system_ram = getSystemRam(byte_size);
   u64 free_ram = getFreeRam(byte_size);
   u64 used_ram = getUsedRam(byte_size);
+
+  if(obor_profile_build == 6997)
+  {
+    printf("Total Ram: %"PRIu64" Bytes\n Free Ram: %"PRIu64" Bytes\n Used Ram: %"PRIu64" Bytes\n\n",
+           system_ram, free_ram, used_ram);
+    return;
+  }
 
   printf("Total Ram: %11"PRIu64" Bytes ( %5"PRIu64" MB )\n Free Ram: %11"PRIu64" Bytes ( %5"PRIu64" MB )\n Used Ram: %11"PRIu64" Bytes ( %5"PRIu64" MB )\n\n",
            system_ram, system_ram >> 20,

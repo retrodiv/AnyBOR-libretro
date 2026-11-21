@@ -19,16 +19,23 @@ int main(void) {
   unsigned expected=(value>>8)|((value&255)<<8);
   assert(Swap16(value)==expected && Swap16(Swap16(value))==value);
  }
- const unsigned profiles[]={7086,7123,7142};
- for(unsigned p=0;p<3;++p) {
-  obor_profile_build=profiles[p];memset(&savedata,0xa5,sizeof(savedata));clearsettings();
-  assert(savedata.vsync==(profiles[p]==7123?0:1));
+ static const struct { unsigned profile; const char *version; } cases[] = {
+  {6997, "v3.0 Build 6997"},
+  {7039, "v3.0 Build 7039 (commit hash: be46a55)"},
+  {7086, "v3.0 Build 7086 (commit hash: 7a45a22)"},
+  {7091, "v3.0 Build 7091 (commit hash: 8ad6874)"},
+  {7123, "v3.0 Build 7123 (commit hash: f5261e7)"},
+  {7142, VERSION}
+ };
+ for(unsigned p=0;p<sizeof(cases)/sizeof(cases[0]);++p) {
+  obor_profile_build=cases[p].profile;memset(&savedata,0xa5,sizeof(savedata));clearsettings();
+  assert(savedata.vsync==(obor_profile_build==7123?0:1));
   assert(savedata.compatibleversion==COMPATIBLEVERSION);
-  assert(SHADOW_Z==PLAYER_MIN_Z-(profiles[p]==7123?47:48));
-  assert(NEONPANEL_Z==PLAYER_MIN_Z-(profiles[p]==7123?48:47));
-  const char *version=p==0?"v3.0 Build 7086 (commit hash: 7a45a22)":p==1?"v3.0 Build 7123 (commit hash: f5261e7)":VERSION;
-  assert(!strcmp(obor_profile_version_string(),version));
-  assert(strstr(obor_profile_shutdown_message(),version));
+  int swapped_layers=obor_profile_build==7091||obor_profile_build==7123;
+  assert(SHADOW_Z==PLAYER_MIN_Z-(swapped_layers?47:48));
+  assert(NEONPANEL_Z==PLAYER_MIN_Z-(swapped_layers?48:47));
+  assert(!strcmp(obor_profile_version_string(),cases[p].version));
+  assert(strstr(obor_profile_shutdown_message(),cases[p].version));
   for(int player=0;player<4;++player)for(int button=0;button<SDID_ESC;++button) {
    assert(savedata.keys[player][button]==savedata.keys[0][button]+player*OBOR_KEYSPAN);
    assert(savedata.keys[player][button]!=CONTROL_NONE);

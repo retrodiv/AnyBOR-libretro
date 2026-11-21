@@ -20,6 +20,8 @@
  * additive APIs. Transfer loaded stream buffers through aligned local
  * outputs while preserving native record layout and results. Close owned
  * input files after stream loading and on buffer allocation failure.
+ * Preserve the original optional animation property results and energy
+ * selector diagnostics.
  * Existing changes recorded here; this is not their implementation date.
  * See MODIFICATIONS.md and docs/modifications/7142.md
  * at the source repository root. Original notices follow below.
@@ -4043,7 +4045,9 @@ HRESULT openbor_getentityproperty(ScriptVariant **varlist , ScriptVariant **pret
 
         ScriptVariant_ChangeType(*pretvar, VT_INTEGER);
 		       
-        if(!obor_profile_legacy_branch() || ent->modeldata.animation[ltemp]->obor_drop_present)
+        if(ltemp >= 0 && ltemp < ent->modeldata.animation_capacity && ent->modeldata.animation &&
+           ent->modeldata.animation[ltemp] &&
+           (!obor_profile_legacy_branch() || ent->modeldata.animation[ltemp]->obor_drop_present))
             (*pretvar)->lVal = ent->modeldata.animation[ltemp]->dropframe.frame;       
 
         break;
@@ -6220,7 +6224,8 @@ HRESULT openbor_changeentityproperty(ScriptVariant **varlist , ScriptVariant **p
             break;
         }
         default:
-            printf("Unknown energy_cost flag.\n");
+            printf("%s", obor_profile_has_numeric_script_properties() ?
+                   "Unknown Energycost flag.\n" : "Unknown energy_cost flag.\n");
             goto changeentityproperty_error;
         }
         break;

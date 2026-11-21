@@ -7,7 +7,11 @@
  * used by each collection. Track each model's allocated animation-table
  * capacity and reject lookups outside it. Preserve divergent 7086 and 2021
  * 7123 animation, combat, model, script-selector and menu contracts by
- * logical profile, retaining safe storage and additive APIs.
+ * logical profile, retaining safe storage and additive APIs. Preserve
+ * numeric animation properties and the original script property conversion
+ * routes for 6997, 7039 and 7091. Keep the 7091 depth order of neon panels
+ * and shadows. Retain ACT level palette loading and script access to level
+ * blending collections for 6997 and 7039.
  * Existing changes recorded here; this is not their implementation date.
  * See MODIFICATIONS.md and docs/modifications/7142.md
  * at the source repository root. Original notices follow below.
@@ -116,8 +120,8 @@ movement restirctions are here!
 #define		FRONTPANEL_Z		(PLAYER_MAX_Z+50)
 #define     HUD_Z               (FRONTPANEL_Z+10000)
 #define		HOLE_Z				(PLAYER_MIN_Z-46)
-#define		NEONPANEL_Z			(PLAYER_MIN_Z - (obor_profile_build == 7123 ? 48 : 47))
-#define		SHADOW_Z			(PLAYER_MIN_Z - (obor_profile_build == 7123 ? 47 : 48))
+#define		NEONPANEL_Z			(PLAYER_MIN_Z - (obor_profile_build == 7091 || obor_profile_build == 7123 ? 48 : 47))
+#define		SHADOW_Z			(PLAYER_MIN_Z - (obor_profile_build == 7091 || obor_profile_build == 7123 ? 47 : 48))
 #define		SCREENPANEL_Z		(PLAYER_MIN_Z-49)
 #define		PANEL_Z				(PLAYER_MIN_Z-50)
 #define		MIRROR_Z			(PLAYER_MIN_Z-5)
@@ -947,9 +951,20 @@ typedef enum
     COUNTERACTION_DAMAGE_NORMAL //Normal damage.
 } e_counteraction_damage;
 
+static inline int obor_profile_6997_or_7039(void)
+{
+    return obor_profile_build == 6997 || obor_profile_build == 7039;
+}
+
+static inline int obor_profile_has_numeric_script_properties(void)
+{
+    return obor_profile_6997_or_7039() || obor_profile_build == 7091;
+}
+
 static inline int obor_profile_legacy_branch(void)
 {
-    return obor_profile_build == 7086 || obor_profile_build == 7123;
+    return obor_profile_6997_or_7039() ||
+           obor_profile_build == 7086 || obor_profile_build == 7091 || obor_profile_build == 7123;
 }
 
 typedef enum
@@ -3055,6 +3070,8 @@ typedef struct
     unsigned bossmusic_offset;
     int numpalettes;
     unsigned char (*palettes)[1024];//dynamic palettes
+    unsigned char *(*obor_palette_blendings)[MAX_BLENDINGS];
+    size_t obor_palette_blending_count;
     int settime; // Set time limit per level
     int notime; // Used to specify if the time is displayed 1 = no, else yes
     int noreset; // If set, clock will not reset when players spawn/die

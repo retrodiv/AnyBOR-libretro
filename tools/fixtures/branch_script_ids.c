@@ -18,9 +18,9 @@ int searchList(const char *list[],const char *value,int length) {
 void writeToLogFile(const char *text,...) {(void)text;}
 CONVERSIONS
 int main(void) {
- const unsigned profiles[]={7086,7123,7142};
- for(unsigned p=0;p<3;++p) {
-  int legacy=p!=2;obor_profile_build=profiles[p];
+ const unsigned profiles[]={6997,7039,7086,7091,7123,7142};
+ for(unsigned p=0;p<sizeof(profiles)/sizeof(profiles[0]);++p) {
+  obor_profile_build=profiles[p];int legacy=obor_profile_build!=7142;
   for(int probe=-4;probe<=30;++probe)for(int kind=0;kind<2;++kind) {
    int id=probe==30?INT_MAX:probe;
    int physical=legacy&&id>=21?(id>INT_MAX-2?-1:id+2):id;

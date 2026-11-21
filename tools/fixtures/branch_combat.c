@@ -22,6 +22,12 @@ entity *spawn_attack_flash(entity *ent,s_collision_attack *attack,int flash,int 
 }
 __OBOR_DAMAGE_FUNCTION__
 METHODS
+static int native_counter_call(entity *e,s_collision_attack *attack,unsigned current_attack_id) {
+ int counter_result=0;
+ if(0) {}
+ __OBOR_COUNTER_CALL__
+ return counter_result;
+}
 static int reference_follow(entity *e,int didblock) { return (e->animation->followup.animation && !e->animation->obor_counter_present &&
   ((int)e->animation->followup.condition == 0 || (int)e->animation->followup.condition == 1 ||
    (((self->modeldata.type & e->modeldata.hostile) != 0) &&
@@ -50,8 +56,8 @@ int main(void) {
  for(int i=0;i<MAX_ATKS;++i){offense[i]=2.0f;defense[i].factor=1.0f;}
  attacker.offense_factors=offense;target.defense=defense;
 
- const unsigned profiles[]={7086,7123};
- for(unsigned p=0;p<2;++p) {
+ const unsigned profiles[]={6997,7039,7086,7091,7123};
+ for(unsigned p=0;p<sizeof(profiles)/sizeof(profiles[0]);++p) {
   obor_profile_build=profiles[p];
   for(int condition=-1;condition<=8;++condition)for(int counter=0;counter<2;++counter)
   for(int blocked=0;blocked<2;++blocked)for(int alive=0;alive<2;++alive)
@@ -74,26 +80,29 @@ int main(void) {
   for(int frozen=0;frozen<2;++frozen)for(int lethal=0;lethal<2;++lethal)
   for(int type=0;type<2;++type)for(int mask=0;mask<2;++mask)
   for(int direction=0;direction<2;++direction)for(int unblockable=0;unblockable<2;++unblockable)
-  for(int freeze=0;freeze<2;++freeze) {
+  for(int freeze=0;freeze<2;++freeze)for(int projectile=0;projectile<2;++projectile) {
    t.counter_action.condition=condition;t.obor_counter_present=present;
    target.frozen=frozen;target.energy_state.health_current=lethal?10:30;
    attacker.modeldata.type=type?TYPE_ENEMY:TYPE_PLAYER;
    attacker.modeldata.candamage=mask?TYPE_ENEMY:TYPE_PLAYER;
-   attacker.projectile=0;target.direction=0;attacker.direction=direction;
+   attacker.modeldata.projectilehit=mask?TYPE_PLAYER:TYPE_ENEMY;
+   attacker.projectile=projectile?BLAST_ATTACK:0;target.direction=0;attacker.direction=direction;
    attack.attack_force=20;attack.no_block=unblockable;attack.freeze=freeze;
-   int expected=reference_counter(&attacker,&attack,20,attacker.modeldata.candamage);
+   int them=projectile?attacker.modeldata.projectilehit:attacker.modeldata.candamage;
+   int expected=reference_counter(&attacker,&attack,20,them);
    assert(!!check_counter_condition(&target,&attacker,&attack)==expected);
   }
   target.frozen=0;target.direction=0;attacker.direction=1;target.animpos=2;
   t.counter_action.condition=COUNTERACTION_CONDITION_ALWAYS_RAGE;t.obor_counter_present=1;
   t.counter_action.damaged=COUNTERACTION_DAMAGE_NORMAL;target.energy_state.health_current=30;
   t.followup.animation=1;target.animation=&t;attack.attack_force=20;animation_calls=flash_calls=0;
-  assert(try_counter_action(&target,&attacker,&attack)==2);
+  assert(native_counter_call(&attacker,&attack,43)==2 && target.attack_id_incoming==43);
   assert(target.energy_state.health_current==10 && animation_calls==1 && flash_calls==1 && last_reset==0);
   target.animation=&t;target.energy_state.health_current=10;
   assert(try_counter_action(&target,&attacker,&attack)==2 && target.energy_state.health_current==1);
   target.animation=&t;next.numframes=0;target.energy_state.health_current=30;
-  assert(try_counter_action(&target,&attacker,&attack)==1 && target.energy_state.health_current==10);
+  assert(native_counter_call(&attacker,&attack,44)==1 && target.attack_id_incoming==43);
+  assert(target.energy_state.health_current==10);
   next.numframes=1;t.followup.animation=0;target.animation=&t;
   assert(!try_counter_action(&target,&attacker,&attack));
   t.followup.animation=5;assert(!try_counter_action(&target,&attacker,&attack));

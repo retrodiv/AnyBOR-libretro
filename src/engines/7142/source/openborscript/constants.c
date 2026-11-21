@@ -6,7 +6,10 @@
  * Expose each logical profile's native constants and translate shared
  * selectors to native values. Preserve divergent 7086 and 2021 7123
  * animation, combat, model, script-selector and menu contracts by logical
- * profile, retaining safe storage and additive APIs.
+ * profile, retaining safe storage and additive APIs. Preserve numeric
+ * animation properties and the original script property conversion routes
+ * for 6997, 7039 and 7091. Respect the original script constant vocabulary
+ * and binding flag values.
  * Existing changes recorded here; this is not their implementation date.
  * See MODIFICATIONS.md and docs/modifications/7142.md
  * at the source repository root. Original notices follow below.
@@ -41,7 +44,7 @@ else if(stricmp(#x, constname)==0) {\
 }
 
 #define OBOR_ICMPCONST_CURRENT(x) \
-else if(stricmp(#x, constname)==0) {\
+else if(!obor_profile_has_numeric_script_properties() && stricmp(#x, constname)==0) {\
     v.lVal = (LONG)x;\
 }
 #define OBOR_ICMPCONST_LEGACY(x) \
@@ -576,7 +579,7 @@ int mapstrings_transconst(ScriptVariant **varlist, int paramCount)
         ICMPCONST(IDLING_ACTIVE)
 
 		// Item defaults.
-		ICMPCONST(ITEM_HIDE_POSITION_Z)
+        else if(!obor_profile_6997_or_7039() && !stricmp(constname, "ITEM_HIDE_POSITION_Z")) { v.lVal = ITEM_HIDE_POSITION_Z; }
 
         // Edge type.
         ICMPCONST(EDGE_NONE)

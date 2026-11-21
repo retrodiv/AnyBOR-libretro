@@ -36,7 +36,7 @@ v3.0 4420, v3.0 4421-dev, v3.0 4423, v3.0 4424, v3.0 4426, v3.0 4429, v3.0 4430,
 v3.0 4432, v3.0 4453, v3.0 4454-dev, v3.0 4456, v3.0 4510-dev, v3.0 4574, v3.0 4580, v3.0 4583,
 v3.0 4596, v3.0 4624, v3.0 4626, v3.0 4642, v3.0 4665, v3.0 4682, v3.0 4701, v3.0 4742, v3.0 4750,
 v3.0 4905, v3.0 5134, v3.0 6119, v3.0 6175, v3.0 6196, v3.0 6203, v3.0 6212, v3.0 6223, v3.0 6240, v3.0 6245, v3.0 6258, v3.0 6271, v3.0 6276, v3.0 6291, v3.0 6297, v3.0 6301-dev, v3.0 6315, v3.0 6325, v3.0 6330, v3.0 6330-lns-010g, v3.0 6385, v3.0 6390, v3.0 6391, v3.0 6391-mod,
-v3.0 6392-dev, v3.0 6412-dev, v3.0 6453-dev, v3.0 6510-dev, v3.0 7086-dev, v3.0 7123-dev, v4.0 7142-alpha,
+v3.0 6392-dev, v3.0 6412-dev, v3.0 6453-dev, v3.0 6510-dev, v3.0 6997-dev, v3.0 7039-dev, v3.0 7086-dev, v3.0 7091-dev, v3.0 7123-dev, v4.0 7142-alpha,
 v4.0 7530, v4.0 7533, v4.0 7555, v4.0 7556, v4.0 7735 and v4.0 8023-dev.
 
 Automatic selection uses build tags and content clues to choose a profile. Manual selection
@@ -88,8 +88,9 @@ An explicit **Build 6391 Mod** variant or manual choice selects v3.0 6391-mod.
 Bare numeric tags, ordinary content evidence and unidentified executable declarations do
 not select that variant. Missing build numbers are not inferred from an
 executable's compile date. See [variant rules](docs/ANYBOR.md#core-options).
-Builds 6413 through 7142 select v4.0 7142-alpha, unless an exact test-build
-tag or a manual choice selects v3.0 7086-dev or v3.0 7123-dev.
+Automatic selection for builds 6413 through 7142 uses v4.0 7142-alpha.
+Exact build tags and manual selection can choose v3.0 6997-dev, v3.0 7039-dev,
+v3.0 7086-dev, v3.0 7091-dev and v3.0 7123-dev.
 Builds 7143–7530 select v4.0 7530; 7531–7533 select v4.0 7533;
 7534–7555 select v4.0 7555; 7556 selects v4.0 7556; 7557–7735 select
 v4.0 7735. Builds 7736 and later select v4.0 8023-dev.

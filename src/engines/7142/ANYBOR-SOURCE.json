@@ -17,9 +17,9 @@
       "upstream_sha256": null
     },
     "openbor.c": {
-      "distributed_sha256": "54e6d6f059c46932767ac34455fe81b2d3f6072b2baf326998a76d5418b3c840",
+      "distributed_sha256": "c14cd8741216a16886ee63382f44987dbc87bc49033b437e9eb79ae928fefe8f",
       "modified": true,
-      "summary": "Apply the port's engine corrections and select the PC video configuration on macOS. Derive output names from the content basename with explicit destination capacities, and reject overflowing output path joins. Leave multiplayer slots without a selected model available to join even if game scripts preassign lives to them. Let a missing basename-only PAK self-check read the active frontend content after it has been validated and prepared. Allocate each model's animation pointer table through the highest animation index that model uses, and bound cache, copy and cleanup paths to that capacity. Ignore optional defense and offense entries outside the configured attack-type range with a log warning before accessing their tables. Yield after each newly completed model during explicit model-list or level preparation, and defer states until that preparation has cleaned up its intermediate parsers and handles. Initialize all four RetroPads and repair legacy unbound player profiles without replacing custom bindings. Return a defined null result for absent colourmap models or tables while retaining valid palette fallback. Keep selected palette-conversion reads bounded and reject missing maps or flags, while preserving unselected slots and native allocation failure callbacks. Check destination animation capacity when retaining an animation across model changes, preserving the native fallback and timing. Preserve divergent 7086 and 2021 7123 animation, combat, model, script-selector and menu contracts by logical profile, retaining safe storage and additive APIs. Access script-container pointer slots with byte copies, preserving record layout, pointer values and native copy/cleanup order. Pointer-slot allocation and release accept byte storage without imposing pointer alignment on a packed field. Release each sprite owner once and complete cleanup independently of alias counts. Preserve native sprite-map capacity policies, check allocation extents and retain existing storage and capacity when growth is unavailable. Validate sprite-node allocations and release partial resources without changing existing owners. Check cached sprite availability before reading metadata and ignore cache requests for absent nodes. Capture explicit shutdown failure text before cleanup and bound legacy diagnostic formatting. Receive layer screen outputs in naturally aligned storage before assigning the packed member.",
+      "summary": "Apply the port's engine corrections and select the PC video configuration on macOS. Derive output names from the content basename with explicit destination capacities, and reject overflowing output path joins. Leave multiplayer slots without a selected model available to join even if game scripts preassign lives to them. Let a missing basename-only PAK self-check read the active frontend content after it has been validated and prepared. Allocate each model's animation pointer table through the highest animation index that model uses, and bound cache, copy and cleanup paths to that capacity. Ignore optional defense and offense entries outside the configured attack-type range with a log warning before accessing their tables. Yield after each newly completed model during explicit model-list or level preparation, and defer states until that preparation has cleaned up its intermediate parsers and handles. Initialize all four RetroPads and repair legacy unbound player profiles without replacing custom bindings. Return a defined null result for absent colourmap models or tables while retaining valid palette fallback. Keep selected palette-conversion reads bounded and reject missing maps or flags, while preserving unselected slots and native allocation failure callbacks. Check destination animation capacity when retaining an animation across model changes, preserving the native fallback and timing. Preserve divergent 7086 and 2021 7123 animation, combat, model, script-selector and menu contracts by logical profile, retaining safe storage and additive APIs. Access script-container pointer slots with byte copies, preserving record layout, pointer values and native copy/cleanup order. Pointer-slot allocation and release accept byte storage without imposing pointer alignment on a packed field. Release each sprite owner once and complete cleanup independently of alias counts. Preserve native sprite-map capacity policies, check allocation extents and retain existing storage and capacity when growth is unavailable. Validate sprite-node allocations and release partial resources without changing existing owners. Check cached sprite availability before reading metadata and ignore cache requests for absent nodes. Capture explicit shutdown failure text before cleanup and bound legacy diagnostic formatting. Apply the standard palette at the original level and selection background stages for 6997 and 7039. Admit model defense and offense attack names according to the original source profile. Keep the 6997 and 7039 minimum animation ranges and read energy costs only for eligible animations. Preserve their horizontal binding offsets and block eligibility. Use their original grab drawing order and debug range coordinates. Preserve 6997's random grab attack order, credits and loading diagnostics. Apply the original startup palette and touchpad text placement in 6997 and 7039. Retain ACT level palette loading and script access to level blending collections for 6997 and 7039. Receive layer screen outputs in naturally aligned storage before assigning the packed member.",
       "topics": [
         "active-content-pak-aliases",
         "animation-frame-ownership",
@@ -67,9 +67,9 @@
       "upstream_sha256": "71fd11c5f33bce214d0af7ef6ad521cc34440d460e4e2a45e99bf28ee9c03c69"
     },
     "openbor.h": {
-      "distributed_sha256": "d748ed4f7fc295664f46aad82c8694fd5e6f15fa479db805c049523ce3027c31",
+      "distributed_sha256": "e7139ae5c24d4539bda8ddd3fd694aa240b1364948bfcd176ec4dbd9bc014150",
       "modified": true,
-      "summary": "Allocate collision pointer slots through the highest author-facing index used by each collection. Track each model's allocated animation-table capacity and reject lookups outside it. Preserve divergent 7086 and 2021 7123 animation, combat, model, script-selector and menu contracts by logical profile, retaining safe storage and additive APIs.",
+      "summary": "Allocate collision pointer slots through the highest author-facing index used by each collection. Track each model's allocated animation-table capacity and reject lookups outside it. Preserve divergent 7086 and 2021 7123 animation, combat, model, script-selector and menu contracts by logical profile, retaining safe storage and additive APIs. Preserve numeric animation properties and the original script property conversion routes for 6997, 7039 and 7091. Keep the 7091 depth order of neon panels and shadows. Retain ACT level palette loading and script access to level blending collections for 6997 and 7039.",
       "topics": [
         "animation-frame-ownership",
         "animation-memory-layout",
@@ -85,9 +85,9 @@
       "upstream_sha256": "06928e6765895d2d9f344a6bb9efd394c4fea0bef540f3fa061dee3da9c61f68"
     },
     "openborscript.c": {
-      "distributed_sha256": "afe72c71378f0ad19201ca6a9f8a68f1eefa232db855a0b536b716f51b5c79f3",
+      "distributed_sha256": "4d78f4c4b2ed1c36867fac6c48e434beb02e81149cec6c262d478bb65577e079",
       "modified": true,
-      "summary": "Keep the dormant constant-lowering diagnostic compatible with the single-value instruction layout. Derive output names from the content basename with explicit destination capacities, and reject overflowing output path joins. Compact compiler-only instruction records after resolving value ownership, preserving branch and export anchors, all mutable values and exactly-once pool cleanup. Retain shared interpreters through the last script reference while preserving independent variables, replacement and native callbacks. Track diagnostic comments independently so interpreter replacement can retain them. Resolve text-property names within the actual table bounds while preserving native numeric selectors. Reuse each text object's owned buffer when replacing its contents. Reject missing colourtable indices and keep selector arithmetic and table reads defined. Preserve divergent 7086 and 2021 7123 animation, combat, model, script-selector and menu contracts by logical profile, retaining safe storage and additive APIs. Transfer loaded stream buffers through aligned local outputs while preserving native record layout and results. Close owned input files after stream loading and on buffer allocation failure.",
+      "summary": "Keep the dormant constant-lowering diagnostic compatible with the single-value instruction layout. Derive output names from the content basename with explicit destination capacities, and reject overflowing output path joins. Compact compiler-only instruction records after resolving value ownership, preserving branch and export anchors, all mutable values and exactly-once pool cleanup. Retain shared interpreters through the last script reference while preserving independent variables, replacement and native callbacks. Track diagnostic comments independently so interpreter replacement can retain them. Resolve text-property names within the actual table bounds while preserving native numeric selectors. Reuse each text object's owned buffer when replacing its contents. Reject missing colourtable indices and keep selector arithmetic and table reads defined. Preserve divergent 7086 and 2021 7123 animation, combat, model, script-selector and menu contracts by logical profile, retaining safe storage and additive APIs. Transfer loaded stream buffers through aligned local outputs while preserving native record layout and results. Close owned input files after stream loading and on buffer allocation failure. Preserve the original optional animation property results and energy selector diagnostics.",
       "topics": [
         "collision-selector-inputs",
         "colourtable-selector-bounds",
@@ -231,12 +231,13 @@
       "upstream_sha256": "ddfa2f06adeed431eb4c9b558a596e1b2ed46927ba3c08db26ba9613b88233ce"
     },
     "source/gamelib/loadimg.c": {
-      "distributed_sha256": "3c2b5bc9837c051dbd754091358675f5794378ac1cb21e8f2198fb63f42b9bf2",
+      "distributed_sha256": "fdacd2c4b7ba9909425f030ad8b4d49042506157bb8b242ec461721af2ae08a5",
       "modified": true,
-      "summary": "Declare the resolved source member and original bitmap dimensions for independent sprite reconstruction proof. Validate PCX sprite signatures before using header dimensions. Preserve native palette-only filename probing, three-plane refusals and final RGB table conversion without interpreting palette bytes as sprite dimensions. Keep bitmap row reads within the requested output width.",
+      "summary": "Declare the resolved source member and original bitmap dimensions for independent sprite reconstruction proof. Validate PCX sprite signatures before using header dimensions. Preserve native palette-only filename probing, three-plane refusals and final RGB table conversion without interpreting palette bytes as sprite dimensions. Keep bitmap row reads within the requested output width. Preserve 6997's interlaced row layout for supported images and their original palette path.",
       "topics": [
         "bitmap-row-bounds",
         "image-loader-safety",
+        "logical-profile-compatibility",
         "reconstructible-resources"
       ],
       "upstream_sha256": "1f62b52e99a0f264891b61caf16682a28fead1fa028f8df718acc2727388fcb3"
@@ -412,11 +413,12 @@
       "upstream_sha256": "fb2a7b1c0ab1c19182644e9b11448778cd3acb3310e428b3ee4e527f6c048b53"
     },
     "source/gamelib/transform.c": {
-      "distributed_sha256": "045210716402068b2873e7b94f2dbe9c0b51341452d0f179fffa6bcd3e4aea87",
+      "distributed_sha256": "feca8c10829272358c91847822ff43c1f8dad7abb0d6f63cc162a9a35fab632c",
       "modified": true,
-      "summary": "Keep absent transform masks null during sprite seeks and traversal; retain native masked cursor positioning.",
+      "summary": "Keep absent transform masks null during sprite seeks and traversal; retain native masked cursor positioning. Use the original sprite transform mask and color-table paths for 6997 and 7039.",
       "topics": [
-        "encoded-sprite-safety"
+        "encoded-sprite-safety",
+        "logical-profile-compatibility"
       ],
       "upstream_sha256": "1f9b44420c0016d97a11306c24db05c9b72650216777a2ce73351d2f7c1b12a1"
     },
@@ -455,9 +457,13 @@
       "upstream_sha256": "56ad1484e4a9baa5acd553454e8770879fe26117dfd3379982d46cf8a00fd5ef"
     },
     "source/gamelib/writepixel.h": {
-      "distributed_sha256": "4165f3a4c223a0856a828b8256bc5cf15b5d9a530441a7c1ab61c4cf2b4841dc",
-      "modified": false,
-      "topics": [],
+      "distributed_sha256": "517cb4cb16398b80762c402c5eeaa4f7c2be69cb4ae09c36e2b0315f8cf476f3",
+      "modified": true,
+      "summary": "Provide the original indexed fill operation for a verified color table.",
+      "topics": [
+        "logical-profile-compatibility",
+        "record-dates-and-file-notices"
+      ],
       "upstream_sha256": "4165f3a4c223a0856a828b8256bc5cf15b5d9a530441a7c1ab61c4cf2b4841dc"
     },
     "source/gfxlib/gfxtypes.h": {
@@ -489,9 +495,9 @@
       "upstream_sha256": "053f95e573ed4643a449d3231a003db6808bc7b59d44b6a4a457cc2a2c44d912"
     },
     "source/openborscript/animation.c": {
-      "distributed_sha256": "edc78696a6888ab912dd645844a20bf4c06b136f06e470bacb6a1980d8f949cd",
+      "distributed_sha256": "cc0eae8ff55af01a97437274305a2e8b525fc36325fa3b65ae7116fb4e2fc10f",
       "modified": true,
-      "summary": "Translate native animation property IDs for the logical profile. Preserve divergent 7086 and 2021 7123 animation, combat, model, script-selector and menu contracts by logical profile, retaining safe storage and additive APIs.",
+      "summary": "Translate native animation property IDs for the logical profile. Preserve divergent 7086 and 2021 7123 animation, combat, model, script-selector and menu contracts by logical profile, retaining safe storage and additive APIs. Preserve numeric animation properties and the original script property conversion routes for 6997, 7039 and 7091.",
       "topics": [
         "logical-profile-compatibility",
         "record-dates-and-file-notices"
@@ -564,9 +570,9 @@
       "upstream_sha256": "e1893bcaf3ae9937f57322d1b01ce923786b65f3bc7f32b3429a68212b4b7cc7"
     },
     "source/openborscript/commands.c": {
-      "distributed_sha256": "f5fde81b763d8500de2ef4967ef738d82c5c101ebe48385e8a5ad816b92e1f25",
+      "distributed_sha256": "7522a6dbda38371396245e2b610aaa74d54a142edff4d097a5ce312bd8697398",
       "modified": true,
-      "summary": "Convert the command-list lookup result to its command enumeration explicitly instead of through a plain pointer cast.",
+      "summary": "Convert the command-list lookup result to its command enumeration explicitly instead of through a plain pointer cast. Preserve the 6997, 7039 and 7091 model command names for energy cost and projectile positioning.",
       "topics": [
         "logical-profile-compatibility",
         "record-dates-and-file-notices"
@@ -592,9 +598,9 @@
       "upstream_sha256": "00b20cfbeafeae622464b8ce62b68514dc5387ca758c2316f18888e4f5b9a2cc"
     },
     "source/openborscript/constants.c": {
-      "distributed_sha256": "757e08940d117c4ca8ee71954f330bf6a4b5650a302357241ab2cb470911f5ef",
+      "distributed_sha256": "1e69feb27f3722aad9083c4fd8bce9276bd1b8cefa3b0f204bb0e34f700c9ea9",
       "modified": true,
-      "summary": "Expose each logical profile's native constants and translate shared selectors to native values. Preserve divergent 7086 and 2021 7123 animation, combat, model, script-selector and menu contracts by logical profile, retaining safe storage and additive APIs.",
+      "summary": "Expose each logical profile's native constants and translate shared selectors to native values. Preserve divergent 7086 and 2021 7123 animation, combat, model, script-selector and menu contracts by logical profile, retaining safe storage and additive APIs. Preserve numeric animation properties and the original script property conversion routes for 6997, 7039 and 7091. Respect the original script constant vocabulary and binding flag values.",
       "topics": [
         "logical-profile-compatibility",
         "record-dates-and-file-notices"
@@ -614,9 +620,9 @@
       "upstream_sha256": "4545f9fa4487da09d92a09951f81b4fd8569032f90c062e74bddf368d3eb12cc"
     },
     "source/openborscript/entity.c": {
-      "distributed_sha256": "06d9cd915e3ed430d0f419df8103b3c0ce5ff909a728ecbdf74f3c2fd9a09349",
+      "distributed_sha256": "a24ea5c7ece88ceef5091a275d06e1d7b17774f0bb06930a9d7029220aeea541",
       "modified": true,
-      "summary": "Translate native entity property names, numeric IDs and animation values for each logical profile.",
+      "summary": "Translate native entity property names, numeric IDs and animation values for each logical profile. Preserve numeric animation properties and the original script property conversion routes for 6997, 7039 and 7091.",
       "topics": [
         "logical-profile-compatibility",
         "record-dates-and-file-notices",
@@ -631,9 +637,13 @@
       "upstream_sha256": "024bab0a647bf8b91b33d80362063e330022a5bcf120e472f8414f1869c0546b"
     },
     "source/openborscript/index.c": {
-      "distributed_sha256": "a35bbced21d8b5deee89497b082504795068091cfccf0b460e23303575cebc2f",
-      "modified": false,
-      "topics": [],
+      "distributed_sha256": "db4d14b8ce3d0d7ac475124c65bb68b4181304b17dc9439dbeca1052fb8869a5",
+      "modified": true,
+      "summary": "Register native functions according to each logical profile's upstream API. Preserve numeric animation properties and the original script property conversion routes for 6997, 7039 and 7091.",
+      "topics": [
+        "logical-profile-compatibility",
+        "record-dates-and-file-notices"
+      ],
       "upstream_sha256": "a35bbced21d8b5deee89497b082504795068091cfccf0b460e23303575cebc2f"
     },
     "source/openborscript/layer.c": {
@@ -643,10 +653,11 @@
       "upstream_sha256": "ea42303e1f173f50f5f0c2a5a57f4af0c7e35bee099d55b387cd3c2115f422db"
     },
     "source/openborscript/level.c": {
-      "distributed_sha256": "add9a0648f66ceaed1cf7550b07b7e9ad1617029abf8324d50c9a286e326365b",
+      "distributed_sha256": "ad816eceaeb0c82ddcf5b1aa7f06d65c728671ab327e5aa7a348141f1b25bef3",
       "modified": true,
-      "summary": "Select the native 6330 background-speed return representation.",
+      "summary": "Select the native 6330 background-speed return representation. Retain ACT level palette loading and script access to level blending collections for 6997 and 7039.",
       "topics": [
+        "logical-profile-compatibility",
         "record-dates-and-file-notices",
         "script-text-object-ownership"
       ],
@@ -659,9 +670,9 @@
       "upstream_sha256": "bb7b74c3d04121233c5f27ac6923df3bcc713604646843fd4e0bf10e611c1535"
     },
     "source/openborscript/profile_ids.h": {
-      "distributed_sha256": "89a9a59a455500859dead6f9818e8cee3e4e37898ad49a0b608957ed882cbf74",
+      "distributed_sha256": "d65c61e6dbcfcefedadbf770f4dc694165118327b793f5a29f591237f0dd95d6",
       "modified": true,
-      "summary": "Map native logical-profile animation, attack, subtype and spawn IDs to the shared engine selectors. Preserve divergent 7086 and 2021 7123 animation, combat, model, script-selector and menu contracts by logical profile, retaining safe storage and additive APIs.",
+      "summary": "Map native logical-profile animation, attack, subtype and spawn IDs to the shared engine selectors. Preserve divergent 7086 and 2021 7123 animation, combat, model, script-selector and menu contracts by logical profile, retaining safe storage and additive APIs. Report the original source version strings for 6997, 7039 and 7091.",
       "topics": [
         "logical-profile-compatibility",
         "record-dates-and-file-notices"
@@ -776,11 +787,12 @@
       "upstream_sha256": "bf743d291108ab411fc0e34ed891ad78f2d52f1bf20bdfb36d226f0df279155e"
     },
     "source/ramlib/ram.c": {
-      "distributed_sha256": "0eee5e91caec28adcdc757677869928346fc8e17fba9fd2df868e645dc80dc32",
+      "distributed_sha256": "488fea5fc8fd345d769044a548ec215e897086a28608093bdbfbe1a283da7a17",
       "modified": true,
-      "summary": "Read host memory statistics through mach on macOS instead of the glibc-only <malloc.h>.",
+      "summary": "Read host memory statistics through mach on macOS instead of the glibc-only <malloc.h>. Use the original memory report format in 6997.",
       "topics": [
         "darwin-platform-support",
+        "logical-profile-compatibility",
         "record-dates-and-file-notices"
       ],
       "upstream_sha256": "9fc5cf5c2da5d52af7dd895678045d4f304d411be6153fe1158408acf7f7197c"

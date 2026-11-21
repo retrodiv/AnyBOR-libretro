@@ -21,9 +21,9 @@ METHODS
 static void drop(void) { __OBOR_DROP_BRANCH__ }
 static int jump_cost(void) { int candospecial=0; __OBOR_JUMP_COST__ return candospecial; }
 int main(void) {
- const unsigned profiles[]={7086,7123,7142};
- for(unsigned p=0;p<3;++p) {
-  int legacy=p!=2;obor_profile_build=profiles[p];
+ const unsigned profiles[]={6997,7039,7086,7091,7123,7142};
+ for(unsigned p=0;p<sizeof(profiles)/sizeof(profiles[0]);++p) {
+  obor_profile_build=profiles[p];int legacy=obor_profile_build!=7142;
   entity ent={0},parent={0};s_anim animation={0};s_anim *animations[]={&animation};self=&ent;
   ent.animation=&animation;ent.modeldata.animation=animations;ent.modeldata.animation_capacity=1;animation.numframes=10;
   ent.binding.ent=&parent;
@@ -33,6 +33,13 @@ int main(void) {
    assert(!!check_bind_override(&ent,flags[f])==!!(mask&bit));
   }
   ent.binding.ent=NULL;
+  animation.numframes=0;
+  assert(!check_energy(ENERGY_TYPE_MP,0));
+  animation.numframes=10;
+  assert(!check_energy(ENERGY_TYPE_MP,-1) && !check_energy(ENERGY_TYPE_MP,1));
+  animations[0]=NULL;
+  assert(!check_energy(ENERGY_TYPE_MP,0));
+  animations[0]=&animation;
   const int types[]={TYPE_PLAYER,TYPE_ENEMY,TYPE_NPC,TYPE_SHOT,TYPE_PLAYER|TYPE_NPC};
   for(unsigned t=0;t<5;++t)for(int disable=-5;disable<=35;++disable)
   for(int cost=0;cost<=8;cost+=4)for(int mode=0;mode<3;++mode)

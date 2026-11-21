@@ -150,7 +150,7 @@ static bool content_contract_active(size_t i)
 static bool content_contract_allows(const obor_contract_rule *rule, int profile, int engine)
 {
     if ((rule->flags & OBOR_CT_OLD_ANIMATION_BRANCH) && engine == 7142 &&
-        (profile == 7086 || profile == 7123)) return true;
+        (profile == 7086 || profile == 7091 || profile == 7123)) return true;
     return profile >= rule->lower && profile <= rule->upper &&
         !(rule->gap_lower && profile >= rule->gap_lower && profile <= rule->gap_upper) &&
         (!(rule->flags & OBOR_CT_NO_4453) || profile != 4453);

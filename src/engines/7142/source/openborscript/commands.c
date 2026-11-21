@@ -4,7 +4,9 @@
  * These contributions are licensed under BSD-3-Clause; see LICENSE at the root.
  * Upstream code retains its original license and notices.
  * Convert the command-list lookup result to its command enumeration
- * explicitly instead of through a plain pointer cast.
+ * explicitly instead of through a plain pointer cast. Preserve the 6997,
+ * 7039 and 7091 model command names for energy cost and projectile
+ * positioning.
  * Existing changes recorded here; this is not their implementation date.
  * See MODIFICATIONS.md and docs/modifications/7142.md
  * at the source repository root. Original notices follow below.
@@ -123,6 +125,7 @@ List *createModelCommandList(void)
     int i, amax = 99;
     char buf[64] ;
     List *result = prepareList();
+    const int legacy_names = obor_profile_build == 6997 || obor_profile_build == 7039 || obor_profile_build == 7091;
 #define LIST_ADD(y,z) List_InsertAfter(result, (void*) y, z)
         LIST_ADD(CMD_MODEL_AGGRESSION, "aggression");
     LIST_ADD(CMD_MODEL_AIATTACK, "aiattack");
@@ -277,7 +280,10 @@ List *createModelCommandList(void)
     LIST_ADD(CMD_MODEL_EDELAY, "edelay");
     LIST_ADD(CMD_MODEL_EDGERANGE, "edgerange");
     LIST_ADD(CMD_MODEL_ENERGY_COST, "energycost");	// Backward compatability.
-	LIST_ADD(CMD_MODEL_ENERGY_COST, "energy_cost");
+    if(!legacy_names)
+    {
+        LIST_ADD(CMD_MODEL_ENERGY_COST, "energy_cost");
+    }
     LIST_ADD(CMD_MODEL_ENTITYPUSHING, "entitypushing");
     LIST_ADD(CMD_MODEL_ESCAPEHITS, "escapehits");
     LIST_ADD(CMD_MODEL_FACING, "facing");
@@ -415,9 +421,12 @@ List *createModelCommandList(void)
     LIST_ADD(CMD_MODEL_PLAYSHOTW, "playshotw");
     LIST_ADD(CMD_MODEL_PRIORITY, "priority");
     LIST_ADD(CMD_MODEL_PROJECT, "project");
-	LIST_ADD(CMD_MODEL_PROJECTILE_POSITION_X, "projectile_position_x");
-	LIST_ADD(CMD_MODEL_PROJECTILE_POSITION_Y, "projectile_position_y");
-	LIST_ADD(CMD_MODEL_PROJECTILE_POSITION_Z, "projectile_position_z");
+    if(!legacy_names)
+    {
+        LIST_ADD(CMD_MODEL_PROJECTILE_POSITION_X, "projectile_position_x");
+        LIST_ADD(CMD_MODEL_PROJECTILE_POSITION_Y, "projectile_position_y");
+        LIST_ADD(CMD_MODEL_PROJECTILE_POSITION_Z, "projectile_position_z");
+    }
     LIST_ADD(CMD_MODEL_PROJECTILEHIT, "projectilehit");
     LIST_ADD(CMD_MODEL_PSHOTFRAME, "pshotframe");
     LIST_ADD(CMD_MODEL_PSHOTFRAMENO, "pshotframeno");

@@ -1,6 +1,19 @@
+/* AnyBOR modification record: 2026-10-06.
+ * Port maintained by retrodiv <retrodiv@proton.me>.
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me> (original contributions).
+ * These contributions are licensed under BSD-3-Clause; see LICENSE at the root.
+ * Upstream code retains its original license and notices.
+ * Provide the original indexed fill operation for a verified color table.
+ * Existing changes recorded here; this is not their implementation date.
+ * See MODIFICATIONS.md and docs/modifications/7142.md
+ * at the source repository root. Original notices follow below.
+ */
+
 
 // dest, src, transbg, fillcolor, blendfunc
 
+
+#define WP_HISTORICAL_INDEXED_FILL 48
 
 #define wp_8_8_0_0_0() *cur_dest=*cur_src;
 #define wp_8_8_0_0_1() *cur_dest=pfp(table,*cur_src,*cur_dest);
@@ -117,6 +130,7 @@ case 44: x wp_32_32_1_0_0() y break; \
 case 45: x wp_32_32_1_0_1() y break; \
 case 46: x wp_32_32_1_1_0() y break; \
 case 47: x wp_32_32_1_1_1() y break; \
+case WP_HISTORICAL_INDEXED_FILL: x memmove(cur_dest, table + (size_t)*cur_src * sizeof(unsigned), sizeof(unsigned)); y break; \
 }
 
 

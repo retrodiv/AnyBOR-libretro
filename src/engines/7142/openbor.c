@@ -35,8 +35,18 @@
  * and release partial resources without changing existing owners. Check
  * cached sprite availability before reading metadata and ignore cache
  * requests for absent nodes. Capture explicit shutdown failure text before
- * cleanup and bound legacy diagnostic formatting. Receive layer screen
- * outputs in naturally aligned storage before assigning the packed member.
+ * cleanup and bound legacy diagnostic formatting. Apply the standard palette
+ * at the original level and selection background stages for 6997 and 7039.
+ * Admit model defense and offense attack names according to the original
+ * source profile. Keep the 6997 and 7039 minimum animation ranges and read
+ * energy costs only for eligible animations. Preserve their horizontal
+ * binding offsets and block eligibility. Use their original grab drawing
+ * order and debug range coordinates. Preserve 6997's random grab attack
+ * order, credits and loading diagnostics. Apply the original startup palette
+ * and touchpad text placement in 6997 and 7039. Retain ACT level palette
+ * loading and script access to level blending collections for 6997 and 7039.
+ * Receive layer screen outputs in naturally aligned storage before assigning
+ * the packed member.
  * Existing changes recorded here; this is not their implementation date.
  * See MODIFICATIONS.md and docs/modifications/7142.md
  * at the source repository root. Original notices follow below.
@@ -3636,45 +3646,105 @@ int convert_map_to_palette(s_model *model, unsigned mapflag[])
     return 1;
 }
 
-//load a 256 colors' palette
-int load_palette(unsigned char *palette, char *filename)
+static int obor_load_act_palette(unsigned char *palette, char *filename)
 {
-    char *fileext;
     int handle, i;
     unsigned *dp;
     unsigned char tpal[3];
 
-    // Determine whether the author is using an .act or image file, and
-    // verify the file content is valid to load a color table from.
-    fileext = strrchr(filename, '.');
-    if(fileext != NULL && stricmp(fileext, ".act") == 0)
+    handle = openpackfile(filename, packfile);
+    if(handle < 0)
     {
-        handle = openpackfile(filename, packfile);
-        if(handle < 0)
+        return 0;
+    }
+    memset(palette, 0, MAX_PAL_SIZE);
+    dp = (unsigned *)palette;
+    for(i = 0; i < MAX_PAL_SIZE / 4; i++)
+    {
+        if(readpackfile(handle, tpal, 3) != 3)
+        {
+            closepackfile(handle);
+            return 0;
+        }
+        dp[i] = colour32(tpal[0], tpal[1], tpal[2]);
+
+    }
+    closepackfile(handle);
+    dp[0] = 0;
+
+    return 1;
+}
+
+// Load a 256-color palette from an ACT file or an image.
+int load_palette(unsigned char *palette, char *filename)
+{
+    const char *extension = strrchr(filename, '.');
+    if(extension && stricmp(extension, ".act") == 0)
+    {
+        return obor_load_act_palette(palette, filename);
+    }
+    return loadimagepalette(filename, packfile, palette);
+}
+
+static int obor_add_level_palette(s_level *lv, char *filename, const int *usemap)
+{
+    static const palette_table_function factories[MAX_BLENDINGS] = {
+        palette_table_screen, palette_table_multiply, palette_table_overlay,
+        palette_table_hardlight, palette_table_dodge, palette_table_half
+    };
+    const size_t index = (size_t)lv->numpalettes;
+    if(index >= SIZE_MAX / sizeof(*lv->palettes) || index >= INT_MAX)
+    {
+        return 0;
+    }
+
+    unsigned char (*palettes)[MAX_PAL_SIZE] = realloc(lv->palettes, (index + 1) * sizeof(*palettes));
+    if(!palettes)
+    {
+        return 0;
+    }
+    lv->palettes = palettes;
+    memset(palettes[index], 0, sizeof(palettes[index]));
+
+    if(usemap)
+    {
+        if(!obor_load_act_palette(palettes[index], filename))
         {
             return 0;
         }
-        memset(palette, 0, MAX_PAL_SIZE);
-        dp = (unsigned *)palette;
-        for(i = 0; i < MAX_PAL_SIZE / 4; i++)
+
+        unsigned char *(*blendings)[MAX_BLENDINGS] = realloc(
+            lv->obor_palette_blendings, (index + 1) * sizeof(*blendings));
+        if(!blendings)
         {
-            if(readpackfile(handle, tpal, 3) != 3)
-            {
-                closepackfile(handle);
-                return 0;
-            }
-            dp[i] = colour32(tpal[0], tpal[1], tpal[2]);
-
+            return 0;
         }
-        closepackfile(handle);
-        dp[0] = 0;
+        lv->obor_palette_blendings = blendings;
+        lv->obor_palette_blending_count = index + 1;
+        memset(blendings[index], 0, sizeof(blendings[index]));
 
-        return 1;
+        if(pixelformat == PIXEL_8)
+        {
+            for(int i = 0; i < MAX_BLENDINGS; ++i)
+            {
+                if(usemap[i])
+                {
+                    blendings[index][i] = factories[i](palettes[index]);
+                    if(!blendings[index][i])
+                    {
+                        return 0;
+                    }
+                }
+            }
+        }
     }
-    else
+    else if(!load_palette(palettes[index], filename))
     {
-        return loadimagepalette(filename, packfile, palette);
+        return 0;
     }
+
+    ++lv->numpalettes;
+    return 1;
 }
 
 void create_blend_tables_x8(unsigned char *tables[])
@@ -3902,7 +3972,7 @@ void init_colourtable()
     memcpy(ldcolourtable, hpcolourtable, 11 * sizeof(*hpcolourtable));
 }
 
-void load_background(char *filename)
+static void obor_load_background(char *filename, int use_standard_palette)
 {
     // Clean up any previous background.
     unload_background();
@@ -3929,6 +3999,11 @@ void load_background(char *filename)
     {
         memcpy(pal, background->palette, PAL_BYTES);
         memcpy(neontable, pal, PAL_BYTES);
+    }
+
+    if(use_standard_palette && obor_profile_6997_or_7039())
+    {
+        standard_palette(0);
     }
 
     lifebar_colors();
@@ -3988,10 +4063,15 @@ void load_background(char *filename)
     change_system_palette(0);
 }
 
-void load_cached_background(char *filename)
+void load_background(char *filename)
+{
+    obor_load_background(filename, 0);
+}
+
+static void obor_load_cached_background(char *filename, int use_standard_palette)
 {
 #ifndef CACHE_BACKGROUNDS
-    load_background(filename);
+    obor_load_background(filename, use_standard_palette);
 #else
     int index = -1;
     unload_background();
@@ -4055,12 +4135,22 @@ void load_cached_background(char *filename)
         memcpy(pal, background->palette, PAL_BYTES);
     }
 
+    if(use_standard_palette && obor_profile_6997_or_7039())
+    {
+        standard_palette(0);
+    }
+
     video_clearscreen();
     pal[0] = pal[1] = pal[2] = 0;
     //palette_set_corrected(pal, savedata.gamma,savedata.gamma,savedata.gamma, savedata.brightness,savedata.brightness,savedata.brightness);
     change_system_palette(0);
     printf("use cached bg\n");
 #endif
+}
+
+void load_cached_background(char *filename)
+{
+    obor_load_cached_background(filename, 0);
 }
 
 #ifdef CACHE_BACKGROUNDS
@@ -9888,8 +9978,14 @@ s_model *load_cached_model(char *name, char *owner, char unload)
                 tempdef(else if, LIFESPAN)
                 tempdef(else if, LOSE)
                 tempdef(else if, PIT)
-				tempdef(else if, SUB_ENTITY_PARENT_KILL)
-				tempdef(else if, SUB_ENTITY_UNSUMMON)
+				else if(!obor_profile_has_numeric_script_properties() && stricmp(value, "SUB_ENTITY_PARENT_KILL") == 0)
+				{
+				    newchar->defense[ATK_SUB_ENTITY_PARENT_KILL] = defense;
+				}
+				else if(!obor_profile_has_numeric_script_properties() && stricmp(value, "SUB_ENTITY_UNSUMMON") == 0)
+				{
+				    newchar->defense[ATK_SUB_ENTITY_UNSUMMON] = defense;
+				}
                 tempdef(else if, TIMEOVER)
 
                 else if(starts_with(value, "normal"))
@@ -9963,8 +10059,14 @@ s_model *load_cached_model(char *name, char *owner, char unload)
                 tempoff(else if,    LIFESPAN,   offense_factors)
                 tempoff(else if,    LOSE,       offense_factors)
                 tempoff(else if,    PIT,        offense_factors)
-				tempoff(else if,	SUB_ENTITY_PARENT_KILL,	offense_factors)
-				tempoff(else if,	SUB_ENTITY_UNSUMMON,	offense_factors)
+				else if(!obor_profile_has_numeric_script_properties() && stricmp(value, "SUB_ENTITY_PARENT_KILL") == 0)
+				{
+				    newchar->offense_factors[ATK_SUB_ENTITY_PARENT_KILL] = GET_FLOAT_ARG(2);
+				}
+				else if(!obor_profile_has_numeric_script_properties() && stricmp(value, "SUB_ENTITY_UNSUMMON") == 0)
+				{
+				    newchar->offense_factors[ATK_SUB_ENTITY_UNSUMMON] = GET_FLOAT_ARG(2);
+				}
                 tempoff(else if,    TIMEOVER,   offense_factors)
 
                 else if(starts_with(value, "normal"))
@@ -10720,9 +10822,9 @@ s_model *load_cached_model(char *name, char *owner, char unload)
                 newanim->range.x.max            = (int)newchar->jumpheight * 20;		// 30-12-2004 default range affected by jump height
                 newanim->range.z.min            = (int) - newchar->grabdistance / 3;	//zmin
                 newanim->range.z.max            = (int)newchar->grabdistance / 3;		//zmax
-                newanim->range.y.min            = 0;									//amin
+                newanim->range.y.min            = obor_profile_6997_or_7039() ? T_MIN_BASEMAP : 0;
 				newanim->range.y.max			= (int)newchar->jumpheight * 20;			// Same logic as X. Good for attacks, but not terrian. Author better remember to add jump ranges.
-                newanim->range.base.min         = 0;									// Base min.				
+                newanim->range.base.min         = newanim->range.y.min;
 				newanim->range.base.max			= (int)newchar->jumpheight * 20;			// Just use same logic as range Y.
                 newanim->obor_counter_present = newanim->obor_drop_present = 0;
                 newanim->obor_jump_present = newanim->obor_land_present = 0;
@@ -14938,6 +15040,17 @@ void free_level(s_level *lv)
     {
         free(lv->palettes);
     }
+    if(lv->obor_palette_blendings)
+    {
+        for(size_t row = 0; row < lv->obor_palette_blending_count; ++row)
+        {
+            for(int mode = 0; mode < MAX_BLENDINGS; ++mode)
+            {
+                free(lv->obor_palette_blendings[row][mode]);
+            }
+        }
+        free(lv->obor_palette_blendings);
+    }
 
     free(lv);
     lv = NULL;
@@ -15816,14 +15929,23 @@ void load_level(char *filename)
             addbasemap(GET_FLOAT_ARG(1), GET_FLOAT_ARG(2), GET_FLOAT_ARG(3), GET_FLOAT_ARG(4), GET_FLOAT_ARG(5), GET_FLOAT_ARG(6), GET_FLOAT_ARG(7));
             break;
         case CMD_LEVEL_PALETTE:
-            __realloc(level->palettes, level->numpalettes);
-            if(!load_palette(level->palettes[level->numpalettes], GET_ARG(1)))
+        {
+            int usemap[MAX_BLENDINGS] = {0};
+            const int legacy = obor_profile_6997_or_7039();
+            if(legacy)
+            {
+                for(int i = 0; i < MAX_BLENDINGS; ++i)
+                {
+                    usemap[i] = GET_INT_ARG(i + 2);
+                }
+            }
+            if(!obor_add_level_palette(level, GET_ARG(1), legacy ? usemap : NULL))
             {
                 errormessage = "Failed to create colour conversion tables for level! (Out of memory?)";
                 goto lCleanup;
             }
-            level->numpalettes++;
             break;
+        }
         case CMD_LEVEL_UPDATESCRIPT:
         case CMD_LEVEL_UPDATEDSCRIPT:
         case CMD_LEVEL_KEYSCRIPT:
@@ -16198,7 +16320,7 @@ void load_level(char *filename)
     {
         clearscreen(vscreen);
         spriteq_clear();
-        load_background(bgPath);
+        obor_load_background(bgPath, 1);
     }
     else if(background)
     {
@@ -16386,13 +16508,20 @@ void load_level(char *filename)
     totalram = getSystemRam(BYTES);
     freeram = getFreeRam(BYTES);
     usedram = getUsedRam(BYTES);
-    printf("Total Ram: %11"PRIu64" Bytes ( %5"PRIu64" MB )\n Free Ram: %11"PRIu64" Bytes ( %5"PRIu64" MB )\n Used Ram: %11"PRIu64" Bytes ( %5"PRIu64" MB )\n",
-        totalram,
-        totalram >> 20,
-        freeram,
-        freeram >> 20,
-        usedram,
-        usedram >> 20);
+    if(obor_profile_build == 6997)
+    {
+        printf("Total Ram: %"PRIu64" Bytes\n Free Ram: %"PRIu64" Bytes\n Used Ram: %"PRIu64" Bytes\n", totalram, freeram, usedram);
+    }
+    else
+    {
+        printf("Total Ram: %11"PRIu64" Bytes ( %5"PRIu64" MB )\n Free Ram: %11"PRIu64" Bytes ( %5"PRIu64" MB )\n Used Ram: %11"PRIu64" Bytes ( %5"PRIu64" MB )\n",
+            totalram,
+            totalram >> 20,
+            freeram,
+            freeram >> 20,
+            usedram,
+            usedram >> 20);
+    }
     printf("Total sprites mapped: %d\n\n", sprites_loaded);
 
 lCleanup:
@@ -17106,9 +17235,6 @@ void draw_visual_debug()
     s_drawmethod        drawmethod = plainmethod;
     entity              *entity;
 
-	int range_y_min = 0;
-	int range_y_max = 0;
-
     drawmethod.alpha = BLEND_MODE_ALPHA;
 
     for(i=0; i<ent_max; i++)
@@ -17136,17 +17262,11 @@ void draw_visual_debug()
         // Range debug requested?
         if(savedata.debuginfo & DEBUG_DISPLAY_RANGE)
         {
-			// Range is calculated a bit differently than body/attack 
-			// boxes, which is what the draw_box_on_entity() funciton
-			// is meant for. For Y axis, We need to invert the value, 
-			// and place them in opposiing parameters (Max Y into 
-			// function's min Y parameter, and and min Y into function's
-			// max Y parameter).
-
-			range_y_min =  -entity->animation->range.y.min;
-			range_y_max =  -entity->animation->range.y.max;
-			
-            draw_box_on_entity(entity, entity->animation->range.x.min, range_y_max, entity->position.z+1, entity->animation->range.x.max, range_y_min, -1, LOCAL_COLOR_GREEN, &drawmethod);
+            // Later profiles invert the vertical range for screen coordinates.
+            const int early = obor_profile_6997_or_7039();
+            const int top = early ? entity->animation->range.y.min : -entity->animation->range.y.max;
+            const int bottom = early ? entity->animation->range.y.max : -entity->animation->range.y.min;
+            draw_box_on_entity(entity, entity->animation->range.x.min, top, entity->position.z+1, entity->animation->range.x.max, bottom, -1, LOCAL_COLOR_GREEN, &drawmethod);
         }
 
         // Collision body debug requested?
@@ -20269,7 +20389,7 @@ int check_blocking_eligible(entity *ent, entity *other, s_collision_attack *atta
 	}
 
 	// Attack block breaking exceeds block power?
-	if (attack->no_block || ent->defense[attack->attack_type].blockpower)
+	if (ent->defense[attack->attack_type].blockpower || (!obor_profile_6997_or_7039() && attack->no_block))
 	{
 		if (attack->no_block >= ent->defense[attack->attack_type].blockpower)
 		{
@@ -22974,7 +23094,8 @@ void adjust_bind(entity *e)
 	e->position.z = binding_position(e->position.z, e->binding.ent->position.z, e->binding.offset.z, e->binding.positioning.z);
 	e->position.y = binding_position(e->position.y, e->binding.ent->position.y, e->binding.offset.y, e->binding.positioning.y);
 
-	if (e->binding.positioning.x == BIND_MODE_TARGET && e->binding.ent->direction == DIRECTION_LEFT)
+	if (e->binding.ent->direction == DIRECTION_LEFT &&
+	    (obor_profile_6997_or_7039() || e->binding.positioning.x == BIND_MODE_TARGET))
 	{
 		e->position.x = binding_position(e->position.x, e->binding.ent->position.x, -e->binding.offset.x, e->binding.positioning.x);
 	}
@@ -23377,7 +23498,19 @@ void display_ents()
                     // whether the entity is grabbing someone and has grabback set
 
                     z = (int)e->position.z;    // Set the layer offset
-					
+                    if(obor_profile_6997_or_7039() && e->grabbing && e->link)
+                    {
+                        sortid = e->link->sortid;
+                        if(e->modeldata.grabback)
+                        {
+                            if(sortid > INT_MIN) --sortid;
+                        }
+                        else if(sortid < INT_MAX)
+                        {
+                            ++sortid;
+                        }
+                    }
+
                     if(other && e->position.y >= other->position.y + other->animation->platform[other->animpos][PLATFORM_HEIGHT] && !other->modeldata.setlayer)
                     {
                         float zdepth = (float)( (float)e->position.z - (float)other->position.z +
@@ -25527,6 +25660,16 @@ void common_grab_check()
         return;
     }
     which = rnum % GRAB_ACTION_SELECT_MAX;
+    if(obor_profile_build == 6997)
+    {
+        // The random selection follows the order of the original table.
+        static const e_grab_action_select original_order[] = {
+            GRAB_ACTION_SELECT_ATTACK, GRAB_ACTION_SELECT_FORWARD,
+            GRAB_ACTION_SELECT_UP, GRAB_ACTION_SELECT_DOWN,
+            GRAB_ACTION_SELECT_BACKWARD
+        };
+        which = original_order[which];
+    }
     // grab attacks
     if(rnum > 12 && validanim(self, grab_attacks[which][0]))
     {
@@ -27290,22 +27433,11 @@ int adjust_grabposition(entity *ent, entity *other, float dist, int grabin)
     //other->position.y = ent->position.y;
     //other->base = ent->base;
 
-	// Sort order control.
-	//
-	// If grabback is set (grabback = 1) the grabbed entity's 
-	// sort order is forced 1 greater than grappler so grappler 
-	// appears behind. Otherwise grabbed is moved one lower, 
-	// forcing grappler to appear in front.
-	if (ent->modeldata.grabback)
-	{
-		other->sortid = ent->sortid + 1;
-	}
-	else if (!ent->modeldata.grabback)
-	{
-		other->sortid = ent->sortid - 1;
-	}
+    if(!obor_profile_6997_or_7039())
+    {
+        other->sortid = ent->modeldata.grabback ? ent->sortid + 1 : ent->sortid - 1;
+    }
 
-	
     return 1;
 }
 
@@ -30823,12 +30955,6 @@ int check_energy(e_cost_check which, int ani)
 {
     int result = FALSE;
     e_entity_type type;        //Entity type.
-    s_energy_cost energy_cost;
-	   
-    // Get animation's energy_cost data.
-    energy_cost.cost = self->modeldata.animation[ani]->energy_cost.cost;
-	energy_cost.disable = self->modeldata.animation[ani]->energy_cost.disable;
-	energy_cost.mponly = self->modeldata.animation[ani]->energy_cost.mponly;
 
     // Get entity type.
     type	   = self->modeldata.type;
@@ -30850,8 +30976,9 @@ int check_energy(e_cost_check which, int ani)
         }
     }
 
-    if(validanim(self, ani))
+    if(self->modeldata.animation && validanim(self, ani))
     {
+        const s_energy_cost energy_cost = self->modeldata.animation[ani]->energy_cost;
         // Caskey, Damon V.
         // 2010-05-08
         //
@@ -36318,7 +36445,8 @@ void display_credits()
         font_printf(col1, s + v * m,  0, 0, "Caskey, Damon V.");
         font_printf(col2, s + v * m,  0, 0, "Project Lead"); ++m;
 
-        font_printf(col1, s + v * m,  0, 0, "Msmalik681");
+        const int early_credits = obor_profile_build == 6997;
+        font_printf(col1, s + v * m,  0, 0, early_credits ? "White Dragon" : "Msmalik681");
         font_printf(col2, s + v * m,  0, 0, "Developer"); ++m;
 
         font_printf(col1, s + v * m,  0, 0, "Plombo");
@@ -36335,24 +36463,29 @@ void display_credits()
         font_printf(col1, s + v * m, 0, 0, "SX");
         font_printf(col2, s + v * m,  0, 0, "Tails"); ++m;
         font_printf(col1, s + v * m,  0, 0, "uTunnels");
-		font_printf(col2, s + v * m,  0, 0, "White Dragon"); ++m;
+        if(!early_credits)
+        {
+            font_printf(col2, s + v * m,  0, 0, "White Dragon");
+        }
+        ++m;
 
         font_printf(_strmidx(1, "Ports"), s + v * m,  1, 0, "Ports"); ++m;
         font_printf(col1, s + v * m, 0, 0, "PSP/Linux/OSX");
         font_printf(col2, s + v * m, 0, 0, "SX"); ++m;
-		/*
-        font_printf(col1, s + v * m, 0, 0, "OpenDingux");
-        font_printf(col2, s + v * m, 0, 0, "Shin-NiL"); ++m;
-        
-        font_printf(col1, s + v * m, 0, 0, "DreamCast");
-        font_printf(col2, s + v * m, 0, 0, "Neill Corlett, SX"); ++m;
-		*/
+        if(early_credits)
+        {
+            font_printf(col1, s + v * m, 0, 0, "OpenDingux");
+            font_printf(col2, s + v * m, 0, 0, "Shin-NiL"); ++m;
+
+            font_printf(col1, s + v * m, 0, 0, "DreamCast");
+            font_printf(col2, s + v * m, 0, 0, "Neill Corlett, SX"); ++m;
+        }
         font_printf(col1, s + v * m, 0, 0, "Wii");
-        font_printf(col2, s + v * m, 0, 0, "Plombo, SX, Msmalik681"); ++m;
+        font_printf(col2, s + v * m, 0, 0, early_credits ? "Plombo, SX" : "Plombo, SX, Msmalik681"); ++m;
 
         font_printf(col1, s + v * m, 0, 0, "Android");
         font_printf(col2, s + v * m, 0, 0, "CRxTRDude, Plombo,"); ++m;
-        font_printf(col2, s + v * m, 0, 0, "uTunnels, Msmalik681"); ++m;
+        font_printf(col2, s + v * m, 0, 0, early_credits ? "uTunnels," : "uTunnels, Msmalik681"); ++m;
         font_printf(col2, s + v * m, 0, 0, "White Dragon"); ++m;
 
         font_printf(col1,  s + v * m, 0, 0, "PS Vita");
@@ -36713,6 +36846,11 @@ void startup()
     if(!video_set_mode(videomodes))
     {
         borShutdown(1, "Unable to set video mode: %d x %d!\n", videomodes.hRes, videomodes.vRes);
+    }
+
+    if(obor_profile_6997_or_7039() && pixelformat == PIXEL_8)
+    {
+        standard_palette(1);
     }
 
     printf("Loading menu.txt.............\t");
@@ -37657,7 +37795,7 @@ static void load_select_screen_info(s_savelevel *save)
 
     ParseArgs(&arglist, save->selectBackground, argbuf);
     command = GET_ARG(0);
-    if(command && command[0]) load_background(GET_ARG(1));
+    if(command && command[0]) obor_load_background(GET_ARG(1), 1);
 
     return;
 }
@@ -37765,7 +37903,7 @@ int selectplayer(int *players, char *filename, int useSavedGame)
 				}
 				else if (stricmp(command, "background") == 0)
 				{
-					load_background(GET_ARG(1));
+					obor_load_background(GET_ARG(1), 1);
 					// SAVE
 					multistrcatsp(save->selectBackground, command, GET_ARG(1), NULL);
 				}
@@ -37870,11 +38008,11 @@ int selectplayer(int *players, char *filename, int useSavedGame)
 				{
 					strcpy(string, custBkgrds);
 					strcat(string, "unlockbg");
-					load_background(string);
+					obor_load_background(string, 1);
 				}
 				else
 				{
-					load_cached_background("data/bgs/unlockbg");
+					obor_load_cached_background("data/bgs/unlockbg", 1);
 				}
 			}
 			else
@@ -37884,11 +38022,11 @@ int selectplayer(int *players, char *filename, int useSavedGame)
 				{
 					strcpy(string, custBkgrds);
 					strcat(string, "select");
-					load_background(string);
+					obor_load_background(string, 1);
 				}
 				else
 				{
-					load_cached_background("data/bgs/select");
+					obor_load_cached_background("data/bgs/select", 1);
 				}
 			}
 			if (!music("data/music/menu", 1, 0))
@@ -39434,13 +39572,15 @@ void menu_options_input()
         _menutext((selector == 3), x_pos, 1, Tr("Setup Player 3..."));
         _menutext((selector == 4), x_pos, 2, Tr("Setup Player 4..."));
         #if ANDROID
-        if(savedata.is_touchpad_vibration_enabled)
+        char *vibration = savedata.is_touchpad_vibration_enabled
+            ? Tr("Touchpad Vibration Enabled") : Tr("Touchpad Vibration Disabled");
+        if(obor_profile_6997_or_7039())
         {
-            _menutextm((selector == 5), 4, 0, Tr("Touchpad Vibration Enabled"));
+            _menutext((selector == 5), x_pos, 4, vibration);
         }
         else
         {
-            _menutextm((selector == 5), 4, 0, Tr("Touchpad Vibration Disabled"));
+            _menutextm((selector == 5), 4, 0, vibration);
         }
         _menutextm((selector == 6), 6, 0, Tr("Back"));
         #else

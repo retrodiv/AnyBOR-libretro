@@ -56,7 +56,9 @@ class ContentTriageTests(unittest.TestCase):
 
     def test_exact_tags_never_run_triage(self):
         for tag, expected in (('3741',3741),('3780',3780),('6330',6330),
-                              ('6392',6392),('6412',6412),('6453',6453),('6453-dev',6453)):
+                              ('6392',6392),('6412',6412),('6453',6453),('6453-dev',6453),
+                              ('6997',6997),('6997-dev',6997),('7039',7039),('7039-dev',7039),
+                              ('7091',7091),('7091-dev',7091)):
             profile, log = self.script(tag, 'void main(){ movie_load("x"); }')
             self.assertEqual(profile, expected)
             self.assertNotIn('filename triage', log)
@@ -377,13 +379,13 @@ class ContentTriageTests(unittest.TestCase):
         self.assertEqual(self.select('4088')[0], 4088)
         self.assertEqual(self.select('4088-4088')[0], 4107)
         self.assertEqual(self.select('408X')[0], 4086)
-        for revision in (3968, 3970, 6453):
+        for revision in (3968, 3970, 6453, 6997, 7039, 7091):
             with self.subTest(revision=revision):
                 self.assertEqual(self.select(str(revision))[0], revision)
                 for suffix in (' dev', '-DEV', '_Dev'):
                     self.assertEqual(self.select(str(revision) + suffix)[0], revision)
                 self.assertNotIn(self.select('%d-%d' % (revision, revision))[0],
-                                 (3968, 3970, 6453))
+                                 (3968, 3970, 6453, 6997, 7039, 7091))
         self.assertNotIn(self.select('396X')[0], (3968, 3970))
         self.assertNotEqual(self.select('645X')[0], 6453)
 
@@ -477,13 +479,13 @@ class ContentTriageTests(unittest.TestCase):
         for row in rules:
             ident,kind,name,lower,upper,flags,gap_lower,gap_upper=row.split()
             kind,lower,upper,flags,gap_lower,gap_upper=map(int,(kind,lower,upper,flags,gap_lower,gap_upper))
-            controls={max(1,lower-1),lower,min(99999,upper),min(99999,upper+1),4453,7086,7123,7142}
+            controls={max(1,lower-1),lower,min(99999,upper),min(99999,upper+1),4453,7086,7091,7123,7142}
             if gap_lower: controls.update((gap_lower-1,gap_lower,gap_upper,gap_upper+1))
             for build in controls:
                 for engine in {build,7142}:
                     expected=(lower<=build<=upper and not(flags&1 and build==4453) and
                               not(gap_lower and gap_lower<=build<=gap_upper))
-                    if flags&2 and engine==7142 and build in (7086,7123):expected=True
+                    if flags&2 and engine==7142 and build in (7086,7091,7123):expected=True
                     actual=subprocess.check_output([str(self.host),'--rule-probe',ident,str(build),str(engine)],
                                                    text=True,timeout=8)
                     self.assertEqual(int(actual),int(expected),(row,build,engine))

@@ -12,12 +12,18 @@ uint32_t obor_profile_build;
 int max_attack_types=MAX_ATKS+4;
 s_defense default_defense;
 s_axis_principal_float default_model_dropv={1.2f,3.0f,0.0f};
+s_collision_attack emptyattack;
+void *checkAlloc(void *pointer,size_t size,const char *function,const char *file,int line) {
+ (void)size;(void)function;(void)file;(void)line;
+ assert(pointer);return pointer;
+}
+void borShutdown(int status,char *message,...) {(void)status;(void)message;abort();}
 int getValidInt(char *text,char *file,char *cmd) { (void)file;(void)cmd;return atoi(text); }
 float getValidFloat(char *text,char *file,char *cmd) { (void)file;(void)cmd;return strtof(text,NULL); }
 int get_cached_model_index(char *name) { assert(!strcmp(name,"model"));return 35; }
 void writeToLogFile(const char *format,...) {(void)format;}
 TYPE_METHODS
-static void initialize(s_anim *newanim) {
+static void initialize(s_anim *newanim, const s_model *newchar) {
  memset(newanim,0,sizeof(*newanim));
  INITIALIZER
 }
@@ -43,13 +49,16 @@ static void one(s_anim *a,s_model *m,int command,char *v1,char *v2,char *v3,char
  apply(a,m,command,count,args);
 }
 int main(void) {
- const unsigned profiles[]={7086,7123,7142};
- for(unsigned p=0;p<3;++p) {
-  int legacy=p!=2;obor_profile_build=profiles[p];s_anim a;s_model m={0};
+ const unsigned profiles[]={6997,7039,7086,7091,7123,7142};
+ for(unsigned p=0;p<sizeof(profiles)/sizeof(profiles[0]);++p) {
+  obor_profile_build=profiles[p];int legacy=obor_profile_build!=7142;s_anim a;s_model m={0};
   s_defense defenses[128]={0};float offense[128]={0};m.defense=defenses;m.offense_factors=offense;
   m.type=TYPE_PLAYER;m.jumpheight=12;
-  initialize(&a);
+  initialize(&a,&m);
   assert(!a.obor_energy_present && !a.obor_counter_present && !a.obor_drop_present && !a.obor_jump_present && !a.obor_land_present);
+  int minimum=(obor_profile_build==6997||obor_profile_build==7039)?T_MIN_BASEMAP:0;
+  assert(a.range.y.min==minimum && a.range.base.min==minimum);
+  assert(a.range.y.max==240 && a.range.base.max==240);
   assert(a.subject_to_gravity && a.charge_time==2 && a.projectile.position.x==0 && a.projectile.position.z==0);
   assert(a.projectile.position.y==(legacy?0:70));
   assert(a.energy_cost.cost==0 && a.energy_cost.disable==0 && a.energy_cost.mponly==COST_TYPE_MP_THEN_HP);
@@ -57,8 +66,8 @@ int main(void) {
   assert(a.obor_energy_present && a.energy_cost.cost==6);
   a.energy_cost.cost=29;
   special_defaults(&a,"special");assert(a.energy_cost.cost==(legacy?29:6));
-  initialize(&a);assert(special_defaults(&a,"special2")==ANI_SPECIAL2 && a.obor_energy_present && a.energy_cost.cost==0);
-  initialize(&a);assert(special_defaults(&a,"jumpspecial")==ANI_JUMPSPECIAL && a.obor_energy_present && a.energy_cost.cost==0);
+  initialize(&a,&m);assert(special_defaults(&a,"special2")==ANI_SPECIAL2 && a.obor_energy_present && a.energy_cost.cost==0);
+  initialize(&a,&m);assert(special_defaults(&a,"jumpspecial")==ANI_JUMPSPECIAL && a.obor_energy_present && a.energy_cost.cost==0);
   for(int disable=-4;disable<=5;++disable) {
    char value[16];snprintf(value,sizeof(value),"%d",disable);
    one(&a,&m,CMD_MODEL_MPCOST,"6","1",value,NULL,NULL);
@@ -71,24 +80,44 @@ int main(void) {
    }
    assert(a.obor_energy_present && a.energy_cost.cost==6 && a.energy_cost.mponly==1 && a.energy_cost.disable==expected);
   }
-  initialize(&a);one(&a,&m,CMD_MODEL_MPONLY,"2",NULL,NULL,NULL,NULL);
+  initialize(&a,&m);one(&a,&m,CMD_MODEL_MPONLY,"2",NULL,NULL,NULL,NULL);
   assert(a.obor_energy_present && a.energy_cost.cost==0 && a.energy_cost.disable==0 && a.energy_cost.mponly==2);
-  initialize(&a);a.numframes=10;
+  initialize(&a,&m);a.numframes=10;
   one(&a,&m,CMD_MODEL_JUMPFRAME,"this","5","2","3","model");
   assert(a.obor_jump_present && a.jumpframe.frame==10 && a.jumpframe.ent==35);
   assert(a.jumpframe.velocity.x==2 && a.jumpframe.velocity.y==5 && a.jumpframe.velocity.z==3);
   one(&a,&m,CMD_MODEL_DIVE1,"4",NULL,NULL,NULL,NULL);
   assert(a.obor_jump_present && !a.subject_to_gravity && a.jumpframe.frame==0 && a.jumpframe.ent==-1);
   assert(a.jumpframe.velocity.x==4 && a.jumpframe.velocity.y==0 && a.jumpframe.velocity.z==0);
-  initialize(&a);one(&a,&m,CMD_MODEL_LANDFRAME,"3","model",NULL,NULL,NULL);
+  one(&a,&m,CMD_MODEL_DIVE,"3","7",NULL,NULL,NULL);
+  assert(a.obor_jump_present && !a.subject_to_gravity && a.jumpframe.frame==0 && a.jumpframe.ent==-1);
+  assert(a.jumpframe.velocity.x==3 && a.jumpframe.velocity.y==-7 && a.jumpframe.velocity.z==0);
+  one(&a,&m,CMD_MODEL_DIVE2,"5",NULL,NULL,NULL,NULL);
+  assert(a.obor_jump_present && !a.subject_to_gravity && a.jumpframe.frame==0 && a.jumpframe.ent==-1);
+  assert(a.jumpframe.velocity.x==0 && a.jumpframe.velocity.y==-5 && a.jumpframe.velocity.z==0);
+  const int jump_types[]={TYPE_PLAYER,TYPE_ENEMY,TYPE_NPC,TYPE_ITEM};
+  for(size_t type=0;type<sizeof(jump_types)/sizeof(jump_types[0]);++type) {
+   m.type=jump_types[type];
+   initialize(&a,&m);
+   one(&a,&m,CMD_MODEL_JUMPFRAME,"2","0",NULL,NULL,NULL);
+   assert(a.obor_jump_present && a.jumpframe.frame==2 && a.jumpframe.ent==-1);
+   assert(a.jumpframe.velocity.y==(m.type==TYPE_PLAYER?6:12));
+   assert(a.jumpframe.velocity.x==(m.type==TYPE_PLAYER?2:0) && a.jumpframe.velocity.z==0);
+   one(&a,&m,CMD_MODEL_JUMPFRAME,"3","4",NULL,NULL,NULL);
+   assert(a.jumpframe.frame==3 && a.jumpframe.ent==-1 && a.jumpframe.velocity.y==4);
+   const float expected=m.type==TYPE_ENEMY||m.type==TYPE_NPC?(float)1.3:0;
+   assert(a.jumpframe.velocity.x==expected && a.jumpframe.velocity.z==0);
+  }
+  m.type=TYPE_PLAYER;
+  initialize(&a,&m);one(&a,&m,CMD_MODEL_LANDFRAME,"3","model",NULL,NULL,NULL);
   assert(a.obor_land_present && a.landframe.frame==3 && a.landframe.model_index==35);
   one(&a,&m,CMD_MODEL_LANDFRAME,"4",NULL,NULL,NULL,NULL);
   assert(a.landframe.frame==4 && a.landframe.model_index==(legacy?-1:35));
-  initialize(&a);one(&a,&m,CMD_MODEL_DROPFRAME,"2","model",NULL,NULL,NULL);
+  initialize(&a,&m);one(&a,&m,CMD_MODEL_DROPFRAME,"2","model",NULL,NULL,NULL);
   assert(a.obor_drop_present && a.dropframe.frame==2 && a.dropframe.model_index==(legacy?0:35));
   for(int condition=0;condition<=6;++condition) {
    char value[16];snprintf(value,sizeof(value),"%d",condition);
-   initialize(&a);one(&a,&m,CMD_MODEL_FOLLOWCOND,value,NULL,NULL,NULL,NULL);
+   initialize(&a,&m);one(&a,&m,CMD_MODEL_FOLLOWCOND,value,NULL,NULL,NULL,NULL);
    if(legacy)assert((int)a.followup.condition==condition);
    else {
     const int modes[]={FOLLOW_CONDITION_ANY,FOLLOW_CONDITION_ANY,FOLLOW_CONDITION_HOSTILE_TARGET_TRUE,
@@ -108,14 +137,34 @@ int main(void) {
     assert((int)a.counter_action.condition==modes[condition]);
    }
   }
-  initialize(&a);one(&a,&m,CMD_MODEL_PROJECTILE_POSITION_X,"7",NULL,NULL,NULL,NULL);
+  initialize(&a,&m);one(&a,&m,CMD_MODEL_PROJECTILE_POSITION_X,"7",NULL,NULL,NULL,NULL);
   assert(a.obor_projectile_position_explicit && a.projectile.position.x==7);
+  char timeover[16];
+  snprintf(timeover,sizeof(timeover),"%d",legacy?21:23);
+  ArgList smartbomb={0};smartbomb.count=3;
+  smartbomb.args[0]="smartbomb";smartbomb.args[1]="25";smartbomb.args[2]=timeover;
+  lcmHandleCommandSmartbomb(&smartbomb,&m,"synthetic");
+  assert(m.smartbomb && m.smartbomb->attack_force==25 && m.smartbomb->attack_type==ATK_TIMEOVER);
+  assert(m.smartbomb->attack_drop==1 && m.smartbomb->dropv.y==default_model_dropv.y);
+  free(m.smartbomb);m.smartbomb=NULL;
   one(&a,&m,CMD_MODEL_DEFENSE,"normal11","2",NULL,NULL,NULL);
   assert(defenses[24].factor==2); /* Canonical slot for original normal11. */
-  one(&a,&m,CMD_MODEL_DEFENSE,"SUB_ENTITY_PARENT_KILL","3",NULL,NULL,NULL);
-  assert(defenses[ATK_SUB_ENTITY_PARENT_KILL].factor==3);
-  one(&a,&m,CMD_MODEL_OFFENSE,"SUB_ENTITY_UNSUMMON","4",NULL,NULL,NULL);
-  assert(offense[ATK_SUB_ENTITY_UNSUMMON]==4);
+  const int early=profiles[p]==6997||profiles[p]==7039||profiles[p]==7091;
+  const char *subentity_names[]={"SUB_ENTITY_PARENT_KILL","SUB_ENTITY_UNSUMMON"};
+  const int subentity_slots[]={ATK_SUB_ENTITY_PARENT_KILL,ATK_SUB_ENTITY_UNSUMMON};
+  for(size_t i=0;i<sizeof(subentity_slots)/sizeof(subentity_slots[0]);++i) {
+   one(&a,&m,CMD_MODEL_DEFENSE,(char *)subentity_names[i],"3",NULL,NULL,NULL);
+   one(&a,&m,CMD_MODEL_OFFENSE,(char *)subentity_names[i],"4",NULL,NULL,NULL);
+   assert(defenses[subentity_slots[i]].factor==(early?0:3));
+   assert(offense[subentity_slots[i]]==(early?0:4));
+  }
+  one(&a,&m,CMD_MODEL_DEFENSE,"ALL","5",NULL,NULL,NULL);
+  one(&a,&m,CMD_MODEL_OFFENSE,"ALL","6",NULL,NULL,NULL);
+  assert(defenses[ATK_NORMAL].factor==5 && offense[ATK_NORMAL]==6);
+  for(size_t i=0;i<sizeof(subentity_slots)/sizeof(subentity_slots[0]);++i) {
+   assert(defenses[subentity_slots[i]].factor==(early?0:3));
+   assert(offense[subentity_slots[i]]==(early?0:4));
+  }
   const char *words[]={"enemy","player","obstacle","shot","npc","ground","panel","item","none","4096"};
   const int values[]={TYPE_ENEMY,TYPE_PLAYER,TYPE_OBSTACLE,TYPE_SHOT,TYPE_NPC};
   for(int i=0;i<10;++i) {

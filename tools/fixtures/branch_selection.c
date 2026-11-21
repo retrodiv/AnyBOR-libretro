@@ -53,8 +53,8 @@ static int choice(u64 keys) {
 }
 static int escape_selection(void) { int escape=0; ESCAPE return escape; }
 int main(void) {
- const unsigned profiles[]={7086,7123,7142};
- for(unsigned p=0;p<3;++p) {
+ const unsigned profiles[]={6997,7039,7086,7091,7123,7142};
+ for(unsigned p=0;p<sizeof(profiles)/sizeof(profiles[0]);++p) {
   obor_profile_build=profiles[p];entity target={0};multihitcheat=0;
   for(unsigned id=1;id<=5;++id)obor_remember_attack(&target,id);
   for(unsigned id=1;id<=6;++id) {
@@ -69,7 +69,8 @@ int main(void) {
   assert(choice(FLAG_ATTACK)==1 && choice(FLAG_MOVELEFT)==2);
   assert(choice(FLAG_ATTACK|FLAG_MOVELEFT)==(profiles[p]==7123?1:2));
   entity ent={0};ent.modeldata.subject_to_screen=1;advancex=100;videomodes.hRes=320;
-  for(int x=100;x<=420;++x)assert(screen(&ent,x)==(x>=100+(p==1?5:10)&&x<=420-(p==1?5:10)));
+  int margin=profiles[p]==7123?5:10;
+  for(int x=100;x<=420;++x)assert(screen(&ent,x)==(x>=100+margin&&x<=420-margin));
   calls=0;bothnewkeys=0;menu_labels[0]=0;menu_options();
   assert(multihitcheat==(profiles[p]==7123));
   assert((strstr(menu_labels,"Multihit Glitch")!=NULL)==(profiles[p]==7123));

@@ -1,6 +1,6 @@
 # AnyBOR
 
-An independent libretro core for OpenBOR games, offering 340 selectable engine profiles:
+An independent libretro core for OpenBOR games, offering 343 selectable engine profiles:
 
 |  |  |  |  |  |  |
 |---|---|---|---|---|---|
@@ -59,8 +59,9 @@ An independent libretro core for OpenBOR games, offering 340 selectable engine p
 | v3.0 6245 | v3.0 6258 | v3.0 6271 | v3.0 6276 | v3.0 6291 | v3.0 6297 |
 | v3.0 6301-dev | v3.0 6315 | v3.0 6325 | v3.0 6330 | v3.0 6330-lns-010g | v3.0 6385 |
 | v3.0 6390 | v3.0 6391 | v3.0 6391-mod | v3.0 6392-dev | v3.0 6412-dev | v3.0 6453-dev |
-| v3.0 6510-dev | v3.0 7086-dev | v3.0 7123-dev | v4.0 7142-alpha | v4.0 7530 | v4.0 7533 |
-| v4.0 7555 | v4.0 7556 | v4.0 7735 | v4.0 8023-dev |  |  |
+| v3.0 6510-dev | v3.0 6997-dev | v3.0 7039-dev | v3.0 7086-dev | v3.0 7091-dev | v3.0 7123-dev |
+| v4.0 7142-alpha | v4.0 7530 | v4.0 7533 | v4.0 7555 | v4.0 7556 | v4.0 7735 |
+| v4.0 8023-dev |  |  |  |  |  |
 
 Automatic engine selection uses build tags and content clues to choose a profile.
 Turn it off in Core Options to choose one manually when a game needs it.

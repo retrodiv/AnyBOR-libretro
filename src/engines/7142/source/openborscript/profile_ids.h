@@ -6,7 +6,8 @@
  * Map native logical-profile animation, attack, subtype and spawn IDs to the
  * shared engine selectors. Preserve divergent 7086 and 2021 7123 animation,
  * combat, model, script-selector and menu contracts by logical profile,
- * retaining safe storage and additive APIs.
+ * retaining safe storage and additive APIs. Report the original source
+ * version strings for 6997, 7039 and 7091.
  * Existing changes recorded here; this is not their implementation date.
  * See MODIFICATIONS.md and docs/modifications/7142.md
  * at the source repository root. Original notices follow below.
@@ -23,13 +24,19 @@
 #define OBOR_ANIMATION_NAMED_BASE 65536
 static inline const char *obor_profile_version_string(void)
 {
+    if(obor_profile_build == 6997) return "v3.0 Build 6997";
+    if(obor_profile_build == 7039) return "v3.0 Build 7039 (commit hash: be46a55)";
     if(obor_profile_build == 7086) return "v3.0 Build 7086 (commit hash: 7a45a22)";
+    if(obor_profile_build == 7091) return "v3.0 Build 7091 (commit hash: 8ad6874)";
     if(obor_profile_build == 7123) return "v3.0 Build 7123 (commit hash: f5261e7)";
     return VERSION;
 }
 static inline const char *obor_profile_shutdown_message(void)
 {
+    if(obor_profile_build == 6997) return OBOR_SHUTDOWN_MESSAGE_VERSION("v3.0 Build 6997");
+    if(obor_profile_build == 7039) return OBOR_SHUTDOWN_MESSAGE_VERSION("v3.0 Build 7039 (commit hash: be46a55)");
     if(obor_profile_build == 7086) return OBOR_SHUTDOWN_MESSAGE_VERSION("v3.0 Build 7086 (commit hash: 7a45a22)");
+    if(obor_profile_build == 7091) return OBOR_SHUTDOWN_MESSAGE_VERSION("v3.0 Build 7091 (commit hash: 8ad6874)");
     if(obor_profile_build == 7123) return OBOR_SHUTDOWN_MESSAGE_VERSION("v3.0 Build 7123 (commit hash: f5261e7)");
     return DEFAULT_SHUTDOWN_MESSAGE;
 }

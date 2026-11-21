@@ -6,7 +6,8 @@
  * Translate native animation property IDs for the logical profile. Preserve
  * divergent 7086 and 2021 7123 animation, combat, model, script-selector and
  * menu contracts by logical profile, retaining safe storage and additive
- * APIs.
+ * APIs. Preserve numeric animation properties and the original script
+ * property conversion routes for 6997, 7039 and 7091.
  * Existing changes recorded here; this is not their implementation date.
  * See MODIFICATIONS.md and docs/modifications/7142.md
  * at the source repository root. Original notices follow below.
@@ -1117,6 +1118,9 @@ int mapstrings_animation_frame_property(ScriptVariant** varlist, int paramCount)
 }
 HRESULT openbor_get_animation_property(ScriptVariant **varlist, ScriptVariant **pretvar, int paramCount)
 {
+    if(obor_profile_has_numeric_script_properties())
+        return obor_legacy_get_animation_property(varlist, pretvar, paramCount);
+
     if(obor_profile_legacy_branch())
     {
         if(paramCount >= 2 && varlist[1]->vt == VT_INTEGER &&
@@ -1135,6 +1139,9 @@ HRESULT openbor_get_animation_property(ScriptVariant **varlist, ScriptVariant **
 
 HRESULT openbor_set_animation_property(ScriptVariant **varlist, ScriptVariant **pretvar, int paramCount)
 {
+    if(obor_profile_has_numeric_script_properties())
+        return obor_legacy_set_animation_property(varlist, pretvar, paramCount);
+
     if(obor_profile_legacy_branch())
     {
         if(paramCount >= 2 && varlist[1]->vt == VT_INTEGER &&

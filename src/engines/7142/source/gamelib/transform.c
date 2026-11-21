@@ -4,7 +4,8 @@
  * These contributions are licensed under BSD-3-Clause; see LICENSE at the root.
  * Upstream code retains its original license and notices.
  * Keep absent transform masks null during sprite seeks and traversal; retain
- * native masked cursor positioning.
+ * native masked cursor positioning. Use the original sprite transform mask
+ * and color-table paths for 6997 and 7039.
  * Existing changes recorded here; this is not their implementation date.
  * See MODIFICATIONS.md and docs/modifications/7142.md
  * at the source repository root. Original notices follow below.
@@ -26,6 +27,11 @@
 #include "types.h"
 #include "sprite.h"
 #include "transform.h"
+#include "openbor.h"
+#include "anybor_resources.h"
+#include <string.h>
+
+extern unsigned char pal[MAX_PAL_SIZE];
 
 static transpixelfunc pfp;
 static unsigned int fillcolor;
@@ -320,7 +326,7 @@ void draw_pixel_sprite(s_screen *dest, gfx_entry *src, int dx, int dy, int sx, i
         {
             ps32 = table ? ((unsigned int *)table)[ps8] : ((unsigned int *)src->sprite->palette)[ps8];
         }
-        if(src->sprite->mask)
+        if(!obor_profile_6997_or_7039() && src->sprite->mask)
         {
             *ptrd32 = blend_channel32(ps32, pd32, sprite_get_pixel(src->sprite->mask, sx, sy));
         }
@@ -687,6 +693,14 @@ void calc_wp_cond()
 
     wpcond = wp_cond[c1][transbg != 0][fillcolor != 0][p != NULL];
 
+    // The early 32-bit fill case used the indexed writer when given a palette.
+    if(obor_profile_6997_or_7039() && spf == PIXEL_32 && dpf == PIXEL_32 &&
+       !transbg && fillcolor && !p && table &&
+       (table == pal || obor_allocation_contains(table, 256 * sizeof(unsigned))))
+    {
+        wpcond = WP_HISTORICAL_INDEXED_FILL;
+    }
+
     // alpha masks can come into play when rendering sprite (PIXEL_x8) to screen (PIXEL_32)
     if(c1 == 3 && ptr_src_mask != NULL)
     {
@@ -743,7 +757,8 @@ void init_gfx_global_draw_stuff(s_screen *dest, gfx_entry *src, s_drawmethod *dr
         if(trans_sw)
         {
             ptr_src = (unsigned char *)src->sprite->data;
-            ptr_src_mask = src->sprite->mask ? (unsigned char *)src->sprite->mask->data : NULL;
+            ptr_src_mask = !obor_profile_6997_or_7039() && src->sprite->mask
+                ? (unsigned char *)src->sprite->mask->data : NULL;
             cur_spr = ptr_src + (*(int *)ptr_src);
         }
         table = drawmethod->table ? drawmethod->table : src->sprite->palette;

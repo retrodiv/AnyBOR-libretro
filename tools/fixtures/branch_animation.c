@@ -19,9 +19,11 @@ int searchList(const char *list[],const char *value,int length) {
 void writeToLogFile(const char *s,...) { (void)s; }
 CONVERSIONS
 int main(void) {
- const uint32_t profiles[]={7086,7123,7142};
+ const uint32_t profiles[]={6997,7039,7086,7091,7123,7142};
  for(unsigned p=0;p<sizeof(profiles)/sizeof(*profiles);++p) {
   obor_profile_build=profiles[p];
+  int numeric_only=profiles[p]==6997||profiles[p]==7039||profiles[p]==7091;
+  int modern=profiles[p]==7142;
   s_anim a={0};a.hit_count=17;a.subject_to_gravity=false;a.attack_one=true;
   a.bounce_factor=2.5f;a.cancel=(e_anim_cancel)-3;a.charge_time=9;a.numframes=31;
   for(int present=0;present<2;++present) {
@@ -32,7 +34,7 @@ int main(void) {
    for(int property=-1;property<=44;++property) {
     ScriptVariant h={.ptrVal=&a,.vt=VT_PTR},prop={.lVal=property,.vt=VT_INTEGER};
     ScriptVariant result={.lVal=88,.vt=VT_INTEGER},*out=&result,*args[]={&h,&prop};
-    if(p==2)continue;
+    if(modern)continue;
     int kind=VT_EMPTY;LONG integer=0;double decimal=0;void *ptr=NULL;int supported=1;
     switch(property) {
      case 0:kind=VT_INTEGER;integer=17;break;
@@ -57,13 +59,17 @@ int main(void) {
    ScriptVariant h={.ptrVal=&a,.vt=VT_PTR},prop={.strVal=0,.vt=VT_STR};
    ScriptVariant result={0},*out=&result,*args[]={&h,&prop};
    property_name="hit_count";
-   assert(mapstrings_animation_property(args,2));
-   assert(prop.vt==VT_INTEGER && prop.lVal==_ANIMATION_PROP_HIT_COUNT+(p==2?0:OBOR_ANIMATION_NAMED_BASE));
-   assert(openbor_get_animation_property(args,&out,2)==S_OK && result.vt==VT_INTEGER && result.lVal==17);
-   property_name="no_such_animation_property";prop=(ScriptVariant){.strVal=0,.vt=VT_STR};
-   assert(!mapstrings_animation_property(args,2) && prop.vt==VT_STR);
+   if(numeric_only) {
+    assert(openbor_get_animation_property(args,&out,2)==E_FAIL && prop.vt==VT_STR && out==NULL);
+   } else {
+    assert(mapstrings_animation_property(args,2));
+    assert(prop.vt==VT_INTEGER && prop.lVal==_ANIMATION_PROP_HIT_COUNT+(modern?0:OBOR_ANIMATION_NAMED_BASE));
+    assert(openbor_get_animation_property(args,&out,2)==S_OK && result.vt==VT_INTEGER && result.lVal==17);
+    property_name="no_such_animation_property";prop=(ScriptVariant){.strVal=0,.vt=VT_STR};
+    assert(!mapstrings_animation_property(args,2) && prop.vt==VT_STR);
+   }
   }
-  if(p==2) {
+  if(modern) {
    ScriptVariant h={.ptrVal=&a,.vt=VT_PTR},prop={.lVal=_ANIMATION_PROP_HIT_COUNT,.vt=VT_INTEGER};
    ScriptVariant result={0},*out=&result,*args[]={&h,&prop};
    assert(openbor_get_animation_property(args,&out,2)==S_OK && out==&result && result.vt==VT_INTEGER && result.lVal==17);

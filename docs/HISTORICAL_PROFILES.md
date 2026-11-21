@@ -36,7 +36,7 @@ v3.0 4420, v3.0 4421-dev, v3.0 4423, v3.0 4424, v3.0 4426, v3.0 4429, v3.0 4430,
 v3.0 4432, v3.0 4453, v3.0 4454-dev, v3.0 4456, v3.0 4510-dev, v3.0 4574, v3.0 4580, v3.0 4583,
 v3.0 4596, v3.0 4624, v3.0 4626, v3.0 4642, v3.0 4665, v3.0 4682, v3.0 4701, v3.0 4742, v3.0 4750,
 v3.0 4905, v3.0 5134, v3.0 6119, v3.0 6175, v3.0 6196, v3.0 6203, v3.0 6212, v3.0 6223, v3.0 6240, v3.0 6245, v3.0 6258, v3.0 6271, v3.0 6276, v3.0 6291, v3.0 6297, v3.0 6301-dev, v3.0 6315, v3.0 6325, v3.0 6330, v3.0 6330-lns-010g, v3.0 6385, v3.0 6390, v3.0 6391, v3.0 6391-mod,
-v3.0 6392-dev, v3.0 6412-dev, v3.0 6453-dev, v3.0 6510-dev, v3.0 7086-dev, v3.0 7123-dev, v4.0 7142-alpha,
+v3.0 6392-dev, v3.0 6412-dev, v3.0 6453-dev, v3.0 6510-dev, v3.0 6997-dev, v3.0 7039-dev, v3.0 7086-dev, v3.0 7091-dev, v3.0 7123-dev, v4.0 7142-alpha,
 v4.0 7530, v4.0 7533, v4.0 7555, v4.0 7556, v4.0 7735 and v4.0 8023-dev.
 
 Automatic selection uses build tags and content clues to choose a profile. You can select one
@@ -584,6 +584,21 @@ content-evidence and stable-profile priority described in
 [content selection rules](AUTO_SELECTION_RULES.md). Existing states require
 the same core build and selected profile and are not converted.
 
+### 6997, 7039 and 7091
+
+v3.0 6997-dev, v3.0 7039-dev and v3.0 7091-dev use the 7142 engine and their
+own source-defined model, animation and script contracts. The 6997 and 7039
+profiles retain the original model energy limits, binding positions, grab
+drawing order, startup palettes and transformed sprites. The 6997 profile
+also uses the original PNG output dimensions and interlaced row order, and
+its original random grab selection. The 7091 profile uses its original
+neon and shadow layer order and numbered animation properties.
+
+Exact filename build tags and manual selection choose these three profiles.
+An executable whose source can be matched to several identical engine trees
+keeps its unresolved package identity. The profile revisions and license
+notices are recorded in [source provenance](../PROVENANCE.md).
+
 
 ## Profile implementation details
 
@@ -874,7 +889,10 @@ Profiles are compatibility selections. Several profiles use one physical source 
 | v3.0 6412-dev | `6391` |
 | v3.0 6453-dev | `6391` |
 | v3.0 6510-dev | `6391` |
+| v3.0 6997-dev | `7142` |
+| v3.0 7039-dev | `7142` |
 | v3.0 7086-dev | `7142` |
+| v3.0 7091-dev | `7142` |
 | v3.0 7123-dev | `7142` |
 | v4.0 7142-alpha | `7142` |
 | v4.0 7530 | `7533` |
@@ -928,7 +946,10 @@ boundary controls; they do not establish whole-game or native-host acceptance.
 | v3.0 4086 | `af23dc9c2316bb7853bb266ccf40986aa9765aeb` | [v3.0 4086](modifications/4086.md) |
 | v3.0 4432 | `2566cbee6185025e6a69d2aa1823b15c7a154ff9` | [v3.0 4432](modifications/4432.md) |
 | v3.0 6391 | `494708eb34e71d1afda237873907701c4ec3a569` | [v3.0 6391](modifications/6391.md) |
+| v3.0 6997-dev | `203d148433ac86ac51c131564d14c2465f8af80b` | [Selected contracts](#6997-7039-and-7091) |
+| v3.0 7039-dev | `be46a55822e19750728ef271b7bebd80ccd678f1` | [Selected contracts](#6997-7039-and-7091) |
 | v3.0 7086-dev | `7a45a2215a0cc12c1085d92e7b210a827ea552c2` | [Selected contracts](HISTORICAL_PROFILES.md#divergent-test-profiles) |
+| v3.0 7091-dev | `8ad68746200339af2a9006bd9f489f8df0d26347` | [Selected contracts](#6997-7039-and-7091) |
 | v3.0 7123-dev | `f5261e7cb97786909276c0b87f8f9f63504d2844` | [Selected contracts](HISTORICAL_PROFILES.md#divergent-test-profiles) |
 | v4.0 7142-alpha | `9dcd966d1dc8e93ff03c39edbd6bd262f4a2d7ab` | [v4.0 7142-alpha](modifications/7142.md) |
 | v4.0 7533 | `5c8261444de6b61f8e2ce6e79e3d86a2949e55bd` | [v4.0 7533](modifications/7533.md) |
