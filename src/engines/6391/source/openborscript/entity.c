@@ -135,7 +135,7 @@ int mapstrings_entity_property(ScriptVariant **varlist, int paramCount)
         return 1;
     }
 
-    if((obor_profile_build == 6412 || obor_profile_build == 6510) && varlist[ARG_PROPERTY]->vt == VT_STR)
+    if((obor_profile_build == 6412 || obor_profile_build == 6453 || obor_profile_build == 6510) && varlist[ARG_PROPERTY]->vt == VT_STR)
     {
         const char *name = StrCache_Get(varlist[ARG_PROPERTY]->strVal);
         if(stricmp(name, "opponent") == 0 || stricmp(name, "owner") == 0)
@@ -232,7 +232,7 @@ static e_entity_properties profile_entity_property(LONG property)
         return property >= 0 && property < _ENTITY_BOOMERANG_LOOP
             ? (e_entity_properties)property : _ENTITY_END;
     }
-    if((obor_profile_build == 6412 || obor_profile_build == 6510))
+    if(obor_profile_build == 6412 || obor_profile_build == 6453 || obor_profile_build == 6510)
     {
         if(property == 27) return _ENTITY_OPPONENT;
         if(property == 28) return _ENTITY_OWNER;

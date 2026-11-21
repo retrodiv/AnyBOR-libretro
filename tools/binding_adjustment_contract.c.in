@@ -1,0 +1,172 @@
+/* SPDX-License-Identifier: BSD-3-Clause
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me>
+ */
+#include <assert.h>
+#include <stddef.h>
+#include <stdint.h>
+#include <stdio.h>
+#include <string.h>
+#include "scriptcommon.h"
+#undef assert
+#undef printf
+#include <assert.h>
+
+uint32_t obor_profile_build;
+uint32_t obor_profile_features;
+static entity subject, target;
+static Script hooks[2];
+static ScriptVariant locals[2][3];
+static s_anim animations[2];
+static s_anim *slots[] = {&animations[0], &animations[1]};
+static unsigned events, registrations, dispatches, kills;
+
+void ScriptVariant_Init(ScriptVariant *value) { *value = (ScriptVariant){.vt = VT_EMPTY}; }
+void ScriptVariant_Clear(ScriptVariant *value) { ScriptVariant_Init(value); }
+void ScriptVariant_ChangeType(ScriptVariant *value, VARTYPE kind) { value->vt = kind; }
+int Script_IsInitialized(Script *script) { return script != NULL; }
+
+static void remember_local(Script *script, const char *name, const ScriptVariant *value)
+{
+    const unsigned hook = (unsigned)(script - hooks);
+    assert(hook < 2);
+    const unsigned index = strcmp(name, "self") == 0 ? 0 : strcmp(name, "other") == 0 ? 1 : 2;
+    assert(index < 2 || strcmp(name, "binding") == 0);
+    locals[hook][index] = *value;
+}
+
+#undef Script_Set_Local_Variant
+#define Script_Set_Local_Variant(s, k, v) remember_local(s, k, v)
+
+int Script_Execute(Script *script)
+{
+    const unsigned hook = (unsigned)(script - hooks);
+    assert(hook < 2 && events == hook);
+    assert(locals[hook][0].vt == VT_PTR && locals[hook][0].ptrVal == (hook ? &subject : &target));
+    assert(locals[hook][1].vt == VT_PTR && locals[hook][1].ptrVal == (hook ? &target : &subject));
+    assert(locals[hook][2].vt == VT_PTR && locals[hook][2].ptrVal == &subject.binding);
+    ++events;
+    return 1;
+}
+
+void ent_set_anim(entity *ent, int animation, int reset)
+{
+    assert(ent == &subject && animation == 1 && reset == 1 && events == 2);
+    ent->animnum = animation;
+    ent->animation = slots[animation];
+    ent->animpos = 0;
+    ++events;
+}
+
+void update_frame(entity *ent, unsigned int frame)
+{
+    assert(ent == &subject && frame == 3 && events == 3);
+    ent->animpos = frame;
+    ++events;
+}
+
+void kill_entity(entity *ent) { assert(ent == &subject); ++kills; }
+
+@METHODS@
+
+static void bind_dispatch(entity *e)
+{
+    @DISPATCH@
+    ++dispatches;
+}
+
+static void register_commands(void)
+{
+    #define LIST_ADD(command, name) do { \
+        const char *expected = registrations++ == 0 \
+            ? "on_bind_update_other_to_self_script" : "on_bind_update_self_to_other_script"; \
+        assert(strcmp(name, expected) == 0); \
+    } while(0)
+    @REGISTRY@
+    #undef LIST_ADD
+}
+
+static void check_adjustment(void)
+{
+    static s_scripts subject_scripts, target_scripts;
+    subject = (entity){0};
+    target = (entity){0};
+    subject_scripts.on_bind_update_self_to_other_script = &hooks[1];
+    target_scripts.on_bind_update_other_to_self_script = &hooks[0];
+    subject.scripts = &subject_scripts;
+    target.scripts = &target_scripts;
+    subject.modeldata.animation = slots;
+    subject.modeldata.animation_capacity = 2;
+    subject.animation = slots[0];
+    animations[0].numframes = animations[1].numframes = 4;
+    subject.binding = (s_bind){.ent = &target, .offset = {.x = 7, .y = -3, .z = 9},
+        .bind_toggle = {.x = 2, .y = 1, .z = -1}, .sortid = 4,
+        .direction = DIRECTION_ADJUST_LEFT, .ani_bind = BINDING_MATCHING_FRAME_TARGET};
+    target.position.x = 100;
+    target.position.y = 200;
+    target.position.z = 300;
+    target.sortid = 10;
+    target.animnum = 1;
+    target.animpos = 3;
+    events = kills = 0;
+    bind_dispatch(&subject);
+    assert(events == 4 && subject.animpos == 3 && subject.animnum == 1 && kills == 0);
+    assert(subject.position.x == 107 && subject.position.y == 197 && subject.position.z == 309);
+    assert(subject.sortid == 14 && subject.direction == DIRECTION_LEFT);
+    for(unsigned hook = 0; hook < 2; ++hook)
+        for(unsigned arg = 0; arg < 3; ++arg)
+            assert(locals[hook][arg].vt == VT_EMPTY);
+
+    events = 0;
+    subject.direction = DIRECTION_RIGHT;
+    subject.binding.bind_toggle.x = 0;
+    bind_dispatch(&subject);
+    assert(events == 2 && subject.direction == DIRECTION_RIGHT && subject.position.x == 107);
+
+    events = 0;
+    subject.binding.bind_toggle.x = 1;
+    subject.binding.direction = DIRECTION_ADJUST_NONE;
+    bind_dispatch(&subject);
+    assert(events == 2 && subject.direction == DIRECTION_RIGHT && subject.position.x == 93);
+
+    events = 0;
+    target.animpos = 7;
+    bind_dispatch(&subject);
+    assert(events == 2 && kills == 1 && subject.binding.ent == NULL);
+    bind_dispatch(&subject);
+    assert(events == 2 && kills == 1);
+
+    for(unsigned remove = 0; remove < 2; ++remove)
+    {
+        events = kills = 0;
+        target.animnum = 2;
+        subject.binding.ent = &target;
+        subject.binding.ani_bind = remove ? BINDING_MATCHING_ANIMATION_REMOVE
+                                          : BINDING_MATCHING_ANIMATION_TARGET;
+        bind_dispatch(&subject);
+        assert(events == 2 && kills == remove && subject.binding.ent == NULL);
+    }
+}
+
+int main(void)
+{
+    static const size_t native_order[] = {@SCRIPT_LAYOUT@};
+    static const struct { unsigned revision; int callbacks, target_relative_axes; } rows[] = {@ROWS@};
+    for(unsigned i = 0; i < sizeof(rows) / sizeof(*rows); ++i)
+    {
+        obor_profile_build = rows[i].revision;
+        registrations = dispatches = 0;
+        register_commands();
+        assert(registrations == 2u * rows[i].callbacks);
+        if(rows[i].callbacks)
+            for(size_t index = 0; index < sizeof(native_order) / sizeof(*native_order); ++index)
+                assert(obor_profile_script_container_offset(index) == native_order[index]);
+        if(rows[i].target_relative_axes) check_adjustment();
+        else
+        {
+            bind_dispatch(&subject);
+            assert(dispatches == 1);
+        }
+        printf("PASS %u\n", rows[i].revision);
+    }
+    return 0;
+}

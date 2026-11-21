@@ -1417,7 +1417,7 @@ void Script_LoadSystemFunctions()
                      (void *)openbor_getentity, "getentity");
     List_InsertAfter(&theFunctionList,
                      (void *)openbor_loadmodel, "loadmodel");
-    if((obor_profile_build == 6412 || obor_profile_build == 6510))
+    if(obor_profile_build == 6412 || obor_profile_build == 6453 || obor_profile_build == 6510)
         List_InsertAfter(&theFunctionList,
                          (void *)openbor_unload_model, "unload_model");
     List_InsertAfter(&theFunctionList,

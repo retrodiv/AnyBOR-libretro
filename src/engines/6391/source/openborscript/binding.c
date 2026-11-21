@@ -65,7 +65,15 @@ int mapstrings_binding(ScriptVariant **varlist, int paramCount)
     }
 
     // See macro - will return 0 on fail.
-    if(obor_profile_build == 6510)
+    if(obor_profile_build == 6453)
+    {
+        static const char *names[] = {
+            "direction", "enable", "matching", "offset", "sort_id", "tag", "target"
+        };
+        MAPSTRINGS(varlist[ARG_PROPERTY], names, sizeof(names) / sizeof(*names),
+                   "Property name '%s' is not supported by binding.\n");
+    }
+    else if(obor_profile_build == 6510)
     {
         static const char *names[] = {
             "direction", "matching", "offset", "overriding",
@@ -105,6 +113,15 @@ static e_binding_properties profile_binding_property(LONG property)
         _BINDING_ANIMATION, _BINDING_DIRECTION, _BINDING_ENABLE,
         _BINDING_OFFSET, _BINDING_SORT_ID, _BINDING_TARGET
     };
+    if(obor_profile_build == 6453)
+    {
+        static const e_binding_properties properties[] = {
+            _BINDING_DIRECTION, _BINDING_ENABLE, _BINDING_ANIMATION, _BINDING_OFFSET,
+            _BINDING_SORT_ID, _BINDING_TAG, _BINDING_TARGET
+        };
+        return property >= 0 && property < (LONG)(sizeof(properties) / sizeof(*properties))
+                   ? properties[property] : _BINDING_END;
+    }
     if(obor_profile_build == 6510)
     {
         static const e_binding_properties modern6510[] = {
@@ -163,12 +180,15 @@ HRESULT openbor_get_binding_property(ScriptVariant **varlist , ScriptVariant **p
     }
 
     const bool boolean_axes = obor_profile_boolean_binding_axes();
-    /* The original diagnostics report the selected profile's record layout. */
-    const size_t entity_bytes = boolean_axes ? (sizeof(void *) == 4 ? 2100 : 2304) : sizeof(entity);
-    const size_t binding_bytes = boolean_axes ? (sizeof(void *) == 4 ? 32 : 36) : sizeof(s_bind);
+    if(obor_profile_build != 6412 && obor_profile_build != 6453)
+    {
+        /* The original diagnostics report the selected profile's record layout. */
+        const size_t entity_bytes = boolean_axes ? (sizeof(void *) == 4 ? 2100 : 2304) : sizeof(entity);
+        const size_t binding_bytes = boolean_axes ? (sizeof(void *) == 4 ? 32 : 36) : sizeof(s_bind);
 
-    printf("\n\n Size entity: %zu", entity_bytes);
-    printf("\n Size bind: %zu", binding_bytes);
+        printf("\n\n Size entity: %zu", entity_bytes);
+        printf("\n Size bind: %zu", binding_bytes);
+    }
 
     switch(property)
     {

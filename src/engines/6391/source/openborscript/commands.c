@@ -492,7 +492,7 @@ List *createModelCommandList(void)
     LIST_ADD(CMD_MODEL_SUMMONKILL, "summonkill");
     LIST_ADD(CMD_MODEL_SYNC, "sync");
     LIST_ADD(CMD_MODEL_TAKEDAMAGESCRIPT, "takedamagescript");
-    if(obor_profile_build == 6510)
+    if(obor_profile_build == 6453 || obor_profile_build == 6510)
     {
         LIST_ADD(CMD_MODEL_ON_BIND_UPDATE_OTHER_TO_SELF_SCRIPT, "on_bind_update_other_to_self_script");
         LIST_ADD(CMD_MODEL_ON_BIND_UPDATE_SELF_TO_OTHER_SCRIPT, "on_bind_update_self_to_other_script");

@@ -41,6 +41,34 @@ void *checkAlloc(void *ptr, size_t size, const char *func, const char *file, int
 typedef struct { const char *name; LONG expected; } constant_case;
 static const constant_case early[] = {@EARLY@};
 static const constant_case base[] = {@BASE@};
+typedef struct { const int *values; size_t count; } enum_layout;
+static const enum_layout animation_layouts[] = {@ANIMATION_ENUM_LAYOUTS@};
+static const enum_layout attack_layouts[] = {@ATTACK_ENUM_LAYOUTS@};
+
+static void check_animation_layout(enum_layout layout)
+{
+    if(!layout.count) return;
+    for(size_t ordinal = 0; ordinal <= layout.count; ++ordinal)
+    {
+        assert(obor_animation_from_native((int)ordinal) == layout.values[ordinal]);
+        assert(obor_animation_to_native(layout.values[ordinal]) == (int)ordinal);
+    }
+    assert(obor_animation_from_native((int)layout.count + 1) == MAX_ANIS + 1);
+    assert(obor_animation_to_native(MAX_ANIS + 1) == (int)layout.count + 1);
+}
+
+static void check_attack_layout(enum_layout layout)
+{
+    if(!layout.count) return;
+    assert(obor_attack_from_native(-1) == ATK_NONE && obor_attack_to_native(ATK_NONE) == -1);
+    for(size_t ordinal = 0; ordinal <= layout.count; ++ordinal)
+    {
+        assert(obor_attack_from_native((int)ordinal) == layout.values[ordinal]);
+        assert(obor_attack_to_native(layout.values[ordinal]) == (int)ordinal);
+    }
+    assert(obor_attack_from_native((int)layout.count + 1) == MAX_ATKS + 1);
+    assert(obor_attack_to_native(MAX_ATKS + 1) == (int)layout.count + 1);
+}
 
 static void check_cases(const constant_case *cases, size_t count)
 {
@@ -78,6 +106,8 @@ int main(void)
             reaction_animations[slot] = MAX_ANIS + obor_attack_to_native(slot);
         if(profiles[i].early_ids) check_cases(early, sizeof(early) / sizeof(*early));
         else check_cases(base, sizeof(base) / sizeof(*base));
+        check_animation_layout(animation_layouts[profiles[i].early_ids != 0]);
+        check_attack_layout(attack_layouts[profiles[i].early_ids != 0]);
         printf("PASS %u\n", obor_profile_build);
     }
     StrCache_Clear();

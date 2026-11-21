@@ -8,6 +8,14 @@ distributed hash of every retained upstream file. This makes the port's modifica
 distinguishable from upstream code without importing upstream Git history.
 The shared port, frontend glue and build tooling are included as source.
 
+The v3.0 6453-dev profile adapts upstream
+[`2664325c0bd301332f27df3f4bd68cd64d20aa2b`](https://github.com/DCurrent/openbor/tree/2664325c0bd301332f27df3f4bd68cd64d20aa2b/engine)
+on the 6391 source tree. Its 6412-dev control follows
+[`d9bfceeb0d53cd43ed7cf5cfdfb0c60bba4df3f8`](https://github.com/DCurrent/openbor/tree/d9bfceeb0d53cd43ed7cf5cfdfb0c60bba4df3f8/engine).
+Both upstream revisions retain the same BSD grant and author notice as
+the 6391 source. The attack mapper adaptation and source coverage are
+documented in [historical profiles](docs/HISTORICAL_PROFILES.md).
+
 The official v4.0 7530, 7555, 7556 and 7735 profiles identify their own source
 revisions in `src/pin.json`. The 7556 package's engine has an embedded 7555
 label; its verified package identity and global-configuration implementation

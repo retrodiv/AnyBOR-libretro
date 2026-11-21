@@ -20,6 +20,7 @@ typedef int frame_index;
 #define AXIS_ENABLE bind_toggle
 #define KILL_BOUND_ENTITY kill_entity
 typedef unsigned int frame_index;
+static void adjust_bind_6453(entity *ent) { abort(); }
 static void adjust_bind_6510(entity *ent) { abort(); }
 #endif
 

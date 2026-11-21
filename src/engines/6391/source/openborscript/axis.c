@@ -892,7 +892,7 @@ HRESULT openbor_set_axis_principal_int_property(ScriptVariant **varlist, ScriptV
 
         case _AXIS_PRINCIPAL_Y:
 
-            if((obor_profile_build == 6412 || obor_profile_build == 6510))
+            if((obor_profile_build >= 6394 && obor_profile_build <= 6453) || obor_profile_build == 6510)
                 handle->y = temp_int;
             else
                 handle->x = temp_int;

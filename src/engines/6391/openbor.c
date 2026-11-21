@@ -1416,7 +1416,7 @@ void clear_scripts()
 
 static size_t obor_profile_script_container_offset(size_t index)
 {
-    if(obor_profile_build == 6510u)
+    if(obor_profile_build == 6453u || obor_profile_build == 6510u)
     {
         static const size_t offsets[] = {
             offsetof(s_scripts, animation_script),
@@ -10574,7 +10574,7 @@ s_model *load_cached_model(char *name, char *owner, char unload)
                                                                                                             Skip the pit, lifespan, and time over attack types as these are for engine use. Nothing stops an author from defining defense settings for them individually.
                                                                                                             */
                                                                                                             if(i != ATK_PIT && i != ATK_TIMEOVER && i != ATK_LIFESPAN && i != ATK_LOSE &&
-                                               i != ATK_BOSS_DEATH && (obor_profile_build != 6510 || i != ATK_ITEM))
+                                               (i != ATK_BOSS_DEATH || obor_profile_build == 6453) && (obor_profile_build != 6510 || i != ATK_ITEM))
                                                                                                             {
                                                                                                                 newchar->defense[i] = defense;
                                                                                                             }
@@ -10636,7 +10636,7 @@ s_model *load_cached_model(char *name, char *owner, char unload)
                                                                                                         {
                                                                                                             //offense hardly need those, just in case
                                                                                                             if(i != ATK_PIT && i != ATK_TIMEOVER && i != ATK_LIFESPAN && i != ATK_LOSE &&
-                                               i != ATK_BOSS_DEATH && (obor_profile_build != 6510 || i != ATK_ITEM))
+                                               (i != ATK_BOSS_DEATH || obor_profile_build == 6453) && (obor_profile_build != 6510 || i != ATK_ITEM))
                                                                                                             {
                                                                                                                 newchar->offense_factors[i] = tempFloat;
                                                                                                             }
@@ -23953,8 +23953,79 @@ static void adjust_bind_6510(entity *e)
     #undef ADJUST_BIND_NO_FRAME_MATCH
 }
 
+static void adjust_bind_6453(entity *e)
+{
+    s_bind *bind = &e->binding;
+    if(!bind->ent) return;
+
+    if(bind->ent->scripts) execute_on_bind_update_other_to_self(bind->ent, e, bind);
+    if(e->scripts) execute_on_bind_update_self_to_other(e, bind->ent, bind);
+    if(!bind->ent) return;
+
+    if(bind->ani_bind)
+    {
+        if(e->animnum != bind->ent->animnum)
+        {
+            if(!validanim(e, (int)bind->ent->animnum))
+            {
+                if(bind->ani_bind & BINDING_MATCHING_ANIMATION_REMOVE) kill_entity(e);
+                bind->ent = NULL;
+                return;
+            }
+            ent_set_anim(e, bind->ent->animnum, 1);
+        }
+
+        if(!bind->ent) return;
+        if((bind->ani_bind & BINDING_MATCHING_FRAME_TARGET) && e->animpos != bind->ent->animpos)
+        {
+            const int frame = bind->ent->animpos;
+            if(!e->animation || e->animation->numframes < frame)
+            {
+                if(bind->ani_bind & BINDING_MATCHING_FRAME_REMOVE) kill_entity(e);
+                bind->ent = NULL;
+                return;
+            }
+            update_frame(e, frame);
+        }
+    }
+
+    entity *target = bind->ent;
+    if(!target) return;
+    e->sortid = target->sortid + bind->sortid;
+    if(bind->bind_toggle.z) e->position.z = target->position.z + bind->offset.z;
+    if(bind->bind_toggle.y) e->position.y = target->position.y + bind->offset.y;
+    if(!bind->bind_toggle.x) return;
+
+    int horizontal_sign = DIRECTION_RIGHT == target->direction ? 1 : -1;
+    switch(bind->direction)
+    {
+        case DIRECTION_ADJUST_RIGHT:
+            e->direction = DIRECTION_RIGHT;
+            horizontal_sign = 1;
+            break;
+        case DIRECTION_ADJUST_LEFT:
+            e->direction = DIRECTION_LEFT;
+            horizontal_sign = 1;
+            break;
+        case DIRECTION_ADJUST_SAME:
+            e->direction = target->direction;
+            break;
+        case DIRECTION_ADJUST_OPPOSITE:
+            e->direction = !target->direction;
+            break;
+        default:
+            break;
+    }
+    e->position.x = target->position.x + horizontal_sign * (float)bind->offset.x;
+}
+
 void adjust_bind(entity *e)
 {
+    if(obor_profile_build == 6453)
+    {
+        adjust_bind_6453(e);
+        return;
+    }
     if(obor_profile_build == 6510)
     {
         adjust_bind_6510(e);

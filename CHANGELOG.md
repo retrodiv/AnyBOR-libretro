@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.2.50
+
+- Add selectable OpenBOR profile v3.0 6453-dev.
+- Preserve its script constant numbering, entity binding hooks and model unload support.
+- Match the original v3.0 6412-dev output when binding arguments are refused.
+
 ## 0.2.49
 
 - Add 17 selectable OpenBOR profiles from v3.0 6175 through v3.0 6390, including v3.0 6301-dev.

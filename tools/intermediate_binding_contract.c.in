@@ -1,0 +1,126 @@
+/* SPDX-License-Identifier: BSD-3-Clause
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me>
+ */
+#include <stdint.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <strings.h>
+#include "scriptcommon.h"
+#undef printf
+#undef assert
+#include <assert.h>
+#ifndef stricmp
+#define stricmp strcasecmp
+#endif
+
+uint32_t obor_profile_build;
+
+void *checkAlloc(void *ptr, size_t size, const char *func, const char *file, int line)
+{
+    assert(!size || ptr);
+    return ptr;
+}
+
+@CACHE@
+@SEARCH@
+@METHODS@
+
+static void check_property(s_bind *binding, const char *name, LONG ordinal,
+                           e_binding_properties field, entity *target)
+{
+    ScriptVariant handle = {.vt = VT_PTR, .ptrVal = binding};
+    ScriptVariant property = {.vt = VT_STR, .strVal = StrCache_CreateNewFrom(name)};
+    ScriptVariant argument = {.vt = VT_DECIMAL, .dblVal = 6.75};
+    ScriptVariant value = {.vt = VT_EMPTY}, *result = &value;
+    ScriptVariant *args[] = {&handle, &property, &argument};
+    assert(openbor_get_binding_property(args, &result, 2) == S_OK && result == &value);
+    assert(property.vt == VT_INTEGER && property.lVal == ordinal);
+    assert(profile_binding_property(ordinal) == field);
+
+    if(field == _BINDING_TARGET)
+    {
+        assert(value.vt == VT_EMPTY);
+        argument = (ScriptVariant){.vt = VT_PTR, .ptrVal = target};
+        assert(openbor_set_binding_property(args, &result, 3) == S_OK && result == &value);
+        assert(binding->ent == target);
+        assert(openbor_get_binding_property(args, &result, 2) == S_OK);
+        assert(value.vt == VT_PTR && value.ptrVal == target);
+        return;
+    }
+    if(field == _BINDING_ENABLE || field == _BINDING_OFFSET)
+    {
+        s_axis_principal_int *point = field == _BINDING_ENABLE ? &binding->bind_toggle : &binding->offset;
+        assert(value.vt == VT_PTR && value.ptrVal == point);
+        s_axis_principal_int before = *point;
+        assert(openbor_set_binding_property(args, &result, 3) == S_OK && result == &value);
+        assert(point->x == before.x && point->y == before.y && point->z == before.z);
+        return;
+    }
+    assert(value.vt == VT_INTEGER && value.lVal == 0);
+    assert(openbor_set_binding_property(args, &result, 3) == S_OK && result == &value);
+    assert(openbor_get_binding_property(args, &result, 2) == S_OK);
+    assert(value.vt == VT_INTEGER && value.lVal == 6);
+    switch(field)
+    {
+        case _BINDING_ANIMATION: assert(binding->ani_bind == 6); break;
+        case _BINDING_DIRECTION: assert(binding->direction == 6); break;
+        case _BINDING_SORT_ID: assert(binding->sortid == 6); break;
+        case _BINDING_TAG: assert(binding->tag == 6); break;
+        case _BINDING_OVERRIDING: assert(binding->overriding == 6); break;
+        default: assert(!"Expected a scalar binding property");
+    }
+}
+
+int main(void)
+{
+    static const struct {
+        unsigned revision;
+        LONG count;
+        const char *names[8];
+        e_binding_properties fields[8];
+    } rows[] = {@ROWS@};
+    static const char *names[] = {"animation", "direction", "enable", "matching", "offset",
+                                  "overriding", "positioning", "sort_id", "tag", "target"};
+    StrCache_Init();
+    for(unsigned i = 0; i < sizeof(rows) / sizeof(*rows); ++i)
+    {
+        entity target = {0};
+        s_bind binding = {.bind_toggle = {.x = 1, .y = -2}, .offset = {.x = 7, .z = 9}};
+        obor_profile_build = rows[i].revision;
+        printf("BEGIN %u\n", rows[i].revision);
+        for(LONG ordinal = 0; ordinal < rows[i].count; ++ordinal)
+            check_property(&binding, rows[i].names[ordinal], ordinal, rows[i].fields[ordinal], &target);
+        assert(profile_binding_property(rows[i].count) == _BINDING_END);
+        ScriptVariant handle = {.vt = VT_PTR, .ptrVal = &binding};
+        ScriptVariant absent = {.vt = VT_INTEGER, .lVal = rows[i].count};
+        ScriptVariant input = {.vt = VT_INTEGER, .lVal = 2};
+        ScriptVariant value = {.vt = VT_EMPTY}, *result = &value;
+        ScriptVariant *args[] = {&handle, &absent, &input};
+        assert(openbor_get_binding_property(args, &result, 2) == E_FAIL && result == NULL);
+        result = &value;
+        assert(openbor_set_binding_property(args, &result, 3) == E_FAIL);
+        absent.lVal = 0;
+        handle = (ScriptVariant){.vt = VT_INTEGER, .lVal = 0};
+        result = &value;
+        assert(openbor_get_binding_property(args, &result, 2) == E_FAIL && result == NULL);
+        result = &value;
+        assert(openbor_set_binding_property(args, &result, 3) == E_FAIL && result == NULL);
+        for(unsigned n = 0; n < sizeof(names) / sizeof(*names); ++n)
+        {
+            LONG ordinal = 0;
+            while(ordinal < rows[i].count && strcmp(rows[i].names[ordinal], names[n]) != 0)
+                ++ordinal;
+            if(ordinal == rows[i].count)
+            {
+                ScriptVariant name = {.vt = VT_STR, .strVal = StrCache_CreateNewFrom(names[n])};
+                ScriptVariant *name_args[] = {NULL, &name};
+                assert(!mapstrings_binding(name_args, 2) && name.vt == VT_STR);
+                ScriptVariant_Clear(&name);
+            }
+        }
+        printf("PASS %u\n", rows[i].revision);
+    }
+    StrCache_Clear();
+    return 0;
+}

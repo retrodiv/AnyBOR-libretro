@@ -16148,7 +16148,7 @@ loadmodel_error:
     return E_FAIL;
 }
 
-// Available only through the 6412 logical profile.
+// The script registry exposes this function for the profiles that provide it.
 HRESULT openbor_unload_model(ScriptVariant **varlist , ScriptVariant **pretvar, int paramCount)
 {
     s_model *model;

@@ -51,6 +51,12 @@ else if(obor_profile_build == 6510 && stricmp(#x, constname)==0) {\
     v.lVal = (LONG)x;\
 }
 
+#define ICMPCONST_BINDING_MATCHING(x) \
+else if((obor_profile_build == 6453 || obor_profile_build == 6510) && \
+        stricmp(#x, constname)==0) {\
+    v.lVal = (LONG)x;\
+}
+
 #define ICMPCONST6330(x) \
 else if(obor_profile_build == 6330 && stricmp(#x, constname)==0) {\
     v.lVal = (LONG)x;\
@@ -133,6 +139,7 @@ int mapstrings_transconst(ScriptVariant **varlist, int paramCount)
         constname = (char *)StrCache_Get(varlist[0]->strVal);
 
         IICMPCONST(COMPATIBLEVERSION)
+        else if(obor_profile_build == 6453 && stricmp("ATK_BIND", constname) == 0) { v.lVal = ATK_BOSS_DEATH; }
         ICMPCONST6510(ATK_LOSE)
         ICMPCONST6510(ATK_BOSS_DEATH)
         ICMPCONST6510(BINDING_POSITIONING_LEVEL)
@@ -140,11 +147,11 @@ int mapstrings_transconst(ScriptVariant **varlist, int paramCount)
         ICMPCONST6510(BINDING_POSITIONING_NONE)
         ICMPCONST6510(BINDING_MATCHING_FRAME_DEFINED)
         ICMPCONST6510(BINDING_MATCHING_ANIMATION_DEFINED)
-        ICMPCONST6510(BINDING_MATCHING_FRAME_REMOVE)
-        ICMPCONST6510(BINDING_MATCHING_ANIMATION_REMOVE)
-        ICMPCONST6510(BINDING_MATCHING_FRAME_TARGET)
-        ICMPCONST6510(BINDING_MATCHING_ANIMATION_TARGET)
-        ICMPCONST6510(BINDING_MATCHING_NONE)
+        ICMPCONST_BINDING_MATCHING(BINDING_MATCHING_FRAME_REMOVE)
+        ICMPCONST_BINDING_MATCHING(BINDING_MATCHING_ANIMATION_REMOVE)
+        ICMPCONST_BINDING_MATCHING(BINDING_MATCHING_FRAME_TARGET)
+        ICMPCONST_BINDING_MATCHING(BINDING_MATCHING_ANIMATION_TARGET)
+        ICMPCONST_BINDING_MATCHING(BINDING_MATCHING_NONE)
         ICMPCLASSICBOOMERANG(ANI_GETBOOMERANGINAIR)
         ICMPCLASSICBOOMERANG(ANI_GETBOOMERANG)
         ICMPCLASSICBOOMERANG(AIMOVE1_BOOMERANG)

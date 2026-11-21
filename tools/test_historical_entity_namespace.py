@@ -23,6 +23,10 @@ LEGACY_ENTITY_SELECTORS = ('obor_entityproperty_legacy_count', 'obor_entityprope
                            'obor_entityproperty')
 ENTITY_COLLISION = FIXTURE.with_name('profile-6391-entity-collision.json')
 AXIS_PROPERTIES = FIXTURE.with_name('profile-6391-axis-properties.json')
+ENTITY_LINKS_AND_MODEL_UNLOAD = FIXTURE.with_name('profile-6391-entity-links-and-model-unload.json')
+INTERMEDIATE_BINDING = FIXTURE.with_name('profile-6391-intermediate-binding.json')
+ANIMATION_AND_MATCHING_IDS = FIXTURE.with_name('profile-6391-animation-and-matching-ids.json')
+BINDING_ADJUSTMENT = FIXTURE.with_name('profile-6391-binding-adjustment.json')
 LITERAL_CONSTANTS = FIXTURE.with_name('profile-6391-literal-constants.json')
 ANIMATION_CONSTANTS = FIXTURE.with_name('profile-6391-animation-constants.json')
 BACKGROUND_SPEEDS = FIXTURE.with_name('profile-6391-background-speeds.json')
@@ -197,6 +201,19 @@ def legacy_boomerang_program(engine, rows, tables, controls):
     return re.sub(r'@([A-Z_]+)@', lambda match: values[match[1]], template)
 
 
+def binding_property_methods(engine):
+    source = (engine / 'source/openborscript/binding.c').read_text()
+    variants = (engine / 'source/scriptlib/ScriptVariant.c').read_text()
+    methods = ('mapstrings_binding', 'obor_profile_boolean_binding_axes', 'profile_binding_property',
+               'openbor_get_binding_property', 'openbor_set_binding_property')
+    return {
+        'CACHE': variants[variants.index('#define STRCACHE_INC'):
+                          variants.index('HRESULT ScriptVariant_DecimalValue(')],
+        'SEARCH': function((engine / 'source/utils.c').read_text(), 'searchList'),
+        'METHODS': '\n'.join(function(source, name) for name in methods),
+    }
+
+
 def axis_property_program(data, rows, engine):
     modules = engine / 'source/openborscript'
     index = (modules / 'index.c').read_text(encoding='latin-1')
@@ -214,7 +231,8 @@ def axis_property_program(data, rows, engine):
         'SEARCH': function(utility, 'searchList'),
         'VARIANTS': '\n'.join(function(variant, name) for name in ('ScriptVariant_Init', 'ScriptVariant_Clear',
                                   'ScriptVariant_ChangeType', 'ScriptVariant_DecimalValue', 'ScriptVariant_IntegerValue')),
-        'ROWS': ','.join('{%du,%d}' % (row['revision'], row['axis_properties']) for row in rows),
+        'ROWS': ','.join('{%du,%d,%d}' % (row['revision'], row['axis_properties'],
+                                         row.get('principal_int_y', 0)) for row in rows),
     }
     for key, method in (('REVERSE', 'Script_GetFunctionName'), ('MAPPER', 'Script_GetStringMapFunction')):
         body = function(index, method)
@@ -246,6 +264,26 @@ def constant_mapper_parts(engine):
                     '\n' + function(variants, 'ScriptVariant_Copy'),
         'MAPPER': macros + '\n' + mapper,
     }
+
+
+def typed_script_ids_program(data, engine):
+    parts = constant_mapper_parts(engine) | {
+        'PROFILES': ','.join('{%du,%d}' % (row['revision'], row['early_ids']) for row in data['sources']),
+    }
+    for key in ('early', 'base'):
+        parts[key.upper()] = ',\n'.join(
+            '{%s,%s}' % (json.dumps(name), 'INT_MIN' if value is None else int(value))
+            for name, value in data['cases'][key].items())
+    for domain, prefix, limit in (('animation', 'ANI_', 'MAX_ANIS'), ('attack', 'ATK_', 'MAX_ATKS')):
+        layouts = []
+        for key in ('base', 'early'):
+            layout = data.get(domain + '_layouts', {}).get(key, [])
+            if any(not re.fullmatch(prefix + r'[A-Z0-9_]+', name) for name in layout):
+                raise ValueError('Expected native enum entries for ' + domain)
+            layouts.append('{(const int[]){%s}, %d}' % (','.join([*layout, limit]), len(layout)))
+        parts[domain.upper() + '_ENUM_LAYOUTS'] = ',\n'.join(layouts)
+    template = Path(__file__).with_name('typed_script_ids_contract.c.in').read_text()
+    return re.sub(r'@([A-Z_]+)@', lambda match: parts[match[1]], template)
 
 
 def constant_level_methods(engine):
@@ -378,6 +416,48 @@ class EntityNamespaceContracts(unittest.TestCase):
         result = native_output(axis_property_program(data, rows, engine), data, engine_source=engine,
                                extra_cflags=('-fgnu89-inline',))
         self.assertEqual([int(line) for line in result.splitlines()], revisions)
+
+    def test_6391_entity_links_and_model_unload(self):
+        data = load_contract_fixture(ENTITY_LINKS_AND_MODEL_UNLOAD)
+        rows = data['sources']
+        revisions = [row['revision'] for row in rows]
+        self.assertEqual(revisions, sorted(contract_revisions(data, data['expected_revisions'])))
+        engine = Path(os.environ.get('OBOR_HISTORICAL_ENGINE', ROOT / 'src/engines' / data['engine']))
+        modules = engine / 'source/openborscript'
+        variants = (engine / 'source/scriptlib/ScriptVariant.c').read_text()
+        index = (modules / 'index.c').read_text()
+        registry = function(index, 'Script_LoadSystemFunctions')
+        insertion = re.search(r'(?m)^    if[^\n]*\n        List_InsertAfter\(&theFunctionList,\s*'
+                              r'\(void \*\)openbor_unload_model, "unload_model"\);', registry)
+        reverse = re.search(r'else if\s*\(functionRef == \(\(void \*\)openbor_unload_model\)\)'
+                            r'\s*\{[^{}]*\}', function(index, 'Script_GetFunctionName'))
+        self.assertIsNotNone(insertion)
+        self.assertIsNotNone(reverse)
+        sources = {
+            modules / 'binding.c': ('mapstrings_binding',),
+            modules / 'entity.c': ('obor_profile_scalar_entity_positions', 'mapstrings_entity_property',
+                                   'profile_entity_property', 'openbor_get_entity_property',
+                                   'openbor_set_entity_property'),
+            engine / 'openbor.c': ('obor_remember_attack',),
+            engine / 'openborscript.c': ('openbor_unload_model',),
+        }
+        methods = []
+        for path, symbols in sources.items():
+            source = path.read_text()
+            methods.extend(function(source, name) for name in symbols)
+        values = {
+            'CACHE': variants[variants.index('#define STRCACHE_INC'):variants.index('BOOL ScriptVariant_IsTrue(')],
+            'SEARCH': function((engine / 'source/utils.c').read_text(), 'searchList'),
+            'METHODS': '\n'.join(methods),
+            'REGISTRY': insertion[0],
+            'REVERSE': reverse[0].removeprefix('else '),
+            'ROWS': ','.join('{%du,%d,%d,%d,%d}' % (row['revision'], row['opponent'], row['owner'],
+                                                  row['player_index'], row['unload_model']) for row in rows),
+        }
+        template = Path(__file__).with_name('entity_links_and_model_unload_contract.c.in').read_text()
+        code = re.sub(r'@([A-Z_]+)@', lambda match: values[match[1]], template)
+        result = native_output(code, data, engine_source=engine, extra_cflags=('-fgnu89-inline',))
+        self.assertEqual(re.findall(r'(?m)^PASS \d+$', result), [f'PASS {revision}' for revision in revisions])
 
     def check_script_entity_status(self, physical):
         data = load_contract_fixture(SCRIPT_STATUS)
@@ -615,15 +695,8 @@ class EntityNamespaceContracts(unittest.TestCase):
         self.assertEqual(revisions, sorted(set(revisions)))
         self.assertEqual(set(revisions), contract_revisions(data, data['expected_revisions']))
         engine = Path(os.environ.get('OBOR_HISTORICAL_ENGINE', ROOT / 'src/engines' / data['engine']))
-        source = (engine / 'source/openborscript/binding.c').read_text()
-        variants = (engine / 'source/scriptlib/ScriptVariant.c').read_text()
-        methods = ('mapstrings_binding', 'obor_profile_boolean_binding_axes', 'profile_binding_property',
-                   'openbor_get_binding_property', 'openbor_set_binding_property')
         values = {
-            'CACHE': variants[variants.index('#define STRCACHE_INC'):
-                              variants.index('HRESULT ScriptVariant_DecimalValue(')],
-            'SEARCH': function((engine / 'source/utils.c').read_text(), 'searchList'),
-            'METHODS': '\n'.join(function(source, name) for name in methods),
+            **binding_property_methods(engine),
             'NAMES': ','.join(json.dumps(name) for name in data['names']),
             'PROFILES': ','.join('{%du,%d}' % (row['revision'], row['boolean_axes']) for row in rows),
         }
@@ -649,6 +722,67 @@ class EntityNamespaceContracts(unittest.TestCase):
         names = set(re.findall(r',\s*"([^"]+)"\);', registry))
         self.assertIn('getentityproperty', names)
         self.assertTrue(names.isdisjoint(load_contract_fixture(TYPED_ENTITY)['registry_names']))
+
+    def test_6391_intermediate_binding_properties(self):
+        data = load_contract_fixture(INTERMEDIATE_BINDING)
+        rows = data['sources']
+        revisions = [row['revision'] for row in rows]
+        self.assertEqual(revisions, sorted(contract_revisions(data, data['expected_revisions'])))
+        engine = Path(os.environ.get('OBOR_HISTORICAL_ENGINE', ROOT / 'src/engines' / data['engine']))
+
+        def profile(row):
+            entries = row['properties']
+            return '{%du,%d,{%s},{%s}}' % (
+                row['revision'], len(entries),
+                ','.join(json.dumps(name) for name, _ in entries),
+                ','.join('_BINDING_' + field for _, field in entries))
+
+        values = {**binding_property_methods(engine), 'ROWS': ',\n'.join(map(profile, rows))}
+        template = Path(__file__).with_name('intermediate_binding_contract.c.in').read_text()
+        code = re.sub(r'@([A-Z_]+)@', lambda match: values[match[1]], template)
+        result = native_output(code, data, engine_source=engine, extra_cflags=('-fgnu89-inline',))
+        contexts = re.findall(r'(?ms)^BEGIN (\d+)\n(.*?)^PASS \1$', result)
+        self.assertEqual([int(revision) for revision, _ in contexts], revisions)
+        for row, (_, output) in zip(rows, contexts, strict=True):
+            if 'diagnostics' in row:
+                with self.subTest(revision=row['revision']):
+                    self.assertEqual(' Size entity:' in output, bool(row['diagnostics']))
+                    self.assertEqual(' Size bind:' in output, bool(row['diagnostics']))
+
+    def test_6391_binding_adjustment_callbacks_and_model_commands(self):
+        data = load_contract_fixture(BINDING_ADJUSTMENT)
+        rows = data['sources']
+        revisions = [row['revision'] for row in rows]
+        self.assertEqual(revisions, sorted(contract_revisions(data, data['expected_revisions'])))
+        engine = Path(os.environ.get('OBOR_HISTORICAL_ENGINE', ROOT / 'src/engines' / data['engine']))
+        source = (engine / 'openbor.c').read_text()
+        commands = (engine / 'source/openborscript/commands.c').read_text()
+        registry = function(commands, 'createModelCommandList')
+        guard = re.search(r'(?m)^    if[^\n]*\n    \{\n'
+                          r'        LIST_ADD\(CMD_MODEL_ON_BIND_UPDATE_OTHER_TO_SELF_SCRIPT[^\n]*\n'
+                          r'        LIST_ADD\(CMD_MODEL_ON_BIND_UPDATE_SELF_TO_OTHER_SCRIPT[^\n]*\n    \}', registry)
+        dispatch = re.search(r'(?m)^    if[^\n]*\n    \{\n        adjust_bind_6453\(e\);\n'
+                             r'        return;\n    \}', function(source, 'adjust_bind'))
+        self.assertIsNotNone(guard)
+        self.assertIsNotNone(dispatch)
+        methods = ['execute_on_bind_update_other_to_self', 'execute_on_bind_update_self_to_other',
+                   'adjust_bind_6453', 'obor_profile_script_container_offset']
+        layout = data['script_layout']
+        self.assertTrue(all(re.fullmatch(r'\w+_script', name) for name in layout))
+        parts = {
+            'METHODS': '\n'.join(function(source, name) for name in methods),
+            'REGISTRY': guard[0], 'DISPATCH': dispatch[0],
+            'SCRIPT_LAYOUT': ',\n'.join('offsetof(s_scripts, ' + name + ')' for name in layout),
+            'ROWS': ','.join('{%du,%d,%d}' % (row['revision'], row['callbacks'], row['target_relative_axes'])
+                             for row in rows),
+        }
+        for side in ('other_to_self', 'self_to_other'):
+            loader_call = f'newchar->scripts->on_bind_update_{side}_script, "on_bind_update_{side}_script"'
+            self.assertEqual(function(source, 'load_cached_model').count(loader_call), 1)
+        template = Path(__file__).with_name('binding_adjustment_contract.c.in').read_text()
+        code = re.sub(r'@([A-Z_]+)@', lambda match: parts[match[1]], template)
+        output = native_output(code, data, engine_source=engine, extra_cflags=('-fgnu89-inline',))
+        self.assertEqual(output.splitlines(), [f'PASS {revision}' for revision in revisions])
 
     def test_6391_typed_entity_and_energy(self):
         data = load_contract_fixture(TYPED_ENTITY)
@@ -744,21 +878,22 @@ class EntityNamespaceContracts(unittest.TestCase):
         self.assertEqual(revisions, sorted(set(revisions)))
         self.assertEqual(set(revisions), contract_revisions(data, data['expected_revisions']))
         engine = Path(os.environ.get('OBOR_HISTORICAL_ENGINE', ROOT / 'src/engines' / data['engine']))
-        parts = constant_mapper_parts(engine) | {
-            'PROFILES': ','.join('{%du,%d}' % (row['revision'], row['early_ids']) for row in rows),
-        }
-        for key in ('early', 'base'):
-            table = data['cases'][key]
-            parts[key.upper()] = ',\n'.join('{%s,%s}' % (json.dumps(name), 'INT_MIN' if value is None else int(value))
-                                            for name, value in table.items())
-        template = Path(__file__).with_name('typed_script_ids_contract.c.in').read_text()
-        code = re.sub(r'@([A-Z_]+)@', lambda match: parts[match[1]], template)
+        code = typed_script_ids_program(data, engine)
         output = native_output(code, data, engine_source=engine, extra_cflags=('-fgnu89-inline',))
         self.assertEqual(re.findall(r'(?m)^PASS \d+$', output), [f'PASS {revision}' for revision in revisions])
         self.assertEqual(re.findall(r"(?m)^Can't find openbor constant '([^']+)' $", output),
                          [name for row in rows
                           for name, value in data['cases']['early' if row['early_ids'] else 'base'].items()
                           if value is None])
+
+    def test_6391_native_animation_and_binding_matching_ids(self):
+        data = load_contract_fixture(ANIMATION_AND_MATCHING_IDS)
+        revisions = [row['revision'] for row in data['sources']]
+        self.assertEqual(revisions, sorted(contract_revisions(data, data['expected_revisions'])))
+        engine = Path(os.environ.get('OBOR_HISTORICAL_ENGINE', ROOT / 'src/engines' / data['engine']))
+        code = typed_script_ids_program(data, engine)
+        output = native_output(code, data, engine_source=engine, extra_cflags=('-fgnu89-inline',))
+        self.assertEqual(re.findall(r'(?m)^PASS \d+$', output), [f'PASS {revision}' for revision in revisions])
 
     def check_6391_literal_constants(self, fixture, *, background_fixture=None):
         data = load_contract_fixture(fixture)

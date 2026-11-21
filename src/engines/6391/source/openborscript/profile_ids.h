@@ -86,7 +86,7 @@ static inline int obor_animation_from_native(int id)
         if(id <= ANI_BACKRUN) return id;
         return id <= INT_MAX - offset ? id + offset : -1;
     }
-    if(obor_profile_build == 6510)
+    if(obor_profile_build == 6453 || obor_profile_build == 6510)
     {
         if(id == 0) return ANI_NONE;
         return id < original_max + 1 ? id - 1 : id < INT_MAX ? id + 1 : -1;
@@ -117,7 +117,7 @@ static inline int obor_animation_to_native(int id)
         if(id <= ANI_BACKRUN) return id;
         return id >= ANI_GETBOOMERANG ? id - offset : -1;
     }
-    if(obor_profile_build == 6510)
+    if(obor_profile_build == 6453 || obor_profile_build == 6510)
     {
         if(id == ANI_NONE) return 0;
         return id < original_max ? id + 1 : id - 1;
@@ -306,7 +306,7 @@ static inline int obor_attack_from_native(int id)
         /* Both the lose and boss-death slots precede the physical custom range. */
         return id <= INT_MAX - 2 ? id + 2 : -1;
     }
-    if(obor_profile_build == 6510)
+    if(obor_profile_build == 6453 || obor_profile_build == 6510)
     {
         switch(id)
         {
@@ -330,7 +330,7 @@ static inline int obor_attack_to_native(int id)
         if(id >= MAX_ATKS) return id - 2;
         return ATK_NONE;
     }
-    if(obor_profile_build == 6510)
+    if(obor_profile_build == 6453 || obor_profile_build == 6510)
     {
         switch(id)
         {

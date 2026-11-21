@@ -56,7 +56,7 @@ class ContentTriageTests(unittest.TestCase):
 
     def test_exact_tags_never_run_triage(self):
         for tag, expected in (('3741',3741),('3780',3780),('6330',6330),
-                              ('6392',6392),('6412',6412)):
+                              ('6392',6392),('6412',6412),('6453',6453),('6453-dev',6453)):
             profile, log = self.script(tag, 'void main(){ movie_load("x"); }')
             self.assertEqual(profile, expected)
             self.assertNotIn('filename triage', log)
@@ -174,7 +174,8 @@ class ContentTriageTests(unittest.TestCase):
                               ('4153',4153),('4154',4213),
                               ('4433',4453),('4452',4453),('4453',4453),
                               ('4454',4454),('6000',6119),('6330',6330),
-                              ('6331',6391),('6393',6391),('6411',6391)):
+                              ('6331',6385),('6385',6385),('6386',6390),
+                              ('6390',6390),('6391',6391),('6393',6391),('6411',6391)):
             with self.subTest(tag=tag):
                 self.assertEqual(self.select(tag)[0], expected)
 
@@ -376,14 +377,15 @@ class ContentTriageTests(unittest.TestCase):
         self.assertEqual(self.select('4088')[0], 4088)
         self.assertEqual(self.select('4088-4088')[0], 4107)
         self.assertEqual(self.select('408X')[0], 4086)
-        for revision in (3968, 3970):
+        for revision in (3968, 3970, 6453):
             with self.subTest(revision=revision):
                 self.assertEqual(self.select(str(revision))[0], revision)
                 for suffix in (' dev', '-DEV', '_Dev'):
                     self.assertEqual(self.select(str(revision) + suffix)[0], revision)
                 self.assertNotIn(self.select('%d-%d' % (revision, revision))[0],
-                                 (3968, 3970))
+                                 (3968, 3970, 6453))
         self.assertNotIn(self.select('396X')[0], (3968, 3970))
+        self.assertNotEqual(self.select('645X')[0], 6453)
 
     def test_palette_requirement_excludes_only_the_incompatible_revision(self):
         for text in (b'colourdepth 8bit\n', b'colourdepth 16bit\n', b'remap a.gif b.gif\n'):

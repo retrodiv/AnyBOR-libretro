@@ -103,7 +103,7 @@ static void write_property(accessor set, ScriptVariant **args)
     assert(set(args, &out, 3) == S_OK && out == &result && result.vt == VT_INTEGER && result.lVal == 42);
 }
 
-static void check_values(int shape, void *handle, const char *axes, int integer,
+static void check_values(int shape, void *handle, const char *axes, int integer, int principal_y,
                          double x, double second, double third)
 {
     const int coordinates = strlen(axes);
@@ -125,8 +125,7 @@ static void check_values(int shape, void *handle, const char *axes, int integer,
         assert(set_map(args, 3) == 1 && selector.vt == VT_INTEGER && selector.lVal == i);
         write_property(set, args);
 
-        /* The original principal setters route the Y selector to X. */
-        const int destination = coordinates == 3 && i == 1 ? 0 : i;
+        const int destination = coordinates == 3 && i == 1 ? principal_y : i;
         expected[destination] = integer ? (int)value.dblVal : value.dblVal;
         for(int j = 0; j < coordinates; ++j)
         {
@@ -141,7 +140,7 @@ static void check_values(int shape, void *handle, const char *axes, int integer,
         value = (ScriptVariant){.vt = VT_INTEGER, .lVal = 22};
         write_property(set, args);
         assert(selector.vt == VT_INTEGER && selector.lVal == 1);
-        expected[0] = 22;
+        expected[principal_y] = 22;
         for(int j = 0; j < coordinates; ++j)
         {
             selector = (ScriptVariant){.vt = VT_INTEGER, .lVal = j};
@@ -151,28 +150,28 @@ static void check_values(int shape, void *handle, const char *axes, int integer,
     assert(conversions == coordinates * 2 + (coordinates == 3));
 }
 
-static void check_properties(void)
+static void check_properties(int principal_int_y)
 {
     s_axis_plane_lateral_float lateral_float = {.x = 2.25f, .z = -3.5f};
     s_axis_plane_lateral_int lateral_int = {.x = 2, .z = -3};
     s_axis_plane_vertical_int vertical_int = {.x = 4, .y = -5};
     s_axis_principal_float principal_float = {.x = 2.25f, .y = 3.5f, .z = 6.75f};
     s_axis_principal_int principal_int = {.x = 7, .y = -6, .z = 3};
-    check_values(0, &lateral_float, "xz", 0, 2.25, -3.5, 0);
-    check_values(1, &lateral_int, "xz", 1, 2, -3, 0);
-    check_values(2, &vertical_int, "xy", 1, 4, -5, 0);
-    check_values(3, &principal_float, "xyz", 0, 2.25, 3.5, 6.75);
-    check_values(4, &principal_int, "xyz", 1, 7, -6, 3);
+    check_values(0, &lateral_float, "xz", 0, 0, 2.25, -3.5, 0);
+    check_values(1, &lateral_int, "xz", 1, 0, 2, -3, 0);
+    check_values(2, &vertical_int, "xy", 1, 0, 4, -5, 0);
+    check_values(3, &principal_float, "xyz", 0, 0, 2.25, 3.5, 6.75);
+    check_values(4, &principal_int, "xyz", 1, principal_int_y, 7, -6, 3);
 }
 
 int main(void)
 {
-    static const struct { unsigned revision; int visible; } rows[] = {@ROWS@};
+    static const struct { unsigned revision; int visible; int principal_int_y; } rows[] = {@ROWS@};
     for(unsigned i = 0; i < sizeof(rows) / sizeof(*rows); ++i)
     {
         obor_profile_build = rows[i].revision;
         check_registry(rows[i].visible);
-        if(rows[i].visible) check_properties();
+        if(rows[i].visible) check_properties(rows[i].principal_int_y);
         printf("%u\n", rows[i].revision);
     }
     return 0;

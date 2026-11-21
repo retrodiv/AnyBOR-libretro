@@ -1,0 +1,147 @@
+/* SPDX-License-Identifier: BSD-3-Clause
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me>
+ */
+#include <stdint.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <strings.h>
+#include "scriptcommon.h"
+#include "profile_ids.h"
+#undef printf
+#undef assert
+#include <assert.h>
+#ifndef stricmp
+#define stricmp strcasecmp
+#endif
+
+uint32_t obor_profile_build;
+uint32_t obor_profile_features;
+List theFunctionList;
+static SCRIPTFUNCTION registered;
+static s_model cached_model;
+static unsigned events;
+
+void *checkAlloc(void *ptr, size_t size, const char *func, const char *file, int line)
+{
+    assert(!size || ptr);
+    return ptr;
+}
+
+s_model *load_cached_model(char *name, char *owner, char unload)
+{
+    assert(strcmp(owner, "openbor_loadmodel") == 0 && unload == 0 && events == 0);
+    ++events;
+    return strcmp(name, "loaded") == 0 ? &cached_model : NULL;
+}
+
+void cache_model_sprites(s_model *model, int load)
+{
+    assert(model == &cached_model && load == 0 && events == 1);
+    ++events;
+}
+
+int free_model(s_model *model)
+{
+    assert(model == &cached_model && events == 2);
+    ++events;
+    return 0;
+}
+
+@CACHE@
+@SEARCH@
+@METHODS@
+
+void List_InsertAfter(List *list, void *function, const char *name)
+{
+    assert(list == &theFunctionList && !registered && strcmp(name, "unload_model") == 0);
+    registered = (SCRIPTFUNCTION)function;
+}
+
+static const char *reverse_lookup(void *functionRef)
+{
+    @REVERSE@
+    return NULL;
+}
+
+static LONG selector(const char *name)
+{
+    ScriptVariant key = {.vt = VT_STR, .strVal = StrCache_CreateNewFrom(name)};
+    ScriptVariant *args[] = {NULL, &key};
+    if(!mapstrings_entity_property(args, 2))
+    {
+        ScriptVariant_Clear(&key);
+        return -1;
+    }
+    assert(key.vt == VT_INTEGER);
+    return key.lVal;
+}
+
+static void check_link(const char *name, LONG ordinal, e_entity_properties physical,
+                       entity *subject, entity **field)
+{
+    assert(selector(name) == ordinal);
+    if(ordinal < 0) return;
+    assert(profile_entity_property(ordinal) == physical);
+    entity initial = {0}, replacement = {0};
+    *field = &initial;
+    ScriptVariant handle = {.vt = VT_PTR, .ptrVal = subject};
+    ScriptVariant key = {.vt = VT_INTEGER, .lVal = ordinal};
+    ScriptVariant input = {.vt = VT_PTR, .ptrVal = &replacement};
+    ScriptVariant result = {.vt = VT_EMPTY}, *out = &result;
+    ScriptVariant *args[] = {&handle, &key, &input};
+    assert(openbor_get_entity_property(args, &out, 2) == S_OK);
+    assert(result.vt == VT_PTR && result.ptrVal == &initial);
+    assert(openbor_set_entity_property(args, &out, 3) == S_OK);
+    assert(*field == &replacement);
+    assert(openbor_get_entity_property(args, &out, 2) == S_OK);
+    assert(result.vt == VT_PTR && result.ptrVal == &replacement);
+}
+
+static void check_unload(int expected)
+{
+    registered = NULL;
+    @REGISTRY@
+    assert((registered != NULL) == expected);
+    if(!expected) return;
+    assert(registered == openbor_unload_model);
+    assert(strcmp(reverse_lookup((void *)registered), "unload_model") == 0);
+    const char *names[] = {"loaded", "missing"};
+    for(unsigned i = 0; i < 2; ++i)
+    {
+        events = 0;
+        ScriptVariant name = {.vt = VT_STR, .strVal = StrCache_CreateNewFrom(names[i])};
+        ScriptVariant result = {.vt = VT_INTEGER, .lVal = 41}, *out = &result;
+        ScriptVariant *args[] = {&name};
+        assert(registered(args, &out, 1) == S_OK);
+        assert(events == (i == 0 ? 3u : 1u));
+        assert(out == &result && result.vt == VT_INTEGER && result.lVal == 41);
+        ScriptVariant_Clear(&name);
+    }
+    events = 0;
+    ScriptVariant invalid = {.vt = VT_INTEGER, .lVal = 2};
+    ScriptVariant *invalid_args[] = {&invalid};
+    for(int count = 0; count <= 1; ++count)
+    {
+        ScriptVariant result = {.vt = VT_INTEGER, .lVal = 41}, *out = &result;
+        assert(registered(invalid_args, &out, count) == E_FAIL && out == NULL);
+        assert(events == 0);
+    }
+}
+
+int main(void)
+{
+    static const struct { unsigned revision; int opponent, owner, player_index, unload; } rows[] = {@ROWS@};
+    for(unsigned i = 0; i < sizeof(rows) / sizeof(*rows); ++i)
+    {
+        entity subject = {0};
+        obor_profile_build = rows[i].revision;
+        check_link("opponent", rows[i].opponent, _ENTITY_OPPONENT, &subject, &subject.opponent);
+        check_link("owner", rows[i].owner, _ENTITY_OWNER, &subject, &subject.owner);
+        assert(selector("player_index") == rows[i].player_index);
+        assert(profile_entity_property(rows[i].player_index) == _ENTITY_PLAYER_INDEX);
+        check_unload(rows[i].unload);
+        printf("PASS %u\n", rows[i].revision);
+    }
+    return 0;
+}
