@@ -1279,6 +1279,50 @@ int main(void)
             revision=row['revision'], **data['contracts'][row['contract']]) for row in data['sources']])
         self.assertEqual(json.loads(native_output(program(data), data)), expected)
 
+    def test_7612_landing_damage_health_cheat_scope(self):
+        data = {'engine': '7533'}
+        engine = Path(os.environ.get('OBOR_HISTORICAL_ENGINE', ROOT / 'src/engines' / data['engine']))
+        source = (engine / 'openbor.c').read_text()
+        gravity = function(source, 'check_gravity')
+        gate = re.search(r'\bif\((obor_profile_build < 7557[^{};]*)\)\s*\{\s*checkdamageonlanding\(self\);',
+                         gravity)
+        self.assertIsNotNone(gate)
+        code = r'''
+#include "openbor.h"
+#undef assert
+#include <assert.h>
+
+uint32_t obor_profile_build;
+s_global_config global_config;
+
+static int landing_takes_damage(entity *self)
+{
+    return @GATE@;
+}
+
+int main(void)
+{
+    static entity actor;
+    static const uint32_t profiles[] = {7610, 7611, 7612};
+    static const unsigned types[] = {TYPE_PLAYER, TYPE_ENEMY, TYPE_PLAYER | TYPE_ENEMY};
+    for (size_t revision = 0; revision < sizeof(profiles) / sizeof(*profiles); ++revision)
+    {
+        obor_profile_build = profiles[revision];
+        for (size_t type = 0; type < sizeof(types) / sizeof(*types); ++type)
+        {
+            actor.modeldata.type = types[type];
+            global_config.cheats = 0;
+            assert(landing_takes_damage(&actor));
+            global_config.cheats = CHEAT_OPTIONS_HEALTH_ACTIVE;
+            const int expected = profiles[revision] >= 7611 && !(types[type] & TYPE_PLAYER);
+            assert(landing_takes_damage(&actor) == expected);
+        }
+    }
+    return 0;
+}
+'''
+        self.assertEqual(native_output(code.replace('@GATE@', gate[1]), data, engine_source=engine), '')
+
 
 if __name__ == '__main__':
     unittest.main()

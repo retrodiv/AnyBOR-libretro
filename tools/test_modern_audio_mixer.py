@@ -91,7 +91,7 @@ void List_Init(List *list)
 
 int main(void)
 {
-    const unsigned profiles[] = {7369, 7391, 7420, 7473, 7474, 7533, 8023};
+    const unsigned profiles[] = {7369, 7391, 7420, 7473, 7474, 7533, 7612, 8023};
     const int requests[] = {0, 1, 2, 63, 64, 65, 128, 255, 256, 257};
     for (size_t i = 0; i < sizeof(profiles) / sizeof(*profiles); ++i)
     {

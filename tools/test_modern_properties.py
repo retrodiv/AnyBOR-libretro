@@ -37,6 +37,7 @@ def program(data, engine):
         if family == 'entity':
             helpers.extend(function(source, name) for name in (
                 'mapstrings_entity_property', 'obor_entity_property_native_id', 'obor_legacy_entity_scalar'))
+            entries.append(function(source, 'obor_report_legacy_entity_property_usage'))
         maps.append(function(source, family + '_get_property_map'))
         entries.extend(function(source, 'openbor_' + op + '_' + family + '_property')
                        for op in ('get', 'set'))

@@ -3,7 +3,7 @@
 /* Engine ABI table generated from src/pin.json. */
 #include "anybor_abi.h"
 
-#define OBOR_CORE_VERSION "0.2.52"
+#define OBOR_CORE_VERSION "0.2.53"
 #define OBOR_FALLBACK_BUILD 6391
 
 typedef struct {
@@ -590,6 +590,8 @@ static const obor_profile_def kProfiles[] = {
     { 7533, "7533", "v4.0 7533", 7533, 7533, 1, 1, 1, "", 0u },
     { 7555, "7555", "v4.0 7555", 7533, 7555, 1, 1, 1, "", 0u },
     { 7556, "7556", "v4.0 7556", 7533, 7556, 1, 1, 1, "", 0u },
+    { 7612, "7612", "v4.0 7612-dev", 7533, 7612, 0, 1, 0, "dev", 0u },
     { 7735, "7735", "v4.0 7735", 7533, 7735, 1, 1, 1, "", 0u },
+    { 8020, "8020", "v4.0 8020-dev", 8023, 8020, 0, 1, 0, "dev", 0u },
     { 8023, "8023", "v4.0 8023-dev", 8023, 8023, 1, 1, 1, "dev", 0u },
 };

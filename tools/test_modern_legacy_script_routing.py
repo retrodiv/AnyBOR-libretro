@@ -87,6 +87,112 @@ def program(data, engine):
 
 
 class ModernLegacyScriptRoutingContracts(unittest.TestCase):
+    def test_8020_player_property_names_and_numeric_ids(self):
+        engine = Path(os.environ.get('OBOR_HISTORICAL_ENGINE', ROOT / 'src/engines/8023'))
+        source = (engine / 'openborscript.c').read_text()
+        utility = (engine / 'source/utils.c').read_text()
+        # The 8020 getter and setter share this original sorted name table.
+        legacy = ('colourmap', 'combokey', 'combostep', 'credits', 'disablekeys', 'ent', 'entity',
+                  'hasplayed', 'hmapl', 'hmapu', 'inputtime', 'joining', 'keys', 'lives', 'mapcount',
+                  'name', 'newkeys', 'numweapons', 'playkeys', 'releasekeys', 'score', 'spawnhealth',
+                  'spawnmp', 'weapnum', 'weapon')
+        buttons = ('button_attack1', 'button_attack2', 'button_attack3', 'button_attack4', 'button_jump',
+                   'button_movedown', 'button_moveleft', 'button_moveright', 'button_moveup',
+                   'button_screenshot', 'button_special', 'button_start')
+        modern = (*buttons, *legacy[:4], 'device_name', *legacy[4:])
+        definitions = re.search(r'(?ms)^enum playerproperty_enum\s*\{.*?^\};', source)[0]
+        historical_definition = re.search(r'(?ms)^enum\s*\{\s*OBOR_LEGACY_PLAYER_PROPERTY_COUNT.*?^\};', source)[0]
+        for name, argument in (('openbor_getplayerproperty', 'arg->lVal'),
+                               ('openbor_changeplayerproperty', 'varlist[1]->lVal')):
+            callback = function(source, name)
+            self.assertIn('mapstrings_playerproperty(varlist, paramCount);', callback)
+            self.assertIn(f'prop = obor_player_property_index({argument});', callback)
+        program = r'''
+#include <stdint.h>
+#include <stdbool.h>
+#include <strings.h>
+#include <string.h>
+#pragma GCC diagnostic ignored "-Wignored-qualifiers"
+#if defined(__clang__)
+#pragma GCC diagnostic ignored "-Wdeprecated-non-prototype"
+#endif
+#include "scriptcommon.h"
+#undef assert
+#include <assert.h>
+#undef printf
+#undef stricmp
+#define stricmp strcasecmp
+
+uint32_t obor_profile_build;
+static char property_name[40];
+
+CHAR *StrCache_Get(int index)
+{
+    assert(index == 1);
+    return property_name;
+}
+
+void ScriptVariant_ChangeType(ScriptVariant *variant, VARTYPE type)
+{
+    variant->vt = type;
+}
+
+@SEARCH@
+@ENUMS@
+@ROUTING@
+
+static int lookup(const char *name, ScriptVariant *value)
+{
+    assert(strlen(name) < sizeof(property_name));
+    strcpy(property_name, name);
+    *value = (ScriptVariant){.vt = VT_STR, .strVal = 1};
+    ScriptVariant index = {.vt = VT_INTEGER};
+    ScriptVariant *arguments[2] = {&index, value};
+    return mapstrings_playerproperty(arguments, 2);
+}
+
+int main(void)
+{
+    static const char *legacy[] = {@LEGACY@};
+    static const char *modern[] = {@MODERN@};
+    const uint32_t revisions[] = {8020, 8021, 8023};
+    ScriptVariant result;
+    for (size_t r = 0; r < sizeof(revisions) / sizeof(*revisions); ++r)
+    {
+        obor_profile_build = revisions[r];
+        const bool old = obor_profile_build == 8020;
+        const char **names = old ? legacy : modern;
+        const int count = old ? sizeof(legacy) / sizeof(*legacy) : sizeof(modern) / sizeof(*modern);
+        for (int i = 0; i < count; ++i)
+        {
+            assert(lookup(names[i], &result) == 1);
+            assert(result.vt == VT_INTEGER && result.lVal == i);
+            const int canonical = obor_player_property_index(result.lVal);
+            assert(canonical >= 0 && canonical < _pp_the_end);
+            assert(strcmp(names[i], modern[canonical]) == 0);
+        }
+    }
+    obor_profile_build = 8020;
+    assert(obor_player_property_index(-1) == _pp_the_end);
+    assert(obor_player_property_index(sizeof(legacy) / sizeof(*legacy)) == _pp_the_end);
+    assert(lookup("device_name", &result) == 0 && result.vt == VT_STR);
+    return 0;
+}
+'''
+        inputs = {
+            'SEARCH': function(utility, 'searchList'),
+            'ENUMS': definitions + '\n' + historical_definition,
+            'ROUTING': '\n'.join(function(source, name) for name in (
+                'obor_legacy_player_properties', 'obor_player_property_index', 'mapstrings_playerproperty')),
+            'LEGACY': ', '.join(map(json.dumps, legacy)),
+            'MODERN': ', '.join(map(json.dumps, modern)),
+        }
+        for key, value in inputs.items():
+            program = program.replace('@' + key + '@', value)
+        result = native_output(program, {'engine': '8023'}, engine_source=engine)
+        self.assertEqual(tuple(line.strip() for line in result.split('Available properties:')[1].splitlines()
+                               if line.strip()), legacy)
+
     def test_original_script_execution_diagnostic(self):
         engine = Path(os.environ.get('OBOR_HISTORICAL_ENGINE', ROOT / 'src/engines/7533'))
         source = (engine / 'openborscript.c').read_text()

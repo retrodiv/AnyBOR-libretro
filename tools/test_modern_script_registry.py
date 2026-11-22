@@ -23,7 +23,7 @@ def program(data):
     methods = '\n'.join(function(source, name) for name in
         ('Script_GetFunctionName', 'Script_GetStringMapFunction', 'Script_LoadSystemFunctions'))
     symbols = data['symbols']
-    stubs = sorted(set(symbols) | {EARLY_MAPPER})
+    stubs = sorted(set(symbols) | {EARLY_MAPPER, 'mapstrings_bind_property'})
     if (not 8 <= len(symbols) <= 512 or len(symbols) != len(set(symbols)) or
             any(not re.fullmatch(r'[A-Za-z_]\w*', name) for name in symbols) or
             set(re.findall(r'\(void\s*\*\)\s*(\w+)', methods)) - set(stubs)):

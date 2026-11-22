@@ -2855,8 +2855,27 @@ void execute_pdie_script(int index)
 
 // ------------------------ Save/load -----------------------------
 
+static bool obor_uses_8020_controls(void)
+{
+    return control_uses_legacy_8020(obor_profile_build);
+}
+
+static bool obor_menu_has_confirm(int keys)
+{
+    if (obor_uses_8020_controls())
+        return (keys & FLAG_ANYBUTTON) != 0;
+    return any_button_except_esc(keys);
+}
+
+static bool obor_menu_has_action(int keys)
+{
+    return obor_menu_has_confirm(keys) ||
+        (obor_uses_8020_controls() && (keys & (FLAG_MOVELEFT | FLAG_MOVERIGHT)));
+}
+
 void clearsettings()
 {
+    const bool legacy = obor_uses_8020_controls();
     int i = 0;
 
     savedata.compatibleversion = COMPATIBLEVERSION;
@@ -2896,8 +2915,11 @@ void clearsettings()
     for (i = 0; i < MAX_PLAYERS; i++)
     {
         savedata.joyrumble[i] = 0;
+        if (legacy)
+            control_legacy_default_keys(i, savedata.keys[i]);
     }
-    control_clearmappings();
+    if (!legacy)
+        control_clearmappings();
 }
 
 
@@ -2916,6 +2938,9 @@ void savesettings()
     }
     fwrite(&savedata, 1, sizeof(savedata), handle);
     fclose(handle);
+
+    if (obor_uses_8020_controls())
+        return;
 
     // save controls
     getBasePath(path, "Saves", 0);
@@ -2940,6 +2965,9 @@ void saveasdefault()
     }
     fwrite(&savedata, 1, sizeof(savedata), handle);
     fclose(handle);
+
+    if (obor_uses_8020_controls())
+        return;
 
     // save controls
     getBasePath(path, "Saves", 0);
@@ -2977,6 +3005,9 @@ void loadsettings()
         clearsettings();
     }
 
+    if (obor_uses_8020_controls())
+        return;
+
     // load controls
     getBasePath(path, "Saves", 0);
     getPakName(tmpname, sizeof(tmpname), 5);
@@ -3005,6 +3036,9 @@ void loadfromdefault()
     {
         clearsettings();
     }
+
+    if (obor_uses_8020_controls())
+        return;
 
     // load controls
     getBasePath(path, "Saves", 0);
@@ -52022,26 +52056,12 @@ void fade_out(int type, int speed)
 
 void apply_controls()
 {
-#if 0 // TODO
-    int p;
-
-    for(p = 0; p < MAX_PLAYERS; p++)
+    if (obor_uses_8020_controls())
     {
-        control_setkey(playercontrolpointers[p], FLAG_ESC,        CONTROL_ESC);
-        control_setkey(playercontrolpointers[p], FLAG_MOVEUP,     savedata.keys[p][SDID_MOVEUP]);
-        control_setkey(playercontrolpointers[p], FLAG_MOVEDOWN,   savedata.keys[p][SDID_MOVEDOWN]);
-        control_setkey(playercontrolpointers[p], FLAG_MOVELEFT,   savedata.keys[p][SDID_MOVELEFT]);
-        control_setkey(playercontrolpointers[p], FLAG_MOVERIGHT,  savedata.keys[p][SDID_MOVERIGHT]);
-        control_setkey(playercontrolpointers[p], FLAG_ATTACK,     savedata.keys[p][SDID_ATTACK]);
-        control_setkey(playercontrolpointers[p], FLAG_ATTACK2,    savedata.keys[p][SDID_ATTACK2]);
-        control_setkey(playercontrolpointers[p], FLAG_ATTACK3,    savedata.keys[p][SDID_ATTACK3]);
-        control_setkey(playercontrolpointers[p], FLAG_ATTACK4,    savedata.keys[p][SDID_ATTACK4]);
-        control_setkey(playercontrolpointers[p], FLAG_JUMP,       savedata.keys[p][SDID_JUMP]);
-        control_setkey(playercontrolpointers[p], FLAG_SPECIAL,    savedata.keys[p][SDID_SPECIAL]);
-        control_setkey(playercontrolpointers[p], FLAG_START,      savedata.keys[p][SDID_START]);
-        control_setkey(playercontrolpointers[p], FLAG_SCREENSHOT, savedata.keys[p][SDID_SCREENSHOT]);
+        control_legacy_usejoy(savedata.usejoy);
+        for (int player = 0; player < MAX_PLAYERS; ++player)
+            control_legacy_apply_keys(player, savedata.keys[player]);
     }
-#endif
 }
 
 
@@ -52434,6 +52454,20 @@ void guistartup()
 }
 
 
+static void obor_load_startup_fonts(void)
+{
+    printf("Loading fonts................\t");
+    load_all_fonts();
+    printf("Done!\n");
+}
+
+static void obor_load_startup_menu(void)
+{
+    printf("Loading menu.txt.............\t");
+    load_menu_txt();
+    printf("Done!\n");
+}
+
 void startup()
 {
     int i;
@@ -52486,6 +52520,9 @@ void startup()
 
     // init. input recorder
     init_input_recorder();
+    const bool legacy = obor_uses_8020_controls();
+    if (legacy)
+        obor_load_startup_fonts();
 
     printf("Loading sprites..............\t");
     load_special_sprites();
@@ -52499,13 +52536,11 @@ void startup()
     load_model_constants();
     printf("Done!\n");
 
-    printf("Loading menu.txt.............\t");
-    load_menu_txt();
-    printf("Done!\n");
-
-    printf("Loading fonts................\t");
-    load_all_fonts();
-    printf("Done!\n");
+    if (!legacy)
+    {
+        obor_load_startup_menu();
+        obor_load_startup_fonts();
+    }
 
     printf("Loading script settings......\t");
     load_script_setting();
@@ -52524,6 +52559,9 @@ void startup()
         borShutdown(1, "Not enough memory for game objects!\n");
     }
     printf("Done!\n");
+
+    if (legacy)
+        obor_load_startup_menu();
 
     /*
         Kratus (01-2024) Moved the translation and menu functions to the end of the engine "startup" function,
@@ -52558,7 +52596,7 @@ void startup()
 
     if(savedata.logo++ > 10)
     {
-        savedata.logo = 1;
+        savedata.logo = legacy ? 0 : 1;
     }
 
     printf("Save settings so far.........\t");
@@ -53183,7 +53221,8 @@ void savelevelinfo()
 void tryvictorypose(entity *ent)
 {
     if( ent &&
-       !(ent->inpain & ~IN_PAIN_NONE) &&
+       (obor_uses_8020_controls() ? (ent->inpain & ~IN_PAIN_NONE) != 0
+                                 : !(ent->inpain & ~IN_PAIN_NONE)) &&
        !ent->falling &&
        !(ent->death_state & DEATH_STATE_DEAD) &&
        !ent->rising &&
@@ -53836,7 +53875,7 @@ int selectplayer(int *players, char *filename, int useSavedGame)
 				}
 				else if (!player[i].hasplayed
 					&& (noshare || credits > 0)
-					&& any_button_except_esc(player[i].newkeys))
+					&& obor_menu_has_confirm(player[i].newkeys))
 				{
 
 					//  Now this player has played.
@@ -53875,7 +53914,7 @@ int selectplayer(int *players, char *filename, int useSavedGame)
 						sound_play_sample(global_sample_list.beep, 0, savedata.effectvol, savedata.effectvol, 100);
 					}
 				}
-				else if (any_button_except_esc(player[i].newkeys) && example[i]) //Kratus (01-05-21) Moved the "anybutton" code to before of the "left/right" code to fix a bug that makes no character chosen when both are pressed together
+				else if (obor_menu_has_confirm(player[i].newkeys) && example[i]) //Kratus (01-05-21) Moved the "anybutton" code to before of the "left/right" code to fix a bug that makes no character chosen when both are pressed together
 				{
 					if (global_sample_list.beep_2 >= 0)
 					{
@@ -54349,7 +54388,7 @@ int menu_difficulty()
         }
         //if(selector<num_difficulties) slider = selector * 4.5;
 
-        if(any_button_except_esc(bothnewkeys))
+        if(obor_menu_has_confirm(bothnewkeys))
         {
 
             if(global_sample_list.beep_2 >= 0)
@@ -54581,7 +54620,7 @@ int choose_mode(int *players)
             selector = 0;
         }
 
-        if(any_button_except_esc(bothnewkeys))
+        if(obor_menu_has_confirm(bothnewkeys))
         {
             if(global_sample_list.beep_2 >= 0)
             {
@@ -54909,6 +54948,142 @@ void safe_set(int *arr, int index, int newkey, int oldkey)
     arr[index] = newkey;
 }
 
+static int obor_edit_player_bindings_8020(int player, char buttonnames[MAX_BTN_NUM][32],
+                                          const int disabledkey[MAX_BTN_NUM])
+{
+    const int OPTIONS_NUM = MAX_BTN_NUM + 3;
+    const int col1 = -8, col2 = 6;
+    int quit = 0, selector = 0, setting = -1, ok = 0;
+    int i, k;
+    ptrdiff_t voffset;
+
+    while(disabledkey[selector]) if(++selector > MAX_BTN_NUM - 1) break;
+
+    while(!quit)
+    {
+        voffset = -6;
+        _menutextm(2, -8, 0, Tr("Player %i"), player + 1);
+        for(i = 0; i < MAX_BTN_NUM; i++)
+        {
+            if(!disabledkey[i])
+            {
+                _menutext((selector == i), col1, voffset, "%s", buttonnames[i]);
+                _menutext((selector == i), col2, voffset, "%s", control_legacy_key_name(savedata.keys[player][i]));
+                voffset++;
+            }
+        }
+
+        ++voffset;
+        if(savedata.joyrumble[player])
+        {
+            _menutext((selector == OPTIONS_NUM - 3), col1, voffset++, Tr("Rumble Enabled"));
+        }
+        else
+        {
+            _menutext((selector == OPTIONS_NUM - 3), col1, voffset++, Tr("Rumble Disabled"));
+        }
+
+        _menutextm((selector == OPTIONS_NUM - 2), ++voffset, 0, Tr("OK"));
+        _menutextm((selector == OPTIONS_NUM - 1), ++voffset, 0, Tr("Cancel"));
+        _menutextm((selector == OPTIONS_NUM), ++voffset, 0, Tr("Default"));
+        update((level != NULL), 0);
+
+        if(setting > -1)
+        {
+            if(bothnewkeys & FLAG_ESC)
+            {
+                savedata.keys[player][setting] = ok;
+                sound_play_sample(global_sample_list.beep_2, 0, savedata.effectvol, savedata.effectvol, 50);
+                setting = -1;
+            }
+            if(setting > -1)
+            {
+                k = control_legacy_scan_key();
+                if(k)
+                {
+                    safe_set(savedata.keys[player], setting, k, ok);
+                    sound_play_sample(global_sample_list.beep_2, 0, savedata.effectvol, savedata.effectvol, 100);
+                    setting = -1;
+                    // Prevent accidental screenshot
+                    bothnewkeys = 0;
+                }
+            }
+        }
+        else
+        {
+            if(bothnewkeys & FLAG_ESC)
+            {
+                quit = 1;
+            }
+            if(bothnewkeys & FLAG_MOVEUP)
+            {
+                do
+                {
+                    if(--selector < 0)
+                    {
+                        break;
+                    }
+                }
+                while(selector < MAX_BTN_NUM && disabledkey[selector]);
+                sound_play_sample(global_sample_list.beep, 0, savedata.effectvol, savedata.effectvol, 100);
+            }
+            if(bothnewkeys & FLAG_MOVEDOWN)
+            {
+                do
+                {
+                    if(++selector > MAX_BTN_NUM - 1) break;
+                }
+                while(disabledkey[selector]);
+                sound_play_sample(global_sample_list.beep, 0, savedata.effectvol, savedata.effectvol, 100);
+            }
+            if(selector < 0)
+            {
+                selector = OPTIONS_NUM;
+            }
+            if(selector > OPTIONS_NUM)
+            {
+                selector = 0;
+                while(disabledkey[selector]) if(++selector > MAX_BTN_NUM - 1) break;
+            }
+
+            if(bothnewkeys & (FLAG_MOVELEFT | FLAG_MOVERIGHT | FLAG_ANYBUTTON))
+            {
+                sound_play_sample(global_sample_list.beep_2, 0, savedata.effectvol, savedata.effectvol, 100);
+
+                if (selector != OPTIONS_NUM - 3 &&
+                    bothnewkeys & (FLAG_MOVELEFT | FLAG_MOVERIGHT)) continue;
+
+                if(selector == OPTIONS_NUM - 3)
+                {
+                    savedata.joyrumble[player] ^= 1;
+                }
+                else if(selector == OPTIONS_NUM - 2) // OK
+                {
+                    quit = 2;
+                }
+                else if(selector == OPTIONS_NUM - 1) // cancel
+                {
+                    quit = 1;
+                }
+                else if(selector == OPTIONS_NUM) // default
+                {
+                    savedata.joyrumble[player] = 0;
+                    control_legacy_default_keys(player, savedata.keys[player]);
+                }
+                else
+                {
+                    setting = selector;
+                    ok = savedata.keys[player][setting];
+                    savedata.keys[player][setting] = 0;
+                    control_legacy_begin_scan();
+                }
+            }
+        }
+    }
+
+    return quit;
+}
+
 void keyboard_setup(int player)
 {
     int quit = 0; 
@@ -55003,7 +55178,7 @@ proceed:
             if(stricmp(command, "disablekey") == 0)
             {
                 sdid = translate_SDID(GET_ARG(1));
-                if(sdid >= 0)
+                if(sdid >= 0 && sdid < MAX_BTN_NUM)
                 {
                     disabledkey[sdid] = 1;
                 }
@@ -55011,9 +55186,9 @@ proceed:
             else if(stricmp(command, "renamekey") == 0)
             {
                 sdid = translate_SDID(GET_ARG(1));
-                if(sdid >= 0)
+                if(sdid >= 0 && sdid < MAX_BTN_NUM)
                 {
-                    strcpy(buttonnames[sdid], GET_ARG(2));
+                    snprintf(buttonnames[sdid], sizeof(buttonnames[sdid]), "%s", GET_ARG(2));
                 }
             }
 
@@ -55028,6 +55203,11 @@ proceed:
     }
 
 finish:
+    if (obor_uses_8020_controls())
+    {
+        quit = obor_edit_player_bindings_8020(player, buttonnames, disabledkey);
+        goto finish_binding;
+    }
 
     while(disabledkey[selector]) if(++selector > MAX_BTN_NUM - 1) break;
 
@@ -55164,6 +55344,7 @@ finish:
         }
     }
 
+finish_binding:
     if(quit == 2)
     {
         apply_controls();
@@ -55195,8 +55376,135 @@ static void safe_set_device(int player, int newdevice, int olddevice)
     playercontrolpointers[player]->deviceID = newdevice;
 }
 
+static void obor_control_options_8020(void)
+{
+    int quit = 0;
+    int selector = 1; // 0
+    int x_pos = -6;
+    #if ANDROID
+    int OPTIONS_NUM = 6;
+    #else
+    int OPTIONS_NUM = 5;
+    #endif
+
+    screen_status |= IN_SCREEN_CONTROL_OPTIONS_MENU;
+    bothnewkeys = 0;
+
+    // Kratus (10-2021) Added a second instance of the "control_init" function while in the Control Options
+    // Useful to refresh some text translation if the language is changed "on-the-fly" and re-detect all active controls
+    control_init();
+    control_legacy_usejoy(savedata.usejoy);
+
+    while(!quit)
+    {
+        _menutextm(2, x_pos-1, 0, Tr("Control Options"));
+        if(savedata.usejoy)
+        {
+            _menutext((selector == 0), x_pos, -2, Tr("GamePads Enabled"));
+            if(!savedata.usejoy)
+            {
+                _menutext((selector == 0), x_pos+11, -2, Tr(" - Device Not Ready"));
+            }
+        }
+        else
+        {
+            _menutext((selector == 0), x_pos, -2, Tr("GamePads Disabled"));
+        }
+        _menutext((selector == 1), x_pos,-1, Tr("Setup Player 1..."));
+        _menutext((selector == 2), x_pos, 0, Tr("Setup Player 2..."));
+        _menutext((selector == 3), x_pos, 1, Tr("Setup Player 3..."));
+        _menutext((selector == 4), x_pos, 2, Tr("Setup Player 4..."));
+        #if ANDROID
+        if(savedata.is_touchpad_vibration_enabled)
+        {
+            _menutextm((selector == 5), 4, 0, Tr("Touchpad Vibration Enabled"));
+        }
+        else
+        {
+            _menutextm((selector == 5), 4, 0, Tr("Touchpad Vibration Disabled"));
+        }
+        _menutextm((selector == 6), 6, 0, Tr("Back"));
+        #else
+        _menutextm((selector == 5), 5, 0, Tr("Back"));
+        #endif
+
+        update((level != NULL), 0);
+
+        if(bothnewkeys & FLAG_ESC)
+        {
+            quit = 1;
+        }
+        if(bothnewkeys & FLAG_MOVEUP)
+        {
+            --selector;
+            if(global_sample_list.beep >= 0)
+            {
+                sound_play_sample(global_sample_list.beep, 0, savedata.effectvol, savedata.effectvol, 100);
+            }
+        }
+        if(bothnewkeys & FLAG_MOVEDOWN)
+        {
+            ++selector;
+            if(global_sample_list.beep >= 0)
+            {
+                sound_play_sample(global_sample_list.beep, 0, savedata.effectvol, savedata.effectvol, 100);
+            }
+        }
+        if(selector < 0)
+        {
+            selector = OPTIONS_NUM;
+        }
+        if(selector > OPTIONS_NUM)
+        {
+            selector = 0;
+        }
+        if(bothnewkeys & (FLAG_MOVELEFT | FLAG_MOVERIGHT | FLAG_ANYBUTTON))
+        {
+
+            if(global_sample_list.beep_2 >= 0)
+            {
+                sound_play_sample(global_sample_list.beep_2, 0, savedata.effectvol, savedata.effectvol, 100);
+            }
+
+            switch(selector)
+            {
+            case 0:
+                control_legacy_usejoy(savedata.usejoy ^= 1);
+                break;
+            case 1:
+                keyboard_setup(0);
+                break;
+            case 2:
+                keyboard_setup(1);
+                break;
+            case 3:
+                keyboard_setup(2);
+                break;
+            case 4:
+                keyboard_setup(3);
+                break;
+            #if ANDROID
+            case 5:
+                savedata.is_touchpad_vibration_enabled ^= 1;
+                break;
+            #endif
+            default:
+                quit = (bothnewkeys & FLAG_ANYBUTTON);
+            }
+        }
+    }
+    savesettings();
+    bothnewkeys = 0;
+    screen_status &= ~IN_SCREEN_CONTROL_OPTIONS_MENU;
+}
+
 void menu_options_input()
 {
+    if (obor_uses_8020_controls())
+    {
+        obor_control_options_8020();
+        return;
+    }
     int quit = 0;
     int selector = 0;
     const int col1 = -8;
@@ -55472,7 +55780,7 @@ void menu_options_sound()
             selector = 0;
         }
 
-        if(bothnewkeys & (FLAG_MOVELEFT | FLAG_MOVERIGHT) || any_button_except_esc(bothnewkeys))
+        if(bothnewkeys & (FLAG_MOVELEFT | FLAG_MOVERIGHT) || obor_menu_has_confirm(bothnewkeys))
         {
             dir = 0;
 
@@ -55639,7 +55947,7 @@ void menu_options_config()     //  OX. Load from / save to default.cfg. Restore 
             selector = 0;
         }
 
-        if(any_button_except_esc(bothnewkeys))
+        if(obor_menu_has_action(bothnewkeys))
         {
 
             if(global_sample_list.beep_2 >= 0)
@@ -55969,7 +56277,7 @@ void menu_options_debug() {
 
         // Toggle selection value on left/right or
         // trigger button press.
-        if(bothnewkeys & (FLAG_MOVELEFT | FLAG_MOVERIGHT) || any_button_except_esc(bothnewkeys))
+        if(bothnewkeys & (FLAG_MOVELEFT | FLAG_MOVERIGHT) || obor_menu_has_confirm(bothnewkeys))
         {
             if(global_sample_list.beep_2 >= 0) {
                 sound_play_sample(global_sample_list.beep_2, 0, savedata.effectvol, savedata.effectvol, 100);
@@ -56196,7 +56504,7 @@ void menu_options_cheats()
         * Toggle selection value on left/right or
         * trigger button press.
         */
-        if (bothnewkeys & (FLAG_MOVELEFT | FLAG_MOVERIGHT) || any_button_except_esc(bothnewkeys))
+        if (bothnewkeys & (FLAG_MOVELEFT | FLAG_MOVERIGHT) || obor_menu_has_confirm(bothnewkeys))
         {
             if (global_sample_list.beep_2 >= 0)
             {
@@ -56378,7 +56686,7 @@ void menu_options_system()
             selector = 0;
         }
 
-        if(any_button_except_esc(bothnewkeys))
+        if(obor_menu_has_action(bothnewkeys))
         {
             sound_play_sample(global_sample_list.beep_2, 0, savedata.effectvol, savedata.effectvol, 100);
 
@@ -56425,6 +56733,7 @@ void menu_options_system()
 
 void menu_options_video()
 {
+    const int row_shift = obor_uses_8020_controls() ? 2 : 0;
     int quit = 0;
     int selector = 0;
     int dir;
@@ -56435,36 +56744,36 @@ void menu_options_video()
 
     while(!quit)
     {
-        _menutextm(2, -7, 0, Tr("Video Options"));
-        _menutext((selector == 0), col1, -5, Tr("Brightness:"));
-        _menutext((selector == 0), col2, -5, "%i", savedata.brightness);
-        _menutext((selector == 1), col1, -4, Tr("Gamma:"));
-        _menutext((selector == 1), col2, -4, "%i", savedata.gamma);
-        _menutext((selector == 2), col1, -3, Tr("Window Offset:"));
-        _menutext((selector == 2), col2, -3, "%i", savedata.windowpos);
+        _menutextm(2, -7 + row_shift, 0, Tr("Video Options"));
+        _menutext((selector == 0), col1, -5 + row_shift, Tr("Brightness:"));
+        _menutext((selector == 0), col2, -5 + row_shift, "%i", savedata.brightness);
+        _menutext((selector == 1), col1, -4 + row_shift, Tr("Gamma:"));
+        _menutext((selector == 1), col2, -4 + row_shift, "%i", savedata.gamma);
+        _menutext((selector == 2), col1, -3 + row_shift, Tr("Window Offset:"));
+        _menutext((selector == 2), col2, -3 + row_shift, "%i", savedata.windowpos);
 
 #if SDL
-        _menutext((selector == 3), col1, -2, Tr("Display Mode:"));
-        _menutext((selector == 3), col2, -2, savedata.fullscreen ? Tr("Full") : Tr("Window"));
+        _menutext((selector == 3), col1, -2 + row_shift, Tr("Display Mode:"));
+        _menutext((selector == 3), col2, -2 + row_shift, savedata.fullscreen ? Tr("Full") : Tr("Window"));
 
-        _menutext((selector == 4), col1, -1, Tr("Video Backend:"));
-        _menutext((selector == 4), col2, -1, (opengl ? Tr("OpenGL") : Tr("SDL")));
+        _menutext((selector == 4), col1, -1 + row_shift, Tr("Video Backend:"));
+        _menutext((selector == 4), col2, -1 + row_shift, (opengl ? Tr("OpenGL") : Tr("SDL")));
 
-        _menutext((selector == 5), col1, 0, Tr("Scale:"));
+        _menutext((selector == 5), col1, 0 + row_shift, Tr("Scale:"));
 #ifdef ANDROID
         if(savedata.hwscale == 0)
 #else
 		if(savedata.fullscreen)
 #endif
         {
-            _menutext((selector == 5), col2, 0, Tr("Automatic"));
+            _menutext((selector == 5), col2, 0 + row_shift, Tr("Automatic"));
         }
         else
         {
-            _menutext((selector == 5), col2, 0, "%4.2fx - %ix%i", savedata.hwscale, (int)(videomodes.hRes * savedata.hwscale), (int)(videomodes.vRes * savedata.hwscale));
+            _menutext((selector == 5), col2, 0 + row_shift, "%4.2fx - %ix%i", savedata.hwscale, (int)(videomodes.hRes * savedata.hwscale), (int)(videomodes.vRes * savedata.hwscale));
         }
 
-        _menutext((selector == 6), col1, 1, Tr("Hardware Filter:"));
+        _menutext((selector == 6), col1, 1 + row_shift, Tr("Hardware Filter:"));
         {
             char *filterName;
             if (savedata.hwscale == 1.0 && !savedata.fullscreen)
@@ -56475,11 +56784,11 @@ void menu_options_video()
                 filterName = "Simple";
             else
                 filterName = "Bilinear";
-            _menutext((selector == 6), col2, 1, Tr(filterName));
+            _menutext((selector == 6), col2, 1 + row_shift, Tr(filterName));
         }
 
-        _menutext((selector == 7), col1, 2, Tr("Software Filter:"));
-        _menutext((selector == 7), col2, 2, ((savedata.hwscale >= 2.0 || savedata.fullscreen) ? Tr(GfxBlitterNames[savedata.swfilter]) : Tr("Disabled")));
+        _menutext((selector == 7), col1, 2 + row_shift, Tr("Software Filter:"));
+        _menutext((selector == 7), col2, 2 + row_shift, ((savedata.hwscale >= 2.0 || savedata.fullscreen) ? Tr(GfxBlitterNames[savedata.swfilter]) : Tr("Disabled")));
 
         char fpslimit_text[32];
         switch (savedata.fpslimit)
@@ -56501,20 +56810,20 @@ void menu_options_video()
                 break;
         }
 
-        _menutext((selector == 8), col1, 3, Tr("FPS Limit:"));
-        _menutext((selector == 8), col2, 3, fpslimit_text);
+        _menutext((selector == 8), col1, 3 + row_shift, Tr("FPS Limit:"));
+        _menutext((selector == 8), col2, 3 + row_shift, fpslimit_text);
 
         if(savedata.fullscreen)
         {
-            _menutext((selector == 9), col1, 4, Tr("Fullscreen Type:"));
-            _menutext((selector == 9), col2, 4, (savedata.stretch ? Tr("Stretch to Screen") : Tr("Preserve Aspect Ratio")));
+            _menutext((selector == 9), col1, 4 + row_shift, Tr("Fullscreen Type:"));
+            _menutext((selector == 9), col2, 4 + row_shift, (savedata.stretch ? Tr("Stretch to Screen") : Tr("Preserve Aspect Ratio")));
         }
         else if(selector == 9)
         {
             selector = (bothnewkeys & FLAG_MOVEUP) ? 8 : 10;
         }
 
-        _menutextm((selector == 10), 7, 0, Tr("Back"));
+        _menutextm((selector == 10), 7 + row_shift, 0, Tr("Back"));
         if(selector < 0)
         {
             selector = 10;
@@ -56547,7 +56856,7 @@ void menu_options_video()
                 sound_play_sample(global_sample_list.beep, 0, savedata.effectvol, savedata.effectvol, 100);
             }
         }
-        if(bothnewkeys & (FLAG_MOVELEFT | FLAG_MOVERIGHT) || any_button_except_esc(bothnewkeys))
+        if(bothnewkeys & (FLAG_MOVELEFT | FLAG_MOVERIGHT) || obor_menu_has_confirm(bothnewkeys))
         {
             dir = 0;
 
@@ -56733,7 +57042,7 @@ void menu_options()
         {
             quit = 1;
         }
-        else if(bothnewkeys & FLAG_MOVEUP)
+        if((bothnewkeys & FLAG_MOVEUP) && (obor_uses_8020_controls() || !(bothnewkeys & FLAG_ESC)))
         {
             if(selector <= VIDEO_OPTION)
             {
@@ -56746,7 +57055,8 @@ void menu_options()
                 sound_play_sample(global_sample_list.beep, 0, savedata.effectvol, savedata.effectvol, 100);
             }
         }
-        else if(bothnewkeys & FLAG_MOVEDOWN)
+        if((bothnewkeys & FLAG_MOVEDOWN) &&
+           (obor_uses_8020_controls() || !(bothnewkeys & (FLAG_ESC | FLAG_MOVEUP))))
         {
             ++selector;
             if(selector > BACK_OPTION)
@@ -56759,7 +57069,8 @@ void menu_options()
                 sound_play_sample(global_sample_list.beep, 0, savedata.effectvol, savedata.effectvol, 100);
             }
         }
-        else if(any_button_except_esc(bothnewkeys))
+        if(obor_menu_has_action(bothnewkeys) &&
+           (obor_uses_8020_controls() || !(bothnewkeys & (FLAG_MOVEUP | FLAG_MOVEDOWN))))
         {
 
             if(global_sample_list.beep_2 >= 0)
@@ -56962,7 +57273,7 @@ void openborMain(int argc, char **argv)
                     sound_play_sample(global_sample_list.beep, 0, savedata.effectvol, savedata.effectvol, 100);
                 }
             }
-            if(any_button_except_esc(bothnewkeys))
+            if(obor_menu_has_confirm(bothnewkeys))
             {
                 if(global_sample_list.beep_2 >= 0)
                 {

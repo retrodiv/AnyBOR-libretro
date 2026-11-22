@@ -13,6 +13,12 @@
 #ifndef CONTROL_H
 #define CONTROL_H
 
+/* Virtual key codes used by the player-based control menus. */
+#define OBOR_KEYBASE 100
+#define OBOR_KEYSPAN 32
+#define OBOR_KEY(pl, btn) (OBOR_KEYBASE + (pl) * OBOR_KEYSPAN + (btn))
+#define CONTROL_NONE (601 + 64 * 99)
+
 #if OBOR_ENGINE_BUILD >= 8023 || OBOR_ENGINE_BUILD == 7533
 #include <stdbool.h>
 #include <stdint.h>
@@ -45,15 +51,20 @@ void control_update(s_playercontrols **allPlayerControls, int numPlayers);
 void control_update_keyboard(s_playercontrols *keyboardControls);
 const char *control_getkeyname(int deviceID, int keycode);
 void control_rumble(int deviceID, int ratio, int msec);
+static inline bool control_uses_legacy_8020(uint32_t build)
+{
+    return build && build < 8021u;
+}
+void control_legacy_default_keys(int player, int *keys);
+void control_legacy_apply_keys(int player, const int *keys);
+void control_legacy_usejoy(int enabled);
+void control_legacy_begin_scan(void);
+int control_legacy_scan_key(void);
+const char *control_legacy_key_name(int keycode);
 #define control_getmappedkeyname(deviceID, key) \
     control_getkeyname(deviceID, control_getmappings(deviceID)[key])
 
 #else
-
-#define OBOR_KEYBASE 100
-#define OBOR_KEYSPAN 32
-#define OBOR_KEY(pl, btn) (OBOR_KEYBASE + (pl) * OBOR_KEYSPAN + (btn))
-/* button indexes follow anybor_abi.h (OBOR_BTN_*) */
 
 #define JOY_TYPE_DEFAULT 0
 #define JOY_AXIS_X 0
@@ -70,9 +81,6 @@ void control_rumble(int deviceID, int ratio, int msec);
 #define SDLK_LAST (OBOR_KEYBASE + 4 * OBOR_KEYSPAN)
 
 #define CONTROL_ESC OBOR_KEY(0, 11 /* OBOR_BTN_ESC */)
-
-/* sentinel used by newer engines (>=7xxx) to clear a binding */
-#define CONTROL_NONE ((JOY_LIST_FIRST + 1) + (JOY_MAX_INPUTS * 99))
 
 #define CONTROL_DEFAULT1_UP OBOR_KEY(0, 0)
 #define CONTROL_DEFAULT1_DOWN OBOR_KEY(0, 1)

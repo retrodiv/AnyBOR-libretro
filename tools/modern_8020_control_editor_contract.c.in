@@ -1,0 +1,139 @@
+/* SPDX-License-Identifier: BSD-3-Clause
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me>
+ */
+#include "openbor.h"
+#include "translation.h"
+#include <stdlib.h>
+#include <string.h>
+#undef assert
+#include <assert.h>
+#undef printf
+#undef _menutext
+#undef _menutextm
+
+uint32_t obor_profile_build = 8020;
+key_mask_t bothnewkeys;
+unsigned screen_status;
+s_savedata savedata;
+s_level *level;
+static s_global_sample global_sample_list;
+static s_savedata stored;
+static const unsigned *events;
+static int event_count, frame, scans, begins, saves, loads, applies, resets;
+static unsigned visited;
+static char player_title[32];
+static const int replacement = OBOR_KEY(1, 9);
+
+static void record_settings(void) { ++saves; stored = savedata; }
+static void restore_settings(void) { ++loads; savedata = stored; }
+static void apply_bindings(void) { ++applies; }
+static void begin_scan(void) { ++begins; }
+static int scan_key(void) { ++scans; return replacement; }
+static void setup_player(int player) { visited |= 1u << player; }
+static void default_player(int player, int *keys)
+{
+    assert(player == 0 && keys == savedata.keys[0]);
+    ++resets;
+    keys[0] = OBOR_KEY(0, 0);
+}
+static int no_menu_config(char *path, char **buffer, size_t *size)
+{
+    assert(!strcmp(path, "translation/menu.txt") || !strcmp(path, "data/menu.txt"));
+    *buffer = NULL;
+    *size = 0;
+    return 0;
+}
+static void menu_text(int selected, int x, int y, const char *format, ...)
+{
+    (void)selected;
+    (void)x;
+    (void)y;
+    if (!strcmp(format, "Player %i") || !strcmp(format, "Control Options"))
+        snprintf(player_title, sizeof(player_title), "%s", format);
+}
+char *ob_gettrans(char *text) { return text; }
+static void observed_update(int ingame, int wait)
+{
+    assert(!ingame && !wait);
+    if (!screen_status) return;
+    assert(frame < event_count);
+    bothnewkeys = events[frame++];
+}
+
+#define savesettings record_settings
+#define loadsettings restore_settings
+#define apply_controls apply_bindings
+#define clearbuttons(player) do { savedata.joyrumble[player] = 0; default_player(player, savedata.keys[player]); } while (0)
+#define buffer_pakfile no_menu_config
+#define ParseArgs(...) abort()
+#define getNewLineStart(...) (abort(), 0)
+#define translate_SDID(...) (abort(), 0)
+#define control_getkeyname(...) "bound"
+#define control_scankey scan_key
+#define keyboard_getlastkey begin_scan
+#define control_legacy_key_name(...) "bound"
+#define control_legacy_scan_key scan_key
+#define control_legacy_begin_scan begin_scan
+#define control_legacy_default_keys default_player
+#define control_legacy_usejoy(...) ((void)(__VA_ARGS__))
+#define control_init(...) ((void)0)
+#define control_getjoyenabled() savedata.usejoy
+#define control_usejoy(...) ((void)(__VA_ARGS__))
+#define sound_play_sample(...) ((void)0)
+#define update observed_update
+#define _menutext menu_text
+#define _menutextm menu_text
+#define printf(...) ((void)0)
+#define keyboard_setup setup_player
+@OPTIONS@
+#undef keyboard_setup
+@FUNCTIONS@
+#undef printf
+
+static void prepare(const unsigned *keys, int count)
+{
+    events = keys;
+    event_count = count;
+    frame = scans = begins = saves = loads = applies = resets = 0;
+    bothnewkeys = screen_status = visited = 0;
+    memset(&savedata, 0, sizeof(savedata));
+    savedata.usejoy = savedata.joyrumble[0] = 1;
+    savedata.keys[0][SDID_MOVEUP] = OBOR_KEY(0, 1);
+    savedata.keys[0][SDID_MOVEDOWN] = replacement;
+}
+
+#define RUN(keys, function) do { prepare(keys, sizeof(keys) / sizeof(*keys)); function; \
+    assert(frame == event_count && !bothnewkeys && !screen_status); } while (0)
+int main(void)
+{
+    const unsigned commit[] = {FLAG_ATTACK, 0, FLAG_MOVEUP, FLAG_MOVEUP, FLAG_MOVEUP, FLAG_ATTACK};
+    RUN(commit, keyboard_setup(0));
+    assert(!strcmp(player_title, "Player %i"));
+    assert(saves == 2 && loads == 0 && applies == 1 && begins == 1 && scans == 1);
+    assert(savedata.keys[0][SDID_MOVEUP] == replacement && savedata.keys[0][SDID_MOVEDOWN] == OBOR_KEY(0, 1));
+
+    const unsigned cancel[] = {FLAG_ATTACK, 0, FLAG_ESC};
+    RUN(cancel, keyboard_setup(0));
+    assert(saves == 1 && loads == 1 && applies == 0 && begins == 1 && scans == 1);
+    assert(savedata.keys[0][SDID_MOVEUP] == OBOR_KEY(0, 1) && savedata.keys[0][SDID_MOVEDOWN] == replacement);
+
+    const unsigned cancel_capture[] = {FLAG_ATTACK, FLAG_ESC, FLAG_ESC};
+    RUN(cancel_capture, keyboard_setup(0));
+    assert(loads == 1 && applies == 0 && begins == 1 && scans == 0);
+    assert(savedata.keys[0][SDID_MOVEUP] == OBOR_KEY(0, 1));
+
+    const unsigned reset[] = {FLAG_MOVEUP, FLAG_ATTACK, FLAG_MOVEUP, FLAG_MOVEUP, FLAG_ATTACK};
+    RUN(reset, keyboard_setup(0));
+    assert(resets == 1 && saves == 2 && applies == 1 && !savedata.joyrumble[0]);
+    assert(savedata.keys[0][SDID_MOVEUP] == OBOR_KEY(0, 0));
+
+    const unsigned players[] = {FLAG_ATTACK, FLAG_MOVEDOWN, FLAG_ATTACK, FLAG_MOVEDOWN,
+        FLAG_ATTACK, FLAG_MOVEDOWN, FLAG_ATTACK, FLAG_ESC};
+    RUN(players, @MENU_CALL@());
+    assert(visited == 15u && saves == 1 && !strcmp(player_title, "Control Options"));
+
+    const unsigned toggle[] = {FLAG_MOVEUP, FLAG_ATTACK, FLAG_ESC};
+    RUN(toggle, @MENU_CALL@());
+    assert(!savedata.usejoy && saves == 1);
+    return 0;
+}

@@ -17,7 +17,7 @@
       "upstream_sha256": null
     },
     "openbor.c": {
-      "distributed_sha256": "b55bb41dabe8695d3498587b38de8f67805164adae735b9f663d4c8c74c3bfbb",
+      "distributed_sha256": "fc2ceab879d66d5c034bb7468312484411b1f66d62a53eddfe92d78d861fada3",
       "modified": true,
       "summary": "Apply the port's engine corrections and select the PC video configuration on macOS. Derive output names from the content basename with explicit destination capacities, and reject overflowing output path joins. Bound raw palette stores to the declared allocation while retaining its native in-range layout and complete input reads. Leave multiplayer slots without a selected model available to join even if game scripts preassign lives to them. Let a missing basename-only PAK self-check read the active frontend content after it has been validated and prepared. Allocate each model's animation pointer table through the highest animation index that model uses, and bound cache, copy and cleanup paths to that capacity. Ignore optional defense and offense entries outside the configured attack-type range with a log warning before accessing their tables. Yield after each newly completed model during explicit model-list or level preparation, and defer states until that preparation has cleaned up its intermediate parsers and handles. Use four independent RetroPad devices and per-device mappings. Place player state in aligned storage for PE SIMD reads. Yield to the frontend and decoder workers while asynchronous movies are pending. Grow each collision collection's pointer table only through its highest author-facing slot. Return a defined null result for absent colourmap models or tables while retaining valid palette fallback. Keep selected palette-conversion reads bounded and reject missing maps or flags, while preserving unselected slots and native allocation failure callbacks. Check destination animation capacity when retaining an animation across model changes, preserving the native fallback and timing. Access script-container pointer slots with byte copies, preserving record layout, pointer values and native copy/cleanup order. Pointer-slot allocation and release accept byte storage without imposing pointer alignment on a packed field. Release each sprite owner once and complete cleanup independently of alias counts. Preserve native sprite-map capacity policies, check allocation extents and retain existing storage and capacity when growth is unavailable. Validate sprite-node allocations and release partial resources without changing existing owners. Check cached sprite availability before reading metadata and ignore cache requests for absent nodes. Capture explicit shutdown failure text before cleanup and bound legacy diagnostic formatting. Receive layer screen outputs in naturally aligned storage before assigning the packed member.",
       "topics": [
@@ -40,6 +40,7 @@
         "image-loader-safety",
         "level-consumer-storage",
         "loading-screen-presentation",
+        "logical-profile-compatibility",
         "model-attack-type-bounds",
         "model-constructor-storage",
         "palette-conversion-safety",
@@ -83,13 +84,14 @@
       "upstream_sha256": "d615b34d570286ab2479d389f64f1acf967141559243d0b03e8e1928af945dfd"
     },
     "openborscript.c": {
-      "distributed_sha256": "f6d7daff8eedcd5e8fdaba9a84c5a16b439f6571ebc3dc14f2cde31c68d952e4",
+      "distributed_sha256": "6129736772e6090695f1ebe2d53e699a1beb8772a73d3f851aed55287b1483d5",
       "modified": true,
       "summary": "Dispatch native string mapping through explicitly tagged compiled call targets. Derive output names from the content basename with explicit destination capacities, and reject overflowing output path joins. Compact compiler-only instruction records after resolving value ownership, preserving branch and export anchors, all mutable values and exactly-once pool cleanup. Retain shared interpreters through the last script reference while preserving independent variables, replacement and native callbacks. Track diagnostic comments independently so interpreter replacement can retain them. Resolve text-property names within the actual table bounds while preserving native numeric selectors. Reject missing colourtable indices and keep selector arithmetic and table reads defined.",
       "topics": [
         "collision-selector-inputs",
         "colourtable-selector-bounds",
         "defense-query-input-bounds",
+        "logical-profile-compatibility",
         "player-property-inputs",
         "record-dates-and-file-notices",
         "script-argument-offsets",

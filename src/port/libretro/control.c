@@ -14,6 +14,49 @@
 #include <stdio.h>
 #include <string.h>
 
+static int key_down(int code)
+{
+    if (code < OBOR_KEYBASE || code >= OBOR_KEYBASE + 4 * OBOR_KEYSPAN)
+        return 0;
+    int player = (code - OBOR_KEYBASE) / OBOR_KEYSPAN;
+    int button = (code - OBOR_KEYBASE) % OBOR_KEYSPAN;
+    return button < 16 && obor_pad[player][button];
+}
+
+static unsigned char prev_pad[4][16];
+
+static int scan_virtual_key(int ports)
+{
+    int hit = 0;
+    for (int port = 0; port < ports && !hit; ++port) {
+        for (int button = 0; button < 16; ++button) {
+            if (obor_pad[port][button] && !prev_pad[port][button]) {
+                hit = OBOR_KEY(port, button);
+                break;
+            }
+        }
+    }
+    memcpy(prev_pad, obor_pad, sizeof(prev_pad));
+    return hit;
+}
+
+static char *virtual_key_name(unsigned int keycode)
+{
+    static const char *btn_names[16] = {
+        "Up", "Down", "Left", "Right", "Attack1", "Attack2", "Attack3",
+        "Attack4", "Jump", "Special", "Start", "Esc", "Shot", "?", "?", "?",
+    };
+    static char name[32];
+    if (keycode >= OBOR_KEYBASE && keycode < OBOR_KEYBASE + 4 * OBOR_KEYSPAN) {
+        int port = ((int)keycode - OBOR_KEYBASE) / OBOR_KEYSPAN;
+        int button = ((int)keycode - OBOR_KEYBASE) % OBOR_KEYSPAN;
+        snprintf(name, sizeof(name), "P%d %s", port + 1,
+                 button < 16 ? btn_names[button] : "?");
+        return name;
+    }
+    return (char *)"None";
+}
+
 #if OBOR_ENGINE_BUILD >= 8023 || OBOR_ENGINE_BUILD == 7533
 
 /* The controller branch indexes devices, not a global keyboard keyspace.
@@ -25,13 +68,13 @@ static int mapping_ready;
 static int remap_device = -1;
 static int remap_key = -1;
 static unsigned char remap_previous[16];
+static const int default_buttons[OBOR_INPUT_COUNT] = {
+    0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 12, 11
+};
 
 static void defaults(int device)
 {
-    static const int buttons[OBOR_INPUT_COUNT] = {
-        0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 12, 11
-    };
-    memcpy(mappings[device], buttons, sizeof(buttons));
+    memcpy(mappings[device], default_buttons, sizeof(default_buttons));
 }
 
 bool control_isvaliddevice(int deviceID)
@@ -186,6 +229,75 @@ bool control_savemappings(const char *filename)
 
 #if OBOR_ENGINE_BUILD >= 8023
 
+static int legacy_keys[4][OBOR_INPUT_COUNT];
+static int legacy_usejoy;
+
+void control_legacy_default_keys(int player, int *keys)
+{
+    for (int button = 0; button < OBOR_INPUT_COUNT - 1; ++button)
+        keys[button] = player == 0 ? OBOR_KEY(0, default_buttons[button]) : CONTROL_NONE;
+}
+
+void control_legacy_apply_keys(int player, const int *keys)
+{
+    if (!control_isvaliddevice(player))
+        return;
+    memcpy(legacy_keys[player], keys, sizeof(legacy_keys[player]));
+    legacy_keys[player][OBOR_INPUT_COUNT - 1] = OBOR_KEY(0, default_buttons[OBOR_INPUT_COUNT - 1]);
+}
+
+void control_legacy_usejoy(int enabled)
+{
+    legacy_usejoy = enabled;
+}
+
+void control_legacy_begin_scan(void)
+{
+    memcpy(prev_pad, obor_pad, sizeof(prev_pad));
+}
+
+int control_legacy_scan_key(void)
+{
+    return scan_virtual_key(legacy_usejoy ? 4 : 1);
+}
+
+const char *control_legacy_key_name(int keycode)
+{
+    return virtual_key_name(keycode);
+}
+
+static void update_legacy_input(s_playercontrols **players, int count)
+{
+    obor_poll_tick();
+    for (int i = 0; i < count; ++i) {
+        s_playercontrols *player = players[i];
+        const int device = player->deviceID;
+        uint32_t primary = 0;
+        uint32_t other = 0;
+        if (control_isvaliddevice(device)) {
+            for (int button = 0; button < OBOR_INPUT_COUNT; ++button) {
+                const int code = legacy_keys[device][button];
+                if (!key_down(code))
+                    continue;
+                if (code < OBOR_KEY(1, 0))
+                    primary |= UINT32_C(1) << button;
+                else if (legacy_usejoy)
+                    other |= UINT32_C(1) << button;
+            }
+            /* The primary RetroPad stands in for the original keyboard. */
+            if (device == 0 && !primary) {
+                for (int button = 0; button < OBOR_INPUT_COUNT; ++button) {
+                    if (obor_pad[0][default_buttons[button]])
+                        primary |= UINT32_C(1) << button;
+                }
+            }
+        }
+        const uint32_t flags = primary | other;
+        player->newkeyflags = flags & ~player->keyflags;
+        player->keyflags = flags;
+    }
+}
+
 void control_init(void)
 {
     begin_device_input();
@@ -198,7 +310,10 @@ void control_exit(void)
 
 void control_update(s_playercontrols **players, int count)
 {
-    update_device_input(players, count);
+    if (control_uses_legacy_8020(obor_profile_build))
+        update_legacy_input(players, count);
+    else
+        update_device_input(players, count);
 }
 
 void control_update_keyboard(s_playercontrols *player)
@@ -238,7 +353,6 @@ void control_rumble(int deviceID, int ratio, int msec)
 #else
 
 static int usejoy = 1;
-static unsigned char prev_pad[4][16]; /* for control_scankey edge detect */
 
 #if OBOR_ENGINE_BUILD == 7533
 extern s_playercontrols *playercontrolpointers[];
@@ -303,17 +417,6 @@ void control_setkey(s_playercontrols *pcontrols, unsigned int flag, int key)
     pcontrols->settings[flag_to_index(flag)] = key;
 }
 
-static int key_down(int code)
-{
-    if (code < OBOR_KEYBASE || code >= OBOR_KEYBASE + 4 * OBOR_KEYSPAN)
-        return 0;
-    int pl = (code - OBOR_KEYBASE) / OBOR_KEYSPAN;
-    int btn = (code - OBOR_KEYBASE) % OBOR_KEYSPAN;
-    if (btn >= 16)
-        return 0;
-    return obor_pad[pl][btn];
-}
-
 #if OBOR_ENGINE_BUILD == 6391
 extern s_playercontrols default_control;
 extern int allow_default_keys(void);
@@ -357,17 +460,7 @@ void control_update(s_playercontrols **playercontrols, int numplayers)
  * in-game control-binding menu. */
 int control_scankey(void)
 {
-    int hit = 0;
-    for (int pl = 0; pl < 4 && !hit; pl++) {
-        for (int btn = 0; btn < 16; btn++) {
-            if (obor_pad[pl][btn] && !prev_pad[pl][btn]) {
-                hit = OBOR_KEY(pl, btn);
-                break;
-            }
-        }
-    }
-    memcpy(prev_pad, obor_pad, sizeof(prev_pad));
-    return hit;
+    return scan_virtual_key(4);
 }
 
 int keyboard_getlastkey(void)
@@ -377,19 +470,7 @@ int keyboard_getlastkey(void)
 
 char *control_getkeyname(unsigned int keycode)
 {
-    static const char *btn_names[16] = {
-        "Up", "Down", "Left", "Right", "Attack1", "Attack2", "Attack3",
-        "Attack4", "Jump", "Special", "Start", "Esc", "Shot", "?", "?", "?",
-    };
-    static char name[32];
-    if (keycode >= OBOR_KEYBASE && keycode < OBOR_KEYBASE + 4 * OBOR_KEYSPAN) {
-        int pl = ((int)keycode - OBOR_KEYBASE) / OBOR_KEYSPAN;
-        int btn = ((int)keycode - OBOR_KEYBASE) % OBOR_KEYSPAN;
-        snprintf(name, sizeof(name), "P%d %s", pl + 1,
-                 btn < 16 ? btn_names[btn] : "?");
-        return name;
-    }
-    return (char *)"None";
+    return virtual_key_name(keycode);
 }
 
 /* Rumble: the engine pushes requests here; the glue polls them out once

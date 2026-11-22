@@ -1,7 +1,7 @@
 {
   "core_name": "AnyBOR",
   "core_basename": "anybor_libretro",
-  "version": "0.2.52",
+  "version": "0.2.53",
   "fallback_build": "6391",
   "profiles": [
     {
@@ -4049,6 +4049,19 @@
       "upstream_branch": "master"
     },
     {
+      "build": "7612",
+      "engine": "7533",
+      "major": "v4.0",
+      "stage": "dev",
+      "automatic": false,
+      "tagged": true,
+      "triage": false,
+      "upstream_commit": "632699c9e95cb0bd5c63dbb60245db177e9d41eb",
+      "upstream_date": "2024-02-13",
+      "upstream_branch": "development revision",
+      "covers": "Upstream development revision; exact filename tag or core option"
+    },
+    {
       "build": "7735",
       "engine": "7533",
       "major": "v4.0",
@@ -4058,6 +4071,19 @@
       "upstream_date": "2025-05-04",
       "covers": "7557-7735 automatically; exact filename tag or core option",
       "upstream_branch": "master"
+    },
+    {
+      "build": "8020",
+      "engine": "8023",
+      "major": "v4.0",
+      "stage": "dev",
+      "automatic": false,
+      "tagged": true,
+      "triage": false,
+      "upstream_commit": "9d81480f8481fbb9e76b0b5f2a5dfa408376761a",
+      "upstream_date": "2026-08-24",
+      "upstream_branch": "development revision",
+      "covers": "Upstream development revision; exact filename tag or core option"
     },
     {
       "build": "8023",
@@ -4248,6 +4274,18 @@
       "commit": "8a180f22934d574d0159693951d0339eedc53f8a",
       "license_file": "LICENSES/OpenBOR-7142.txt",
       "license_sha256": "adfc28feba4d32bb3933b29fe55fd0a6aa746084704c3ee71fc3f732706b9aa4"
+    },
+    {
+      "build": "7612",
+      "commit": "632699c9e95cb0bd5c63dbb60245db177e9d41eb",
+      "license_file": "LICENSES/OpenBOR-profile-7735-BSD-3-Clause.txt",
+      "license_sha256": "b8f3916944f0b5aee216ef7a494820d17ae658336a4680992dc244ebedecf3ea"
+    },
+    {
+      "build": "8020",
+      "commit": "9d81480f8481fbb9e76b0b5f2a5dfa408376761a",
+      "license_file": "LICENSES/OpenBOR-profile-7735-BSD-3-Clause.txt",
+      "license_sha256": "b8f3916944f0b5aee216ef7a494820d17ae658336a4680992dc244ebedecf3ea"
     }
   ]
 }

@@ -8146,11 +8146,63 @@ enum playerproperty_enum
     _pp_the_end
 };
 
+enum
+{
+    OBOR_LEGACY_PLAYER_PROPERTY_COUNT = _pp_the_end - _pp_colourmap - 1,
+    OBOR_LEGACY_PLAYER_PROPERTY_DEVICE_SLOT = _pp_device_name - _pp_colourmap
+};
+
+static int obor_legacy_player_properties(void)
+{
+    return obor_profile_build && obor_profile_build < 8021u;
+}
+
+static int obor_player_property_index(int property)
+{
+    if (!obor_legacy_player_properties())
+    {
+        return property;
+    }
+    if (property < 0 || property >= OBOR_LEGACY_PLAYER_PROPERTY_COUNT)
+    {
+        return _pp_the_end;
+    }
+    return _pp_colourmap + property + (property >= OBOR_LEGACY_PLAYER_PROPERTY_DEVICE_SLOT);
+}
+
 int mapstrings_playerproperty(ScriptVariant **varlist, int paramCount)
 {
     char *propname;
     int prop;
 
+    static const char *legacy_properties[] =
+    {
+        "colourmap",
+        "combokey",
+        "combostep",
+        "credits",
+        "disablekeys",
+        "ent",
+        "entity",
+        "hasplayed",
+        "hmapl",
+        "hmapu",
+        "inputtime",
+        "joining",
+        "keys",
+        "lives",
+        "mapcount",
+        "name",
+        "newkeys",
+        "numweapons",
+        "playkeys",
+        "releasekeys",
+        "score",
+        "spawnhealth",
+        "spawnmp",
+        "weapnum",
+        "weapon",
+    };
     static const char *proplist[] =
     {
         "button_attack1",
@@ -8199,6 +8251,12 @@ int mapstrings_playerproperty(ScriptVariant **varlist, int paramCount)
     }
 
     // property name
+    if (obor_legacy_player_properties())
+    {
+        MAPSTRINGS(varlist[1], legacy_properties, OBOR_LEGACY_PLAYER_PROPERTY_COUNT,
+                   "Player property name '%s' is not supported yet.\n");
+        return 1;
+    }
     MAPSTRINGS(varlist[1], proplist, _pp_the_end,
                "Player property name '%s' is not supported yet.\n");
 
@@ -8258,7 +8316,7 @@ HRESULT openbor_getplayerproperty(ScriptVariant **varlist , ScriptVariant **pret
         *pretvar = NULL;
         return E_FAIL;
     }
-    prop = arg->lVal;
+    prop = obor_player_property_index(arg->lVal);
 
     switch(prop)
     {
@@ -8631,7 +8689,7 @@ HRESULT openbor_changeplayerproperty(ScriptVariant **varlist , ScriptVariant **p
         }
         return E_FAIL;
     }
-    prop = varlist[1]->lVal;
+    prop = obor_player_property_index(varlist[1]->lVal);
 
     arg = varlist[2];
     if(!arg)

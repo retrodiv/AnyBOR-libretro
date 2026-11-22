@@ -31,6 +31,328 @@ def program(data):
 
 
 class ModernControlMenuContracts(unittest.TestCase):
+    def test_8020_menu_action_and_navigation_order(self):
+        data = {'engine': '8023'}
+        engine = Path(os.environ.get('OBOR_HISTORICAL_ENGINE', ROOT / 'src/engines' / data['engine']))
+        source = (engine / 'openbor.c').read_text()
+        main_options = function(source, 'menu_options')
+        prefix = ('(bothnewkeys & FLAG_MOVEUP)', '(bothnewkeys & FLAG_MOVEDOWN)',
+                  'obor_menu_has_action(bothnewkeys)')
+        conditions = []
+        for start in prefix:
+            matching = re.search(r'(?m)^\s*if\((' + re.escape(start) + r'[^{};]*?)\)\s*\n\s*\{', main_options)
+            self.assertIsNotNone(matching, start)
+            conditions.append(matching[1])
+        for name in ('menu_options_config', 'menu_options_system'):
+            self.assertIn('if(obor_menu_has_action(bothnewkeys))', function(source, name))
+        for name in ('menu_options_sound', 'menu_options_debug', 'menu_options_cheats', 'menu_options_video'):
+            self.assertIn('FLAG_MOVELEFT | FLAG_MOVERIGHT) || obor_menu_has_confirm(bothnewkeys)',
+                          function(source, name))
+        for name in ('menu_difficulty', 'choose_mode', 'openborMain'):
+            self.assertIn('if(obor_menu_has_confirm(bothnewkeys))', function(source, name))
+        self.assertEqual(function(source, 'selectplayer').count('obor_menu_has_confirm(player[i].newkeys)'), 2)
+        code = r'''
+#include "openbor.h"
+#undef assert
+#include <assert.h>
+
+uint32_t obor_profile_build;
+@HELPERS@
+
+static unsigned menu_events(int bothnewkeys)
+{
+    unsigned result = (bothnewkeys & FLAG_ESC) ? 1u : 0u;
+    if (@UP@) result |= 2u;
+    if (@DOWN@) result |= 4u;
+    if (@ACTION@) result |= 8u;
+    return result;
+}
+
+static unsigned original_8020(int keys)
+{
+    unsigned result = 0;
+    if (keys & FLAG_ESC) result |= 1u;
+    if (keys & FLAG_MOVEUP) result |= 2u;
+    if (keys & FLAG_MOVEDOWN) result |= 4u;
+    if (keys & (FLAG_MOVELEFT | FLAG_MOVERIGHT | FLAG_ANYBUTTON)) result |= 8u;
+    return result;
+}
+
+static unsigned original_8021(int keys)
+{
+    if (keys & FLAG_ESC) return 1u;
+    if (keys & FLAG_MOVEUP) return 2u;
+    if (keys & FLAG_MOVEDOWN) return 4u;
+    if (any_button_except_esc(keys)) return 8u;
+    return 0u;
+}
+
+int main(void)
+{
+    static const uint32_t profiles[] = {8020, 8021, 8023};
+    static const int buttons[] = {FLAG_ESC, FLAG_MOVEUP, FLAG_MOVEDOWN, FLAG_MOVELEFT,
+                                 FLAG_MOVERIGHT, FLAG_START, FLAG_ATTACK};
+    for (size_t revision = 0; revision < sizeof(profiles) / sizeof(*profiles); ++revision)
+    {
+        obor_profile_build = profiles[revision];
+        for (unsigned combination = 0; combination < (1u << (sizeof(buttons) / sizeof(*buttons))); ++combination)
+        {
+            int keys = 0;
+            for (size_t button = 0; button < sizeof(buttons) / sizeof(*buttons); ++button)
+            {
+                if (combination & (1u << button)) keys |= buttons[button];
+            }
+            const bool legacy = profiles[revision] == 8020;
+            const unsigned expected = legacy ? original_8020(keys) : original_8021(keys);
+            assert(menu_events(keys) == expected);
+            assert(obor_menu_has_confirm(keys) == !!((keys & FLAG_ANYBUTTON) && (legacy || !(keys & FLAG_ESC))));
+            assert(obor_menu_has_action(keys) == !!(legacy ? keys & (FLAG_ANYBUTTON | FLAG_MOVELEFT | FLAG_MOVERIGHT)
+                                                          : any_button_except_esc(keys)));
+        }
+    }
+    return 0;
+}
+'''
+        helpers = '\n'.join(function(source, name) for name in (
+            'obor_uses_8020_controls', 'obor_menu_has_confirm', 'obor_menu_has_action'))
+        inputs = dict(zip(('UP', 'DOWN', 'ACTION'), conditions))
+        inputs['HELPERS'] = helpers
+        for name, value in inputs.items():
+            code = code.replace('@' + name + '@', value)
+        self.assertEqual(native_output(code, data, engine_source=engine), '')
+
+    def test_8020_settings_use_player_keys_in_the_main_record(self):
+        data = {'engine': '8023'}
+        engine = Path(os.environ.get('OBOR_HISTORICAL_ENGINE', ROOT / 'src/engines' / data['engine']))
+        source = (engine / 'openbor.c').read_text()
+        settings_cases = []
+        names = ('savesettings', 'saveasdefault', 'loadsettings', 'loadfromdefault')
+        for index, name in enumerate(names):
+            routine = function(source, name)
+            gate = re.search(r'(?m)^    (if \(obor_uses_8020_controls\(\)\)\n        return;)\n\n'
+                             r'    // (?:save|load) controls', routine)
+            self.assertIsNotNone(gate)
+            self.assertIn('fclose(handle);', routine[:gate.start()])
+            settings_cases.append(f'        case {index}:\n{gate[1]}\n    break;')
+        control_source = (ROOT / 'src/port/libretro/control.c').resolve()
+        code = r'''
+#include @CONTROL@
+#include "openbor.h"
+#undef assert
+#include <assert.h>
+
+uint32_t obor_profile_build;
+unsigned char obor_pad[4][16];
+s_savedata savedata;
+s_global_config global_config;
+static int separate_files;
+
+void obor_poll_tick(void) { }
+
+@SETTINGS@
+
+static void use_mappings_file(unsigned operation)
+{
+    switch (operation)
+    {
+@GATES@
+        default: abort();
+    }
+    ++separate_files;
+}
+
+int main(void)
+{
+    const uint32_t revisions[] = {8020, 8021, 8023};
+    for (size_t i = 0; i < sizeof(revisions) / sizeof(*revisions); ++i)
+    {
+        obor_profile_build = revisions[i];
+        const bool legacy = revisions[i] == 8020;
+        separate_files = 0;
+        memset(&savedata, 0, sizeof(savedata));
+        memset(obor_pad, 0, sizeof(obor_pad));
+        clearsettings();
+        apply_controls();
+        for (unsigned operation = 0; operation < 4; ++operation)
+            use_mappings_file(operation);
+        assert(separate_files == (legacy ? 0 : 4));
+        s_playercontrols first = {.deviceID = 0};
+        s_playercontrols second = {.deviceID = 1};
+        s_playercontrols *players[] = {&first, &second};
+        obor_pad[0][4] = obor_pad[1][4] = 1;
+        control_update(players, 2);
+        assert(first.keyflags == FLAG_ATTACK && first.newkeyflags == FLAG_ATTACK);
+        assert(second.keyflags == (legacy ? 0u : FLAG_ATTACK));
+        control_update(players, 2);
+        assert(!first.newkeyflags && !second.newkeyflags);
+        if (legacy)
+        {
+            assert(savedata.keys[0][SDID_ATTACK] == OBOR_KEY(0, 4));
+            assert(savedata.keys[1][SDID_ATTACK] == CONTROL_NONE);
+            savedata.keys[0][SDID_JUMP] = OBOR_KEY(1, 9);
+            apply_controls();
+            obor_pad[0][4] = obor_pad[1][4] = 0;
+            obor_pad[1][9] = 1;
+            control_update(players, 2);
+            assert(first.newkeyflags == FLAG_JUMP && !second.keyflags);
+            savedata.usejoy = 0;
+            apply_controls();
+            control_update(players, 2);
+            assert(!first.keyflags && !second.keyflags);
+            obor_pad[0][11] = 1;
+            control_update(players, 2);
+            assert(first.newkeyflags == FLAG_ESC && second.newkeyflags == FLAG_ESC);
+
+            memset(obor_pad, 0, sizeof(obor_pad));
+            obor_pad[0][4] = 1;
+            control_legacy_begin_scan();
+            assert(control_legacy_scan_key() == 0);
+            obor_pad[1][6] = 1;
+            assert(control_legacy_scan_key() == 0);
+            obor_pad[0][6] = 1;
+            assert(control_legacy_scan_key() == OBOR_KEY(0, 6));
+            assert(!strcmp(control_legacy_key_name(OBOR_KEY(0, 6)), "P1 Attack3"));
+            control_legacy_usejoy(1);
+            obor_pad[1][9] = 1;
+            assert(control_legacy_scan_key() == OBOR_KEY(1, 9));
+        }
+    }
+    return 0;
+}
+'''
+        control_functions = ('obor_uses_8020_controls', 'clearsettings', 'apply_controls')
+        replacements = dict(CONTROL=json.dumps(str(control_source)), GATES='\n'.join(settings_cases),
+                            SETTINGS='\n'.join(function(source, name) for name in control_functions))
+        for name, value in replacements.items():
+            code = code.replace('@' + name + '@', value)
+        self.assertEqual(native_output(code, data, engine_source=engine), '')
+
+    def test_8020_player_binding_editor_confirmation_and_cancellation(self):
+        data = {'engine': '8023'}
+        engine = Path(os.environ.get('OBOR_HISTORICAL_ENGINE', ROOT / 'src/engines' / data['engine']))
+        source = (engine / 'openbor.c').read_text()
+        editor = function(source, 'keyboard_setup')
+        branch = braced_statement(editor, 'if (obor_uses_8020_controls())')
+        offset = editor.index(branch)
+        editor = (editor[:offset + len(branch)] + '\n    abort();\n' +
+                  editor[editor.index('finish_binding:', offset):])
+        options_entry = function(source, 'menu_options_input')
+        self.assertIn('obor_control_options_8020();', braced_statement(options_entry,
+                                                                       'if (obor_uses_8020_controls())'))
+        functions = '\n'.join(function(source, name) for name in ('obor_uses_8020_controls', 'safe_set',
+                                                                  'obor_edit_player_bindings_8020'))
+        code = Path(__file__).with_name('modern_8020_control_editor_contract.c.in').read_text()
+        code = (code.replace('@FUNCTIONS@', functions + '\n' + editor)
+                    .replace('@OPTIONS@', function(source, 'obor_control_options_8020'))
+                    .replace('@MENU_CALL@', 'obor_control_options_8020'))
+        self.assertEqual(native_output(code, data, engine_source=engine), '')
+
+    def test_8020_startup_victory_and_video_rows(self):
+        data = {'engine': '8023'}
+        engine = Path(os.environ.get('OBOR_HISTORICAL_ENGINE', ROOT / 'src/engines' / data['engine']))
+        source = (engine / 'openbor.c').read_text()
+        startup = function(source, 'startup')
+        begin = startup.index('    init_input_recorder();')
+        end = startup.index('    printf("Loading translation', begin)
+        video = function(source, 'menu_options_video')
+        shift = re.search(r'(?m)^    const int row_shift = [^;]+;', video)
+        self.assertIsNotNone(shift)
+        positions = re.findall(r'(-?\d+ \+ row_shift),', video)
+        self.assertEqual(len(positions), 23)
+        code = r'''
+#include "openbor.h"
+#include <string.h>
+#undef assert
+#include <assert.h>
+#undef printf
+
+uint32_t obor_profile_build;
+s_savedata savedata;
+static char events[16];
+static size_t event_count;
+static int victory_frames;
+
+static void mark(char event)
+{
+    assert(event_count + 1 < sizeof(events));
+    events[event_count++] = event;
+    events[event_count] = '\0';
+}
+static void victory_animation(entity *ent, int animation, int reset)
+{
+    assert(ent->idling == IDLING_NONE && animation == ANI_VICTORY && reset == 0);
+    ++victory_frames;
+}
+
+#define init_input_recorder() mark('I')
+#define load_all_fonts() mark('F')
+#define load_special_sprites() mark('S')
+#define load_levelorder() mark('L')
+#define load_model_constants() mark('C')
+#define load_menu_txt() mark('U')
+#define load_script_setting() mark('T')
+#define load_scripts() mark('R')
+#define load_models() mark('M')
+#define alloc_ents() (mark('E'), 1)
+#define borShutdown(...) abort()
+#define printf(...) ((void)0)
+#define ent_set_anim victory_animation
+
+@FUNCTIONS@
+
+static void load_startup_items(void)
+{
+@STARTUP@
+@LOGO@
+}
+
+static void check_video_rows(bool legacy)
+{
+@SHIFT@
+    const int actual[] = {@POSITIONS@};
+    const int modern[] = {-7,-5,-5,-4,-4,-3,-3,-2,-2,-1,-1,0,0,0,1,1,2,2,3,3,4,4,7};
+    const int historical[] = {-5,-3,-3,-2,-2,-1,-1,0,0,1,1,2,2,2,3,3,4,4,5,5,6,6,9};
+    const int *expected = legacy ? historical : modern;
+    for (size_t row = 0; row < sizeof(actual) / sizeof(*actual); ++row)
+        assert(actual[row] == expected[row]);
+}
+
+int main(void)
+{
+    static const uint32_t revisions[] = {8020, 8021, 8023};
+    static entity actor;
+    for (size_t i = 0; i < sizeof(revisions) / sizeof(*revisions); ++i)
+    {
+        obor_profile_build = revisions[i];
+        const bool legacy = revisions[i] == 8020;
+        event_count = 0;
+        savedata.logo = 11;
+        load_startup_items();
+        assert(!strcmp(events, legacy ? "IFSLCTRMEU" : "ISLCUFTRME"));
+        assert(savedata.logo == (legacy ? 0 : 1));
+        for (int pain = 0; pain <= 1; ++pain)
+        {
+            actor.inpain = pain ? IN_PAIN_HIT : IN_PAIN_NONE;
+            actor.idling = IDLING_ACTIVE;
+            victory_frames = 0;
+            tryvictorypose(&actor);
+            assert(victory_frames == (legacy ? pain : !pain));
+        }
+        check_video_rows(legacy);
+    }
+    return 0;
+}
+'''
+        functions = '\n'.join(function(source, name) for name in (
+            'obor_uses_8020_controls', 'obor_load_startup_fonts', 'obor_load_startup_menu', 'tryvictorypose'))
+        logo = braced_statement(startup, 'if(savedata.logo++ > 10)')
+        # The logo decision follows the same profile selection as the asset order.
+        replacements = dict(FUNCTIONS=functions, STARTUP=startup[begin:end], LOGO=logo,
+                            SHIFT=shift[0], POSITIONS=', '.join(positions))
+        for key, value in replacements.items():
+            code = code.replace('@' + key + '@', value)
+        self.assertEqual(native_output(code, data, engine_source=engine), '')
+
     def test_original_credits_and_video_on_menu_return(self):
         data = {'engine': '7533'}
         engine = Path(os.environ.get('OBOR_HISTORICAL_ENGINE', ROOT / 'src/engines' / data['engine']))

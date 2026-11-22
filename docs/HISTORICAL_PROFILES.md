@@ -37,7 +37,7 @@ v3.0 4432, v3.0 4453, v3.0 4454-dev, v3.0 4456, v3.0 4510-dev, v3.0 4574, v3.0 4
 v3.0 4596, v3.0 4624, v3.0 4626, v3.0 4642, v3.0 4665, v3.0 4682, v3.0 4701, v3.0 4742, v3.0 4750,
 v3.0 4905, v3.0 5134, v3.0 6119, v3.0 6175, v3.0 6196, v3.0 6203, v3.0 6212, v3.0 6223, v3.0 6240, v3.0 6245, v3.0 6258, v3.0 6271, v3.0 6276, v3.0 6291, v3.0 6297, v3.0 6301-dev, v3.0 6315, v3.0 6325, v3.0 6330, v3.0 6330-lns-010g, v3.0 6385, v3.0 6390, v3.0 6391, v3.0 6391-mod,
 v3.0 6392-dev, v3.0 6412-dev, v3.0 6453-dev, v3.0 6510-dev, v3.0 6997-dev, v3.0 7039-dev, v3.0 7086-dev, v3.0 7091-dev, v3.0 7123-dev, v4.0 7142-alpha,
-v3.0 7369-dev, v3.0 7391-dev, v3.0 7420-dev, v4.0 7530, v4.0 7533, v4.0 7555, v4.0 7556, v4.0 7735 and v4.0 8023-dev.
+v3.0 7369-dev, v3.0 7391-dev, v3.0 7420-dev, v4.0 7530, v4.0 7533, v4.0 7555, v4.0 7556, v4.0 7612-dev, v4.0 7735, v4.0 8020-dev and v4.0 8023-dev.
 
 Automatic selection uses build tags and content clues to choose a profile. You can select one
 manually when a game needs it. Historical profiles preserve selected earlier
@@ -914,12 +914,14 @@ Profiles are compatibility selections. Several profiles use one physical source 
 | v4.0 7533 | `7533` |
 | v4.0 7555 | `7533` |
 | v4.0 7556 | `7533` |
+| v4.0 7612-dev | `7533` |
 | v4.0 7735 | `7533` |
+| v4.0 8020-dev | `8023` |
 | v4.0 8023-dev | `8023` |
 
 ## Modern source contracts
 
-The official v4.0 7530, 7555, 7556 and 7735 profiles use source tree 7533.
+The v4.0 7530, 7555, 7556, 7612-dev and 7735 profiles use source tree 7533.
 Each selects its own script registration, property names and numeric IDs,
 model defaults, combat and drawing behavior, audio state and saved records.
 Valid source-defined results remain unchanged; argument and storage bounds
@@ -930,6 +932,7 @@ remain checked for every profile.
 | v4.0 7530 | [`96959080`](https://github.com/DCurrent/openbor/commit/9695908083f4641278c64fb2e947a11216ab0f9a) |
 | v4.0 7555 | [`b1676f97`](https://github.com/DCurrent/openbor/commit/b1676f97bbe93473a2b93582a164005b4c77b78a) |
 | v4.0 7556 | [`fc92d78d`](https://github.com/DCurrent/openbor/commit/fc92d78dbf8110c8af10702233ba4f022d6bdc50) |
+| v4.0 7612-dev | [`632699c9`](https://github.com/DCurrent/openbor/commit/632699c9e95cb0bd5c63dbb60245db177e9d41eb) |
 | v4.0 7735 | [`f64d63c2`](https://github.com/DCurrent/openbor/commit/f64d63c2fc4e0c6e8993a58fbce1816502fff63a) |
 
 The 7556 profile exposes its global-configuration constants and read/write
@@ -951,6 +954,15 @@ source-defined fields while adapting allocator statistics to host capability.
 The matching `tools/test_modern_*.py` contracts use authored data and explicit
 boundary controls; they do not establish whole-game or native-host acceptance.
 
+### 8020 controller and startup behavior
+
+The v4.0 8020-dev profile uses source tree 8023. Its 25 original player
+selectors follow the 8020 numbering. The input editor stores each player's
+assignments in the main settings record and applies them at startup. The
+primary RetroPad supplies the original keyboard actions. Other ports use the
+original gamepad toggle. The profile also preserves the original startup order,
+video menu positions and victory animation selection.
+
 ## Baselines and complete file inventories
 
 | OpenBOR build | Pinned commit | File inventory |
@@ -971,6 +983,8 @@ boundary controls; they do not establish whole-game or native-host acceptance.
 | v3.0 7391-dev | `8d809a5d13f9c77bc2a3e1cacfa4c5bf8aca4266` | [Selected contracts](#7369-7391-and-7420) |
 | v3.0 7420-dev | `8a180f22934d574d0159693951d0339eedc53f8a` | [Selected contracts](#7369-7391-and-7420) |
 | v4.0 7533 | `5c8261444de6b61f8e2ce6e79e3d86a2949e55bd` | [v4.0 7533](modifications/7533.md) |
+| v4.0 7612-dev | `632699c9e95cb0bd5c63dbb60245db177e9d41eb` | [Modern source contracts](#modern-source-contracts) |
+| v4.0 8020-dev | `9d81480f8481fbb9e76b0b5f2a5dfa408376761a` | [8020 controller and startup behavior](#8020-controller-and-startup-behavior) |
 | v4.0 8023-dev | `16aae1a30b81063778f21977ae20b849bd1c76f9` | [v4.0 8023-dev](modifications/8023.md) |
 
 Each inventory links every modified or added engine file to its explanation,

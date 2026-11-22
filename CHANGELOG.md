@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.2.53
+
+- Add selectable OpenBOR profiles v4.0 7612-dev and v4.0 8020-dev.
+- Preserve the original script properties, drawing and audio behavior in 7612
+  and the original per-player controller editor in 8020.
+
 ## 0.2.52
 
 - Add selectable OpenBOR profiles v3.0 7369-dev, v3.0 7391-dev and v3.0 7420-dev.

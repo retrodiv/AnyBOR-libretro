@@ -32,6 +32,7 @@ def program(data):
         raise ValueError('Complete default attack initializer required')
     parts = dict(DEFAULT=default[0], FUNCTIONS='\n'.join([
         function(script, 'openbor_damageentity'), function(script, 'openbor_getcomputeddamage'),
+        function(core, 'obor_profile_static_move_flags'), function(core, 'obor_profile_pain_flags'),
         function(core, 'drop_all_enemies')]),
         VARIANTS='\n'.join(function(variant, name) for name in (
             'ScriptVariant_Clear', 'ScriptVariant_ChangeType', 'ScriptVariant_IntegerValue')),

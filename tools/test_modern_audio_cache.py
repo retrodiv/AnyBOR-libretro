@@ -41,7 +41,7 @@ def program(data):
         FUNCTIONS='\n'.join(function(source, name) for name in (
             'sound_profile_sample_limit', 'sound_profile_sample_play_id', 'sound_reload_sample',
             'sound_load_sample', 'sound_unload_sample', 'sound_unload_all_samples',
-            'sound_init', 'sound_exit')),
+            'maxchannels', 'sound_init', 'sound_exit')),
         LOWERCASE=function((engine / 'source/utils.c').read_text(), 'lc'),
         PROFILES=','.join(str(row['revision']) + 'u' for row in data['sources']),
         NAME=json.dumps(data['name']), ALIAS=json.dumps(data['alias']),

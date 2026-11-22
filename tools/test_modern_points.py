@@ -66,8 +66,9 @@ def program(data, engine):
                         ('calculate_force_damage', 'target'),
                         ('checkdamageonlanding', 'acting_entity'),
                         ('common_takedamage', 'acting_entity')]:
-        expression = one(r'(\(obor_profile_build >= 7553\s*\? .*?'
-                         r'guardpoints.current <= 0\))', function(core, name), name)
+        expression = one(r'(\(obor_profile_build >= 7553\s*\?[^:]+'
+                         r':\s*obor_model_guard_depleted\(&' + actor + r'->modeldata\.guardpoints\)\))',
+                         function(core, name), name)
         predicates.append('static int probe_' + name + '(entity *' + actor + ')\n{\n'
                           'return ' + expression + ';\n}\n')
     pain = one(r'(    if\(\(obor_profile_build >= 7553.*?)(?=    else if\(type == -1)',
