@@ -1,0 +1,759 @@
+/* SPDX-License-Identifier: BSD-3-Clause
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me>
+ */
+#include <stdint.h>
+#include <stdarg.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <strings.h>
+#pragma GCC diagnostic ignored "-Wignored-qualifiers"
+#if defined(__clang__)
+#pragma GCC diagnostic ignored "-Wdeprecated-non-prototype"
+#endif
+#include "scriptcommon.h"
+#undef printf
+#undef stricmp
+#define stricmp strcasecmp
+
+uint32_t obor_profile_build;
+int ent_list_size;
+int max_attack_types = 3;
+entity **ent_list;
+static const char E_OUT_OF_MEMORY[] = "Allocation failed";
+static CHAR *text;
+static CHAR cached_name[MAX_NAME_LEN];
+static int dump_count;
+static char diagnostics[256];
+static int capture_diagnostics;
+const s_script_variant_meta script_variant_meta_list[] = {[VT_PTR] = {.id_string = "VT_PTR"}};
+
+static void record_diagnostic(const char *format, ...)
+{
+    if (capture_diagnostics)
+    {
+        const size_t used = strlen(diagnostics);
+        va_list args;
+        va_start(args, format);
+        const int written = vsnprintf(diagnostics + used, sizeof(diagnostics) - used, format, args);
+        va_end(args);
+        if (written < 0 || (size_t)written >= sizeof(diagnostics) - used)
+        {
+            abort();
+        }
+    }
+}
+
+CHAR *StrCache_Get(int index) { return index == 1 ? cached_name : text; }
+int StrCache_Pop(int length) { return 1; }
+int StrCache_CreateNewFrom(const CHAR *value) { abort(); }
+void obor_entity_varlist_set(struct entity *owner, void *value) { abort(); }
+void borShutdown(int status, char *message, ...) { (void)status; (void)message; abort(); }
+void *checkAlloc(void *pointer, size_t size, const char *function, const char *file, int line)
+{
+    (void)function; (void)file; (void)line;
+    if (size && !pointer) abort();
+    return pointer;
+}
+void ScriptVariant_Clear(ScriptVariant *value) { *value = (ScriptVariant){0}; }
+void ScriptVariant_ChangeType(ScriptVariant *value, VARTYPE type) { value->vt = type; }
+HRESULT ScriptVariant_IntegerValue(ScriptVariant *value, LONG *number)
+{
+    if (value->vt != VT_INTEGER)
+    {
+        return E_FAIL;
+    }
+    *number = value->lVal;
+    return S_OK;
+}
+HRESULT ScriptVariant_DecimalValue(ScriptVariant *value, DOUBLE *number)
+{
+    if (value->vt != VT_DECIMAL)
+    {
+        return E_FAIL;
+    }
+    *number = value->dblVal;
+    return S_OK;
+}
+
+void property_access_dump_members(property_access_map map, const int count, const void *actor)
+{
+    dump_count = count;
+}
+
+@CONSTANT_HELPER@
+@CONSTANT_MACROS@
+
+static LONG lookup(const char *constname)
+{
+    ScriptVariant v = {.lVal = -1};
+    if (0) {}
+    @CONSTANT_NAMES@
+    return v.lVal;
+}
+
+#define printf record_diagnostic
+@ROUTINES@
+#undef printf
+
+static void *compiler_mapper(void *functionRef)
+{
+    if (0) {}
+    @FUNCTION_MAPPER@
+    return NULL;
+}
+
+static void check(int pass, const char *label)
+{
+    if (!pass)
+    {
+        fprintf(stderr, "%u: %s\n", obor_profile_build, label);
+        abort();
+    }
+}
+
+static void fixture_action(void) {}
+static int fixture_damage(entity *other, s_attack *attack, int fall, s_defense *defense) { return 0; }
+static int fixture_move(float x, float z) { return 0; }
+
+static int profile_property(e_entity_properties property)
+{
+    for (int index = 0; index < obor_profile_entity_property_end(); ++index)
+    {
+        if (obor_entity_property_native_id(index) == property)
+        {
+            return index;
+        }
+    }
+    return -1;
+}
+
+static const s_property_access_map drawing_property(const void *actor, const unsigned int index)
+{
+    return entity_get_property_map(actor, profile_property(ENTITY_PROPERTY_DRAWMETHOD));
+}
+
+static void check_borrowed_members(void)
+{
+    static entity actor;
+    static s_anim animation;
+    static s_drawmethod drawmethod;
+    static s_drawmethod replacement;
+    static s_damage_recursive damage;
+    static s_scripts scripts;
+    static unsigned char colours[256];
+    static const uint32_t builds[] = {7369, 7391, 7420, 7444, 7445, 7474, 7475, 7533};
+    actor = (entity){.object_type = OBJECT_TYPE_ENTITY, .animation = &animation, .drawmethod = &drawmethod,
+                     .recursive_damage = &damage, .scripts = &scripts, .colourmap = colours,
+                     .takeaction = fixture_action, .think = fixture_action,
+                     .takedamage = fixture_damage, .trymove = fixture_move};
+    const struct { e_entity_properties property; void *reference; } cases[] = {
+        {ENTITY_PROPERTY_ANIMATION, &animation},
+        {ENTITY_PROPERTY_DRAWMETHOD, &drawmethod},
+        {ENTITY_PROPERTY_RECURSIVE_DAMAGE, &damage},
+        {ENTITY_PROPERTY_SCRIPT, &scripts},
+        {ENTITY_PROPERTY_COLORSET_TABLE, colours},
+        {ENTITY_PROPERTY_ATTACK_ID_INCOMING, actor.attack_id_incoming},
+        {ENTITY_PROPERTY_FUNCTION_TAKE_ACTION, (void *)fixture_action},
+        {ENTITY_PROPERTY_FUNCTION_THINK, (void *)fixture_action},
+        {ENTITY_PROPERTY_FUNCTION_TAKE_DAMAGE, (void *)fixture_damage},
+        {ENTITY_PROPERTY_FUNCTION_TRY_MOVE, (void *)fixture_move},
+    };
+    ScriptVariant handle = {.vt = VT_PTR, .ptrVal = &actor};
+    ScriptVariant property = {.vt = VT_INTEGER};
+    ScriptVariant replacement_value = {.vt = VT_PTR, .ptrVal = &replacement};
+    ScriptVariant result = {0}, *output = &result;
+    ScriptVariant *args[] = {&handle, &property, &replacement_value};
+    for (size_t i = 0; i < sizeof(builds) / sizeof(*builds); ++i)
+    {
+        obor_profile_build = builds[i];
+        check((profile_property(ENTITY_PROPERTY_FACTION) >= 0) == (builds[i] >= 7445u),
+              "Faction selector enters in 7445");
+        check((profile_property(ENTITY_PROPERTY_SHADOW_CONFIG_FLAGS) >= 0) == (builds[i] >= 7475u),
+              "Shadow configuration selector enters in 7475");
+        for (size_t member = 0; member < sizeof(cases) / sizeof(*cases); ++member)
+        {
+            property.lVal = profile_property(cases[member].property);
+            check(property.lVal >= 0, "Borrowed property is present");
+            check(openbor_get_entity_property(args, &output, 2) == S_OK &&
+                  result.vt == VT_PTR && result.ptrVal == cases[member].reference,
+                  "Borrowed property retains the original engine object or callback");
+        }
+        property.lVal = profile_property(ENTITY_PROPERTY_DRAWMETHOD);
+        check(openbor_set_entity_property(args, &output, 3) == S_OK && actor.drawmethod == &replacement,
+              "A drawing property accepts the replacement record");
+        actor.drawmethod = &drawmethod;
+    }
+    char display_value[48];
+    snprintf(display_value, sizeof(display_value), " | %p", (void *)&drawmethod);
+    diagnostics[0] = '\0';
+    capture_diagnostics = 1;
+    native_property_dump(drawing_property, 1, &actor);
+    capture_diagnostics = 0;
+    check(strstr(diagnostics, "ENTITY_PROPERTY_DRAWMETHOD") && strstr(diagnostics, display_value),
+          "Property table reports the stored drawing record");
+}
+
+static void check_diagnostics(entity *actor)
+{
+    static const char *const messages[][2] = {
+        {
+            "You must provide a valid handle and property name: openbor_get_entity_property(void handle, char property)\n",
+            "You must provide a valid handle, property, and new value: openbor_set_entity_property(void handle, char property, value)\n",
+        },
+        {
+            "You must provide a valid handle and property constant: openbor_get_entity_property(void handle, int property)\n",
+            "You must provide a valid handle, property, and new value: openbor_set_entity_property(void handle, int property, value)\n",
+        },
+        {
+            "\nYou must provide a valid pointer and property constant: openbor_get_entity_property(void entity, int property)\n",
+            "\nYou must provide a valid pointer, property constant, and new value: openbor_set_entity_property(void entity, int property, value)\n",
+        },
+        {
+            "\n\n Script error: openbor_get_entity_property(void entity, int property). You must provide a valid object pointer and property id.\n\n",
+            "\n\n Script error: openbor_set_entity_property(void entity, int property, <mixed> value). You must provide a valid object pointer, property id, and new value.\n\n",
+        },
+    };
+    static const struct { uint32_t build; unsigned form; } cases[] = {
+        {7369, 0}, {7391, 0}, {7420, 0}, {7444, 0}, {7445, 1}, {7464, 1}, {7465, 2},
+        {7503, 2}, {7504, 3}, {7533, 3},
+    };
+    const char *unsupported = "Unsupported property.\n";
+    ScriptVariant object = {.vt = VT_PTR, .ptrVal = actor};
+    ScriptVariant property = {.vt = VT_INTEGER};
+    ScriptVariant change = {.vt = VT_INTEGER};
+    ScriptVariant result = {0}, *output;
+    ScriptVariant *args[] = {&object, &property, &change};
+    capture_diagnostics = 1;
+    for (size_t i = 0; i < sizeof(cases) / sizeof(*cases); ++i)
+    {
+        obor_profile_build = cases[i].build;
+        const unsigned form = cases[i].form;
+        output = &result;
+        diagnostics[0] = '\0';
+        check(openbor_get_entity_property(args, &output, 1) == E_FAIL, "Missing getter argument is refused");
+        check(strcmp(diagnostics, messages[form][0]) == 0, "Missing getter argument diagnostic");
+        check(output == (form == 3 ? &result : NULL), "Getter result on invalid request");
+
+        diagnostics[0] = '\0';
+        output = &result;
+        check(openbor_set_entity_property(args, &output, 2) == E_FAIL, "Missing setter argument is refused");
+        check(strcmp(diagnostics, messages[form][1]) == 0 && output == NULL, "Missing setter argument diagnostic and result");
+
+        if (form != 3)
+        {
+            const char *getter_prefix = form == 0 ? unsupported : "Unknwon property.\n";
+            property.lVal = obor_profile_entity_property_end();
+            diagnostics[0] = '\0';
+            output = &result;
+            check(openbor_get_entity_property(args, &output, 2) == E_FAIL && output == NULL, "Unsupported getter selector");
+            check(strncmp(diagnostics, getter_prefix, strlen(getter_prefix)) == 0 &&
+                  strcmp(diagnostics + strlen(getter_prefix), messages[form][0]) == 0, "Unsupported getter diagnostic");
+            diagnostics[0] = '\0';
+            output = &result;
+            check(openbor_set_entity_property(args, &output, 3) == E_FAIL && output == &result, "Unsupported setter selector");
+            check(strncmp(diagnostics, unsupported, strlen(unsupported)) == 0 &&
+                  strcmp(diagnostics + strlen(unsupported), messages[form][1]) == 0, "Unsupported setter diagnostic");
+        }
+
+        output = &result;
+        diagnostics[0] = '\0';
+        check(openbor_get_attack_id_value(args, &output, 1) == E_FAIL && output == NULL, "Missing attack record getter argument");
+        const char *attack_read = "You must provide a valid handle and element: get_attack_id_value(void handle, int element)\n";
+        const char *attack_write = "You must provide a valid handle, element, and new value: set_attack_id_value(void handle, char property, value)\n";
+        const unsigned offset = cases[i].build >= 7465u;
+        check(!offset || diagnostics[0] == '\n', "Attack getter diagnostic prefix");
+        check(strcmp(diagnostics + offset, attack_read) == 0, "Attack getter diagnostic");
+        diagnostics[0] = '\0';
+        output = &result;
+        check(openbor_set_attack_id_value(args, &output, 2) == E_FAIL && output == NULL, "Missing attack record setter argument");
+        check(!offset || diagnostics[0] == '\n', "Attack setter diagnostic prefix");
+        check(strcmp(diagnostics + offset, attack_write) == 0, "Attack setter diagnostic");
+    }
+    capture_diagnostics = 0;
+}
+
+static void round_trip(entity *actor, CHAR *name, LONG ordinal, int use_string, LONG expected)
+{
+    ScriptVariant handle = {.vt = VT_PTR, .ptrVal = actor};
+    ScriptVariant selector = {.vt = use_string ? VT_STR : VT_INTEGER, .lVal = use_string ? 0 : ordinal};
+    ScriptVariant value = {.vt = VT_INTEGER, .lVal = expected};
+    ScriptVariant ret = {0}, *output = &ret;
+    ScriptVariant *args[] = {&handle, &selector, &value};
+    text = name;
+    check(openbor_set_entity_property(args, &output, 3) == S_OK, name);
+    check(selector.vt == VT_INTEGER && selector.lVal == ordinal, "Setter uses the original selector ordinal");
+    selector.vt = use_string ? VT_STR : VT_INTEGER;
+    selector.lVal = use_string ? 0 : ordinal;
+    check(openbor_get_entity_property(args, &output, 2) == S_OK &&
+          ret.vt == VT_INTEGER && ret.lVal == expected, name);
+    check(selector.vt == VT_INTEGER && selector.lVal == ordinal, "Getter uses the original selector ordinal");
+}
+
+static void check_entity_state_scalars(int legacy_names)
+{
+    static entity actor = {.object_type = OBJECT_TYPE_ENTITY};
+    static const struct { CHAR *name; e_entity_properties property; } states[] = {
+        {"ai_disable", ENTITY_PROPERTY_AI_DISABLE},
+        {"arrow_state", ENTITY_PROPERTY_ARROW_STATE},
+        {"blink", ENTITY_PROPERTY_BLINK},
+        {"block_state", ENTITY_PROPERTY_BLOCK_STATE},
+        {"boss", ENTITY_PROPERTY_BOSS},
+        {"charge_state", ENTITY_PROPERTY_CHARGE_STATE},
+        {"die_on_landing", ENTITY_PROPERTY_DIE_ON_LANDING},
+        {"drop", ENTITY_PROPERTY_DROP},
+        {"exists", ENTITY_PROPERTY_EXISTS},
+        {"fall_state", ENTITY_PROPERTY_FALL_STATE},
+        {"freeze_state", ENTITY_PROPERTY_FREEZE_STATE},
+        {"get_state", ENTITY_PROPERTY_GET_STATE},
+        {"grab_walk_state", ENTITY_PROPERTY_GRAB_WALK_STATE},
+        {"in_pain", ENTITY_PROPERTY_IN_PAIN},
+        {"in_pain_back", ENTITY_PROPERTY_IN_PAIN_BACK},
+        {"jump_state", ENTITY_PROPERTY_JUMP_STATE},
+        {"last_damage_type", ENTITY_PROPERTY_LAST_DAMAGE_TYPE},
+        {"obstructed", ENTITY_PROPERTY_OBSTRUCTED},
+        {"run_state", ENTITY_PROPERTY_RUN_STATE},
+        {"to_cost", ENTITY_PROPERTY_TO_COST},
+        {"turn_state", ENTITY_PROPERTY_TURN_STATE},
+        {"update_mark", ENTITY_PROPERTY_UPDATE_MARK},
+        {"walk_state", ENTITY_PROPERTY_WALK_STATE},
+        {"weapon_state", ENTITY_PROPERTY_WEAPON_STATE},
+    };
+    for (size_t i = 0; i < sizeof(states) / sizeof(*states); ++i)
+    {
+        const int ordinal = profile_property(states[i].property);
+        check(ordinal >= 0, states[i].name);
+        round_trip(&actor, states[i].name, ordinal, legacy_names, 2);
+        round_trip(&actor, states[i].name, ordinal, legacy_names, -1);
+    }
+    check(actor.last_damage_type == ATK_NONE, "Last damage type keeps the signed no-attack value");
+
+    const int prime = profile_property(ENTITY_PROPERTY_PROJECTILE_PRIME);
+    const int legacy_prime = obor_profile_build < 7421u;
+    const LONG script_flags = 2 | (legacy_prime ? (4 | 16) : (8 | 32));
+    const uint32_t native_flags = PROJECTILE_PRIME_BASE_Y | PROJECTILE_PRIME_LAUNCH_MOVING |
+                                  PROJECTILE_PRIME_SOURCE_GLOBAL_KNIFE;
+    check(prime >= 0, "Projectile prime selector");
+    round_trip(&actor, "projectile_prime", prime, legacy_names, script_flags);
+    check(actor.projectile_prime == native_flags, "Projectile flags reach the same engine actions");
+    round_trip(&actor, "projectile_prime", prime, legacy_names, script_flags | (1 << 16) | (1 << 18));
+    const uint32_t extra = legacy_prime ? PROJECTILE_PRIME_INITIALIZE_LEGACY_PROJECTILE_FUNCTION
+                                       : PROJECTILE_PRIME_SOURCE_WEAPON_PROJECTILE;
+    check(actor.projectile_prime == (native_flags | extra | (1 << 18)), "Projectile prime preserves other flag bits");
+}
+
+static void check_original_members(entity *actor, int legacy_names)
+{
+    static entity parent, overhead;
+    static s_axis_plane_lateral_float original_path[1], replacement_path[1];
+    ScriptVariant handle = {.vt = VT_PTR, .ptrVal = actor};
+    ScriptVariant selector = {.vt = VT_INTEGER, .lVal = legacy_names ? 104 : lookup("ENTITY_PROPERTY_POSITION_X")};
+    ScriptVariant value = {.vt = VT_DECIMAL, .dblVal = -12.25};
+    ScriptVariant ret = {0}, *output = &ret;
+    ScriptVariant *args[] = {&handle, &selector, &value};
+    actor->position.z = 531.25f;
+    check(openbor_set_entity_property(args, &output, 3) == S_OK &&
+          actor->position.x == -12.25f && actor->position.z == 531.25f, "Native fractional position write");
+    check(openbor_get_entity_property(args, &output, 2) == S_OK &&
+          ret.vt == VT_DECIMAL && ret.dblVal == -12.25, "Native fractional position read");
+
+    selector.lVal = 9;
+    value = (ScriptVariant){.vt = VT_INTEGER, .lVal = -12};
+    check(openbor_set_entity_property(args, &output, 3) == S_OK &&
+          actor->nextanim == (u32)-12, "Animation clock keeps its original 32-bit value");
+    check(openbor_get_entity_property(args, &output, 2) == S_OK &&
+          ret.vt == VT_INTEGER && ret.lVal == -12, "Animation clock returns the original script integer");
+
+    actor->death_state = DEATH_STATE_BACK;
+    round_trip(actor, "dead", 34, legacy_names, -17);
+    if (obor_profile_build < 7488u)
+    {
+        check(actor->death_state == (DEATH_STATE_BACK | DEATH_STATE_DEAD), "Original dead writes preserve other flags");
+        check(obor_entity_dead_script_get(actor) == -17, "Legacy getters see the typed write");
+        obor_entity_dead_script_set(actor, 1);
+        selector.lVal = 34;
+        check(openbor_get_entity_property(args, &output, 2) == S_OK && ret.lVal == 1, "Typed getter sees a gameplay death");
+        round_trip(actor, "dead", 34, legacy_names, 0);
+        check(actor->death_state == DEATH_STATE_BACK, "Clearing dead preserves other flags");
+    }
+
+    selector.lVal = legacy_names ? 64 : lookup("ENTITY_PROPERTY_ITEM_DATA");
+    value = (ScriptVariant){.vt = VT_PTR, .ptrVal = &parent.item_properties};
+    check(openbor_set_entity_property(args, &output, 3) == S_OK, "Item data setter ignores changes");
+    check(openbor_get_entity_property(args, &output, 2) == S_OK &&
+          ret.vt == VT_PTR && ret.ptrVal == &actor->item_properties, "Item data points to its live structure");
+
+    selector.lVal = legacy_names ? 92 : lookup("ENTITY_PROPERTY_OBSTRUCTION_OVERHEAD");
+    value.ptrVal = &overhead;
+    check(openbor_set_entity_property(args, &output, 3) == S_OK && actor->hithead == &overhead,
+          "Overhead stores an entity handle");
+    check(openbor_get_entity_property(args, &output, 2) == S_OK &&
+          ret.vt == VT_PTR && ret.ptrVal == &overhead, "Overhead returns an entity handle");
+
+    selector.lVal = legacy_names ? 136 : lookup("ENTITY_PROPERTY_WAYPOINT_COLLECTION");
+    actor->waypoints = original_path;
+    value.ptrVal = replacement_path;
+    check(openbor_set_entity_property(args, &output, 3) == S_OK && actor->waypoints == original_path,
+          "Original waypoint setter is read-only");
+    check(openbor_get_entity_property(args, &output, 2) == S_OK &&
+          ret.vt == VT_PTR && ret.ptrVal == original_path, "Returns the installed waypoint collection");
+
+    selector.lVal = legacy_names ? 99 : lookup("ENTITY_PROPERTY_PLATFORM_LAND");
+    actor->landed_on_platform = &overhead;
+    value.ptrVal = &parent;
+    check(openbor_set_entity_property(args, &output, 3) == S_OK &&
+          actor->parent == &parent && actor->landed_on_platform == &overhead, "Original platform setter writes parent");
+    check(openbor_get_entity_property(args, &output, 2) == S_OK &&
+          ret.vt == VT_PTR && ret.ptrVal == &overhead, "Platform getter reads the landing handle");
+
+    actor->varlist = NULL;
+    selector.lVal = legacy_names ? 42 : lookup("ENTITY_PROPERTY_ENTVAR_COLLECTION");
+    check(openbor_get_entity_property(args, &output, 2) == S_OK && ret.vt == VT_EMPTY,
+          "Missing entity variables return an empty value");
+
+    selector.lVal = legacy_names ? 86 : lookup("ENTITY_PROPERTY_NAME");
+    value = (ScriptVariant){.vt = VT_STR, .strVal = 0};
+    text = "Historical actor";
+    check(openbor_set_entity_property(args, &output, 3) == S_OK && strcmp(actor->name, text) == 0,
+          "Name setter recognizes strings");
+    value = (ScriptVariant){.vt = VT_INTEGER, .lVal = 34};
+    check(openbor_set_entity_property(args, &output, 3) == S_OK && strcmp(actor->name, text) == 0,
+          "Name setter ignores numeric values");
+    check(openbor_get_entity_property(args, &output, 2) == S_OK && ret.vt == VT_STR &&
+          strcmp(StrCache_Get(ret.strVal), text) == 0, "Name getter preserves original text");
+}
+
+static void check_target_members(entity *actor, int legacy_names)
+{
+    static entity target, grabbed;
+    const struct {char *name; const char *constant;} properties[] = {
+        {"ai_target_entity", "ENTITY_PROPERTY_AI_TARGET_ENTITY"},
+        {"grab_target", "ENTITY_PROPERTY_GRAB_TARGET"},
+    };
+    ScriptVariant handle = {.vt = VT_PTR, .ptrVal = actor};
+    ScriptVariant selector, result, *output = &result;
+    ScriptVariant *args[] = {&handle, &selector};
+    for (int state = 0; state < 4; ++state)
+    {
+        actor->custom_target = state & 1 ? &target : NULL;
+        actor->grabbing = state & 2 ? &grabbed : NULL;
+        for (size_t i = 0; i < sizeof(properties) / sizeof(*properties); ++i)
+        {
+            selector = (ScriptVariant){.vt = legacy_names ? VT_STR : VT_INTEGER};
+            if (legacy_names)
+            {
+                text = properties[i].name;
+            }
+            else
+            {
+                selector.lVal = lookup(properties[i].constant);
+                check(selector.lVal >= 0, properties[i].constant);
+            }
+            result = (ScriptVariant){.vt = VT_INTEGER, .lVal = 99};
+            check(openbor_get_entity_property(args, &output, 2) == S_OK, properties[i].name);
+            if (obor_profile_build < 7504u && !actor->custom_target)
+            {
+                check(result.vt == VT_EMPTY, "Original missing AI target leaves both results empty");
+            }
+            else
+            {
+                check(result.vt == VT_PTR && result.ptrVal == (i ? actor->grabbing : actor->custom_target),
+                      "Returns the selected target reference");
+            }
+        }
+    }
+    actor->custom_target = NULL;
+    actor->grabbing = NULL;
+}
+
+static void check_animation_and_model_members(entity *actor, int legacy_names)
+{
+    static s_anim first_animation = {.numframes = 9}, second_animation = {.numframes = 10};
+    static s_model first_model, first_default, second_model, second_default;
+    static entity donor = {.object_type = OBJECT_TYPE_ENTITY, .animation = &second_animation,
+                           .model = &second_model, .defaultmodel = &second_default};
+    const struct {char *name; const char *constant; void *starting; void *replacement;} properties[] = {
+        {"animation", "ENTITY_PROPERTY_ANIMATION", &first_animation, &second_animation},
+        {"model", "ENTITY_PROPERTY_MODEL", &first_model, &second_model},
+        {"model_default", "ENTITY_PROPERTY_MODEL_DEFAULT", &first_default, &second_default},
+    };
+    actor->animation = &first_animation;
+    actor->model = &first_model;
+    actor->defaultmodel = &first_default;
+    actor->animpos = 7;
+    actor->animnum = ANI_PAIN;
+    for (size_t i = 0; i < sizeof(properties) / sizeof(*properties); ++i)
+    {
+        ScriptVariant handle = {.vt = VT_PTR, .ptrVal = &donor};
+        ScriptVariant selector = {.vt = legacy_names ? VT_STR : VT_INTEGER};
+        ScriptVariant value = {0}, result = {0}, *output = &value;
+        ScriptVariant *args[] = {&handle, &selector, &value};
+        if (legacy_names)
+        {
+            text = properties[i].name;
+        }
+        else
+        {
+            selector.lVal = lookup(properties[i].constant);
+            check(selector.lVal >= 0, properties[i].constant);
+        }
+        check(openbor_get_entity_property(args, &output, 2) == S_OK &&
+              value.vt == VT_PTR && value.ptrVal == properties[i].replacement, properties[i].name);
+        handle.ptrVal = actor;
+        output = &result;
+        check(openbor_get_entity_property(args, &output, 2) == S_OK &&
+              result.vt == VT_PTR && result.ptrVal == properties[i].starting, properties[i].name);
+        check(openbor_set_entity_property(args, &output, 3) == S_OK, properties[i].name);
+        void *expected = i == 0 && obor_profile_build >= 7504u ? properties[i].starting : properties[i].replacement;
+        check(openbor_get_entity_property(args, &output, 2) == S_OK && result.vt == VT_PTR && result.ptrVal == expected,
+              "Animation becomes read-only in 7504 and model references stay writable");
+    }
+    check(actor->animpos == 7 && actor->animnum == ANI_PAIN, "Reference writes preserve the animation position and ID");
+}
+
+static void check_typed_property_constants(void)
+{
+    static const struct { const char *name; unsigned first; } starts[] = {
+        {"MODEL_PROPERTY_AIR_CONTROL", 7446},
+        {"MODEL_PROPERTY_QUAKE_CONFIG", 7454},
+        {"ICON_PROPERTY_END", 7459},
+        {"STATUS_DIAL_PROPERTY_END", 7460},
+        {"SPAWN_HUD_PROPERTY_END", 7466},
+        {"COLORSET_PROPERTY_END", 7470}
+    };
+    for (size_t i = 0; i < sizeof(starts) / sizeof(*starts); ++i)
+    {
+        obor_profile_build = starts[i].first - 1;
+        check(lookup(starts[i].name) == -1, starts[i].name);
+        obor_profile_build = starts[i].first;
+        check(lookup(starts[i].name) >= 0, starts[i].name);
+    }
+
+    static const char *const quake_flags[] = {
+        "QUAKE_CONFIG_NONE", "QUAKE_CONFIG_DISABLE_SCREEN", "QUAKE_CONFIG_DISABLE_SELF"
+    };
+    static const unsigned quake_builds[] = {7369, 7391, 7420, 7453, 7454, 7533};
+    for (size_t i = 0; i < sizeof(quake_builds) / sizeof(*quake_builds); ++i)
+    {
+        obor_profile_build = quake_builds[i];
+        for (size_t flag = 0; flag < sizeof(quake_flags) / sizeof(*quake_flags); ++flag)
+        {
+            check(lookup(quake_flags[flag]) == (obor_profile_build < 7454u ? -1 : (int)flag), quake_flags[flag]);
+        }
+    }
+
+    static const unsigned colorset_changes[] = {7481, 7482, 7486, 7487, 7488, 7533};
+    for (size_t i = 0; i < sizeof(colorset_changes) / sizeof(*colorset_changes); ++i)
+    {
+        obor_profile_build = colorset_changes[i];
+        check((lookup("MODEL_PROPERTY_COLORSET") >= 0) == (i != 0 && i != 3),
+              "Model colorset selector follows the original introduction, revert and reintroduction");
+    }
+}
+
+static void check_renamed_property_names(void)
+{
+    static const unsigned builds[] = {7369, 7391, 7420, 7470, 7471, 7533};
+    static const struct { const char *old_name, *new_name; LONG ordinal; } properties[] = {
+        {"LEVEL_PROP_AUTO_SCROLL_X", "LEVEL_PROPERTY_AUTO_SCROLL_X", LEVEL_PROPERTY_AUTO_SCROLL_X},
+        {"SET_PROP_COMPLETE_FLAG", "SET_PROPERTY_COMPLETE_FLAG", SET_PROPERTY_COMPLETE_FLAG},
+        {"ATTACK_PROP_DAMAGE_FORCE", "ATTACK_PROPERTY_DAMAGE_FORCE", ATTACK_PROPERTY_DAMAGE_FORCE},
+        {"COLLISION_COORDINATES_PROP_X", "COLLISION_COORDINATES_PROPERTY_X", COLLISION_COORDINATES_PROPERTY_X}
+    };
+    for (size_t i = 0; i < sizeof(builds) / sizeof(*builds); ++i)
+    {
+        obor_profile_build = builds[i];
+        const int old_names = obor_profile_build < 7471u;
+        for (size_t j = 0; j < sizeof(properties) / sizeof(*properties); ++j)
+        {
+            check(lookup(properties[j].old_name) == (old_names ? properties[j].ordinal : -1),
+                  properties[j].old_name);
+            check(lookup(properties[j].new_name) == (old_names ? -1 : properties[j].ordinal),
+                  properties[j].new_name);
+        }
+
+        char message[96] = {0};
+        ScriptVariant result = {.vt = VT_INTEGER, .lVal = 17};
+        ScriptVariant *value = &result, **pretvar = &value;
+        #define printf(...) snprintf(message, sizeof(message), __VA_ARGS__)
+        switch (LEVEL_PROPERTY_PALETTE_BLENDING_COLLECTION)
+        {
+            case LEVEL_PROPERTY_PALETTE_BLENDING_COLLECTION:
+                @RETIRED_LEVEL_PROPERTY@
+        }
+        #undef printf
+        check(result.vt == VT_EMPTY && strcmp(message, old_names
+              ? "LEVEL_PROP_PALETTE_BLENDING_COLLECTION no longer supported"
+              : "LEVEL_PROPERTY_PALETTE_BLENDING_COLLECTION no longer supported") == 0,
+              "Retired level palette selector uses its original message");
+    }
+}
+
+static void check_bomb_state_constants(void)
+{
+    static const unsigned builds[] = {7369, 7389, 7390, 7391, 7420, 7434, 7435, 7533};
+    for (size_t i = 0; i < sizeof(builds) / sizeof(*builds); ++i)
+    {
+        obor_profile_build = builds[i];
+        const int split_preparation = obor_profile_build >= 7390u;
+        const int split_detonation = obor_profile_build >= 7435u;
+        check(lookup("EXPLODE_PREPARED") == (split_preparation ? -1 : 1), "Original preparation constant");
+        check(lookup("EXPLODE_PREPARE_GROUND") == (split_preparation ? 1 : -1), "Ground preparation constant");
+        check(lookup("EXPLODE_PREPARE_TOUCH") == (split_preparation ? 2 : -1), "Contact preparation constant");
+        check(lookup("EXPLODE_DETONATE") == (split_detonation ? -1 : split_preparation ? 4 : 2),
+              "Original shared detonation constant");
+        check(lookup("EXPLODE_DETONATE_DAMAGED") == (split_detonation ? 4 : -1), "Damage detonation constant");
+        check(lookup("EXPLODE_DETONATE_HIT") == (split_detonation ? 8 : -1), "Contact detonation constant");
+    }
+}
+
+static void check_combat_collections(void)
+{
+    static const unsigned builds[] = {7369, 7391, 7420, 7434, 7435, 7444, 7445, 7503, 7504};
+    static s_defense defense[2][3];
+    static s_offense offense[2][3];
+    static entity actors[2];
+    static entity *slots[] = {&actors[0], &actors[1]};
+    ent_list = slots;
+    ent_list_size = sizeof(slots) / sizeof(*slots);
+    for (size_t i = 0; i < sizeof(builds) / sizeof(*builds); ++i)
+    {
+        obor_profile_build = builds[i];
+        const int names = obor_profile_build < 7445u;
+        for (size_t n = 0; n < sizeof(actors) / sizeof(*actors); ++n)
+        {
+            actors[n] = (entity){.object_type = OBJECT_TYPE_ENTITY,
+                .defense = defense[n], .obor_defense_owned = defense[n],
+                .offense = offense[n], .obor_offense_owned = offense[n]};
+        }
+
+        ScriptVariant actor = {.vt = VT_PTR, .ptrVal = &actors[1]};
+        ScriptVariant value = {.vt = VT_PTR, .ptrVal = defense[0]};
+        ScriptVariant selector = {.vt = names ? VT_STR : VT_INTEGER};
+        ScriptVariant result = {0}, *returned = &result;
+        ScriptVariant *arguments[] = {&actor, &selector, &value};
+        text = "defense_collection";
+        if (!names)
+        {
+            selector.lVal = lookup(obor_profile_build < 7504u ? "ENTITY_PROPERTY_DEFENSE_COLLECTION" : "ENTITY_PROPERTY_DEFENSE");
+            check(selector.lVal >= 0, "Defense selector exists");
+        }
+        HRESULT set = openbor_set_entity_property(arguments, &returned, 3);
+        if (obor_profile_build >= 7504u)
+        {
+            check(actors[1].defense == defense[1], "Defense remains read-only from 7504");
+            continue;
+        }
+        check(set == S_OK && actors[1].defense == defense[0], "Earlier defense collection can be shared");
+        check(openbor_get_entity_property(arguments, &returned, 2) == S_OK && result.vt == VT_PTR &&
+              result.ptrVal == defense[0], "Defense getter returns the installed collection");
+        value.ptrVal = offense[0];
+        check(openbor_set_entity_property(arguments, &returned, 3) == E_FAIL && actors[1].defense == defense[0],
+              "A collection keeps its original type");
+
+        text = "offense_collection";
+        selector = names ? (ScriptVariant){.vt = VT_STR} :
+                           (ScriptVariant){.vt = VT_INTEGER, .lVal = lookup("ENTITY_PROPERTY_OFFENSE_COLLECTION")};
+        check(openbor_set_entity_property(arguments, &returned, 3) == S_OK && actors[1].offense == offense[0],
+              "Earlier offense collection can be shared");
+        offense[0][1].factor = 3.25f;
+        check(actors[1].offense[1].factor == 3.25f && openbor_get_entity_property(arguments, &returned, 2) == S_OK &&
+              result.vt == VT_PTR && result.ptrVal == offense[0], "Changes in the source collection remain visible");
+
+        defense[0][1].factor = 0.625f;
+        entity previous = actors[0];
+        s_model_collection_snapshot *snapshot = obor_capture_combat_collections(&previous);
+        check(snapshot && previous.defense != actors[0].defense && previous.offense != actors[0].offense,
+              "Model-copy callback receives separate previous collections");
+        defense[0][1].factor = 1.5f;
+        offense[0][1].factor = 7.f;
+        check(previous.defense[1].factor == 0.625f && previous.offense[1].factor == 3.25f,
+              "Previous collections keep their values after the live model changes");
+        value.ptrVal = previous.offense;
+        check(openbor_set_entity_property(arguments, &returned, 3) == S_OK && actors[1].offense == previous.offense,
+              "Model-copy callback can share its original collection");
+        snapshot->actor = NULL;
+        obor_collect_model_snapshots(0);
+        check(model_collection_snapshots == snapshot && actors[1].offense[1].factor == 3.25f,
+              "Shared model-copy collection remains available");
+        value = (ScriptVariant){.vt = VT_EMPTY};
+        check(openbor_set_entity_property(arguments, &returned, 3) == S_OK && !actors[1].offense &&
+              !model_collection_snapshots, "Replacing the collection releases the copy");
+        check(openbor_get_entity_property(arguments, &returned, 2) == S_OK && result.vt == VT_PTR && !result.ptrVal,
+              "Empty collection remains observable");
+    }
+    ent_list = NULL;
+    ent_list_size = 0;
+}
+
+int main(void)
+{
+    check_combat_collections();
+    static const struct { unsigned build; int fall, guard, sleep, end; } controls[] = {
+        {7369, 46, 56, 119, 140}, {7391, 46, 56, 119, 140}, {7420, 46, 56, 119, 140}, {7421, 46, 56, 119, 140},
+        {7444, 46, 56, 119, 140}, {7445, 47, 57, 120, 141}, {7474, 47, 57, 120, 141},
+        {7475, 47, 57, 121, 142}, {7487, 47, 57, 121, 142}, {7488, 47, 57, 121, 142},
+        {7491, 47, 57, 121, 142}, {7492, 47, 57, 121, 142},
+        {7503, 47, 57, 121, 142}, {7504, 47, 57, 121, 142},
+        {7510, 47, 57, 121, 142}, {7511, 47, 57, 121, 142}, {7512, 47, 57, 121, 142},
+        {7533, 47, 57, 121, 142},
+        {7554, 47, 58, 122, 143}
+    };
+    static entity actor = {.object_type = OBJECT_TYPE_ENTITY};
+    for (size_t row = 0; row < sizeof(controls) / sizeof(*controls); ++row)
+    {
+        obor_profile_build = controls[row].build;
+        const int legacy_names = obor_profile_build < 7445u;
+        void *const mapper = legacy_names ? (void *)mapstrings_entity_property : NULL;
+        check(compiler_mapper((void *)openbor_get_entity_property) == mapper, "Compiler getter string mapper");
+        check(compiler_mapper((void *)openbor_set_entity_property) == mapper, "Compiler setter string mapper");
+        check(lookup("ENTITY_PROPERTY_FALL_STATE") == (legacy_names ? -1 : controls[row].fall), "Fall constant");
+        check(lookup("ENTITY_PROPERTY_GUARD_TIME") == (legacy_names ? -1 : controls[row].guard), "Guard constant");
+        check(lookup("ENTITY_PROPERTY_SLEEP_TIME") == (legacy_names ? -1 : controls[row].sleep), "Sleep constant");
+        check(lookup("ENTITY_PROPERTY_END") == (legacy_names ? -1 : controls[row].end), "End constant");
+        check(lookup("_ENTITY_FALL_STATE") == -1, "Internal C names are private");
+        check(lookup("ENTITY_PROPERTY_DEAD") == (!legacy_names && obor_profile_build < 7488u ? 34 : -1),
+              "Original dead selector spelling");
+        check(lookup("ENTITY_PROPERTY_DEATH_STATE") == (obor_profile_build >= 7488u ? 34 : -1),
+              "Revised death-state selector spelling");
+        check(lookup("DEATH_STATE_DEAD") == (obor_profile_build >= 7492u ? DEATH_STATE_DEAD : -1),
+              "Death-state flag admission");
+        check(lookup("ENTITY_PROPERTY_DEFENSE_COLLECTION") == (!legacy_names && obor_profile_build < 7504u ? 35 : -1),
+              "Original defense selector spelling");
+        check(lookup("ENTITY_PROPERTY_DEFENSE") == (obor_profile_build >= 7504u ? 35 : -1),
+              "Revised defense selector spelling");
+
+        round_trip(&actor, "FALL_STATE", controls[row].fall, legacy_names, 3);
+        round_trip(&actor, "guard_time", controls[row].guard, legacy_names, 270);
+        round_trip(&actor, "sleep_time", controls[row].sleep, legacy_names, 480);
+        check(actor.falling == 3 && actor.guardtime == 270 && actor.sleeptime == 480, "Live state after setter");
+        round_trip(&actor, "WEAPON_STATE", controls[row].end - 1, 0, 2);
+        check(actor.weapon_state == 2, "Original final selector");
+        check_target_members(&actor, legacy_names);
+        check_animation_and_model_members(&actor, legacy_names);
+        if (obor_profile_build < 7504u)
+        {
+            check_original_members(&actor, legacy_names);
+        }
+        check_entity_state_scalars(legacy_names);
+
+        ScriptVariant handle = {.vt = VT_PTR, .ptrVal = &actor};
+        ScriptVariant selector = {.vt = VT_STR, .strVal = 0};
+        ScriptVariant result = {0}, *output = &result;
+        ScriptVariant *args[] = {&handle, &selector};
+        text = legacy_names ? "faction" : "fall_state";
+        check(openbor_get_entity_property(args, &output, 2) == E_FAIL, "Unavailable string selector");
+        selector = (ScriptVariant){.vt = VT_INTEGER, .lVal = PROPERTY_ACCESS_DUMP};
+        output = &result;
+        dump_count = 0;
+        const int supports_dump = obor_profile_build >= 7504u;
+        check(openbor_get_entity_property(args, &output, 2) == (supports_dump ? S_OK : E_FAIL), "Dump boundary");
+        check(dump_count == (supports_dump ? controls[row].end : 0), "Dump stops at the profile's last selector");
+    }
+    check_typed_property_constants();
+    check_borrowed_members();
+    check_diagnostics(&actor);
+    check_renamed_property_names();
+    check_bomb_state_constants();
+    return 0;
+}

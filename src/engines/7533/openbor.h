@@ -7,7 +7,10 @@
  * used by each collection. Track each model's allocated animation-table
  * capacity and reject lookups outside it. Declare the shared typed profile
  * fields and explicit native saved-record layouts without changing the
- * selected wire format.
+ * selected wire format. Adapt cheat masks to the native script-visible
+ * numbering. Retain the original integer setting for running after landing,
+ * native type interpretation for entity searches and validity flags for
+ * historical HUD bar modes.
  * Existing changes recorded here; this is not their implementation date.
  * See MODIFICATIONS.md and docs/modifications/7533.md
  * at the source repository root. Original notices follow below.
@@ -34,6 +37,7 @@
 /////////////////////////////////////////////////////////////////////////////
 
 // INCS in makefile
+#include <limits.h>
 #include	"types.h"
 #include	"video.h"
 #include	"vga.h"
@@ -259,6 +263,32 @@ typedef enum
     EXPLODE_DETONATE_HIT        = (1 << 3)  // Hit another entity.
 } e_explode_state;
 
+enum
+{
+    OBOR_LEGACY_EXPLODE_PREPARED = 1 << 0,
+    OBOR_LEGACY_EXPLODE_DETONATE = 1 << 1
+};
+
+static inline e_explode_state obor_bomb_prepare_on_touch_flag(void)
+{
+    return obor_profile_build < 7390u ? (e_explode_state)OBOR_LEGACY_EXPLODE_PREPARED : EXPLODE_PREPARE_TOUCH;
+}
+
+static inline e_explode_state obor_bomb_detonate_on_hit_flag(void)
+{
+    if (obor_profile_build < 7390u)
+    {
+        return (e_explode_state)OBOR_LEGACY_EXPLODE_DETONATE;
+    }
+    return obor_profile_build < 7435u ? EXPLODE_DETONATE_DAMAGED : EXPLODE_DETONATE_HIT;
+}
+
+static inline e_explode_state obor_bomb_detonation_flags(void)
+{
+    return (e_explode_state)(obor_bomb_detonate_on_hit_flag() |
+        (obor_profile_build < 7435u ? EXPLODE_NONE : EXPLODE_DETONATE_DAMAGED));
+}
+
 // Caskey, Damon V.
 // 2019-01-25
 //
@@ -378,6 +408,35 @@ typedef enum
 	PROJECTILE_PRIME_SOURCE_WEAPON_PROJECTILE	= (1 << 16)		// From a SUBTYPE_PROJECTLE weapon pickup.
 
 } e_projectile_prime;
+
+/* The unused legacy bit above the original flags occupies the added bit.
+ * The engine enables the added bit's projectile behavior from 7421. */
+static inline uint32_t obor_projectile_prime_to_script(uint32_t flags)
+{
+    if (obor_profile_build >= 7421u)
+    {
+        return flags;
+    }
+    const uint32_t inserted = PROJECTILE_PRIME_INITIALIZE_LEGACY_PROJECTILE_FUNCTION;
+    const uint32_t last = PROJECTILE_PRIME_SOURCE_WEAPON_PROJECTILE;
+    const uint32_t shifted = (last << 1) - PROJECTILE_PRIME_LAUNCH_MOVING;
+    return (flags & ~(shifted | inserted)) | ((flags & shifted) >> 1) |
+           ((flags & inserted) ? last : 0u);
+}
+
+static inline uint32_t obor_projectile_prime_from_script(uint32_t flags)
+{
+    if (obor_profile_build >= 7421u)
+    {
+        return flags;
+    }
+    const uint32_t inserted = PROJECTILE_PRIME_INITIALIZE_LEGACY_PROJECTILE_FUNCTION;
+    const uint32_t last = PROJECTILE_PRIME_SOURCE_WEAPON_PROJECTILE;
+    const uint32_t shifted = last - inserted;
+    return (flags & ~(shifted | last)) | ((flags & shifted) << 1) |
+           ((flags & last) ? inserted : 0u);
+}
+
 
 // Caskey, Damon V.
 // 2019-12-17
@@ -511,8 +570,27 @@ typedef enum
     SPAWN_TYPE_PROJECTILE_NORMAL,
     SPAWN_TYPE_PROJECTILE_STAR,
     SPAWN_TYPE_STEAM,
-    SPAWN_TYPE_WEAPON
+    SPAWN_TYPE_WEAPON,
+    SPAWN_TYPE_LEGACY_CHILD_BOMB,
+    SPAWN_TYPE_LEGACY_CHILD_NORMAL,
+    SPAWN_TYPE_LEGACY_CHILD_PROJECTILE
 } e_spawn_type;
+
+static inline e_spawn_type obor_profile_spawn_type(e_spawn_type type)
+{
+    if (obor_profile_build < 7390u)
+    {
+        if (type >= SPAWN_TYPE_LEGACY_CHILD_BOMB && type <= SPAWN_TYPE_LEGACY_CHILD_PROJECTILE)
+        {
+            return SPAWN_TYPE_CHILD + (type - SPAWN_TYPE_LEGACY_CHILD_BOMB);
+        }
+        if (type >= SPAWN_TYPE_CMD_SPAWN && type <= SPAWN_TYPE_WEAPON)
+        {
+            return type + (obor_profile_build < 7382u ? -1 : 2);
+        }
+    }
+    return type;
+}
 
 typedef enum
 {
@@ -606,6 +684,44 @@ typedef enum e_entity_type
 
 } e_entity_type;
 
+static inline e_entity_type obor_profile_type_none(void)
+{
+    return obor_profile_build < 7385u ? (e_entity_type)0 : TYPE_NONE;
+}
+
+/* Keep the unused bits reversible as well as the named entity types. */
+static inline uint32_t obor_type_mask_from_script(uint32_t mask)
+{
+    if (obor_profile_build < 7385u)
+    {
+        /* Player through NPC move two places, and panel through reserved move one. */
+        return ((mask & UINT32_C(0x000007ff)) << 2) | ((mask & UINT32_C(0x00000800)) >> 10)
+            | ((mask & UINT32_C(0x7ffff000)) << 1) | (mask >> 31);
+    }
+    if (obor_profile_build < 7447u)
+    {
+        /* Insert the no-copy position, retaining the original unnamed bit. */
+        return (mask & UINT32_C(0xffff8001)) | ((mask & UINT32_C(0x00003ffe)) << 1)
+            | ((mask & UINT32_C(0x00004000)) >> 13);
+    }
+    return mask;
+}
+
+static inline uint32_t obor_type_mask_to_script(uint32_t mask)
+{
+    if (obor_profile_build < 7385u)
+    {
+        return ((mask & UINT32_C(0x00001ffc)) >> 2) | ((mask & UINT32_C(0x00000002)) << 10)
+            | ((mask & UINT32_C(0xffffe000)) >> 1) | ((mask & UINT32_C(1)) << 31);
+    }
+    if (obor_profile_build < 7447u)
+    {
+        return (mask & UINT32_C(0xffff8001)) | ((mask & UINT32_C(0x00007ffc)) >> 1)
+            | ((mask & UINT32_C(0x00000002)) << 13);
+    }
+    return mask;
+}
+
 // Caskey, Damon V.
 // 2013-12-27
 //
@@ -664,6 +780,40 @@ typedef enum e_aimove
     AIMOVE2_NOTARGETIDLE = (1 << 17),    // 0x00020000,   // don't move when there's no target
     AIMOVE_SPECIAL_DEFAULT = (1 << 18)     // Indicates no change (Ie. child entity spawn's with its default AI if AI parameter is AI_DEFAULT).
 } e_aimove;
+
+static inline e_aimove obor_unspecified_aimove(void)
+{
+    return obor_profile_build < 7382u ? (e_aimove)-1 : AIMOVE1_NONE;
+}
+
+static inline e_aimove obor_normal_aimove(void)
+{
+    return obor_profile_build < 7382u ? 0 : AIMOVE1_NORMAL;
+}
+
+static inline e_aimove obor_aimove_from_script(uint32_t value)
+{
+    if (obor_profile_build >= 7382u)
+    {
+        return (e_aimove)value;
+    }
+
+    /* The original primary flags move up one bit. Rotate the whole primary
+     * field to preserve unused bits written by scripts, including bit 15. */
+    const uint32_t primary = MASK_AIMOVE1;
+    return (e_aimove)((value & ~primary) | ((value << 1) & primary) | ((value >> 15) & 1u));
+}
+
+static inline uint32_t obor_aimove_to_script(uint32_t value)
+{
+    if (obor_profile_build >= 7382u)
+    {
+        return value;
+    }
+    const uint32_t primary = MASK_AIMOVE1;
+    return (value & ~primary) | ((value & primary) >> 1) | ((value & 1u) << 15);
+}
+
 
 /*
 * Caskey, Damon V.
@@ -1348,6 +1498,38 @@ typedef enum e_move_config_flags
     MOVE_CONFIG_SUBJECT_TO_WALL     = (1 << 18)
 } e_move_config_flags;
 
+static inline uint32_t obor_move_flags_to_script(uint32_t flags)
+{
+    if (obor_profile_build >= 7498u)
+    {
+        return flags;
+    }
+
+    const uint32_t terrain = flags & (MOVE_CONFIG_SUBJECT_TO_BASEMAP |
+        MOVE_CONFIG_SUBJECT_TO_GRAVITY | MOVE_CONFIG_SUBJECT_TO_HOLE |
+        MOVE_CONFIG_SUBJECT_TO_MAX_Z | MOVE_CONFIG_SUBJECT_TO_MIN_Z |
+        MOVE_CONFIG_SUBJECT_TO_OBSTACLE | MOVE_CONFIG_SUBJECT_TO_PLATFORM |
+        MOVE_CONFIG_SUBJECT_TO_SCREEN | MOVE_CONFIG_SUBJECT_TO_WALL);
+    if (obor_profile_build >= 7447u)
+    {
+        return (flags & (MOVE_CONFIG_NO_ADJUST_BASE | MOVE_CONFIG_NO_COPY_FROM |
+            MOVE_CONFIG_NO_COPY_TO | MOVE_CONFIG_NO_FLIP | MOVE_CONFIG_NO_HIT_HEAD |
+            MOVE_CONFIG_NO_MOVE | MOVE_CONFIG_PROJECTILE_BASE_DIE |
+            MOVE_CONFIG_PROJECTILE_WALL_BOUNCE)) | (terrain >> 2);
+    }
+
+    const uint32_t core = (flags & MOVE_CONFIG_NO_ADJUST_BASE) |
+        ((flags & MOVE_CONFIG_NO_HIT_HEAD) >> 3);
+    if (obor_profile_build < 7427u)
+    {
+        return core | (terrain >> 8);
+    }
+
+    const uint32_t projectile = flags & (MOVE_CONFIG_PROJECTILE_BASE_DIE |
+        MOVE_CONFIG_PROJECTILE_WALL_BOUNCE);
+    return core | (projectile >> 4) | (terrain >> 6);
+}
+
 typedef enum e_kill_entity_trigger
 {
     KILL_ENTITY_TRIGGER_NONE,
@@ -1397,6 +1579,47 @@ typedef enum e_kill_entity_trigger
     KILL_ENTITY_TRIGGER_UNSUMMON,
     KILL_ENTITY_TRIGGER_WALK_OUT_OF_BOUNDS
 } e_kill_entity_trigger;
+
+static inline int obor_kill_trigger_to_script(e_kill_entity_trigger trigger)
+{
+    const int reason = (int)trigger;
+    const int inserted = KILL_ENTITY_TRIGGER_BOMB_EXPLODE_ANIMATION_UNAVAILABLE;
+    const int last = KILL_ENTITY_TRIGGER_WALK_OUT_OF_BOUNDS;
+
+    if (obor_profile_build < 7433u)
+    {
+        // This internal reason did not occur before 7433. Use it to
+        // round-trip a script's number immediately after the old range.
+        if (reason == inserted)
+        {
+            return last;
+        }
+        if (reason > inserted && reason <= last)
+        {
+            return reason - 1;
+        }
+    }
+    return reason;
+}
+
+static inline e_kill_entity_trigger obor_kill_trigger_from_script(int reason)
+{
+    const int inserted = KILL_ENTITY_TRIGGER_BOMB_EXPLODE_ANIMATION_UNAVAILABLE;
+    const int last = KILL_ENTITY_TRIGGER_WALK_OUT_OF_BOUNDS;
+
+    if (obor_profile_build < 7433u)
+    {
+        if (reason == last)
+        {
+            return (e_kill_entity_trigger)inserted;
+        }
+        if (reason >= inserted && reason < last)
+        {
+            return (e_kill_entity_trigger)(reason + 1);
+        }
+    }
+    return (e_kill_entity_trigger)reason;
+}
 
 // Caskey, Damon V.
 // 2013-12-16
@@ -1602,7 +1825,8 @@ typedef enum
 	GRAB_ACTION_SELECT_DOWN,
 	GRAB_ACTION_SELECT_UP,
 	GRAB_ACTION_SELECT_MAX,
-	GRAB_ACTION_SELECT_FINISH
+	GRAB_ACTION_SELECT_FINISH,
+	GRAB_ACTION_SELECT_VAULT = GRAB_ACTION_SELECT_MAX // Extra table entry used before 7394.
 } e_grab_action_select;
 
 typedef enum
@@ -1772,23 +1996,6 @@ if(n<1) n = 1;
 						e->idling = IDLING_NONE; \
 						 e->ducking = DUCK_NONE;
 
-#define expand_time(e)   if(e->stalltime>0) e->stalltime++;\
-						 if(e->releasetime>0)e->releasetime++;\
-						 if(e->nextanim>0)e->nextanim++;\
-						 if(e->nextthink>0)e->nextthink++;\
-						 if(e->nextmove>0)e->nextmove++;\
-						 if(e->magictime>0)e->magictime++;\
-						 if(e->guardtime>0)e->guardtime++;\
-						 if(e->toss_time>0)e->toss_time++;\
-						 if(e->freezetime>0 && (textbox || smartbomber))e->freezetime++;\
-						 if(e->mpchargetime>0)e->mpchargetime++;\
-						 if(e->invinctime>0) e->invinctime++;\
-						 if(e->turntime>0) e->turntime++;\
-						 if(e->sealtime>0) e->sealtime++;
-/*                       if(e->dot_time>0) e->dot_time++;\
-						 if(e->dot_cnt>0) e->dot_cnt++;
-*/
-
 #define freezeall        (smartbomber || textbox)
 
 #define is_projectile(e) (e->modeldata.type & (TYPE_SHOT | TYPE_PROJECTILE) || e->model->subtype & SUBTYPE_ARROW || e->owner)
@@ -1841,6 +2048,27 @@ typedef enum e_cheat_options
     */
     CHEAT_OPTIONS_ALL_MENU = (CHEAT_OPTIONS_MASTER_MENU | CHEAT_OPTIONS_CREDITS_MENU | CHEAT_OPTIONS_ENERGY_MENU | CHEAT_OPTIONS_HEALTH_MENU | CHEAT_OPTIONS_IMPLACABLE_MENU | CHEAT_OPTIONS_LIVES_MENU | CHEAT_OPTIONS_MULTIHIT_MENU | CHEAT_OPTIONS_TOD_MENU)
 } e_cheat_options;
+
+/* Keep the stored flags in the selected build's script-visible numbering. */
+static inline e_cheat_options obor_profile_cheat_mask(e_cheat_options flags)
+{
+    if (obor_profile_build < 7370u)
+    {
+        return (flags & (CHEAT_OPTIONS_IMPLACABLE_ACTIVE - 1))
+            | ((flags & ~(CHEAT_OPTIONS_MASTER_MENU - 1)) >> 2);
+    }
+    return flags;
+}
+
+static inline e_cheat_options obor_profile_default_cheats(void)
+{
+    e_cheat_options flags = CHEAT_OPTIONS_ALL_MENU;
+    if (obor_profile_build < 7417u)
+    {
+        flags &= ~(CHEAT_OPTIONS_IMPLACABLE_MENU | CHEAT_OPTIONS_TOD_MENU);
+    }
+    return obor_profile_cheat_mask(flags);
+}
 
 /*
 * Caskey, Damon V.
@@ -2020,6 +2248,22 @@ typedef struct s_status_points {
     unsigned int min;
 } s_status_points;
 
+/* Before 7511 the model's guard and juggle counters used signed values. */
+static inline int64_t obor_model_points_value(unsigned int points)
+{
+    return obor_profile_build < 7511u ? (int64_t)(int32_t)points : (int64_t)points;
+}
+
+static inline bool obor_model_guard_depleted(const s_status_points *guard)
+{
+    return obor_model_points_value(guard->max) > 0 && obor_model_points_value(guard->current) <= 0;
+}
+
+static inline bool obor_model_juggle_cost_exceeds(int cost, unsigned int points)
+{
+    return obor_profile_build < 7511u ? cost > (int32_t)points : (unsigned int)cost > points;
+}
+
 typedef struct
 {
     unsigned compatibleversion;
@@ -2154,6 +2398,11 @@ typedef enum e_death_config_flags
     DEATH_CONFIG_MACRO_DEATH_FALL_ALL = DEATH_CONFIG_MACRO_DEATH | DEATH_CONFIG_MACRO_FALL,
     DEATH_CONFIG_MACRO_REMOVE = DEATH_CONFIG_REMOVE_CORPSE_AIR | DEATH_CONFIG_REMOVE_CORPSE_GROUND | DEATH_CONFIG_REMOVE_VANISH_AIR | DEATH_CONFIG_REMOVE_VANISH_GROUND
 } e_death_config_flags;
+
+static inline int obor_uses_legacy_death_config(void)
+{
+    return obor_profile_build < 7482u || (obor_profile_build >= 7487u && obor_profile_build < 7489u);
+}
 
 /*
 * Caskey, Damon V.
@@ -2533,6 +2782,7 @@ typedef struct
     float factor;
     int modifier;
     s_metric_range range;
+    int legacy_mode;
 } s_edelay;
 
 typedef struct
@@ -2675,7 +2925,10 @@ typedef enum e_child_spawn_config
     CHILD_SPAWN_CONFIG_TAKEDAMAGE_PARAMETER         = (1 << 21),
     CHILD_SPAWN_CONFIG_RELATIONSHIP_CHILD           = (1 << 22),
     CHILD_SPAWN_CONFIG_RELATIONSHIP_OWNER           = (1 << 23),
-    CHILD_SPAWN_CONFIG_RELATIONSHIP_PARENT          = (1 << 24)
+    CHILD_SPAWN_CONFIG_RELATIONSHIP_PARENT          = (1 << 24),
+    CHILD_SPAWN_CONFIG_LEGACY_AIMOVE                = (1 << 25),
+    CHILD_SPAWN_CONFIG_LEGACY_COLOR_PARENT_INDEX    = (1 << 26),
+    CHILD_SPAWN_CONFIG_LEGACY_COLOR_PARENT_TABLE    = (1 << 27)
 } e_child_spawn_config;
 
 /*
@@ -2878,6 +3131,8 @@ typedef enum e_status_config
     STATUS_CONFIG_GRAPH_INVERT = (1 << 1),
     STATUS_CONFIG_GRAPH_RATIO = (1 << 2),
     STATUS_CONFIG_GRAPH_VERTICAL = (1 << 3),
+    STATUS_CONFIG_LEGACY_INVALID_TYPE = (1 << 4),
+    STATUS_CONFIG_LEGACY_INVALID_ORIENTATION = (1 << 5),
     STATUS_CONFIG_DEFAULT = STATUS_CONFIG_NONE
 }e_status_config;
 
@@ -3165,6 +3420,17 @@ typedef enum e_faction_group
     FACTION_GROUP_NO_CHECK = FACTION_GROUP_NEUTRAL | FACTION_GROUP_NO_COPY | FACTION_GROUP_PLAYER_VERSES | FACTION_GROUP_TYPE_EXCLUSIVE | FACTION_GROUP_TYPE_INCLUSIVE
 } e_faction_group;
 
+/* 7447 inserts two group bits at the start of the storage layout. */
+static inline uint32_t obor_faction_mask_from_script(uint32_t mask)
+{
+    return obor_profile_build < 7447u ? (mask << 2) | (mask >> 30) : mask;
+}
+
+static inline uint32_t obor_faction_mask_to_script(uint32_t mask)
+{
+    return obor_profile_build < 7447u ? (mask >> 2) | (mask << 30) : mask;
+}
+
 /*
 * Caskey, Damon V.
 * 2023-02-03
@@ -3318,6 +3584,11 @@ typedef enum e_block_config_flags
     BLOCK_CONFIG_HOLD_INFINITE  = (1 << 4)  // Maintain block by holding button indefinitely.
 } e_block_config_flags;
 
+static inline int obor_uses_legacy_block_config(void)
+{
+    return obor_profile_build < 7493u;
+}
+
 typedef enum e_pain_config_flags
 {
     PAIN_CONFIG_NONE                = 0,
@@ -3356,6 +3627,20 @@ typedef enum e_run_config_flags {
     RUN_CONFIG_Z_UP_ENABLED             = (1 << 15),
     RUN_CONFIG_Z_UP_INITIAL             = (1 << 16),
 } e_run_config_flags;
+
+static inline int obor_uses_legacy_run_config(void)
+{
+    return obor_profile_build < 7512u;
+}
+
+static inline int obor_run_value_to_int(double value)
+{
+    if (value > (double)INT_MIN - 1.0 && value < (double)INT_MAX + 1.0)
+    {
+        return (int)value;
+    }
+    return 0;
+}
 
 typedef enum e_run_state {
     RUN_STATE_NONE,
@@ -3428,16 +3713,28 @@ typedef struct
     
     /* Shadows */
     e_shadow_config_flags shadow_config_flags; // ~~
+    int legacy_noshadow; // Original script-visible shadow value.
+    int legacy_gfxshadow;
+    int legacy_shadowbase;
+    int legacy_shadow_aironly;
     int shadow; // Shadow index. ~~
     
     e_pain_config_flags pain_config_flags; // ~~
+    int legacy_nopain;
+    int legacy_nodrop;
+    int legacy_backpain;
+    e_move_config_flags legacy_static_move_flags;
 
     
 
     e_death_config_flags death_config_flags; // Playing death animations, blinking, removal, etc. ~~
+    int legacy_falldie;
+    int legacy_nodieblink;
 
     /* Blocking */
     e_block_config_flags block_config_flags; // ~~
+    int legacy_blockback;
+    int legacy_holdblock;
     int thold; // The entity's threshold for block ~~
     int blockodds; // Odds that an enemy will block an attack (1 : blockodds) ~~
     int blockpain; // Threshold before using blockpain animation.
@@ -3446,7 +3743,8 @@ typedef struct
 
     s_child_follow* child_follow; // Child follow (NPC follow distance) properties.
 
-    e_run_config_flags run_config_flags; 
+    e_run_config_flags run_config_flags;
+    int legacy_runhold;
 
     float runspeed; // The speed the character runs at
     float runjumpheight; // The height the character jumps when running
@@ -3571,6 +3869,8 @@ typedef struct
     s_attack *smartbomb;
 
     s_barstatus* hud_popup; // HUD always on when entity is active (Ex. Boss HUD). ~~
+    s_axis_plane_vertical_int legacy_hud_graph_position;
+    s_axis_plane_vertical_int legacy_hud_name_position;
 
     e_move_config_flags move_config_flags; // Running, terrian limits, etc.
         
@@ -3594,6 +3894,25 @@ typedef struct
     char*					test_pointer;
 
 } s_model;
+
+/* Before 7447, popup coordinates were part of each actor's model copy. */
+static inline s_axis_plane_vertical_int *obor_model_hud_graph_position(s_model *model)
+{
+    if (obor_profile_build < 7447u)
+    {
+        return &model->legacy_hud_graph_position;
+    }
+    return model->hud_popup ? &model->hud_popup->graph_position : NULL;
+}
+
+static inline s_axis_plane_vertical_int *obor_model_hud_name_position(s_model *model)
+{
+    if (obor_profile_build < 7447u)
+    {
+        return &model->legacy_hud_name_position;
+    }
+    return model->hud_popup ? &model->hud_popup->name_position : NULL;
+}
 
 typedef struct
 {
@@ -3670,6 +3989,8 @@ typedef struct entity
 	s_model					*defaultmodel;						// this is the default model ~~
 	s_defense				*defense;							// Resistance or vulnerability to certain attack types. ~~
     s_offense               *offense;					        // Augment or reduce damage output for some attack types.
+    s_defense *obor_defense_owned;
+    s_offense *obor_offense_owned;
     s_model					*model;								// current model ~~
 	s_damage_recursive		*recursive_damage;					// Recursive damage linked list head. ~~
     s_axis_plane_lateral_float *waypoints;						// Pathfinding waypoint array. ~~
@@ -3759,6 +4080,7 @@ typedef struct entity
 	int						sortid;								// Drawing order (sprite queue sort id). ~~
 
 	// Enumerated integers.
+    int                     legacy_dead;                    // Script-visible dead value before 7488.
     e_death_state		    death_state;						// Dead? ~~
     e_attack_types			last_damage_type;					// Used for set death, pain, rise, etc. animation. ~~
     e_spawn_type			spawntype;							// Type of spawn (level spawn, script spawn, ...) ~~
@@ -3816,6 +4138,27 @@ typedef struct entity
     s_meta_data*            meta_data;              // User defiend data.
     int					    meta_tag;	            // User defined int.
 } entity;
+
+static inline int obor_entity_dead_script_get(const entity *actor)
+{
+    return obor_profile_build < 7488u ? actor->legacy_dead : actor->death_state & DEATH_STATE_DEAD;
+}
+
+static inline void obor_entity_dead_script_set(entity *actor, int value)
+{
+    if (obor_profile_build < 7488u)
+    {
+        actor->legacy_dead = value;
+    }
+    if (value)
+    {
+        actor->death_state |= DEATH_STATE_DEAD;
+    }
+    else
+    {
+        actor->death_state &= ~DEATH_STATE_DEAD;
+    }
+}
 
 
 typedef struct
@@ -3975,6 +4318,11 @@ typedef struct
     s_meta_data*        meta_data;              // User defiend data.
     int					meta_tag;	            // User defined int.
 } s_textobj;
+
+static inline unsigned long obor_profile_level_deadline(unsigned long deadline)
+{
+    return obor_profile_build < 7510u ? (u32)deadline : deadline;
+}
 
 typedef struct
 {
@@ -4504,6 +4852,7 @@ void predrawstatus();
 void drawstatus();
 void addscore(int playerindex, int add);
 void free_ent(entity *e);
+int obor_entity_set_combat_collection(entity *actor, void *value, int defense);
 void free_ents();
 int alloc_ents();
 int is_walking(int iAni);
@@ -4622,7 +4971,7 @@ bool check_frame_set_drop(entity *ent);
 bool check_landframe(entity* ent);
 int check_edge(entity *ent);
 void update_ents();
-entity *find_ent_here(entity *exclude, float x, float z, int types, int (*test)(entity *, entity *));
+entity *find_ent_here(entity *exclude, float x, float z, e_entity_type types, int (*test)(entity *, entity *));
 void display_ents();
 void toss(entity *ent, float lift);
 entity *findent(int types);

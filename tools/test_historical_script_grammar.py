@@ -10,6 +10,7 @@ import re
 import unittest
 
 from contract_fixtures import contract_revisions, load_contract_fixture
+from test_early_jump_walkoff import braced_statement
 from test_historical_common_think import ROOT, native_output
 from test_historical_player import function
 
@@ -101,6 +102,141 @@ def program(data):
 
 
 class ScriptGrammarContracts(unittest.TestCase):
+    def test_7533_original_interpreter_diagnostic(self):
+        data = {'engine': '7533'}
+        engine = Path(os.environ.get('OBOR_HISTORICAL_ENGINE', ROOT / 'src/engines' / data['engine']))
+        interpreter = (engine / 'source/scriptlib/Interpreter.c').read_text()
+        dispatch = function(interpreter, 'Interpreter_Call')
+        message = re.search(r'(?m)^            printf\([^;]+returned an exception[^;]+;', dispatch)
+        self.assertIsNotNone(message)
+        code = r'''
+#include "Interpreter.h"
+#include <stdint.h>
+#include <stdio.h>
+#undef printf
+
+unsigned int obor_profile_build;
+
+int main(void)
+{
+    static const unsigned builds[] = {7369, 7391, 7420, 7503, 7504, 7533};
+    for (size_t i = 0; i < sizeof(builds) / sizeof(*builds); ++i)
+    {
+        obor_profile_build = builds[i];
+@MESSAGE@
+    }
+    return 0;
+}
+'''
+        message_source = message[0].replace('List_GetName(pinterpreter->ptheFunctionList)', '"score"')
+        observed = native_output(code.replace('@MESSAGE@', message_source), data, engine_source=engine)
+        old = "Script function 'score' returned an exception, check the manual for details.\n"
+        new = "Script function 'score' returned an exception. See any preceding error messages above for details.\n"
+        self.assertEqual(observed, old * 4 + new * 2)
+
+    def test_7533_original_bitwise_not_instruction_order(self):
+        data = {'engine': '7533'}
+        engine = Path(os.environ.get('OBOR_HISTORICAL_ENGINE', ROOT / 'src/engines' / data['engine']))
+        source = (engine / 'source/scriptlib/Parser.c').read_text()
+        prefix = braced_statement(function(source, 'Parser_Unary_expr'),
+                                  'else if (Parser_Check(pparser, TOKEN_BITWISE_NOT ))')
+        postfix = braced_statement(function(source, 'Parser_Postfix_expr2'),
+                                   'else if (obor_parser_uses_legacy_bitwise_not() && Parser_Check(pparser, TOKEN_BITWISE_NOT ))')
+        code = r'''
+#include "Parser.h"
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#undef sprintf
+
+unsigned int obor_profile_build;
+static Token word;
+static Instruction operand;
+static OpCode emitted[3];
+static unsigned count, matches, operands;
+
+BOOL Parser_Check(Parser *parser, MY_TOKEN_TYPE type)
+{
+    return parser->theNextToken.theType == type;
+}
+
+void Parser_Match(Parser *parser) { (void)parser; ++matches; }
+void Parser_Unary_expr(Parser *parser) { (void)parser; ++operands; }
+void *List_Retrieve(const List *list) { (void)list; return &operand; }
+
+void Parser_AddInstructionViaToken(Parser *parser, OpCode operation, Token *token, Label label)
+{
+    (void)parser;
+    if (count == sizeof(emitted) / sizeof(*emitted) || label ||
+        token != ((operation == SAVE || operation == LOAD) ? &word : NULL))
+    {
+        abort();
+    }
+    emitted[count++] = operation;
+}
+
+@LEGACY@
+
+static void prefix_not(Parser *pparser)
+{
+    Instruction *pInstruction;
+    char buf[MAX_TOKEN_LENGTH + 1];
+@PREFIX@
+}
+
+static void postfix_not(Parser *pparser)
+{
+@POSTFIX@
+}
+
+int main(void)
+{
+    static const unsigned builds[] = {0, 7369, 7371, 7372, 7373, 7391, 7420, 7533};
+    static Parser parser;
+    operand.theToken = &word;
+    parser.theNextToken.theType = TOKEN_BITWISE_NOT;
+    for (size_t i = 0; i < sizeof(builds) / sizeof(*builds); ++i)
+    {
+        obor_profile_build = builds[i];
+        const int legacy = builds[i] && builds[i] < 7372u;
+        operand.OpCode = LOAD;
+        strcpy(word.theSource, "points");
+        count = matches = operands = 0;
+        prefix_not(&parser);
+        if (matches != 1 || operands != 1 || count != (legacy ? 3u : 1u) ||
+            emitted[0] != (legacy ? NEG : BIT_NOT) ||
+            (legacy && (emitted[1] != SAVE || emitted[2] != LOAD)))
+        {
+            abort();
+        }
+
+        count = matches = operands = 0;
+        postfix_not(&parser);
+        if (matches != (unsigned)legacy || operands != (unsigned)legacy ||
+            count != (legacy ? 3u : 0u) ||
+            (legacy && (emitted[0] != NEG || emitted[1] != SAVE || emitted[2] != LOAD)))
+        {
+            abort();
+        }
+
+        operand.OpCode = CONSTINT;
+        strcpy(word.theSource, "3");
+        count = 0;
+        prefix_not(&parser);
+        if (count != (legacy ? 3u : 0u) || strcmp(word.theSource, legacy ? "3" : "-4"))
+        {
+            abort();
+        }
+    }
+    return 0;
+}
+'''
+        helpers = ('obor_parser_uses_legacy_bitwise_not', 'obor_parser_legacy_bitwise_not')
+        staged = (code.replace('@LEGACY@', '\n'.join(function(source, name) for name in helpers))
+                  .replace('@PREFIX@', prefix.removeprefix('else '))
+                  .replace('@POSTFIX@', postfix.removeprefix('else ')))
+        self.assertEqual(native_output(staged, data, engine_source=engine), '')
+
     def test_6391_preprocessor_diagnostic_output(self):
         data = load_contract_fixture(FIXTURE.with_name('profile-6391-preprocessor-diagnostics.json'))
         rows = data['sources']

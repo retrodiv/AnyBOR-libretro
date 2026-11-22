@@ -1,0 +1,206 @@
+/* SPDX-License-Identifier: BSD-3-Clause
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me>
+ */
+#include <stdint.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include "openbor.h"
+
+uint32_t obor_profile_build;
+u32 _time = 17;
+int max_attack_types = 3;
+s_savedata savedata;
+s_level *level;
+entity *self;
+
+static entity parent, children[3];
+static s_offense parent_offense[3], child_offense[3][3];
+static unsigned spawned, callbacks;
+static int spawn_succeeds;
+static e_entity_type initial_damage, initial_indirect, color_type;
+static float input_x[3];
+static e_direction input_direction[3];
+
+static void expect(int condition, const char *label)
+{
+    if (!condition)
+    {
+        fprintf(stderr, "Profile %u: %s\n", obor_profile_build, label);
+        abort();
+    }
+}
+
+void borShutdown(int status, char *message, ...)
+{
+    (void)status;
+    expect(0, message);
+}
+
+entity *spawn(float x, float z, float y, e_direction direction, char *name, int index, s_model *model)
+{
+    expect(spawned < 3 && !name && index == 3 && !model, "selected model");
+    expect(y == 13 && z == 32, "vertical and depth offsets");
+    input_x[spawned] = x;
+    input_direction[spawned] = direction;
+    entity *child = &children[spawned++];
+    if (!spawn_succeeds)
+    {
+        return NULL;
+    }
+    child->position = (s_axis_principal_float){.x = x, .y = y, .z = z};
+    child->direction = direction;
+    child->sortid = 10;
+    child->modeldata.type = TYPE_NPC;
+    child->modeldata.move_config_flags = MOVE_CONFIG_SUBJECT_TO_GRAVITY | MOVE_CONFIG_NO_ADJUST_BASE;
+    child->modeldata.faction = (s_faction){.type_hostile = TYPE_NPC,
+        .type_damage_direct = initial_damage, .type_damage_indirect = initial_indirect};
+    child->faction = child->modeldata.faction;
+    child->offense = child_offense[spawned - 1];
+    return child;
+}
+
+void apply_color_set_adjust(entity *dest, entity *source, e_color_adjust adjustment)
+{
+    (void)source;
+    (void)adjustment;
+    color_type = dest->modeldata.type;
+}
+
+void faction_copy_all(entity *dest, entity *source)
+{
+    dest->modeldata.faction = dest->faction = source->faction;
+}
+
+void execute_onspawn_script(entity *actor)
+{
+    expect(actor->owner == &parent && actor == &children[callbacks], "launch callback and owner");
+    ++callbacks;
+}
+
+void toss(entity *actor, float lift) { (void)actor; (void)lift; }
+void common_think(void) {}
+int get_cached_model_index(char *name) { (void)name; return 3; }
+
+int arrow_takedamage(entity *actor, s_attack *attack, int fall, s_defense *defense)
+{
+    (void)actor; (void)attack; (void)fall; (void)defense;
+    return 0;
+}
+
+int common_takedamage(entity *actor, s_attack *attack, int fall, s_defense *defense)
+{
+    return arrow_takedamage(actor, attack, fall, defense);
+}
+
+#undef malloc
+@FUNCTIONS@
+
+static s_projectile setup(float x, e_entity_type damage, e_entity_type indirect)
+{
+    spawned = callbacks = 0;
+    initial_damage = damage;
+    initial_indirect = indirect;
+    spawn_succeeds = 1;
+    memset(children, 0, sizeof(children));
+    memset(child_offense, 0, sizeof(child_offense));
+    return (s_projectile){.knife = 3, .bomb = 3, .star = 3, .flash = -1,
+        .position = {.x = x, .y = 1, .z = 2}, .offense = PROJECTILE_OFFENSE_PARENT,
+        .direction_adjust = DIRECTION_ADJUST_NONE, .star_velocity = {1, 2, 3}};
+}
+
+int main(void)
+{
+    static const uint32_t profiles[] = {7369, 7374, 7375, 7384, 7385, 7391, 7420, 7421,
+        7426, 7427, 7431, 7432, 7434, 7435, 7443, 7444, 7446, 7447, 7529, 7530, 7533, 7552};
+    parent.position = (s_axis_principal_float){.x = 100, .y = 12, .z = 30};
+    parent.modeldata.type = TYPE_PLAYER;
+    parent.direction = DIRECTION_LEFT;
+    parent.faction = (s_faction){.type_hostile = TYPE_PLAYER | TYPE_ENEMY,
+        .type_damage_direct = TYPE_PLAYER | TYPE_ENEMY, .type_damage_indirect = TYPE_TRAP};
+    parent.modeldata.faction = parent.faction;
+    parent.offense = parent_offense;
+    expect(obor_legacy_projectile_direction(&parent, DIRECTION_ADJUST_NONE) == DIRECTION_LEFT &&
+           obor_legacy_projectile_direction(&parent, DIRECTION_ADJUST_SAME) == DIRECTION_LEFT &&
+           obor_legacy_projectile_direction(&parent, DIRECTION_ADJUST_OPPOSITE) == DIRECTION_RIGHT &&
+           obor_legacy_projectile_direction(&parent, DIRECTION_ADJUST_RIGHT) == DIRECTION_RIGHT &&
+           obor_legacy_projectile_direction(&parent, DIRECTION_ADJUST_LEFT) == DIRECTION_LEFT,
+           "original direction adjustments");
+    for (int i = 0; i < max_attack_types; ++i)
+    {
+        parent_offense[i] = (s_offense){.factor = i + 0.5f, .damage_adjust = i + 3};
+    }
+    self = &parent;
+
+    for (size_t i = 0; i < sizeof(profiles) / sizeof(*profiles); ++i)
+    {
+        obor_profile_build = profiles[i];
+        const int early = obor_profile_build < 7530u;
+        const int legacy_faction = obor_profile_build < 7444u;
+        const int conditional_faction = obor_profile_build < 7447u;
+        const e_entity_type undeclared = obor_profile_build < 7385u ? (e_entity_type)-1 : TYPE_UNDELCARED;
+        const e_direction facing = early ? DIRECTION_LEFT : DIRECTION_RIGHT;
+        const float x = early ? 95.f : 105.f;
+
+        s_projectile *defaults = allocate_projectile();
+        const float default_x = obor_profile_build < 7375u ? 60.f : PROJECTILE_LEGACY_COMPATABILITY_POSITION_X;
+        expect(defaults->position.x == default_x && defaults->position.y == 70.f &&
+               defaults->position.z == 0.f && defaults->color_set_adjust == COLORSET_ADJUST_NONE,
+               "projectile allocation defaults");
+        (free)(defaults);
+
+        s_projectile args = setup(5, TYPE_ITEM, undeclared);
+        savedata.mode = 1;
+        entity *child = knife_spawn(&parent, &args);
+        expect(child == children && callbacks == 1 && spawned == 1, "knife callback count");
+        expect(input_x[0] == (early ? x : 100.f) && input_direction[0] == facing &&
+               child->position.x == x && child->direction == facing, "knife origin and facing");
+        expect(color_type == (obor_profile_build < 7421u ? TYPE_NPC : TYPE_SHOT), "knife color setup order");
+        expect(child->faction.type_hostile == (conditional_faction ? TYPE_NPC : TYPE_ENEMY) &&
+               child->faction.type_damage_direct == (!legacy_faction && conditional_faction ? TYPE_ITEM : TYPE_ENEMY) &&
+               child->faction.type_damage_indirect == (legacy_faction ? undeclared : TYPE_TRAP), "knife faction and player filter");
+        expect(!!(child->modeldata.move_config_flags & MOVE_CONFIG_PROJECTILE_BASE_DIE) == (obor_profile_build >= 7427u) &&
+               !!(child->modeldata.move_config_flags & MOVE_CONFIG_PROJECTILE_WALL_BOUNCE) == (obor_profile_build >= 7432u),
+               "knife terrain flags");
+        expect(!(child->modeldata.move_config_flags & MOVE_CONFIG_NO_ADJUST_BASE), "knife base follows terrain");
+        expect(!(child->modeldata.move_config_flags & MOVE_CONFIG_SUBJECT_TO_GRAVITY), "knife launch gravity");
+        for (int n = 0; n < max_attack_types; ++n)
+        {
+            expect(child->offense[n].factor == parent_offense[n].factor &&
+                   child->offense[n].damage_adjust == (obor_profile_build < 7435u ? 0 : parent_offense[n].damage_adjust),
+                   "offense inheritance");
+        }
+
+        savedata.mode = 0;
+        args = setup(5, undeclared, TYPE_ITEM);
+        child = bomb_spawn(&parent, &args);
+        expect(child == children && callbacks == 1 && spawned == 1, "bomb callback count");
+        expect(input_x[0] == (early ? x : 100.f) && input_direction[0] == facing &&
+               child->position.x == x && child->direction == facing, "bomb origin and facing");
+        expect(child->faction.type_damage_direct == (TYPE_PLAYER | TYPE_ENEMY) &&
+               child->faction.type_damage_indirect == (conditional_faction ? TYPE_ITEM : TYPE_TRAP), "bomb faction");
+        expect(!!(child->modeldata.move_config_flags & MOVE_CONFIG_PROJECTILE_BASE_DIE) == (obor_profile_build >= 7432u) &&
+               !!(child->modeldata.move_config_flags & MOVE_CONFIG_PROJECTILE_WALL_BOUNCE) == (obor_profile_build >= 7432u),
+               "bomb terrain flags");
+
+        args = setup(5, TYPE_ITEM, TYPE_ITEM);
+        expect(star_spawn(&parent, &args) && callbacks == 3 && spawned == 3, "star callback count");
+        for (unsigned n = 0; n < 3; ++n)
+        {
+            expect(input_x[n] == (early || n ? x : 100.f) && input_direction[n] == facing &&
+                   children[n].position.x == x && children[n].direction == facing, "star origin and facing");
+            expect(children[n].sortid == 10 - (int)n && children[n].velocity.x == (early ? -1.f : 1.f) * (n + 1),
+                   "star ordering and velocity");
+            expect(children[n].faction.type_damage_direct == (conditional_faction ? TYPE_ITEM : (TYPE_PLAYER | TYPE_ENEMY)),
+                   "star faction");
+        }
+
+        args = setup(PROJECTILE_LEGACY_COMPATABILITY_POSITION_X, TYPE_ITEM, TYPE_ITEM);
+        spawn_succeeds = 0;
+        expect(!knife_spawn(&parent, &args) && spawned == 1 && callbacks == 0, "failed launch callback");
+        const float offset = obor_profile_build >= 7375u && early ? PROJECTILE_DEFAULT_POSITION_X
+                                                               : PROJECTILE_LEGACY_COMPATABILITY_POSITION_X;
+        expect(args.position.x == offset && input_x[0] == (early ? 100.f - offset : 100.f), "default offset at launch");
+    }
+    return 0;
+}

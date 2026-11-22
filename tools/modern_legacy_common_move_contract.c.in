@@ -1,0 +1,116 @@
+/* SPDX-License-Identifier: BSD-3-Clause
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me>
+ */
+#include <stdint.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include "openbor.h"
+
+uint32_t obor_profile_build;
+static entity actor;
+static unsigned turn_calls;
+static int turn_is_available;
+
+static void expect(int condition, const char *label)
+{
+    if (!condition)
+    {
+        fprintf(stderr, "Profile %u: %s\n", obor_profile_build, label);
+        abort();
+    }
+}
+
+void borShutdown(int status, char *message, ...)
+{
+    (void)status;
+    expect(0, message);
+}
+
+void common_turn(void) {}
+
+void ent_set_anim(entity *out, int index, int resetable)
+{
+    expect(out == &actor && index == ANI_TURN && !resetable, "turn animation invocation");
+    ++turn_calls;
+}
+
+@METHODS@
+
+#undef validanim
+#define validanim(actor, index) (turn_is_available && (index) == ANI_TURN)
+static int steer(entity *acting_entity, entity *other, entity *target, entity *owner, e_aimove aimove)
+{
+    e_direction predir = acting_entity->direction;
+    @STEER@
+    return 0;
+}
+
+int main(void)
+{
+    static const uint32_t profiles[] = {7369, 7391, 7420, 7446, 7447, 7511, 7512, 7529, 7530, 7533};
+    static entity owner, target, item;
+    s_child_follow follow = {
+        .direction_adjust_config = DIRECTION_ADJUST_LEFT,
+        .direction_adjust_range = {
+            .x = {.min = -100, .max = 100},
+            .y = {.min = -100, .max = 100},
+            .z = {.min = -100, .max = 100}
+        }
+    };
+    owner.position.x = 12.f;
+    target.position.x = 20.f;
+    item.position.x = -8.f;
+    for (size_t i = 0; i < sizeof(profiles) / sizeof(*profiles); ++i)
+    {
+        obor_profile_build = profiles[i];
+        const int follow_available = obor_profile_build >= 7512u;
+        const int face_owner_without_adjustment = obor_profile_build < 7530u;
+        actor = (entity){.direction = DIRECTION_LEFT, .running = RUN_STATE_START_X};
+        turn_is_available = 0;
+        expect(!steer(&actor, NULL, NULL, &owner, AIMOVE1_NONE) && !actor.running,
+               "idle horizontal running rule");
+        expect(actor.direction == (face_owner_without_adjustment ? DIRECTION_RIGHT : DIRECTION_LEFT),
+               "unconfigured owner direction");
+
+        actor.direction = DIRECTION_RIGHT;
+        actor.modeldata.child_follow = &follow;
+        steer(&actor, NULL, NULL, &owner, AIMOVE1_NONE);
+        expect(actor.direction == (follow_available ? DIRECTION_LEFT : DIRECTION_RIGHT), "configured owner direction");
+        follow.direction_adjust_config = DIRECTION_ADJUST_TOWARD;
+        actor.direction = DIRECTION_LEFT;
+        steer(&actor, NULL, NULL, &owner, AIMOVE1_NONE);
+        expect(actor.direction == (follow_available && face_owner_without_adjustment ? DIRECTION_LEFT : DIRECTION_RIGHT),
+               "direction adjustment introduced in 7530");
+        follow.direction_adjust_config = DIRECTION_ADJUST_LEFT;
+        actor.modeldata.child_follow = NULL;
+        actor.direction = DIRECTION_RIGHT;
+        steer(&actor, &item, &target, &owner, AIMOVE1_NONE);
+        expect(actor.direction == DIRECTION_LEFT, "item direction precedence");
+        steer(&actor, NULL, &target, &owner, AIMOVE1_NONE);
+        expect(actor.direction == DIRECTION_RIGHT, "target direction precedence");
+
+        actor.modeldata.legacy_static_move_flags = MOVE_CONFIG_NO_FLIP;
+        actor.modeldata.move_config_flags = MOVE_CONFIG_NO_FLIP;
+        steer(&actor, &item, NULL, &owner, AIMOVE1_NONE);
+        expect(actor.direction == DIRECTION_RIGHT, "no-flip rule");
+        actor.modeldata.legacy_static_move_flags = 0;
+        actor.modeldata.move_config_flags = 0;
+        actor.direction = DIRECTION_LEFT;
+        actor.velocity = (s_axis_principal_float){.x = 4.f, .z = 3.f};
+        actor.ducking = DUCK_NONE;
+        turn_calls = 0;
+        turn_is_available = 1;
+        expect(steer(&actor, NULL, &target, &owner, AIMOVE1_NONE) == 1 &&
+               turn_calls == 1 && actor.takeaction == common_turn &&
+               actor.direction == DIRECTION_LEFT && !actor.velocity.x && !actor.velocity.z,
+               "turn action and velocity");
+
+        const u32 now = UINT32_MAX - 3u;
+        const unsigned long modern = (unsigned long)now + 12ul;
+        expect(obor_npc_stall_deadline(now, 12) ==
+               (obor_profile_build < 7512u ? (u32)modern : modern), "movement deadline format");
+        expect(obor_npc_stall_deadline(23, -9) == 23 && obor_npc_stall_deadline(23, 12) == 35,
+               "movement delays");
+    }
+    return 0;
+}

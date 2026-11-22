@@ -44,10 +44,14 @@ def action_program(engine, profiles, *, wrong_refusal=False):
         if len(matches) != 1 or 'obor_rise_random' not in matches[0]:
             raise ValueError('One original inline rise gate required')
         gate = 'static int probe_lie(void) {\n'+matches[0].replace('return;', 'return 1;')+'\nreturn 0;\n}\n'
-    pattern = re.compile(r'obor_rise_random\(rand32\(\),\s*(\(self->stalltime\s*-\s*_?time\s*\+\s*1\))\)')
-    if len(pattern.findall(gate)) != 1:
+    pattern = re.compile(r'obor_rise_random\(rand32\(\),\s*'
+                         r'((?:obor_entity_deadline_value)?\(self->stalltime\s*-\s*_?time\s*\+\s*1\))\)')
+    spans = pattern.findall(gate)
+    if len(spans) != 1:
         raise ValueError('One native timing gate required')
     old_gate = pattern.sub(r'((rand32() % \1) < 3)', gate).replace('probe_lie(', 'baseline_lie(', 1)
+    timing_helpers = (function(core, 'obor_entity_deadline_value')
+                      if spans[0].startswith('obor_entity_deadline_value(') else '')
     writes = set(re.findall(r'(?:iRiseattack|self)->([\w.]+)\s*(?:=(?!=)|[|&^+*-]=)', action))
     writes.update(re.findall(r'e->([\w.]+)\s*=', continued_macro(header, 'set_attacking')))
     writes.update(('animnum', 'modeldata.riseattacktype'))
@@ -78,7 +82,7 @@ def action_program(engine, profiles, *, wrong_refusal=False):
                   ANIM_TYPE=animation_type[0],
                   ANIM_ID_TYPE='animation_id_t' if re.search(r'void\s+ent_set_anim\([^;]+animation_id_t', header) else 'int',
                   TIME_TYPE=time_type[0],
-                  SPAN_TYPE='unsigned long' if re.search(r'unsigned long\s+stalltime\s*;', header) else time_type[0],
+                  SPAN_EXPRESSION=spans[0], TIMING_HELPERS=timing_helpers,
                   HAS_BACK=str(int(has_back)), ACTION=action, BASELINE_ACTION=baseline,
                   GATE=gate, BASELINE_GATE=old_gate, POINT_INIT=point_init,
                   OPTIONAL_INIT='\n'.join(optional), HEALTH=health,

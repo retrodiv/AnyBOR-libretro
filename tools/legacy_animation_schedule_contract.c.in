@@ -1,0 +1,269 @@
+/* SPDX-License-Identifier: BSD-3-Clause
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me>
+ */
+#include <limits.h>
+#include <stdint.h>
+#include <strings.h>
+#pragma GCC diagnostic ignored "-Wignored-qualifiers"
+#if defined(__clang__)
+#pragma GCC diagnostic ignored "-Wdeprecated-non-prototype"
+#endif
+#include "openbor.h"
+#undef assert
+#include <assert.h>
+
+uint32_t obor_profile_build;
+static u32 _time, bothnewkeys;
+static unsigned warnings;
+
+static void observe_warning(const char *format, ...) { ++warnings; }
+#undef printf
+#define printf observe_warning
+@HELPERS@
+#undef printf
+
+int calculate_edelay(entity *ent, int frame)
+{
+    return frame == 5 ? -2 : 17 + frame;
+}
+
+enum { CMD_MODEL_DELAY };
+
+static int parse_delay(char *line)
+{
+    ArgList arglist;
+    char argbuf[MAX_ARG_LEN + 1] = "";
+    char *filename = "actor.txt", *value;
+    int delay = 7;
+    ParseArgs(&arglist, line, argbuf);
+    char *command = GET_ARG(0);
+    switch (CMD_MODEL_DELAY)
+    {
+        @MODEL_COMMAND@
+    }
+    return delay;
+}
+
+static void update_frame_schedule(entity *self, int f)
+{
+    @FRAME@
+}
+
+static void update_model_schedule(entity *ent)
+{
+    @MODEL@
+}
+
+static void pause_attack(entity *attacking_entity, entity *self, s_attack *attack)
+{
+    int equalairpause = 0;
+    attacking_entity->pausetime = 0;
+    @ATTACKER@
+    @DEFENDER@
+}
+
+static void extend_throw_wait(entity *self)
+{
+    @RELEASE@
+}
+
+static int attack_charge_ready(entity *acting_entity, int notinair, const int *animattacks)
+{
+    @CHARGE_READY@
+    {
+        return 1;
+    }
+    return 0;
+}
+
+static int should_advance(entity *self)
+{
+    @ADVANCE@
+    {
+        return 1;
+    }
+    return 0;
+}
+
+static void hold_weapon(entity *other)
+{
+    @WEAPON@
+}
+
+static void hold_projectile(entity *other)
+{
+    @PROJECTILE@
+}
+
+static void hold_identified_item(entity *other)
+{
+    @IDENTIFIED@
+}
+
+static void check_rescheduling(int infinite_supported, int relative_model_time)
+{
+    static entity actor, target;
+    s_attack attack = {.pause_add = 4};
+    const u32 sentinel = DELAY_INFINITE;
+    const u32 model_time = relative_model_time ? 19 : 64;
+    _time = 45;
+    actor.animpos = 2;
+
+    actor.nextanim = 33;
+    update_frame_schedule(&actor, 3);
+    assert(actor.nextanim == 65);
+    actor.nextanim = sentinel;
+    update_frame_schedule(&actor, 3);
+    assert(actor.nextanim == (infinite_supported ? sentinel : 65));
+
+    actor.nextanim = 33;
+    update_model_schedule(&actor);
+    assert(actor.nextanim == model_time);
+    actor.nextanim = sentinel;
+    update_model_schedule(&actor);
+    assert(actor.nextanim == (infinite_supported ? sentinel : model_time));
+    actor.animpos = 5;
+    actor.nextanim = 33;
+    update_model_schedule(&actor);
+    const u32 signed_delay = relative_model_time ? (u32)-2 : 43u;
+    assert(actor.nextanim == signed_delay);
+
+    actor.nextanim = target.nextanim = 33;
+    pause_attack(&actor, &target, &attack);
+    assert(actor.nextanim == 37 && target.nextanim == (relative_model_time ? 41 : 37));
+    actor.nextanim = target.nextanim = sentinel;
+    pause_attack(&actor, &target, &attack);
+    assert(actor.nextanim == (infinite_supported ? sentinel : sentinel + 4u));
+    assert(target.nextanim == sentinel + 4u);
+}
+
+static void check_deadline_cycle(int relative_model_time)
+{
+    static entity actor, target;
+    s_attack attack = {.pause_add = 4};
+    const unsigned long last = UINT32_MAX - 1u;
+    const unsigned long next = obor_profile_build < 7504u ? 2 : last + 4;
+    _time = 45;
+    actor.nextanim = actor.nextmove = actor.nextthink = actor.toss_time = last;
+    target.nextanim = target.nextmove = target.nextthink = target.toss_time = last;
+    pause_attack(&actor, &target, &attack);
+    assert(actor.nextmove == next && actor.nextthink == next && actor.toss_time == next);
+    assert(target.nextmove == next && target.nextthink == next && target.toss_time == next);
+    assert(actor.nextanim == next && target.nextanim == next + (relative_model_time ? 4 : 0));
+    actor.releasetime = last;
+    extend_throw_wait(&actor);
+    const unsigned long release = last + THINK_SPEED;
+    assert(actor.releasetime == (obor_profile_build < 7504u ? (u32)release : release));
+}
+
+static void check_frozen_deadlines(void)
+{
+    static entity actor;
+    unsigned long *const active[] = {
+        &actor.stalltime, &actor.releasetime, &actor.nextanim, &actor.nextthink,
+        &actor.nextmove, &actor.magictime, &actor.guardtime, &actor.toss_time,
+        &actor.mpchargetime, &actor.invinctime, &actor.turntime, &actor.sealtime,
+    };
+    const unsigned long last = UINT32_MAX;
+    const unsigned long next = obor_profile_build < 7504u ? 0 : last + 1;
+    for (size_t i = 0; i < sizeof(active) / sizeof(*active); ++i)
+    {
+        *active[i] = last;
+    }
+    actor.freezetime = last;
+    actor.timestamp = 40;
+    obor_extend_frozen_entity_deadlines(&actor, 0);
+    for (size_t i = 0; i < sizeof(active) / sizeof(*active); ++i)
+    {
+        assert(*active[i] == next);
+        *active[i] = i;
+    }
+    assert(actor.freezetime == last && actor.timestamp == 40);
+    obor_extend_frozen_entity_deadlines(&actor, 1);
+    for (size_t i = 0; i < sizeof(active) / sizeof(*active); ++i)
+    {
+        assert(*active[i] == (i ? i + 1 : 0));
+    }
+    assert(actor.freezetime == next && actor.timestamp == 40);
+}
+
+static void check_charge_deadlines(void)
+{
+    static entity actor;
+    static s_anim attack = {.numframes = 1, .charge_time = 1};
+    static s_anim *animations[ANI_CHARGEATTACK + 1];
+    const int animattacks[] = {ANI_ATTACK1};
+    const int short_clock = obor_profile_build < 7504u || ULONG_MAX == UINT32_MAX;
+    actor.modeldata.animation = animations;
+    actor.modeldata.animation_capacity = sizeof(animations) / sizeof(*animations);
+    actor.modeldata.chainlength = 1;
+    actor.modeldata.atchain[0] = 1;
+    animations[ANI_ATTACK1] = &attack;
+    for (int dedicated = 0; dedicated < 2; ++dedicated)
+    {
+        animations[ANI_CHARGEATTACK] = dedicated ? &attack : NULL;
+        actor.stalltime = UINT32_MAX - 1;
+        _time = GAME_SPEED;
+        assert(attack_charge_ready(&actor, 1, animattacks) == short_clock);
+        assert(!attack_charge_ready(&actor, 0, animattacks));
+        actor.stalltime = 12;
+        _time = 12 + GAME_SPEED;
+        assert(!attack_charge_ready(&actor, 1, animattacks));
+        ++_time;
+        assert(attack_charge_ready(&actor, 1, animattacks));
+    }
+}
+
+static void check_advance_and_items(int infinite_supported)
+{
+    static entity actor;
+    const u32 sentinel = DELAY_INFINITE;
+    bothnewkeys = 0;
+    actor.nextanim = _time = 55;
+    assert(should_advance(&actor));
+    _time = sentinel;
+    actor.nextanim = sentinel;
+    assert(should_advance(&actor) == !infinite_supported);
+    actor.modeldata.type = TYPE_TEXTBOX;
+    bothnewkeys = FLAG_JUMP;
+    assert(should_advance(&actor));
+    actor.modeldata.subtype = SUBTYPE_NOSKIP;
+    assert(should_advance(&actor) == !infinite_supported);
+    actor.modeldata = (s_model){0};
+
+    _time = 45;
+    const u32 held_until = _time + GAME_SPEED * 999999;
+    static void (*const hold[])(entity *) = {hold_weapon, hold_projectile, hold_identified_item};
+    for (size_t i = 0; i < sizeof(hold) / sizeof(*hold); ++i)
+    {
+        actor.nextanim = 39;
+        hold[i](&actor);
+        assert(actor.nextanim == held_until && actor.nextthink == held_until);
+        actor.nextanim = sentinel;
+        hold[i](&actor);
+        assert(actor.nextanim == (infinite_supported ? sentinel : held_until) &&
+               actor.nextthink == held_until);
+    }
+}
+
+int main(void)
+{
+    static const struct { uint32_t build; int infinite, relative_model_time; } cases[] = {
+        {7369, 0, 0}, {7391, 0, 0}, {7420, 0, 0}, {7494, 0, 0},
+        {7495, 1, 1}, {7503, 1, 1}, {7504, 1, 0}, {7509, 1, 0}, {7533, 1, 0},
+    };
+    for (size_t i = 0; i < sizeof(cases) / sizeof(*cases); ++i)
+    {
+        obor_profile_build = cases[i].build;
+        warnings = 0;
+        assert(parse_delay("delay 12") == 12);
+        assert(parse_delay("delay infinite") == (cases[i].infinite ? DELAY_INFINITE : 0));
+        assert(warnings == (cases[i].infinite ? 0u : 1u));
+        check_rescheduling(cases[i].infinite, cases[i].relative_model_time);
+        check_deadline_cycle(cases[i].relative_model_time);
+        check_frozen_deadlines();
+        check_charge_deadlines();
+        check_advance_and_items(cases[i].infinite);
+    }
+    puts("PASS");
+}

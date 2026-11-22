@@ -45,12 +45,24 @@ def program(data):
 class ModernDrawingPrimitiveContracts(unittest.TestCase):
     def test_queued_direct_and_screen_method_selection(self):
         data = load_contract_fixture(FIXTURE)
+        self.check_drawing_calls(data)
+
+    def test_original_alpha_in_legacy_drawing_calls(self):
+        source = load_contract_fixture(FIXTURE)
+        data = {key: value for key, value in source.items() if key != '_contract_boundaries'}
+        builds = (7369, 7391, 7420, 7470, 7471)
+        data['sources'] = [{'revision': build, 'contract': 'raw'} for build in builds]
+        data['expected_revisions'] = builds
+        self.check_drawing_calls(data)
+
+    def check_drawing_calls(self, data):
         revisions = [s['revision'] for s in data['sources']]
         self.assertEqual(len(revisions), len(set(revisions)))
         self.assertEqual(set(revisions), contract_revisions(data, data['expected_revisions']))
         expected = dict(status='PASS', profiles=[dict(revision=s['revision'], cases=data['contracts'][s['contract']])
                                                for s in data['sources']])
-        self.assertEqual(json.loads(native_output(program(data), data)), expected)
+        engine = Path(os.environ.get('OBOR_HISTORICAL_ENGINE', ROOT / 'src/engines' / data['engine']))
+        self.assertEqual(json.loads(native_output(program(data), data, engine_source=engine)), expected)
 
 
 if __name__ == '__main__':

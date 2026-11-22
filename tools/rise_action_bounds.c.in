@@ -58,6 +58,7 @@ unsigned int rand32(void) {++rng_calls;record(4,0,0);return sample;}
 void common_try_riseattack(void) {++rise_calls;record(5,0,0);}
 @ACTION@
 @BASELINE_ACTION@
+@TIMING_HELPERS@
 @GATE@
 @BASELINE_GATE@
 static void setup(int model,int back,unsigned mask,int mode) {
@@ -126,7 +127,7 @@ static void gate_cases(void) {
  for(unsigned c=0;c<5;++c)for(unsigned st=0;st<5;++st)for(unsigned rv=0;rv<4;++rv)
   for(int early=0;early<3;++early)for(int health=0;health<2;++health)for(int delayed=0;delayed<2;++delayed) {
    setup_gate(clocks[c],clocks[st],samples[rv],early,health,delayed);
-   @SPAN_TYPE@ span=actor.stalltime-probe_time+1;if(!span)continue;
+   uint64_t span=@SPAN_EXPRESSION@;if(!span)continue;
    int expected=baseline_lie();unsigned expected_rng=rng_calls,expected_rise=rise_calls,count=used;
    entity state;memcpy(&state,&actor,sizeof(state));memcpy(saved_calls,calls,sizeof(calls));
    setup_gate(clocks[c],clocks[st],samples[rv],early,health,delayed);

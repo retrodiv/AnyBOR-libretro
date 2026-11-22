@@ -690,7 +690,8 @@ HRESULT openbor_get_level_property(ScriptVariant **varlist, ScriptVariant **pret
 
         case LEVEL_PROPERTY_PALETTE_BLENDING_COLLECTION:
 
-            printf("LEVEL_PROPERTY_PALETTE_BLENDING_COLLECTION no longer supported");
+            printf("%s no longer supported", obor_profile_build < 7471u
+                ? "LEVEL_PROP_PALETTE_BLENDING_COLLECTION" : "LEVEL_PROPERTY_PALETTE_BLENDING_COLLECTION");
             ScriptVariant_Clear(*pretvar);
 
             break;
@@ -1431,7 +1432,7 @@ HRESULT openbor_set_level_property(ScriptVariant **varlist, ScriptVariant **pret
                 goto error_local;
             }
 
-            handle->quaketime = temp_int;
+            handle->quaketime = obor_profile_level_deadline(temp_int);
             break;
 
         case LEVEL_PROPERTY_ROCKING:
@@ -1590,7 +1591,7 @@ HRESULT openbor_set_level_property(ScriptVariant **varlist, ScriptVariant **pret
                 goto error_local;
             }
 
-            handle->advancetime = temp_int;
+            handle->advancetime = obor_profile_level_deadline(temp_int);
             break;
 
         case LEVEL_PROPERTY_TIME_DISPLAY:

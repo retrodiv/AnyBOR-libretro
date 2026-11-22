@@ -7,6 +7,7 @@ import json
 import os
 from pathlib import Path
 import re
+import tempfile
 import unittest
 
 from contract_fixtures import contract_revisions, load_contract_fixture
@@ -61,6 +62,20 @@ def program(data, kind):
 
 
 class ModernProgressRecordContracts(unittest.TestCase):
+    def test_original_input_recording_layout(self):
+        engine = Path(os.environ.get('OBOR_HISTORICAL_ENGINE', ROOT / 'src/engines/7533'))
+        source = (engine / 'openbor.c').read_text()
+        row = re.search(r'typedef struct\s*\{[^{}]+\}\s*obor_replay_row_32;', source)
+        self.assertIsNotNone(row)
+        methods = ('obor_read_replay', 'obor_write_replay', 'recordInputs', 'playRecordedInputs',
+                   'stopRecordInputs', 'freeRecordedInputs')
+        template = Path(__file__).with_name('modern_replay_contract.c.in').read_text()
+        with tempfile.TemporaryDirectory(prefix='anybor-replay-records-') as directory:
+            code = (template.replace('@RECORD@', row[0])
+                    .replace('@METHODS@', '\n'.join(function(source, name) for name in methods))
+                    .replace('@DIRECTORY@', json.dumps(Path(directory).as_posix() + '/')))
+            self.assertEqual(native_output(code, {'engine': '7533'}, engine_source=engine, libraries=('m',)), '')
+
     def run_contract(self, kind):
         data = load_contract_fixture(FIXTURE)
         self.assertEqual({row['revision'] for row in data['sources']},

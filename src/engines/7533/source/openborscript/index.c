@@ -327,11 +327,11 @@ const char *Script_GetFunctionName(void *functionRef)
     {
     return "set_attack_id_value";
     }
-    else if (functionRef == ((void*)openbor_get_colorset_property))
+    else if (obor_profile_build >= 7470u && functionRef == ((void*)openbor_get_colorset_property))
     {
         return "get_colorset_property";
     }
-    else if (functionRef == ((void*)openbor_set_colorset_property))
+    else if (obor_profile_build >= 7470u && functionRef == ((void*)openbor_set_colorset_property))
     {
         return "set_colorset_property";
     }
@@ -343,43 +343,43 @@ const char *Script_GetFunctionName(void *functionRef)
     {
         return "set_entity_property";
     }
-    else if (functionRef == ((void*)openbor_get_faction_property))
+    else if (obor_profile_build >= 7445u && functionRef == ((void*)openbor_get_faction_property))
     {
         return "get_faction_property";
     }
-    else if (functionRef == ((void*)openbor_set_faction_property))
+    else if (obor_profile_build >= 7445u && functionRef == ((void*)openbor_set_faction_property))
     {
         return "set_faction_property";
     }
-    else if (functionRef == ((void*)openbor_get_icon_property))
+    else if (obor_profile_build >= 7459u && functionRef == ((void*)openbor_get_icon_property))
     {
         return "get_icon_property";
     }
-    else if (functionRef == ((void*)openbor_set_icon_property))
+    else if (obor_profile_build >= 7459u && functionRef == ((void*)openbor_set_icon_property))
     {
         return "set_icon_property";
     }
-    else if (functionRef == ((void*)openbor_get_model_property))
+    else if (obor_profile_build >= 7446u && functionRef == ((void*)openbor_get_model_property))
     {
         return "get_model_property";
     }
-    else if (functionRef == ((void*)openbor_set_model_property))
+    else if (obor_profile_build >= 7446u && functionRef == ((void*)openbor_set_model_property))
     {
         return "set_model_property";
     }
-    else if (functionRef == ((void*)openbor_get_spawn_hud_property))
+    else if (obor_profile_build >= 7466u && functionRef == ((void*)openbor_get_spawn_hud_property))
     {
         return "get_spawn_hud_property";
         }
-    else if (functionRef == ((void*)openbor_set_spawn_hud_property))
+    else if (obor_profile_build >= 7466u && functionRef == ((void*)openbor_set_spawn_hud_property))
     {
         return "set_spawn_hud_property";
         }
-    else if (functionRef == ((void*)openbor_get_status_dial_property))
+    else if (obor_profile_build >= 7460u && functionRef == ((void*)openbor_get_status_dial_property))
     {
         return "get_status_dial_property";
         }
-    else if (functionRef == ((void*)openbor_set_status_dial_property))
+    else if (obor_profile_build >= 7460u && functionRef == ((void*)openbor_set_status_dial_property))
     {
         return "set_status_dial_property";
         }
@@ -1044,6 +1044,11 @@ const char *Script_GetFunctionName(void *functionRef)
 //return string mapping function corresponding to a given function
 void *Script_GetStringMapFunction(void *functionRef)
 {
+    if (obor_profile_build < 7468u &&
+        (functionRef == (void *)openbor_get_bind_property || functionRef == (void *)openbor_set_bind_property))
+    {
+        return (void *)mapstrings_bind_property;
+    }
     if (functionRef == ((void *)openbor_systemvariant))
     {
         return (void *)mapstrings_systemvariant;
@@ -1072,6 +1077,13 @@ void *Script_GetStringMapFunction(void *functionRef)
 	{
 		return (void*)mapstrings_sub_entity_property;
 	}
+
+    else if (obor_profile_build < 7445u &&
+             (functionRef == (void *)openbor_get_entity_property ||
+              functionRef == (void *)openbor_set_entity_property))
+    {
+        return (void *)mapstrings_entity_property;
+    }
 
 	// Entity (Legacy)
 	else if (functionRef == ((void *)openbor_getentityproperty))
@@ -1407,10 +1419,13 @@ void Script_LoadSystemFunctions()
                      (void *)openbor_set_body_collision_property, "set_body_collision_property");
 
     // Entity properties.
-    List_InsertAfter(&theFunctionList,
-        (void*)openbor_get_colorset_property, "get_colorset_property");
-    List_InsertAfter(&theFunctionList,
-        (void*)openbor_set_colorset_property, "set_colorset_property");
+    if (obor_profile_build >= 7470u)
+    {
+        List_InsertAfter(&theFunctionList,
+            (void*)openbor_get_colorset_property, "get_colorset_property");
+        List_InsertAfter(&theFunctionList,
+            (void*)openbor_set_colorset_property, "set_colorset_property");
+    }
 
     // Entity collision (ebox) properties.
     List_InsertAfter(&theFunctionList,
@@ -1429,10 +1444,13 @@ void Script_LoadSystemFunctions()
                      (void *)openbor_set_entity_property, "set_entity_property");
 
     /* Faction properties. */    
-    List_InsertAfter(&theFunctionList,
-        (void*)openbor_get_faction_property, "get_faction_property");
-    List_InsertAfter(&theFunctionList,
-        (void*)openbor_set_faction_property, "set_faction_property");
+    if (obor_profile_build >= 7445u)
+    {
+        List_InsertAfter(&theFunctionList,
+            (void*)openbor_get_faction_property, "get_faction_property");
+        List_InsertAfter(&theFunctionList,
+            (void*)openbor_set_faction_property, "set_faction_property");
+    }
 
     if(obor_profile_build >= 7557)
     {
@@ -1447,16 +1465,22 @@ void Script_LoadSystemFunctions()
         (void*)openbor_set_global_config_property, "set_global_config_property");
 
     /* Icon properties */
-    List_InsertAfter(&theFunctionList,
-        (void*)openbor_get_icon_property, "get_icon_property");
-    List_InsertAfter(&theFunctionList,
-        (void*)openbor_set_icon_property, "set_icon_property");
+    if (obor_profile_build >= 7459u)
+    {
+        List_InsertAfter(&theFunctionList,
+            (void*)openbor_get_icon_property, "get_icon_property");
+        List_InsertAfter(&theFunctionList,
+            (void*)openbor_set_icon_property, "set_icon_property");
+    }
 
     /* Model properties. */
-    List_InsertAfter(&theFunctionList,
-        (void*)openbor_get_model_property, "get_model_property");
-    List_InsertAfter(&theFunctionList,
-        (void*)openbor_set_model_property, "set_model_property");
+    if (obor_profile_build >= 7446u)
+    {
+        List_InsertAfter(&theFunctionList,
+            (void*)openbor_get_model_property, "get_model_property");
+        List_InsertAfter(&theFunctionList,
+            (void*)openbor_set_model_property, "set_model_property");
+    }
 
     if(obor_profile_build >= 7590)
     {
@@ -1465,16 +1489,22 @@ void Script_LoadSystemFunctions()
     }
 
     /* Spawn HUD properties. */
-    List_InsertAfter(&theFunctionList,
-        (void*)openbor_get_spawn_hud_property, "get_spawn_hud_property");
-    List_InsertAfter(&theFunctionList,
-        (void*)openbor_set_spawn_hud_property, "set_spawn_hud_property");
+    if (obor_profile_build >= 7466u)
+    {
+        List_InsertAfter(&theFunctionList,
+            (void*)openbor_get_spawn_hud_property, "get_spawn_hud_property");
+        List_InsertAfter(&theFunctionList,
+            (void*)openbor_set_spawn_hud_property, "set_spawn_hud_property");
+    }
 
     /* Status Popup properties. */
-    List_InsertAfter(&theFunctionList,
-        (void*)openbor_get_status_dial_property, "get_status_dial_property");
-    List_InsertAfter(&theFunctionList,
-        (void*)openbor_set_status_dial_property, "set_status_dial_property");
+    if (obor_profile_build >= 7460u)
+    {
+        List_InsertAfter(&theFunctionList,
+            (void*)openbor_get_status_dial_property, "get_status_dial_property");
+        List_InsertAfter(&theFunctionList,
+            (void*)openbor_set_status_dial_property, "set_status_dial_property");
+    }
 
     List_InsertAfter(&theFunctionList,
                      (void *)openbor_changeentityproperty, "changeentityproperty");

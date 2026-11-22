@@ -1,0 +1,133 @@
+/* SPDX-License-Identifier: BSD-3-Clause
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me>
+ */
+#include <stdint.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include "openbor.h"
+#undef printf
+
+uint32_t obor_profile_build;
+s_savedata savedata;
+s_level *level;
+entity **ent_list;
+int ent_max;
+const s_attack emptyattack;
+static entity arrow, owner, enemy;
+static unsigned wall_checks, fall_calls;
+
+static void check(int pass, const char *label)
+{
+    if (!pass)
+    {
+        fprintf(stderr, "%u: %s\n", obor_profile_build, label);
+        abort();
+    }
+}
+
+void common_fall(void) {}
+void ent_set_anim(entity *actor, int animation, int reset) { abort(); }
+#define common_up_anim(actor) ent_set_anim(actor, ANI_UP, 0)
+#define common_down_anim(actor) ent_set_anim(actor, ANI_DOWN, 0)
+#define common_walk_anim(actor) ent_set_anim(actor, ANI_WALK, 0)
+
+int projectile_wall_deflect(entity *actor)
+{
+    check(actor == &arrow, "Wall test uses the arrow actor");
+    ++wall_checks;
+    return 0;
+}
+
+int set_fall(entity *actor, entity *other, s_attack *attack, int reset)
+{
+    check(actor == &arrow && other == actor && attack->attack_drop == 10000 && !reset,
+          "Projectile fall uses the original actor and drop force");
+    ++fall_calls;
+    return 1;
+}
+
+@ROUTINES@
+
+static void check_homing(void)
+{
+    static int vulnerable = 1;
+    static s_anim animation = {.vulnerable = &vulnerable};
+    static entity *actors[] = {&arrow, &owner, &enemy};
+    ent_list = actors;
+    ent_max = sizeof(actors) / sizeof(*actors);
+    owner = (entity){.animation = &animation, .exists = 1};
+    owner.modeldata.type = TYPE_ENEMY;
+    owner.position.x = -4;
+    enemy = owner;
+    enemy.position.x = 32;
+    arrow = (entity){.owner = &owner, .direction = DIRECTION_RIGHT};
+    arrow.modeldata.speed.x = 12;
+    arrow.modeldata.type = TYPE_SHOT;
+    arrow.modeldata.aimove = AIMOVE1_CHASE;
+    arrow.faction.type_hostile = TYPE_ENEMY;
+    arrow.faction.hostile = FACTION_GROUP_TYPE_EXCLUSIVE;
+    check(homing_find_target(&arrow) == (obor_profile_build < 7444u ? &owner : &enemy),
+          "Original owner-selection boundary");
+
+    const float expected = obor_profile_build < 7384u ? 12 : obor_profile_build < 7444u ? -18 : 18;
+    check(arrow_move(&arrow) == 1 && arrow.velocity.x == expected, "AI chase flag introduction");
+    arrow.modeldata.subtype = SUBTYPE_CHASE;
+    check(arrow_move(&arrow) == 1 && arrow.velocity.x == (obor_profile_build < 7444u ? -18 : 18),
+          "Chase subtype uses the nearest valid target");
+}
+
+static void check_projectile_primes(void)
+{
+    arrow = (entity){.direction = DIRECTION_RIGHT};
+    arrow.modeldata.speed.x = 12;
+    arrow.modeldata.speed.y = 3;
+    arrow.modeldata.speed.z = 4;
+    arrow.velocity.y = 7;
+    arrow.velocity.z = 8;
+    arrow.projectile_prime = PROJECTILE_PRIME_INITIALIZE_LEGACY_PROJECTILE_FUNCTION | PROJECTILE_PRIME_BASE_FLOOR;
+    check(arrow_move(&arrow) == 1 && arrow.velocity.x == 12, "Horizontal speed still updates");
+    check(arrow.velocity.y == (obor_profile_build < 7421u ? 3 : 7) &&
+          arrow.velocity.z == (obor_profile_build < 7421u ? 4 : 8), "Original lateral and vertical velocity");
+    check(!!(arrow.autokill & AUTOKILL_ANIMATION_COMPLETE) == (obor_profile_build < 7425u),
+          "Original floor animation completion");
+
+    arrow.autokill = AUTOKILL_NONE;
+    arrow.projectile_prime = PROJECTILE_PRIME_LAUNCH_STATIONARY;
+    check(arrow_move(&arrow) == 1 &&
+          !!(arrow.autokill & AUTOKILL_ANIMATION_COMPLETE) == (obor_profile_build >= 7427u),
+          "Original stationary animation completion");
+}
+
+static void check_base_landing(void)
+{
+    static s_level active_level;
+    const e_move_config_flags rules[] = {MOVE_CONFIG_PROJECTILE_WALL_BOUNCE, MOVE_CONFIG_PROJECTILE_BASE_DIE};
+    level = &active_level;
+    for (size_t i = 0; i < sizeof(rules) / sizeof(*rules); ++i)
+    {
+        arrow = (entity){.direction = DIRECTION_RIGHT};
+        arrow.energy_state.health_current = 55;
+        arrow.modeldata.move_config_flags = rules[i];
+        arrow.damage_on_landing.attack_force = 31;
+        fall_calls = wall_checks = 0;
+        check(arrow_move(&arrow) == 1 && wall_checks == 1, "Each landing checks the active level");
+        const int death = obor_profile_build >= 7427u && (i == (obor_profile_build >= 7435u));
+        check(fall_calls == (unsigned)death && arrow.energy_state.health_current == (death ? 0 : 55) &&
+              arrow.damage_on_landing.attack_force == (death ? 0 : 31), "Original projectile base rule");
+    }
+    level = NULL;
+}
+
+int main(void)
+{
+    const unsigned builds[] = {7369, 7383, 7384, 7391, 7420, 7421, 7424, 7425,
+                               7426, 7427, 7434, 7435, 7443, 7444, 7533};
+    for (size_t i = 0; i < sizeof(builds) / sizeof(*builds); ++i)
+    {
+        obor_profile_build = builds[i];
+        check_homing();
+        check_projectile_primes();
+        check_base_landing();
+    }
+    return 0;
+}

@@ -25,6 +25,24 @@
 
 #include "scriptcommon.h"
 
+int mapstrings_bind_property(ScriptVariant **varlist, int paramCount)
+{
+    static const char *proplist[] = {
+        "animation_frame", "animation_id", "config", "direction_adjust", "meta_data", "meta_tag",
+        "offset_x", "offset_y", "offset_z", "sort_id", "target"
+    };
+    char *propname = NULL;
+    int prop;
+
+    if (paramCount < 2)
+    {
+        return 1;
+    }
+    MAPSTRINGS(varlist[1], proplist, BIND_PROPERTY_END,
+               "Property name '%s' is not supported by binding.\n");
+    return 1;
+}
+
 static const s_property_access_map obor_profile_bind_get_property_map(const void* acting_object_param, const unsigned int property_index_param)
 {
     s_property_access_map property_map;
@@ -284,6 +302,10 @@ HRESULT openbor_get_bind_property(ScriptVariant **varlist , ScriptVariant **pret
     * property data back to calling script.     .
     */
 	ScriptVariant_Clear(*pretvar);
+    if (obor_profile_build < 7468u)
+    {
+        mapstrings_bind_property(varlist, paramCount);
+    }
 
 	/*
     * Verify arguments. There should at least
@@ -400,7 +422,14 @@ HRESULT openbor_get_bind_property(ScriptVariant **varlist , ScriptVariant **pret
 
     error_local:
 
-    printf("\nYou must provide a valid pointer and property constant: " SELF_NAME "\n");
+    if (obor_profile_build < 7468u)
+    {
+        printf("\nYou must provide a valid pointer and property name: openbor_get_bind_property(void bind, char property)\n");
+    }
+    else
+    {
+        printf("\nYou must provide a valid pointer and property constant: " SELF_NAME "\n");
+    }
     *pretvar = NULL;
 
     return E_FAIL;
@@ -442,6 +471,10 @@ HRESULT openbor_set_bind_property(ScriptVariant **varlist, ScriptVariant **pretv
 	* taken from argument.
 	*/
 	LONG         temp_int;
+    if (obor_profile_build < 7468u)
+    {
+        mapstrings_bind_property(varlist, paramCount);
+    }
 	
 	/*
 	* Verify incoming arguments. There should at least
@@ -570,7 +603,14 @@ HRESULT openbor_set_bind_property(ScriptVariant **varlist, ScriptVariant **pretv
 	// Error trapping.
     error_local:
 
-	printf("\nYou must provide a valid pointer, property name, and new value: " SELF_NAME "\n");
+	if (obor_profile_build < 7468u)
+    {
+        printf("\nYou must provide a valid pointer, property name, and new value: set_bind_property(void bind, char property, mixed value)\n");
+    }
+    else
+    {
+        printf("\nYou must provide a valid pointer, property name, and new value: " SELF_NAME "\n");
+    }
 
 	result = E_FAIL;
 	return result;

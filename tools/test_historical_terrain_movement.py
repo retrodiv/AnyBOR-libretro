@@ -4,6 +4,7 @@ SPDX-License-Identifier: BSD-3-Clause
 Copyright (c) 2026 retrodiv <retrodiv@proton.me>
 """
 import json
+import os
 from pathlib import Path
 import re
 import unittest
@@ -63,6 +64,131 @@ def program(data, *, movement_decisions=False):
 
 
 class TerrainMovementContracts(unittest.TestCase):
+    def test_7533_original_movement_terrain_and_path_recovery(self):
+        engine = Path(os.environ.get('OBOR_HISTORICAL_ENGINE', ROOT / 'src/engines/7533'))
+        core = (engine / 'openbor.c').read_text()
+        code = r'''
+#include <stdint.h>
+#include "openbor.h"
+#undef assert
+#undef printf
+#include <assert.h>
+
+uint32_t obor_profile_build;
+u32 _time = 50;
+int PLAYER_MIN_Z = 20, PLAYER_MAX_Z = 110;
+float advancex;
+s_videomodes videomodes;
+static entity actor, obstacle_platform;
+static s_terrain wall;
+static s_level stage;
+s_level *level = &stage;
+entity *self = &actor;
+static unsigned between_calls, below_calls, wall_calls, walk_calls;
+static int allow_platform_floor;
+
+entity *check_platform_between(float x, float z, float lower, float upper, entity *exclude)
+{
+    assert(x == 11 && z == 30 && lower == 20 && upper == 30 && exclude == &actor);
+    ++between_calls;
+    return &obstacle_platform;
+}
+
+entity *check_platform_below(float x, float z, float height, entity *exclude)
+{
+    assert(x == 11 && z == 30 && height == actor.position.y + T_WALKOFF && exclude == &actor);
+    ++below_calls;
+    return allow_platform_floor ? &obstacle_platform : NULL;
+}
+
+int checkwall_below(float x, float z, float height)
+{
+    assert(x == 11 && z == 25 && height == T_MAX_CHECK_ALTITUDE);
+    ++wall_calls;
+    return 0;
+}
+
+float get_platform_base(entity *platform) { assert(platform == &obstacle_platform); return 20; }
+void adjust_walk_animation(entity *other) { assert(other == NULL); ++walk_calls; }
+float randf(float max) { assert(max == 1); return 0.8f; }
+int checkhole(float x, float z) { assert(0); return 0; }
+int checkwall_index(float x, float z) { assert(0); return -1; }
+entity *find_ent_here(entity *exclude, float x, float z, e_entity_type types, int (*test)(entity *, entity *))
+{ assert(0); return NULL; }
+entity *normal_find_target(int anim, int detect) { assert(0); return NULL; }
+int astar(entity *ent, float x, float z, float step, s_axis_plane_lateral_float **waypoints)
+{ assert(0); return 0; }
+
+@METHODS@
+
+static void check_movement(void)
+{
+    s_anim animation = {.numframes = 1, .size.y = 10, .range.x.max = 15};
+    s_anim *animations[ANI_JUMP + 1] = {0};
+    actor = (entity){.position.y = 20, .animation = &animation};
+    actor.modeldata.animation = animations;
+    actor.modeldata.animation_capacity = sizeof(animations) / sizeof(*animations);
+
+    between_calls = below_calls = wall_calls = 0;
+    actor.modeldata.move_config_flags = MOVE_CONFIG_SUBJECT_TO_PLATFORM;
+    allow_platform_floor = 0;
+    assert(testmove(&actor, 10, 30, 11, 30) == 0);
+    allow_platform_floor = 1;
+    assert(testmove(&actor, 10, 30, 11, 30) == 1);
+    assert(between_calls == 2 && below_calls == 2 && wall_calls == 0);
+
+    actor.modeldata.move_config_flags = MOVE_CONFIG_SUBJECT_TO_WALL;
+    wall = (s_terrain){.height = 30, .z = 25, .depth = 10};
+    assert(testmove(&actor, 10, 20, 11, 25) == 0);
+    animations[ANI_JUMP] = &animation;
+    assert(testmove(&actor, 10, 20, 11, 25) == -1);
+    actor.position.y = 30;
+    assert(testmove(&actor, 10, 20, 11, 25) == 1);
+    assert(wall_calls == 3);
+}
+
+static void check_path_recovery(void)
+{
+    actor = (entity){.stalltime = _time, .running = RUN_STATE_START_X};
+    actor.position.z = 109;
+    actor.velocity.z = 3;
+    actor.modeldata.move_config_flags = MOVE_CONFIG_SUBJECT_TO_MAX_Z;
+    walk_calls = 0;
+    assert(checkpathblocked() == 1);
+    assert(walk_calls == 1 && actor.velocity.z == -3 && actor.destz == 86);
+    actor.position.z = 21;
+    actor.modeldata.move_config_flags = MOVE_CONFIG_SUBJECT_TO_MIN_Z;
+    assert(checkpathblocked() == 1);
+    assert(walk_calls == 2 && actor.velocity.z == 3 && actor.destz == 44);
+
+    actor.modeldata.move_config_flags = MOVE_CONFIG_NONE;
+    actor.modeldata.speed.x = 4;
+    actor.velocity.x = 2;
+    actor.velocity.z = 0;
+    actor.pathblocked = 41;
+    assert(checkpathblocked() == 1);
+    assert(walk_calls == 3 && actor.running == RUN_STATE_NONE && actor.pathblocked == 0);
+    assert(actor.velocity.x == 0 && actor.velocity.z == 4 && actor.destz == 61);
+}
+
+int main(void)
+{
+    static const unsigned builds[] = {7369, 7390, 7391, 7420, 7426, 7427, 7446, 7447, 7497, 7498, 7533};
+    stage.walls = &wall;
+    videomodes.vRes = 240;
+    for (size_t i = 0; i < sizeof(builds) / sizeof(*builds); ++i)
+    {
+        obor_profile_build = builds[i];
+        check_movement();
+        check_path_recovery();
+    }
+    return 0;
+}
+'''
+        methods = ('diff', 'obor_profile_static_move_flags', 'testmove', 'checkpathblocked')
+        code = code.replace('@METHODS@', '\n'.join(function(core, name) for name in methods))
+        self.assertEqual(native_output(code, {'engine': '7533'}, engine_source=engine), '')
+
     def test_4432_wander_item_draws_and_wall_participation(self):
         fixture = Path(__file__).with_name('fixtures') / 'profile-movement-decision-contracts.json'
         data = load_contract_fixture(fixture)

@@ -13,14 +13,13 @@ from contract_fixtures import contract_revisions, load_contract_fixture
 from test_early_jump_walkoff import continued_macro
 from test_historical_common_think import ROOT, native_output
 from test_historical_player import function
+from test_modern_legacy_script_routing import combat_snapshot_support
 
 
 FIXTURE = Path(__file__).with_name('fixtures') / 'modern-property-contracts.json'
 
 
-def program(data):
-    engine = Path(os.environ.get('OBOR_HISTORICAL_ENGINE',
-                                ROOT / 'src/engines' / data['engine']))
+def program(data, engine):
     constants = (engine / 'source/openborscript/constants.c').read_text()
     mapper = function(constants, 'mapstrings_transconst')
     selected = [line for line in mapper.splitlines() if re.fullmatch(
@@ -28,10 +27,16 @@ def program(data):
     if len(selected) < 100:
         raise ValueError('Expected the complete entity/model constant registration chains')
     helpers = [function(constants, 'obor_profile_property_constant')]
+    core = (engine / 'openbor.c').read_text()
+    helpers.append(combat_snapshot_support(core, ('obor_is_combat_collection', 'obor_entity_set_combat_collection')))
+    helpers.append(function((engine / 'source/utils.c').read_text(), 'searchList'))
     maps, entries = [], []
     for family in ('entity', 'model'):
         source = (engine / 'source/openborscript' / (family + '.c')).read_text()
         helpers.append(function(source, 'obor_profile_' + family + '_property_end'))
+        if family == 'entity':
+            helpers.extend(function(source, name) for name in (
+                'mapstrings_entity_property', 'obor_entity_property_native_id', 'obor_legacy_entity_scalar'))
         maps.append(function(source, family + '_get_property_map'))
         entries.extend(function(source, 'openbor_' + op + '_' + family + '_property')
                        for op in ('get', 'set'))
@@ -90,7 +95,8 @@ class ModernPropertyContracts(unittest.TestCase):
                  data['contracts'][row['contract']].items()
                  if key not in ('field_refs', 'value_indices')})
             for row in data['sources']])
-        self.assertEqual(json.loads(native_output(program(data), data)), expected)
+        engine = Path(os.environ.get('OBOR_HISTORICAL_ENGINE', ROOT / 'src/engines' / data['engine']))
+        self.assertEqual(json.loads(native_output(program(data, engine), data, engine_source=engine)), expected)
 
 
 if __name__ == '__main__':

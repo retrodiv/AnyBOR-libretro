@@ -2,6 +2,7 @@
  * Copyright (c) 2026 retrodiv <retrodiv@proton.me>
  */
 #include <stdint.h>
+#include <stdarg.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -16,12 +17,29 @@ unsigned char neontable[MAX_PAL_SIZE];
 unsigned char *blendtables[MAX_BLENDINGS];
 int pixelformat,startup_done;
 static int events[64],event_count,font_identity,script_font,model_font,override_font;
+static char first_message[64];
 static int event(int id) { if(event_count==64) abort();events[event_count++]=id;return 1; }
 static void fonts(void) { event(12);font_identity=1; }
 static void scripts(void) { event(17);script_font=font_identity; }
 static void models(void) { event(18);model_font=font_identity;if(override_font) font_identity=2; }
 static void volume(int channel,int value)
-{ if((channel!=SB_MASTERVOL && channel!=SB_VOICEVOL) || value!=57) abort();event(10); }
+{
+    const int master = obor_profile_build < 7452u ? 15 : savedata.soundvol;
+    if ((channel != SB_MASTERVOL && channel != SB_VOICEVOL) ||
+        value != (channel == SB_MASTERVOL ? master : savedata.soundvol)) abort();
+    event(10);
+}
+
+static void startup_message(const char *format, ...)
+{
+    if (event_count == 0)
+    {
+        va_list args;
+        va_start(args, format);
+        vsnprintf(first_message, sizeof(first_message), format, args);
+        va_end(args);
+    }
+}
 #define pak_init() event(1)
 #define loadHighScoreFile() event(2)
 #define clearSavedGame() event(3)
@@ -48,13 +66,33 @@ static void volume(int channel,int value)
 #define create_blend_tables_x8(tables) ((void)(tables),(void)event(24))
 #define savesettings() event(25)
 #define borShutdown(...) abort()
-#define printf(...) ((void)0)
+#define printf startup_message
 @FUNCTION@
 #undef printf
+
+static void check_original_startup_defaults(void)
+{
+    static const unsigned controls[] = {7369, 7391, 7406, 7409, 7420, 7447, 7452};
+    for (size_t i = 0; i < sizeof(controls) / sizeof(*controls); ++i)
+    {
+        obor_profile_build = controls[i];
+        event_count = 0;
+        memset(&savedata, 0, sizeof(savedata));
+        savedata.soundvol = 57;
+        savedata.usejoy = 1;
+        pixelformat = PIXEL_32;
+        startup();
+        const char *expected = controls[i] < 7409u ? "FileCaching System Init......\t"
+                                                  : "FileCaching System Init.......\t";
+        if (strcmp(first_message, expected) != 0) abort();
+    }
+}
+
 int main(void)
 {
     static const unsigned profiles[]={@PROFILES@};
     size_t p,i;int c;
+    check_original_startup_defaults();
     printf("{\"status\":\"PASS\",\"profiles\":[");
     for(p=0;p<sizeof(profiles)/sizeof(*profiles);++p)
     {

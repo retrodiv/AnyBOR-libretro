@@ -17,6 +17,7 @@ static entity actor, attacker, effect;
 static s_attack attack;
 static s_body body;
 static int spawn_calls, spawn_failed, spawn_model, spawn_direction, spawn_scripts, toflip;
+static int spawn_model_layer;
 static float spawn_x, spawn_z, spawn_y;
 static int smart_model, smart_attack;
 static char log_text[16384];
@@ -58,6 +59,7 @@ entity *spawn(const float x, const float z, const float y, const e_direction dir
     spawn_model=model; spawn_direction=direction;
     memset(&effect, 0, sizeof(effect));
     effect.modeldata.toflip=toflip;
+    effect.modeldata.setlayer=spawn_model_layer;
     return spawn_failed || model < 0 ? NULL : &effect;
 }
 void execute_onspawn_script(entity *ent)
@@ -152,12 +154,76 @@ static void effect_case(const struct input_case *input)
            effect.base,(int)effect.direction,!!(effect.autokill&AUTOKILL_ANIMATION_COMPLETE),
            effect.spawntype==SPAWN_TYPE_FLASH,spawn_scripts);
 }
+
+static void check_original_flash_diagnostic(int has_placement)
+{
+    if ((strstr(log_text, "->flash_layer_adjust:") != NULL) != has_placement ||
+        (strstr(log_text, "->flash_layer_source:") != NULL) != has_placement ||
+        (strstr(log_text, "->flash_z_source:") != NULL) != has_placement)
+    {
+        abort();
+    }
+}
+
+static void check_original_hit_flash_placement(void)
+{
+    static const uint32_t builds[] = {7369, 7391, 7420, 7438, 7439};
+    actor.position.x = 40;
+    actor.position.z = 30;
+    attacker.position.z = 20;
+    lasthit.position.x = 45;
+    lasthit.position.y = 7;
+    lasthit.position.z = 25;
+    lasthit.attacker = &attacker;
+    lasthit.attack = &attack;
+    lasthit.detect_body = &body;
+    global_config.flash_z_source = -1;
+    global_config.flash_layer_source = 1;
+    global_config.flash_layer_adjust = 4;
+    attack.flash.layer_adjust = 2;
+    body.flash.layer_adjust = 3;
+    spawn_model_layer = 77;
+    toflip = 1;
+    for (size_t i = 0; i < sizeof(builds) / sizeof(*builds); ++i)
+    {
+        obor_profile_build = builds[i];
+        spawn_calls = spawn_scripts = 0;
+        if (spawn_attack_flash(&actor, &attack, 3, 8) != &effect ||
+            spawn_calls != 1 || spawn_scripts != 1 || spawn_model != 3 ||
+            spawn_x != 45 || spawn_y != 7 || effect.base != 7 ||
+            effect.direction != DIRECTION_RIGHT)
+        {
+            abort();
+        }
+        if (spawn_z != (builds[i] < 7439 ? 25 : 20) ||
+            effect.modeldata.setlayer != (builds[i] < 7439 ? 77 : 39))
+        {
+            abort();
+        }
+        log_text[0] = '\0';
+        attack_dump_object(&attack);
+        check_original_flash_diagnostic(builds[i] >= 7439);
+        log_text[0] = '\0';
+        body_dump_object(&body);
+        check_original_flash_diagnostic(builds[i] >= 7439);
+    }
+
+    lasthit.attack = NULL;
+    lasthit.detect_body = NULL;
+    if (spawn_attack_flash(&actor, &attack, 3, 8) != &effect || effect.modeldata.setlayer != 34)
+    {
+        abort();
+    }
+    spawn_model_layer = 0;
+}
+
 int main(void)
 {
     static const unsigned profiles[] = {@PROFILES@};
     static const int inherited[][2]={{-1,-1},{0,-1},{-1,0},{45,46}};
     static s_model model, parent;
     unsigned p,c;
+    check_original_hit_flash_placement();
     puts("{\"status\":\"PASS\",\"profiles\":[");
     for(p=0;p<sizeof(profiles)/sizeof(*profiles);++p)
     {

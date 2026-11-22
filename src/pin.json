@@ -1,7 +1,7 @@
 {
   "core_name": "AnyBOR",
   "core_basename": "anybor_libretro",
-  "version": "0.2.51",
+  "version": "0.2.52",
   "fallback_build": "6391",
   "profiles": [
     {
@@ -3971,6 +3971,45 @@
       "stage": "alpha"
     },
     {
+      "build": "7369",
+      "engine": "7533",
+      "major": "v3.0",
+      "stage": "dev",
+      "automatic": false,
+      "tagged": true,
+      "triage": false,
+      "upstream_commit": "c0c8afe5dbdf5325e65e503ec0547f9b1e5c10eb",
+      "upstream_date": "2022-05-12",
+      "upstream_branch": "development revision",
+      "covers": "Upstream development revision; exact filename tag or core option"
+    },
+    {
+      "build": "7391",
+      "engine": "7533",
+      "major": "v3.0",
+      "stage": "dev",
+      "automatic": false,
+      "tagged": true,
+      "triage": false,
+      "upstream_commit": "8d809a5d13f9c77bc2a3e1cacfa4c5bf8aca4266",
+      "upstream_date": "2023-01-02",
+      "upstream_branch": "development revision",
+      "covers": "Upstream development revision; exact filename tag or core option"
+    },
+    {
+      "build": "7420",
+      "engine": "7533",
+      "major": "v3.0",
+      "stage": "dev",
+      "automatic": false,
+      "tagged": true,
+      "triage": false,
+      "upstream_commit": "8a180f22934d574d0159693951d0339eedc53f8a",
+      "upstream_date": "2023-01-13",
+      "upstream_branch": "development revision",
+      "covers": "Upstream development revision; exact filename tag or core option"
+    },
+    {
       "build": "7530",
       "engine": "7533",
       "major": "v4.0",
@@ -4191,6 +4230,24 @@
       "commit": "8ad68746200339af2a9006bd9f489f8df0d26347",
       "license_file": "LICENSES/OpenBOR-7533.txt",
       "license_sha256": "b8f3916944f0b5aee216ef7a494820d17ae658336a4680992dc244ebedecf3ea"
+    },
+    {
+      "build": "7369",
+      "commit": "c0c8afe5dbdf5325e65e503ec0547f9b1e5c10eb",
+      "license_file": "LICENSES/OpenBOR-7142.txt",
+      "license_sha256": "adfc28feba4d32bb3933b29fe55fd0a6aa746084704c3ee71fc3f732706b9aa4"
+    },
+    {
+      "build": "7391",
+      "commit": "8d809a5d13f9c77bc2a3e1cacfa4c5bf8aca4266",
+      "license_file": "LICENSES/OpenBOR-7142.txt",
+      "license_sha256": "adfc28feba4d32bb3933b29fe55fd0a6aa746084704c3ee71fc3f732706b9aa4"
+    },
+    {
+      "build": "7420",
+      "commit": "8a180f22934d574d0159693951d0339eedc53f8a",
+      "license_file": "LICENSES/OpenBOR-7142.txt",
+      "license_sha256": "adfc28feba4d32bb3933b29fe55fd0a6aa746084704c3ee71fc3f732706b9aa4"
     }
   ]
 }

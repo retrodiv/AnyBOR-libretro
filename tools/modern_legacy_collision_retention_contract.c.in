@@ -1,0 +1,127 @@
+/* SPDX-License-Identifier: BSD-3-Clause
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me>
+ */
+#include <stdint.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include "openbor.h"
+#undef malloc
+
+uint32_t obor_profile_build;
+
+static void expect(int condition, const char *label)
+{
+    if (!condition)
+    {
+        fprintf(stderr, "Profile %u: %s\n", obor_profile_build, label);
+        abort();
+    }
+}
+
+s_attack *attack_clone_object(s_attack *source)
+{
+    expect(!source, "attack payload");
+    return NULL;
+}
+
+s_body *body_clone_object(s_body *source)
+{
+    expect(!source, "body payload");
+    return NULL;
+}
+
+void attack_free_object(s_attack *source) { free(source); }
+void body_free_object(s_body *source) { free(source); }
+
+void collision_attack_prepare_coordinates_for_frame(s_collision_attack *head, s_model *model,
+                                                     s_addframe_data *data)
+{
+    (void)head;
+    (void)model;
+    (void)data;
+}
+
+void collision_body_prepare_coordinates_for_frame(s_collision_body *head, s_model *model,
+                                                   s_addframe_data *data)
+{
+    (void)head;
+    (void)model;
+    (void)data;
+}
+
+@METHODS@
+
+static void build_frame(s_addframe_data *data, ptrdiff_t frame)
+{
+    s_collision_attack *temp_collision_head = data->collision;
+    s_collision_body *temp_collision_body_head = data->collision_body;
+    @PRUNE@
+    data->collision = temp_collision_head;
+    data->collision_body = temp_collision_body_head;
+    collision_attack_initialize_frame_property(data, frame);
+    collision_body_initialize_frame_property(data, frame);
+}
+
+int main(void)
+{
+    static const uint32_t profiles[] = {7369, 7391, 7417, 7418, 7420, 7533};
+    for (size_t i = 0; i < sizeof(profiles) / sizeof(*profiles); ++i)
+    {
+        obor_profile_build = profiles[i];
+        const int retained = obor_profile_build >= 7418u;
+        int vulnerable[2] = {0};
+        s_anim animation = {.vulnerable = vulnerable};
+        s_addframe_data data = {.animation = &animation, .framecount = 2};
+        data.collision = collision_attack_allocate_object();
+        data.collision_body = collision_body_allocate_object();
+        data.collision->coords = collision_allocate_coords(NULL);
+        data.collision_body->coords = collision_allocate_coords(NULL);
+        data.collision->coords->width = 12;
+        data.collision_body->coords->width = 12;
+        data.collision->index = data.collision_body->index = 1;
+        s_collision_attack *attack = collision_attack_append_node(data.collision);
+        s_collision_body *body = collision_body_append_node(data.collision_body);
+        attack->index = body->index = 7;
+        attack->meta_tag = 43;
+        body->meta_tag = 29;
+
+        build_frame(&data, 0);
+        expect(animation.collision_attack[0] && animation.collision_attack[0]->index == 1 &&
+               !animation.collision_attack[0]->next, "first attack frame");
+        expect(animation.collision_body[0] && animation.collision_body[0]->index == 1 &&
+               !animation.collision_body[0]->next && vulnerable[0], "first body frame");
+
+        attack = collision_attack_find_node_index(data.collision, 7);
+        body = collision_body_find_node_index(data.collision_body, 7);
+        expect((attack != NULL) == retained && (body != NULL) == retained, "temporary definitions");
+        if (!retained)
+        {
+            attack = collision_attack_append_node(data.collision);
+            body = collision_body_append_node(data.collision_body);
+            attack->index = body->index = 7;
+        }
+        attack->coords = collision_allocate_coords(NULL);
+        body->coords = collision_allocate_coords(NULL);
+        attack->coords->width = 17;
+        body->coords->width = 19;
+        build_frame(&data, 1);
+
+        attack = collision_attack_find_node_index(animation.collision_attack[1], 7);
+        body = collision_body_find_node_index(animation.collision_body[1], 7);
+        expect(attack && attack->coords->width == 17 &&
+               attack->meta_tag == (retained ? 43 : 0), "second attack frame");
+        expect(body && body->coords->width == 19 && vulnerable[1] &&
+               body->meta_tag == (retained ? 29 : 0), "second body frame");
+        collision_attack_free_list(data.collision);
+        collision_body_free_list(data.collision_body);
+        for (unsigned frame = 0; frame < 2; ++frame)
+        {
+            collision_attack_free_list(animation.collision_attack[frame]);
+            collision_body_free_list(animation.collision_body[frame]);
+        }
+        free(animation.collision_attack);
+        free(animation.collision_body);
+    }
+    return 0;
+}

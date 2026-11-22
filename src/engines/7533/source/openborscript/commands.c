@@ -46,12 +46,36 @@ modelCommands getModelCommand(List *list, char *usercommand)
 
 modelstxtCommands getModelstxtCommand(List *list, char *usercommand)
 {
-    return (modelstxtCommands) getCommandlistCommand(list, usercommand);
+    const modelstxtCommands command = (modelstxtCommands)(uintptr_t)getCommandlistCommand(list, usercommand);
+
+    switch (command)
+    {
+        case CMD_MODELSTXT_GLOBAL_CONFIG_FLASH_LAYER_ADJUST:
+        case CMD_MODELSTXT_GLOBAL_CONFIG_FLASH_LAYER_SOURCE:
+        case CMD_MODELSTXT_GLOBAL_CONFIG_FLASH_Z_SOURCE:
+            return obor_profile_build < 7439u ? (modelstxtCommands)0 : command;
+        default:
+            return command;
+    }
 }
 
 levelCommands getLevelCommand(List *list, char *usercommand)
 {
-    return (levelCommands) getCommandlistCommand(list, usercommand);
+    const levelCommands command = (levelCommands)(uintptr_t)getCommandlistCommand(list, usercommand);
+
+    switch (command)
+    {
+        case CMD_LEVEL_FACTION_GROUP_DAMAGE_DIRECT:
+        case CMD_LEVEL_FACTION_GROUP_DAMAGE_INDIRECT:
+        case CMD_LEVEL_FACTION_GROUP_HOSTILE:
+        case CMD_LEVEL_FACTION_GROUP_MEMBER:
+        case CMD_LEVEL_FACTION_TYPE_DAMAGE_DIRECT:
+        case CMD_LEVEL_FACTION_TYPE_DAMAGE_INDIRECT:
+        case CMD_LEVEL_FACTION_TYPE_HOSTILE:
+            return obor_profile_build < 7445u ? (levelCommands)0 : command;
+        default:
+            return command;
+    }
 }
 
 levelOrderCommands getLevelOrderCommand(List *list, char *usercommand)

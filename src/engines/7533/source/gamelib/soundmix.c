@@ -502,6 +502,11 @@ static void mixaudio(unsigned int todo)
     static unsigned char *sptr8;
     static short *sptr16;
 
+    const double music_gain = obor_profile_build < 7409u ? 1.0 :
+        obor_profile_build < 7452u ? 2.0 : 2.5;
+    const double sample_gain = obor_profile_build < 7409u ? 1.0 :
+        obor_profile_build < 7452u ? 2.0 : 1.5;
+
     /* Script-visible slots may be invalid; retain defined samples safely. */
     if(musicchannel.active && !musicchannel.paused
        && (musicchannel.playing_buffer < 0 || musicchannel.playing_buffer >= MUSIC_NUM_BUFFERS
@@ -560,8 +565,8 @@ static void mixaudio(unsigned int todo)
                 break;
             }
             lmusic = rmusic = sptr16[FIX_TO_INT(fp_pos)];
-            lmusic = obor_profile_build >= 7587 ? (lmusic * lvolume / 60) : (lmusic * lvolume / MAXVOLUME * 2.5);
-            rmusic = obor_profile_build >= 7587 ? (rmusic * rvolume / 60) : (rmusic * rvolume / MAXVOLUME * 2.5);
+            lmusic = obor_profile_build >= 7587 ? (lmusic * lvolume / 60) : (lmusic * lvolume / MAXVOLUME * music_gain);
+            rmusic = obor_profile_build >= 7587 ? (rmusic * rvolume / 60) : (rmusic * rvolume / MAXVOLUME * music_gain);
             mixbuf[i++] += lmusic;
             if(musicchannel.channels == SOUND_MONO)
             {
@@ -604,10 +609,10 @@ static void mixaudio(unsigned int todo)
                 for(i = 0; i < (int)todo;)
                 {
                     lmusic = rmusic = sptr8[FIX_TO_INT(fp_pos)];
-                    mixbuf[i++] += (obor_profile_build >= 7587 ? ((lmusic << 8) * lvolume / 100) : ((lmusic << 8) * lvolume / MAXVOLUME * 1.5)) - 0x8000;
+                    mixbuf[i++] += (obor_profile_build >= 7587 ? ((lmusic << 8) * lvolume / 100) : ((lmusic << 8) * lvolume / MAXVOLUME * sample_gain)) - 0x8000;
                     if(vchannel[chan].channels == SOUND_MONO)
                     {
-                        mixbuf[i++] += (obor_profile_build >= 7587 ? ((rmusic << 8) * rvolume / 100) : ((rmusic << 8) * rvolume / MAXVOLUME * 1.5)) - 0x8000;
+                        mixbuf[i++] += (obor_profile_build >= 7587 ? ((rmusic << 8) * rvolume / 100) : ((rmusic << 8) * rvolume / MAXVOLUME * sample_gain)) - 0x8000;
                     }
                     fp_pos += fp_period;
 
@@ -629,10 +634,10 @@ static void mixaudio(unsigned int todo)
                 for(i = 0; i < (int)todo;)
                 {
                     lmusic = rmusic = (int)(short)SwapLSB16(sptr16[FIX_TO_INT(fp_pos)]);
-                    mixbuf[i++] += (obor_profile_build >= 7587 ? (lmusic * lvolume / 100) : (lmusic * lvolume / MAXVOLUME * 1.5));
+                    mixbuf[i++] += (obor_profile_build >= 7587 ? (lmusic * lvolume / 100) : (lmusic * lvolume / MAXVOLUME * sample_gain));
                     if(vchannel[chan].channels == SOUND_MONO)
                     {
-                        mixbuf[i++] += (obor_profile_build >= 7587 ? (rmusic * rvolume / 100) : (rmusic * rvolume / MAXVOLUME * 1.5));
+                        mixbuf[i++] += (obor_profile_build >= 7587 ? (rmusic * rvolume / 100) : (rmusic * rvolume / MAXVOLUME * sample_gain));
                     }
                     fp_pos += fp_period;
 
@@ -710,6 +715,19 @@ void update_sample(unsigned char *buf, int size)
 
 // Speed in percents of normal.
 // Returns channel the sample is played on or -1 if not playing.
+static int sound_profile_sample_volume_cap(void)
+{
+    if (obor_profile_build >= 7587u)
+    {
+        return 100;
+    }
+    if (obor_profile_build >= 7452u)
+    {
+        return MAXVOLUME * 3 / 2;
+    }
+    return obor_profile_build < 7409u ? MAXVOLUME : MAXVOLUME * 2;
+}
+
 int sound_play_sample(int samplenum, unsigned int priority, int lvolume, int rvolume, unsigned int speed)
 {
 
@@ -772,13 +790,14 @@ int sound_play_sample(int samplenum, unsigned int priority, int lvolume, int rvo
     {
         rvolume = 0;
     }
-    if(lvolume > (obor_profile_build >= 7587 ? 100 : 96))
+    const int volume_cap = sound_profile_sample_volume_cap();
+    if(lvolume > volume_cap)
     {
-        lvolume = (obor_profile_build >= 7587 ? 100 : 96);
+        lvolume = volume_cap;
     }
-    if(rvolume > (obor_profile_build >= 7587 ? 100 : 96))
+    if(rvolume > volume_cap)
     {
-        rvolume = (obor_profile_build >= 7587 ? 100 : 96);
+        rvolume = volume_cap;
     }
 
     vchannel[channel].samplenum = samplenum;
@@ -877,13 +896,14 @@ void sound_volume_sample(int channel, int lvolume, int rvolume)
     {
         rvolume = 0;
     }
-    if(lvolume > (obor_profile_build >= 7587 ? 100 : 96))
+    const int volume_cap = sound_profile_sample_volume_cap();
+    if(lvolume > volume_cap)
     {
-        lvolume = (obor_profile_build >= 7587 ? 100 : 96);
+        lvolume = volume_cap;
     }
-    if(rvolume > (obor_profile_build >= 7587 ? 100 : 96))
+    if(rvolume > volume_cap)
     {
-        rvolume = (obor_profile_build >= 7587 ? 100 : 96);
+        rvolume = volume_cap;
     }
     vchannel[channel].volume[0] = lvolume;
     vchannel[channel].volume[1] = rvolume;
@@ -1618,13 +1638,15 @@ void sound_volume_music(int left, int right)
     {
         right = 0;
     }
-    if(left > (obor_profile_build >= 7587 ? 800 : 512))
+    const int volume_cap = obor_profile_build >= 7587u ? 800 :
+        MAXVOLUME * (obor_profile_build >= 7409u && obor_profile_build < 7452u ? 16 : 8);
+    if(left > volume_cap)
     {
-        left = (obor_profile_build >= 7587 ? 800 : 512);
+        left = volume_cap;
     }
-    if(right > (obor_profile_build >= 7587 ? 800 : 512))
+    if(right > volume_cap)
     {
-        right = (obor_profile_build >= 7587 ? 800 : 512);
+        right = volume_cap;
     }
     musicchannel.volume[0] = left;
     musicchannel.volume[1] = right;
@@ -1713,9 +1735,10 @@ int sound_init(int channels)
     {
         channels = 2;
     }
-    if(channels > MAX_CHANNELS)
+    const int channel_limit = maxchannels();
+    if(channels > channel_limit)
     {
-        channels = MAX_CHANNELS;
+        channels = channel_limit;
     }
     sound_exit();
 
@@ -1760,8 +1783,8 @@ u32 sound_getinterval()
     return msecs;
 }
 
-int maxchannels()
+int maxchannels(void)
 {
-    return MAX_CHANNELS;
+    return obor_profile_build < 7474u ? 64 : MAX_CHANNELS;
 }
 

@@ -21,6 +21,7 @@ u32 _time=17;
 @DEFAULTS@
 static s_defense defense;
 static int event_count,defense_count,kill_count,onkill_calls,clear_calls,animation_calls;
+static int observe_summons,summon_calls;
 static int variant,damage_calls,grab_calls,drop_calls,effect_calls,mp_calls,score_calls,didhit_calls;
 static struct event { int kind,recipient,other; s_attack value; } events[16];
 static int defenses[8][2],kills[8][2];
@@ -81,7 +82,7 @@ void dropweapon(int mode) { if(mode!=1) abort(); }
 void set_weapon(entity *ent,int weapon,int flag) { (void)ent;(void)weapon;(void)flag;abort(); }
 int set_idle(entity *ent) { (void)ent;abort(); }
 void ent_spawn_ent(entity *ent) { (void)ent;abort(); }
-void ent_summon_ent(entity *ent) { (void)ent;abort(); }
+void ent_summon_ent(entity *ent) { if(!observe_summons || ent!=entities) abort();++summon_calls; }
 void child_spawn_execute_list(s_child_spawn *head,entity *parent) { (void)head;(void)parent;abort(); }
 int sound_play_sample(int sample,unsigned priority,int left,int right,unsigned speed)
 { (void)sample;(void)priority;(void)left;(void)right;(void)speed;abort(); }
@@ -105,7 +106,7 @@ void checkmpadd(void) { ++mp_calls; }
 void checkhitscore(entity *other,s_attack *attack) { (void)other;(void)attack;++score_calls; }
 void checkdamage(entity *ent,entity *other,s_attack *attack,s_defense *object)
 {
-    if(object!=&defense) abort();
+    if(object!=(obor_profile_build < 7435u ? NULL : &defense)) abort();
     ++damage_calls;record(4,ent,other,attack);
     if(variant==8) ent->energy_state.health_current=0;
 }
@@ -153,6 +154,7 @@ int main(void)
             memset(player,0,sizeof(player));memset(&animation,0,sizeof(animation));
             memset(&lasthit,0,sizeof(lasthit));
             event_count=defense_count=kill_count=onkill_calls=clear_calls=animation_calls=0;
+            observe_summons=summon_calls=0;
             damage_calls=grab_calls=drop_calls=effect_calls=mp_calls=score_calls=didhit_calls=0;
             level_completed=0;ent_count=4;self=&sentinel;
             animation.numframes=2;animation.move=moves;animation.flipframe=-1;
@@ -189,12 +191,28 @@ int main(void)
                     entities[0].energy_state.health_current,ent_count,self==&sentinel,onkill_calls,
                     clear_calls,sentinel.subentity==entities,player[0].ent==NULL,smartbomber==NULL,textbox==NULL);
             }
+            else if(kind==3)
+            {
+                s_sub_entity summon={.frame=0};
+                animation.sub_entity_summon=&summon;
+                animation.sub_entity_model_index=0;
+                animation.sub_entity_unsummon=1;
+                entities[0].subentity=variant ? &entities[1] : NULL;
+                if(variant>=2)
+                {
+                    obor_entity_dead_script_set(&entities[1], -7);
+                    if(variant==3) obor_entity_dead_script_set(&entities[1], 0);
+                }
+                observe_summons=1;
+                update_frame(entities,0);
+                printf("%d,%d",summon_calls,self==&sentinel);
+            }
             else
             {
                 self=entities;entities[0].energy_state.health_current=variant==0 ? 0 : 30;
                 entities[0].damage_on_landing.attack_force=variant==6 || variant==7 ? 0 : 7;
                 entities[0].damage_on_landing.attack_type=ATK_NORMAL2;
-                if(variant==5) entities[0].toexplode=EXPLODE_DETONATE_HIT;
+                if(variant==5) entities[0].toexplode=obor_bomb_detonate_on_hit_flag();
                 if(variant==6 || variant==7) entities[0].die_on_landing=1;
                 if(variant==7) entities[0].takedamage=NULL;
                 if(variant==9) entities[0].opponent=&entities[1];

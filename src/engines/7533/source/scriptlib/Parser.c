@@ -26,6 +26,37 @@
 
 Parser *pcurParser = NULL;
 
+extern unsigned int obor_profile_build;
+
+static int obor_parser_uses_legacy_bitwise_not(void)
+{
+    return obor_profile_build && obor_profile_build < 7372u;
+}
+
+static void obor_parser_legacy_bitwise_not(Parser *pparser)
+{
+    Parser_Match(pparser);
+    Parser_Unary_expr(pparser);
+    if (pparser->errorFound)
+    {
+        return;
+    }
+
+    const Instruction *operand = List_Retrieve(pparser->pIList);
+    if (!operand)
+    {
+        return;
+    }
+
+    Token *token = operand->theToken;
+    Parser_AddInstructionViaToken(pparser, NEG, NULL, NULL);
+    if (token)
+    {
+        Parser_AddInstructionViaToken(pparser, SAVE, token, NULL);
+        Parser_AddInstructionViaToken(pparser, LOAD, token, NULL);
+    }
+}
+
 void Parser_Init(Parser *pparser)
 {
     memset(pparser, 0, sizeof(Parser));
@@ -1870,6 +1901,11 @@ void Parser_Unary_expr(Parser *pparser )
     }
     else if (Parser_Check(pparser, TOKEN_BITWISE_NOT ))
     {
+        if (obor_parser_uses_legacy_bitwise_not())
+        {
+            obor_parser_legacy_bitwise_not(pparser);
+            return;
+        }
         Parser_Match(pparser);
         Parser_Unary_expr(pparser );
         pInstruction = (Instruction *)List_Retrieve(pparser->pIList);
@@ -1963,6 +1999,10 @@ void Parser_Postfix_expr2(Parser *pparser )
         Parser_Match(pparser);
         Parser_AddInstructionViaToken(pparser, SAVE, pInstruction->theToken, NULL );
         Parser_Postfix_expr2(pparser );
+    }
+    else if (obor_parser_uses_legacy_bitwise_not() && Parser_Check(pparser, TOKEN_BITWISE_NOT ))
+    {
+        obor_parser_legacy_bitwise_not(pparser);
     }
     else if (ParserSet_Follow(&(pparser->theParserSet), postfix_expr2, pparser->theNextToken.theType )) {}
     else

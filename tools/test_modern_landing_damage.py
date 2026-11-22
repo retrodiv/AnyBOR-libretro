@@ -51,6 +51,81 @@ def program(data):
 
 
 class ModernLandingDamageContracts(unittest.TestCase):
+    def test_7533_dive_arguments_follow_original_revisions(self):
+        engine = Path(os.environ.get('OBOR_HISTORICAL_ENGINE', ROOT / 'src/engines/7533'))
+        source = (engine / 'openbor.c').read_text()
+        _, cases = switch_cases(source, 'load_cached_model', 'cmd', outermost=True)
+        directives = ('DIVE', 'DIVE1', 'DIVE2')
+        code = r'''
+#include <stdint.h>
+#include <stdlib.h>
+#include "openbor.h"
+#undef assert
+#include <assert.h>
+
+uint32_t obor_profile_build;
+
+float getValidFloat(char *text, char *file, char *cmd)
+{
+    return strtof(text, NULL);
+}
+
+static void apply_dive(s_anim *newanim, int directive, size_t count)
+{
+    char *filename = "model.txt", *command = "dive";
+    ArgList arglist = {.count = count, .args = {"dive", "4.5", "1.25"}};
+    switch (directive)
+    {
+        @DIRECTIVES@
+    }
+}
+
+int main(void)
+{
+    const unsigned builds[] = {7369, 7391, 7420, 7516, 7517, 7533};
+    const e_move_config_flags retained = MOVE_CONFIG_SUBJECT_TO_MAX_Z;
+    for (size_t i = 0; i < sizeof(builds) / sizeof(*builds); ++i)
+    {
+        obor_profile_build = builds[i];
+        const int legacy = builds[i] < 7517u;
+        const float expected_x[] = {4.5f, 4.5f, 0.0f};
+        const float expected_y[] = {-1.25f, 0.0f, legacy ? -4.5f : -1.25f};
+        s_anim anim = {0};
+        for (int directive = 0; directive < 3; ++directive)
+        {
+            anim.move_config_flags = retained | MOVE_CONFIG_SUBJECT_TO_GRAVITY;
+            anim.jumpframe = (s_onframe_move){.frame = 7, .model_index = 8,
+                                             .velocity = {.x = 8, .y = 9, .z = 10}};
+            apply_dive(&anim, directive, 3);
+            assert(anim.move_config_flags == retained);
+            assert(anim.jumpframe.frame == 0 && anim.jumpframe.model_index == MODEL_INDEX_NONE);
+            assert(anim.jumpframe.velocity.x == expected_x[directive]);
+            assert(anim.jumpframe.velocity.y == expected_y[directive]);
+            assert(anim.jumpframe.velocity.z == 0);
+        }
+        apply_dive(&anim, 2, 2);
+        assert(anim.jumpframe.velocity.y == (legacy ? -4.5f : 0.0f));
+    }
+    return 0;
+}
+'''
+        bodies = '\n'.join(f"case {index}: {cases['CMD_MODEL_' + name]['body']}"
+                           for index, name in enumerate(directives))
+        self.assertEqual(native_output(code.replace('@DIRECTIVES@', bodies), {'engine': '7533'}, engine_source=engine), '')
+
+    def test_7533_jump_dust_uses_original_spawn_inputs(self):
+        data = {'engine': '7533'}
+        engine = Path(os.environ.get('OBOR_HISTORICAL_ENGINE', ROOT / 'src/engines' / data['engine']))
+        core = (engine / 'openbor.c').read_text(encoding='latin1')
+        spawn = function(core, 'spawn')
+        start = spawn.index('    s_model* spawn_model = model_pointer;')
+        end = spawn.index('    if(ent_count >= ent_list_size', start)
+        template = Path(__file__).with_name('jump_dust_contract.c.in').read_text()
+        code = (template.replace('@JUMP@', function(core, 'check_jumpframe'))
+                .replace('@SPAWN_DECLARATION@', spawn[:spawn.index('{')].strip())
+                .replace('@MODEL_SELECTION@', spawn[start:end]))
+        self.assertEqual(native_output(code, data, engine_source=engine), 'PASS\n')
+
     def check_jump_frame_record(self, physical):
         data = load_contract_fixture(JUMP_FRAME_FIXTURE)
         rows = [row for row in data['sources'] if row['engine'] == physical]

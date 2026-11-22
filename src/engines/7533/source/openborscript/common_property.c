@@ -1,3 +1,15 @@
+/* AnyBOR modification record: 2026-11-09.
+ * Port maintained by retrodiv <retrodiv@proton.me>.
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me> (original contributions).
+ * These contributions are licensed under BSD-3-Clause; see LICENSE at the root.
+ * Upstream code retains its original license and notices.
+ * Copy reference values when reading, writing and reporting packed script
+ * properties.
+ * Existing changes recorded here; this is not their implementation date.
+ * See MODIFICATIONS.md and docs/modifications/7533.md
+ * at the source repository root. Original notices follow below.
+ */
+
 #include "scriptcommon.h"
 
 /*
@@ -107,7 +119,9 @@ void property_access_dump_members(property_access_map get_property_map, const in
                     }
                     else
                     {
-                        printf(" | %p", *(void**)property_map.field);
+                        void *value;
+                        memcpy(&value, property_map.field, sizeof(value));
+                        printf(" | %p", value);
                     }
                     
                     break;
@@ -182,7 +196,7 @@ HRESULT property_access_get_member(const s_property_access_map* property_map, Sc
         }
         else
         {
-            pretvar->ptrVal = *(void**)property_map->field;
+            memcpy(&pretvar->ptrVal, property_map->field, sizeof(pretvar->ptrVal));
         }
         break;
     case VT_DECIMAL:
@@ -250,7 +264,7 @@ HRESULT property_access_set_member(const void* const acting_object, const s_prop
 
         case VT_PTR:
 
-            *(void**)property_map->field = acting_value->ptrVal;
+            memcpy((void*)property_map->field, &acting_value->ptrVal, sizeof(acting_value->ptrVal));
             break;
 
         case VT_DECIMAL:

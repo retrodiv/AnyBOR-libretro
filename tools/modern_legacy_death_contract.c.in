@@ -1,0 +1,382 @@
+/* SPDX-License-Identifier: BSD-3-Clause
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me>
+ */
+#include <stdint.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#pragma GCC diagnostic ignored "-Wignored-qualifiers"
+#if defined(__clang__)
+#pragma GCC diagnostic ignored "-Wdeprecated-non-prototype"
+#endif
+#include "scriptcommon.h"
+
+uint32_t obor_profile_build;
+u32 _time = 37;
+entity *self;
+s_savedata savedata;
+s_level *level;
+int level_completed, level_completed_defeating_boss;
+static entity actor;
+static s_defense defense;
+static int sequence_calls, requested_sequence_result, animation_calls, kills, deflections;
+static int fall_calls, score;
+static unsigned char ko_colour;
+static unsigned ko_calls;
+static e_death_config_flags sequence_flags;
+static e_death_sequence_acting_event sequence_event;
+static const struct { int hRes; } window = {320};
+#define advancex 100
+#define videomodes window
+
+static void check(int condition, const char *description)
+{
+    if (!condition)
+    {
+        fprintf(stderr, "%u: %s\n", obor_profile_build, description);
+        abort();
+    }
+}
+
+void suicide(void) { abort(); }
+void player_blink(void) { abort(); }
+void player_die(void) { abort(); }
+void common_fall(void) { abort(); }
+static void unchanged(void) { abort(); }
+
+void addscore(int playerindex, int add)
+{
+    check(playerindex == 1, "Death score goes to the attacker");
+    score += add;
+}
+int count_ents(int types) { abort(); }
+entity *drop_item(entity *ent) { abort(); }
+void kill_all_enemies(void) { abort(); }
+int sound_play_sample(int sample, unsigned int priority, int left, int right, unsigned int speed) { abort(); }
+void dropweapon(int flag) { abort(); }
+void toss(entity *ent, float lift)
+{
+    check(ent == &actor, "Toss uses the damage recipient");
+    ent->velocity.y = lift;
+}
+int set_fall(entity *ent, entity *other, s_attack *attack, int reset)
+{
+    check(ent == &actor && other == &actor && attack->attack_type == ATK_NORMAL && reset == 1,
+          "Fallback fall animation uses the damage caller arguments");
+    ++fall_calls;
+    return 1;
+}
+
+int set_death(entity *ent, int type, int reset)
+{
+    check(ent == &actor && type == ATK_NORMAL && reset == 0, "Death animation arguments");
+    ++animation_calls;
+    ent->animating = ANIMATING_FORWARD;
+    return 1;
+}
+
+s_defense *defense_find_current_object(entity *ent, s_body *body, e_attack_types type)
+{
+    check(ent == &actor && !body && type == ATK_NORMAL, "Defense lookup arguments");
+    return &defense;
+}
+
+int death_try_sequence_damage(entity *ent, e_death_config_flags flags, e_death_sequence_acting_event event)
+{
+    check(ent == &actor, "Death sequence actor");
+    sequence_flags = flags;
+    sequence_event = event;
+    ++sequence_calls;
+    return requested_sequence_result;
+}
+
+unsigned char *model_get_colourmap(s_model *model, unsigned index)
+{
+    check(model == &actor.modeldata && index == 3, "KO colourmap uses the actor and configured index");
+    ++ko_calls;
+    return &ko_colour;
+}
+
+int set_rise(entity *ent, int type, int reset)
+{
+    (void)ent;
+    (void)type;
+    (void)reset;
+    abort();
+}
+
+int projectile_wall_deflect(entity *ent)
+{
+    check(ent == &actor, "Star deflection actor");
+    ++deflections;
+    return 0;
+}
+
+void kill_entity(entity *ent, e_kill_entity_trigger trigger)
+{
+    check(ent == &actor && (trigger == KILL_ENTITY_TRIGGER_STAR_OUT_OF_BOUNDS ||
+                            trigger == KILL_ENTITY_TRIGGER_PLAYER_DEATH), "Removal actor and caller");
+    ++kills;
+}
+
+@METHODS@
+
+#undef control_rumble
+#define control_rumble(...) abort()
+static int damage_fall(entity *acting_entity, entity *other, s_attack *attack, int fall_flag,
+                       s_defense *defense_object)
+{
+    @DAMAGE_FALL@
+    return 1;
+}
+#undef control_rumble
+
+static void finish_player_death(void)
+{
+@FINISH_PLAYER_DEATH@
+}
+
+static void obstacle_blink(void)
+{
+@OBSTACLE_BLINK@
+}
+
+static void prepare_landing_death(entity *acting_entity)
+{
+@FALLDIE_ON_LANDING@
+}
+
+static void set_timeout_falldie(int airborne)
+{
+    if (airborne)
+    {
+@TIMEOUT_FALL@
+    }
+    else
+    {
+@TIMEOUT_INSTANT@
+    }
+}
+
+static void reset_actor(int type)
+{
+    memset(&actor, 0, sizeof(actor));
+    memset(&defense, 0, sizeof(defense));
+    actor.modeldata.type = type;
+    actor.modeldata.colorsets.ko = COLORSET_INDEX_NONE;
+    actor.last_damage_type = ATK_NORMAL;
+    actor.takeaction = unchanged;
+    self = &actor;
+    sequence_calls = animation_calls = kills = deflections = requested_sequence_result = 0;
+    fall_calls = score = 0;
+    ko_calls = 0;
+}
+
+static void check_original_death_markers(void)
+{
+    static entity attacker;
+    attacker = (entity){.playerindex = 1};
+    attacker.modeldata.type = TYPE_PLAYER;
+    reset_actor(TYPE_ENEMY);
+    actor.position.y = 12;
+    actor.inbackpain = 1;
+    actor.modeldata.diesound = -1;
+    actor.modeldata.score = 9;
+    actor.opponent = &attacker;
+    actor.energy_state.health_current = 1;
+    checkdeath();
+    check(actor.death_state == DEATH_STATE_NONE && !score, "Living entity keeps its state and score");
+    actor.energy_state.health_current = 0;
+    checkdeath();
+    const unsigned expected = DEATH_STATE_DEAD | (obor_profile_build >= 7488u
+                        ? DEATH_STATE_AIR | DEATH_STATE_BACK : DEATH_STATE_NONE);
+    check(actor.death_state == expected && actor.nograb && score == 9, "Original death flags and score");
+    check(obor_entity_dead_script_get(&actor) == (obor_profile_build < 7488u ? 1 : DEATH_STATE_DEAD),
+          "Original script-visible death value");
+}
+
+static void check_original_damage_fall(void)
+{
+    s_attack attack = {.attack_type = ATK_NORMAL, .dropv = {.x = 4, .y = 5, .z = 6}};
+    reset_actor(TYPE_ENEMY);
+    actor.modeldata.legacy_falldie = 1;
+    actor.velocity = (s_axis_principal_float){.x = 1, .y = 2, .z = 3};
+    check(damage_fall(&actor, &actor, &attack, 0, &defense) == 1 && animation_calls == 1 && !fall_calls,
+          "Immediate death before fall animation");
+    check(!actor.velocity.x && !actor.velocity.y && !actor.velocity.z, "Immediate death clears all velocity");
+
+    reset_actor(TYPE_ENEMY);
+    actor.direction = DIRECTION_RIGHT;
+    attack.damage_on_landing.attack_force = 13;
+    check(damage_fall(&actor, &actor, &attack, 0, &defense) == 1 && !animation_calls && fall_calls == 1,
+          "Non-immediate death follows the normal fall path");
+    check(actor.velocity.x == -4 && actor.velocity.y == 5 && actor.velocity.z == 6 &&
+          actor.damage_on_landing.attack_force == 13, "Fallback fall velocity and landing force");
+
+    reset_actor(TYPE_ENEMY);
+    actor.velocity.x = 1;
+    check(damage_fall(&actor, &actor, &attack, 1, &defense) == 1 && !animation_calls &&
+          !fall_calls && actor.velocity.x == 1, "A completed landing leaves velocity alone");
+}
+
+static void check_legacy_lie(void)
+{
+    for (int player_actor = 0; player_actor <= 1; ++player_actor)
+    for (int active = 0; active <= 1; ++active)
+    for (int value = -1; value <= 4; ++value)
+    {
+        reset_actor(player_actor ? TYPE_PLAYER : TYPE_ENEMY);
+        actor.animating = active ? ANIMATING_FORWARD : ANIMATING_NONE;
+        actor.modeldata.legacy_nodieblink = value;
+        common_lie();
+        check(!sequence_calls && !animation_calls, "Legacy lie sequence selection");
+        if (value == 0 || (value == 1 && !active))
+        {
+            check(actor.takeaction == (player_actor ? player_blink : suicide) && actor.blink &&
+                  actor.stalltime == _time + 2 * GAME_SPEED, "Original removal delay and blink");
+        }
+        else if (value == 2 && !active)
+        {
+            check(actor.takeaction == (player_actor ? player_die : suicide) && !actor.blink, "Original removal action");
+        }
+        else if (value == 3 && !active && player_actor)
+        {
+            check(actor.takeaction == player_die, "Original player corpse action");
+        }
+        else if (value == 3 && !active)
+        {
+            check(actor.modeldata.type == (obor_profile_build < 7385 ? 0 : TYPE_NONE) &&
+                  actor.noaicontrol && actor.takeaction == unchanged,
+                  "Original non-player corpse");
+        }
+        else
+        {
+            check(actor.takeaction == unchanged && !actor.blink && !actor.stalltime, "Original retained lie action");
+        }
+    }
+
+    reset_actor(TYPE_ENEMY);
+    actor.modeldata.legacy_falldie = 2;
+    actor.modeldata.legacy_nodieblink = 2;
+    common_lie();
+    check(animation_calls == 1 && actor.takeaction == unchanged && actor.animating == ANIMATING_FORWARD,
+          "Original animation order updates the lie condition");
+
+    reset_actor(TYPE_ENEMY);
+    actor.animating = ANIMATING_FORWARD;
+    actor.modeldata.legacy_nodieblink = 2;
+    actor.modeldata.colorsets.ko = 3;
+    actor.modeldata.colorsets.kotype = KO_COLORSET_CONFIG_INSTANT;
+    common_lie();
+    check(ko_calls == 1 && actor.colourmap == &ko_colour, "Immediate KO colourmap follows the original animation rule");
+}
+
+static void check_legacy_damage_and_star(void)
+{
+    for (int value = -1; value <= 3; ++value)
+    {
+        reset_actor(TYPE_ENEMY);
+        actor.modeldata.legacy_falldie = value;
+        actor.velocity.x = 1;
+        actor.velocity.y = 2;
+        actor.velocity.z = 3;
+        const int immediate = value == 1;
+        check(obor_damage_death_handled(&actor, &defense, ATK_NORMAL) == immediate &&
+              animation_calls == immediate && !sequence_calls, "Original immediate death condition");
+        check(actor.velocity.x == (immediate ? 0 : 1) && actor.velocity.y == (immediate ? 0 : 2) &&
+              actor.velocity.z == (immediate ? 0 : 3), "Original death velocity");
+
+        reset_actor(TYPE_ENEMY);
+        actor.position.x = 100;
+        actor.animating = ANIMATING_FORWARD;
+        actor.modeldata.legacy_falldie = value;
+        actor.modeldata.legacy_nodieblink = 2;
+        check(star_move() == (value != 0), "Original grounded star return value");
+        if (!value)
+        {
+            check(kills == 1 && !deflections, "Original grounded star removal");
+        }
+        else
+        {
+            check(!kills && deflections == 1 && actor.takeaction == common_lie &&
+                  actor.animating == ANIMATING_NONE && actor.death_state == 0, "Original grounded star action");
+        }
+    }
+
+    reset_actor(TYPE_PLAYER);
+    actor.modeldata.legacy_falldie = 1;
+    actor.energy_state.health_current = 3;
+    check(!obor_damage_death_handled(&actor, &defense, ATK_NORMAL) && !animation_calls, "Living legacy actor");
+    actor.modeldata.legacy_nodieblink = 3;
+    actor.think = unchanged;
+    finish_player_death();
+    check(!kills && actor.modeldata.type == (obor_profile_build < 7385 ? 0 : TYPE_NONE) &&
+          !actor.think && !actor.takeaction, "Original player corpse");
+    actor.modeldata.legacy_nodieblink = 4;
+    finish_player_death();
+    check(kills == 1, "Original player removal");
+}
+
+static void check_legacy_death_assignments(void)
+{
+    for (int value = -1; value <= 4; ++value)
+    {
+        reset_actor(TYPE_OBSTACLE);
+        actor.modeldata.legacy_nodieblink = value;
+        obstacle_blink();
+        check(actor.blink == (value == 0), "Original obstacle blink");
+    }
+    reset_actor(TYPE_PLAYER);
+    set_timeout_falldie(1);
+    check(actor.modeldata.legacy_falldie == 2, "Original airborne timeout mode");
+    set_timeout_falldie(0);
+    check(actor.modeldata.legacy_falldie == 1, "Original grounded timeout mode");
+    actor.modeldata.legacy_falldie = 3;
+    actor.die_on_landing = 1;
+    actor.energy_state.health_current = 1;
+    prepare_landing_death(&actor);
+    check(actor.modeldata.legacy_falldie == 3, "Original living landing mode");
+    actor.energy_state.health_current = 0;
+    prepare_landing_death(&actor);
+    check(actor.modeldata.legacy_falldie == 1, "Original death on landing mode");
+}
+
+static void check_modern_sequence(void)
+{
+    reset_actor(TYPE_ENEMY);
+    defense.death_config_flags = DEATH_CONFIG_SOURCE_MODEL;
+    actor.modeldata.death_config_flags = DEATH_CONFIG_MACRO_DEATH;
+    common_lie();
+    check(sequence_calls == 1 && sequence_flags == DEATH_CONFIG_MACRO_DEATH &&
+          sequence_event == DEATH_TRY_SEQUENCE_ACTING_EVENT_LIE, "Model-specific modern lie sequence");
+    defense.death_config_flags = DEATH_CONFIG_DEATH_GROUND;
+    requested_sequence_result = 1;
+    check(obor_damage_death_handled(&actor, &defense, ATK_NORMAL) && sequence_calls == 2 &&
+          sequence_flags == DEATH_CONFIG_DEATH_GROUND && sequence_event == DEATH_TRY_SEQUENCE_ACTING_EVENT_DAMAGE,
+          "Attack-specific modern damage sequence");
+}
+
+int main(void)
+{
+    static const unsigned legacy[] = {7369, 7391, 7420, 7481, 7487, 7488};
+    static const unsigned modern[] = {7482, 7486, 7489, 7530, 7533};
+    for (size_t i = 0; i < sizeof(legacy) / sizeof(*legacy); ++i)
+    {
+        obor_profile_build = legacy[i];
+        check_legacy_lie();
+        check_legacy_damage_and_star();
+        check_legacy_death_assignments();
+        check_original_death_markers();
+        if (obor_profile_build < 7488u)
+        {
+            check_original_damage_fall();
+        }
+    }
+    for (size_t i = 0; i < sizeof(modern) / sizeof(*modern); ++i)
+    {
+        obor_profile_build = modern[i];
+        check_modern_sequence();
+        check_original_death_markers();
+    }
+    return 0;
+}

@@ -22,6 +22,7 @@ entity *self;
 static entity parent_object,child;
 static int model_ok,spawn_ok,spawn_calls,spawn_kind,color;
 static unsigned prime_seed;
+static float launch_config_x;
 static const char *active_name;
 static char log_text[8192];
 static int capture_log(const char *format,...)
@@ -47,22 +48,548 @@ entity *knife_spawn(entity *parent,s_projectile *settings)
 {
     if(parent!=self || settings->knife!=2) abort();
     ++spawn_calls;spawn_kind=0;if(!spawn_ok) return NULL;
+    launch_config_x = settings->position.x;
     child.projectile_prime=prime_seed;return &child;
 }
 entity *bomb_spawn(entity *parent,s_projectile *settings)
 {
     if(parent!=self || settings->bomb!=2) abort();
     ++spawn_calls;spawn_kind=1;if(!spawn_ok) return NULL;
+    launch_config_x = settings->position.x;
     child.projectile_prime=prime_seed;return &child;
 }
 void ent_set_colourmap(entity *ent,unsigned map)
 { if(ent!=&child) abort();color=(int)map; }
 #define printf capture_log
 @MAPPER@
+@DEATH_ACCESSORS@
+@AIR_CONTROL@
 @GETTER@
 @PROJECTILE@
+@ENTITY_DEADLINE@
+
+static void set_entity_property(entity *ent, ScriptVariant **varlist, int paramCount)
+{
+    LONG ltemp;
+    DOUBLE dbltemp;
+    int i;
+    @ENTITY_TYPES@
+    if(!mapstrings_entityproperty(varlist, paramCount)) abort();
+    switch (obor_profile_entity_native_index(varlist[1]->lVal))
+    {
+@ENTITY_MUTATIONS@
+    default:
+        abort();
+    }
+    return;
+changeentityproperty_error:
+    abort();
+}
 #undef printf
 #pragma GCC diagnostic pop
+
+static void check_property(int condition, const char *message)
+{
+    if (!condition)
+    {
+        fprintf(stderr, "%u: %s\n", obor_profile_build, message);
+        abort();
+    }
+}
+
+static void check_legacy_palette_properties(void)
+{
+    static const unsigned builds[] = {7369, 7374, 7391, 7420, 7445, 7446, 7504, 7533};
+    static const struct { const char *name; LONG input; int nested_selector; } fields[] = {
+        {"alpha", -1, -1},
+        {"hmapl", 4, _ep_maps_hide_start},
+        {"hmapu", 11, _ep_maps_hide_end},
+        {"komap", 7, _ep_maps_ko},
+    };
+    for (size_t i = 0; i < sizeof(builds) / sizeof(*builds); ++i)
+    {
+        obor_profile_build = builds[i];
+        ScriptVariant handle = {.vt = VT_PTR, .ptrVal = &parent_object};
+        ScriptVariant prop, value, mode = {.vt = VT_INTEGER, .lVal = 1};
+        ScriptVariant result = {.vt = VT_EMPTY}, *out = &result;
+        ScriptVariant *args[] = {&handle, &prop, &value, &mode};
+        for (size_t j = 0; j < sizeof(fields) / sizeof(*fields); ++j)
+        {
+            active_name = fields[j].name;
+            prop = (ScriptVariant){.vt = VT_STR, .strVal = 0};
+            value = (ScriptVariant){.vt = VT_INTEGER, .lVal = fields[j].input};
+            set_entity_property(&parent_object, args, fields[j].nested_selector == _ep_maps_ko ? 4 : 3);
+            check_property(openbor_getentityproperty(args, &out, 2) == S_OK &&
+                           result.vt == VT_INTEGER && result.lVal == fields[j].input, fields[j].name);
+            if (fields[j].nested_selector >= 0)
+            {
+                active_name = "maps";
+                prop = (ScriptVariant){.vt = VT_STR, .strVal = 0};
+                value.lVal = fields[j].nested_selector;
+                check_property(mapstrings_entityproperty(args, 3) &&
+                               openbor_getentityproperty(args, &out, 3) == S_OK &&
+                               result.vt == VT_INTEGER && result.lVal == fields[j].input, active_name);
+            }
+        }
+        check_property(parent_object.modeldata.colorsets.hide_start == 4 &&
+                       parent_object.modeldata.colorsets.hide_end == 11 &&
+                       parent_object.modeldata.colorsets.ko == 7, "Palette settings reach the model fields");
+        parent_object.modeldata.colorsets.frozen = 5;
+        static const struct { int selector; LONG expected; } reads[] = {
+            {_ep_maps_frozen, 5}, {_ep_maps_kotype, 1},
+        };
+        for (size_t j = 0; j < sizeof(reads) / sizeof(*reads); ++j)
+        {
+            active_name = "maps";
+            prop = (ScriptVariant){.vt = VT_STR, .strVal = 0};
+            value = (ScriptVariant){.vt = VT_INTEGER, .lVal = reads[j].selector};
+            check_property(mapstrings_entityproperty(args, 3) &&
+                           openbor_getentityproperty(args, &out, 3) == S_OK &&
+                           result.vt == VT_INTEGER && result.lVal == reads[j].expected,
+                           "Original freeze palette and knockout mode aliases");
+        }
+    }
+}
+
+static void check_historical_script_deadlines(void)
+{
+    static const unsigned builds[] = {7369, 7391, 7420, 7503, 7504, 7509, 7533};
+    static const struct { const char *name; unsigned long *field; } timers[] = {
+        {"combotime", &parent_object.combotime}, {"freezetime", &parent_object.freezetime},
+        {"invinctime", &parent_object.invinctime}, {"maptime", &parent_object.maptime},
+        {"nextanim", &parent_object.nextanim}, {"nextmove", &parent_object.nextmove},
+        {"nextthink", &parent_object.nextthink}, {"pain_time", &parent_object.next_hit_time},
+        {"releasetime", &parent_object.releasetime}, {"sealtime", &parent_object.sealtime},
+        {"stalltime", &parent_object.stalltime}, {"tosstime", &parent_object.toss_time},
+    };
+    for (size_t i = 0; i < sizeof(builds) / sizeof(*builds); ++i)
+    {
+        obor_profile_build = builds[i];
+        ScriptVariant handle = {.vt = VT_PTR, .ptrVal = &parent_object};
+        ScriptVariant prop, value = {.vt = VT_INTEGER, .lVal = -5};
+        ScriptVariant *args[] = {&handle, &prop, &value, &value};
+        const unsigned long expected = builds[i] < 7504 ? (u32)value.lVal : (unsigned long)value.lVal;
+        for (size_t j = 0; j < sizeof(timers) / sizeof(*timers); ++j)
+        {
+            active_name = timers[j].name;
+            prop = (ScriptVariant){.vt = VT_STR, .strVal = 0};
+            set_entity_property(&parent_object, args, 3);
+            check_property(*timers[j].field == expected, timers[j].name);
+        }
+        active_name = "nextanim";
+        prop = (ScriptVariant){.vt = VT_STR, .strVal = 0};
+        ScriptVariant result = {.vt = VT_EMPTY}, *out = &result;
+        check_property(mapstrings_entityproperty(args, 2), "Original next animation time selector");
+        check_property(openbor_getentityproperty(args, &out, 2) == S_OK && result.vt == VT_INTEGER &&
+                       result.lVal == value.lVal,
+                       "Original next animation time returned to script");
+        active_name = "knockdowncount";
+        prop = (ScriptVariant){.vt = VT_STR, .strVal = 0};
+        ScriptVariant selector = {.vt = VT_INTEGER, .lVal = _ep_knockdowncount_time};
+        args[2] = &selector;
+        set_entity_property(&parent_object, args, 4);
+        check_property(parent_object.knockdowntime == (unsigned long)selector.lVal,
+                       "Original knockdown time argument");
+    }
+}
+
+static void check_original_script_air_control(void)
+{
+    static const unsigned builds[] = {7369, 7391, 7420, 7435, 7436, 7446, 7533};
+    for (size_t i = 0; i < sizeof(builds) / sizeof(*builds); ++i)
+    {
+        obor_profile_build = builds[i];
+        const int original_axis = builds[i] < 7436u;
+        parent_object.modeldata.air_control = AIR_CONTROL_NONE;
+        ScriptVariant handle = {.vt = VT_PTR, .ptrVal = &parent_object};
+        ScriptVariant prop = {.vt = VT_STR, .strVal = 0};
+        ScriptVariant value = {.vt = VT_INTEGER, .lVal = AIR_CONTROL_LEGACY_Z_ADJUST};
+        ScriptVariant result = {.vt = VT_EMPTY}, *out = &result;
+        ScriptVariant *args[] = {&handle, &prop, &value};
+        active_name = "jumpmovez";
+        set_entity_property(&parent_object, args, 3);
+        const e_air_control expected = original_axis ? AIR_CONTROL_JUMP_X_ADJUST
+            : (AIR_CONTROL_JUMP_Z_INITIAL | AIR_CONTROL_JUMP_Z_ADJUST);
+        check_property(parent_object.modeldata.air_control == expected, active_name);
+        check_property(openbor_getentityproperty(args, &out, 2) == S_OK && result.vt == VT_INTEGER &&
+                       result.lVal == (original_axis ? AIR_CONTROL_LEGACY_Z_NONE : AIR_CONTROL_LEGACY_Z_MOMENTUM_AND_ADJUST),
+                       "Original Z axis readback");
+        active_name = "jumpmovex";
+        prop = (ScriptVariant){.vt = VT_STR, .strVal = 0};
+        check_property(mapstrings_entityproperty(args, 2) &&
+                       openbor_getentityproperty(args, &out, 2) == S_OK && result.vt == VT_INTEGER &&
+                       result.lVal == (original_axis ? AIR_CONTROL_LEGACY_X_ADJUST : AIR_CONTROL_LEGACY_X_NONE),
+                       "Original X axis readback");
+    }
+}
+
+static void check_original_recall_action_name(void)
+{
+    static const unsigned builds[] = {7369, 7391, 7420, 7515, 7516, 7533};
+    for (size_t i = 0; i < sizeof(builds) / sizeof(*builds); ++i)
+    {
+        obor_profile_build = builds[i];
+        ScriptVariant handle = {.vt = VT_PTR, .ptrVal = &parent_object};
+        ScriptVariant prop = {.vt = VT_STR, .strVal = 0};
+        ScriptVariant value = {.vt = VT_STR, .strVal = 0};
+        ScriptVariant *args[] = {&handle, &prop, &value};
+        active_name = "takeaction";
+        check_property(mapstrings_entityproperty(args, 2) && prop.vt == VT_INTEGER, "Original takeaction selector");
+        active_name = builds[i] < 7516u ? "npc_warp" : "npc_recall";
+        check_property(mapstrings_entityproperty(args, 3) && value.vt == VT_INTEGER &&
+                       value.lVal == _ep_ta_npc_recall, active_name);
+        value = (ScriptVariant){.vt = VT_STR, .strVal = 0};
+        active_name = builds[i] < 7516u ? "npc_recall" : "npc_warp";
+        mapstrings_entityproperty(args, 3);
+        check_property(value.vt == VT_STR, "Only the original action name resolves");
+    }
+}
+
+static void check_original_staydown_names(void)
+{
+    static const unsigned builds[] = {7369, 7391, 7420, 7510, 7511, 7533};
+    static const char *names[] = {"rise", "riseattack", "riseattack_stall"};
+    for (size_t p = 0; p < sizeof(builds) / sizeof(*builds); ++p)
+    {
+        obor_profile_build = builds[p];
+        for (size_t i = 0; i < sizeof(names) / sizeof(*names); ++i)
+        {
+            ScriptVariant handle = {.vt = VT_PTR, .ptrVal = &parent_object};
+            ScriptVariant prop = {.vt = VT_STR, .strVal = 0};
+            ScriptVariant value = {.vt = VT_STR, .strVal = 0};
+            ScriptVariant *args[] = {&handle, &prop, &value};
+            active_name = "staydown";
+            check_property(mapstrings_entityproperty(args, 2) && prop.vt == VT_INTEGER, active_name);
+            active_name = names[i];
+            check_property(mapstrings_entityproperty(args, 3) && value.vt == VT_INTEGER &&
+                           value.lVal == (LONG)i, active_name);
+        }
+    }
+}
+
+static void check_historical_type_masks(void)
+{
+    static const unsigned revisions[] = {7369, 7384, 7385, 7391, 7420, 7446, 7447, 7533};
+    for (size_t p = 0; p < sizeof(revisions) / sizeof(*revisions); ++p)
+    {
+        obor_profile_build = revisions[p];
+        const unsigned expected_player = revisions[p] < 7385 ? 1 : revisions[p] < 7447 ? 2 : 4;
+        const unsigned expected_panel = revisions[p] < 7447 ? 4096 : 8192;
+        memset(&parent_object, 0, sizeof(parent_object));
+        ScriptVariant handle = {.vt = VT_PTR, .ptrVal = &parent_object};
+        ScriptVariant prop = {.vt = VT_STR, .strVal = 0};
+        ScriptVariant first = {.vt = VT_INTEGER, .lVal = expected_player};
+        ScriptVariant second = {.vt = VT_INTEGER, .lVal = expected_panel};
+        ScriptVariant result = {0}, *out = &result;
+        ScriptVariant *args[] = {&handle, &prop, &first, &second};
+        active_name = "type";
+        set_entity_property(&parent_object, args, 3);
+        check_property(parent_object.modeldata.type == TYPE_PLAYER, "Numeric type translates to the native player");
+        for (unsigned i = 0; i < 32; ++i)
+        {
+            const uint32_t original = UINT32_C(1) << i;
+            first.lVal = (LONG)original;
+            set_entity_property(&parent_object, args, 3);
+            check_property(openbor_getentityproperty(args, &out, 2) == S_OK &&
+                           result.vt == VT_INTEGER && (uint32_t)result.lVal == original, "Type bit round trip");
+        }
+        first.lVal = 0;
+        set_entity_property(&parent_object, args, 3);
+        check_property(parent_object.modeldata.type == 0, "Numeric zero remains zero");
+
+        const char *names[] = {"hostile", "candamage", "projectilehit"};
+        e_entity_type *masks[] = {&parent_object.faction.type_hostile,
+                                 &parent_object.faction.type_damage_direct,
+                                 &parent_object.faction.type_damage_indirect};
+        for (size_t i = 0; i < sizeof(names) / sizeof(*names); ++i)
+        {
+            active_name = names[i];
+            prop = (ScriptVariant){.vt = VT_STR, .strVal = 0};
+            check_property(mapstrings_entityproperty(args, 2), "Mask property name");
+            first = (ScriptVariant){.vt = VT_INTEGER, .lVal = expected_player | (1u << 29)};
+            second = (ScriptVariant){.vt = VT_INTEGER, .lVal = expected_panel};
+            set_entity_property(&parent_object, args, 4);
+            check_property((*masks[i] & (TYPE_PLAYER | TYPE_PANEL)) == (TYPE_PLAYER | TYPE_PANEL),
+                           "Numeric mask bits reach their native types");
+            check_property(openbor_getentityproperty(args, &out, 2) == S_OK && result.vt == VT_INTEGER &&
+                           result.lVal == (LONG)(expected_player | expected_panel | (1u << 29)),
+                           "Mask getter returns the original numbers with custom bits");
+            active_name = "type_enemy";
+            first = (ScriptVariant){.vt = VT_STR, .strVal = 0};
+            set_entity_property(&parent_object, args, 3);
+            check_property(*masks[i] == TYPE_ENEMY, "Named masks retain their canonical types");
+        }
+    }
+}
+
+static void check_historical_running_values(void)
+{
+    static const unsigned revisions[] = {7369, 7391, 7420, 7524, 7525, 7528, 7529, 7533};
+    const unsigned z_enabled = RUN_CONFIG_Z_DOWN_ENABLED | RUN_CONFIG_Z_UP_ENABLED;
+    for (size_t i = 0; i < sizeof(revisions) / sizeof(*revisions); ++i)
+    {
+        obor_profile_build = revisions[i];
+        memset(&parent_object, 0, sizeof(parent_object));
+        active_name = "running";
+        ScriptVariant handle = {.vt = VT_PTR, .ptrVal = &parent_object};
+        ScriptVariant prop = {.vt = VT_STR, .strVal = 0};
+        ScriptVariant speed = {.vt = VT_DECIMAL, .dblVal = 2.5};
+        ScriptVariant jumpy = {.vt = VT_DECIMAL, .dblVal = 4.5};
+        ScriptVariant jumpx = {.vt = VT_DECIMAL, .dblVal = 1.5};
+        ScriptVariant land = {.vt = VT_DECIMAL, .dblVal = -2.5};
+        ScriptVariant movez = {.vt = VT_DECIMAL, .dblVal = 6.5};
+        ScriptVariant *inputs[] = {&handle, &prop, &speed, &jumpy, &jumpx, &land, &movez};
+        set_entity_property(&parent_object, inputs, 7);
+        check_property((parent_object.modeldata.run_config_flags & z_enabled) ==
+                       (revisions[i] < 7525 ? 0 : z_enabled), "Running script flag introduction");
+        ScriptVariant subproperty = {.vt = VT_INTEGER, .lVal = _ep_running_land};
+        ScriptVariant result = {0}, *out = &result;
+        ScriptVariant *query[] = {&handle, &prop, &subproperty};
+        check_property(openbor_getentityproperty(query, &out, 3) == S_OK && result.vt == VT_INTEGER &&
+                       result.lVal == (revisions[i] < 7529 ? -2 : RUN_CONFIG_LAND), "Original running land property");
+        subproperty.lVal = _ep_running_movez;
+        check_property(openbor_getentityproperty(query, &out, 3) == S_OK && result.vt == VT_INTEGER &&
+                       result.lVal == 6, "Original running movez property");
+        subproperty.lVal = _ep_running_speed;
+        check_property(openbor_getentityproperty(query, &out, 3) == S_OK && result.vt == VT_DECIMAL &&
+                       result.dblVal == 2.5, "Original running speed property");
+        land.dblVal = 0.25;
+        set_entity_property(&parent_object, inputs, 6);
+        subproperty.lVal = _ep_running_land;
+        check_property(openbor_getentityproperty(query, &out, 3) == S_OK && result.vt == VT_INTEGER &&
+                       result.lVal == 0, "Clearing the running land property");
+        subproperty.lVal = _ep_running_movez;
+        check_property(openbor_getentityproperty(query, &out, 3) == S_OK && result.lVal == 6,
+                       "Omitted movez keeps its previous value");
+        movez.dblVal = 0.0;
+        set_entity_property(&parent_object, inputs, 7);
+        const int preserve_z = revisions[i] >= 7525 && revisions[i] < 7529;
+        check_property((parent_object.modeldata.run_config_flags & z_enabled) == (preserve_z ? z_enabled : 0),
+                       "Running script flag clearing");
+    }
+}
+
+static void check_script_dead_values(void)
+{
+    static const unsigned builds[] = {7369, 7391, 7420, 7487, 7488, 7533};
+    for (size_t i = 0; i < sizeof(builds) / sizeof(*builds); ++i)
+    {
+        obor_profile_build = builds[i];
+        memset(&parent_object, 0, sizeof(parent_object));
+        active_name = "dead";
+        ScriptVariant handle = {.vt = VT_PTR, .ptrVal = &parent_object};
+        ScriptVariant prop = {.vt = VT_STR, .strVal = 0};
+        ScriptVariant value = {.vt = VT_INTEGER, .lVal = -17};
+        ScriptVariant result = {0}, *out = &result;
+        ScriptVariant *args[] = {&handle, &prop, &value};
+        set_entity_property(&parent_object, args, 3);
+        check_property(openbor_getentityproperty(args, &out, 2) == S_OK &&
+                       result.vt == VT_INTEGER &&
+                       result.lVal == (builds[i] < 7488u ? -17 : DEATH_STATE_DEAD),
+                       "Dead property keeps original integer or flag");
+        value.lVal = 0;
+        set_entity_property(&parent_object, args, 3);
+        check_property(openbor_getentityproperty(args, &out, 2) == S_OK &&
+                       result.lVal == 0 && !(parent_object.death_state & DEATH_STATE_DEAD),
+                       "Dead property clears gameplay death");
+    }
+}
+
+static int shadow_visible(const entity *e)
+{
+    return @SHADOW_DRAW@;
+}
+
+static void check_historical_entity_indices(void)
+{
+    static const unsigned revisions[] = {7369, 7391, 7420, 7445, 7446, 7474, 7475, 7530, 7533};
+    static const char *names[] = {"health", "numweapons", "shadow", "subject_to_wall", "zdir"};
+    static const int legacy_indices[] = {73, 130, 157, 177, 202};
+    static const int modern_indices[] = {73, 129, 156, 176, 201};
+
+    for (size_t i = 0; i < sizeof(revisions) / sizeof(*revisions); ++i)
+    {
+        obor_profile_build = revisions[i];
+        const int legacy = obor_profile_build < 7475;
+        const int *expected = legacy ? legacy_indices : modern_indices;
+        ScriptVariant handle = {.vt = VT_PTR, .ptrVal = &parent_object};
+        ScriptVariant prop, value, result = {0}, *out = &result;
+        ScriptVariant *args[] = {&handle, &prop, &value};
+        log_text[0] = 0;
+        memset(&parent_object, 0, sizeof(parent_object));
+        parent_object.modeldata.weapon_properties.weapon_count = 12;
+        parent_object.energy_state.health_current = 77;
+
+        for (size_t j = 0; j < sizeof(names) / sizeof(*names); ++j)
+        {
+            active_name = names[j];
+            prop = (ScriptVariant){.vt = VT_STR, .strVal = 0};
+            check_property(mapstrings_entityproperty(args, 2), "Known entity property name rejected");
+            check_property(prop.vt == VT_INTEGER && prop.lVal == expected[j], "Changed script property index");
+        }
+
+        prop = (ScriptVariant){.vt = VT_INTEGER, .lVal = expected[1]};
+        check_property(openbor_getentityproperty(args, &out, 2) == S_OK &&
+                       result.vt == VT_INTEGER && result.lVal == 12, "Weapon count numeric index");
+
+        if (obor_profile_build < 7446)
+        {
+            active_name = "health";
+            prop = (ScriptVariant){.vt = VT_STR, .strVal = 0};
+            check_property(openbor_getentityproperty(args, &out, 2) == S_OK && result.lVal == 77,
+                           "Original runtime string conversion");
+        }
+
+        active_name = "noshadow";
+        prop = (ScriptVariant){.vt = VT_STR, .strVal = 0};
+        check_property(mapstrings_entityproperty(args, 2) == legacy, "Shadow property name availability");
+        if (legacy)
+        {
+            check_property(prop.vt == VT_INTEGER && prop.lVal == 129, "Original shadow property index");
+            const int values[] = {0, 1, 2, -3};
+            for (size_t j = 0; j < sizeof(values) / sizeof(*values); ++j)
+            {
+                value = (ScriptVariant){.vt = VT_INTEGER, .lVal = values[j]};
+                set_entity_property(&parent_object, args, 3);
+                check_property(openbor_getentityproperty(args, &out, 2) == S_OK &&
+                               result.vt == VT_INTEGER && result.lVal == values[j], "Shadow property integer round trip");
+                check_property(shadow_visible(&parent_object) == (values[j] != 1), "Original shadow drawing test");
+            }
+        }
+        else
+        {
+            check_property(shadow_visible(&parent_object), "Modern enabled shadow");
+            parent_object.shadow_config_flags = SHADOW_CONFIG_DISABLED;
+            check_property(!shadow_visible(&parent_object), "Modern disabled shadow");
+        }
+    }
+}
+
+static void check_historical_reaction_and_block_values(void)
+{
+    static const unsigned revisions[] = {7369, 7391, 7420, 7492, 7493, 7494, 7533};
+    static const char *names[] = {"nopain", "nodrop", "blockback"};
+    static const int values[] = {-3, 0, 1, 2, 4};
+    static const int modern_drop[] = {0, 0, 1, 2, 2};
+    for (size_t i = 0; i < sizeof(revisions) / sizeof(*revisions); ++i)
+    {
+        obor_profile_build = revisions[i];
+        ScriptVariant handle = {.vt = VT_PTR, .ptrVal = &parent_object};
+        ScriptVariant prop, value, result = {0}, *out = &result;
+        ScriptVariant *args[] = {&handle, &prop, &value};
+        memset(&parent_object, 0, sizeof(parent_object));
+        for (size_t j = 0; j < sizeof(names) / sizeof(*names); ++j)
+        {
+            const int legacy = obor_profile_build < (j == 2 ? 7493u : 7494u);
+            active_name = names[j];
+            prop = (ScriptVariant){.vt = VT_STR, .strVal = 0};
+            check_property(mapstrings_entityproperty(args, 2), "Reaction property name rejected");
+            for (size_t k = 0; k < sizeof(values) / sizeof(*values); ++k)
+            {
+                LONG expected = values[k];
+                if (!legacy)
+                {
+                    if (j == 1)
+                    {
+                        expected = modern_drop[k];
+                    }
+                    else
+                    {
+                        expected = values[k] ? (j == 2 ? BLOCK_CONFIG_BACK : PAIN_CONFIG_PAIN_DISABLE) : 0;
+                    }
+                }
+                value = (ScriptVariant){.vt = VT_INTEGER, .lVal = values[k]};
+                set_entity_property(&parent_object, args, 3);
+                check_property(openbor_getentityproperty(args, &out, 2) == S_OK &&
+                               result.vt == VT_INTEGER && result.lVal == expected, "Reaction property integer round trip");
+            }
+        }
+    }
+}
+
+static void check_historical_death_values(void)
+{
+    static const unsigned revisions[] = {7369, 7391, 7420, 7481, 7482, 7486, 7487, 7488, 7489, 7533};
+    static const char *names[] = {"falldie", "nodieblink"};
+    static const int values[] = {1, -3, 0, 2, 3, 4};
+    for (size_t i = 0; i < sizeof(revisions) / sizeof(*revisions); ++i)
+    {
+        obor_profile_build = revisions[i];
+        const int legacy = obor_profile_build < 7482 || (obor_profile_build >= 7487 && obor_profile_build < 7489);
+        ScriptVariant handle = {.vt = VT_PTR, .ptrVal = &parent_object};
+        ScriptVariant prop, value, result = {0}, *out = &result;
+        ScriptVariant *args[] = {&handle, &prop, &value};
+        memset(&parent_object, 0, sizeof(parent_object));
+        for (size_t j = 0; j < sizeof(names) / sizeof(*names); ++j)
+        {
+            active_name = names[j];
+            prop = (ScriptVariant){.vt = VT_STR, .strVal = 0};
+            check_property(mapstrings_entityproperty(args, 2), "Death property name rejected");
+            const size_t count = legacy ? sizeof(values) / sizeof(*values) : 1;
+            for (size_t k = 0; k < count; ++k)
+            {
+                value = (ScriptVariant){.vt = VT_INTEGER, .lVal = values[k]};
+                set_entity_property(&parent_object, args, 3);
+                const LONG expected = !legacy && j == 1 ? NODIEBLINK_CONFIG_FALL_LIE_VANISH : values[k];
+                check_property(openbor_getentityproperty(args, &out, 2) == S_OK &&
+                               result.vt == VT_INTEGER && result.lVal == expected, "Death property integer result");
+            }
+        }
+    }
+}
+
+static void check_historical_projectile_launch(void)
+{
+    const unsigned builds[] = {7369, 7374, 7375, 7391, 7420, 7421, 7426, 7427, 7533};
+    const e_projectile_type types[] = {PROJECTILE_TYPE_KNIFE, PROJECTILE_TYPE_BOMB};
+
+    for (size_t i = 0; i < sizeof(builds) / sizeof(*builds); ++i)
+    {
+        obor_profile_build = builds[i];
+        for (size_t j = 0; j < sizeof(types) / sizeof(*types); ++j)
+        {
+            ScriptVariant values[] = {
+                {.vt = VT_STR, .strVal = 0},
+                {.vt = VT_INTEGER, .lVal = 2},
+                {.vt = VT_INTEGER, .lVal = 3},
+                {.vt = VT_INTEGER, .lVal = 4},
+                {.vt = VT_INTEGER, .lVal = DIRECTION_RIGHT},
+                {.vt = VT_INTEGER, .lVal = 0},
+                {.vt = VT_INTEGER, .lVal = types[j]},
+                {.vt = VT_INTEGER, .lVal = 5},
+            };
+            ScriptVariant result = {0};
+            ScriptVariant *out = &result;
+            ScriptVariant *args[sizeof(values) / sizeof(*values)];
+            for (size_t k = 0; k < sizeof(values) / sizeof(*values); ++k)
+            {
+                args[k] = &values[k];
+            }
+
+            parent_object.base = 7;
+            child.base = 23;
+            active_name = "model";
+            model_ok = 1;
+            spawn_ok = 1;
+            spawn_calls = 0;
+            prime_seed = PROJECTILE_PRIME_LAUNCH_MOVING;
+            const HRESULT status = openbor_projectile(args, &out, sizeof(args) / sizeof(*args));
+            const unsigned prime = builds[i] < 7421u ? prime_seed
+                : prime_seed | PROJECTILE_PRIME_INITIALIZE_LEGACY_PROJECTILE_FUNCTION;
+            const float initial_x = builds[i] < 7375u ? 60.0f : PROJECTILE_LEGACY_COMPATABILITY_POSITION_X;
+            check_property(status == S_OK && result.vt == VT_PTR && result.ptrVal == &child,
+                           "Unexpected projectile script return");
+            check_property(spawn_calls == 1 && spawn_kind == (int)j && launch_config_x == initial_x,
+                           "Unexpected projectile script constructor defaults");
+            check_property(child.base == (builds[i] < 7427u ? 23 : 7) && child.projectile_prime == prime,
+                           "Unexpected projectile script initialization");
+            check_property(child.position.x == 2 && child.position.y == 4 && child.position.z == 3 &&
+                           child.direction == DIRECTION_RIGHT && color == 5,
+                           "Unexpected projectile script placement");
+        }
+    }
+}
+
 static void print_string(const char *text)
 {
     const unsigned char *s=(const unsigned char*)text;putchar('"');
@@ -81,7 +608,19 @@ int main(void)
     static const unsigned profiles[]={@PROFILES@};
     static const struct input { int count,flag,kind,model,spawn;unsigned seed; } inputs[]={@CASES@};
     size_t p,c;int i;
+    check_historical_entity_indices();
+    check_historical_reaction_and_block_values();
+    check_historical_death_values();
+    check_script_dead_values();
+    check_historical_script_deadlines();
+    check_legacy_palette_properties();
+    check_original_script_air_control();
+    check_original_recall_action_name();
+    check_original_staydown_names();
+    check_historical_running_values();
+    check_historical_type_masks();
     self=&parent_object;
+    check_historical_projectile_launch();
     printf("{\"status\":\"PASS\",\"flags\":[%u,%u,%u,%u,%u],\"profiles\":[",
         PROJECTILE_PRIME_BASE_FLOOR,PROJECTILE_PRIME_LAUNCH_STATIONARY,PROJECTILE_PRIME_BASE_Y,
         PROJECTILE_PRIME_LAUNCH_MOVING,PROJECTILE_PRIME_INITIALIZE_LEGACY_PROJECTILE_FUNCTION);

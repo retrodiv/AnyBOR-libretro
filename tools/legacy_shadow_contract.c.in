@@ -1,0 +1,257 @@
+/* SPDX-License-Identifier: BSD-3-Clause
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me>
+ */
+#include <stdint.h>
+#include <strings.h>
+#pragma GCC diagnostic ignored "-Wignored-qualifiers"
+#if defined(__clang__)
+#pragma GCC diagnostic ignored "-Wdeprecated-non-prototype"
+#endif
+#include "scriptcommon.h"
+#undef assert
+#include <assert.h>
+
+uint32_t obor_profile_build;
+int PLAYER_MIN_Z = 150, PLAYER_MAX_Z = 232;
+s_level *level;
+const s_drawmethod plainmethod = {.scalex = 256, .scaley = 256};
+static s_axis_plane_vertical_int light = {.x = 32, .y = 128};
+static int shadowcolor = 1, shadowalpha = 1, shadowopacity = 255;
+static int shadowsprites[6] = {11};
+static unsigned sprites_loaded = 16;
+static unsigned warnings, draws;
+static int last_sprite, last_y, airborne;
+static int terrain_hole, underfoot_wall, projected_wall = -1;
+static entity *shadow_actor;
+static struct shadow_submission {
+    int x, y, z, sprite, center, flip_y;
+} submissions[4];
+
+static void observe_warning(const char *format, ...) { ++warnings; }
+#undef printf
+#define printf observe_warning
+@METHODS@
+#undef printf
+
+void spriteq_add_sprite(int x, int y, int z, int id, s_drawmethod *method, int sort_id)
+{
+    assert(draws < sizeof(submissions) / sizeof(*submissions));
+    submissions[draws] = (struct shadow_submission){x, y, z, id, method->centery, method->flipy};
+    ++draws;
+    last_sprite = id;
+    last_y = y;
+}
+int inair(entity *actor) { return airborne; }
+int checkhole(float x, float z) { return terrain_hole; }
+int checkwall_below(float x, float z, float altitude)
+{
+    return x == shadow_actor->position.x && z == shadow_actor->position.z ? underfoot_wall : projected_wall;
+}
+
+static void draw_shadow_over_terrain(entity *e, unsigned f, entity *other, int wall,
+                                     float basemap, int use_mirror)
+{
+    int qx, qy, z, sy, sz, alty, wall2, in_air, useshadow;
+    int scrx = 0, scry = 0, shadowz = 80;
+    float temp1, temp2;
+    s_drawmethod current = plainmethod, shadowmethod;
+    s_drawmethod *drawmethod = &current;
+    draws = 0;
+    shadow_actor = e;
+    underfoot_wall = wall;
+    @DRAW@
+}
+
+static void draw_shadow(entity *e, unsigned f)
+{
+    draw_shadow_over_terrain(e, f, NULL, -1, 4.f, 0);
+}
+
+enum { CMD_MODEL_SHADOW, CMD_MODEL_GFXSHADOW, CMD_MODEL_AIRONLY, CMD_MODEL_FSHADOW };
+enum { _ep_gfxshadow, _ep_shadowbase };
+
+static int model_command(s_model *newchar, int directive, char *line)
+{
+    ArgList arglist;
+    char argbuf[MAX_ARG_LEN + 1] = "";
+    char *filename = "actor.txt", *value;
+    int tempInt, frameshadow = 7;
+    ParseArgs(&arglist, line, argbuf);
+    char *command = GET_ARG(0);
+    switch (directive)
+    {
+        @MODEL_COMMANDS@
+    }
+    return frameshadow;
+}
+
+void ScriptVariant_ChangeType(ScriptVariant *value, VARTYPE type) { value->vt = type; }
+HRESULT ScriptVariant_IntegerValue(ScriptVariant *value, LONG *result)
+{
+    if (value->vt != VT_INTEGER)
+    {
+        return E_FAIL;
+    }
+    *result = value->lVal;
+    return S_OK;
+}
+
+static LONG read_property(entity *ent, int property)
+{
+    ScriptVariant value = {0}, *result = &value, **pretvar = &result;
+    switch (property)
+    {
+        @READ@
+    }
+    assert(value.vt == VT_INTEGER);
+    return value.lVal;
+}
+
+static void write_property(entity *ent, int property, int input)
+{
+    ScriptVariant value = {.vt = VT_INTEGER, .lVal = input};
+    ScriptVariant *varlist[] = {NULL, NULL, &value};
+    LONG ltemp;
+    switch (property)
+    {
+        @WRITE@
+    }
+}
+
+static void load_settings(entity *actor)
+{
+    actor->modeldata = (s_model){.shadow_config_flags = SHADOW_CONFIG_DEFAULT};
+    model_command(&actor->modeldata, CMD_MODEL_SHADOW, "shadow 1 5");
+    model_command(&actor->modeldata, CMD_MODEL_GFXSHADOW, "gfxshadow 2 5");
+    actor->shadow_config_flags = actor->modeldata.shadow_config_flags;
+}
+
+static void check_shadow_mode(int legacy)
+{
+    static entity actor;
+    static s_anim animation;
+    actor.animation = &animation;
+    actor.position.x = 100.75f;
+    actor.position.z = 200.5f;
+    actor.position.y = 10.f;
+    airborne = 0;
+    load_settings(&actor);
+    assert(read_property(&actor, _ep_gfxshadow) == (legacy ? 2 : 1));
+    assert(read_property(&actor, _ep_shadowbase) == (legacy ? 5 : 0));
+    draw_shadow(&actor, 5);
+    assert(draws == 1 && last_sprite == (legacy ? 11 : 5));
+    assert(last_y == (legacy ? 200 : 196));
+
+    write_property(&actor, _ep_gfxshadow, 1);
+    draw_shadow(&actor, 5);
+    assert(draws == 1 && last_sprite == 5);
+    draw_shadow(&actor, sprites_loaded);
+    assert(draws == (legacy ? 1u : 0u));
+    assert(!legacy || last_sprite == 11);
+
+    write_property(&actor, _ep_gfxshadow, -3);
+    write_property(&actor, _ep_shadowbase, 6);
+    assert(read_property(&actor, _ep_gfxshadow) == (legacy ? -3 : 1));
+    assert(read_property(&actor, _ep_shadowbase) == (legacy ? 6 : 0));
+
+    actor.modeldata = (s_model){.shadow_config_flags = SHADOW_CONFIG_DEFAULT, .shadow = 1};
+    model_command(&actor.modeldata, CMD_MODEL_AIRONLY, "aironly 1");
+    actor.shadow_config_flags = actor.modeldata.shadow_config_flags;
+    draw_shadow(&actor, 5);
+    assert(draws == 0);
+    airborne = 1;
+    draw_shadow(&actor, 5);
+    assert(draws == 1 && last_sprite == 11);
+    airborne = 0;
+    model_command(&actor.modeldata, CMD_MODEL_AIRONLY, "aironly 0");
+    actor.shadow_config_flags = actor.modeldata.shadow_config_flags;
+    draw_shadow(&actor, 5);
+    assert(draws == (legacy ? 1u : 0u));
+}
+
+static void check_terrain_shadows(void)
+{
+    static float platform_shape[1][8] = {{[PLATFORM_HEIGHT] = 5}};
+    static int shadow_offset[1][2] = {{3, 2}};
+    static s_anim animation = {.shadow_coords = shadow_offset};
+    static s_anim platform_animation = {.platform = platform_shape};
+    static entity actor, platform;
+    static s_terrain walls[] = {{.height = 6}, {.height = 3}};
+    static s_level stage = {.numwalls = 2, .walls = walls};
+    actor.animation = &animation;
+    actor.position.x = 100.75f;
+    actor.position.y = 12.f;
+    actor.position.z = 200.5f;
+    actor.direction = DIRECTION_RIGHT;
+    actor.modeldata = (s_model){.shadow = 1};
+    platform.animation = &platform_animation;
+    platform.position.y = 3.f;
+    platform.position.z = 202.25f;
+    level = &stage;
+
+    draw_shadow_over_terrain(&actor, 5, &platform, -1, 4.f, 1);
+    assert(draws == 2 && submissions[0].sprite == 11 && submissions[1].sprite == 11);
+    assert(submissions[0].x == 103 && submissions[1].x == 103);
+    assert(submissions[0].y == 194 && submissions[1].y == 79);
+    assert(submissions[0].z == 203 && submissions[1].z == 2 * PANEL_Z - 203);
+
+    draw_shadow_over_terrain(&actor, 5, NULL, 0, 4.f, 1);
+    assert(draws == 2 && submissions[0].y == 196 && submissions[1].y == 81);
+    draw_shadow_over_terrain(&actor, 5, NULL, -1, 4.f, 1);
+    assert(draws == 2 && submissions[0].y == 198 && submissions[1].y == 83);
+
+    actor.modeldata.legacy_gfxshadow = 1;
+    draw_shadow_over_terrain(&actor, 5, &platform, -1, 4.f, 1);
+    assert(draws == 2 && submissions[0].sprite == 5 && submissions[1].sprite == 5);
+    assert(submissions[0].x == 103 && submissions[1].x == 103);
+    assert(submissions[0].y == 198 && submissions[1].y == 92);
+    assert(submissions[0].z == 203 && submissions[1].z == PANEL_Z - HUD_Z);
+    assert(submissions[0].center == 8 && submissions[1].center == -8);
+    assert(!submissions[0].flip_y && submissions[1].flip_y);
+
+    actor.modeldata.legacy_shadowbase = 2;
+    draw_shadow_over_terrain(&actor, 5, &platform, -1, 4.f, 1);
+    assert(draws == 2 && submissions[0].y == 198 && submissions[1].y == 92);
+    assert(submissions[0].center == 0 && submissions[1].center == 0);
+    actor.modeldata.legacy_shadowbase = 0;
+    projected_wall = 1;
+    draw_shadow_over_terrain(&actor, 5, NULL, 0, 0.f, 1);
+    assert(draws == 2 && submissions[0].y == 196 && submissions[1].y == 94);
+    assert(submissions[0].center == 9 && submissions[1].center == -9);
+
+    projected_wall = -1;
+    terrain_hole = 1;
+    draw_shadow_over_terrain(&actor, 5, NULL, -1, 0.f, 1);
+    assert(draws == 0);
+    actor.modeldata.legacy_gfxshadow = 0;
+    draw_shadow_over_terrain(&actor, 5, NULL, -1, 0.f, 1);
+    assert(draws == 0);
+    terrain_hole = 0;
+    level = NULL;
+}
+
+int main(void)
+{
+    static const uint32_t revisions[] = {7369, 7391, 7420, 7474, 7491, 7492, 7533};
+    static s_model model;
+    for (size_t i = 0; i < sizeof(revisions) / sizeof(*revisions); ++i)
+    {
+        obor_profile_build = revisions[i];
+        const int symbolic = revisions[i] >= 7492u;
+        warnings = 0;
+        assert(model_command(&model, CMD_MODEL_FSHADOW, "fshadow none") == (symbolic ? -1 : 0));
+        assert(warnings == (symbolic ? 0u : 1u));
+        assert(model_command(&model, CMD_MODEL_FSHADOW, "fshadow -1") == -1);
+        assert(model_command(&model, CMD_MODEL_FSHADOW, "fshadow 2") == 2);
+        assert(warnings == (symbolic ? 0u : 1u));
+        if (revisions[i] < 7475u || revisions[i] == 7533u)
+        {
+            check_shadow_mode(revisions[i] < 7475u);
+        }
+        if (revisions[i] < 7475u)
+        {
+            check_terrain_shadows();
+        }
+    }
+    puts("PASS");
+}

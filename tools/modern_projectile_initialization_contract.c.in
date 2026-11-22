@@ -1,0 +1,71 @@
+/* SPDX-License-Identifier: BSD-3-Clause
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me>
+ */
+#include <stdint.h>
+#pragma GCC diagnostic ignored "-Wignored-qualifiers"
+#if defined(__clang__)
+#pragma GCC diagnostic ignored "-Wdeprecated-non-prototype"
+#endif
+#include "openbor.h"
+#undef assert
+#include <assert.h>
+
+uint32_t obor_profile_build;
+
+void common_think(void) {}
+int arrow_takedamage(entity *other, s_attack *attack, int fall, s_defense *defense) { return 0; }
+int common_trymove(float x, float z) { return 1; }
+static int previous_trymove(float x, float z) { return 0; }
+
+@MOVE_FLAGS@
+
+static void initialize_projectile(entity *e)
+{
+    switch (e->modeldata.type)
+    {
+        @DEFAULTS@
+        default:
+            abort();
+    }
+}
+
+static void check_defaults(e_entity_type type, int uses_shot_speed, int initializes_trymove)
+{
+    static entity actor;
+    static s_model model;
+    static const float shot_speed[] = {2, 5, 0};
+    for (int mode = 0; mode < 3; ++mode)
+    {
+        const int stationary = mode == 2;
+        const e_move_config_flags flags = stationary ? MOVE_CONFIG_NO_MOVE : 0;
+        const float authored_speed = mode ? 5 : 0;
+        model = (s_model){.type = type, .move_config_flags = flags, .legacy_static_move_flags = flags};
+        model.speed.x = authored_speed;
+        actor = (entity){.model = &model, .modeldata = model, .trymove = previous_trymove};
+        actor.position.y = 12.5f;
+        actor.projectile_prime = stationary ? PROJECTILE_PRIME_BASE_FLOOR : 0;
+        initialize_projectile(&actor);
+        const float expected = uses_shot_speed ? shot_speed[mode] : authored_speed;
+        assert(actor.modeldata.speed.x == expected);
+        assert(actor.trymove == (initializes_trymove ? common_trymove : previous_trymove));
+        assert(actor.base == (stationary ? 0 : 12.5f) && actor.speedmul == 2);
+        assert(actor.energy_state.health_current == 1 && actor.nograb == 1 && actor.nograb_default == 1);
+        assert(actor.think == common_think && actor.takedamage == arrow_takedamage &&
+               actor.attacking == ATTACKING_ACTIVE);
+    }
+}
+
+int main(void)
+{
+    static const struct { uint32_t build; int shot_speed, trymove; } cases[] = {
+        {7369, 1, 0}, {7381, 1, 0}, {7382, 1, 0}, {7389, 1, 0}, {7390, 1, 1},
+        {7391, 1, 1}, {7420, 1, 1}, {7426, 1, 1}, {7427, 0, 1}, {7533, 0, 1},
+    };
+    for (size_t i = 0; i < sizeof(cases) / sizeof(*cases); ++i)
+    {
+        obor_profile_build = cases[i].build;
+        check_defaults(TYPE_PROJECTILE, cases[i].shot_speed, cases[i].trymove);
+        check_defaults(TYPE_SHOT, 1, 0);
+    }
+    puts("PASS");
+}

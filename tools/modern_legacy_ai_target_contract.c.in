@@ -1,0 +1,336 @@
+/* SPDX-License-Identifier: BSD-3-Clause
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me>
+ */
+#include <stdint.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <strings.h>
+#pragma GCC diagnostic ignored "-Wignored-qualifiers"
+#if defined(__clang__)
+#pragma GCC diagnostic ignored "-Wdeprecated-non-prototype"
+#endif
+#include "scriptcommon.h"
+#undef printf
+#undef stricmp
+#define stricmp strcasecmp
+
+uint32_t obor_profile_build;
+u32 _time = THINK_SPEED;
+s_savedata savedata;
+s_level *level;
+entity *self, **ent_list, *smartbomber;
+int ent_max;
+int nocost;
+static int currentspawnplayer = 2;
+static entity *textbox;
+s_lasthit lasthit;
+float min_noatk_chance;
+static entity *grabbed;
+static entity *flashed;
+static int grab_checks;
+static unsigned int next_random;
+static int range_allowed = 1;
+static unsigned range_checks;
+static unsigned initial_palette_calls;
+
+unsigned int rand32(void) { return next_random; }
+float randf(float max) { return max / 2; }
+int inair(entity *target) { return 0; }
+int check_range_target_all(const entity *actor, const entity *target,
+                           e_animations anim, int min, int max)
+{
+    if (min || max)
+    {
+        abort();
+    }
+    ++range_checks;
+    return range_allowed;
+}
+u32 recheck_nextattack(entity *target) { return 0; }
+int check_attack_chance(entity *target, float min, float max) { return 1; }
+void common_attack_proc(void) {}
+void ent_set_anim(entity *ent, int animation, int reset) { ent->animnum = animation; }
+void tryduck(entity *ent) { ent->ducking = DUCK_ACTIVE; }
+void tryduckrise(entity *ent) { ent->ducking = DUCK_RISE; }
+int check_cangrab(entity *actor, entity *target) { return 0; }
+int check_energy(e_cost_check which, int animation) { return 0; }
+int calculate_force_damage(entity *target, entity *actor, s_attack *attack, s_defense *defense) { return 0; }
+void kill_entity(entity *victim, e_kill_entity_trigger trigger) { abort(); }
+void ent_set_colourmap(entity *ent, unsigned int which)
+{
+    if (which != 0)
+    {
+        abort();
+    }
+    ++initial_palette_calls;
+}
+
+s_defense *defense_find_current_object(entity *target, s_body *body, e_attack_types attack)
+{
+    static s_defense defense;
+    return &defense;
+}
+
+s_collision_attack *collision_attack_find_no_block_on_frame(s_anim *animation, int frame, int block)
+{
+    static s_collision_attack collision;
+    return &collision;
+}
+
+entity *spawn_attack_flash(entity *target, s_attack *attack, int attack_flash, int model_flash)
+{
+    flashed = target;
+    return NULL;
+}
+
+int trygrab(entity *target)
+{
+    ++grab_checks;
+    grabbed = target;
+    return 1;
+}
+
+@ROUTINES@
+
+static void check(int pass, const char *label)
+{
+    if (!pass)
+    {
+        fprintf(stderr, "%u: %s\n", obor_profile_build, label);
+        abort();
+    }
+}
+
+static void initialize_spawn_mask(entity *e)
+{
+    @SPAWN_FACTION@
+}
+
+static void initialize_spawn_state(entity *acting_entity, s_model *spawn_model, e_direction direction)
+{
+    const float pos_x = 14.5f, pos_y = 12.5f, pos_z = 73.5f;
+    acting_entity->modeldata = *spawn_model;
+    @SPAWN_STATE@
+    initialize_spawn_mask(acting_entity);
+}
+
+static void check_spawn_player_mask(int legacy)
+{
+    static entity actor;
+    static s_level scene;
+    s_level *old_level = level;
+    const int old_mode = savedata.mode;
+    const e_entity_type types = TYPE_PLAYER | TYPE_ENEMY;
+    s_model model = {.name = "spawn fixture", .health = 41, .mp = 12, .knockdowncount = 7, .lifespan = 11,
+                     .faction = {.type_hostile = types, .type_damage_direct = types,
+                                 .type_damage_indirect = types}};
+    for (int mode = 0; mode < 4; ++mode)
+    {
+        actor = (entity){0};
+        model.type = mode == 3 ? TYPE_TEXTBOX : TYPE_PLAYER;
+        scene.nohit = mode == 0 ? DAMAGE_FROM_PLAYER_ON : DAMAGE_FROM_PLAYER_OFF;
+        level = mode == 2 ? NULL : &scene;
+        savedata.mode = mode == 2;
+        initial_palette_calls = 0;
+        textbox = NULL;
+        initialize_spawn_state(&actor, &model, DIRECTION_LEFT);
+        const e_entity_type expected = legacy && (mode == 1 || mode == 2) ? TYPE_ENEMY : types;
+        check(actor.faction.type_hostile == expected && actor.faction.type_damage_direct == expected,
+              "Spawn retains the original player damage and hostility mask");
+        check(actor.modeldata.faction.type_hostile == expected &&
+              actor.modeldata.faction.type_damage_direct == expected &&
+              actor.faction.type_damage_indirect == types && model.faction.type_damage_direct == types,
+              "Only the actor's direct type mask changes");
+        check(actor.energy_state.health_current == 41 && actor.energy_state.mp_current == 12 &&
+              actor.knockdowncount == 7 && actor.lifespancountdown == 11,
+              "Spawn initializes resources and lifespan from the selected model");
+        check(actor.position.x == 14.5f && actor.position.y == 12.5f && actor.position.z == 73.5f &&
+              actor.direction == DIRECTION_LEFT && actor.speedmul == 1,
+              "Spawn preserves the caller's position and direction");
+        check(actor.timestamp == _time && actor.nextmove == _time + 1 && actor.nextthink == _time + 1 &&
+              initial_palette_calls == 1 && strcmp(actor.name, "spawn fixture") == 0,
+              "Spawn initializes the original schedules, palette and name");
+        check(mode == 3 ? textbox == &actor : actor.playerindex == currentspawnplayer,
+              "Spawn identifies its player slot and textbox");
+    }
+    level = old_level;
+    savedata.mode = old_mode;
+}
+
+static void check_model_masks(int legacy)
+{
+    static entity actor;
+    s_model model = {.type = TYPE_ENEMY};
+    obor_init_model_faction(&model);
+    check((int32_t)model.faction.type_hostile == (legacy ? -1 : 0), "Initial unspecified type representation");
+    model.faction.type_hostile = 0;
+    obor_finish_model_faction(&model);
+    check(model.faction.type_hostile == (legacy ? 0 : TYPE_PLAYER) &&
+          model.faction.type_damage_direct == (TYPE_PLAYER | TYPE_SHOT) &&
+          model.faction.type_damage_indirect == (TYPE_ENEMY | TYPE_OBSTACLE), "Explicit empty versus default model masks");
+    s_model obstacle = {.type = TYPE_OBSTACLE};
+    obor_init_model_faction(&obstacle);
+    obor_finish_model_faction(&obstacle);
+    const int no_type = obor_profile_build < 7385;
+    check((int32_t)obstacle.faction.type_hostile == (no_type ? -1 : 0),
+          "Obstacle default uses the original undeclared type value");
+    ArgList args = {.count = 3, .args = {"hostile", "player", "none"}};
+    check(get_type_from_arglist(&args) == (TYPE_PLAYER | (no_type ? 0 : TYPE_NONE)),
+          "Authored none contributes its original type value");
+
+    actor = (entity){.modeldata = model, .faction.type_hostile = TYPE_NPC};
+    initialize_spawn_mask(&actor);
+    check(actor.faction.type_hostile == (legacy ? 0 : TYPE_PLAYER) &&
+          actor.faction.type_damage_direct == model.faction.type_damage_direct, "Spawn transfers all original model masks");
+
+    s_model previous = model;
+    previous.faction.type_hostile = TYPE_ENEMY;
+    previous.faction.type_damage_direct = (TYPE_ENEMY | TYPE_PLAYER);
+    previous.faction.type_damage_indirect = TYPE_ITEM;
+    actor.faction.type_hostile = TYPE_ITEM; /* A live update can differ from the previous model. */
+    actor.modeldata.faction.type_hostile = legacy ? (e_entity_type)-1 : TYPE_UNDELCARED;
+    actor.modeldata.faction.type_damage_direct = 0;
+    actor.modeldata.faction.type_damage_indirect = TYPE_OBSTACLE;
+    ent_copy_uninit(&actor, &previous);
+    check(actor.faction.type_hostile == (legacy ? TYPE_ITEM : TYPE_ENEMY) &&
+          actor.faction.type_damage_direct == (legacy ? 0 : (TYPE_ENEMY | TYPE_PLAYER)) &&
+          actor.faction.type_damage_indirect == (legacy ? TYPE_OBSTACLE : TYPE_ITEM),
+          "Model swap inherits only original unspecified masks and keeps explicit masks");
+    check(actor.modeldata.faction.type_hostile == actor.faction.type_hostile &&
+          actor.modeldata.faction.type_damage_direct == actor.faction.type_damage_direct &&
+          actor.modeldata.faction.type_damage_indirect == actor.faction.type_damage_indirect,
+          "Model swap updates the model and live type values");
+}
+
+static void check_combat_targets(entity *npc, entity *neutral, entity *foe, s_anim *action, int legacy)
+{
+    npc->faction.hostile = FACTION_GROUP_B;
+    npc->faction.member = FACTION_GROUP_B;
+    foe->faction.hostile = FACTION_GROUP_B;
+    s_attack attack = {.attack_force = 3};
+    action->followup.animation = ANI_PAIN;
+    for (unsigned i = 0; i < 4; ++i)
+    {
+        static const unsigned follow[] = {FOLLOW_CONDITION_HOSTILE_ATTACKER_TRUE, FOLLOW_CONDITION_HOSTILE_ATTACKER_FALSE,
+                                          FOLLOW_CONDITION_HOSTILE_TARGET_TRUE, FOLLOW_CONDITION_HOSTILE_TARGET_FALSE};
+        static const unsigned counter[] = {COUNTER_ACTION_CONDITION_HOSTILE_ATTACKER_TRUE, COUNTER_ACTION_CONDITION_HOSTILE_ATTACKER_FALSE,
+                                           COUNTER_ACTION_CONDITION_HOSTILE_TARGET_TRUE, COUNTER_ACTION_CONDITION_HOSTILE_TARGET_FALSE};
+        const int expected[] = {legacy, !legacy, !legacy, legacy};
+        action->followup.condition = follow[i];
+        check(check_follow_up_condition(npc, foe, action, 0) == expected[i], "Follow-up hostility direction and sense");
+        action->counter_action.condition = counter[i];
+        check(check_counter_condition(foe, npc, &attack, NULL) == expected[i], "Counter hostility direction and sense");
+    }
+
+    foe->attacking = neutral->attacking = ATTACKING_PREPARED;
+    foe->faction.type_damage_direct = TYPE_ENEMY;
+    foe->faction.damage_direct = FACTION_GROUP_A;
+    neutral->faction.damage_direct = FACTION_GROUP_B;
+    entity *block_candidate = legacy ? foe : neutral;
+    range_checks = 0;
+    check(block_find_target(-1, 0) == block_candidate && range_checks == 0,
+          "Block observes direct damage admission and skips an unspecified range");
+    check(block_find_target(ANI_IDLE, 0) == block_candidate && range_checks != 0,
+          "Block checks the configured animation range");
+    range_allowed = 0;
+    check(block_find_target(ANI_IDLE, 0) == NULL, "Block rejects attackers outside the animation range");
+    range_allowed = 1;
+    obor_entity_dead_script_set(block_candidate, -1);
+    check(block_find_target(ANI_IDLE, 0) == NULL, "Block ignores attackers marked as dead");
+    obor_entity_dead_script_set(block_candidate, 0);
+    check(block_find_target(ANI_IDLE, 0) == block_candidate, "Block admits an attacker restored to living state");
+
+    npc->modeldata.type = TYPE_PLAYER;
+    neutral->energy_state.health_current = foe->energy_state.health_current = 20;
+    flashed = NULL;
+    smart_bomb(npc, &attack);
+    check(self == npc && flashed == (legacy ? foe : neutral) && lasthit.target == flashed,
+          "Smart bomb target and restored actor");
+    check(foe->energy_state.health_current == (legacy ? 17 : 20) &&
+          neutral->energy_state.health_current == (legacy ? 20 : 17),
+          "Smart bomb uses original type mask even when the target is another player");
+}
+
+int main(void)
+{
+    static const unsigned profiles[] = {7369, 7384, 7385, 7391, 7420, 7443, 7444, 7454, 7455, 7533};
+    static entity npc, neutral, foe;
+    int vulnerable = 1;
+    s_anim action = {.numframes = 1, .vulnerable = &vulnerable};
+    s_anim *animations[] = {
+        [ANI_GRAB] = &action, [ANI_THROW] = &action,
+        [ANI_DUCK] = &action, [ANI_DUCKATTACK] = &action
+    };
+    entity *actors[] = {&npc, &neutral, &foe};
+    ent_list = actors;
+    ent_max = sizeof(actors) / sizeof(*actors);
+    self = &npc;
+    for (size_t i = 0; i < sizeof(profiles) / sizeof(*profiles); ++i)
+    {
+        obor_profile_build = profiles[i];
+        const int legacy = profiles[i] < 7444;
+        check_spawn_player_mask(legacy);
+        npc = (entity){
+            .direction = DIRECTION_RIGHT, .exists = 1, .idling = IDLING_PREPARED,
+            .ducking = DUCK_ACTIVE, .animnum = ANI_IDLE, .animation = &action,
+            .modeldata = {.type = TYPE_ENEMY, .grabdistance = 30, .animation = animations,
+                          .animation_capacity = sizeof(animations) / sizeof(*animations)},
+            .faction = {.hostile = FACTION_GROUP_A, .type_hostile = TYPE_PLAYER,
+                        .damage_direct = FACTION_GROUP_B, .type_damage_direct = TYPE_PLAYER,
+                        .damage_indirect = FACTION_GROUP_A, .type_damage_indirect = TYPE_ITEM}
+        };
+        neutral = (entity){.exists = 1, .position.x = 5, .animation = &action, .ducking = DUCK_ACTIVE,
+                           .modeldata.type = TYPE_ITEM, .faction.member = FACTION_GROUP_B};
+        foe = (entity){.exists = 1, .position.x = 7, .animation = &action, .ducking = DUCK_ACTIVE,
+                       .modeldata.type = TYPE_PLAYER, .faction.member = FACTION_GROUP_A};
+        grabbed = NULL;
+        grab_checks = 0;
+        next_random = 1;
+        check(common_try_grab(&foe) == 0 && grab_checks == 0, "Grab draw before target admission");
+        next_random = 0;
+        check(common_try_grab(NULL) == legacy && grab_checks == legacy && grabbed == (legacy ? &foe : NULL),
+              "Type-filtered and unfiltered lookup with a neutral entity first");
+        check(common_try_grab(&neutral) == legacy, "Explicit grab target follows its profile's hostility policy");
+        check(common_try_grab(&foe) == 1 && grabbed == &foe, "Explicit hostile target reaches grab action");
+        neutral.exists = 0;
+        const int search_after_faction = profiles[i] >= 7455 || legacy;
+        check(common_try_grab(NULL) == search_after_faction, "Automatic grab before and after 7455");
+        neutral.exists = 1;
+
+        npc.faction.hostile = FACTION_GROUP_B;
+        entity *nearest = legacy ? &foe : &neutral;
+        check(normal_find_target(-1, 0) == nearest, "Original type-based nearest target");
+        range_checks = 0;
+        check(normal_find_target(ANI_IDLE, 0) == nearest && range_checks != 0,
+              "Nearest target must be within the selected animation range");
+        range_allowed = 0;
+        check(normal_find_target(ANI_IDLE, 0) == NULL, "Nearest target outside the animation range");
+        range_allowed = 1;
+        obor_entity_dead_script_set(nearest, -7);
+        check(normal_find_target(-1, 0) == NULL, "Nearest target with a nonzero dead value is skipped");
+        obor_entity_dead_script_set(nearest, 0);
+        check(normal_find_target(-1, 0) == nearest, "Nearest target restored to the active search");
+        npc.faction.type_hostile = (e_entity_type)-1;
+        neutral.modeldata.type = obor_profile_build < 7385 ? 0 : TYPE_NONE;
+        const int blank_type_filtered = obor_profile_build < 7385;
+        check(normal_find_target(-1, 0) == (blank_type_filtered ? &foe : &neutral),
+              "Type none is filtered while its original value is zero");
+        neutral.modeldata.type = TYPE_ITEM;
+        npc.faction.type_hostile = TYPE_PLAYER;
+        npc.custom_target = &foe;
+        check(common_try_duckattack(NULL) == legacy, "Crouching attack admits the original direct type mask");
+        npc.animnum = ANI_IDLE;
+        check(ai_check_ducking() == legacy, "Duck decision admits the original direct type mask");
+        npc.projectile = BLAST_TOSS;
+        check(common_try_duckattack(NULL) == !legacy, "Crouching attack uses the indirect mask for any blast");
+        npc.animnum = ANI_IDLE;
+        check(ai_check_ducking() == legacy, "Toss state still uses direct mask for the duck decision");
+        npc.projectile = BLAST_ATTACK;
+        check(ai_check_ducking() == !legacy, "Attack blast uses the indirect mask for the duck decision");
+        npc.custom_target = &neutral;
+        check(common_try_duckattack(NULL) == legacy, "Original indirect type independently admits the second candidate");
+        check_combat_targets(&npc, &neutral, &foe, &action, legacy);
+        check_model_masks(legacy);
+    }
+    return 0;
+}

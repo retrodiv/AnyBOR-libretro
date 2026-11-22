@@ -31,6 +31,8 @@
 #include "anybor_script_compact.h"
 #include "anybor_script_executable.h"
 
+extern unsigned int obor_profile_build;
+
 static void Interpreter_CompactInstructionStorage(Interpreter *pinterpreter)
 {
     Instruction *storage;
@@ -303,7 +305,10 @@ HRESULT Interpreter_Call(Interpreter *pinterpreter)
         if(FAILED(hr))
         {
             List_Includes(pinterpreter->ptheFunctionList, currentCall->functionRef);
-            printf("Script function '%s' returned an exception. See any preceding error messages above for details.\n", List_GetName(pinterpreter->ptheFunctionList));
+            printf(obor_profile_build && obor_profile_build < 7504u
+                ? "Script function '%s' returned an exception, check the manual for details.\n"
+                : "Script function '%s' returned an exception. See any preceding error messages above for details.\n",
+                List_GetName(pinterpreter->ptheFunctionList));
             if(Instruction_CallReferenceCount(currentCall))
             {
                 printf(" parameters: ");

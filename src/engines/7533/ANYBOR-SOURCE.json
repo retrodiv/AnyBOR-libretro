@@ -17,9 +17,9 @@
       "upstream_sha256": null
     },
     "openbor.c": {
-      "distributed_sha256": "7934a058041a8761a4d219a23a7d74f4352e80fc6828a617f50ca1b4beb17b60",
+      "distributed_sha256": "f8709317cbfababcd5e2c9e4094090b7fbeee3d556fd4480718ca973509ada19",
       "modified": true,
-      "summary": "Apply the port's engine corrections and select the PC video configuration on macOS. Derive output names from the content basename with explicit destination capacities, and reject overflowing output path joins. Leave multiplayer slots without a selected model available to join even if game scripts preassign lives to them. Let a missing basename-only PAK self-check read the active frontend content after it has been validated and prepared. Allocate each model's animation pointer table through the highest animation index that model uses, and bound cache, copy and cleanup paths to that capacity. Ignore optional defense and offense entries outside the configured attack-type range with a log warning before accessing their tables. Yield after each newly completed model during explicit model-list or level preparation, and defer states until that preparation has cleaned up its intermediate parsers and handles. Initialize all four RetroPads and repair legacy unbound player profiles without replacing custom bindings. Return a defined null result for absent colourmap models or tables while retaining valid palette fallback. Keep selected palette-conversion reads bounded and reject missing maps or flags, while preserving unselected slots and native allocation failure callbacks. Check destination animation capacity when retaining an animation across model changes, preserving the native fallback and timing. Access script-container pointer slots with byte copies, preserving record layout, pointer values and native copy/cleanup order. Pointer-slot allocation and release accept byte storage without imposing pointer alignment on a packed field. Release each sprite owner once and complete cleanup independently of alias counts. Preserve native sprite-map capacity policies, check allocation extents and retain existing storage and capacity when growth is unavailable. Validate sprite-node allocations and release partial resources without changing existing owners. Check cached sprite availability before reading metadata and ignore cache requests for absent nodes. Select source-defined combat, drawing, palette, music, startup/menu/default and saved-record behavior for profiles 7530, 7555, 7556 and 7735. Capture explicit shutdown failure text before cleanup and bound legacy diagnostic formatting. Receive layer screen outputs in naturally aligned storage before assigning the packed member.",
+      "summary": "Apply the port's engine corrections and select the PC video configuration on macOS. Derive output names from the content basename with explicit destination capacities, and reject overflowing output path joins. Leave multiplayer slots without a selected model available to join even if game scripts preassign lives to them. Let a missing basename-only PAK self-check read the active frontend content after it has been validated and prepared. Allocate each model's animation pointer table through the highest animation index that model uses, and bound cache, copy and cleanup paths to that capacity. Ignore optional defense and offense entries outside the configured attack-type range with a log warning before accessing their tables. Yield after each newly completed model during explicit model-list or level preparation, and defer states until that preparation has cleaned up its intermediate parsers and handles. Initialize all four RetroPads and repair legacy unbound player profiles without replacing custom bindings. Return a defined null result for absent colourmap models or tables while retaining valid palette fallback. Keep selected palette-conversion reads bounded and reject missing maps or flags, while preserving unselected slots and native allocation failure callbacks. Check destination animation capacity when retaining an animation across model changes, preserving the native fallback and timing. Access script-container pointer slots with byte copies, preserving record layout, pointer values and native copy/cleanup order. Pointer-slot allocation and release accept byte storage without imposing pointer alignment on a packed field. Release each sprite owner once and complete cleanup independently of alias counts. Preserve native sprite-map capacity policies, check allocation extents and retain existing storage and capacity when growth is unavailable. Validate sprite-node allocations and release partial resources without changing existing owners. Check cached sprite availability before reading metadata and ignore cache requests for absent nodes. Select source-defined combat, drawing, palette, music, startup/menu/default and saved-record behavior for profiles 7530, 7555, 7556 and 7735. Preserve native binding animation selection, direction adjustments, position recipient, authored body-box depth, collision and wall placement, entity-removal script arguments, volume defaults and settings record sizes for earlier profiles. Preserve native cheat selection, menu labels, default flags, hit factors, blocking, model directives, shadow settings and drawing, reaction settings and death sequences. Restore original running model values, player movement, NPC chase and follow, combat target checks, and model type-mask defaults and inheritance. Preserve historical HUD bar options, alignment and per-actor positions. Capture explicit shutdown failure text before cleanup and bound legacy diagnostic formatting. Receive layer screen outputs in naturally aligned storage before assigning the packed member.",
       "topics": [
         "active-content-pak-aliases",
         "animation-frame-ownership",
@@ -67,9 +67,9 @@
       "upstream_sha256": "cee8b05ccf51961ac3847f2b41e879f14aeb05d6d4030ca898ffcb3eb13b06bb"
     },
     "openbor.h": {
-      "distributed_sha256": "a17c27ee74fe489c4af4e51a3d91d13a446446d1a9937cc2ffab94f689f6d793",
+      "distributed_sha256": "28c8233aacf7017618dc734058a9418bd1a0b29079aa245c044ff3452b81de56",
       "modified": true,
-      "summary": "Allocate collision pointer slots through the highest author-facing index used by each collection. Track each model's allocated animation-table capacity and reject lookups outside it. Declare the shared typed profile fields and explicit native saved-record layouts without changing the selected wire format.",
+      "summary": "Allocate collision pointer slots through the highest author-facing index used by each collection. Track each model's allocated animation-table capacity and reject lookups outside it. Declare the shared typed profile fields and explicit native saved-record layouts without changing the selected wire format. Adapt cheat masks to the native script-visible numbering. Retain the original integer setting for running after landing, native type interpretation for entity searches and validity flags for historical HUD bar modes.",
       "topics": [
         "animation-frame-ownership",
         "animation-memory-layout",
@@ -85,9 +85,9 @@
       "upstream_sha256": "af6be352e04112724da5aa2cd26be2f75169fd727ecdc5b03927ab80f41ec7df"
     },
     "openborscript.c": {
-      "distributed_sha256": "bda26ba3d70199d66fecb2a57d25962d8d008f31859396449eeb05f8cf883299",
+      "distributed_sha256": "caf5550d8ea3714104c079fe335519c12e905e53103741d031a2efdc26636dcd",
       "modified": true,
-      "summary": "Keep the dormant constant-lowering diagnostic compatible with the single-value instruction layout. Derive output names from the content basename with explicit destination capacities, and reject overflowing output path joins. Compact compiler-only instruction records after resolving value ownership, preserving branch and export anchors, all mutable values and exactly-once pool cleanup. Retain shared interpreters through the last script reference while preserving independent variables, replacement and native callbacks. Track diagnostic comments independently so interpreter replacement can retain them. Resolve text-property names within the actual table bounds while preserving native numeric selectors. Reuse each text object's owned buffer when replacing its contents. Reject missing colourtable indices and keep selector arithmetic and table reads defined. Transfer loaded stream buffers through aligned local outputs while preserving native record layout and results. Close owned input files after stream loading and on buffer allocation failure. Select the native property namespaces, script result types, legacy call routing and music/system property domains.",
+      "summary": "Keep the dormant constant-lowering diagnostic compatible with the single-value instruction layout. Derive output names from the content basename with explicit destination capacities, and reject overflowing output path joins. Compact compiler-only instruction records after resolving value ownership, preserving branch and export anchors, all mutable values and exactly-once pool cleanup. Retain shared interpreters through the last script reference while preserving independent variables, replacement and native callbacks. Track diagnostic comments independently so interpreter replacement can retain them. Resolve text-property names within the actual table bounds while preserving native numeric selectors. Reuse each text object's owned buffer when replacing its contents. Reject missing colourtable indices and keep selector arithmetic and table reads defined. Transfer loaded stream buffers through aligned local outputs while preserving native record layout and results. Close owned input files after stream loading and on buffer allocation failure. Select the native property namespaces, script result types, legacy call routing and music/system property domains. Preserve original entity-property indices and integer movement, running, block, reaction, shadow and death values. Translate entity types and targeting masks between native script numbers and shared flags.",
       "topics": [
         "collision-selector-inputs",
         "colourtable-selector-bounds",
@@ -261,11 +261,12 @@
       "upstream_sha256": "97bfca87a0eab276a7899153a0a0bdfa0e8e7ed32081df161eaba839fae3de78"
     },
     "source/gamelib/packfile.c": {
-      "distributed_sha256": "03cfeeb93fa65ffd48b76ee63185e42761887e440cbfef8c06ce17bf67e8858b",
+      "distributed_sha256": "ac8708ab61d1c416be9552ad5b4b7b4c3eb406f54e8cca439146d6a9b5e21281",
       "modified": true,
       "summary": "Repair PAK handles after state loads, close process descriptors on reset, and compile loose-file search on macOS. Skip a loose lookup only when the common bounded, watched directory index proves its first component absent; preserve script changes and case-insensitive overrides.",
       "topics": [
         "darwin-platform-support",
+        "logical-profile-compatibility",
         "packfile-state-and-resource-lifecycle",
         "record-dates-and-file-notices",
         "session-relative-filesystem"
@@ -333,7 +334,7 @@
       "upstream_sha256": "d69a29810c89cbf421a723c1eb78ae2a6bbf1f4ccfab304d0a3a0e9b532a4b19"
     },
     "source/gamelib/soundmix.c": {
-      "distributed_sha256": "67df9f3919d8e12ea317aa0988eeed7f070f58d56c1a5393ba8947325ec724f4",
+      "distributed_sha256": "8ddcf5b220f713bc5ea8e283c9dea8aca3b559f361136a5678d2582b59bd44ba",
       "modified": true,
       "summary": "Declare exact resident PCM content-member ranges for independently verified reconstruction; preserve allocation tails and mutable mixer state. Select native sample caching, counter width, channel mixing, music stream state and lifecycle behavior.",
       "topics": [
@@ -360,8 +361,7 @@
       "topics": [
         "encoded-sprite-safety",
         "logical-profile-compatibility",
-        "reconstructible-resources",
-        "record-dates-and-file-notices"
+        "reconstructible-resources"
       ],
       "upstream_sha256": "0c343058ac6e9f6012af42df3318f9a0ed61d0eaabfb8792f40123d6b6860d06"
     },
@@ -428,8 +428,7 @@
       "summary": "Keep absent transform masks null during sprite seeks and traversal; retain native masked cursor positioning. Select native transformation flip and transparency flags by profile.",
       "topics": [
         "encoded-sprite-safety",
-        "logical-profile-compatibility",
-        "record-dates-and-file-notices"
+        "logical-profile-compatibility"
       ],
       "upstream_sha256": "a9e34c67d1be58e2a3fe3e14f3497353d0a102a60f57e54605824c5087c9559e"
     },
@@ -559,7 +558,7 @@
       "upstream_sha256": "28d5b01b29bf9c70a44cb52962e4d8b6e4d64cccf1b6c798999b3846c860878c"
     },
     "source/openborscript/binding.c": {
-      "distributed_sha256": "fa9397cd1727a58e79be0793c7190bcc1c803b14f8f4c91399e70f8c95a68a14",
+      "distributed_sha256": "88fc3d282a859912fa6712a09b90e5f0f53fb97ea4e80c914ee8c4ccf4752f8c",
       "modified": true,
       "summary": "Map native legacy, 6412 and 6510 binding property names and IDs to the shared layout. Select native binding fields, initialization, object tags, argument conversions and property results.",
       "topics": [
@@ -569,9 +568,13 @@
       "upstream_sha256": "17e8511d50acdad591a0fc1ffad7a83801eb04b3178cc44a8edf5ad60b4b7389"
     },
     "source/openborscript/binding.h": {
-      "distributed_sha256": "2fbd42360190d311a876f9b570074e2eb3548f9fb8d7ab28d2756efca36269df",
-      "modified": false,
-      "topics": [],
+      "distributed_sha256": "a54a6343e3a8692ae205fe644bd68b6997d41e405fd7edb85534eb4d139d2955",
+      "modified": true,
+      "summary": "Keep legacy binding IDs and append shared selectors for modern profile properties. Declare the shared binding selectors used by the native profile maps.",
+      "topics": [
+        "logical-profile-compatibility",
+        "record-dates-and-file-notices"
+      ],
       "upstream_sha256": "2fbd42360190d311a876f9b570074e2eb3548f9fb8d7ab28d2756efca36269df"
     },
     "source/openborscript/collision_attack.c": {
@@ -622,7 +625,7 @@
       "upstream_sha256": "c4e98bd87c81e2941474a09ab0e0c95eb283717e46489df1442f9dfee3f900a8"
     },
     "source/openborscript/commands.c": {
-      "distributed_sha256": "63172535586788ffc5f854e48349941c7842a0ee55d3e443b475ad695ace1eac",
+      "distributed_sha256": "1c30349ed7b52b530ea5cd048a794e8c3f2ebe7976379f27f62c02cc6f457540",
       "modified": true,
       "summary": "Convert the command-list lookup result to its command enumeration explicitly instead of through a plain pointer cast.",
       "topics": [
@@ -642,9 +645,13 @@
       "upstream_sha256": "49ba511e6a1a84bd818b2af4edd8d1cdd66badc5bb15ea82d32e322a3ccd0b77"
     },
     "source/openborscript/common_property.c": {
-      "distributed_sha256": "249735d7be5c406974862beb5c87af9f88e06c6e033447c257221d0355057572",
-      "modified": false,
-      "topics": [],
+      "distributed_sha256": "2e64ee63b3841dfde975adc232e6eac8102f1f593b59feda5e9f2268d2ae781a",
+      "modified": true,
+      "summary": "Copy reference values when reading, writing and reporting packed script properties.",
+      "topics": [
+        "record-dates-and-file-notices",
+        "script-record-alignment"
+      ],
       "upstream_sha256": "249735d7be5c406974862beb5c87af9f88e06c6e033447c257221d0355057572"
     },
     "source/openborscript/config.h": {
@@ -661,9 +668,9 @@
       "upstream_sha256": "2fb2065f9a3e8e4e1da71cf200f5d4ff28839455a165299e8427bd6fe8781014"
     },
     "source/openborscript/constants.c": {
-      "distributed_sha256": "845bbc3c6e038cd600a6b483fc150f78c792c34619743ccf62c0651ebb6447cd",
+      "distributed_sha256": "4ff70581436fe8912d9e2574a2444d72db492875e33279c3f02b48d25ef72231",
       "modified": true,
-      "summary": "Expose each logical profile's native constants and translate shared selectors to native values. Expose each profile's native global-config, flash, drawing, palette and music constants.",
+      "summary": "Expose each logical profile's native constants and translate shared selectors to native values. Expose each profile's native entity type, faction, cheat, direction, global-config, flash, drawing, palette and music constants.",
       "topics": [
         "logical-profile-compatibility",
         "record-dates-and-file-notices"
@@ -691,7 +698,7 @@
       "upstream_sha256": "d4f91c9c2f34c091e384d4f930922bac60bef6264942ab1f1cbb7ee110a5762a"
     },
     "source/openborscript/entity.c": {
-      "distributed_sha256": "5254f9686a308f1ae42466db56cc1726b8310acd8640eece030bd665b4eac8b9",
+      "distributed_sha256": "121ccd95b3e631c06894b81ee59f0684ce08b627d15204af92f98e8bb5f4bb6e",
       "modified": true,
       "summary": "Translate native entity property names, numeric IDs and animation values for each logical profile.",
       "topics": [
@@ -702,7 +709,7 @@
       "upstream_sha256": "ec7012c5484d64cc2906938fa4908e629e3c0099e2567b2d0e9415e86439783b"
     },
     "source/openborscript/entity.h": {
-      "distributed_sha256": "d3ccd5902fa0acd26e6ad2751675814981fbdd43c4cabb74b5169dfea7314958",
+      "distributed_sha256": "aa4d1432337f9e56e1b099fb322aa0675d0055a9f8ac02ed88c02c04f663f164",
       "modified": true,
       "summary": "Keep legacy entity IDs and append selectors needed by the nearby logical profiles.",
       "topics": [
@@ -712,9 +719,13 @@
       "upstream_sha256": "b3493e261298f99deaf3953ad2fed92e25832f8c3caf131dc0c8dc61f0e5dc9a"
     },
     "source/openborscript/faction.c": {
-      "distributed_sha256": "56e2ca6e5f59bda687f37e148d420fe33503c4fb38f26ba07ea166afe206dc4a",
-      "modified": false,
-      "topics": [],
+      "distributed_sha256": "241cdd791fd31e86e5322648e693c2866b2ffccdd4c96a30369f3e9b3cf3972e",
+      "modified": true,
+      "summary": "Select native faction-property availability and translate script group and type masks.",
+      "topics": [
+        "logical-profile-compatibility",
+        "record-dates-and-file-notices"
+      ],
       "upstream_sha256": "56e2ca6e5f59bda687f37e148d420fe33503c4fb38f26ba07ea166afe206dc4a"
     },
     "source/openborscript/faction.h": {
@@ -756,9 +767,9 @@
       "upstream_sha256": null
     },
     "source/openborscript/global_config.c": {
-      "distributed_sha256": "d3ff0306eb1a1cd14ba9e005b7753c65c80ceb4f7f6432d9285c0352946736ac",
+      "distributed_sha256": "b024ac4f8d8dc4de3cceb769b42952d915cb6b9c6d3c4584b1015aa5f2e442f5",
       "modified": true,
-      "summary": "Preserve native global-configuration property names, flags, results and typed field access. Select the native global-config property maps, read/write flags, field conversions and setter results.",
+      "summary": "Preserve native global-configuration property names, flags, results and typed field access. Select the native global-config property names and ordinals, read/write flags, field conversions and setter results.",
       "topics": [
         "logical-profile-compatibility",
         "record-dates-and-file-notices"
@@ -788,7 +799,7 @@
       "upstream_sha256": "00fe52601bfab561a9a9a3bda4e0e3a0f79e925dbd4c5483eeee7f841e9f6e71"
     },
     "source/openborscript/index.c": {
-      "distributed_sha256": "c9aabc54a77e2440e760368c2f8b87c9e32f3c48c875fb272fea4c0a3c6f4171",
+      "distributed_sha256": "ad3a538e3fc93bcdaca6c3bb1a89371e852ec7172f414775129ea8555b7f12d2",
       "modified": true,
       "summary": "Register native functions according to each logical profile's upstream API. Preserve native callback registration, preconversion routes and function-name lookup by profile.",
       "topics": [
@@ -804,10 +815,11 @@
       "upstream_sha256": "7ff27e41939d64ad60b49891bd00956eebd97355aeec1f0d1e0783ae08b50509"
     },
     "source/openborscript/level.c": {
-      "distributed_sha256": "1977978b6c1108d99f7097cd2d8fb50c1d043bae5bbeada1efe99e3dca1f62a9",
+      "distributed_sha256": "0cbd5f7cbb5371e73087f49865c3835cdd5c95905dd3729430d387ad41d14c5a",
       "modified": true,
       "summary": "Select the native 6330 background-speed return representation.",
       "topics": [
+        "logical-profile-compatibility",
         "record-dates-and-file-notices",
         "script-text-object-ownership"
       ],
@@ -820,7 +832,7 @@
       "upstream_sha256": "c145e93b742c0b957361c61960debd75b324b30751753c40c5da256917f28a5f"
     },
     "source/openborscript/model.c": {
-      "distributed_sha256": "4334bfaa844163c975fe998184034b31f2028e5d1115efe7b68e7e83deea46ad",
+      "distributed_sha256": "214feb9b0d835429a78504f2c34a5ad973ba0f8a310cb1f0708a268b95608cb2",
       "modified": true,
       "summary": "Select native model-property names, numeric IDs and typed query/update results for each logical profile.",
       "topics": [
@@ -830,7 +842,7 @@
       "upstream_sha256": "5acb40805775b50ffaf34c53b300694da86d4543d14ad2e451061715f755f2f6"
     },
     "source/openborscript/model.h": {
-      "distributed_sha256": "bb45e1bf689c5a395694cf74b01b4d201e0d21c1d0c91e0d1f3ec903e9fb4cb3",
+      "distributed_sha256": "2982cc83ef33440b3a5959e681e254fa34b6de3c6d1299447aea405d34a2935a",
       "modified": true,
       "summary": "Declare shared model-property selectors while preserving each profile's native domain.",
       "topics": [
@@ -840,9 +852,13 @@
       "upstream_sha256": "2aa40c45f13e56822f08aebdc17aeb55026efbcd26bf6bf02c48417b6925019c"
     },
     "source/openborscript/recursive_damage.c": {
-      "distributed_sha256": "36b43b3134510a4f6f78476ff2bf49da8247e1175e34e1335826cb6a8cb2add7",
-      "modified": false,
-      "topics": [],
+      "distributed_sha256": "e2137cbae020e2fbe54572bca064599a4de437561d6c2f39672619db510c4930",
+      "modified": true,
+      "summary": "Translate recursive attack-type selectors at the script boundary and reject indices outside the retained table.",
+      "topics": [
+        "logical-profile-compatibility",
+        "record-dates-and-file-notices"
+      ],
       "upstream_sha256": "36b43b3134510a4f6f78476ff2bf49da8247e1175e34e1335826cb6a8cb2add7"
     },
     "source/openborscript/recursive_damage.h": {
@@ -1055,10 +1071,11 @@
       "upstream_sha256": "9af53da73bfb0caeca81215a8977059da790f019cb9f9a7f59ebbf7c20f8ddbd"
     },
     "source/scriptlib/Interpreter.c": {
-      "distributed_sha256": "f47908a7af621066dde5bed6b26a189e12caa4e6fc67573e85797a97cd220e0c",
+      "distributed_sha256": "465d4c574497af7d53287c5640be931c4e2d46477894f9094323be193133a6e7",
       "modified": true,
       "summary": "Push canonical constants, release parser-only instruction data, and pack compiled instructions, values, and call references into exact contiguous storage. Compact compiler-only instruction records after resolving value ownership, preserving branch and export anchors, all mutable values and exactly-once pool cleanup. Allocate parser state only while compiling and release it once runtime instructions are ready.",
       "topics": [
+        "logical-profile-compatibility",
         "record-dates-and-file-notices",
         "script-memory-layout"
       ],
@@ -1103,10 +1120,11 @@
       "upstream_sha256": "a58e54a21a807fc5b9e6756aeda601d218b319eb1594784c47ac1c378a527113"
     },
     "source/scriptlib/Parser.c": {
-      "distributed_sha256": "b7674149441492189e267e621d1b6af71542a480d04367130eb92672d627f052",
+      "distributed_sha256": "2228894bb192e2a68c5bfe7f4e446ad5c9fdb32d201760605417719a74e97180",
       "modified": true,
       "summary": "Check constant-token prefix capacity and resolve instruction labels before recording control targets. Stop terminal lexer failures and EOF recovery without changing finite historical recovery.",
       "topics": [
+        "logical-profile-compatibility",
         "record-dates-and-file-notices",
         "script-parser-table-safety"
       ],

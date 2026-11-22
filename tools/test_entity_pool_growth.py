@@ -14,6 +14,7 @@ import unittest
 from contract_fixtures import load_contract_fixture
 from test_historical_player import function, rename_identifiers
 from test_model_constructor_ownership import run_native
+from test_modern_legacy_script_routing import combat_snapshot_support
 
 HERE = Path(__file__).resolve().parent
 ROOT = Path(os.environ.get('OBOR_TEST_SOURCE', HERE.parent))
@@ -23,6 +24,8 @@ FIXTURE = HERE / 'fixtures/entity-pool-native-baseline.json'
 def program(engine, profiles, *, omit_tail_initialization=False):
     core = (engine / 'openbor.c').read_text(encoding='latin1')
     native = function(core, 'alloc_ents')
+    release = function(core, 'free_ents')
+    snapshots = combat_snapshot_support(core) if 'obor_collect_model_snapshots' in release else ''
     original = load_contract_fixture(FIXTURE)['engines'][engine.name]['alloc_ents']
     if omit_tail_initialization:
         line = 'memset(ent_list + first, 0, sizeof(*ent_list) * (size_t)MAX_ENTS);'
@@ -32,7 +35,7 @@ def program(engine, profiles, *, omit_tail_initialization=False):
     values = dict(
         CONFIG='#include "config.h"' if (engine / 'config.h').is_file() else '',
         DUAL=str(int('ent_stack' in native)),
-        ROUTINES='\n'.join([function(core, 'free_ents'), native,
+        ROUTINES='\n'.join([snapshots, release, native,
                             rename_identifiers(original, {'alloc_ents': 'original_alloc_ents'})]),
         PROFILES=','.join(str(int(p.get('revision', p['build'].split('-')[0])))+'u' for p in profiles))
     text = (HERE / 'entity_pool_growth.c.in').read_text()

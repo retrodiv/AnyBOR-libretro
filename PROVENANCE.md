@@ -8,6 +8,14 @@ distributed hash of every retained upstream file. This makes the port's modifica
 distinguishable from upstream code without importing upstream Git history.
 The shared port, frontend glue and build tooling are included as source.
 
+The v3.0 7369-dev, v3.0 7391-dev and v3.0 7420-dev profiles adapt
+[`c0c8afe5dbdf5325e65e503ec0547f9b1e5c10eb`](https://github.com/DCurrent/openbor/tree/c0c8afe5dbdf5325e65e503ec0547f9b1e5c10eb/engine),
+[`8d809a5d13f9c77bc2a3e1cacfa4c5bf8aca4266`](https://github.com/DCurrent/openbor/tree/8d809a5d13f9c77bc2a3e1cacfa4c5bf8aca4266/engine), and
+[`8a180f22934d574d0159693951d0339eedc53f8a`](https://github.com/DCurrent/openbor/tree/8a180f22934d574d0159693951d0339eedc53f8a/engine)
+on the 7533 source tree. The three original revisions share the
+[upstream BSD grant](LICENSES/OpenBOR-7142.txt). Their source-defined behavior
+is documented in [historical profiles](docs/HISTORICAL_PROFILES.md#7369-7391-and-7420).
+
 The v3.0 6997-dev, v3.0 7039-dev and v3.0 7091-dev profiles adapt
 [`203d148433ac86ac51c131564d14c2465f8af80b`](https://github.com/DCurrent/openbor/tree/203d148433ac86ac51c131564d14c2465f8af80b/engine),
 [`be46a55822e19750728ef271b7bebd80ccd678f1`](https://github.com/DCurrent/openbor/tree/be46a55822e19750728ef271b7bebd80ccd678f1/engine), and

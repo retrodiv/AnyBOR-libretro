@@ -10,6 +10,7 @@ import re
 import unittest
 
 from contract_fixtures import contract_revisions, load_contract_fixture
+from test_early_jump_walkoff import braced_statement
 from test_historical_common_think import ROOT, native_output
 from test_historical_player import function
 
@@ -37,6 +38,21 @@ def program(data, engine):
 
 
 class FrameCollisionConstructionTests(unittest.TestCase):
+    def test_7533_retains_incomplete_collision_definitions_from_7418(self):
+        engine = Path(os.environ.get('OBOR_HISTORICAL_ENGINE', ROOT / 'src/engines/7533'))
+        source = (engine / 'openbor.c').read_text(encoding='latin1')
+        loader = function(source, 'load_cached_model')
+        prune = braced_statement(loader, 'if (obor_profile_build < 7418u)')
+        suffixes = ('allocate_object', 'append_node', 'check_has_coords', 'clone_list',
+                    'find_node_index', 'free_list', 'free_node', 'initialize_frame_property',
+                    'remove_undefined_coordinates')
+        functions = ['collision_allocate_coords']
+        functions += [f'collision_{kind}_{suffix}' for kind in ('attack', 'body') for suffix in suffixes]
+        code = Path(__file__).with_name('modern_legacy_collision_retention_contract.c.in').read_text()
+        code = code.replace('@METHODS@', '\n'.join(function(source, name) for name in functions))
+        code = code.replace('@PRUNE@', prune)
+        self.assertEqual(native_output(code, {'engine': '7533'}, engine_source=engine), '')
+
     def test_original_construction_contracts(self):
         data = load_contract_fixture(FIXTURE)
         revisions = {row['revision'] for row in data['sources']}

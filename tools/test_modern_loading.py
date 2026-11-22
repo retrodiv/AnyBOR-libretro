@@ -54,20 +54,22 @@ def lifebar_program(data):
     return code
 
 
-def type_none_program(data):
-    engine = Path(os.environ.get('OBOR_HISTORICAL_ENGINE',
-                                ROOT / 'src/engines' / data['engine']))
+def type_none_program(data, engine):
     core = (engine / 'openbor.c').read_text()
     initialization = function(core, 'ent_default_init')
     cases = re.findall(r'(?ms)^[ \t]*case TYPE_NONE:.*?(?=^[ \t]*case TYPE_PANEL:)',
                        initialization)
-    if len(cases) != 1 or cases[0].count('break;') != 1:
+    if len(cases) != 1 or not cases[0].rstrip().endswith('break;'):
         raise ValueError('Expected the complete native TYPE_NONE switch case')
+    switch_start = initialization.index('    const e_entity_type type = e->modeldata.type;')
+    switch_end = initialization.index('{', switch_start)
     inputs = []
     for case in data['cases']:
         inputs.append('{' + json.dumps(case['command']) + ',' +
                       ','.join(str(case[key]) for key in data['case_fields']) + '}')
-    parts = dict(TYPE_FUNCTION=function(core, 'lcmHandleCommandType'),
+    parts = dict(TYPE_FUNCTION='\n'.join(function(core, name) for name in
+                                        ('obor_add_model_aimove', 'lcmHandleCommandType')),
+                 TYPE_SWITCH=initialization[switch_start:switch_end].strip(),
                  ENTITY_CASE=cases[0], CASES=',\n'.join(inputs),
                  PROFILES=','.join(str(row['revision']) + 'u' for row in data['sources']))
     code = Path(__file__).with_name('modern_type_none_contract.c.in').read_text()
@@ -79,6 +81,42 @@ def type_none_program(data):
 
 
 class ModernLoadingContracts(unittest.TestCase):
+    def test_original_archive_identifier_boundary(self):
+        data = {'engine': '7533'}
+        engine = Path(os.environ.get('OBOR_HISTORICAL_ENGINE', ROOT / 'src/engines' / data['engine']))
+        source = (engine / 'source/gamelib/packfile.c').read_text()
+        for name in ('openPackfile', 'pak_init'):
+            self.assertIn('|| !obor_profile_accepts_pack_magic(magic)', function(source, name))
+        identifier = re.search(r'(?m)^#define\s+PACKMAGIC\s+0x[0-9A-Fa-f]+', source)
+        self.assertIsNotNone(identifier)
+        code = r'''
+#include "openbor.h"
+#include "borendian.h"
+#include <stdlib.h>
+
+uint32_t obor_profile_build;
+@IDENTIFIER@
+@RULE@
+
+int main(void)
+{
+    static const unsigned builds[] = {0, 7369, 7391, 7406, 7409, 7420, 7533};
+    for (size_t i = 0; i < sizeof(builds) / sizeof(*builds); ++i)
+    {
+        obor_profile_build = builds[i];
+        if (!obor_profile_accepts_pack_magic(SwapLSB32(PACKMAGIC)) ||
+            obor_profile_accepts_pack_magic(0) != (builds[i] == 0 || builds[i] >= 7409u))
+        {
+            abort();
+        }
+    }
+    return 0;
+}
+'''
+        code = (code.replace('@IDENTIFIER@', identifier[0])
+                .replace('@RULE@', function(source, 'obor_profile_accepts_pack_magic')))
+        self.assertEqual(native_output(code, data, engine_source=engine), '')
+
     def test_lifebar_commands_fallback_defaults_and_diagnostics(self):
         data = load_contract_fixture(FIXTURE)
         revisions = [row['revision'] for row in data['sources']]
@@ -97,7 +135,8 @@ class ModernLoadingContracts(unittest.TestCase):
         revisions = [row['revision'] for row in data['sources']]
         self.assertEqual(len(revisions), len(set(revisions)))
         self.assertEqual(set(revisions), contract_revisions(data, data['expected_revisions']))
-        actual = json.loads(native_output(type_none_program(data), data))
+        engine = Path(os.environ.get('OBOR_HISTORICAL_ENGINE', ROOT / 'src/engines' / data['engine']))
+        actual = json.loads(native_output(type_none_program(data, engine), data, engine_source=engine))
         expected = dict(status='PASS', profiles=[
             dict(revision=row['revision'], cases=data['contracts'][row['contract']])
             for row in data['sources']])

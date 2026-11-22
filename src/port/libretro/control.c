@@ -14,7 +14,7 @@
 #include <stdio.h>
 #include <string.h>
 
-#if OBOR_ENGINE_BUILD >= 8023
+#if OBOR_ENGINE_BUILD >= 8023 || OBOR_ENGINE_BUILD == 7533
 
 /* The controller branch indexes devices, not a global keyboard keyspace.
  * Each frontend port is a stable device. Mappings contain RetroPad button
@@ -25,7 +25,6 @@ static int mapping_ready;
 static int remap_device = -1;
 static int remap_key = -1;
 static unsigned char remap_previous[16];
-static int rumble_ratio[4], rumble_ms[4];
 
 static void defaults(int device)
 {
@@ -40,7 +39,7 @@ bool control_isvaliddevice(int deviceID)
     return deviceID >= 0 && deviceID < 4;
 }
 
-void control_init(void)
+static void begin_device_input(void)
 {
     if (initialized)
         return;
@@ -51,7 +50,7 @@ void control_init(void)
     remap_key = -1;
 }
 
-void control_exit(void)
+static void end_device_input(void)
 {
     initialized = 0;
     mapping_ready = 0;
@@ -91,7 +90,7 @@ int control_getremappedkey(void)
     return remap_key;
 }
 
-void control_update(s_playercontrols **players, int count)
+static void update_device_input(s_playercontrols **players, int count)
 {
     obor_poll_tick();
     if (remap_device >= 0 && remap_key < 0) {
@@ -116,23 +115,19 @@ void control_update(s_playercontrols **players, int count)
         }
         player->newkeyflags = flags & ~player->keyflags;
         player->keyflags = flags;
+#if OBOR_ENGINE_BUILD == 7533
+        player->kb_break = 0;
+#endif
     }
 }
 
-void control_update_keyboard(s_playercontrols *player)
-{
-    s_playercontrols *one[] = {player};
-    control_update(one, 1);
-}
-
-const char *control_getkeyname(int deviceID, int keycode)
+static const char *device_key_name(int keycode)
 {
     static const char *names[16] = {
         "Up", "Down", "Left", "Right", "Attack 1", "Attack 2",
         "Attack 3", "Attack 4", "Jump", "Special", "Start", "Exit",
         "Screenshot", "Button 13", "Button 14", "Button 15"
     };
-    (void)deviceID;
     return keycode >= 0 && keycode < 16 ? names[keycode] : "None";
 }
 
@@ -187,6 +182,38 @@ bool control_savemappings(const char *filename)
         valid = false;
     return valid;
 }
+#endif
+
+#if OBOR_ENGINE_BUILD >= 8023
+
+void control_init(void)
+{
+    begin_device_input();
+}
+
+void control_exit(void)
+{
+    end_device_input();
+}
+
+void control_update(s_playercontrols **players, int count)
+{
+    update_device_input(players, count);
+}
+
+void control_update_keyboard(s_playercontrols *player)
+{
+    s_playercontrols *one[] = {player};
+    control_update(one, 1);
+}
+
+const char *control_getkeyname(int deviceID, int keycode)
+{
+    (void)deviceID;
+    return device_key_name(keycode);
+}
+
+static int rumble_ratio[4], rumble_ms[4];
 
 void obor_get_rumble(int32_t player, int32_t *ratio, int32_t *msec)
 {
@@ -213,13 +240,39 @@ void control_rumble(int deviceID, int ratio, int msec)
 static int usejoy = 1;
 static unsigned char prev_pad[4][16]; /* for control_scankey edge detect */
 
+#if OBOR_ENGINE_BUILD == 7533
+extern s_playercontrols *playercontrolpointers[];
+
+bool control_uses_device_mappings(void)
+{
+    return obor_profile_build && obor_profile_build < 7404u;
+}
+
+const char *control_getdevicekeyname(int keycode)
+{
+    return device_key_name(keycode);
+}
+#endif
+
 void control_init(int joy_enable)
 {
     usejoy = joy_enable;
     memset(prev_pad, 0, sizeof(prev_pad));
+#if OBOR_ENGINE_BUILD == 7533
+    if (control_uses_device_mappings() && !initialized) {
+        begin_device_input();
+        for (int player = 0; player < 4; ++player)
+            playercontrolpointers[player]->deviceID = player;
+    }
+#endif
 }
 
-void control_exit(void) {}
+void control_exit(void)
+{
+#if OBOR_ENGINE_BUILD == 7533
+    end_device_input();
+#endif
+}
 
 int control_usejoy(int enable)
 {
@@ -268,6 +321,12 @@ extern int allow_default_keys(void);
 
 void control_update(s_playercontrols **playercontrols, int numplayers)
 {
+#if OBOR_ENGINE_BUILD == 7533
+    if (control_uses_device_mappings()) {
+        update_device_input(playercontrols, numplayers);
+        return;
+    }
+#endif
     obor_poll_tick();
     for (int player = 0; player < numplayers; player++) {
         s_playercontrols *pcontrols = playercontrols[player];
@@ -359,6 +418,10 @@ void control_rumble(int port, int ratio, int msec)
         return;
     /* The original SDL haptic ratio is normalized to [0, 1]. */
     ratio = 100;
+#endif
+#if OBOR_ENGINE_BUILD == 7533
+    if (control_uses_device_mappings() && port >= 0 && port < 4)
+        port = playercontrolpointers[port]->deviceID;
 #endif
     if (port < 0 || port >= 4 || msec <= 0)
         return;

@@ -26,9 +26,7 @@ def one(pattern, source, label):
     return matches[0]
 
 
-def program(data):
-    engine = Path(os.environ.get('OBOR_HISTORICAL_ENGINE',
-                                ROOT / 'src/engines' / data['engine']))
+def program(data, engine):
     core = (engine / 'openbor.c').read_text()
     script = (engine / 'openborscript.c').read_text()
     labels = ['_ep_guardpoints', '_ep_jugglepoints', '_ep_maxguardpoints',
@@ -40,7 +38,8 @@ def program(data):
                            ('CMD_MODEL_GUARDPOINTS', 'CMD_MODEL_JUGGLEPOINTS'))
     defaults = one(r'(newchar->jugglepoints = \(s_status_points\).*?)'
                    r'(?=    newchar->mpswitch)', function(core, 'init_model'), 'defaults')
-    initialize = one(r'(e->nograb_default = 0;.*?)(?=    switch\(e->modeldata.type\))',
+    initialize = one(r'(e->nograb_default = 0;.*?)(?=    (?:const e_entity_type type = e->modeldata.type;|'
+                     r'switch\(e->modeldata.type\)))',
                      function(core, 'ent_default_init'), 'entity initialization')
     recovery = function(core, 'update_health').split('//Damage over time.', 1)[0]
     recovery = recovery[recovery.index('{') + 1:]
@@ -136,13 +135,14 @@ class ModernPointsContracts(unittest.TestCase):
 
     def test_model_entity_state_legacy_access_and_guard_juggle_operations(self):
         data = load_contract_fixture(FIXTURE)
+        engine = Path(os.environ.get('OBOR_HISTORICAL_ENGINE', ROOT / 'src/engines' / data['engine']))
         revisions = [row['revision'] for row in data['sources']]
         self.assertEqual(len(revisions), len(set(revisions)))
         self.assertEqual(set(revisions), contract_revisions(data, data['expected_revisions']))
         expected = dict(status='PASS', profiles=[
             dict(revision=row['revision'], **data['contracts'][row['contract']])
             for row in data['sources']])
-        self.assertEqual(json.loads(native_output(program(data), data)), expected)
+        self.assertEqual(json.loads(native_output(program(data, engine), data, engine_source=engine)), expected)
 
 
 if __name__ == '__main__':

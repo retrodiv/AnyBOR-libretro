@@ -1,0 +1,173 @@
+/* SPDX-License-Identifier: BSD-3-Clause
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me>
+ */
+#include <stdint.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <strings.h>
+#pragma GCC diagnostic ignored "-Wignored-qualifiers"
+#if defined(__clang__)
+#pragma GCC diagnostic ignored "-Wdeprecated-non-prototype"
+#endif
+#include "scriptcommon.h"
+#include "anybor_pak_name.h"
+#include "libretroport.h"
+#undef printf
+#undef stricmp
+#define stricmp strcasecmp
+
+uint32_t obor_profile_build;
+static s_level scene;
+s_level *level = &scene;
+int max_attack_types = 51;
+int PLAYER_MIN_Z = 180;
+int PLAYER_MAX_Z = 430;
+int BGHEIGHT = 240;
+int MAX_WALL_HEIGHT = 1000;
+int sample_play_id;
+int shadowalpha;
+static struct { uint32_t sample_play_id; } audio_global;
+char packfile[OBOR_CONTENT_PATH_MAX];
+static char pak_label[MAX_BUFFER_LEN];
+static const char *active_name;
+
+void StrCache_Collect(int index) { if (index != 0) abort(); }
+CHAR *StrCache_Get(int index) { if (index != 0 || !active_name) abort(); return (CHAR *)active_name; }
+int StrCache_Pop(int size) { (void)size; abort(); }
+int StrCache_CreateNewFrom(const CHAR *label)
+{
+    if (strlen(label) >= sizeof(pak_label)) abort();
+    strcpy(pak_label, label);
+    return 0;
+}
+void getPakName(char *label, size_t capacity, int type)
+{
+    if (!obor_pak_name(label, capacity, packfile, type)) abort();
+}
+
+static int discard_log(const char *format, ...)
+{
+    (void)format;
+    return 0;
+}
+
+@VARIANTS@
+@SEARCH@
+@ARRAYS@
+#define printf discard_log
+@HELPERS@
+@COUNTER@
+@GETTER@
+@SETTER@
+#undef printf
+@CONSTANT_HELPER@
+@CONSTANT_MACROS@
+
+static LONG lookup_constant(const char *constname)
+{
+    ScriptVariant v = {0};
+    if (0) { }
+    @CONSTANT_CHAIN@
+    else return -1;
+    return v.lVal;
+}
+
+static int system_index(const char *name)
+{
+    ScriptVariant selector = {.vt = VT_STR, .strVal = 0};
+    ScriptVariant *arguments[] = {&selector};
+    active_name = name;
+    mapstrings_systemvariant(arguments, 1);
+    return selector.vt == VT_INTEGER ? selector.lVal : -1;
+}
+
+int main(void)
+{
+    static const struct { uint32_t build; const char *name; int ordinal; } names[] = {
+        @NAMES@
+    };
+    static const struct { uint32_t build; int ordinal; int native; } ordinals[] = {
+        @ORDINALS@
+    };
+    static const struct { const char *name; LONG value; unsigned last; } geometry[] = {
+        {"BGHEIGHT", 240, 0}, {"MAX_WALL_HEIGHT", 1000, 7471},
+        {"FRONTPANEL_Z", 480, 7469}, {"HOLE_Z", 134, 7469},
+        {"HUD_Z", 10480, 7469}, {"NEONPANEL_Z", 132, 7469},
+        {"SHADOW_Z", 133, 7469}, {"SCREENPANEL_Z", 131, 7469},
+        {"PANEL_Z", 130, 7469}, {"MIRROR_Z", 175, 7469},
+        {"PLAYER_MIN_Z", 180, 7469}, {"PLAYER_MAX_Z", 430, 7469},
+    };
+    for (size_t i = 0; i < sizeof(names) / sizeof(*names); ++i)
+    {
+        obor_profile_build = names[i].build;
+        if (system_index(names[i].name) != names[i].ordinal)
+        {
+            fprintf(stderr, "Profile %u resolved the wrong ordinal for %s\n", obor_profile_build, names[i].name);
+            return 1;
+        }
+    }
+    scene.waiting = 7;
+    for (size_t i = 0; i < sizeof(ordinals) / sizeof(*ordinals); ++i)
+    {
+        obor_profile_build = ordinals[i].build;
+        int native = obor_profile_system_native_index(ordinals[i].ordinal);
+        if (native != ordinals[i].native)
+        {
+            fprintf(stderr, "Profile %u routed ordinal %d incorrectly\n", obor_profile_build, ordinals[i].ordinal);
+            return 2;
+        }
+        if (native == SYSTEM_PROPERTY_WAITING)
+        {
+            ScriptVariant result = {0};
+            level = &scene;
+            LONG expected = obor_profile_build < 7472u ? max_attack_types : scene.waiting;
+            if (!getsyspropertybyindex(&result, ordinals[i].ordinal) || result.vt != VT_INTEGER ||
+                result.lVal != expected) return 3;
+            level = NULL;
+            if (!getsyspropertybyindex(&result, ordinals[i].ordinal) ||
+                result.lVal != (obor_profile_build < 7472u ? max_attack_types : 0)) return 4;
+            for (size_t j = 0; j < sizeof(geometry) / sizeof(*geometry); ++j)
+            {
+                LONG value = !geometry[j].last || obor_profile_build < geometry[j].last ? geometry[j].value : -1;
+                if (lookup_constant(geometry[j].name) != value)
+                {
+                    fprintf(stderr, "Profile %u resolved the wrong value for %s\n", obor_profile_build, geometry[j].name);
+                    return 5;
+                }
+            }
+        }
+        if (native == SYSTEM_PROPERTY_PAKNAME)
+        {
+            static const char *paths[] = {"demo.pak", "mods/demo.pak", "mods\\demo.pak", "/demo.pak"};
+            for (size_t j = 0; j < sizeof(paths) / sizeof(*paths); ++j)
+            {
+                ScriptVariant result = {0};
+                const char *expected = obor_profile_build < 7530u && j == 3 ? "/demo" : "demo";
+                strcpy(packfile, paths[j]);
+                if (!getsyspropertybyindex(&result, ordinals[i].ordinal) || result.vt != VT_STR ||
+                    result.strVal != 0 || strcmp(pak_label, expected)) return 6;
+            }
+        }
+        if (native == SYSTEM_PROPERTY_SAMPLE_PLAY_ID || native == SYSTEM_PROPERTY_SHADOWALPHA)
+        {
+            static const LONG values[] = {INT32_MIN, -1, 0, 7, INT32_MAX};
+            for (size_t j = 0; j < sizeof(values) / sizeof(*values); ++j)
+            {
+                ScriptVariant result = {0};
+                if (native == SYSTEM_PROPERTY_SAMPLE_PLAY_ID)
+                {
+                    sample_play_id = values[j];
+                }
+                else
+                {
+                    ScriptVariant value = {.vt = VT_INTEGER, .lVal = values[j]};
+                    if (!changesyspropertybyindex(ordinals[i].ordinal, &value) || shadowalpha != values[j]) return 7;
+                }
+                if (!getsyspropertybyindex(&result, ordinals[i].ordinal) || result.vt != VT_INTEGER ||
+                    result.lVal != values[j]) return 8;
+            }
+        }
+    }
+    return 0;
+}

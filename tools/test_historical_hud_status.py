@@ -11,7 +11,7 @@ import unittest
 
 from contract_fixtures import contract_revisions, load_contract_fixture
 from test_historical_common_think import ROOT, native_output
-from test_historical_player import function
+from test_historical_player import function, switch_cases
 
 FIXTURE = Path(__file__).with_name('fixtures') / 'profile-hud-status-contracts.json'
 HUD_VARIANTS = FIXTURE.with_name('profile-6391-hud-variants.json')
@@ -119,6 +119,132 @@ class HistoricalHudStatusTests(unittest.TestCase):
                 .replace('@ENTRY@', gate).replace('@CASES@', cases))
         self.assertEqual(native_output(code, data, engine_source=engine),
                          ''.join(f'PASS {revision}\n' for revision in revisions))
+
+    def test_7533_original_graph_options_and_popup_alignment(self):
+        from test_early_jump_walkoff import braced_statement
+
+        data = {'engine': '7533'}
+        engine = Path(os.environ.get('OBOR_HISTORICAL_ENGINE', ROOT / 'src/engines' / data['engine']))
+        source = (engine / 'openbor.c').read_text(encoding='latin1')
+        script = (engine / 'openborscript.c').read_text(encoding='latin1')
+        change_property = function(script, 'openbor_changeentityproperty')
+        caller = function(source, 'display_ents')
+        level_order = function(source, 'load_levelorder')
+        start = level_order.index('    lbarstatus.size.x  = mpbarstatus.size.x = 100;')
+        stop = level_order.index('    // Show Complete Default Values', start)
+        methods = ('isNumeric', 'getValidInt', 'ParseArgs', 'bar_status_read_legacy_mode', '_readbarstatus',
+                   'bar_status_allocate_object', 'bar', 'drawenemystatus')
+        _, cases = switch_cases(source, 'load_cached_model', 'cmd', outermost=True)
+        load = '\n'.join('case CMD_MODEL_' + name + ':' + cases['CMD_MODEL_' + name]['body']
+                         for name in ('LIFEPOSITION', 'NAMEPOSITION', 'LIFEBARSTATUS'))
+        initializers = '\n'.join(re.search(
+            r'(?ms)^s_barstatus ' + names + r'\s*=\s*\{.*?^\};', source)[0]
+            for names in ('loadingbarstatus', 'lbarstatus, olbarstatus', 'mpbarstatus'))
+        change = '\n'.join(braced_statement(change_property, 'case _ep_' + name + ':')
+                           for name in ('lifeposition', 'nameposition'))
+        template = Path(__file__).with_name('legacy_hud_bar_contract.c.in').read_text()
+        code = (template.replace('@METHODS@', '\n\n'.join(function(source, name) for name in methods))
+                .replace('@MODEL_COMMANDS@', load).replace('@SCRIPT_PROPERTIES@', change)
+                .replace('@INITIALIZERS@', initializers)
+                .replace('@DISPLAY@', braced_statement(caller, 'if(e->modeldata.hud_popup &&'))
+                .replace('@LEVEL_DEFAULTS@', level_order[start:stop]))
+        self.assertEqual(native_output(code, data, engine_source=engine,
+                                       extra_cflags=('-Wno-implicit-fallthrough',)), 'PASS 11\n')
+
+    def test_7533_original_go_cue_visibility_and_sound(self):
+        engine = Path(os.environ.get('OBOR_HISTORICAL_ENGINE', ROOT / 'src/engines/7533'))
+        source = (engine / 'openbor.c').read_text()
+        script = (engine / 'openborscript.c').read_text()
+        update = function(source, 'updatestatus')
+        draw = function(source, 'predrawstatus')
+        eligibility = re.search(r'if\s*\((global_config\.showgo)\)', draw)[1]
+        _, properties = switch_cases(script, 'getsyspropertybyindex', 'index', outermost=True)
+        code = r'''
+#include <stdint.h>
+#pragma GCC diagnostic ignored "-Wignored-qualifiers"
+#if defined(__clang__)
+#pragma GCC diagnostic ignored "-Wdeprecated-non-prototype"
+#endif
+#include "scriptcommon.h"
+#undef assert
+#include <assert.h>
+
+uint32_t obor_profile_build, go_time;
+s_savedata savedata;
+s_global_config global_config;
+s_global_sample global_sample_list;
+e_screen_status screen_status;
+static int gosound, cues;
+
+int sound_play_sample(int sample, unsigned int priority, int left, int right, unsigned int speed)
+{
+    assert(sample == 3 && priority == 0 && left == 27 && right == 27 && speed == 100);
+    return ++cues;
+}
+
+void ScriptVariant_ChangeType(ScriptVariant *var, VARTYPE type)
+{
+    var->vt = type;
+}
+
+static void update_cue(uint32_t _time)
+{
+    int dt;
+    @UPDATE@
+}
+
+@ADMISSION@
+
+static int visible_in_script(void)
+{
+    if (obor_profile_build < obor_system_property_first_build(SYSTEM_PROPERTY_SHOWGO)) return -1;
+    ScriptVariant result = {.vt = VT_EMPTY}, *var = &result;
+    switch (SYSTEM_PROPERTY_SHOWGO)
+    {
+    case SYSTEM_PROPERTY_SHOWGO:
+        @GETTER@
+    }
+    assert(result.vt == VT_INTEGER);
+    return result.lVal;
+}
+
+static void check_cue(uint32_t now, int visible, int sound, int total)
+{
+    update_cue(now);
+    assert(visible_in_script() == (obor_profile_build < 7409u ? -1 : visible));
+    assert((@DRAW@ != 0) == visible);
+    assert(screen_status == (IN_SCREEN_GAME_OVER | (visible ? IN_SCREEN_SHOW_GO_ARROW : 0)));
+    assert(gosound == sound && cues == total);
+}
+
+int main(void)
+{
+    static const unsigned profiles[] = {7369, 7391, 7406, 7409, 7412, 7413, 7420, 7533};
+    savedata.effectvol = 27;
+    for (size_t i = 0; i < sizeof(profiles) / sizeof(*profiles); ++i)
+    {
+        obor_profile_build = profiles[i];
+        go_time = 3u * GAME_SPEED;
+        screen_status = IN_SCREEN_GAME_OVER;
+        global_sample_list.go = 3;
+        gosound = cues = 0;
+        check_cue(GAME_SPEED, 1, 1, 1);
+        check_cue(GAME_SPEED + 1, 0, 0, 1);
+        check_cue(GAME_SPEED + GAME_SPEED / 2 + 1, 1, 1, 2);
+        check_cue(2 * GAME_SPEED, 1, 1, 2);
+        check_cue(go_time, 0, 1, 2);
+        global_sample_list.go = -1;
+        gosound = 0;
+        check_cue(2 * GAME_SPEED, 1, 1, 2);
+    }
+    return 0;
+}
+'''
+        code = (code.replace('@UPDATE@', update[update.index('if(go_time > _time)'):update.rfind('}')])
+                .replace('@ADMISSION@', function(script, 'obor_system_property_first_build'))
+                .replace('@GETTER@', properties['SYSTEM_PROPERTY_SHOWGO']['body'])
+                .replace('@DRAW@', eligibility))
+        self.assertEqual(native_output(code, {'engine': '7533'}, engine_source=engine), '')
 
 
 if __name__ == '__main__':

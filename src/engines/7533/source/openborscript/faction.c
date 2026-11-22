@@ -1,3 +1,15 @@
+/* AnyBOR modification record: 2026-11-09.
+ * Port maintained by retrodiv <retrodiv@proton.me>.
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me> (original contributions).
+ * These contributions are licensed under BSD-3-Clause; see LICENSE at the root.
+ * Upstream code retains its original license and notices.
+ * Select native faction-property availability and translate script group and
+ * type masks.
+ * Existing changes recorded here; this is not their implementation date.
+ * See MODIFICATIONS.md and docs/modifications/7533.md
+ * at the source repository root. Original notices follow below.
+ */
+
 /*
  * OpenBOR - http://www.chronocrash.com
  * -----------------------------------------------------------------------
@@ -33,8 +45,9 @@ HRESULT openbor_get_faction_property(ScriptVariant **varlist , ScriptVariant **p
     // Verify arguments. There should at least
     // be a pointer for the property handle and an integer
     // to determine which property constant is accessed.
-    if(paramCount < ARG_MINIMUM
+    if(obor_profile_build < 7445u || paramCount < ARG_MINIMUM
        || varlist[ARG_OBJECT]->vt != VT_PTR
+       || !varlist[ARG_OBJECT]->ptrVal
        || varlist[ARG_PROPERTY]->vt != VT_INTEGER)
     {
         *pretvar = NULL;
@@ -52,49 +65,49 @@ HRESULT openbor_get_faction_property(ScriptVariant **varlist , ScriptVariant **p
 		case FACTION_PROPERTY_GROUP_DAMAGE_DIRECT:
 
 			ScriptVariant_ChangeType(*pretvar, VT_INTEGER);
-			(*pretvar)->lVal = (e_faction_group)handle->damage_direct;
+			(*pretvar)->lVal = (LONG)obor_faction_mask_to_script(handle->damage_direct);
 
 			break;
 
 		case FACTION_PROPERTY_GROUP_DAMAGE_INDIRECT:
 
 			ScriptVariant_ChangeType(*pretvar, VT_INTEGER);
-			(*pretvar)->lVal = (e_faction_group)handle->damage_indirect;
+			(*pretvar)->lVal = (LONG)obor_faction_mask_to_script(handle->damage_indirect);
 
 			break;
 
 		case FACTION_PROPERTY_GROUP_HOSTILE:
 
 			ScriptVariant_ChangeType(*pretvar, VT_INTEGER);
-			(*pretvar)->lVal = (e_faction_group)handle->hostile;
+			(*pretvar)->lVal = (LONG)obor_faction_mask_to_script(handle->hostile);
 
 			break;
 
 		case FACTION_PROPERTY_GROUP_MEMBER:
 
 			ScriptVariant_ChangeType(*pretvar, VT_INTEGER);
-			(*pretvar)->lVal = (e_faction_group)handle->member;
+			(*pretvar)->lVal = (LONG)obor_faction_mask_to_script(handle->member);
 
 			break;
 
 		case FACTION_PROPERTY_TYPE_DAMAGE_DIRECT:
 
 			ScriptVariant_ChangeType(*pretvar, VT_INTEGER);
-			(*pretvar)->lVal = (e_faction_group)handle->type_damage_direct;
+			(*pretvar)->lVal = (LONG)obor_type_mask_to_script(handle->type_damage_direct);
 
 			break;
 
 		case FACTION_PROPERTY_TYPE_DAMAGE_INDIRECT:
 
 			ScriptVariant_ChangeType(*pretvar, VT_INTEGER);
-			(*pretvar)->lVal = (e_faction_group)handle->type_damage_indirect;
+			(*pretvar)->lVal = (LONG)obor_type_mask_to_script(handle->type_damage_indirect);
 
 			break;
 
 		case FACTION_PROPERTY_TYPE_HOSTILE:
 
 			ScriptVariant_ChangeType(*pretvar, VT_INTEGER);
-			(*pretvar)->lVal = (e_faction_group)handle->type_hostile;
+			(*pretvar)->lVal = (LONG)obor_type_mask_to_script(handle->type_hostile);
 
 			break;
 
@@ -152,8 +165,9 @@ HRESULT openbor_set_faction_property(ScriptVariant **varlist, ScriptVariant **pr
     // Verify incoming arguments. There should at least
     // be a pointer for the property handle and an integer
     // to determine which property is accessed.
-    if(paramCount < ARG_MINIMUM
+    if(obor_profile_build < 7445u || paramCount < ARG_MINIMUM
        || varlist[ARG_OBJECT]->vt != VT_PTR
+       || !varlist[ARG_OBJECT]->ptrVal
        || varlist[ARG_PROPERTY]->vt != VT_INTEGER)
     {
         *pretvar = NULL;
@@ -172,7 +186,7 @@ HRESULT openbor_set_faction_property(ScriptVariant **varlist, ScriptVariant **pr
 
 			if (SUCCEEDED(ScriptVariant_IntegerValue(varlist[ARG_VALUE], &temp_int)))
 			{
-				handle->damage_direct = temp_int;
+				handle->damage_direct = (e_faction_group)obor_faction_mask_from_script(temp_int);
 			}
 
 			break;
@@ -181,7 +195,7 @@ HRESULT openbor_set_faction_property(ScriptVariant **varlist, ScriptVariant **pr
 
 			if (SUCCEEDED(ScriptVariant_IntegerValue(varlist[ARG_VALUE], &temp_int)))
 			{
-				handle->damage_indirect = temp_int;
+				handle->damage_indirect = (e_faction_group)obor_faction_mask_from_script(temp_int);
 			}
 
             break;
@@ -190,7 +204,7 @@ HRESULT openbor_set_faction_property(ScriptVariant **varlist, ScriptVariant **pr
 
 			if (SUCCEEDED(ScriptVariant_IntegerValue(varlist[ARG_VALUE], &temp_int)))
 			{
-				handle->hostile = temp_int;
+				handle->hostile = (e_faction_group)obor_faction_mask_from_script(temp_int);
 			}
 
 			break;
@@ -199,7 +213,7 @@ HRESULT openbor_set_faction_property(ScriptVariant **varlist, ScriptVariant **pr
 
 			if (SUCCEEDED(ScriptVariant_IntegerValue(varlist[ARG_VALUE], &temp_int)))
 			{
-				handle->member = temp_int;
+				handle->member = (e_faction_group)obor_faction_mask_from_script(temp_int);
 			}
 
 			break;
@@ -208,7 +222,7 @@ HRESULT openbor_set_faction_property(ScriptVariant **varlist, ScriptVariant **pr
 
 			if (SUCCEEDED(ScriptVariant_IntegerValue(varlist[ARG_VALUE], &temp_int)))
 			{
-				handle->type_damage_direct = temp_int;
+				handle->type_damage_direct = (e_entity_type)obor_type_mask_from_script(temp_int);
 			}
 
 			break;
@@ -217,7 +231,7 @@ HRESULT openbor_set_faction_property(ScriptVariant **varlist, ScriptVariant **pr
 
 			if (SUCCEEDED(ScriptVariant_IntegerValue(varlist[ARG_VALUE], &temp_int)))
 			{
-				handle->type_damage_indirect = temp_int;
+				handle->type_damage_indirect = (e_entity_type)obor_type_mask_from_script(temp_int);
 			}
 
 			break;
@@ -226,7 +240,7 @@ HRESULT openbor_set_faction_property(ScriptVariant **varlist, ScriptVariant **pr
 
 			if (SUCCEEDED(ScriptVariant_IntegerValue(varlist[ARG_VALUE], &temp_int)))
 			{
-				handle->type_hostile = temp_int;
+				handle->type_hostile = (e_entity_type)obor_type_mask_from_script(temp_int);
 			}
 
 			break;

@@ -1,0 +1,178 @@
+/*
+ * SPDX-License-Identifier: BSD-3-Clause
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me>
+ */
+#include "openbor.h"
+#include <math.h>
+#include <stddef.h>
+#undef assert
+#include <assert.h>
+
+enum { FIRST_TICK = 100, RECORDING_FRAMES = 5, PLAYBACK_FRAMES = 3 };
+
+typedef struct
+{
+    u64 keys[MAX_PLAYERS], newkeys[MAX_PLAYERS], releasekeys[MAX_PLAYERS], playkeys[MAX_PLAYERS];
+    u32 time, interval, synctime;
+} OriginalInputRow;
+
+uint32_t obor_profile_build;
+a_playrecstatus *playrecstatus;
+s_player player[MAX_PLAYERS];
+u32 _time, interval;
+static u64 restored_seed;
+static unsigned restored_clock_seed;
+static const u64 keys[MAX_PLAYERS] = {FLAG_MOVELEFT, FLAG_MOVERIGHT, FLAG_JUMP, FLAG_SPECIAL};
+
+void getBasePath(char *destination, char *name, int type) { strcpy(destination, @DIRECTORY@); }
+u64 getseed(void) { return 12345678; }
+unsigned timer_gettick(void) { return 42; }
+void srand32(u64 seed) { restored_seed = seed; }
+void obor_srand(unsigned seed) { restored_clock_seed = seed; }
+void writeToLogFile(const char *format, ...) { abort(); }
+void *checkAlloc(void *pointer, size_t size, const char *function, const char *file, int line)
+{
+    assert(pointer);
+    return pointer;
+}
+
+@RECORD@
+@METHODS@
+
+static void check_row(FILE *file, int writing, unsigned frame)
+{
+    union
+    {
+        OriginalInputRow original;
+        RecKeys current;
+    } expected;
+    memset(&expected, 0, sizeof(expected));
+    u64 inputs[4][MAX_PLAYERS];
+    for (size_t slot = 0; slot < MAX_PLAYERS; ++slot)
+    {
+        inputs[0][slot] = keys[slot] | FLAG_ATTACK;
+        inputs[1][slot] = frame % 2 ? FLAG_ATTACK : keys[slot];
+        inputs[2][slot] = frame % 2 ? FLAG_SPECIAL : 0;
+        inputs[3][slot] = keys[slot];
+    }
+    _Static_assert(offsetof(OriginalInputRow, time) == sizeof(inputs), "Original input sequence layout");
+    _Static_assert(offsetof(RecKeys, time) == sizeof(inputs), "Current input sequence layout");
+    memcpy(&expected, inputs, sizeof(inputs));
+    size_t record_size, field_size;
+    if (obor_profile_build < 7510u)
+    {
+        expected.original.time = FIRST_TICK + frame;
+        expected.original.interval = 8 + frame;
+        expected.original.synctime = frame;
+        record_size = sizeof(expected.original);
+        field_size = offsetof(OriginalInputRow, synctime) + sizeof(expected.original.synctime);
+    }
+    else
+    {
+        expected.current.time = FIRST_TICK + frame;
+        expected.current.interval = 8 + frame;
+        expected.current.synctime = frame;
+        record_size = sizeof(expected.current);
+        field_size = offsetof(RecKeys, synctime) + sizeof(expected.current.synctime);
+    }
+    if (writing)
+    {
+        assert(fwrite(&expected, record_size, 1, file) == 1);
+    }
+    else
+    {
+        unsigned char provided[sizeof(expected)];
+        assert(fread(provided, record_size, 1, file) == 1);
+        assert(!memcmp(provided, &expected, field_size));
+    }
+}
+
+static void check_file(int writing)
+{
+    FILE *file = fopen(@DIRECTORY@ "input.bin", writing ? "wb" : "rb");
+    assert(file);
+    static const char signature[] = "INP10";
+    const u32 timing[4] = {FIRST_TICK, FIRST_TICK + RECORDING_FRAMES - 1, PLAYBACK_FRAMES, FIRST_TICK};
+    const unsigned long seed = getseed();
+    const unsigned ticks = timer_gettick();
+    if (writing)
+    {
+        assert(fwrite(signature, sizeof(signature), 1, file) == 1);
+        assert(fwrite(timing, sizeof(timing), 1, file) == 1);
+        assert(fwrite(&seed, sizeof(seed), 1, file) == 1);
+        assert(fwrite(&ticks, sizeof(ticks), 1, file) == 1);
+    }
+    else
+    {
+        char recorded_signature[sizeof(signature)];
+        u32 recorded_timing[4];
+        unsigned long recorded_seed;
+        unsigned recorded_ticks;
+        assert(fread(recorded_signature, sizeof(recorded_signature), 1, file) == 1);
+        assert(fread(recorded_timing, sizeof(recorded_timing), 1, file) == 1);
+        assert(fread(&recorded_seed, sizeof(recorded_seed), 1, file) == 1);
+        assert(fread(&recorded_ticks, sizeof(recorded_ticks), 1, file) == 1);
+        assert(!memcmp(recorded_signature, signature, sizeof(signature)));
+        assert(!memcmp(recorded_timing, timing, sizeof(timing)));
+        assert(recorded_seed == seed && recorded_ticks == ticks);
+    }
+    for (unsigned frame = 0; frame <= PLAYBACK_FRAMES; ++frame)
+    {
+        check_row(file, writing, frame);
+    }
+    if (!writing)
+    {
+        assert(fgetc(file) == EOF);
+    }
+    assert(fclose(file) == 0);
+}
+
+int main(void)
+{
+    static const unsigned builds[] = {7369, 7391, 7420, 7509, 7510, 7533};
+    a_playrecstatus replay = {.filename = "input.bin"};
+    playrecstatus = &replay;
+    for (size_t build = 0; build < sizeof(builds) / sizeof(*builds); ++build)
+    {
+        obor_profile_build = builds[build];
+        replay.status = A_REC_REC;
+        for (unsigned frame = 0; frame < RECORDING_FRAMES; ++frame)
+        {
+            for (size_t slot = 0; slot < MAX_PLAYERS; ++slot)
+            {
+                player[slot].keys = keys[slot] | FLAG_ATTACK;
+                player[slot].newkeys = frame % 2 ? FLAG_ATTACK : keys[slot];
+                player[slot].releasekeys = frame % 2 ? FLAG_SPECIAL : 0;
+                player[slot].playkeys = keys[slot];
+            }
+            _time = FIRST_TICK + frame;
+            interval = 8 + frame;
+            assert(recordInputs() == 1);
+        }
+        stopRecordInputs();
+        assert(replay.status == A_REC_STOP && !replay.buffer && !replay.handle);
+        check_file(0);
+
+        check_file(1);
+        replay.status = A_REC_PLAY;
+        restored_seed = 0;
+        restored_clock_seed = 0;
+        for (unsigned frame = 0; frame < PLAYBACK_FRAMES; ++frame)
+        {
+            memset(player, 0, sizeof(player));
+            _time = FIRST_TICK + frame;
+            interval = 0;
+            assert(playRecordedInputs() == 1);
+            assert(restored_seed == getseed() && restored_clock_seed == FIRST_TICK && interval == 8 + frame);
+            for (size_t slot = 0; slot < MAX_PLAYERS; ++slot)
+            {
+                assert(player[slot].keys == (keys[slot] | FLAG_ATTACK));
+                assert(player[slot].newkeys == (frame % 2 ? FLAG_ATTACK : keys[slot]));
+                assert(player[slot].releasekeys == (frame % 2 ? FLAG_SPECIAL : 0));
+                assert(player[slot].playkeys == keys[slot]);
+            }
+        }
+        assert(replay.status == A_REC_STOP && !replay.buffer && !replay.handle);
+    }
+    return 0;
+}

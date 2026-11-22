@@ -22,28 +22,199 @@
 
 static int obor_profile_entity_property_end(void)
 {
-    return (int)ENTITY_PROPERTY_END - (obor_profile_build < 7553 ? 1 : 0);
+    return (int)ENTITY_PROPERTY_END - (obor_profile_build < 7553u)
+         - (obor_profile_build < 7475u) - (obor_profile_build < 7445u);
 }
 
+int mapstrings_entity_property(ScriptVariant **varlist, int paramCount)
+{
+    char *propname;
+    int prop;
+    static const char *names[] =
+    {
+        "ai_disable",
+        "ai_target_entity",
+        "alternate_idle",
+        "alternate_walk",
+        "animation",
+        "animation_frame",
+        "animation_id",
+        "animation_id_previous",
+        "animation_state",
+        "animation_time",
+        "arrow_state",
+        "attack_id_incoming",
+        "attack_id_outgoing",
+        "attack_state",
+        "autokill",
+        "back_hit_direction",
+        "bind",
+        "blast_state",
+        "blink",
+        "block_state",
+        "boss",
+        "charge_state",
+        "child",
+        "colorset_default",
+        "colorset_dying_health_1",
+        "colorset_dying_health_2",
+        "colorset_dying_index_1",
+        "colorset_dying_index_2",
+        "colorset_table",
+        "colorset_time",
+        "combo_step",
+        "combo_time",
+        "command_time",
+        "damage_on_landing",
+        "dead",
+        "defense_collection",
+        "destination_x",
+        "destination_z",
+        "die_on_landing",
+        "drawmethod",
+        "drop",
+        "duck_state",
+        "entvar_collection",
+        "escape_count",
+        "exists",
+        "explode",
+        "fall_state",
+        "freeze_state",
+        "freeze_time",
+        "function_take_action",
+        "function_take_damage",
+        "function_think",
+        "function_try_move",
+        "get_state",
+        "grab_target",
+        "grab_walk_state",
+        "guard_time",
+        "hp",
+        "hp_old",
+        "idle_state",
+        "in_pain",
+        "in_pain_back",
+        "invincible_state",
+        "invincible_time",
+        "item_data",
+        "jump_animation_id",
+        "jump_state",
+        "jump_velocity_x",
+        "jump_velocity_y",
+        "jump_velocity_z",
+        "knockdown_count",
+        "knockdown_time",
+        "last_damage_type",
+        "last_hit",
+        "lifespan",
+        "link",
+        "model",
+        "model_data",
+        "model_default",
+        "move_time",
+        "move_x",
+        "move_z",
+        "mp",
+        "mp_charge_time",
+        "mp_old",
+        "mp_time",
+        "name",
+        "next_attack_time",
+        "next_hit_time",
+        "nograb",
+        "nograb_default",
+        "obstructed",
+        "obstruction_overhead",
+        "offense_collection",
+        "opponent",
+        "owner",
+        "parent",
+        "path_obstructed_wait",
+        "pause_time",
+        "platform_land",
+        "player_index",
+        "position_base",
+        "position_base_alternate",
+        "position_direction",
+        "position_x",
+        "position_y",
+        "position_z",
+        "projectile_prime",
+        "recursive_damage",
+        "release_time",
+        "rise_attack_delay",
+        "rise_attack_time",
+        "rise_delay",
+        "rise_state",
+        "run_state",
+        "rush",
+        "script_collection",
+        "seal_energy",
+        "seal_time",
+        "sleep_time",
+        "sort_id",
+        "space_other",
+        "spawn_type",
+        "speed_multiplier",
+        "stall_time",
+        "think_time",
+        "timestamp",
+        "to_cost",
+        "toss_time",
+        "turn_state",
+        "turn_time",
+        "update_mark",
+        "velocity_x",
+        "velocity_y",
+        "velocity_z",
+        "walk_state",
+        "waypoint_collection",
+        "waypoint_count",
+        "weapon_item",
+        "weapon_state",
+    };
+
+    if (obor_profile_build >= 7445u || paramCount < 2)
+    {
+        return 1;
+    }
+
+    MAPSTRINGS(varlist[1], names, sizeof(names) / sizeof(names[0]),
+               "\n\n Error: '%s' is not a known entity property.\n");
+    return 1;
+}
+
+static e_entity_properties obor_entity_property_native_id(unsigned int profile_index)
+{
+    if (profile_index >= (unsigned int)obor_profile_entity_property_end())
+    {
+        profile_index = ENTITY_PROPERTY_END;
+    }
+    else
+    {
+        // Translate the original selector across the subsequent insertions.
+        if (obor_profile_build < 7445u && profile_index >= ENTITY_PROPERTY_FACTION)
+        {
+            ++profile_index;
+        }
+        if (obor_profile_build < 7553u && profile_index >= ENTITY_PROPERTY_GUARD_POINTS)
+        {
+            ++profile_index;
+        }
+        if (obor_profile_build < 7475u && profile_index >= ENTITY_PROPERTY_SHADOW_CONFIG_FLAGS)
+        {
+            ++profile_index;
+        }
+    }
+    return (e_entity_properties)profile_index;
+}
 
 const s_property_access_map entity_get_property_map(const void* acting_object_param, const unsigned int property_index_param)
-{	
-	s_property_access_map property_map;
-	const entity* acting_object = acting_object_param;
-	unsigned int profile_index = property_index_param;
-	if(obor_profile_build < 7553)
-	{
-	    if(profile_index >= (unsigned int)obor_profile_entity_property_end())
-	    {
-	        profile_index = ENTITY_PROPERTY_END;
-	    }
-	    else if(profile_index >= ENTITY_PROPERTY_GUARD_POINTS)
-	    {
-	        profile_index += 1;
-	    }
-	}
-	const e_entity_properties property_index = profile_index;
-	
+{
+    s_property_access_map property_map;
+    const entity* acting_object = acting_object_param;
+    const e_entity_properties property_index = obor_entity_property_native_id(property_index_param);
+
 	switch (property_index)
 	{
 
@@ -81,7 +252,8 @@ const s_property_access_map entity_get_property_map(const void* acting_object_pa
 
 	case ENTITY_PROPERTY_ANIMATION:
 
-		property_map.config_flags = PROPERTY_ACCESS_CONFIG_READ;
+		property_map.config_flags = obor_profile_build < 7504u
+            ? PROPERTY_ACCESS_CONFIG_MACRO_DEFAULT : PROPERTY_ACCESS_CONFIG_READ;
 		property_map.field = &acting_object->animation;
 		property_map.id_string = "ENTITY_PROPERTY_ANIMATION";
 		property_map.type = VT_PTR;
@@ -576,7 +748,9 @@ const s_property_access_map entity_get_property_map(const void* acting_object_pa
 
 	case ENTITY_PROPERTY_ITEM_DATA:
 
-		property_map.config_flags = PROPERTY_ACCESS_CONFIG_MACRO_DEFAULT;
+		property_map.config_flags = obor_profile_build < 7504u
+            ? (PROPERTY_ACCESS_CONFIG_READ | PROPERTY_ACCESS_CONFIG_STATIC_POINTER)
+            : PROPERTY_ACCESS_CONFIG_MACRO_DEFAULT;
 		property_map.field = &acting_object->item_properties;
 		property_map.id_string = "ENTITY_PROPERTY_ITEM_DATA";
 		property_map.type = VT_PTR;
@@ -802,7 +976,7 @@ const s_property_access_map entity_get_property_map(const void* acting_object_pa
 		property_map.config_flags = PROPERTY_ACCESS_CONFIG_MACRO_DEFAULT;
 		property_map.field = &acting_object->hithead;
 		property_map.id_string = "ENTITY_PROPERTY_OBSTRUCTION_OVERHEAD";
-		property_map.type = VT_INTEGER;
+		property_map.type = obor_profile_build < 7504u ? VT_PTR : VT_INTEGER;
 		break;
 
 	case ENTITY_PROPERTY_OFFENSE:
@@ -1160,7 +1334,8 @@ const s_property_access_map entity_get_property_map(const void* acting_object_pa
 
 	case ENTITY_PROPERTY_WAYPOINT:
 
-		property_map.config_flags = PROPERTY_ACCESS_CONFIG_MACRO_DEFAULT;
+		property_map.config_flags = obor_profile_build < 7504u ? PROPERTY_ACCESS_CONFIG_READ
+                                                               : PROPERTY_ACCESS_CONFIG_MACRO_DEFAULT;
 		property_map.field = &acting_object->waypoints;
 		property_map.id_string = "ENTITY_PROPERTY_WAYPOINT";
 		property_map.type = VT_PTR;
@@ -1210,7 +1385,201 @@ const s_property_access_map entity_get_property_map(const void* acting_object_pa
 * a object pointer and property
 * constant to access.
 */
-HRESULT openbor_get_entity_property(const ScriptVariant* const* varlist, ScriptVariant** const pretvar, const int paramCount)
+/* The original accessors converted the member value using its C type. */
+static int obor_legacy_entity_scalar(entity *actor, e_entity_properties property,
+                                    ScriptVariant *output, ScriptVariant *input)
+{
+    #define ENTITY_SCALAR(member, kind, c_type, storage_type, converter, value_field) \
+        do { \
+            if (input) { \
+                c_type value; \
+                if (SUCCEEDED(converter(input, &value))) { actor->member = (storage_type)value; } \
+            } else { \
+                ScriptVariant_ChangeType(output, kind); \
+                output->value_field = (c_type)actor->member; \
+            } \
+            return 1; \
+        } while (0)
+    #define ENTITY_INT(member) ENTITY_SCALAR(member, VT_INTEGER, LONG, LONG, ScriptVariant_IntegerValue, lVal)
+    #define ENTITY_TIMER(member) ENTITY_SCALAR(member, VT_INTEGER, LONG, u32, ScriptVariant_IntegerValue, lVal)
+    #define ENTITY_DECIMAL(member) ENTITY_SCALAR(member, VT_DECIMAL, DOUBLE, DOUBLE, ScriptVariant_DecimalValue, dblVal)
+
+    switch (property)
+    {
+        case ENTITY_PROPERTY_DEATH_STATE:
+            if (obor_profile_build < 7488u)
+            {
+                if (input)
+                {
+                    LONG value;
+                    if (SUCCEEDED(ScriptVariant_IntegerValue(input, &value)))
+                    {
+                        obor_entity_dead_script_set(actor, value);
+                    }
+                }
+                else
+                {
+                    ScriptVariant_ChangeType(output, VT_INTEGER);
+                    output->lVal = obor_entity_dead_script_get(actor);
+                }
+                return 1;
+            }
+            ENTITY_INT(death_state);
+        case ENTITY_PROPERTY_SHADOW_CONFIG_FLAGS: ENTITY_INT(shadow_config_flags);
+        case ENTITY_PROPERTY_AI_DISABLE: ENTITY_INT(noaicontrol);
+        case ENTITY_PROPERTY_ALTERNATE_IDLE: ENTITY_INT(idlemode);
+        case ENTITY_PROPERTY_ALTERNATE_WALK: ENTITY_INT(walkmode);
+        case ENTITY_PROPERTY_ANIMATION_FRAME: ENTITY_INT(animpos);
+        case ENTITY_PROPERTY_ANIMATION_ID: ENTITY_INT(animnum);
+        case ENTITY_PROPERTY_ANIMATION_ID_PREVIOUS: ENTITY_INT(animnum_previous);
+        case ENTITY_PROPERTY_ANIMATION_STATE: ENTITY_INT(animating);
+        case ENTITY_PROPERTY_ANIMATION_TIME: ENTITY_TIMER(nextanim);
+        case ENTITY_PROPERTY_ARROW_STATE: ENTITY_INT(arrowon);
+        case ENTITY_PROPERTY_ATTACK_ID_OUTGOING: ENTITY_INT(attack_id_outgoing);
+        case ENTITY_PROPERTY_ATTACK_STATE: ENTITY_INT(attacking);
+        case ENTITY_PROPERTY_AUTOKILL: ENTITY_INT(autokill);
+        case ENTITY_PROPERTY_BACK_HIT_DIRECTION: ENTITY_INT(normaldamageflipdir);
+        case ENTITY_PROPERTY_BLAST_STATE: ENTITY_INT(projectile);
+        case ENTITY_PROPERTY_BLINK: ENTITY_INT(blink);
+        case ENTITY_PROPERTY_BLOCK_STATE: ENTITY_INT(blocking);
+        case ENTITY_PROPERTY_BOSS: ENTITY_INT(boss);
+        case ENTITY_PROPERTY_CHARGE_STATE: ENTITY_INT(charging);
+        case ENTITY_PROPERTY_COLORSET_DEFAULT: ENTITY_INT(map);
+        case ENTITY_PROPERTY_COLORSET_DYING_HEALTH_1: ENTITY_INT(per1);
+        case ENTITY_PROPERTY_COLORSET_DYING_HEALTH_2: ENTITY_INT(per2);
+        case ENTITY_PROPERTY_COLORSET_DYING_INDEX_1: ENTITY_INT(dying);
+        case ENTITY_PROPERTY_COLORSET_DYING_INDEX_2: ENTITY_INT(dying2);
+        case ENTITY_PROPERTY_COLORSET_TIME: ENTITY_TIMER(maptime);
+        case ENTITY_PROPERTY_COMBO_TIME: ENTITY_TIMER(combotime);
+        case ENTITY_PROPERTY_COMMAND_TIME: ENTITY_TIMER(movetime);
+        case ENTITY_PROPERTY_DESTINATION_X: ENTITY_DECIMAL(destx);
+        case ENTITY_PROPERTY_DESTINATION_Z: ENTITY_DECIMAL(destz);
+        case ENTITY_PROPERTY_DIE_ON_LANDING: ENTITY_INT(die_on_landing);
+        case ENTITY_PROPERTY_DROP: ENTITY_INT(drop);
+        case ENTITY_PROPERTY_DUCK_STATE: ENTITY_INT(ducking);
+        case ENTITY_PROPERTY_ESCAPE_COUNT: ENTITY_INT(escapecount);
+        case ENTITY_PROPERTY_EXISTS: ENTITY_INT(exists);
+        case ENTITY_PROPERTY_EXPLODE: ENTITY_INT(toexplode);
+        case ENTITY_PROPERTY_FALL_STATE: ENTITY_INT(falling);
+        case ENTITY_PROPERTY_FREEZE_STATE: ENTITY_INT(frozen);
+        case ENTITY_PROPERTY_FREEZE_TIME: ENTITY_TIMER(freezetime);
+        case ENTITY_PROPERTY_GET_STATE: ENTITY_INT(getting);
+        case ENTITY_PROPERTY_GRAB_WALK_STATE: ENTITY_INT(grabwalking);
+        case ENTITY_PROPERTY_GUARD_TIME: ENTITY_TIMER(guardtime);
+        case ENTITY_PROPERTY_HP: ENTITY_INT(energy_state.health_current);
+        case ENTITY_PROPERTY_HP_OLD: ENTITY_INT(energy_state.health_old);
+        case ENTITY_PROPERTY_IDLE_STATE: ENTITY_INT(idling);
+        case ENTITY_PROPERTY_IN_PAIN: ENTITY_INT(inpain);
+        case ENTITY_PROPERTY_IN_PAIN_BACK: ENTITY_INT(inbackpain);
+        case ENTITY_PROPERTY_INVINCIBLE_STATE: ENTITY_INT(invincible);
+        case ENTITY_PROPERTY_INVINCIBLE_TIME: ENTITY_TIMER(invinctime);
+        case ENTITY_PROPERTY_JUMP_ANIMATION_ID: ENTITY_INT(jump.animation_id);
+        case ENTITY_PROPERTY_JUMP_STATE: ENTITY_INT(jumping);
+        case ENTITY_PROPERTY_JUMP_VELOCITY_X: ENTITY_DECIMAL(jump.velocity.x);
+        case ENTITY_PROPERTY_JUMP_VELOCITY_Y: ENTITY_DECIMAL(jump.velocity.y);
+        case ENTITY_PROPERTY_JUMP_VELOCITY_Z: ENTITY_DECIMAL(jump.velocity.z);
+        case ENTITY_PROPERTY_KNOCKDOWN_COUNT: ENTITY_INT(knockdowncount);
+        case ENTITY_PROPERTY_KNOCKDOWN_TIME: ENTITY_TIMER(knockdowntime);
+        case ENTITY_PROPERTY_LAST_DAMAGE_TYPE: ENTITY_INT(last_damage_type);
+        case ENTITY_PROPERTY_LIFESPAN: ENTITY_INT(lifespancountdown);
+        case ENTITY_PROPERTY_MOVE_TIME: ENTITY_TIMER(nextmove);
+        case ENTITY_PROPERTY_MOVE_X: ENTITY_DECIMAL(movex);
+        case ENTITY_PROPERTY_MOVE_Z: ENTITY_DECIMAL(movez);
+        case ENTITY_PROPERTY_MP: ENTITY_INT(energy_state.mp_current);
+        case ENTITY_PROPERTY_MP_CHARGE_TIME: ENTITY_TIMER(mpchargetime);
+        case ENTITY_PROPERTY_MP_OLD: ENTITY_INT(energy_state.mp_old);
+        case ENTITY_PROPERTY_MP_TIME: ENTITY_TIMER(magictime);
+        case ENTITY_PROPERTY_NEXT_ATTACK_TIME: ENTITY_TIMER(nextattack);
+        case ENTITY_PROPERTY_NEXT_HIT_TIME: ENTITY_TIMER(next_hit_time);
+        case ENTITY_PROPERTY_NOGRAB: ENTITY_INT(nograb);
+        case ENTITY_PROPERTY_NOGRAB_DEFAULT: ENTITY_INT(nograb_default);
+        case ENTITY_PROPERTY_OBSTRUCTED: ENTITY_INT(hitwall);
+        case ENTITY_PROPERTY_PATH_OBSTRUCTED_WAIT: ENTITY_INT(pathblocked);
+        case ENTITY_PROPERTY_PAUSE_TIME: ENTITY_TIMER(pausetime);
+        case ENTITY_PROPERTY_PLAYER_INDEX: ENTITY_INT(playerindex);
+        case ENTITY_PROPERTY_POSITION_BASE: ENTITY_DECIMAL(base);
+        case ENTITY_PROPERTY_POSITION_BASE_ALTERNATE: ENTITY_DECIMAL(altbase);
+        case ENTITY_PROPERTY_POSITION_DIRECTION: ENTITY_INT(direction);
+        case ENTITY_PROPERTY_POSITION_X: ENTITY_DECIMAL(position.x);
+        case ENTITY_PROPERTY_POSITION_Y: ENTITY_DECIMAL(position.y);
+        case ENTITY_PROPERTY_POSITION_Z: ENTITY_DECIMAL(position.z);
+        case ENTITY_PROPERTY_PROJECTILE_PRIME:
+            if (input)
+            {
+                LONG value;
+                if (SUCCEEDED(ScriptVariant_IntegerValue(input, &value)))
+                {
+                    actor->projectile_prime = (e_projectile_prime)obor_projectile_prime_from_script((uint32_t)value);
+                }
+            }
+            else
+            {
+                ScriptVariant_ChangeType(output, VT_INTEGER);
+                output->lVal = (LONG)obor_projectile_prime_to_script(actor->projectile_prime);
+            }
+            return 1;
+        case ENTITY_PROPERTY_RELEASE_TIME: ENTITY_TIMER(releasetime);
+        case ENTITY_PROPERTY_RISE_ATTACK_DELAY: ENTITY_INT(staydown.riseattack);
+        case ENTITY_PROPERTY_RISE_ATTACK_TIME: ENTITY_INT(staydown.riseattack_stall);
+        case ENTITY_PROPERTY_RISE_DELAY: ENTITY_INT(staydown.rise);
+        case ENTITY_PROPERTY_RISE_STATE: ENTITY_INT(rising);
+        case ENTITY_PROPERTY_RUN_STATE: ENTITY_INT(running);
+        case ENTITY_PROPERTY_SEAL_ENERGY: ENTITY_INT(seal);
+        case ENTITY_PROPERTY_SEAL_TIME: ENTITY_TIMER(sealtime);
+        case ENTITY_PROPERTY_SLEEP_TIME: ENTITY_TIMER(sleeptime);
+        case ENTITY_PROPERTY_SORT_ID: ENTITY_INT(sortid);
+        case ENTITY_PROPERTY_SPAWN_TYPE: ENTITY_INT(spawntype);
+        case ENTITY_PROPERTY_SPEED_MULTIPLIER: ENTITY_DECIMAL(speedmul);
+        case ENTITY_PROPERTY_STALL_TIME: ENTITY_TIMER(stalltime);
+        case ENTITY_PROPERTY_THINK_TIME: ENTITY_TIMER(nextthink);
+        case ENTITY_PROPERTY_TIMESTAMP: ENTITY_TIMER(timestamp);
+        case ENTITY_PROPERTY_TO_COST: ENTITY_INT(tocost);
+        case ENTITY_PROPERTY_TOSS_TIME: ENTITY_TIMER(toss_time);
+        case ENTITY_PROPERTY_TURN_STATE: ENTITY_INT(turning);
+        case ENTITY_PROPERTY_TURN_TIME: ENTITY_TIMER(turntime);
+        case ENTITY_PROPERTY_UPDATE_MARK: ENTITY_INT(update_mark);
+        case ENTITY_PROPERTY_VELOCITY_X: ENTITY_DECIMAL(velocity.x);
+        case ENTITY_PROPERTY_VELOCITY_Y: ENTITY_DECIMAL(velocity.y);
+        case ENTITY_PROPERTY_VELOCITY_Z: ENTITY_DECIMAL(velocity.z);
+        case ENTITY_PROPERTY_WALK_STATE: ENTITY_INT(walking);
+        case ENTITY_PROPERTY_WAYPOINT_COUNT: ENTITY_INT(numwaypoints);
+        case ENTITY_PROPERTY_WEAPON_STATE: ENTITY_INT(weapon_state);
+        default: return 0;
+    }
+
+    #undef ENTITY_DECIMAL
+    #undef ENTITY_TIMER
+    #undef ENTITY_INT
+    #undef ENTITY_SCALAR
+}
+
+
+static void obor_report_legacy_entity_property_usage(int setting, int unsupported)
+{
+    static const char *const usage[][2] =
+    {
+        {
+            "You must provide a valid handle and property name: openbor_get_entity_property(void handle, char property)\n",
+            "You must provide a valid handle, property, and new value: openbor_set_entity_property(void handle, char property, value)\n"
+        },
+        {
+            "You must provide a valid handle and property constant: openbor_get_entity_property(void handle, int property)\n",
+            "You must provide a valid handle, property, and new value: openbor_set_entity_property(void handle, int property, value)\n"
+        },
+        {
+            "\nYou must provide a valid pointer and property constant: openbor_get_entity_property(void entity, int property)\n",
+            "\nYou must provide a valid pointer, property constant, and new value: openbor_set_entity_property(void entity, int property, value)\n"
+        }
+    };
+    const unsigned int format = obor_profile_build >= 7465u ? 2u : obor_profile_build >= 7445u;
+    if (unsupported)
+    {
+        printf("%s", !setting && obor_profile_build >= 7445u ? "Unknwon property.\n" : "Unsupported property.\n");
+    }
+    printf("%s", usage[format][setting != 0]);
+}
+
+HRESULT openbor_get_entity_property(ScriptVariant** varlist, ScriptVariant** const pretvar, const int paramCount)
 {
 	const char* SELF_NAME = "openbor_get_entity_property(void entity, int property)";
 	const unsigned int ARG_OBJECT = 0;
@@ -1222,13 +1591,26 @@ HRESULT openbor_get_entity_property(const ScriptVariant* const* varlist, ScriptV
 	*/
 	ScriptVariant_Clear(*pretvar);
 
+    mapstrings_entity_property(varlist, paramCount);
+
 	/*
 	* Should at least be a pointer to the
 	* acting object and a property id.
 	*/
-	if (varlist[ARG_OBJECT]->vt != VT_PTR
-		|| varlist[ARG_PROPERTY]->vt != VT_INTEGER) {
-		printf("\n\n Script error: %s. You must provide a valid object pointer and property id.\n\n", SELF_NAME);
+	if (paramCount < 2 || varlist[ARG_OBJECT]->vt != VT_PTR
+        || varlist[ARG_OBJECT]->ptrVal == NULL || varlist[ARG_PROPERTY]->vt != VT_INTEGER) {
+        if (obor_profile_build < 7504u)
+        {
+            obor_report_legacy_entity_property_usage(0, 0);
+        }
+        else
+        {
+    		printf("\n\n Script error: %s. You must provide a valid object pointer and property id.\n\n", SELF_NAME);
+        }
+        if (obor_profile_build < 7504u)
+        {
+            *pretvar = NULL;
+        }
 		return E_FAIL;
 	}
 
@@ -1259,6 +1641,37 @@ HRESULT openbor_get_entity_property(const ScriptVariant* const* varlist, ScriptV
 	*/
 
 	if (property_id_param >= 0 && property_id_param < obor_profile_entity_property_end()) {
+        if (obor_profile_build < 7504u)
+        {
+            const e_entity_properties native_id = obor_entity_property_native_id(property_id);
+            if (obor_legacy_entity_scalar((entity *)acting_object, native_id, *pretvar, NULL))
+            {
+                return S_OK;
+            }
+            if (!acting_object->custom_target &&
+                (native_id == ENTITY_PROPERTY_AI_TARGET_ENTITY || native_id == ENTITY_PROPERTY_GRAB_TARGET))
+            {
+                return S_OK;
+            }
+            if (property_map.field == &acting_object->varlist && !acting_object->varlist)
+            {
+                return S_OK;
+            }
+            if (property_map.type == VT_PTR)
+            {
+                ScriptVariant_ChangeType(*pretvar, VT_PTR);
+                if (property_map.config_flags & PROPERTY_ACCESS_CONFIG_STATIC_POINTER)
+                {
+                    (*pretvar)->ptrVal = (void *)property_map.field;
+                }
+                else
+                {
+                    // Entity members use the engine's packed layout.
+                    memcpy(&(*pretvar)->ptrVal, property_map.field, sizeof((*pretvar)->ptrVal));
+                }
+                return S_OK;
+            }
+        }
 		property_access_get_member(&property_map, *pretvar);
 		return S_OK;
 	}
@@ -1268,11 +1681,19 @@ HRESULT openbor_get_entity_property(const ScriptVariant* const* varlist, ScriptV
 	* the property id is invalid.
 	*/
 
-	if (property_id_param == PROPERTY_ACCESS_DUMP) {
+	if (obor_profile_build >= 7504u && property_id_param == PROPERTY_ACCESS_DUMP) {
 		property_access_dump_members(entity_get_property_map, obor_profile_entity_property_end(), acting_object);
 	}
 	else {
-		printf("\n\nScript error: %s. Unknown property id (%d). \n\n", SELF_NAME, property_id_param);
+        if (obor_profile_build < 7504u)
+        {
+            obor_report_legacy_entity_property_usage(0, 1);
+            *pretvar = NULL;
+        }
+        else
+        {
+            printf("\n\nScript error: %s. Unknown property id (%d). \n\n", SELF_NAME, property_id_param);
+        }
 		return E_FAIL;
 	}
 
@@ -1296,16 +1717,24 @@ HRESULT openbor_set_entity_property(ScriptVariant** varlist, ScriptVariant** con
 	const unsigned int ARG_VALUE = 2;
 	const unsigned int ARG_MINIMUM = 3;
 
+    mapstrings_entity_property(varlist, paramCount);
+
 	/*
 	* Should at least be a pointer to the
 	* acting object, a property id, and
 	* a new value.
 	*/
 
-	if (varlist[ARG_OBJECT]->vt != VT_PTR
-		|| varlist[ARG_PROPERTY]->vt != VT_INTEGER
-		|| paramCount < ARG_MINIMUM) {
-		printf("\n\n Script error: %s. You must provide a valid object pointer, property id, and new value.\n\n", SELF_NAME);
+	if (paramCount < ARG_MINIMUM || varlist[ARG_OBJECT]->vt != VT_PTR
+        || varlist[ARG_OBJECT]->ptrVal == NULL || varlist[ARG_PROPERTY]->vt != VT_INTEGER) {
+        if (obor_profile_build < 7504u)
+        {
+            obor_report_legacy_entity_property_usage(1, 0);
+        }
+        else
+        {
+    		printf("\n\n Script error: %s. You must provide a valid object pointer, property id, and new value.\n\n", SELF_NAME);
+        }
 		*pretvar = NULL;
 		return E_FAIL;
 	}
@@ -1328,8 +1757,9 @@ HRESULT openbor_set_entity_property(ScriptVariant** varlist, ScriptVariant** con
 	const int property_id_param = (const int)varlist[ARG_PROPERTY]->lVal;
 	const e_entity_properties property_id = (e_entity_properties)(property_id_param);
 
-	if (property_id_param < 0 && property_id_param >= obor_profile_entity_property_end()) {
-		printf("\n\nScript error: %s. Unknown property id (%d). \n\n", SELF_NAME, property_id_param);
+    if (obor_profile_build < 7504u &&
+        (property_id_param < 0 || property_id_param >= obor_profile_entity_property_end())) {
+        obor_report_legacy_entity_property_usage(1, 1);
 		return E_FAIL;
 	}
 
@@ -1342,6 +1772,58 @@ HRESULT openbor_set_entity_property(ScriptVariant** varlist, ScriptVariant** con
 	*/
 
 	const s_property_access_map property_map = entity_get_property_map(acting_object, property_id);
+
+    if (obor_profile_build < 7504u)
+    {
+        const e_entity_properties native_id = obor_entity_property_native_id(property_id);
+        ScriptVariant *value = varlist[ARG_VALUE];
+        if (obor_legacy_entity_scalar((entity *)acting_object, native_id, NULL, value))
+        {
+            return S_OK;
+        }
+        if (native_id == ENTITY_PROPERTY_DEFENSE || native_id == ENTITY_PROPERTY_OFFENSE)
+        {
+            if (value->vt != VT_PTR && value->vt != VT_EMPTY)
+            {
+                return E_FAIL;
+            }
+            return obor_entity_set_combat_collection((entity *)acting_object,
+                value->vt == VT_PTR ? value->ptrVal : NULL, native_id == ENTITY_PROPERTY_DEFENSE) ? S_OK : E_FAIL;
+        }
+        if (native_id == ENTITY_PROPERTY_PLATFORM_LAND)
+        {
+            if (value->vt == VT_PTR || value->vt == VT_EMPTY)
+            {
+                ((entity *)acting_object)->parent = value->vt == VT_PTR ? value->ptrVal : NULL;
+            }
+            return S_OK;
+        }
+        if (native_id == ENTITY_PROPERTY_NAME)
+        {
+            if (value->vt == VT_STR)
+            {
+                const char *name = (const char *)StrCache_Get(value->strVal);
+                if (name)
+                {
+                    snprintf(((entity *)acting_object)->name, sizeof(acting_object->name), "%s", name);
+                }
+            }
+            return S_OK;
+        }
+        if (!(property_map.config_flags & PROPERTY_ACCESS_CONFIG_WRITE))
+        {
+            return S_OK;
+        }
+        if (property_map.type == VT_PTR && property_map.field != &acting_object->varlist)
+        {
+            if (value->vt == VT_PTR || value->vt == VT_EMPTY)
+            {
+                void *pointer = value->vt == VT_PTR ? value->ptrVal : NULL;
+                memcpy((void *)property_map.field, &pointer, sizeof(pointer));
+            }
+            return S_OK;
+        }
+    }
 
 	/*
 	* Populate the property value on
@@ -1413,7 +1895,7 @@ HRESULT openbor_get_attack_id_value(ScriptVariant** varlist, ScriptVariant** pre
 
 error_local:
 
-	printf("\nYou must provide a valid handle and element: " SELF_NAME "\n");
+	printf("%sYou must provide a valid handle and element: " SELF_NAME "\n", obor_profile_build >= 7465u ? "\n" : "");
 	*pretvar = NULL;
 
 	return E_FAIL;
@@ -1482,7 +1964,7 @@ HRESULT openbor_set_attack_id_value(ScriptVariant** varlist, ScriptVariant** pre
 	/* Error trapping. */
 error_local:
 
-	printf("\nYou must provide a valid handle, element, and new value: " SELF_NAME "\n");
+	printf("%sYou must provide a valid handle, element, and new value: " SELF_NAME "\n", obor_profile_build >= 7465u ? "\n" : "");
 
 	result = E_FAIL;
 	return result;

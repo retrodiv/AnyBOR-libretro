@@ -1,0 +1,190 @@
+/* SPDX-License-Identifier: BSD-3-Clause
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me>
+ */
+#include <stdarg.h>
+#include <stdint.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <strings.h>
+#pragma GCC diagnostic ignored "-Wignored-qualifiers"
+#if defined(__clang__)
+#pragma GCC diagnostic ignored "-Wdeprecated-non-prototype"
+#endif
+#include "scriptcommon.h"
+
+uint32_t obor_profile_build;
+s_global_config global_config;
+s_level *level;
+static unsigned long long bothnewkeys;
+static e_screen_status screen_status;
+s_global_sample global_sample_list = {.beep = -1, .beep_2 = -1};
+static unsigned frames, row_count, empty_messages;
+static unsigned long long inputs[2];
+static char rows[7][20], diagnostic[160];
+
+static void check(int pass, const char *description)
+{
+    if (!pass)
+    {
+        fprintf(stderr, "%s for profile %u\n", description, obor_profile_build);
+        abort();
+    }
+}
+
+static void record_row(int column, const char *text)
+{
+    if (frames == 0 && column == -11)
+    {
+        check(row_count < sizeof(rows) / sizeof(*rows), "Unexpected number of menu rows");
+        snprintf(rows[row_count++], sizeof(*rows), "%s", text);
+    }
+}
+
+static void record_message(const char *text)
+{
+    if (frames == 0 && strncmp(text, "No cheats ", 10) == 0)
+    {
+        const char *expected = obor_profile_build < 7441 ? "No cheats avaialble." : "No cheats available.";
+        check(strcmp(text, expected) == 0, "Empty menu text");
+        ++empty_messages;
+    }
+}
+
+static void menu_frame(void)
+{
+    check(frames < sizeof(inputs) / sizeof(*inputs), "Menu input sequence");
+    bothnewkeys = inputs[frames++];
+}
+
+static int record_diagnostic(const char *format, ...)
+{
+    va_list args;
+    va_start(args, format);
+    int written = vsnprintf(diagnostic, sizeof(diagnostic), format, args);
+    va_end(args);
+    return written;
+}
+
+#undef stricmp
+#define stricmp strcasecmp
+@CONSTANT_HELPER@
+@CONSTANT_MACROS@
+
+static LONG read_cheat_constant(const char *constname)
+{
+    ScriptVariant v = {0};
+    if (!constname) return -1;
+    @CONSTANT_CHAIN@
+    else return -1;
+    return v.lVal;
+}
+
+#undef printf
+#define printf record_diagnostic
+#undef _menutext
+#define _menutext(selected, column, line, text) record_row(column, text)
+#undef _menutextm
+#define _menutextm(selected, line, shift, text) record_message(text)
+#undef Tr
+#define Tr(text) (text)
+#define update(...) menu_frame()
+#define sound_play_sample(...) ((void)0)
+@CHEAT_FUNCTIONS@
+
+static void run_menu(e_cheat_options flags, unsigned long long first, unsigned long long second)
+{
+    global_config.cheats = flags;
+    inputs[0] = first;
+    inputs[1] = second;
+    frames = row_count = empty_messages = 0;
+    menu_options_cheats();
+    check(bothnewkeys == 0 && screen_status == IN_SCREEN_NONE, "Menu state after exit");
+}
+
+static void check_row(unsigned index, const char *label)
+{
+    char expected[20];
+    snprintf(expected, sizeof(expected), "%s%s", label, obor_profile_build < 7441 ? "" : ":");
+    check(index < row_count && strcmp(rows[index], expected) == 0, "Menu label or order");
+}
+
+static void check_menu(e_cheat_options defaults, e_cheat_options tod_menu, e_cheat_options tod_active)
+{
+    run_menu(defaults, FLAG_ESC, 0);
+    unsigned index = 0;
+    if (obor_profile_build >= 7417) check_row(index++, "Implacable March");
+    check_row(index++, "Infinite Credits");
+    check_row(index++, "Infinite Energy");
+    check_row(index++, "Infinite Health");
+    check_row(index++, "Infinite Lives");
+    check_row(index++, "Multihit Glitch");
+    if (obor_profile_build >= 7417) check_row(index++, "Touch of Death");
+    check(row_count == index && empty_messages == 0, "Default menu options");
+
+    run_menu(CHEAT_OPTIONS_NONE, FLAG_ESC, 0);
+    check(row_count == 0 && empty_messages == 1, "Empty menu options");
+
+    run_menu(tod_menu, FLAG_ATTACK, FLAG_ESC);
+    check(row_count == 1, "Single enabled option");
+    check_row(0, "Touch of Death");
+    check(global_config.cheats == (tod_menu | tod_active), "Menu toggle in native flags");
+
+    run_menu(tod_menu, FLAG_MOVEDOWN, FLAG_ATTACK);
+    check(global_config.cheats == tod_menu, "Back after the last available item");
+}
+
+int main(void)
+{
+    static const uint32_t profiles[] = {7369, 7370, 7391, 7414, 7415, 7416, 7417, 7420, 7440, 7441, 7500, 7501, 7533};
+    static const struct {
+        const char *text, *constant_name;
+        LONG early, later;
+    } flags[] = {
+        {"credits_active", "CHEAT_OPTIONS_CREDITS_ACTIVE", 1, 1},
+        {"credits_menu", "CHEAT_OPTIONS_CREDITS_MENU", 2, 2},
+        {"energy_active", "CHEAT_OPTIONS_ENERGY_ACTIVE", 4, 4},
+        {"energy_menu", "CHEAT_OPTIONS_ENERGY_MENU", 8, 8},
+        {"health_active", "CHEAT_OPTIONS_HEALTH_ACTIVE", 16, 16},
+        {"health_menu", "CHEAT_OPTIONS_HEALTH_MENU", 32, 32},
+        {"implacable_active", "CHEAT_OPTIONS_IMPLACABLE_ACTIVE", -1, 64},
+        {"implacable_menu", "CHEAT_OPTIONS_IMPLACABLE_MENU", -1, 128},
+        {"MaStEr_MeNu", "CHEAT_OPTIONS_MASTER_MENU", 64, 256},
+        {"lives_active", "CHEAT_OPTIONS_LIVES_ACTIVE", 128, 512},
+        {"lives_menu", "CHEAT_OPTIONS_LIVES_MENU", 256, 1024},
+        {"multihit_active", "CHEAT_OPTIONS_MULTIHIT_ACTIVE", 512, 2048},
+        {"multihit_menu", "CHEAT_OPTIONS_MULTIHIT_MENU", 1024, 4096},
+        {"touch_of_death_active", "CHEAT_OPTIONS_TOD_ACTIVE", 2048, 8192},
+        {"touch_of_death_menu", "CHEAT_OPTIONS_TOD_MENU", 4096, 16384},
+    };
+    for (size_t p = 0; p < sizeof(profiles) / sizeof(*profiles); ++p)
+    {
+        obor_profile_build = profiles[p];
+        const int early = profiles[p] < 7370;
+        const e_cheat_options defaults = early ? 1386 : profiles[p] < 7417 ? 5418 : 21930;
+        check(obor_profile_default_cheats() == defaults, "Default cheat mask");
+        check(find_cheat_options_from_string("none") == 0, "Model none option");
+        check(read_cheat_constant("CHEAT_OPTIONS_NONE") == (profiles[p] < 7415 ? -1 : 0),
+              "None constant availability");
+        check(read_cheat_constant("CHEAT_OPTIONS_ALL_MENU") == (profiles[p] < 7415 ? -1 : (LONG)defaults),
+              "All-menu constant value and availability");
+        for (size_t f = 0; f < sizeof(flags) / sizeof(*flags); ++f)
+        {
+            LONG expected = early ? flags[f].early : flags[f].later;
+            diagnostic[0] = '\0';
+            check(read_cheat_constant(flags[f].constant_name) == expected, "Named cheat constant");
+            check((LONG)find_cheat_options_from_string(flags[f].text) == (expected < 0 ? 0 : expected),
+                  "Named model option");
+            check((diagnostic[0] != '\0') == (expected < 0), "Named option diagnostic");
+        }
+        check(find_cheat_options_from_string("unknown") == 0, "Unknown model option");
+        const char *unknown = profiles[p] < 7501 ? "\n\n Unknown cheat option (unknown), using 'none'. \n"
+                                               : "\n\n  Unknown cheat option (unknown). \n";
+        check(strcmp(diagnostic, unknown) == 0, "Unknown model option text");
+        ArgList args = {.count = 4, .args = {"cheats", "master_menu", "lives_menu", "touch_of_death_active"}};
+        global_config.cheats = defaults;
+        lcmHandleCommandGlobalConfigCheats(&args);
+        check(global_config.cheats == (early ? 2368 : 9472), "Model option list replaces the native mask");
+        check_menu(defaults, early ? 4096 : 16384, early ? 2048 : 8192);
+    }
+    return 0;
+}

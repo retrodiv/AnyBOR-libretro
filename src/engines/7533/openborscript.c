@@ -19,7 +19,10 @@
  * preserving native record layout and results. Close owned input files after
  * stream loading and on buffer allocation failure. Select the native
  * property namespaces, script result types, legacy call routing and
- * music/system property domains.
+ * music/system property domains. Preserve original entity-property indices
+ * and integer movement, running, block, reaction, shadow and death values.
+ * Translate entity types and targeting masks between native script numbers
+ * and shared flags.
  * Existing changes recorded here; this is not their implementation date.
  * See MODIFICATIONS.md and docs/modifications/7533.md
  * at the source repository root. Original notices follow below.
@@ -64,6 +67,7 @@
 #include "ImportCache.h"
 #include "models.h"
 #include "scriptcommon.h"
+#include "anybor_pak_name.h"
 
 Varlist global_var_list;
 Script *pcurrentscript = NULL; //used by local script functions
@@ -850,7 +854,10 @@ int Script_Execute(Script *pscript)
     pcurrentscript = temp;
     if(!result)
     {
-        borShutdown(1, "There's an exception while executing script '%s' %s. Please review log to locate the exception alert(s). \n\n", pscript->pinterpreter->theSymbolTable.name, pscript->comment ? pscript->comment : "");
+        char *const message = obor_profile_build < 7504u
+            ? "There's an exception while executing script '%s' %s"
+            : "There's an exception while executing script '%s' %s. Please review log to locate the exception alert(s). \n\n";
+        borShutdown(1, message, pscript->pinterpreter->theSymbolTable.name, pscript->comment ? pscript->comment : "");
     }
     return result;
 }
@@ -1487,13 +1494,92 @@ static const char *obor_profile_system_music_names[] =
     "ypos",
 };
 
+static struct
+{
+    uint32_t build;
+    int name_count;
+    int native_count;
+    const char *names[SYSTEM_PROPERTY_THE_END];
+    int native_ids[SYSTEM_PROPERTY_THE_END];
+} obor_legacy_system_layout;
+
+static uint32_t obor_system_property_first_build(int index)
+{
+    switch (index)
+    {
+    case SYSTEM_PROPERTY_IN_BUTTON_CONFIG:
+    case SYSTEM_PROPERTY_SHOWGO:
+        return 7409u;
+    case SYSTEM_PROPERTY_HUD_COMMON_MAIN:
+    case SYSTEM_PROPERTY_HUD_COMMON_MP:
+    case SYSTEM_PROPERTY_HUD_COMMON_OPPONENT:
+    case SYSTEM_PROPERTY_HUD_LOAD:
+        return 7467u;
+    case SYSTEM_PROPERTY_FRONT_PANEL_Z:
+    case SYSTEM_PROPERTY_HOLE_Z:
+    case SYSTEM_PROPERTY_HUD_Z:
+    case SYSTEM_PROPERTY_MIRROR_Z:
+    case SYSTEM_PROPERTY_NEON_PANEL_Z:
+    case SYSTEM_PROPERTY_PANEL_Z:
+    case SYSTEM_PROPERTY_SCREEN_PANEL_Z:
+    case SYSTEM_PROPERTY_SHADOW_Z:
+        return 7469u;
+    case SYSTEM_PROPERTY_BACKGROUND_HEIGHT:
+    case SYSTEM_PROPERTY_MAX_WALL_HEIGHT:
+        return 7471u;
+    case SYSTEM_PROPERTY_MUSIC_CHANNEL:
+        return 7590u;
+    default:
+        return 0;
+    }
+}
+
+static void obor_profile_system_prepare_layout(void)
+{
+    const uint32_t build = obor_profile_build;
+    if (obor_legacy_system_layout.name_count && obor_legacy_system_layout.build == build)
+    {
+        return;
+    }
+
+    int names = 0;
+    int native = 0;
+    for (int index = 0; index < SYSTEM_PROPERTY_THE_END; ++index)
+    {
+        if (index == SYSTEM_PROPERTY_HRESOLUTION && build >= 7409u && build < 7411u)
+        {
+            /* The original enum included a selector with no name or handler. */
+            obor_legacy_system_layout.native_ids[native++] = -1;
+        }
+        if (build >= obor_system_property_first_build(index))
+        {
+            obor_legacy_system_layout.names[names++] = obor_profile_system_music_names[index];
+            obor_legacy_system_layout.native_ids[native++] = index;
+        }
+    }
+    obor_legacy_system_layout.name_count = names;
+    obor_legacy_system_layout.native_count = native;
+    obor_legacy_system_layout.build = build;
+}
+
 static int obor_profile_system_property_count(void)
 {
+    if (obor_profile_build < 7471u)
+    {
+        obor_profile_system_prepare_layout();
+        return obor_legacy_system_layout.name_count;
+    }
     return (int)SYSTEM_PROPERTY_THE_END - (obor_profile_build < 7590 ? 1 : 0);
 }
 
 static int obor_profile_system_native_index(int index)
 {
+    if (obor_profile_build < 7471u)
+    {
+        obor_profile_system_prepare_layout();
+        return index >= 0 && index < obor_legacy_system_layout.native_count
+            ? obor_legacy_system_layout.native_ids[index] : -1;
+    }
     if(index < 0 || index >= obor_profile_system_property_count()) return -1;
     if(obor_profile_build < 7590 && index >= SYSTEM_PROPERTY_MUSIC_CHANNEL) ++index;
     return index;
@@ -1506,8 +1592,12 @@ int mapstrings_systemvariant(ScriptVariant **varlist, int paramCount)
     int prop;
 
 
-    const char **names = obor_profile_build >= 7590 ? obor_profile_system_music_names : svlist;
-    int count = obor_profile_system_property_count();
+    const int count = obor_profile_system_property_count();
+    const char **names = obor_profile_build >= 7590u ? obor_profile_system_music_names : svlist;
+    if (obor_profile_build < 7471u)
+    {
+        names = obor_legacy_system_layout.names;
+    }
 
     MAPSTRINGS(varlist[0], names, count,
                "openborvariant: System variable name not found: '%s'\n");
@@ -2891,6 +2981,30 @@ static const char *eplist[] =
     "zdir",
 };
 
+enum
+{
+    OBOR_LEGACY_EP_NOSHADOW = _ep_the_end + 1
+};
+
+static unsigned long obor_script_entity_deadline(LONG value)
+{
+    return obor_profile_build < 7504u ? (u32)value : (unsigned long)value;
+}
+
+static int obor_profile_entity_native_index(int index)
+{
+    const int legacy = obor_profile_build < 7475u;
+    if (index < 0 || index >= _ep_the_end + legacy)
+    {
+        return _ep_the_end;
+    }
+    if (legacy && index >= _ep_numweapons)
+    {
+        return index == _ep_numweapons ? OBOR_LEGACY_EP_NOSHADOW : index - 1;
+    }
+    return index;
+}
+
 enum aiflag_enum
 {
     _ep_aiflag_animating,
@@ -3360,6 +3474,11 @@ enum cep_think_enum   // 2011_03_03, DC: Think types.
     _ep_th_the_end,
 };
 
+static LONG obor_profile_movement_property(e_move_config_flags flags, e_move_config_flags property)
+{
+    return (LONG)obor_move_flags_to_script(flags & property);
+}
+
 int mapstrings_entityproperty(ScriptVariant **varlist, int paramCount)
 {
     char *propname;
@@ -3495,32 +3614,6 @@ int mapstrings_entityproperty(ScriptVariant **varlist, int paramCount)
         "type_shot",
     };
 
-    static const char *proplist_takeaction[] =
-    {
-        "bomb_explode",
-        "common_animation_normal",
-        "common_attack_proc",
-        "common_block",
-        "common_drop",
-        "common_fall",
-        "common_get",
-        "common_grab",
-        "common_grabattack",
-        "common_grabbed",
-        "common_jump",
-        "common_land",
-        "common_lie",
-        "common_pain",
-        "common_prejump",
-        "common_rise",
-        "common_spawn",
-        "common_turn",
-        "normal_prepare",
-        "npc_recall",
-        "player_blink",
-        "suicide",
-    };
-
     static const char *proplist_think[] =   // 2011_03_03, DC: Think types.
     {
         "common_think",
@@ -3537,7 +3630,21 @@ int mapstrings_entityproperty(ScriptVariant **varlist, int paramCount)
     }
 
     // map entity properties
-    MAPSTRINGS(varlist[1], eplist, _ep_the_end,
+    const char *legacy_names[_ep_the_end + 2];
+    const char **property_names = eplist;
+    int count = _ep_the_end;
+    if (obor_profile_build < 7475u && varlist[1]->vt == VT_STR)
+    {
+        /* The original list includes noshadow immediately before numweapons. */
+        memcpy(legacy_names, eplist, _ep_numweapons * sizeof(*eplist));
+        legacy_names[_ep_numweapons] = "noshadow";
+        memcpy(legacy_names + _ep_numweapons + 1, eplist + _ep_numweapons,
+               (_ep_the_end - _ep_numweapons) * sizeof(*eplist));
+        legacy_names[_ep_the_end + 1] = NULL;
+        property_names = legacy_names;
+        ++count;
+    }
+    MAPSTRINGS(varlist[1], property_names, count,
                "Property name '%s' is not supported by function getentityproperty.\n");
 
     if(paramCount < 3 || varlist[1]->vt != VT_INTEGER)
@@ -3545,7 +3652,7 @@ int mapstrings_entityproperty(ScriptVariant **varlist, int paramCount)
         return 1;
     }
 
-    ep = varlist[1]->lVal;
+    ep = obor_profile_entity_native_index(varlist[1]->lVal);
     eps = (ep < _ep_the_end && ep >= 0) ? eplist[ep] : "";
 
     switch (ep)
@@ -3681,6 +3788,31 @@ int mapstrings_entityproperty(ScriptVariant **varlist, int paramCount)
     // action for takeaction
     case _ep_takeaction:
     {
+        const char *proplist_takeaction[] =
+        {
+            "bomb_explode",
+            "common_animation_normal",
+            "common_attack_proc",
+            "common_block",
+            "common_drop",
+            "common_fall",
+            "common_get",
+            "common_grab",
+            "common_grabattack",
+            "common_grabbed",
+            "common_jump",
+            "common_land",
+            "common_lie",
+            "common_pain",
+            "common_prejump",
+            "common_rise",
+            "common_spawn",
+            "common_turn",
+            "normal_prepare",
+            obor_profile_build < 7516u ? "npc_warp" : "npc_recall",
+            "player_blink",
+            "suicide",
+        };
         MAPSTRINGS(varlist[2], proplist_takeaction, _ep_ta_the_end,
                    _is_not_supported_by_, eps);
         break;
@@ -3749,7 +3881,10 @@ HRESULT openbor_getentityproperty(ScriptVariant **varlist , ScriptVariant **pret
     }
 
     ScriptVariant_Clear(*pretvar);
-    if(obor_profile_build >= 7609) mapstrings_entityproperty(varlist, paramCount);
+    if (obor_profile_build < 7446u || obor_profile_build >= 7609u)
+    {
+        mapstrings_entityproperty(varlist, paramCount);
+    }
 
     arg = varlist[0];
     if(arg->vt != VT_PTR && arg->vt != VT_EMPTY)
@@ -3770,7 +3905,7 @@ HRESULT openbor_getentityproperty(ScriptVariant **varlist , ScriptVariant **pret
         printf("Function getentityproperty must have a string property name.\n");
     }
 
-    propind = arg->lVal;
+    propind = obor_profile_entity_native_index(arg->lVal);
 
     switch(propind)
     {
@@ -3811,7 +3946,7 @@ HRESULT openbor_getentityproperty(ScriptVariant **varlist , ScriptVariant **pret
         switch(ltemp)
         {
         case _ep_aiflag_dead:
-            (*pretvar)->lVal = (LONG)(ent->death_state & DEATH_STATE_DEAD);
+            (*pretvar)->lVal = (LONG)obor_entity_dead_script_get(ent);
             break;
         case _ep_aiflag_jumpid:
             (*pretvar)->lVal = (LONG)ent->jump.animation_id;
@@ -3897,7 +4032,7 @@ HRESULT openbor_getentityproperty(ScriptVariant **varlist , ScriptVariant **pret
     case _ep_aimove:
     {
         ScriptVariant_ChangeType(*pretvar, VT_INTEGER);
-        (*pretvar)->lVal = (LONG)ent->modeldata.aimove;
+        (*pretvar)->lVal = (LONG)obor_aimove_to_script(ent->modeldata.aimove);
         break;
     }
     case _ep_alpha:
@@ -4081,7 +4216,8 @@ HRESULT openbor_getentityproperty(ScriptVariant **varlist , ScriptVariant **pret
     case _ep_blockback:
     {
         ScriptVariant_ChangeType(*pretvar, VT_INTEGER);
-        (*pretvar)->lVal = (LONG)(ent->modeldata.block_config_flags & BLOCK_CONFIG_BACK);
+        (*pretvar)->lVal = obor_uses_legacy_block_config() ? (LONG)ent->modeldata.legacy_blockback
+            : (LONG)(ent->modeldata.block_config_flags & BLOCK_CONFIG_BACK);
         break;
     }
     case _ep_blockodds:
@@ -4123,7 +4259,7 @@ HRESULT openbor_getentityproperty(ScriptVariant **varlist , ScriptVariant **pret
     case _ep_candamage:
     {
         ScriptVariant_ChangeType(*pretvar, VT_INTEGER);
-        (*pretvar)->lVal = (e_entity_type)ent->faction.type_damage_direct;
+        (*pretvar)->lVal = (LONG)obor_type_mask_to_script(ent->faction.type_damage_direct);
         break;
     }
     case _ep_combostep:
@@ -4165,13 +4301,13 @@ HRESULT openbor_getentityproperty(ScriptVariant **varlist , ScriptVariant **pret
     case _ep_hostile:
     {
         ScriptVariant_ChangeType(*pretvar, VT_INTEGER);
-        (*pretvar)->lVal = (LONG)ent->faction.type_hostile;
+        (*pretvar)->lVal = (LONG)obor_type_mask_to_script(ent->faction.type_hostile);
         break;
     }
     case _ep_projectilehit:
     {
         ScriptVariant_ChangeType(*pretvar, VT_INTEGER);
-        (*pretvar)->lVal = (LONG)ent->faction.type_damage_indirect;
+        (*pretvar)->lVal = (LONG)obor_type_mask_to_script(ent->faction.type_damage_indirect);
         break;
     }
     case _ep_chargerate:
@@ -4205,7 +4341,7 @@ HRESULT openbor_getentityproperty(ScriptVariant **varlist , ScriptVariant **pret
     case _ep_dead:
     {
         ScriptVariant_ChangeType(*pretvar, VT_INTEGER);
-        (*pretvar)->lVal = (LONG)(ent->death_state & DEATH_STATE_DEAD);
+        (*pretvar)->lVal = (LONG)obor_entity_dead_script_get(ent);
         break;
     }
     case _ep_defaultmodel:
@@ -4334,8 +4470,8 @@ HRESULT openbor_getentityproperty(ScriptVariant **varlist , ScriptVariant **pret
     }
     case _ep_edelay:
     {
-        arg = varlist[2];
-        if(arg->vt != VT_INTEGER)
+        arg = paramCount > 2 ? varlist[2] : NULL;
+        if(!arg || arg->vt != VT_INTEGER)
         {
             printf("You must provide a string name for edelay subproperty.\n\
 	~'cap_max'\n\
@@ -4354,7 +4490,7 @@ HRESULT openbor_getentityproperty(ScriptVariant **varlist , ScriptVariant **pret
         {
         case _ep_edelay_mode:
         {
-            (*pretvar)->lVal = 0;
+            (*pretvar)->lVal = obor_profile_build < 7495u ? ent->modeldata.edelay.legacy_mode : 0;
             break;
         }
         case _ep_edelay_factor:
@@ -4502,7 +4638,8 @@ HRESULT openbor_getentityproperty(ScriptVariant **varlist , ScriptVariant **pret
     case _ep_falldie:
     {
         ScriptVariant_ChangeType(*pretvar, VT_INTEGER);
-        (*pretvar)->lVal = death_config_get_falldie_from_value((e_death_config_flags)ent->modeldata.death_config_flags);
+        (*pretvar)->lVal = obor_uses_legacy_death_config() ? (LONG)ent->modeldata.legacy_falldie
+            : death_config_get_falldie_from_value((e_death_config_flags)ent->modeldata.death_config_flags);
         break;
     }
     case _ep_flash:
@@ -4565,7 +4702,14 @@ HRESULT openbor_getentityproperty(ScriptVariant **varlist , ScriptVariant **pret
     case _ep_gfxshadow:
     {
         ScriptVariant_ChangeType(*pretvar, VT_INTEGER);
-        (*pretvar)->lVal = (LONG)((ent->shadow_config_flags & (SHADOW_CONFIG_GRAPHIC_REPLICA_AIR | SHADOW_CONFIG_GRAPHIC_REPLICA_GROUND)) == (SHADOW_CONFIG_GRAPHIC_REPLICA_AIR | SHADOW_CONFIG_GRAPHIC_REPLICA_GROUND));
+        if (obor_profile_build < 7475u)
+        {
+            (*pretvar)->lVal = (LONG)ent->modeldata.legacy_gfxshadow;
+        }
+        else
+        {
+            (*pretvar)->lVal = (LONG)((ent->shadow_config_flags & (SHADOW_CONFIG_GRAPHIC_REPLICA_AIR | SHADOW_CONFIG_GRAPHIC_REPLICA_GROUND)) == (SHADOW_CONFIG_GRAPHIC_REPLICA_AIR | SHADOW_CONFIG_GRAPHIC_REPLICA_GROUND));
+        }
         break;
     }
     case _ep_grabbing:
@@ -5189,7 +5333,7 @@ HRESULT openbor_getentityproperty(ScriptVariant **varlist , ScriptVariant **pret
     case _ep_no_adjust_base:
     {
         ScriptVariant_ChangeType(*pretvar, VT_INTEGER);
-        (*pretvar)->lVal = (LONG)(ent->modeldata.move_config_flags & MOVE_CONFIG_NO_ADJUST_BASE);
+        (*pretvar)->lVal = obor_profile_movement_property(ent->modeldata.move_config_flags, MOVE_CONFIG_NO_ADJUST_BASE);
         break;
     }
     case _ep_noaicontrol:
@@ -5201,12 +5345,18 @@ HRESULT openbor_getentityproperty(ScriptVariant **varlist , ScriptVariant **pret
     case _ep_nodieblink:
     {
         ScriptVariant_ChangeType(*pretvar, VT_INTEGER);
-        (*pretvar)->lVal = death_config_get_nodieblink_from_value((e_death_config_flags)ent->modeldata.death_config_flags);
+        (*pretvar)->lVal = obor_uses_legacy_death_config() ? (LONG)ent->modeldata.legacy_nodieblink
+            : death_config_get_nodieblink_from_value((e_death_config_flags)ent->modeldata.death_config_flags);
         break;
     }
     case _ep_nodrop:
     {
         ScriptVariant_ChangeType(*pretvar, VT_INTEGER);
+        if (obor_profile_build < 7494u)
+        {
+            (*pretvar)->lVal = ent->modeldata.legacy_nodrop;
+            break;
+        }
 
         if ((ent->modeldata.pain_config_flags & (PAIN_CONFIG_FALL_DISABLE | PAIN_CONFIG_FALL_DISABLE_AIR)) == (PAIN_CONFIG_FALL_DISABLE | PAIN_CONFIG_FALL_DISABLE_AIR))
         {
@@ -5232,7 +5382,7 @@ HRESULT openbor_getentityproperty(ScriptVariant **varlist , ScriptVariant **pret
     case _ep_nohithead:
     {
         ScriptVariant_ChangeType(*pretvar, VT_INTEGER);
-        (*pretvar)->lVal = (LONG)(ent->modeldata.move_config_flags & MOVE_CONFIG_NO_HIT_HEAD);
+        (*pretvar)->lVal = obor_profile_movement_property(ent->modeldata.move_config_flags, MOVE_CONFIG_NO_HIT_HEAD);
         break;
     }
     case _ep_nolife:
@@ -5244,7 +5394,14 @@ HRESULT openbor_getentityproperty(ScriptVariant **varlist , ScriptVariant **pret
     case _ep_nopain:
     {
         ScriptVariant_ChangeType(*pretvar, VT_INTEGER);
-        (*pretvar)->lVal = (LONG)(ent->modeldata.pain_config_flags & PAIN_CONFIG_PAIN_DISABLE);
+        (*pretvar)->lVal = obor_profile_build < 7494u ? ent->modeldata.legacy_nopain
+            : (LONG)(ent->modeldata.pain_config_flags & PAIN_CONFIG_PAIN_DISABLE);
+        break;
+    }
+    case OBOR_LEGACY_EP_NOSHADOW:
+    {
+        ScriptVariant_ChangeType(*pretvar, VT_INTEGER);
+        (*pretvar)->lVal = (LONG)ent->modeldata.legacy_noshadow;
         break;
     }
     case _ep_offense:
@@ -5259,7 +5416,8 @@ HRESULT openbor_getentityproperty(ScriptVariant **varlist , ScriptVariant **pret
             }
         }
         ScriptVariant_ChangeType(*pretvar, VT_DECIMAL);
-        (*pretvar)->dblVal = (DOUBLE)ent->offense[(LONG)ltemp].factor;
+        (*pretvar)->dblVal = ent->offense && ltemp >= 0 && ltemp < max_attack_types
+            ? (DOUBLE)ent->offense[ltemp].factor : 0.0;
         break;
     }
     case _ep_offscreen_noatk_factor:
@@ -5435,7 +5593,8 @@ HRESULT openbor_getentityproperty(ScriptVariant **varlist , ScriptVariant **pret
         case _ep_running_land:
         {
             ScriptVariant_ChangeType(*pretvar, VT_INTEGER);
-            (*pretvar)->lVal = (LONG)(ent->modeldata.run_config_flags & RUN_CONFIG_LAND);
+            (*pretvar)->lVal = obor_profile_build < 7529u ? (LONG)ent->modeldata.legacy_runhold
+                : (LONG)(ent->modeldata.run_config_flags & RUN_CONFIG_LAND);
 
             break;
         }
@@ -5506,7 +5665,11 @@ HRESULT openbor_getentityproperty(ScriptVariant **varlist , ScriptVariant **pret
     {
         ScriptVariant_ChangeType(*pretvar, VT_INTEGER);
         
-        if (ent->shadow_config_flags & SHADOW_CONFIG_BASE_PLATFORM && ent->shadow_config_flags & SHADOW_CONFIG_BASE_STATIC)
+        if (obor_profile_build < 7475u)
+        {
+            (*pretvar)->lVal = (LONG)ent->modeldata.legacy_shadowbase;
+        }
+        else if (ent->shadow_config_flags & SHADOW_CONFIG_BASE_PLATFORM && ent->shadow_config_flags & SHADOW_CONFIG_BASE_STATIC)
         {
             (*pretvar)->lVal = (LONG)3;
         }
@@ -5713,55 +5876,55 @@ HRESULT openbor_getentityproperty(ScriptVariant **varlist , ScriptVariant **pret
     case _ep_subject_to_basemap:
     {
         ScriptVariant_ChangeType(*pretvar, VT_INTEGER);
-        (*pretvar)->lVal = (LONG)(ent->modeldata.move_config_flags & MOVE_CONFIG_SUBJECT_TO_BASEMAP);
+        (*pretvar)->lVal = obor_profile_movement_property(ent->modeldata.move_config_flags, MOVE_CONFIG_SUBJECT_TO_BASEMAP);
         break;
     }
     case _ep_subject_to_gravity:
     {
         ScriptVariant_ChangeType(*pretvar, VT_INTEGER);
-        (*pretvar)->lVal = (LONG)(ent->modeldata.move_config_flags & MOVE_CONFIG_SUBJECT_TO_GRAVITY);
+        (*pretvar)->lVal = obor_profile_movement_property(ent->modeldata.move_config_flags, MOVE_CONFIG_SUBJECT_TO_GRAVITY);
         break;
     }
     case _ep_subject_to_hole:
     {
         ScriptVariant_ChangeType(*pretvar, VT_INTEGER);
-        (*pretvar)->lVal = (LONG)(ent->modeldata.move_config_flags & MOVE_CONFIG_SUBJECT_TO_HOLE);
+        (*pretvar)->lVal = obor_profile_movement_property(ent->modeldata.move_config_flags, MOVE_CONFIG_SUBJECT_TO_HOLE);
         break;
     }
     case _ep_subject_to_maxz:
     {
         ScriptVariant_ChangeType(*pretvar, VT_INTEGER);
-        (*pretvar)->lVal = (LONG)(ent->modeldata.move_config_flags & MOVE_CONFIG_SUBJECT_TO_MAX_Z);
+        (*pretvar)->lVal = obor_profile_movement_property(ent->modeldata.move_config_flags, MOVE_CONFIG_SUBJECT_TO_MAX_Z);
         break;
     }
     case _ep_subject_to_minz:
     {
         ScriptVariant_ChangeType(*pretvar, VT_INTEGER);
-        (*pretvar)->lVal = (LONG)(ent->modeldata.move_config_flags & MOVE_CONFIG_SUBJECT_TO_MIN_Z);
+        (*pretvar)->lVal = obor_profile_movement_property(ent->modeldata.move_config_flags, MOVE_CONFIG_SUBJECT_TO_MIN_Z);
         break;
     }
     case _ep_subject_to_obstacle:
     {
         ScriptVariant_ChangeType(*pretvar, VT_INTEGER);
-        (*pretvar)->lVal = (LONG)(ent->modeldata.move_config_flags & MOVE_CONFIG_SUBJECT_TO_OBSTACLE);
+        (*pretvar)->lVal = obor_profile_movement_property(ent->modeldata.move_config_flags, MOVE_CONFIG_SUBJECT_TO_OBSTACLE);
         break;
     }
     case _ep_subject_to_platform:
     {
         ScriptVariant_ChangeType(*pretvar, VT_INTEGER);
-        (*pretvar)->lVal = (LONG)(ent->modeldata.move_config_flags & MOVE_CONFIG_SUBJECT_TO_PLATFORM);
+        (*pretvar)->lVal = obor_profile_movement_property(ent->modeldata.move_config_flags, MOVE_CONFIG_SUBJECT_TO_PLATFORM);
         break;
     }
     case _ep_subject_to_screen:
     {
         ScriptVariant_ChangeType(*pretvar, VT_INTEGER);
-        (*pretvar)->lVal = (LONG)(ent->modeldata.move_config_flags & MOVE_CONFIG_SUBJECT_TO_SCREEN);
+        (*pretvar)->lVal = obor_profile_movement_property(ent->modeldata.move_config_flags, MOVE_CONFIG_SUBJECT_TO_SCREEN);
         break;
     }
     case _ep_subject_to_wall:
     {
         ScriptVariant_ChangeType(*pretvar, VT_INTEGER);
-        (*pretvar)->lVal = (LONG)(ent->modeldata.move_config_flags & MOVE_CONFIG_SUBJECT_TO_WALL);
+        (*pretvar)->lVal = obor_profile_movement_property(ent->modeldata.move_config_flags, MOVE_CONFIG_SUBJECT_TO_WALL);
         break;
     }
     case _ep_subtype:
@@ -5815,7 +5978,7 @@ HRESULT openbor_getentityproperty(ScriptVariant **varlist , ScriptVariant **pret
     case _ep_type:
     {
         ScriptVariant_ChangeType(*pretvar, VT_INTEGER);
-        (*pretvar)->lVal = (LONG)ent->modeldata.type;
+        (*pretvar)->lVal = (LONG)obor_type_mask_to_script(ent->modeldata.type);
         break;
     }
     case _ep_walkoffmovex:
@@ -5998,7 +6161,7 @@ HRESULT openbor_changeentityproperty(ScriptVariant **varlist , ScriptVariant **p
         goto changeentityproperty_error;
     }
 
-    propind = varlist[1]->lVal;
+    propind = obor_profile_entity_native_index(varlist[1]->lVal);
 
     switch(propind)
     {
@@ -6039,14 +6202,7 @@ HRESULT openbor_changeentityproperty(ScriptVariant **varlist , ScriptVariant **p
             {
             case _ep_aiflag_dead:
 
-                if (ltemp)
-                {
-                    ent->death_state |= DEATH_STATE_DEAD;
-                }
-                else
-                {
-                    ent->death_state &= ~DEATH_STATE_DEAD;
-                }
+                obor_entity_dead_script_set(ent, ltemp);
 
                 break;
             case _ep_aiflag_jumpid:
@@ -6135,7 +6291,7 @@ HRESULT openbor_changeentityproperty(ScriptVariant **varlist , ScriptVariant **p
     {
         if(SUCCEEDED(ScriptVariant_IntegerValue(varlist[2], &ltemp)))
         {
-            ent->modeldata.aimove = (LONG)ltemp;
+            ent->modeldata.aimove = obor_aimove_from_script((uint32_t)ltemp);
         }
         break;
     }
@@ -6236,6 +6392,12 @@ HRESULT openbor_changeentityproperty(ScriptVariant **varlist , ScriptVariant **p
     {
         if(SUCCEEDED(ScriptVariant_IntegerValue(varlist[2], &ltemp)))
         {
+            if (obor_uses_legacy_block_config())
+            {
+                ent->modeldata.legacy_blockback = ltemp;
+                break;
+            }
+
             if (ltemp)
             {
                 ent->modeldata.block_config_flags |= BLOCK_CONFIG_BACK;
@@ -6306,7 +6468,7 @@ HRESULT openbor_changeentityproperty(ScriptVariant **varlist , ScriptVariant **p
                 }
                 else
                 {
-                    ent->faction.type_damage_direct |= ltemp;
+                    ent->faction.type_damage_direct |= obor_type_mask_from_script(ltemp);
                 }
             }
             else
@@ -6339,7 +6501,7 @@ HRESULT openbor_changeentityproperty(ScriptVariant **varlist , ScriptVariant **p
     {
         if(SUCCEEDED(ScriptVariant_IntegerValue(varlist[2], &ltemp)))
         {
-            ent->combotime = (LONG)ltemp;
+            ent->combotime = obor_script_entity_deadline(ltemp);
         }
         break;
     }
@@ -6368,14 +6530,7 @@ HRESULT openbor_changeentityproperty(ScriptVariant **varlist , ScriptVariant **p
     {
         if(SUCCEEDED(ScriptVariant_IntegerValue(varlist[2], &ltemp)))
         {
-            if (ltemp)
-            {
-                ent->death_state |= DEATH_STATE_DEAD;
-            }
-            else
-            {
-                ent->death_state &= ~DEATH_STATE_DEAD;
-            }
+            obor_entity_dead_script_set(ent, ltemp);
         }
         break;
     }
@@ -6468,42 +6623,47 @@ HRESULT openbor_changeentityproperty(ScriptVariant **varlist , ScriptVariant **p
     }
     case _ep_edelay:
     {
-        if(SUCCEEDED(ScriptVariant_IntegerValue(varlist[2], &ltemp)))
+        LONG mode = 0;
+        const int has_mode = paramCount > 2 && SUCCEEDED(ScriptVariant_IntegerValue(varlist[2], &mode));
+        if (obor_profile_build < 7495u)
         {
-            //           
-        }
-
-        if(paramCount >= 3)
-        {
-            if (ltemp == EDELAY_MODE_MULTIPLY)
+            if (has_mode)
             {
-                if (SUCCEEDED(ScriptVariant_DecimalValue(varlist[3], &dbltemp)))
-                {
-                    ent->modeldata.edelay.factor = (DOUBLE)dbltemp;
-                }
+                ent->modeldata.edelay.legacy_mode = mode;
             }
-            else
+            if (paramCount > 3 && SUCCEEDED(ScriptVariant_DecimalValue(varlist[3], &dbltemp)))
             {
-                if (SUCCEEDED(ScriptVariant_IntegerValue(varlist[4], &ltemp2)))
-                {
-                    ent->modeldata.edelay.modifier = (LONG)ltemp2;
-                }
+                ent->modeldata.edelay.factor = (float)dbltemp;
             }
         }
+        else if (has_mode)
+        {
+            if (mode == EDELAY_MODE_MULTIPLY)
+            {
+                if (paramCount > 3 && SUCCEEDED(ScriptVariant_DecimalValue(varlist[3], &dbltemp)))
+                {
+                    ent->modeldata.edelay.factor = (float)dbltemp;
+                }
+            }
+            else if (paramCount > 4 && SUCCEEDED(ScriptVariant_IntegerValue(varlist[4], &ltemp2)))
+            {
+                ent->modeldata.edelay.modifier = ltemp2;
+            }
+        }
 
-        if(paramCount >= 4 && SUCCEEDED(ScriptVariant_IntegerValue(varlist[4], &ltemp)))
+        if(paramCount > 4 && SUCCEEDED(ScriptVariant_IntegerValue(varlist[4], &ltemp)))
         {
             ent->modeldata.edelay.cap.min = (LONG)ltemp;
         }
-        if(paramCount >= 5 && SUCCEEDED(ScriptVariant_IntegerValue(varlist[5], &ltemp)))
+        if(paramCount > 5 && SUCCEEDED(ScriptVariant_IntegerValue(varlist[5], &ltemp)))
         {
             ent->modeldata.edelay.cap.max = (LONG)ltemp;
         }
-        if(paramCount >= 6 && SUCCEEDED(ScriptVariant_IntegerValue(varlist[6], &ltemp)))
+        if(paramCount > 6 && SUCCEEDED(ScriptVariant_IntegerValue(varlist[6], &ltemp)))
         {
             ent->modeldata.edelay.range.min = (LONG)ltemp;
         }
-        if(paramCount >= 7 && SUCCEEDED(ScriptVariant_IntegerValue(varlist[7], &ltemp)))
+        if(paramCount > 7 && SUCCEEDED(ScriptVariant_IntegerValue(varlist[7], &ltemp)))
         {
             ent->modeldata.edelay.range.max = (LONG)ltemp;
         }
@@ -6638,6 +6798,11 @@ HRESULT openbor_changeentityproperty(ScriptVariant **varlist , ScriptVariant **p
     {
         if(SUCCEEDED(ScriptVariant_IntegerValue(varlist[2], &ltemp)))
         {
+            if (obor_uses_legacy_death_config())
+            {
+                ent->modeldata.legacy_falldie = ltemp;
+                break;
+            }
             ent->modeldata.death_config_flags = death_config_get_value_from_falldie(ent->modeldata.death_config_flags, (e_falldie_config)ltemp);
         }
         break;
@@ -6654,7 +6819,7 @@ HRESULT openbor_changeentityproperty(ScriptVariant **varlist , ScriptVariant **p
     {
         if(SUCCEEDED(ScriptVariant_IntegerValue(varlist[2], &ltemp)))
         {
-            ent->next_hit_time = (LONG)ltemp;
+            ent->next_hit_time = obor_script_entity_deadline(ltemp);
         }
         break;
     }
@@ -6662,7 +6827,7 @@ HRESULT openbor_changeentityproperty(ScriptVariant **varlist , ScriptVariant **p
     {
         if(SUCCEEDED(ScriptVariant_IntegerValue(varlist[2], &ltemp)))
         {
-            ent->freezetime = (LONG)ltemp;
+            ent->freezetime = obor_script_entity_deadline(ltemp);
         }
         break;
     }
@@ -6678,7 +6843,14 @@ HRESULT openbor_changeentityproperty(ScriptVariant **varlist , ScriptVariant **p
     {
         if(SUCCEEDED(ScriptVariant_IntegerValue(varlist[2], &ltemp)))
         {
-            ent->shadow_config_flags = shadow_get_config_from_legacy_gfxshadow(ent->shadow_config_flags, ltemp);
+            if (obor_profile_build < 7475u)
+            {
+                ent->modeldata.legacy_gfxshadow = (LONG)ltemp;
+            }
+            else
+            {
+                ent->shadow_config_flags = shadow_get_config_from_legacy_gfxshadow(ent->shadow_config_flags, ltemp);
+            }
         }
         break;
     }
@@ -6809,7 +6981,7 @@ HRESULT openbor_changeentityproperty(ScriptVariant **varlist , ScriptVariant **p
                 }
                 else
                 {
-                    ent->faction.type_hostile |= ltemp;
+                    ent->faction.type_hostile |= obor_type_mask_from_script(ltemp);
                 }
             }
             else
@@ -6845,7 +7017,7 @@ HRESULT openbor_changeentityproperty(ScriptVariant **varlist , ScriptVariant **p
     {
         if(SUCCEEDED(ScriptVariant_IntegerValue(varlist[2], &ltemp)))
         {
-            ent->invinctime = (LONG)ltemp;
+            ent->invinctime = obor_script_entity_deadline(ltemp);
         }
         break;
     }
@@ -6884,7 +7056,9 @@ HRESULT openbor_changeentityproperty(ScriptVariant **varlist , ScriptVariant **p
     {
         if(SUCCEEDED(ScriptVariant_IntegerValue(varlist[2], &ltemp)))
         {
-            ent->modeldata.air_control = (e_air_control)air_control_interpret_from_legacy_jumpmove_z(ent->modeldata.air_control, ltemp);
+            ent->modeldata.air_control = obor_profile_build < 7436u
+                ? air_control_interpret_from_legacy_jumpmove_x(ent->modeldata.air_control, ltemp)
+                : air_control_interpret_from_legacy_jumpmove_z(ent->modeldata.air_control, ltemp);
         }
         break;
     }
@@ -6937,7 +7111,7 @@ HRESULT openbor_changeentityproperty(ScriptVariant **varlist , ScriptVariant **p
             case _ep_knockdowncount_time:
                 if(SUCCEEDED(ScriptVariant_IntegerValue(varlist[2], &ltemp)))
                 {
-                    ent->knockdowntime = (LONG)ltemp;
+                    ent->knockdowntime = obor_script_entity_deadline(ltemp);
                 }
                 break;
             }
@@ -6961,15 +7135,16 @@ HRESULT openbor_changeentityproperty(ScriptVariant **varlist , ScriptVariant **p
     }
     case _ep_lifeposition:
     {
-        if (ent->modeldata.hud_popup)
+        s_axis_plane_vertical_int *position = obor_model_hud_graph_position(&ent->modeldata);
+        if (position)
         {
             if (SUCCEEDED(ScriptVariant_IntegerValue(varlist[2], &ltemp)))
             {
-                ent->modeldata.hud_popup->graph_position.x = (LONG)ltemp;
+                position->x = (LONG)ltemp;
             }
             if (paramCount > 3 && SUCCEEDED(ScriptVariant_IntegerValue(varlist[3], &ltemp)))
             {
-                ent->modeldata.hud_popup->graph_position.y = (LONG)ltemp;
+                position->y = (LONG)ltemp;
             }
         }
         break;
@@ -7010,7 +7185,7 @@ HRESULT openbor_changeentityproperty(ScriptVariant **varlist , ScriptVariant **p
     {
         if(SUCCEEDED(ScriptVariant_IntegerValue(varlist[2], &ltemp)))
         {
-            ent->maptime = (LONG)ltemp;
+            ent->maptime = obor_script_entity_deadline(ltemp);
         }
         break;
     }
@@ -7174,15 +7349,16 @@ HRESULT openbor_changeentityproperty(ScriptVariant **varlist , ScriptVariant **p
     }
     case _ep_nameposition:
     {
-        if (ent->modeldata.hud_popup)
+        s_axis_plane_vertical_int *position = obor_model_hud_name_position(&ent->modeldata);
+        if (position)
         {
             if (SUCCEEDED(ScriptVariant_IntegerValue(varlist[2], &ltemp)))
             {
-                ent->modeldata.hud_popup->name_position.x = (LONG)ltemp;
+                position->x = (LONG)ltemp;
             }
             if (paramCount > 3 && SUCCEEDED(ScriptVariant_IntegerValue(varlist[3], &ltemp)))
             {
-                ent->modeldata.hud_popup->name_position.y = (LONG)ltemp;
+                position->y = (LONG)ltemp;
             }
         }
         break;
@@ -7191,7 +7367,7 @@ HRESULT openbor_changeentityproperty(ScriptVariant **varlist , ScriptVariant **p
     {
         if(SUCCEEDED(ScriptVariant_IntegerValue(varlist[2], &ltemp)))
         {
-            ent->nextanim = (LONG)ltemp;
+            ent->nextanim = obor_script_entity_deadline(ltemp);
         }
         break;
     }
@@ -7199,7 +7375,7 @@ HRESULT openbor_changeentityproperty(ScriptVariant **varlist , ScriptVariant **p
     {
         if(SUCCEEDED(ScriptVariant_IntegerValue(varlist[2], &ltemp)))
         {
-            ent->nextmove = (LONG)ltemp;
+            ent->nextmove = obor_script_entity_deadline(ltemp);
         }
         break;
     }
@@ -7207,7 +7383,7 @@ HRESULT openbor_changeentityproperty(ScriptVariant **varlist , ScriptVariant **p
     {
         if(SUCCEEDED(ScriptVariant_IntegerValue(varlist[2], &ltemp)))
         {
-            ent->nextthink = (LONG)ltemp;
+            ent->nextthink = obor_script_entity_deadline(ltemp);
         }
         break;
     }
@@ -7239,6 +7415,11 @@ HRESULT openbor_changeentityproperty(ScriptVariant **varlist , ScriptVariant **p
     {
         if(SUCCEEDED(ScriptVariant_IntegerValue(varlist[2], &ltemp)))
         {
+            if (obor_uses_legacy_death_config())
+            {
+                ent->modeldata.legacy_nodieblink = ltemp;
+                break;
+            }
             ent->modeldata.death_config_flags = death_config_get_value_from_nodieblink(ent->modeldata.death_config_flags, (e_nodieblink_config)ltemp);
         }
         break;
@@ -7247,6 +7428,12 @@ HRESULT openbor_changeentityproperty(ScriptVariant **varlist , ScriptVariant **p
     {
         if(SUCCEEDED(ScriptVariant_IntegerValue(varlist[2], &ltemp)))
         {
+            if (obor_profile_build < 7494u)
+            {
+                ent->modeldata.legacy_nodrop = ltemp;
+                break;
+            }
+
             ent->modeldata.pain_config_flags &= ~(PAIN_CONFIG_FALL_DISABLE | PAIN_CONFIG_FALL_DISABLE_AIR);
 
             if (ltemp == 1)
@@ -7295,6 +7482,12 @@ HRESULT openbor_changeentityproperty(ScriptVariant **varlist , ScriptVariant **p
     {
         if(SUCCEEDED(ScriptVariant_IntegerValue(varlist[2], &ltemp)))
         {
+            if (obor_profile_build < 7494u)
+            {
+                ent->modeldata.legacy_nopain = ltemp;
+                break;
+            }
+
             if (ltemp)
             {
                 ent->modeldata.pain_config_flags |= PAIN_CONFIG_PAIN_DISABLE;
@@ -7306,11 +7499,19 @@ HRESULT openbor_changeentityproperty(ScriptVariant **varlist , ScriptVariant **p
         }
         break;
     }    
+    case OBOR_LEGACY_EP_NOSHADOW:
+    {
+        if(SUCCEEDED(ScriptVariant_IntegerValue(varlist[2], &ltemp)))
+        {
+            ent->modeldata.legacy_noshadow = ltemp;
+        }
+        break;
+    }
     case _ep_offense:
     {
-        if(paramCount >= 4 &&
+        if(paramCount >= 4 && ent->offense &&
                 SUCCEEDED(ScriptVariant_IntegerValue(varlist[2], &ltemp)) &&
-                ltemp < (LONG)MAX_ATKS && ltemp >= (LONG)0 &&
+                ltemp >= 0 && ltemp < max_attack_types && ltemp < (LONG)MAX_ATKS &&
                 SUCCEEDED(ScriptVariant_DecimalValue(varlist[3], &dbltemp)))
         {
             ent->offense[(LONG)ltemp].factor = (DOUBLE)dbltemp;
@@ -7433,7 +7634,7 @@ HRESULT openbor_changeentityproperty(ScriptVariant **varlist , ScriptVariant **p
                 }
                 else
                 {
-                    ent->faction.type_damage_indirect |= ltemp;
+                    ent->faction.type_damage_indirect |= obor_type_mask_from_script(ltemp);
                 }
             }
             else
@@ -7452,7 +7653,7 @@ HRESULT openbor_changeentityproperty(ScriptVariant **varlist , ScriptVariant **p
             ent->modeldata.runspeed = (DOUBLE)dbltemp;
 
             // For backward compatability.
-            if (ent->modeldata.runspeed)
+            if (obor_profile_build >= 7525u && ent->modeldata.runspeed)
             {
                 ent->modeldata.run_config_flags |= (RUN_CONFIG_X_LEFT_ENABLED | RUN_CONFIG_X_LEFT_INITIAL | RUN_CONFIG_X_RIGHT_ENABLED | RUN_CONFIG_X_RIGHT_INITIAL);
             }
@@ -7467,7 +7668,12 @@ HRESULT openbor_changeentityproperty(ScriptVariant **varlist , ScriptVariant **p
         }
         if(paramCount >= 6 && SUCCEEDED(ScriptVariant_DecimalValue(varlist[5], &dbltemp)))
         {            
-            if ((int)dbltemp)
+            const int runhold = obor_run_value_to_int(dbltemp);
+            if (obor_profile_build < 7529u)
+            {
+                ent->modeldata.legacy_runhold = runhold;
+            }
+            else if (runhold)
             {
                 ent->modeldata.run_config_flags |= RUN_CONFIG_LAND;
             }
@@ -7478,14 +7684,14 @@ HRESULT openbor_changeentityproperty(ScriptVariant **varlist , ScriptVariant **p
         }
         if(paramCount >= 7 && SUCCEEDED(ScriptVariant_DecimalValue(varlist[6], &dbltemp)))
         {
-            ent->modeldata.runupdown = (int)dbltemp;
+            ent->modeldata.runupdown = obor_run_value_to_int(dbltemp);
 
             /* For backward compatability. */
-            if (ent->modeldata.runupdown)
+            if (obor_profile_build >= 7525u && ent->modeldata.runupdown)
             {
                 ent->modeldata.run_config_flags |= (RUN_CONFIG_Z_DOWN_ENABLED | RUN_CONFIG_Z_UP_ENABLED);
             }
-            else
+            else if (obor_profile_build >= 7529u)
             {
                 ent->modeldata.run_config_flags &= ~(RUN_CONFIG_Z_DOWN_ENABLED | RUN_CONFIG_Z_UP_ENABLED);
             }
@@ -7513,7 +7719,7 @@ HRESULT openbor_changeentityproperty(ScriptVariant **varlist , ScriptVariant **p
     {
         if(SUCCEEDED(ScriptVariant_IntegerValue(varlist[2], &ltemp)))
         {
-            ent->rush.time = (LONG)ltemp;
+            ent->rush.time = obor_profile_build < 7510u ? (u32)ltemp : (unsigned long)(LONG)ltemp;
         }
         break;
     }
@@ -7545,7 +7751,7 @@ HRESULT openbor_changeentityproperty(ScriptVariant **varlist , ScriptVariant **p
     {
         if(SUCCEEDED(ScriptVariant_IntegerValue(varlist[2], &ltemp)))
         {
-            ent->sealtime = (LONG)ltemp;
+            ent->sealtime = obor_script_entity_deadline(ltemp);
         }
         break;
     }
@@ -7569,7 +7775,14 @@ HRESULT openbor_changeentityproperty(ScriptVariant **varlist , ScriptVariant **p
     {
         if(SUCCEEDED(ScriptVariant_IntegerValue(varlist[2], &ltemp)))
         {
-            ent->shadow_config_flags = shadow_get_config_from_legacy_shadowbase(ent->shadow_config_flags, ltemp);
+            if (obor_profile_build < 7475u)
+            {
+                ent->modeldata.legacy_shadowbase = (LONG)ltemp;
+            }
+            else
+            {
+                ent->shadow_config_flags = shadow_get_config_from_legacy_shadowbase(ent->shadow_config_flags, ltemp);
+            }
         }
         break;
     }
@@ -7694,7 +7907,7 @@ HRESULT openbor_changeentityproperty(ScriptVariant **varlist , ScriptVariant **p
     {
         if(SUCCEEDED(ScriptVariant_IntegerValue(varlist[2], &ltemp)))
         {
-            ent->stalltime = (LONG)ltemp;
+            ent->stalltime = obor_script_entity_deadline(ltemp);
         }
         break;
     }
@@ -7702,7 +7915,7 @@ HRESULT openbor_changeentityproperty(ScriptVariant **varlist , ScriptVariant **p
     {
         if(SUCCEEDED(ScriptVariant_IntegerValue(varlist[2], &ltemp)))
         {
-            ent->releasetime = (LONG)ltemp;
+            ent->releasetime = obor_script_entity_deadline(ltemp);
         }
         break;
     }
@@ -7729,7 +7942,7 @@ HRESULT openbor_changeentityproperty(ScriptVariant **varlist , ScriptVariant **p
         {
             if(SUCCEEDED(ScriptVariant_IntegerValue(varlist[3], &ltemp)))
             {
-                ent->staydown.rise = (LONG)ltemp;
+                ent->staydown.rise = obor_script_entity_deadline(ltemp);
             }
             break;
         }
@@ -7737,7 +7950,7 @@ HRESULT openbor_changeentityproperty(ScriptVariant **varlist , ScriptVariant **p
         {
             if(SUCCEEDED(ScriptVariant_IntegerValue(varlist[3], &ltemp)))
             {
-                ent->staydown.riseattack = (LONG)ltemp;
+                ent->staydown.riseattack = obor_script_entity_deadline(ltemp);
             }
             break;
         }
@@ -7745,7 +7958,7 @@ HRESULT openbor_changeentityproperty(ScriptVariant **varlist , ScriptVariant **p
         {
             if(SUCCEEDED(ScriptVariant_IntegerValue(varlist[3], &ltemp)))
             {
-                ent->staydown.riseattack_stall = (LONG)ltemp;
+                ent->staydown.riseattack_stall = obor_script_entity_deadline(ltemp);
             }
             break;
         }
@@ -8014,7 +8227,7 @@ HRESULT openbor_changeentityproperty(ScriptVariant **varlist , ScriptVariant **p
     {
         if(SUCCEEDED(ScriptVariant_IntegerValue(varlist[2], &ltemp)))
         {
-            ent->toss_time = (LONG)ltemp;
+            ent->toss_time = obor_script_entity_deadline(ltemp);
         }
         break;
     }
@@ -8046,7 +8259,7 @@ HRESULT openbor_changeentityproperty(ScriptVariant **varlist , ScriptVariant **p
         }
 
         ltemp = varlist[2]->lVal;
-        ent->modeldata.type = (LONG)ltemp;
+        ent->modeldata.type = (e_entity_type)obor_type_mask_from_script(ltemp);
 
         break;
     }
@@ -9690,7 +9903,18 @@ int getsyspropertybyindex(ScriptVariant *var, int index)
     case SYSTEM_PROPERTY_PAKNAME:
     {
         char tempstr[MAX_BUFFER_LEN];
-        getPakName(tempstr, sizeof(tempstr), -1);
+        if (obor_profile_build < 7530u)
+        {
+            if (!obor_pak_label(tempstr, sizeof(tempstr), packfile))
+            {
+                ScriptVariant_Clear(var);
+                return 0;
+            }
+        }
+        else
+        {
+            getPakName(tempstr, sizeof(tempstr), -1);
+        }
         ScriptVariant_ChangeType(var, VT_STR);
         var->strVal = StrCache_CreateNewFrom(tempstr);
         break;
@@ -9957,7 +10181,8 @@ int getsyspropertybyindex(ScriptVariant *var, int index)
     case SYSTEM_PROPERTY_WAITING:
 
         ScriptVariant_ChangeType(var, VT_INTEGER);
-        var->lVal = level ? level->waiting : 0;
+        var->lVal = obor_profile_build < 7472u ? max_attack_types
+            : (level ? level->waiting : 0);
         break;
 
     case SYSTEM_PROPERTY_XPOS:
@@ -11777,10 +12002,9 @@ HRESULT openbor_killentity(ScriptVariant **varlist , ScriptVariant **pretvar, in
         return S_OK;
     }
 
-    // Get the saves directory
-    if (paramCount >= 2)
+    if (obor_profile_build >= 7425u && paramCount >= 2)
     {
-        trigger = (e_kill_entity_trigger)(varlist[1])->lVal; // Reason to kill entity.
+        trigger = obor_kill_trigger_from_script((varlist[1])->lVal);
     }
 
     kill_entity(ent, trigger);
@@ -12460,6 +12684,10 @@ HRESULT openbor_projectile(ScriptVariant **varlist , ScriptVariant **pretvar, in
 	int relative = 0;
 
 	s_projectile projectile = projectile_default_config;
+    if (obor_profile_build < 7375u)
+    {
+        projectile.position.x = 60.0f;
+    }
 
 	/* We are going to return an entity pointer (or NULL). */
 	ScriptVariant_ChangeType(*pretvar, VT_PTR);
@@ -12671,12 +12899,18 @@ HRESULT openbor_projectile(ScriptVariant **varlist , ScriptVariant **pretvar, in
     }
 
 	// Apply incomming parameters.
-    ent->base = self->base;
+    if (obor_profile_build >= 7427u)
+    {
+        ent->base = self->base;
+    }
 	ent->position.x = x;
 	ent->position.y = a;
 	ent->position.z = z;
 	ent->direction = direction;
-	ent->projectile_prime |= PROJECTILE_PRIME_INITIALIZE_LEGACY_PROJECTILE_FUNCTION;
+    if (obor_profile_build >= 7421u)
+    {
+        ent->projectile_prime |= PROJECTILE_PRIME_INITIALIZE_LEGACY_PROJECTILE_FUNCTION;
+    }
     
     //printf("\n\t position (base, x, y, z): %d, %f, %f, %f", ent->base, ent->position.x, ent->position.y, ent->position.z);
     
@@ -13659,7 +13893,7 @@ HRESULT openbor_changetextobjproperty(ScriptVariant **varlist , ScriptVariant **
     {
         if(SUCCEEDED(ScriptVariant_IntegerValue(varlist[2], &ltemp)))
         {
-            level->textobjs[ind].time = (LONG)ltemp;
+            level->textobjs[ind].time = obor_profile_level_deadline(ltemp);
         }
         else
         {
@@ -13778,7 +14012,7 @@ HRESULT openbor_settextobj(ScriptVariant **varlist , ScriptVariant **pretvar, in
         goto settextobj_error;
     }
 
-    level->textobjs[ind].time = (int)T;
+    level->textobjs[ind].time = obor_profile_level_deadline(T);
     level->textobjs[ind].position.x = (int)X;
     level->textobjs[ind].position.y = (int)Y;
     level->textobjs[ind].position.z = (int)Z;
@@ -14551,6 +14785,10 @@ HRESULT openbor_bindentity(ScriptVariant **varlist , ScriptVariant **pretvar, in
             return E_FAIL;
         }
         ent->binding.offset.y = (int)a;
+        if (obor_profile_build < 7391u)
+        {
+            ent->binding.config = BIND_CONFIG_NONE;
+        }
         ent->binding.config |= BIND_CONFIG_AXIS_Y_TARGET;
     }
 

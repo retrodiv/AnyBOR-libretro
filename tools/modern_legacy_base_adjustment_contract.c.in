@@ -1,0 +1,171 @@
+/* SPDX-License-Identifier: BSD-3-Clause
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me>
+ */
+#include <stdint.h>
+#include <float.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include "openbor.h"
+#undef printf
+
+uint32_t obor_profile_build;
+entity *self;
+static entity actor, platform, old_actor;
+static entity *platform_below;
+static s_anim actor_animation, platform_animation;
+static s_move move;
+static s_move *moves[] = {&move};
+static float platform_surfaces[1][8];
+static s_terrain walls[1], holes[1];
+static s_level stage = {.walls = walls, .holes = holes};
+s_level *level = &stage;
+static int wall_index, in_hole;
+static unsigned inherited_gravity, hole_callbacks, unlinks;
+static float basemap_height;
+
+static void check(int pass, const char *description)
+{
+    if (!pass)
+    {
+        fprintf(stderr, "%u: %s\n", obor_profile_build, description);
+        abort();
+    }
+}
+
+entity *check_platform_below_entity(entity *entity)
+{
+    check(entity == &actor, "Platform query uses the active actor");
+    return platform_below;
+}
+void check_gravity(entity *entity)
+{
+    check(entity == &platform, "Nested gravity uses the platform");
+    entity->update_mark |= UPDATE_MARK_CHECK_GRAVITY;
+    ++inherited_gravity;
+}
+int testplatform(entity *entity, float x, float z, struct entity *unused) { return entity == platform_below; }
+int checkwall_below(float x, float z, float altitude) { return wall_index; }
+float check_basemap(int x, int z) { return basemap_height; }
+int checkhole_in(float x, float z, float height) { return in_hole; }
+int checkholeindex_in(float x, float z, float height) { return in_hole ? 0 : HOLE_INDEX_NONE; }
+void execute_inhole_script(entity *entity, s_terrain *hole, int index)
+{
+    check(entity == &actor && hole == &holes[0] && index == 0, "Hole callback receives actor and hole index");
+    ++hole_callbacks;
+}
+void ent_unlink(entity *entity)
+{
+    check(entity == &actor, "Hole entry unlinks the actor");
+    ++unlinks;
+}
+
+@ADJUST_BASE@
+
+static void reset(void)
+{
+    actor = (entity){.animation = &actor_animation};
+    platform = (entity){.animation = &platform_animation};
+    actor_animation = (s_anim){.move = moves};
+    platform_animation = (s_anim){.platform = platform_surfaces};
+    move = (s_move){0};
+    platform_below = NULL;
+    self = &actor;
+    wall_index = WALL_INDEX_NONE;
+    in_hole = 0;
+    basemap_height = 0;
+    inherited_gravity = hole_callbacks = unlinks = 0;
+}
+
+static void check_platform_rounding(void)
+{
+    reset();
+    volatile float platform_y = 0.2f, height = 1.0f;
+    platform_below = &platform;
+    platform.position.y = platform_y;
+    platform_surfaces[0][PLATFORM_HEIGHT] = height;
+    actor.modeldata.move_config_flags = MOVE_CONFIG_SUBJECT_TO_PLATFORM;
+    actor.position.y = 3.0f;
+    move.base = 1;
+    actor.altbase = -0.9f;
+    volatile float manual_base = move.base + actor.altbase;
+    entity *under = &old_actor;
+    adjust_base(&actor, &under);
+    const float expected = obor_profile_build < 7390u
+        ? manual_base + (platform_y + height) : (manual_base + platform_y) + height;
+    if (FLT_EVAL_METHOD == 0)
+    {
+        float legacy = manual_base + (platform_y + height);
+        float revised = (manual_base + platform_y) + height;
+        check(legacy != revised, "Platform control distinguishes the two source formulas");
+    }
+    check(actor.base == expected && under == &platform, "Original platform height addition");
+    check(inherited_gravity == 1 && self == &actor, "Platform recursion preserves the active actor");
+
+    actor.position.y = 0.8f;
+    adjust_base(&actor, &under);
+    check(actor.landed_on_platform == &platform && inherited_gravity == 1 &&
+          actor.position.y == platform_y + height, "Landing uses the platform surface once");
+}
+
+static void check_wall_height(void)
+{
+    reset();
+    wall_index = 0;
+    walls[0].height = 7;
+    const e_move_config_flags config = MOVE_CONFIG_SUBJECT_TO_WALL;
+    actor.modeldata.move_config_flags = config;
+    actor.position.y = 5;
+    actor.toexplode = EXPLODE_PREPARE_GROUND;
+    entity *under = NULL;
+    adjust_base(&actor, &under);
+    float expected = obor_profile_build < 7390u ? 7 : obor_profile_build < 7435u ? 5 : 0;
+    check(actor.base == expected, "Original bomb height at wall contact");
+
+    actor.toexplode = EXPLODE_NONE;
+    actor.modeldata.move_config_flags = config | MOVE_CONFIG_PROJECTILE_WALL_BOUNCE;
+    adjust_base(&actor, &under);
+    expected = obor_profile_build < 7427u ? 7 : obor_profile_build < 7435u ? 5 : 0;
+    check(actor.base == expected, "Original wall bounce height");
+}
+
+static void check_hole_and_basemap(void)
+{
+    reset();
+    actor.modeldata.move_config_flags = MOVE_CONFIG_SUBJECT_TO_HOLE;
+    in_hole = 1;
+    entity *under = NULL;
+    adjust_base(&actor, &under);
+    check(actor.base == T_MIN_BASEMAP && hole_callbacks == 1 && unlinks == 1, "Original hole entry");
+
+    in_hole = 0;
+    actor.position.y = -1;
+    actor.velocity.x = 8;
+    actor.velocity.z = 9;
+    adjust_base(&actor, &under);
+    check(actor.base == T_MIN_BASEMAP && actor.velocity.x == 0 && actor.velocity.z == 0,
+          "Original hole border");
+
+    actor.position.y = 1;
+    adjust_base(&actor, &under);
+    check(actor.base == 0 && hole_callbacks == 1, "Original exit from a hole");
+
+    reset();
+    actor.modeldata.move_config_flags = MOVE_CONFIG_SUBJECT_TO_BASEMAP;
+    basemap_height = 4;
+    actor.position.y = 4 + T_WALKOFF / 2.0f;
+    adjust_base(&actor, &under);
+    check(actor.base == 4 && actor.position.y == 4, "Original basemap walkoff threshold");
+}
+
+int main(void)
+{
+    const unsigned revisions[] = {7369, 7389, 7390, 7391, 7420, 7426, 7427, 7434, 7435, 7533};
+    for (size_t i = 0; i < sizeof(revisions) / sizeof(*revisions); ++i)
+    {
+        obor_profile_build = revisions[i];
+        check_platform_rounding();
+        check_wall_height();
+        check_hole_and_basemap();
+    }
+    return 0;
+}

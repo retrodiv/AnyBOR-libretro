@@ -43,6 +43,14 @@ const s_property_access_map model_get_property_map(const void* acting_object_par
             profile_index += 2;
         }
     }
+    if (obor_profile_build >= 7446u && property_index_param == obor_profile_model_faction_index())
+    {
+        profile_index = MODEL_PROPERTY_FACTION;
+    }
+    else if (profile_index == MODEL_PROPERTY_FACTION)
+    {
+        profile_index = MODEL_PROPERTY_END;
+    }
     const e_model_properties property_index = profile_index;
 
     switch (property_index)
@@ -174,10 +182,18 @@ const s_property_access_map model_get_property_map(const void* acting_object_par
         break;
 
     case MODEL_PROPERTY_FACTION:
-        property_map.config_flags = PROPERTY_ACCESS_CONFIG_MACRO_DEFAULT;
         property_map.field = &acting_object->faction;
         property_map.id_string = "MODEL_PROPERTY_FACTION";
-        property_map.type = VT_INTEGER;
+        if (obor_profile_build < 7504u)
+        {
+            property_map.config_flags = PROPERTY_ACCESS_CONFIG_READ | PROPERTY_ACCESS_CONFIG_STATIC_POINTER;
+            property_map.type = VT_PTR;
+        }
+        else
+        {
+            property_map.config_flags = PROPERTY_ACCESS_CONFIG_MACRO_DEFAULT;
+            property_map.type = VT_INTEGER;
+        }
         break;
 
     case MODEL_PROPERTY_FLIP:

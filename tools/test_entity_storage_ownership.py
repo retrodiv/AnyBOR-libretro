@@ -26,12 +26,25 @@ def program(engine, profiles, *, omit_release=False):
     core = (engine / 'openbor.c').read_text(encoding='latin1')
     ctor, release = function(core, 'alloc_ent'), function(core, 'free_ent')
     baseline = load_contract_fixture(FIXTURE)['engines'][engine.name]
+    original_ctor = baseline['alloc_ent']
     owned_varlist = 'obor_varlist_register(ent->varlist);' in ctor
     expected_release = baseline['free_ent']
     if owned_varlist:
         expected_release = expected_release.replace(
             '        Varlist_Clear(e->varlist);\n        free(e->varlist);',
             '        obor_varlist_release(e->obor_varlist_owned, 1);', 1)
+    if 'obor_defense_owned' in ctor:
+        for family in ('defense', 'offense'):
+            field = f'obor_{family}_owned'
+            old_init = f'ent->{family} = {family}_allocate_object();'
+            if original_ctor.count(old_init) != 1:
+                raise ValueError('Expected the original combat collection allocation')
+            original_ctor = original_ctor.replace(old_init, f'ent->{field} = {old_init}')
+            old_release = (f'    if(e->{family})\n    {{\n        {family}_free_object(e->{family});\n'
+                           f'        e->{family} = NULL;\n    }}')
+            if expected_release.count(old_release) != 1:
+                raise ValueError('Expected the original combat collection release')
+            expected_release = expected_release.replace(old_release, f'    {family}_free_object(e->{field});')
     if expected_release != release:
         raise ValueError('Unexpected change to native entity release')
     inline = 'defense_factors' in ctor
@@ -61,6 +74,10 @@ def program(engine, profiles, *, omit_release=False):
         helpers = '\n'.join(function(core, name) for name in (
             'defense_allocate_object', 'offense_allocate_object',
             'defense_free_object', 'offense_free_object'))
+        if 'obor_profile_default_defense()' in helpers:
+            defaults = ('static const s_defense legacy_default_defense = {0};\n' +
+                        function(core, 'obor_profile_default_defense'))
+            helpers = defaults + '\n' + helpers
         helpers = rename_identifiers(helpers, {'borShutdown': 'fixture_stop', 'shutdown': 'fixture_stop_alias'})
         matches = re.findall(r'(?m)^(?:static\s+const\s+char\s*\*\s*E_OUT_OF_MEMORY|char\s+E_OUT_OF_MEMORY\[\])[^;]*;', core)
         if len(matches) != 1:
@@ -82,7 +99,7 @@ def program(engine, profiles, *, omit_release=False):
         CALLBACK_ENUM=enums, DIAGNOSTIC=diagnostic, HELPERS=helpers,
         ROUTINES='\n'.join([
             rename_identifiers(release, providers), rename_identifiers(ctor, providers),
-            rename_identifiers(baseline['alloc_ent'], dict(providers, alloc_ent='original_alloc_ent'))]),
+            rename_identifiers(original_ctor, dict(providers, alloc_ent='original_alloc_ent'))]),
         PROFILES=','.join(str(int(p.get('revision', p['build'].split('-')[0])))+'u' for p in profiles))
     text = (HERE / 'entity_storage_ownership.c.in').read_text()
     for key, value in values.items():

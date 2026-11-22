@@ -37,7 +37,7 @@ v3.0 4432, v3.0 4453, v3.0 4454-dev, v3.0 4456, v3.0 4510-dev, v3.0 4574, v3.0 4
 v3.0 4596, v3.0 4624, v3.0 4626, v3.0 4642, v3.0 4665, v3.0 4682, v3.0 4701, v3.0 4742, v3.0 4750,
 v3.0 4905, v3.0 5134, v3.0 6119, v3.0 6175, v3.0 6196, v3.0 6203, v3.0 6212, v3.0 6223, v3.0 6240, v3.0 6245, v3.0 6258, v3.0 6271, v3.0 6276, v3.0 6291, v3.0 6297, v3.0 6301-dev, v3.0 6315, v3.0 6325, v3.0 6330, v3.0 6330-lns-010g, v3.0 6385, v3.0 6390, v3.0 6391, v3.0 6391-mod,
 v3.0 6392-dev, v3.0 6412-dev, v3.0 6453-dev, v3.0 6510-dev, v3.0 6997-dev, v3.0 7039-dev, v3.0 7086-dev, v3.0 7091-dev, v3.0 7123-dev, v4.0 7142-alpha,
-v4.0 7530, v4.0 7533, v4.0 7555, v4.0 7556, v4.0 7735 and v4.0 8023-dev.
+v3.0 7369-dev, v3.0 7391-dev, v3.0 7420-dev, v4.0 7530, v4.0 7533, v4.0 7555, v4.0 7556, v4.0 7735 and v4.0 8023-dev.
 
 Automatic selection uses build tags and content clues to choose a profile. You can select one
 manually when a game needs it. Historical profiles preserve selected earlier
@@ -600,6 +600,18 @@ keeps its unresolved package identity. The profile revisions and license
 notices are recorded in [source provenance](../PROVENANCE.md).
 
 
+### 7369, 7391 and 7420
+
+v3.0 7369-dev, v3.0 7391-dev and v3.0 7420-dev use the 7533 source tree.
+The profiles preserve the original model and script selectors, attack and
+projectile defaults and input behavior. The 7391 profile places the bound
+entity at its original destination. The 7420 profile applies single-depth
+collision boxes in both directions. The 7369 profile uses the original
+weapon inheritance and script complement rules.
+
+Exact filename build tags and manual selection choose these profiles.
+The original revisions and license are recorded in [source provenance](../PROVENANCE.md).
+
 ## Profile implementation details
 
 Profiles are compatibility selections. Several profiles use one physical source tree, with revision-specific behavior selected in code. Safety corrections and accepted additive extensions stay shared. This implementation reference is separate from the user-facing profile inventory.
@@ -895,6 +907,9 @@ Profiles are compatibility selections. Several profiles use one physical source 
 | v3.0 7091-dev | `7142` |
 | v3.0 7123-dev | `7142` |
 | v4.0 7142-alpha | `7142` |
+| v3.0 7369-dev | `7533` |
+| v3.0 7391-dev | `7533` |
+| v3.0 7420-dev | `7533` |
 | v4.0 7530 | `7533` |
 | v4.0 7533 | `7533` |
 | v4.0 7555 | `7533` |
@@ -952,6 +967,9 @@ boundary controls; they do not establish whole-game or native-host acceptance.
 | v3.0 7091-dev | `8ad68746200339af2a9006bd9f489f8df0d26347` | [Selected contracts](#6997-7039-and-7091) |
 | v3.0 7123-dev | `f5261e7cb97786909276c0b87f8f9f63504d2844` | [Selected contracts](HISTORICAL_PROFILES.md#divergent-test-profiles) |
 | v4.0 7142-alpha | `9dcd966d1dc8e93ff03c39edbd6bd262f4a2d7ab` | [v4.0 7142-alpha](modifications/7142.md) |
+| v3.0 7369-dev | `c0c8afe5dbdf5325e65e503ec0547f9b1e5c10eb` | [Selected contracts](#7369-7391-and-7420) |
+| v3.0 7391-dev | `8d809a5d13f9c77bc2a3e1cacfa4c5bf8aca4266` | [Selected contracts](#7369-7391-and-7420) |
+| v3.0 7420-dev | `8a180f22934d574d0159693951d0339eedc53f8a` | [Selected contracts](#7369-7391-and-7420) |
 | v4.0 7533 | `5c8261444de6b61f8e2ce6e79e3d86a2949e55bd` | [v4.0 7533](modifications/7533.md) |
 | v4.0 8023-dev | `16aae1a30b81063778f21977ae20b849bd1c76f9` | [v4.0 8023-dev](modifications/8023.md) |
 

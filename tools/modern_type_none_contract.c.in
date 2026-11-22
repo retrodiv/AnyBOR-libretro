@@ -31,7 +31,7 @@ static void common_walk_anim(entity *ent) { (void)ent; ++walk_animation_calls; }
 
 static void initialize_type_case(entity *e)
 {
-    switch(e->modeldata.type)
+    @TYPE_SWITCH@
     {
         @ENTITY_CASE@
     default:

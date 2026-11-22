@@ -1,0 +1,144 @@
+/* SPDX-License-Identifier: BSD-3-Clause
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me>
+ */
+#include <stdarg.h>
+#include <stdint.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include "openbor.h"
+#undef printf
+
+uint32_t obor_profile_build;
+s_savedata savedata;
+entity *self;
+static entity bomb, victim;
+static unsigned wall_hits, deflections, log_events, kills;
+static int wall, deflection, animation;
+static e_kill_entity_trigger last_kill;
+static s_anim landing_animation, contact_animation;
+static s_anim *animations[ANI_ATTACK2 + 1];
+
+static void check(int pass, const char *message)
+{
+    if (!pass)
+    {
+        fprintf(stderr, "%u: %s\n", obor_profile_build, message);
+        abort();
+    }
+}
+
+static int record_log(const char *format, ...)
+{
+    ++log_events;
+    return 0;
+}
+
+int checkhole(float x, float z) { return 0; }
+entity *check_block_obstacle(entity *actor) { return NULL; }
+int check_block_wall(entity *actor)
+{
+    check(actor == &bomb, "Wall query uses the bomb");
+    ++wall_hits;
+    return wall ? 0 : WALL_INDEX_NONE;
+}
+int projectile_wall_deflect(entity *actor)
+{
+    check(actor == &bomb, "Deflection uses the bomb");
+    ++deflections;
+    return deflection;
+}
+int sound_play_sample(int sample, unsigned int priority, int left, int right, unsigned int speed)
+{
+    abort();
+}
+void ent_set_anim(entity *actor, int id, int reset)
+{
+    check(actor == &bomb && reset == 0 && (id == ANI_ATTACK1 || id == ANI_ATTACK2), "Bomb animation");
+    animation = id;
+    actor->animation = animations[id];
+}
+void kill_entity(entity *actor, e_kill_entity_trigger trigger)
+{
+    check(actor == &bomb, "Bomb removal uses the same entity");
+    last_kill = trigger;
+    ++kills;
+}
+
+#define printf(...) record_log(__VA_ARGS__)
+@ROUTINES@
+#undef printf
+
+static void mark_attack_contact(entity *attacking_entity)
+{
+    @ATTACK_CONTACT@
+}
+
+static void setup_bomb(int has_contact_animation)
+{
+    bomb = (entity){.position.y = 12, .direction = DIRECTION_RIGHT};
+    bomb.modeldata.speed.x = 5;
+    bomb.modeldata.diesound = -1;
+    bomb.modeldata.remove = 1;
+    bomb.modeldata.animation_capacity = sizeof(animations) / sizeof(*animations);
+    bomb.modeldata.animation = animations;
+    landing_animation = (s_anim){.numframes = 1, .move_config_flags = MOVE_CONFIG_SUBJECT_TO_GRAVITY};
+    contact_animation = landing_animation;
+    animations[ANI_ATTACK1] = &landing_animation;
+    animations[ANI_ATTACK2] = has_contact_animation ? &contact_animation : NULL;
+    wall_hits = deflections = log_events = kills = 0;
+    wall = deflection = 0;
+    animation = -1;
+    entity *ent = &bomb;
+    @SPAWN_PREPARATION@
+    check(bomb.toexplode == (obor_profile_build < 7390u ? 1 : 3), "Original prepared bits");
+}
+
+int main(void)
+{
+    const unsigned revisions[] = {7369, 7389, 7390, 7391, 7420, 7421, 7431,
+                                  7432, 7433, 7434, 7435, 7533};
+    for (size_t row = 0; row < sizeof(revisions) / sizeof(*revisions); ++row)
+    {
+        obor_profile_build = revisions[row];
+        const int legacy = obor_profile_build < 7390u;
+        const int logged = obor_profile_build >= 7390u && obor_profile_build < 7421u;
+        const unsigned hit_flag = legacy ? 2 : obor_profile_build < 7435u ? 4 : 8;
+        setup_bomb(1);
+        check(bomb_move(&bomb) == 1 && bomb.velocity.x == 5 && bomb.takeaction == NULL, "Prepared bomb moves in air");
+        check(deflections == (obor_profile_build >= 7432u) && wall_hits == (legacy ? 0 : logged ? 2 : 1),
+              "Original airborne geometry query order");
+        check(log_events == (logged ? 4u : 0u), "Original airborne diagnostics");
+        wall = 1;
+        check(bomb_move(&bomb) == 1 && (bomb.takeaction == bomb_explode) == !legacy,
+              "Wall contact introduced in 7390");
+        check(legacy || animation == ANI_ATTACK1, "Wall contact uses landing animation");
+
+        setup_bomb(1);
+        victim = (entity){.toexplode = bomb.toexplode};
+        self = &victim;
+        mark_attack_contact(&bomb);
+        check((bomb.toexplode & hit_flag) != 0, "Attacking bomb sets its original contact bit");
+        check(!!(victim.toexplode & hit_flag) == (obor_profile_build < 7435u),
+              "Earlier victims detonate with no damage animation");
+        check(bomb_move(&bomb) == 1 && bomb.takeaction == bomb_explode &&
+              animation == ANI_ATTACK2 && !(bomb.animation->move_config_flags & MOVE_CONFIG_SUBJECT_TO_GRAVITY),
+              "Contact chooses the original explosion animation");
+        check(!!(bomb.modeldata.move_config_flags & MOVE_CONFIG_SUBJECT_TO_WALL) == legacy,
+              "Original terrain rules from detonation");
+        self = &bomb;
+        bomb.animating = ANIMATING_FORWARD;
+        bomb_explode();
+        check(kills == 0, "Bomb stays through its animation");
+        bomb.animating = ANIMATING_NONE;
+        bomb_explode();
+        check(kills == 1 && last_kill == KILL_ENTITY_TRIGGER_BOMB_EXPLODE_ANIMATION_COMPLETE,
+              "Original removal on animation completion");
+
+        setup_bomb(0);
+        bomb.toexplode |= hit_flag;
+        check(bomb_move(&bomb) == 1 && bomb.takeaction == bomb_explode, "Missing contact animation");
+        check(animation == (obor_profile_build < 7433u ? ANI_ATTACK1 : -1) &&
+              kills == (obor_profile_build >= 7433u), "Original fallback and removal boundary");
+    }
+    return 0;
+}

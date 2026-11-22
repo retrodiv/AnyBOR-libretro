@@ -1,0 +1,269 @@
+/* SPDX-License-Identifier: BSD-3-Clause
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me>
+ */
+#include <stdint.h>
+#pragma GCC diagnostic ignored "-Wignored-qualifiers"
+#if defined(__clang__)
+#pragma GCC diagnostic ignored "-Wdeprecated-non-prototype"
+#endif
+#include "scriptcommon.h"
+#undef assert
+#include <assert.h>
+
+uint32_t obor_profile_build;
+const s_drawmethod plainmethod = {0};
+int PLAYER_MAX_Z = 232;
+static int colorbars, color_black, color_white;
+static int hpcolourtable[11], mpcolourtable[11], ldcolourtable[11];
+
+@INITIALIZERS@
+
+static unsigned boxes, lines, titles, warnings;
+static int title_x, title_y;
+struct rectangle { int x, y, width, height; };
+static struct rectangle background, foreground;
+
+void *checkAlloc(void *pointer, size_t size, const char *function, const char *file, int line)
+{
+    assert(pointer);
+    return pointer;
+}
+
+void spriteq_add_box(int x, int y, int width, int height, int z, int colour, s_drawmethod *method)
+{
+    if(boxes++ == 0)
+    {
+        background = (struct rectangle){x, y, width, height};
+    }
+    else
+    {
+        foreground = (struct rectangle){x, y, width, height};
+    }
+}
+
+void spriteq_add_line(int x, int y, int end_x, int end_y, int z, int colour, s_drawmethod *method)
+{
+    ++lines;
+}
+
+void spriteq_add_sprite(int x, int y, int z, int id, s_drawmethod *method, int sort_id)
+{
+    assert(0 && "Popup icon is disabled in this case");
+}
+
+void font_printf(int x, int y, int font, int layer, char *format, ...)
+{
+    ++titles;
+    title_x = x;
+    title_y = y;
+}
+
+static void observe_warning(const char *format, ...)
+{
+    ++warnings;
+}
+
+#undef printf
+#define printf observe_warning
+@METHODS@
+#undef printf
+
+HRESULT ScriptVariant_IntegerValue(ScriptVariant *value, LONG *result)
+{
+    if (value->vt != VT_INTEGER)
+    {
+        return E_FAIL;
+    }
+    *result = value->lVal;
+    return S_OK;
+}
+
+enum { CMD_MODEL_LIFEPOSITION, CMD_MODEL_NAMEPOSITION, CMD_MODEL_LIFEBARSTATUS };
+enum { _ep_lifeposition, _ep_nameposition };
+
+static void load_position(s_model *newchar, int directive, char *line)
+{
+    ArgList arglist;
+    char argbuf[MAX_ARG_LEN + 1] = "";
+    char *value;
+    char *filename = "actor.txt";
+    char *buf = line;
+    int pos = 0;
+    ParseArgs(&arglist, line, argbuf);
+    char *command = GET_ARG(0);
+    switch(directive)
+    {
+        @MODEL_COMMANDS@
+    }
+}
+
+static void change_position(entity *ent, int property, int count, int x, int y)
+{
+    ScriptVariant values[] = {{.vt = VT_INTEGER, .lVal = x}, {.vt = VT_INTEGER, .lVal = y}};
+    ScriptVariant *varlist[] = {NULL, NULL, &values[0], &values[1]};
+    int paramCount = count;
+    LONG ltemp;
+    switch(property)
+    {
+        @SCRIPT_PROPERTIES@
+    }
+}
+
+static void display_popup(entity *e)
+{
+    @DISPLAY@
+}
+
+static void reset_level_order(void)
+{
+@LEVEL_DEFAULTS@
+}
+
+static void expect_draw(s_barstatus *status, unsigned expected_boxes, unsigned expected_lines)
+{
+    boxes = lines = 0;
+    bar(100, 200, 30, 60, status);
+    assert(boxes == expected_boxes && lines == expected_lines);
+}
+
+static void check_options(int legacy)
+{
+    s_barstatus status = {0};
+    _readbarstatus("lifebarstatus 40 20 -1 1 1 7 8 9 10", &status);
+    assert(status.borderlayer == 7 && status.shadowlayer == 8);
+    assert(status.barlayer == 9 && status.backlayer == 10);
+    expect_draw(&status, 2, 0);
+    assert(foreground.x == 101 && foreground.y == 211);
+    assert(foreground.width == 40 && foreground.height == 10);
+
+    _readbarstatus("lifebarstatus 40 20 0 0 0", &status);
+    expect_draw(&status, 2, legacy ? 6 : 0);
+    assert(foreground.y == (legacy ? 201 : 211));
+    assert(foreground.width == (legacy ? 30 : 40));
+    assert(foreground.height == (legacy ? 20 : 10));
+
+    _readbarstatus("lifebarstatus 40 20 0 2", &status);
+    expect_draw(&status, legacy ? 0 : 2, 0);
+    _readbarstatus("lifebarstatus 40 20 0 0 -1", &status);
+    expect_draw(&status, legacy ? 0 : 2, 0);
+    _readbarstatus("lifebarstatus 40 20 0 0 0", &status);
+    expect_draw(&status, 2, legacy ? 6 : 0);
+
+    _readbarstatus("lifebarstatus 40 20 1 1 1", &lbarstatus);
+    _readbarstatus("mpbarstatus 40 20 1 1 1", &mpbarstatus);
+    reset_level_order();
+    expect_draw(&lbarstatus, 2, 6);
+    assert(foreground.width == (legacy ? 100 : 30));
+    expect_draw(&mpbarstatus, 2, 6);
+    assert(foreground.width == (legacy ? 100 : 30));
+}
+
+static void check_hud_defaults(void)
+{
+    static const s_barstatus *bars[] = {&loadingbarstatus, &olbarstatus, &mpbarstatus, &lbarstatus};
+    static int (*tables[])[11] = {&ldcolourtable, &hpcolourtable, &mpcolourtable, NULL};
+    for (size_t i = 0; i < sizeof(bars) / sizeof(*bars); ++i)
+    {
+        const s_barstatus *status = bars[i];
+        assert(status->colourtable == tables[i]);
+        assert(status->size.x == 0 && status->size.y == (i == 0 ? 10 : 0));
+        assert(status->graph_position.x == 0 && status->graph_position.y == 0);
+        assert(status->name_position.x == 0 && status->name_position.y == 0);
+        assert(status->config_flags == (i == 0 ? STATUS_CONFIG_GRAPH_RATIO : 0));
+        assert(status->barlayer == 0 && status->backlayer == 0);
+        assert(status->borderlayer == 0 && status->shadowlayer == 0);
+    }
+}
+
+static void check_model_health_bar(void)
+{
+    s_model model = {0};
+    load_position(&model, CMD_MODEL_LIFEBARSTATUS, "lifebarstatus 40 20 0 0 0");
+    s_barstatus *status = model.hud_popup;
+    assert(status && status->colourtable == &hpcolourtable);
+    assert(status->size.x == 40 && status->size.y == 20);
+    expect_draw(status, 2, 6);
+    load_position(&model, CMD_MODEL_LIFEBARSTATUS, "lifebarstatus 45 25 1 0 0");
+    assert(model.hud_popup == status && status->colourtable == &hpcolourtable);
+    assert(status->size.x == 45 && status->size.y == 25);
+    expect_draw(status, 2, 0);
+    free(status);
+}
+
+static void check_alignment(int offset)
+{
+    static entity boss;
+    s_barstatus status = {
+        .size = { .x = 40, .y = 20 },
+    };
+    boss.modeldata.hud_popup = &status;
+    load_position(&boss.modeldata, CMD_MODEL_LIFEPOSITION, "lifeposition 7 9");
+    load_position(&boss.modeldata, CMD_MODEL_NAMEPOSITION, "nameposition -1000 -1000");
+    boss.modeldata.icon.position.x = -1000;
+    boss.modeldata.icon.position.y = -1000;
+    boss.modeldata.health = 60;
+    boss.energy_state.health_old = 30;
+    boxes = lines = titles = 0;
+    display_popup(&boss);
+    assert(boxes == 2 && lines == 6 && titles == 0);
+    assert(background.x == (offset ? 15 : 8));
+    assert(background.y == (offset ? 19 : 10));
+}
+
+static void check_actor_positions(int embedded, int reset_missing)
+{
+    static entity first, second;
+    s_model model = {0};
+    model.icon.position.x = -1000;
+    load_position(&model, CMD_MODEL_LIFEPOSITION, "lifeposition 10 20");
+    load_position(&model, CMD_MODEL_LIFEPOSITION, "lifeposition 7");
+    assert(obor_model_hud_graph_position(&model)->x == 7);
+    assert(obor_model_hud_graph_position(&model)->y == (reset_missing ? 0 : 20));
+    warnings = 0;
+    load_position(&model, CMD_MODEL_LIFEPOSITION, "lifeposition word");
+    assert(obor_model_hud_graph_position(&model)->x == 0);
+    assert(warnings == (reset_missing ? 1u : 0u));
+    load_position(&model, CMD_MODEL_LIFEPOSITION, "lifeposition -1000 -1000");
+    load_position(&model, CMD_MODEL_NAMEPOSITION, "nameposition 11 22");
+    assert((model.hud_popup == NULL) == embedded);
+    first.modeldata = second.modeldata = model;
+
+    change_position(&first, _ep_nameposition, 3, 15, 25);
+    change_position(&first, _ep_lifeposition, 4, 70, 90);
+    assert(obor_model_hud_name_position(&first.modeldata)->x == 15);
+    assert(obor_model_hud_name_position(&first.modeldata)->y == 22);
+    assert(obor_model_hud_name_position(&second.modeldata)->x == (embedded ? 11 : 15));
+    assert(obor_model_hud_graph_position(&second.modeldata)->y == (embedded ? -1000 : 90));
+
+    s_barstatus empty = {0};
+    if (embedded)
+    {
+        first.modeldata.hud_popup = &empty;
+    }
+    boxes = lines = titles = 0;
+    display_popup(&first);
+    assert(boxes == 0 && lines == 0 && titles == (embedded ? 0u : 1u));
+    if (!embedded)
+    {
+        assert(title_x == 15 && title_y == 22);
+        free(model.hud_popup);
+    }
+}
+
+int main(void)
+{
+    static const struct { uint32_t build; int legacy, offset; } cases[] = {
+        {7369, 1, 0}, {7391, 1, 0}, {7420, 1, 0}, {7446, 1, 0}, {7447, 1, 1}, {7454, 1, 1},
+        {7455, 1, 1}, {7456, 1, 0}, {7459, 1, 0}, {7460, 0, 0}, {7533, 0, 0},
+    };
+    check_hud_defaults();
+    for(size_t i = 0; i < sizeof(cases) / sizeof(*cases); ++i)
+    {
+        obor_profile_build = cases[i].build;
+        check_options(cases[i].legacy);
+        check_model_health_bar();
+        check_alignment(cases[i].offset);
+        check_actor_positions(cases[i].build < 7447u, cases[i].build >= 7447u && cases[i].build < 7455u);
+    }
+    puts("PASS 11");
+}

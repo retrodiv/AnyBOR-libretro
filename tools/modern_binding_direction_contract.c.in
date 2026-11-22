@@ -1,0 +1,195 @@
+/* SPDX-License-Identifier: BSD-3-Clause
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me>
+ */
+#include <limits.h>
+#include <stdint.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <strings.h>
+#pragma GCC diagnostic ignored "-Wignored-qualifiers"
+#if defined(__clang__)
+#pragma GCC diagnostic ignored "-Wdeprecated-non-prototype"
+#endif
+#include "scriptcommon.h"
+#undef borShutdown
+#define borShutdown(...) abort()
+#undef stricmp
+#define stricmp strcasecmp
+#define execute_on_bind_update_other_to_self(...) ((void)0)
+#define execute_on_bind_update_self_to_other(...) ((void)0)
+
+uint32_t obor_profile_build;
+static unsigned number_reads;
+static unsigned removals;
+static e_kill_entity_trigger removal_reason;
+
+void kill_entity(entity *actor, e_kill_entity_trigger reason)
+{
+    ++removals;
+    removal_reason = reason;
+}
+
+int getValidInt(char *text, char *file, char *command)
+{
+    ++number_reads;
+    return atoi(text);
+}
+
+void ent_set_anim(entity *actor, int animation, int reset)
+{
+    actor->animnum = animation;
+    actor->animation = actor->modeldata.animation[animation];
+}
+
+static void update_frame(entity *actor, unsigned int frame)
+{
+    actor->animpos = frame;
+}
+
+int defense_result_pain(s_attack *attack, s_defense *defense)
+{
+    return 1;
+}
+
+@PARSE_DIRECTION@
+@RESOLVE_DIRECTION@
+@ADJUST_BIND@
+@ATTACK_DIRECTION@
+
+static LONG obor_profile_property_constant(const char *name, LONG value)
+{
+    return value;
+}
+
+@CONSTANT_MACROS@
+
+static LONG direction_constant(const char *constname)
+{
+    ScriptVariant v = {0};
+    v.lVal = INT_MIN;
+    if(!constname) return v.lVal;
+    @CONSTANT_CHAIN@
+    return v.lVal;
+}
+
+static void check(int value, const char *description)
+{
+    if(!value)
+    {
+        fprintf(stderr, "%s for profile %u\n", description, obor_profile_build);
+        abort();
+    }
+}
+
+static void check_animation(void)
+{
+    s_anim animation = {.numframes = 2};
+    s_anim *available[] = {NULL, &animation};
+    entity actor = {0}, target = {0};
+    target.animnum = 1;
+    actor.modeldata.animation = available;
+    actor.modeldata.animation_capacity = sizeof(available) / sizeof(*available);
+    actor.binding.target = &target;
+    actor.binding.config = BIND_CONFIG_AXIS_X_TARGET;
+    adjust_bind(&actor);
+    check(actor.animnum == (obor_profile_build < 7391u), "Position-only binding animation");
+    check(actor.binding.target == &target, "Position-only binding target");
+
+    actor.animnum = 0;
+    actor.binding.config = BIND_CONFIG_ANIMATION_TARGET;
+    adjust_bind(&actor);
+    check(actor.animnum == 1, "Target animation selected");
+
+    actor.animnum = 0;
+    available[1] = NULL;
+    actor.binding.config = BIND_CONFIG_AXIS_X_TARGET;
+    adjust_bind(&actor);
+    check(actor.binding.target == (obor_profile_build < 7391u ? NULL : &target),
+          "Position-only binding with unavailable target animation");
+
+    actor.binding.target = &target;
+    actor.binding.config = BIND_CONFIG_ANIMATION_DEFINED | BIND_CONFIG_ANIMATION_REMOVE;
+    actor.binding.animation = 1;
+    removals = 0;
+    adjust_bind(&actor);
+    check(removals == 1 && removal_reason == KILL_ENTITY_TRIGGER_BIND_ANIMATION_MATCH,
+          "Binding removes an actor when its required animation is missing");
+
+    available[1] = &animation;
+    actor.animation = &animation;
+    actor.animnum = 1;
+    actor.binding.target = &target;
+    actor.binding.config = BIND_CONFIG_ANIMATION_FRAME_DEFINED | BIND_CONFIG_ANIMATION_FRAME_REMOVE;
+    actor.binding.frame = 4;
+    removals = 0;
+    adjust_bind(&actor);
+    check(removals == 1 && removal_reason == KILL_ENTITY_TRIGGER_BIND_FRAME_MATCH,
+          "Binding removes an actor when its required frame is missing");
+}
+
+static void check_direction(void)
+{
+    const int modern = obor_profile_build >= 7530;
+    entity actor = {.direction = DIRECTION_LEFT}, target = {.direction = DIRECTION_RIGHT};
+    target.position.x = 10;
+    number_reads = 0;
+    check(direction_get_adjustment_from_argument("model", "bind", "same") == DIRECTION_ADJUST_SAME,
+          "Existing direction name");
+    check(direction_get_adjustment_from_argument("model", "bind", "ToWaRd") ==
+              (modern ? DIRECTION_ADJUST_TOWARD : DIRECTION_ADJUST_NONE), "Toward direction name");
+    check(direction_get_adjustment_from_argument("model", "bind", "away") ==
+              (modern ? DIRECTION_ADJUST_AWAY : DIRECTION_ADJUST_NONE), "Away direction name");
+    check(direction_get_adjustment_from_argument("model", "bind", "3") == 3,
+          "Numeric direction argument");
+    check(number_reads == (modern ? 1u : 3u), "Direction fallback calls");
+    check(direction_get_adjustment_result(&actor, &target, DIRECTION_ADJUST_SAME) == DIRECTION_RIGHT,
+          "Existing direction result");
+    check(direction_get_adjustment_result(&actor, &target, DIRECTION_ADJUST_TOWARD) ==
+              (modern ? DIRECTION_RIGHT : DIRECTION_LEFT), "Toward direction result");
+    actor.position.x = 20;
+    check(direction_get_adjustment_result(&actor, &target, DIRECTION_ADJUST_AWAY) ==
+              (modern ? DIRECTION_RIGHT : DIRECTION_LEFT), "Away direction result");
+    actor.position.x = target.position.x;
+    check(direction_get_adjustment_result(&actor, &target, DIRECTION_ADJUST_TOWARD) == DIRECTION_LEFT,
+          "Equal positions preserve direction");
+    check(direction_constant("DIRECTION_ADJUST_SAME") == DIRECTION_ADJUST_SAME,
+          "Existing direction constant");
+    check(direction_constant("DIRECTION_ADJUST_TOWARD") == (modern ? DIRECTION_ADJUST_TOWARD : INT_MIN),
+          "Toward direction constant");
+    check(direction_constant("DIRECTION_ADJUST_AWAY") == (modern ? DIRECTION_ADJUST_AWAY : INT_MIN),
+          "Away direction constant");
+}
+
+static void check_attack_direction(void)
+{
+    const e_direction expected = obor_profile_build >= 7530 ? DIRECTION_RIGHT : DIRECTION_LEFT;
+    entity target = {.direction = DIRECTION_LEFT, .drop = 1}, attacker = {0};
+    target.position.x = 20;
+    s_attack attack = {.force_direction = DIRECTION_ADJUST_TOWARD};
+    checkdamageflip(&target, &attacker, &attack, NULL);
+    check(target.direction == expected, "Toward direction after an attack");
+
+    target.direction = DIRECTION_LEFT;
+    attacker.position.x = 30;
+    attack.force_direction = DIRECTION_ADJUST_AWAY;
+    checkdamageflip(&target, &attacker, &attack, NULL);
+    check(target.direction == expected, "Away direction after an attack");
+
+    target.direction = DIRECTION_LEFT;
+    attack.force_direction = DIRECTION_ADJUST_RIGHT;
+    checkdamageflip(&target, &attacker, &attack, NULL);
+    check(target.direction == DIRECTION_RIGHT, "Existing attack direction");
+}
+
+int main(void)
+{
+    static const uint32_t profiles[] = {7369, 7390, 7391, 7420, 7424, 7425, 7530, 7533, 7555};
+    for(size_t i = 0; i < sizeof(profiles) / sizeof(*profiles); ++i)
+    {
+        obor_profile_build = profiles[i];
+        check_animation();
+        check_direction();
+        check_attack_direction();
+    }
+    return 0;
+}

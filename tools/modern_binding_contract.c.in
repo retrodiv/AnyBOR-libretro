@@ -6,6 +6,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <strings.h>
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wignored-qualifiers"
 #if defined(__clang__)
@@ -13,6 +14,8 @@
 #endif
 #include "scriptcommon.h"
 #undef printf
+#undef stricmp
+#define stricmp strcasecmp
 
 uint32_t obor_profile_build;
 s_level *level;
@@ -26,6 +29,7 @@ static int idle_calls, animation_calls, adjust_calls, adjust_matches;
 static size_t allocation_size;
 static int allocation_checks, dump_calls, dump_rows;
 static char log_text[8192];
+static const char *active_name;
 
 static int capture_log(const char *format, ...)
 {
@@ -56,8 +60,8 @@ void ent_set_anim(entity *ent, int animation, int reset)
 }
 int set_idle(entity *ent) { ++idle_calls; ent->animation = &present_animation; return 1; }
 void adjust_bind(entity *ent) { ++adjust_calls; adjust_matches = ent == &actor; }
-void StrCache_Collect(int index) { (void)index; abort(); }
-CHAR *StrCache_Get(int index) { (void)index; abort(); }
+void StrCache_Collect(int index) { if (index != 0 || !active_name) abort(); }
+CHAR *StrCache_Get(int index) { if (index != 0 || !active_name) abort(); return (CHAR *)active_name; }
 int StrCache_Pop(int size) { (void)size; abort(); }
 int StrCache_CreateNewFrom(const CHAR *text) { (void)text; abort(); }
 @VARIANTS@
@@ -76,12 +80,81 @@ void property_access_dump_members(property_access_map mapper, const int count, c
 
 #define printf capture_log
 @COMMON@
+@SEARCH@
 @HELPERS@
 @ENTRIES@
 @ALLOCATE@
 @INITIALIZE@
 #undef printf
 #pragma GCC diagnostic pop
+
+static void *binding_mapper(void *functionRef)
+{
+    @MAPPER_ROUTE@
+    return NULL;
+}
+
+@CONSTANT_SUPPORT@
+
+static LONG binding_constant(const char *constname)
+{
+    ScriptVariant v = {0};
+    if (0) { }
+    @BIND_CONSTANTS@
+    else return -1;
+    return v.lVal;
+}
+
+static void check_named_routing(void)
+{
+    static const uint32_t revisions[] = {7369, 7391, 7420, 7467, 7468, 7530, 7533};
+    static const char *names[] = {"animation_frame", "animation_id", "config", "direction_adjust", "meta_data",
+        "meta_tag", "offset_x", "offset_y", "offset_z", "sort_id", "target"};
+    for (size_t i = 0; i < sizeof(revisions) / sizeof(*revisions); ++i)
+    {
+        obor_profile_build = revisions[i];
+        const int legacy = obor_profile_build < 7468u;
+        void *mapper = legacy ? (void *)mapstrings_bind_property : NULL;
+        if (binding_mapper((void *)openbor_get_bind_property) != mapper ||
+            binding_mapper((void *)openbor_set_bind_property) != mapper || binding_mapper(NULL)) abort();
+        if (binding_constant("BIND_PROPERTY_OFFSET_X") != (legacy ? -1 : BIND_PROPERTY_OFFSET_X) ||
+            binding_constant("BIND_PROPERTY_END") != (legacy ? -1 : BIND_PROPERTY_END)) abort();
+
+        s_bind binding = {0};
+        ScriptVariant handle = {.vt = VT_PTR, .ptrVal = &binding};
+        ScriptVariant selector = {.vt = VT_STR, .strVal = 0};
+        ScriptVariant input = {.vt = VT_INTEGER, .lVal = -12};
+        ScriptVariant result = {0};
+        ScriptVariant *arguments[] = {&handle, &selector, &input};
+        ScriptVariant *output = &result;
+        active_name = "offset_x";
+        log_text[0] = 0;
+        HRESULT write = openbor_set_bind_property(arguments, &output, 3);
+        if (legacy)
+        {
+            if (write != S_OK || binding.offset.x != -12 || selector.vt != VT_INTEGER) abort();
+            for (size_t n = 0; n < sizeof(names) / sizeof(*names); ++n)
+            {
+                active_name = names[n];
+                selector = (ScriptVariant){.vt = VT_STR, .strVal = 0};
+                if (!mapstrings_bind_property(arguments, 2) || selector.vt != VT_INTEGER || selector.lVal != (LONG)n) abort();
+            }
+            active_name = "OFFSET_X";
+            selector = (ScriptVariant){.vt = VT_STR, .strVal = 0};
+            output = &result;
+            if (openbor_get_bind_property(arguments, &output, 2) != S_OK ||
+                !output || output->vt != VT_INTEGER || output->lVal != -12) abort();
+            active_name = "unknown";
+            selector = (ScriptVariant){.vt = VT_STR, .strVal = 0};
+            output = &result;
+            log_text[0] = 0;
+            if (openbor_get_bind_property(arguments, &output, 2) != E_FAIL || output ||
+                !strstr(log_text, "not supported by binding") || !strstr(log_text, "char property")) abort();
+        }
+        else if (write != E_FAIL || selector.vt != VT_STR || binding.offset.x || !strstr(log_text, "int property")) abort();
+    }
+    active_name = NULL;
+}
 
 static void quote(const char *text)
 {
@@ -228,6 +301,7 @@ static void limit_case(int setter, int count)
 
 int main(void)
 {
+    check_named_routing();
     static const struct { unsigned revision; int signed_points; } profiles[] = {@PROFILES@};
     unsigned p, c;
     int embedded, has_level, count;

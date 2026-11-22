@@ -1,0 +1,205 @@
+/* SPDX-License-Identifier: BSD-3-Clause
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me>
+ */
+#include <stdarg.h>
+#include <stdint.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <strings.h>
+#pragma GCC diagnostic ignored "-Wignored-qualifiers"
+#if defined(__clang__)
+#pragma GCC diagnostic ignored "-Wdeprecated-non-prototype"
+#endif
+#include "scriptcommon.h"
+#undef stricmp
+#undef printf
+#define stricmp strcasecmp
+
+uint32_t obor_profile_build;
+s_level *level;
+s_savedata savedata;
+static unsigned constraint_warnings, config_warnings;
+static struct {
+    int value;
+    const char *format;
+} diagnostic[4];
+static unsigned diagnostic_count;
+
+static void expect(int condition, const char *label)
+{
+    if (!condition)
+    {
+        fprintf(stderr, "Profile %u: %s\n", obor_profile_build, label);
+        abort();
+    }
+}
+
+static void capture(const char *format, ...)
+{
+    if (strstr(format, "Unknown move constraint flag"))
+    {
+        ++constraint_warnings;
+    }
+    else if (strstr(format, "Unknown move config flag"))
+    {
+        ++config_warnings;
+    }
+    else
+    {
+        expect(diagnostic_count < sizeof(diagnostic) / sizeof(*diagnostic), "child diagnostic count");
+        va_list args;
+        va_start(args, format);
+        diagnostic[diagnostic_count].value = va_arg(args, int);
+        diagnostic[diagnostic_count++].format = format;
+        va_end(args);
+    }
+}
+
+#define printf capture
+@METHODS@
+static void apply(s_child_spawn *object, entity *parent, entity *child_entity)
+{
+    diagnostic_count = 0;
+    @INHERIT@
+}
+#undef printf
+
+@MACRO@
+static LONG constant_value(const char *constname)
+{
+    ScriptVariant v = {0};
+    if (0) { }
+    @CONSTANTS@
+    else return -1;
+    return v.lVal;
+}
+
+static void expect_constant(const char *suffix, LONG expected)
+{
+    char name[64];
+    const int legacy = obor_profile_build < 7498u;
+    snprintf(name, sizeof(name), "%s%s", legacy ? "MOVE_CONSTRAINT_" : "MOVE_CONFIG_", suffix);
+    expect(constant_value(name) == expected, name);
+    snprintf(name, sizeof(name), "%s%s", legacy ? "MOVE_CONFIG_" : "MOVE_CONSTRAINT_", suffix);
+    expect(constant_value(name) == -1, name);
+}
+
+static void check_movement_constants(unsigned terrain_bit)
+{
+    static const struct { const char *name; e_move_config_flags bit; } terrain[] = {
+        {"SUBJECT_TO_BASEMAP", MOVE_CONFIG_SUBJECT_TO_BASEMAP},
+        {"SUBJECT_TO_GRAVITY", MOVE_CONFIG_SUBJECT_TO_GRAVITY},
+        {"SUBJECT_TO_HOLE", MOVE_CONFIG_SUBJECT_TO_HOLE},
+        {"SUBJECT_TO_MAX_Z", MOVE_CONFIG_SUBJECT_TO_MAX_Z},
+        {"SUBJECT_TO_MIN_Z", MOVE_CONFIG_SUBJECT_TO_MIN_Z},
+        {"SUBJECT_TO_OBSTACLE", MOVE_CONFIG_SUBJECT_TO_OBSTACLE},
+        {"SUBJECT_TO_PLATFORM", MOVE_CONFIG_SUBJECT_TO_PLATFORM},
+        {"SUBJECT_TO_SCREEN", MOVE_CONFIG_SUBJECT_TO_SCREEN},
+        {"SUBJECT_TO_WALL", MOVE_CONFIG_SUBJECT_TO_WALL},
+    };
+    const int exposed = obor_profile_build >= 7431u;
+    const int static_flags = obor_profile_build >= 7447u;
+    expect_constant("NONE", exposed ? 0 : -1);
+    expect_constant("NO_ADJUST_BASE", exposed ? 1 : -1);
+    expect_constant("NO_HIT_HEAD", exposed ? (static_flags ? 16 : 2) : -1);
+    expect_constant("NO_COPY_FROM", static_flags ? 2 : -1);
+    expect_constant("NO_COPY_TO", static_flags ? 4 : -1);
+    expect_constant("NO_FLIP", static_flags ? 8 : -1);
+    expect_constant("NO_MOVE", static_flags ? 32 : -1);
+    expect_constant("PROJECTILE_BASE_DIE", exposed ? (static_flags ? 64 : 4) : -1);
+    expect_constant("PROJECTILE_WALL_BOUNCE", exposed ? (static_flags ? 128 : 8) : -1);
+    for (unsigned i = 0; i < sizeof(terrain) / sizeof(*terrain); ++i)
+    {
+        expect_constant(terrain[i].name, exposed ? (LONG)(1u << (terrain_bit + i)) : -1);
+        expect(obor_move_flags_to_script(terrain[i].bit) == 1u << (terrain_bit + i), terrain[i].name);
+    }
+    expect(obor_move_flags_to_script(MOVE_CONFIG_NO_ADJUST_BASE) == 1u, "no-adjust base bit");
+    expect(obor_move_flags_to_script(MOVE_CONFIG_NO_HIT_HEAD) == (static_flags ? 16u : 2u), "no-hit-head bit");
+    expect(obor_move_flags_to_script(MOVE_CONFIG_PROJECTILE_BASE_DIE) ==
+           (static_flags ? 64u : obor_profile_build >= 7427u ? 4u : 0u), "projectile base bit");
+    expect(obor_move_flags_to_script(MOVE_CONFIG_PROJECTILE_WALL_BOUNCE) ==
+           (static_flags ? 128u : obor_profile_build >= 7427u ? 8u : 0u), "projectile wall bit");
+    expect_constant("RUN_LAND", -1);
+    expect_constant("RUN_Z", -1);
+}
+
+int main(void)
+{
+    static const struct { uint32_t build; unsigned terrain_bit; } profiles[] = {
+        {7369, 2}, {7391, 2}, {7420, 2}, {7426, 2}, {7427, 4}, {7430, 4}, {7431, 4},
+        {7443, 4}, {7444, 4}, {7446, 4}, {7447, 8}, {7497, 8}, {7498, 10},
+        {7500, 10}, {7501, 10}, {7533, 10},
+    };
+    const unsigned own = CHILD_SPAWN_CONFIG_FACTION_DAMAGE_PARAMETER |
+        CHILD_SPAWN_CONFIG_FACTION_HOSTILE_PARAMETER | CHILD_SPAWN_CONFIG_FACTION_INDIRECT_PARAMETER |
+        CHILD_SPAWN_CONFIG_MOVE_CONFIG_PARAMETER;
+    const unsigned inherit = CHILD_SPAWN_CONFIG_FACTION_DAMAGE_PARENT |
+        CHILD_SPAWN_CONFIG_FACTION_HOSTILE_PARENT | CHILD_SPAWN_CONFIG_FACTION_INDIRECT_PARENT |
+        CHILD_SPAWN_CONFIG_MOVE_CONFIG_PARENT;
+    static entity parent, child;
+    static s_level scene;
+    parent.faction.type_hostile = TYPE_PLAYER | TYPE_OBSTACLE;
+    parent.faction.type_damage_direct = TYPE_PLAYER | TYPE_ENEMY;
+    parent.faction.type_damage_indirect = TYPE_PLAYER | TYPE_NPC;
+    parent.modeldata.move_config_flags = MOVE_CONFIG_NO_ADJUST_BASE | MOVE_CONFIG_SUBJECT_TO_WALL;
+    parent.modeldata.legacy_static_move_flags = MOVE_CONFIG_NO_FLIP;
+    for (size_t i = 0; i < sizeof(profiles) / sizeof(*profiles); ++i)
+    {
+        obor_profile_build = profiles[i].build;
+        check_movement_constants(profiles[i].terrain_bit);
+        constraint_warnings = config_warnings = 0;
+        ArgList args = {.count = 3, .args = {"move_constraint", "None", "Subject_To_Platform"}};
+        s_child_spawn object = {.config = own, .candamage = TYPE_ENEMY, .hostile = TYPE_NPC,
+                                .projectilehit = TYPE_PLAYER,
+                                .move_config_flags = get_move_config_flags_from_arguments(&args)};
+        expect(object.move_config_flags == MOVE_CONFIG_SUBJECT_TO_PLATFORM, "movement argument value");
+        expect(constraint_warnings == (unsigned)(obor_profile_build < 7501u) &&
+               config_warnings == 0, "historical none diagnostic");
+        expect(find_move_config_flags_from_string("unsupported") == MOVE_CONFIG_NONE &&
+               config_warnings == (unsigned)(obor_profile_build >= 7501u) &&
+               constraint_warnings == 2u * (unsigned)(obor_profile_build < 7501u), "unknown diagnostic");
+        if (obor_profile_build == 7369u)
+        {
+            continue;
+        }
+
+        child.modeldata.legacy_static_move_flags = MOVE_CONFIG_NO_MOVE;
+        parent.modeldata.type = TYPE_ENEMY;
+        apply(&object, &parent, &child);
+        expect(child.faction.type_hostile == TYPE_NPC && child.faction.type_damage_direct == TYPE_ENEMY &&
+               child.faction.type_damage_indirect == TYPE_PLAYER, "explicit type parameters");
+        expect(child.modeldata.move_config_flags == MOVE_CONFIG_SUBJECT_TO_PLATFORM, "explicit move parameter");
+        object.config |= inherit;
+        apply(&object, &parent, &child);
+        expect(child.faction.type_hostile == parent.faction.type_hostile &&
+               child.faction.type_damage_direct == parent.faction.type_damage_direct &&
+               child.faction.type_damage_indirect == parent.faction.type_damage_indirect, "parent type precedence");
+        expect(child.modeldata.move_config_flags == parent.modeldata.move_config_flags, "parent movement precedence");
+        expect(obor_profile_static_move_flags(&child.modeldata) == (obor_profile_build < 7447u ?
+               MOVE_CONFIG_NO_MOVE : parent.modeldata.move_config_flags), "independent earlier static movement");
+        expect(diagnostic_count == 4 && diagnostic[3].value == 1 + (1 << (profiles[i].terrain_bit + 8)),
+               "native movement diagnostic value");
+        expect(strstr(diagnostic[3].format, obor_profile_build < 7498u ?
+                      "modeldata.move_constraint" : "modeldata.move_config_flags") != NULL,
+               "historical movement diagnostic name");
+        expect(diagnostic[1].value == (obor_profile_build < 7447u ? 6 : 12) &&
+               strstr(diagnostic[1].format, obor_profile_build < 7444u ?
+                      "modeldata.candamage" : "faction.type_damage_direct") != NULL,
+               "historical faction diagnostic");
+
+        parent.modeldata.type = TYPE_PLAYER;
+        scene.nohit = DAMAGE_FROM_PLAYER_OFF;
+        level = &scene;
+        apply(&object, &parent, &child);
+        expect(child.faction.type_hostile == TYPE_OBSTACLE && child.faction.type_damage_direct == TYPE_ENEMY &&
+               child.faction.type_damage_indirect == parent.faction.type_damage_indirect, "level damage restriction");
+        level = NULL;
+        savedata.mode = 1;
+        apply(&object, &parent, &child);
+        expect(child.faction.type_hostile == TYPE_OBSTACLE && child.faction.type_damage_direct == TYPE_ENEMY &&
+               child.faction.type_damage_indirect == parent.faction.type_damage_indirect, "saved damage restriction");
+        savedata.mode = 0;
+    }
+    return 0;
+}

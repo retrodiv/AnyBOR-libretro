@@ -16,6 +16,8 @@ void clearbuttons(int player)
     int key;if(player!=clears++ || player<0 || player>=MAX_PLAYERS) abort();
     for(key=0;key<MAX_BTN_NUM;++key) savedata.keys[player][key]=player*100+key;
 }
+#define control_uses_device_mappings() 0
+#define control_clearmappings() abort()
 @FUNCTION@
 int main(void)
 {

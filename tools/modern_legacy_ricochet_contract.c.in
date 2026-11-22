@@ -1,0 +1,138 @@
+/* SPDX-License-Identifier: BSD-3-Clause
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me>
+ */
+#include <stdint.h>
+#pragma GCC diagnostic ignored "-Wignored-qualifiers"
+#if defined(__clang__)
+#pragma GCC diagnostic ignored "-Wdeprecated-non-prototype"
+#endif
+#include "openbor.h"
+#undef assert
+#include <assert.h>
+
+uint32_t obor_profile_build;
+static entity actor, current, obstacle;
+static entity *self = &current, *expected_subject;
+static int animation_available, wall_hit, obstacle_hit;
+static unsigned wall_checks, obstacle_checks, tosses, landings;
+static int fall_force;
+const s_attack emptyattack = {.attack_drop = 0};
+
+#undef validanim
+static int validanim(entity *ent, int animation)
+{
+    assert(ent == &actor && animation == ANI_FALL);
+    return animation_available;
+}
+
+int check_block_wall(entity *ent)
+{
+    assert(ent == expected_subject);
+    ++wall_checks;
+    return wall_hit ? 0 : -1;
+}
+
+entity *check_block_obstacle(entity *ent)
+{
+    assert(ent == expected_subject);
+    ++obstacle_checks;
+    return obstacle_hit ? &obstacle : NULL;
+}
+
+float randf(float maximum)
+{
+    assert(maximum == 1.0f);
+    return 0.5f;
+}
+
+void toss(entity *ent, float lift)
+{
+    assert(ent == &actor && lift == 3.0f);
+    ++tosses;
+}
+
+void common_fall(void) {}
+
+int set_fall(entity *ent, entity *other, s_attack *attack, int reset)
+{
+    assert(ent == &actor && other == &actor && reset == 0 && tosses == 1);
+    fall_force = attack->attack_drop;
+    ++landings;
+    return 1;
+}
+
+@DEFLECT@
+
+static void reset(int bounce_flag)
+{
+    actor.velocity.x = 8;
+    actor.velocity.z = 3;
+    actor.base = 9;
+    actor.direction = DIRECTION_LEFT;
+    actor.attacking = ATTACKING_ACTIVE;
+    actor.energy_state.health_current = 25;
+    actor.damage_on_landing.attack_force = 4;
+    actor.damage_on_landing.attack_type = ATK_NORMAL;
+    actor.modeldata.move_config_flags = MOVE_CONFIG_NO_ADJUST_BASE;
+    if (bounce_flag)
+    {
+        actor.modeldata.move_config_flags |= MOVE_CONFIG_PROJECTILE_WALL_BOUNCE;
+    }
+    animation_available = 1;
+    wall_hit = obstacle_hit = 0;
+    wall_checks = obstacle_checks = tosses = landings = 0;
+    fall_force = -1;
+}
+
+int main(void)
+{
+    static const struct {
+        uint32_t build;
+        int current_subject, drops_with_force, lateral, left, needs_flag;
+    } cases[] = {
+        {7369, 1, 0, 3, 2, 0}, {7391, 1, 0, 3, 2, 0}, {7420, 1, 0, 3, 2, 0},
+        {7421, 0, 1, 3, 2, 0}, {7424, 0, 1, 3, 2, 0}, {7425, 0, 1, 0, 2, 0},
+        {7426, 0, 1, 0, 2, 0}, {7427, 0, 1, 0, -2, 0}, {7431, 0, 1, 0, -2, 0},
+        {7432, 0, 1, 0, -2, 1}, {7533, 0, 1, 0, -2, 1},
+    };
+    const uint32_t basic_terrain = MOVE_CONFIG_SUBJECT_TO_BASEMAP | MOVE_CONFIG_SUBJECT_TO_HOLE;
+    const uint32_t extra_terrain = MOVE_CONFIG_SUBJECT_TO_GRAVITY | MOVE_CONFIG_SUBJECT_TO_PLATFORM |
+                                   MOVE_CONFIG_SUBJECT_TO_WALL;
+    for (size_t i = 0; i < sizeof(cases) / sizeof(*cases); ++i)
+    {
+        obor_profile_build = cases[i].build;
+        expected_subject = cases[i].current_subject ? self : &actor;
+
+        reset(0);
+        wall_hit = 1;
+        assert(projectile_wall_deflect(&actor) == !cases[i].needs_flag);
+        assert(wall_checks == (unsigned)!cases[i].needs_flag);
+        assert(landings == (unsigned)!cases[i].needs_flag);
+
+        reset(1);
+        obstacle_hit = 1;
+        assert(projectile_wall_deflect(&actor) && wall_checks == 1 && obstacle_checks == 1);
+        assert(landings == 1 && tosses == 1);
+        assert(actor.takeaction == common_fall && actor.attacking == ATTACKING_NONE);
+        const int reset_base = cases[i].build < 7421u || cases[i].build >= 7425u;
+        assert(actor.energy_state.health_current == 0 && actor.base == (reset_base ? 0 : 9));
+        assert(actor.velocity.x == cases[i].left && actor.velocity.z == cases[i].lateral);
+        assert(actor.damage_on_landing.attack_force == 0 && actor.damage_on_landing.attack_type == ATK_NONE);
+        assert((actor.modeldata.move_config_flags & (basic_terrain | extra_terrain)) ==
+               (basic_terrain | (cases[i].drops_with_force ? extra_terrain : 0)));
+        assert(!(actor.modeldata.move_config_flags & MOVE_CONFIG_NO_ADJUST_BASE));
+        assert(fall_force == (cases[i].drops_with_force ? 10000 : 0));
+
+        reset(1);
+        actor.direction = DIRECTION_RIGHT;
+        wall_hit = 1;
+        assert(projectile_wall_deflect(&actor) && actor.velocity.x == -2);
+
+        reset(1);
+        assert(!projectile_wall_deflect(&actor) && wall_checks == 1 && obstacle_checks == 1 && tosses == 0);
+        reset(1);
+        animation_available = 0;
+        assert(!projectile_wall_deflect(&actor) && wall_checks == 0 && obstacle_checks == 0 && tosses == 0);
+    }
+    puts("PASS");
+}

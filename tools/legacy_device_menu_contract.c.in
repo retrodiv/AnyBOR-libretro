@@ -1,0 +1,202 @@
+/* SPDX-License-Identifier: BSD-3-Clause
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me>
+ */
+#include <stdint.h>
+#include <strings.h>
+#include "openbor.h"
+#include "translation.h"
+#include "control.c"
+#undef _menutext
+#undef _menutextm
+#undef printf
+#undef assert
+#include <assert.h>
+
+uint32_t obor_profile_build;
+unsigned char obor_pad[4][16];
+static s_playercontrols players[4];
+s_playercontrols *playercontrolpointers[] = {&players[0], &players[1], &players[2], &players[3]};
+static s_set_entry current = {.maxplayers = 2};
+s_set_entry *levelsets = &current;
+int current_set;
+s_savedata savedata;
+s_global_config global_config;
+static s_playercontrols default_control;
+static int default_keys[MAX_BTN_NUM];
+s_level *level;
+unsigned screen_status;
+unsigned long long bothnewkeys;
+static const struct {int beep, beep_2;} global_sample_list = {-1, -1};
+static int frames, scenario, saves, loads, applies, candidate_seen;
+static int stored[OBOR_INPUT_COUNT];
+
+@DEFAULTS@
+
+static void check_settings_reset(void)
+{
+    static const unsigned builds[] = {7369, 7391, 7402, 7403, 7404, 7420, 7533};
+    for (size_t i = 0; i < sizeof(builds) / sizeof(*builds); ++i)
+    {
+        obor_profile_build = builds[i];
+        control_clearmappings();
+        int *mapping = control_getmappings(0);
+        const int default_up = mapping[SDID_MOVEUP];
+        mapping[SDID_MOVEUP] = default_up + 1;
+        for (int slot = 0; slot < MAX_PLAYERS; ++slot)
+        {
+            savedata.joyrumble[slot] = 1;
+            savedata.keys[slot][SDID_ATTACK] = 77;
+            players[slot].settings[SDID_ATTACK] = 88;
+        }
+        clearsettings();
+        apply_controls();
+        assert(mapping[SDID_MOVEUP] == default_up + (builds[i] >= 7403u));
+        for (int slot = 0; slot < MAX_PLAYERS; ++slot)
+        {
+            const int default_attack = CONTROL_DEFAULT1_FIRE1 + slot * OBOR_KEYSPAN;
+            assert(savedata.joyrumble[slot] == 0);
+            assert(savedata.keys[slot][SDID_ATTACK] == (builds[i] < 7403u ? 77 : default_attack));
+            assert(players[slot].settings[SDID_ATTACK] == (builds[i] < 7404u ? 88 : default_attack));
+        }
+    }
+}
+
+void obor_poll_tick(void) {}
+char *ob_gettrans(char *message) { return message; }
+
+static void save_settings(void)
+{
+    ++saves;
+    memcpy(stored, control_getmappings(0), sizeof(stored));
+}
+
+static void load_settings(void)
+{
+    ++loads;
+    memcpy(control_getmappings(0), stored, sizeof(stored));
+}
+
+static void apply(void) { ++applies; }
+
+static int no_config(char *path, char **buffer, size_t *bytes)
+{
+    *buffer = NULL;
+    *bytes = 0;
+    return 0;
+}
+
+static void menu_text(int selected, int x, int y, const char *format, ...)
+{
+    if (selected && !strcmp(format, "< %s >"))
+    {
+        va_list args;
+        va_start(args, format);
+        candidate_seen |= !strcmp(va_arg(args, const char *), "RetroPad 2");
+        va_end(args);
+    }
+}
+
+static void read_frame(int ingame, int wait)
+{
+    ++frames;
+    assert(frames <= 12);
+    memset(obor_pad, 0, sizeof(obor_pad));
+    if (scenario == 0)
+    {
+        if (frames == 1) obor_pad[0][3] = 1;
+        if (frames == 2) obor_pad[0][10] = 1;
+        if (frames == 3) obor_pad[1][11] = 1;
+    }
+    else if (scenario == 1 || scenario == 2)
+    {
+        if (frames == 1) obor_pad[0][4] = 1;
+        if (frames == 3) obor_pad[0][8] = 1;
+        if (scenario == 1 && frames == 5) obor_pad[0][11] = 1;
+        if (scenario == 2 && (frames == 5 || frames == 7 || frames == 9)) obor_pad[0][8] = 1;
+        if (scenario == 2 && frames == 11) obor_pad[0][4] = 1;
+    }
+    else
+    {
+        obor_pad[0][11] = 1;
+    }
+    control_update(playercontrolpointers, 4);
+    bothnewkeys = players[0].newkeyflags | players[1].newkeyflags;
+}
+
+#define savesettings save_settings
+#define loadsettings load_settings
+#define apply_controls apply
+#define clearbuttons(...) abort()
+#define buffer_pakfile no_config
+#define ParseArgs(...) abort()
+#define getNewLineStart(...) (abort(), 0)
+#define translate_SDID(...) (abort(), 0)
+#define sound_play_sample(...) ((void)0)
+#define update read_frame
+#define _menutext menu_text
+#define _menutextm menu_text
+#define printf(...) ((void)0)
+@MENUS@
+#undef printf
+
+static void start_probe(uint32_t revision, int test_case)
+{
+    control_exit();
+    memset(players, 0, sizeof(players));
+    memset(obor_pad, 0, sizeof(obor_pad));
+    obor_profile_build = revision;
+    control_init(1);
+    control_setkey(&players[0], FLAG_ESC, CONTROL_ESC);
+    memcpy(stored, control_getmappings(0), sizeof(stored));
+    scenario = test_case;
+    frames = saves = loads = applies = candidate_seen = 0;
+    assert(!bothnewkeys && !screen_status);
+}
+
+int main(void)
+{
+    static const uint32_t builds[] = {7369, 7391, 7398, 7399, 7403, 7404, 7420, 7533};
+    for (size_t i = 0; i < sizeof(builds) / sizeof(*builds); ++i)
+    {
+        const int device_menu = builds[i] < 7404;
+        start_probe(builds[i], device_menu ? 0 : 3);
+        menu_options_input();
+        assert(frames == (device_menu ? 3 : 1));
+        assert(saves == 1 && !applies && !loads);
+        assert(candidate_seen == device_menu);
+        if (device_menu)
+        {
+            const int swap = builds[i] < 7399;
+            assert(players[0].deviceID == swap && players[1].deviceID == 1 - swap);
+            assert(players[swap ? 0 : 1].newkeyflags == FLAG_ESC);
+            int32_t ratio, msec;
+            control_rumble(0, 50, 35);
+            obor_get_rumble(players[0].deviceID, &ratio, &msec);
+            assert(ratio == 50 && msec == 35);
+        }
+        assert(!bothnewkeys && !screen_status);
+    }
+
+    start_probe(7369, 1);
+    keyboard_setup(0);
+    assert(saves == 1 && loads == 1 && !applies);
+    assert(control_getmappings(0)[SDID_MOVEUP] == 0);
+    assert(!screen_status);
+    bothnewkeys = 0;
+
+    start_probe(7391, 2);
+    keyboard_setup(0);
+    assert(saves == 2 && !loads && applies == 1);
+    assert(control_getmappings(0)[SDID_MOVEUP] == 8 && control_getmappings(0)[SDID_JUMP] == 0);
+    assert(control_getmappings(1)[SDID_MOVEUP] == 0 && control_getremappedkey() == -1);
+    assert(!screen_status);
+
+    const char *path = @MAP_PATH@;
+    assert(control_savemappings(path));
+    control_clearmappings();
+    assert(control_getmappings(0)[SDID_MOVEUP] == 0);
+    assert(control_loadmappings(path));
+    assert(control_getmappings(0)[SDID_MOVEUP] == 8 && control_getmappings(1)[SDID_MOVEUP] == 0);
+    check_settings_reset();
+    puts("PASS");
+}

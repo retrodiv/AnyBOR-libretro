@@ -31,10 +31,14 @@ def program(engine, profiles, *, remove_promotion=False):
         raise ValueError('One explicit native threshold promotion required')
     if remove_promotion:
         target = target.replace(promotion, promotion[len('(int64_t)'):], 1)
+    hostility_init = ''
+    if '->modeldata.hostile' in target:
+        hostility_init = 'actor.modeldata.hostile=2;candidate.modeldata.type=2;'
+    elif '->faction.type_hostile' in target:
+        hostility_init = 'actor.faction.type_hostile=TYPE_ENEMY;candidate.modeldata.type=TYPE_ENEMY;'
     values = dict(CONFIG='#include "config.h"' if (engine / 'config.h').is_file() else '',
                   DIFF=function(source, 'diff'), TARGET=target, INTRO=str(adjustment_intro())+'u',
-                  HOSTILITY_INIT=('actor.modeldata.hostile=2;candidate.modeldata.type=2;'
-                                  if '->modeldata.hostile' in target else ''),
+                  HOSTILITY_INIT=hostility_init,
                   POSITION_INIT=('candidate.position.x=10;' if '->position.x' in target else 'candidate.x=10;'),
                   PROFILES=','.join(str(int(p.get('revision', p['build'].split('-')[0])))+'u'
                                     for p in profiles))
@@ -68,6 +72,16 @@ class TargetDetectionArithmeticTests(unittest.TestCase):
 
 
 class NormalTargetSelectionContracts(unittest.TestCase):
+    def test_7533_combat_range_keeps_original_coordinate_comparisons(self):
+        engine = Path(os.environ.get('OBOR_HISTORICAL_ENGINE', ROOT / 'src/engines/7533'))
+        source = (engine / 'openbor.c').read_text(encoding='latin1')
+        axes = ('x', 'y', 'z', 'base', 'all')
+        functions = '\n\n'.join(function(source, 'check_range_target_' + axis) for axis in axes)
+        functions += '\n' + function((engine / 'openborscript.c').read_text(), 'openbor_checkrange')
+        template = (HERE / 'combat_range_contract.c.in').read_text()
+        code = template.replace('@FUNCTIONS@', functions)
+        self.assertEqual(native_output(code, {'engine': '7533'}, engine_source=engine), 'PASS\n')
+
     def check_normal_target_selection(self, engine_id):
         data = load_contract_fixture(HERE / 'fixtures/profile-normal-target-selection.json')
         rows = [row for row in data['sources'] if row['engine'] == engine_id]

@@ -1,0 +1,118 @@
+/* SPDX-License-Identifier: BSD-3-Clause
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me>
+ */
+#include <limits.h>
+#include <stdint.h>
+#pragma GCC diagnostic ignored "-Wignored-qualifiers"
+#if defined(__clang__)
+#pragma GCC diagnostic ignored "-Wdeprecated-non-prototype"
+#endif
+#include "scriptcommon.h"
+#undef assert
+#include <assert.h>
+
+uint32_t obor_profile_build;
+@SELECTORS@
+@CALCULATION@
+
+void ScriptVariant_ChangeType(ScriptVariant *value, VARTYPE type) { value->vt = type; }
+HRESULT ScriptVariant_IntegerValue(ScriptVariant *value, LONG *result)
+{
+    if (value->vt != VT_INTEGER) return E_FAIL;
+    *result = value->lVal;
+    return S_OK;
+}
+HRESULT ScriptVariant_DecimalValue(ScriptVariant *value, DOUBLE *result)
+{
+    if (value->vt != VT_DECIMAL) return E_FAIL;
+    *result = value->dblVal;
+    return S_OK;
+}
+
+static void initialize(s_model *newchar) { @DEFAULTS@ }
+
+static void load_edelay(s_model *newchar, const int *args, float factor)
+{
+    int tempInt;
+    #undef GET_INT_ARG
+    #undef GET_FLOAT_ARG
+    #define GET_INT_ARG(index) args[index]
+    #define GET_FLOAT_ARG(index) factor
+    do { @MODEL@ } while (0);
+    #undef GET_INT_ARG
+    #undef GET_FLOAT_ARG
+}
+
+static HRESULT read_edelay(entity *ent, ScriptVariant **varlist, int paramCount, ScriptVariant **pretvar)
+{
+    ScriptVariant *arg;
+    LONG ltemp;
+    #undef printf
+    #define printf(...) ((void)0)
+    do { @READ@ } while (0);
+    #undef printf
+    return S_OK;
+}
+
+static void write_edelay(entity *ent, ScriptVariant **varlist, int paramCount)
+{
+    LONG ltemp, ltemp2;
+    DOUBLE dbltemp;
+    do { @WRITE@ } while (0);
+}
+
+int main(void)
+{
+    static const uint32_t revisions[] = {7369, 7391, 7420, 7494, 7495, 7533};
+    static entity actor;
+    int delays[] = {3, 7, 20, 29};
+    s_anim animation = {.delay = delays};
+    actor.animation = &animation;
+
+    for (size_t n = 0; n < sizeof(revisions) / sizeof(*revisions); ++n)
+    {
+        obor_profile_build = revisions[n];
+        actor.modeldata.edelay = (s_edelay){0};
+        initialize(&actor.modeldata);
+        if (revisions[n] < 7495)
+        {
+            assert(actor.modeldata.edelay.factor == 0.f && actor.modeldata.edelay.range.max == 0);
+        }
+        else
+        {
+            assert(actor.modeldata.edelay.factor == 1.f && actor.modeldata.edelay.range.max == MAX_INT);
+        }
+        assert(calculate_edelay(&actor, 1) == 7);
+
+        const int command[] = {0, EDELAY_MODE_MULTIPLY, 0, 0, revisions[n] < 7495 ? 0 : 100, 3, 20};
+        load_edelay(&actor.modeldata, command, 1.75f);
+        assert(calculate_edelay(&actor, 1) == 12 && calculate_edelay(&actor, 3) == 29);
+        ScriptVariant values[8] = {0};
+        ScriptVariant *args[] = {&values[0], &values[1], &values[2], &values[3],
+                                 &values[4], &values[5], &values[6], &values[7]};
+        values[2] = (ScriptVariant){.vt = VT_INTEGER, .lVal = _ep_edelay_mode};
+        ScriptVariant result = {0}, *output = &result;
+        assert(read_edelay(&actor, args, 3, &output) == S_OK && result.vt == VT_INTEGER);
+        assert(result.lVal == (revisions[n] < 7495 ? EDELAY_MODE_MULTIPLY : 0));
+
+        values[2].lVal = EDELAY_MODE_ADD;
+        values[3] = (ScriptVariant){.vt = VT_DECIMAL, .dblVal = -2.75};
+        values[4] = (ScriptVariant){.vt = VT_INTEGER, .lVal = 3};
+        values[5] = (ScriptVariant){.vt = VT_INTEGER, .lVal = 10};
+        values[6] = (ScriptVariant){.vt = VT_INTEGER, .lVal = 3};
+        values[7] = (ScriptVariant){.vt = VT_INTEGER, .lVal = 20};
+        write_edelay(&actor, args, 8);
+        assert(calculate_edelay(&actor, 1) == (revisions[n] < 7495 ? 5 : 10));
+        assert(calculate_edelay(&actor, 0) == (revisions[n] < 7495 ? 3 : 8));
+        assert(calculate_edelay(&actor, 2) == 10);
+        values[2].lVal = _ep_edelay_factor;
+        assert(read_edelay(&actor, args, 3, &output) == S_OK && result.vt == VT_DECIMAL);
+        assert(result.dblVal == (revisions[n] < 7495 ? -2.75 : 1.75));
+
+        values[2].lVal = EDELAY_MODE_MULTIPLY;
+        write_edelay(&actor, args, 3);
+        assert(actor.modeldata.edelay.cap.min == 3 && actor.modeldata.edelay.cap.max == 10);
+        assert(read_edelay(&actor, args, 2, &output) == E_FAIL && !output);
+    }
+    return 0;
+}

@@ -4,8 +4,8 @@
  * These contributions are licensed under BSD-3-Clause; see LICENSE at the root.
  * Upstream code retains its original license and notices.
  * Preserve native global-configuration property names, flags, results and
- * typed field access. Select the native global-config property maps,
- * read/write flags, field conversions and setter results.
+ * typed field access. Select the native global-config property names and
+ * ordinals, read/write flags, field conversions and setter results.
  * Existing changes recorded here; this is not their implementation date.
  * See MODIFICATIONS.md and docs/modifications/7533.md
  * at the source repository root. Original notices follow below.
@@ -287,6 +287,12 @@ int mapstrings_global_config_property(ScriptVariant** varlist, int paramCount)
 		"show_go"
 	};
 
+	static const char* early_proplist[] = {"ajspecial", "cheats"};
+    const int early = obor_profile_build < 7439u;
+    const char **names = early ? early_proplist : proplist;
+    const int name_count = early ? sizeof(early_proplist) / sizeof(*early_proplist)
+                                 : sizeof(proplist) / sizeof(*proplist);
+
 	//printf("\n\n mapstrings_global_config_property(%s)", varlist[ARG_PROPERTY]);
 
 	/*
@@ -302,7 +308,7 @@ int mapstrings_global_config_property(ScriptVariant** varlist, int paramCount)
 	}
 
 	/* See macro - will return 0 on fail. */
-	MAPSTRINGS(varlist[ARG_PROPERTY], proplist, (int)(sizeof(proplist) / sizeof(*proplist)),
+	MAPSTRINGS(varlist[ARG_PROPERTY], names, name_count,
 		"Property name '%s' is not supported by global config.\n");
 
 	//const char *eps = (varlist[ARG_PROPERTY]->lVal < _GLOBAL_CONFIG_END && varlist[ARG_PROPERTY]->lVal >= 0) ? proplist[varlist[ARG_PROPERTY]->lVal] : "";
@@ -314,6 +320,24 @@ int mapstrings_global_config_property(ScriptVariant** varlist, int paramCount)
 #undef ARG_MINIMUM
 #undef ARG_PROPERTY
 }
+
+static e_global_config_properties obor_profile_legacy_global_config_property(e_global_config_properties property)
+{
+    if (obor_profile_build >= 7439u)
+    {
+        return property;
+    }
+    if (property == 0)
+    {
+        return _GLOBAL_CONFIG_AJSPECIAL;
+    }
+    if (property == 1)
+    {
+        return _GLOBAL_CONFIG_CHEATS;
+    }
+    return _GLOBAL_CONFIG_END;
+}
+
 
 /*
 * Caskey, Damon  V.
@@ -370,7 +394,7 @@ HRESULT openbor_get_global_config_property(ScriptVariant** varlist, ScriptVarian
 		property = (e_global_config_properties)varlist[ARG_PROPERTY]->lVal;
 	}
 
-	switch (property)
+	switch (obor_profile_legacy_global_config_property(property))
 	{
 	case _GLOBAL_CONFIG_AJSPECIAL:
 
@@ -507,7 +531,7 @@ HRESULT openbor_set_global_config_property(ScriptVariant** varlist, ScriptVarian
 	property = (e_global_config_properties)varlist[ARG_PROPERTY]->lVal;
 
 	/* Which property to modify ? */
-	switch (property)
+	switch (obor_profile_legacy_global_config_property(property))
 	{
 
 	case _GLOBAL_CONFIG_AJSPECIAL:

@@ -19,6 +19,8 @@
 #endif
 
 uint32_t obor_profile_build;
+int ent_list_size;
+entity **ent_list;
 static entity actor;
 static s_model model;
 static int dump_calls, dump_count, dump_valid_rows;
@@ -108,8 +110,8 @@ static HRESULT get_property(int family, int index, ScriptVariant **out)
 {
     ScriptVariant object = {.ptrVal=family ? (void *)&model : (void *)&actor, .vt=VT_PTR};
     ScriptVariant property = {.lVal=index, .vt=VT_INTEGER};
-    const ScriptVariant *args[] = {&object, &property};
-    return family ? openbor_get_model_property(args, out, 2) :
+    ScriptVariant *args[] = {&object, &property};
+    return family ? openbor_get_model_property((const ScriptVariant *const *)args, out, 2) :
                     openbor_get_entity_property(args, out, 2);
 }
 

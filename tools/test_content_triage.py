@@ -58,7 +58,9 @@ class ContentTriageTests(unittest.TestCase):
         for tag, expected in (('3741',3741),('3780',3780),('6330',6330),
                               ('6392',6392),('6412',6412),('6453',6453),('6453-dev',6453),
                               ('6997',6997),('6997-dev',6997),('7039',7039),('7039-dev',7039),
-                              ('7091',7091),('7091-dev',7091)):
+                              ('7091',7091),('7091-dev',7091),
+                              ('7369',7369),('7369-dev',7369),('7391',7391),('7391-dev',7391),
+                              ('7420',7420),('7420-dev',7420)):
             profile, log = self.script(tag, 'void main(){ movie_load("x"); }')
             self.assertEqual(profile, expected)
             self.assertNotIn('filename triage', log)
@@ -379,13 +381,13 @@ class ContentTriageTests(unittest.TestCase):
         self.assertEqual(self.select('4088')[0], 4088)
         self.assertEqual(self.select('4088-4088')[0], 4107)
         self.assertEqual(self.select('408X')[0], 4086)
-        for revision in (3968, 3970, 6453, 6997, 7039, 7091):
+        exact_only = (3968, 3970, 6453, 6997, 7039, 7091, 7369, 7391, 7420)
+        for revision in exact_only:
             with self.subTest(revision=revision):
                 self.assertEqual(self.select(str(revision))[0], revision)
                 for suffix in (' dev', '-DEV', '_Dev'):
                     self.assertEqual(self.select(str(revision) + suffix)[0], revision)
-                self.assertNotIn(self.select('%d-%d' % (revision, revision))[0],
-                                 (3968, 3970, 6453, 6997, 7039, 7091))
+                self.assertNotIn(self.select('%d-%d' % (revision, revision))[0], exact_only)
         self.assertNotIn(self.select('396X')[0], (3968, 3970))
         self.assertNotEqual(self.select('645X')[0], 6453)
 

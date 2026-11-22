@@ -24,6 +24,116 @@ FIXTURE = Path(__file__).parent / 'fixtures/profile-forward-settings-contracts.j
 
 
 class ForwardSettingsRecordTests(unittest.TestCase):
+    def test_7533_native_volume_defaults_and_frame_limit_record(self):
+        engine = Path(os.environ.get('OBOR_HISTORICAL_ENGINE', ROOT / 'src/engines/7533'))
+        source = (engine / 'openbor.c').read_text()
+        header = (engine / 'source/savedata.h').read_text()
+        core_header = (engine / 'openbor.h').read_text()
+        cheat_flags = re.search(r'typedef enum e_cheat_options\s*\{[^{}]*\}\s*e_cheat_options;',
+                                core_header)[0]
+        for entry in ('savesettings', 'saveasdefault', 'loadsettings', 'loadfromdefault'):
+            self.assertIn('obor_profile_settings_io(handle,', function(source, entry))
+        code = r'''
+#include <assert.h>
+#include <stdbool.h>
+#include <stddef.h>
+#include <stdint.h>
+#include <stdio.h>
+#include <string.h>
+@PLATFORM@
+@SAVEDATA@
+#define COMPATIBLEVERSION 0x00033748u
+@CHEAT_FLAGS@
+
+s_savedata savedata;
+static uint32_t obor_profile_build;
+static struct { int cheats; } global_config;
+static void clearbuttons(int player) { (void)player; }
+static int mappings_cleared;
+static int control_uses_device_mappings(void) { return obor_profile_build && obor_profile_build < 7404u; }
+static void control_clearmappings(void) { ++mappings_cleared; }
+@METHODS@
+
+static void check_record(void)
+{
+    const size_t vsync_offset = offsetof(s_savedata, vsync);
+    size_t gap = sizeof(savedata);
+    if(obor_profile_build < 7416)
+        gap = vsync_offset + sizeof(int);
+    else if(obor_profile_build >= 7617)
+        gap = vsync_offset;
+    const size_t removed = gap == sizeof(savedata) ? 0 : sizeof(int);
+    const size_t disk_size = sizeof(savedata) - removed;
+    unsigned char live[sizeof(savedata)], expected[sizeof(savedata)], actual[sizeof(savedata)];
+    for(size_t i = 0; i < sizeof(live); ++i) live[i] = (unsigned char)(i * 13 + 3);
+    memcpy(expected, live, gap);
+    memcpy(expected + gap, live + gap + removed, sizeof(live) - gap - removed);
+    memcpy(&savedata, live, sizeof(live));
+
+    FILE *stream = tmpfile();
+    assert(stream && obor_profile_settings_io(stream, 1) == 1);
+    assert((size_t)ftell(stream) == disk_size);
+    rewind(stream);
+    assert(fread(actual, 1, sizeof(actual), stream) == disk_size);
+    assert(!memcmp(actual, expected, disk_size) && fclose(stream) == 0);
+
+    for(size_t prefix = 0; prefix <= disk_size; ++prefix)
+    {
+        stream = tmpfile();
+        assert(stream && fwrite(expected, 1, prefix, stream) == prefix);
+        rewind(stream);
+        memset(&savedata, 0xd1, sizeof(savedata));
+        memset(actual, 0xd1, sizeof(actual));
+        const size_t first = prefix < gap ? prefix : gap;
+        memcpy(actual, live, first);
+        if(prefix > gap)
+            memcpy(actual + gap + removed, live + gap + removed, prefix - gap);
+        assert(obor_profile_settings_io(stream, 0) == (prefix == disk_size));
+        assert((size_t)ftell(stream) == prefix && fclose(stream) == 0);
+        assert(!memcmp(&savedata, actual, sizeof(actual)));
+    }
+}
+
+int main(void)
+{
+    static const struct {
+        uint32_t revision;
+        int master, music, effects, frame_limit;
+    } profiles[] = {
+        {7369, 15, 100, 120, 0}, {7391, 15, 100, 120, 0},
+        {7406, 15, 100, 120, 0}, {7409, 15, 120, 70, 0},
+        {7415, 15, 120, 70, 0}, {7416, 15, 120, 70, 1},
+        {7420, 15, 120, 70, 1}, {7447, 15, 120, 70, 1},
+        {7452, 100, 100, 100, 1}, {7533, 100, 100, 100, 1},
+        {7616, 100, 100, 100, 1}, {7617, 100, 100, 100, 1},
+    };
+    for(size_t i = 0; i < sizeof(profiles) / sizeof(*profiles); ++i)
+    {
+        obor_profile_build = profiles[i].revision;
+        mappings_cleared = 0;
+        memset(&savedata, 0, sizeof(savedata));
+        clearsettings();
+        assert(mappings_cleared == (profiles[i].revision < 7403u));
+        assert(savedata.soundvol == profiles[i].master && savedata.musicvol == profiles[i].music);
+        assert(savedata.effectvol == profiles[i].effects && savedata.fpslimit == profiles[i].frame_limit);
+        assert(savedata.compatibleversion == COMPATIBLEVERSION);
+        check_record();
+    }
+    puts("modern_settings=1");
+    return 0;
+}
+'''
+        methods = ('obor_profile_record_io', 'obor_profile_settings_io', 'clearsettings')
+        cheat_methods = ('obor_profile_cheat_mask', 'obor_profile_default_cheats')
+        code = code.replace('@SAVEDATA@', header)
+        code = code.replace('@CHEAT_FLAGS@', cheat_flags)
+        code = code.replace('@METHODS@', '\n'.join([*(function(core_header, name) for name in cheat_methods),
+                                                     *(function(source, name) for name in methods)]))
+        platforms = ('', '#define SDL 1', '#define ANDROID 1')
+        for defines in platforms:
+            with self.subTest(defines=defines):
+                self.run_native(code.replace('@PLATFORM@', defines), marker='modern_settings=1')
+
     def sources(self):
         fixture = load_contract_fixture(FIXTURE)
         rows = fixture['sources']

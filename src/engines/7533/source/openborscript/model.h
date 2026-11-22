@@ -84,6 +84,27 @@ typedef enum e_model_properties
 	MODEL_PROPERTY_END
 } e_model_properties;
 
+static inline unsigned int obor_profile_model_faction_index(void)
+{
+    /* Original occurrences of the property in the script selector enum. */
+    static const struct { unsigned int first; unsigned int index; } history[] = {
+        {7504, 17}, {7497, 18}, {7495, 17}, {7493, 10}, {7489, 7}, {7487, 6},
+        {7482, 7}, {7471, 6}, {7470, 5}, {7459, 4}, {7454, 3}, {7446, 2}
+    };
+    if (obor_profile_build >= 7524u)
+    {
+        return MODEL_PROPERTY_FACTION;
+    }
+    for (size_t i = 0; i < sizeof(history) / sizeof(*history); ++i)
+    {
+        if (obor_profile_build >= history[i].first)
+        {
+            return history[i].index;
+        }
+    }
+    return MODEL_PROPERTY_END;
+}
+
 
 HRESULT openbor_get_model_property(const ScriptVariant* const* varlist, ScriptVariant** const pretvar, const int paramCount);
 HRESULT openbor_set_model_property(ScriptVariant **varlist, ScriptVariant** const pretvar, const int paramCount);

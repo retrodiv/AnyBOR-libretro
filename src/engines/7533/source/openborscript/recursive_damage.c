@@ -1,3 +1,15 @@
+/* AnyBOR modification record: 2026-11-09.
+ * Port maintained by retrodiv <retrodiv@proton.me>.
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me> (original contributions).
+ * These contributions are licensed under BSD-3-Clause; see LICENSE at the root.
+ * Upstream code retains its original license and notices.
+ * Translate recursive attack-type selectors at the script boundary and
+ * reject indices outside the retained table.
+ * Existing changes recorded here; this is not their implementation date.
+ * See MODIFICATIONS.md and docs/modifications/7533.md
+ * at the source repository root. Original notices follow below.
+ */
+
 /*
  * OpenBOR - http://www.chronocrash.com
  * -----------------------------------------------------------------------
@@ -296,7 +308,7 @@ HRESULT openbor_set_recursive_damage_property(ScriptVariant **varlist, ScriptVar
 
 		if (SUCCEEDED(ScriptVariant_IntegerValue(varlist[ARG_VALUE], &temp_int)))
 		{
-			handle->tick = temp_int;
+			handle->tick = obor_profile_build < 7504u ? (u32)temp_int : (unsigned long)temp_int;
 		}
 
 		break;
@@ -305,7 +317,7 @@ HRESULT openbor_set_recursive_damage_property(ScriptVariant **varlist, ScriptVar
 
 		if (SUCCEEDED(ScriptVariant_IntegerValue(varlist[ARG_VALUE], &temp_int)))
 		{
-			handle->time = temp_int;
+			handle->time = obor_profile_build < 7504u ? (u32)temp_int : (unsigned long)temp_int;
 		}
 
 		break;

@@ -170,7 +170,8 @@ typedef enum
 	ENTITY_PROPERTY_END,
 } e_entity_properties;
 
-HRESULT openbor_get_entity_property(const ScriptVariant* const* varlist, ScriptVariant** const pretvar, const int paramCount);
+int mapstrings_entity_property(ScriptVariant **varlist, int paramCount);
+HRESULT openbor_get_entity_property(ScriptVariant** varlist, ScriptVariant** const pretvar, const int paramCount);
 HRESULT openbor_set_entity_property(ScriptVariant** varlist, ScriptVariant** const pretvar, const int paramCount);
 
 HRESULT openbor_get_attack_id_value(ScriptVariant** varlist, ScriptVariant** pretvar, int paramCount);

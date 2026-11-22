@@ -60,6 +60,8 @@ static void store_key(int *keys,int index,int value,int old)
 #define control_scankey scanned_key
 #define keyboard_getlastkey() ((void)++flushes)
 #define safe_set store_key
+#define control_uses_device_mappings() 0
+#define obor_keyboard_setup_devices(...) abort()
 #define sound_play_sample(...) ((void)0)
 #define update observed_update
 #define _menutext menu_text

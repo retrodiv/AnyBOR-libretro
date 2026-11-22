@@ -1,0 +1,115 @@
+/* SPDX-License-Identifier: BSD-3-Clause
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me>
+ */
+#include <stdint.h>
+#pragma GCC diagnostic ignored "-Wignored-qualifiers"
+#if defined(__clang__)
+#pragma GCC diagnostic ignored "-Wdeprecated-non-prototype"
+#endif
+#include "scriptcommon.h"
+#undef assert
+#undef printf
+#include <assert.h>
+
+uint32_t obor_profile_build;
+int max_animations = 2;
+static entity actor, target;
+static s_anim animation, alternate;
+static s_anim *animations[] = {&animation, &alternate};
+
+void ScriptVariant_ChangeType(ScriptVariant *value, VARTYPE type)
+{
+    value->vt = type;
+}
+
+HRESULT ScriptVariant_IntegerValue(ScriptVariant *value, LONG *result)
+{
+    if (value->vt != VT_INTEGER) return E_FAIL;
+    *result = value->lVal;
+    return S_OK;
+}
+
+@FUNCTIONS@
+
+static void check_script_range(void)
+{
+    ScriptVariant acting = {.vt = VT_PTR, .ptrVal = &actor};
+    ScriptVariant candidate = {.vt = VT_PTR, .ptrVal = &target};
+    ScriptVariant animation_id = {.vt = VT_INTEGER, .lVal = 1};
+    ScriptVariant result = {.vt = VT_EMPTY}, *returned = &result;
+    ScriptVariant *args[] = {&acting, &candidate, &animation_id};
+
+    actor.animnum = 0;
+    alternate.range = animation.range;
+    alternate.range.x.min = alternate.range.x.max = 3;
+    assert(openbor_checkrange(args, &returned, 2) == S_OK &&
+           result.vt == VT_INTEGER && result.lVal == 1);
+    assert(openbor_checkrange(args, &returned, 3) == S_OK &&
+           result.vt == VT_INTEGER && result.lVal == 0);
+}
+
+static void check_source_coordinates(void)
+{
+    actor.direction = DIRECTION_RIGHT;
+    actor.position.x = -0.75f;
+    actor.position.y = -0.75f;
+    actor.position.z = 12.2f;
+    actor.base = 12.2f;
+    target.position.x = 2.75f;
+    target.position.y = 2.75f;
+    target.position.z = 9.9f;
+    target.base = 9.9f;
+    animation.range.x = (s_metric_range){.min = 2, .max = 2};
+    animation.range.y = (s_metric_range){.min = 2, .max = 2};
+    animation.range.z = (s_metric_range){.min = -3, .max = -3};
+    animation.range.base = (s_metric_range){.min = -3, .max = -3};
+
+    assert(check_range_target_all(&actor, &target, 0, 0, 0));
+    assert(!check_range_target_all(&actor, NULL, 0, 0, 0));
+    check_script_range();
+
+    actor.direction = DIRECTION_LEFT;
+    assert(!check_range_target_all(&actor, &target, 0, 0, 0));
+    target.position.x = -2.75f;
+    assert(check_range_target_all(&actor, &target, 0, 0, 0));
+
+    target.position.y = 3.f;
+    assert(!check_range_target_all(&actor, &target, 0, 0, 0));
+    target.position.y = 2.75f;
+    target.position.z = 8.9f;
+    assert(!check_range_target_all(&actor, &target, 0, 0, 0));
+    target.position.z = 9.9f;
+    target.base = 10.9f;
+    assert(!check_range_target_all(&actor, &target, 0, 0, 0));
+}
+
+static void check_range_adjustments(void)
+{
+    actor.direction = DIRECTION_RIGHT;
+    target.position.x = 3.75f;
+    target.position.y = 3.75f;
+    target.position.z = 10.9f;
+    target.base = 10.9f;
+    assert(!check_range_target_all(&actor, &target, 0, 0, 0));
+    assert(check_range_target_all(&actor, &target, 0, 1, 1));
+    assert(check_range_target_x(&actor, &target, NULL, 3, 3));
+    assert(check_range_target_y(&actor, &target, NULL, 3, 3));
+    assert(check_range_target_z(&actor, &target, NULL, -2, -2));
+    assert(check_range_target_base(&actor, &target, NULL, -2, -2));
+}
+
+int main(void)
+{
+    static const uint32_t builds[] = {7369, 7391, 7420, 7511, 7512, 7515, 7516, 7533};
+    actor.modeldata.animation = animations;
+    for (size_t i = 0; i < sizeof(builds) / sizeof(*builds); ++i)
+    {
+        obor_profile_build = builds[i];
+        check_source_coordinates();
+        if (builds[i] >= 7516u)
+        {
+            check_range_adjustments();
+        }
+    }
+    puts("PASS");
+}

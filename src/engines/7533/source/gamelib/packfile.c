@@ -73,6 +73,12 @@
 #define	MAXPACKHANDLES	8
 #define	PACKMAGIC		0x4B434150 //0x7F14111D (sorx)
 #define	PACKVERSION		0x00000000
+
+static int obor_profile_accepts_pack_magic(unsigned int magic)
+{
+    return obor_profile_build == 0 || obor_profile_build >= 7409u ||
+           magic == SwapLSB32(PACKMAGIC);
+}
 static const size_t USED_FLAG = (((size_t) 1) << ((sizeof(size_t) * 8) - 1));
 
 /////////////////////////////////////////////////////////////////////////////
@@ -624,9 +630,7 @@ int openPackfile(const char *filename, const char *packfilename)
 
 
     // Read magic dword ("PACK" identifier)
-    // Kratus (12-2022) Temporarily disabled the original "PACK" magic dword
-    // if(read(handle, &magic, 4) != 4 || magic != SwapLSB32(PACKMAGIC))
-    if(read(handle, &magic, 4) != 4)
+    if(read(handle, &magic, 4) != 4 || !obor_profile_accepts_pack_magic(magic))
     {
 #ifdef VERBOSE
         printf ("err magic\n");
@@ -1388,9 +1392,7 @@ int pak_init()
     pakfd = open(packfile, O_RDONLY | O_BINARY, per);
 
     // Read magic dword ("PACK")
-    // Kratus (12-2022) Temporarily disabled the original "PACK" magic dword
-    // if(read(handle, &magic, 4) != 4 || magic != SwapLSB32(PACKMAGIC))
-    if(read(pakfd, &magic, 4) != 4)
+    if(read(pakfd, &magic, 4) != 4 || !obor_profile_accepts_pack_magic(magic))
     {
         close(pakfd);
         return -1;

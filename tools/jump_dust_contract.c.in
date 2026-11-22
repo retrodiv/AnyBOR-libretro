@@ -1,0 +1,91 @@
+/* SPDX-License-Identifier: BSD-3-Clause
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me>
+ */
+#include <stdint.h>
+#pragma GCC diagnostic ignored "-Wignored-qualifiers"
+#if defined(__clang__)
+#pragma GCC diagnostic ignored "-Wdeprecated-non-prototype"
+#endif
+#include "openbor.h"
+#undef assert
+#include <assert.h>
+
+uint32_t obor_profile_build;
+static entity actor, dust;
+static s_model dust_model;
+static s_modelcache cache[4] = {[3] = {.model = &dust_model}};
+s_modelcache *model_cache = cache;
+static unsigned tosses, callbacks;
+static int expected_spawn_type;
+
+static s_model *findmodel(char *name)
+{
+    assert(0 && "Jump dust selects a cached model by index");
+    return NULL;
+}
+
+@SPAWN_DECLARATION@
+{
+    @MODEL_SELECTION@
+    assert(spawn_model == &dust_model);
+    assert(pos_x == actor.position.x && pos_z == actor.position.z && pos_y == actor.position.y);
+    assert(direction == actor.direction && model_index == 3);
+    dust.autokill = AUTOKILL_ATTACK_HIT;
+    return &dust;
+}
+
+void toss(entity *ent, float lift)
+{
+    assert(ent == &actor && lift == 3.5f);
+    ++tosses;
+}
+
+void execute_onspawn_script(entity *ent)
+{
+    assert(ent == &dust);
+    assert(actor.velocity.x == (actor.direction == DIRECTION_RIGHT ? 1.5f : -1.5f));
+    assert(actor.velocity.z == 0.25f);
+    assert((int)ent->spawntype == expected_spawn_type && ent->base == actor.position.y);
+    assert(ent->autokill == (AUTOKILL_ATTACK_HIT | AUTOKILL_ANIMATION_COMPLETE));
+    ++callbacks;
+}
+
+@JUMP@
+
+int main(void)
+{
+    static const struct { uint32_t build; int dust_type; } revisions[] = {
+        {7369, 6}, {7391, 7}, {7420, 7}, {7516, 7}, {7517, 7}, {7533, 7},
+    };
+    s_anim animation = {0};
+    actor.animation = &animation;
+    actor.position.x = 14.5f;
+    actor.position.y = 12.5f;
+    actor.position.z = 73.5f;
+    animation.jumpframe.velocity.x = 1.5f;
+    animation.jumpframe.velocity.y = 3.5f;
+    animation.jumpframe.velocity.z = 0.25f;
+
+    for (size_t i = 0; i < sizeof(revisions) / sizeof(*revisions); ++i)
+    {
+        obor_profile_build = revisions[i].build;
+        expected_spawn_type = revisions[i].dust_type;
+        tosses = callbacks = 0;
+        animation.jumpframe.model_index = 3;
+        animation.jumpframe.frame = FRAME_NONE;
+        assert(!check_jumpframe(&actor, 2) && tosses == 0 && callbacks == 0);
+        animation.jumpframe.frame = 2;
+        assert(!check_jumpframe(&actor, 1) && tosses == 0 && callbacks == 0);
+
+        actor.direction = DIRECTION_RIGHT;
+        assert(check_jumpframe(&actor, 2) && tosses == 1 && callbacks == 1);
+        actor.direction = DIRECTION_LEFT;
+        assert(check_jumpframe(&actor, 2) && tosses == 2 && callbacks == 2);
+
+        animation.jumpframe.model_index = -2;
+        assert(check_jumpframe(&actor, 2) && tosses == 3 && callbacks == 2);
+        animation.jumpframe.model_index = MODEL_INDEX_NONE;
+        assert(check_jumpframe(&actor, 2) && tosses == 4 && callbacks == 2);
+    }
+    puts("PASS");
+}

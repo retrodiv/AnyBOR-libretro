@@ -46,6 +46,8 @@ static size_t observed_fread(void *out,size_t size,size_t count,FILE *file)
 #define fopen observed_fopen
 #define fclose observed_fclose
 #define fread observed_fread
+#define control_uses_device_mappings() 0
+#define obor_device_settings_io(...) abort()
 @FUNCTIONS@
 #undef fopen
 #undef fclose

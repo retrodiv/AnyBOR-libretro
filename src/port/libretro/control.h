@@ -13,7 +13,7 @@
 #ifndef CONTROL_H
 #define CONTROL_H
 
-#if OBOR_ENGINE_BUILD >= 8023
+#if OBOR_ENGINE_BUILD >= 8023 || OBOR_ENGINE_BUILD == 7533
 #include <stdbool.h>
 #include <stdint.h>
 
@@ -21,6 +21,18 @@
 #define CONTROL_DEVICE_NAME_SIZE 64
 #define OBOR_INPUT_COUNT 13
 
+void control_remapdevice(int deviceID);
+int control_getremappedkey(void);
+int *control_getmappings(int deviceID);
+void control_resetmappings(int deviceID);
+bool control_isvaliddevice(int deviceID);
+const char *control_getdevicename(int deviceID);
+bool control_loadmappings(const char *filename);
+bool control_savemappings(const char *filename);
+void control_clearmappings(void);
+#endif
+
+#if OBOR_ENGINE_BUILD >= 8023
 typedef struct {
     int deviceID;
     uint32_t keyflags;
@@ -29,19 +41,10 @@ typedef struct {
 
 void control_init(void);
 void control_exit(void);
-void control_remapdevice(int deviceID);
-int control_getremappedkey(void);
-int *control_getmappings(int deviceID);
-void control_resetmappings(int deviceID);
 void control_update(s_playercontrols **allPlayerControls, int numPlayers);
 void control_update_keyboard(s_playercontrols *keyboardControls);
 const char *control_getkeyname(int deviceID, int keycode);
-bool control_isvaliddevice(int deviceID);
-const char *control_getdevicename(int deviceID);
 void control_rumble(int deviceID, int ratio, int msec);
-bool control_loadmappings(const char *filename);
-bool control_savemappings(const char *filename);
-void control_clearmappings(void);
 #define control_getmappedkeyname(deviceID, key) \
     control_getkeyname(deviceID, control_getmappings(deviceID)[key])
 
@@ -131,7 +134,15 @@ typedef struct
     int settings[JOY_MAX_INPUTS];
     u64 keyflags, newkeyflags;
     int kb_break;
+#if OBOR_ENGINE_BUILD == 7533
+    int deviceID;
+#endif
 } s_playercontrols;
+
+#if OBOR_ENGINE_BUILD == 7533
+bool control_uses_device_mappings(void);
+const char *control_getdevicekeyname(int keycode);
+#endif
 
 void control_exit(void);
 void control_init(int joy_enable);

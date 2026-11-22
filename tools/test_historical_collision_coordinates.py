@@ -17,6 +17,7 @@ import unittest
 
 from historical_collision_coordinates import render_collision
 from native_sanitizers import sanitizer_environment
+from test_historical_common_think import native_output
 from test_historical_player import function
 
 SOURCE=Path(os.environ.get('OBOR_TEST_SOURCE',Path(__file__).resolve().parents[1]))
@@ -119,6 +120,145 @@ class CollisionCoordinateTests(unittest.TestCase):
                     subprocess.run([str(self.executables[key]),str(row['revision'])],
                         check=True,timeout=15,env=sanitizer_environment(),
                         stdout=subprocess.DEVNULL)
+
+
+class ModernBodyBoxDepthTests(unittest.TestCase):
+    def test_overlap_center_and_edges_at_original_depth_boundaries(self):
+        engine = Path(os.environ.get('OBOR_HISTORICAL_ENGINE', SOURCE / 'src/engines/7533'))
+        source = (engine / 'openbor.c').read_text()
+        code = r'''
+#include <limits.h>
+#include <stdint.h>
+#include <stdio.h>
+#include <stdlib.h>
+#pragma GCC diagnostic ignored "-Wignored-qualifiers"
+#if defined(__clang__)
+#pragma GCC diagnostic ignored "-Wdeprecated-non-prototype"
+#endif
+#include "scriptcommon.h"
+
+uint32_t obor_profile_build;
+@CHECK_COLLISION@
+
+struct depth_result { int center, background, foreground; };
+
+static void check_depth(int target_z, int hit, struct depth_result expected)
+{
+    s_hitbox seeker_box = {.width = 10, .height = 6, .z_background = 12, .z_foreground = 20};
+    s_hitbox target_box = {.width = 10, .height = 6, .z_background = 14, .z_foreground = 9};
+    s_axis_principal_int seeker_position = {.x = 20, .y = 10, .z = 10};
+    s_axis_principal_int target_position = {.x = 20, .y = 10, .z = target_z};
+    s_box overlap = {.center_x = -1, .center_y = -1, .center_z = -1,
+                     .background = -2, .foreground = -3};
+    s_collision_check_data test = {
+        .return_overlap = &overlap,
+        .seeker_pos = &seeker_position, .seeker_coords = &seeker_box,
+        .seeker_direction = DIRECTION_RIGHT,
+        .target_pos = &target_position, .target_coords = &target_box,
+        .target_direction = DIRECTION_RIGHT,
+    };
+    int accepted = check_collision(&test);
+    if(accepted != hit || overlap.center_z != expected.center ||
+       overlap.background != expected.background || overlap.foreground != expected.foreground ||
+       overlap.center_x != (hit ? 25 : -1) || overlap.center_y != (hit ? 7 : -1))
+    {
+        fprintf(stderr, "Unexpected collision depth for profile %u at %d\n", obor_profile_build, target_z);
+        abort();
+    }
+}
+
+int main(void)
+{
+    static const struct {
+        uint32_t revision;
+        struct depth_result expected[3];
+    } cases[] = {
+        {7369, {{16,-2,-3}, {21,-2,-3}, {23,-2,-3}}},
+        {7391, {{16,-2,-3}, {21,-2,-3}, {23,-2,-3}}},
+        {7419, {{16,-2,-3}, {13,-2,-3}, {14,-2,-3}}},
+        {7420, {{16,-2,-3}, {17, 6,29}, {19, 8,30}}},
+        {7438, {{16,-2,-3}, {17, 6,29}, {19, 8,30}}},
+        {7439, {{12, 1,24}, {17, 6,29}, {19, 8,30}}},
+        {7533, {{12, 1,24}, {17, 6,29}, {19, 8,30}}},
+    };
+    static const int positions[] = {15, 20, 22};
+    for(size_t i = 0; i < sizeof(cases) / sizeof(*cases); ++i)
+    {
+        obor_profile_build = cases[i].revision;
+        for(size_t j = 0; j < sizeof(positions) / sizeof(*positions); ++j)
+            check_depth(positions[j], 1, cases[i].expected[j]);
+        check_depth(100, 0, (struct depth_result){-1, -2, -3});
+    }
+    return 0;
+}
+'''
+        code = code.replace('@CHECK_COLLISION@', function(source, 'check_collision'))
+        self.assertEqual(native_output(code, {'engine': '7533'}, engine_source=engine), '')
+
+    def test_foreground_depth_at_7420_boundary(self):
+        engine = Path(os.environ.get('OBOR_HISTORICAL_ENGINE', SOURCE / 'src/engines/7533'))
+        source = (engine / 'openbor.c').read_text()
+        loader = function(source, 'load_cached_model')
+        case = loader.split('case CMD_MODEL_BBOX:', 1)[1].split('case CMD_MODEL_BBOX_INDEX:', 1)[0]
+        depth = one(case, r'^\s*tempInt = GET_INT_ARG\(5\);[\s\S]*?->z_foreground = [^;]+;')
+        code = r'''
+#include <stdint.h>
+#include <stdio.h>
+#include <stdlib.h>
+#pragma GCC diagnostic ignored "-Wignored-qualifiers"
+#if defined(__clang__)
+#pragma GCC diagnostic ignored "-Wdeprecated-non-prototype"
+#endif
+#include "scriptcommon.h"
+
+uint32_t obor_profile_build;
+static unsigned warnings;
+#undef printf
+#define printf(...) (++warnings)
+#undef assert
+#define assert(expression) do { if(!(expression)) abort(); } while(0)
+@IS_NUMERIC@
+@VALID_INT@
+#undef printf
+
+static s_hitbox coordinates;
+#define collision_body_upsert_coordinates_property(...) (&coordinates)
+
+static void check_depth(char *foreground, int expected_depth, unsigned expected_warnings)
+{
+    ArgList arglist = {.count = foreground ? 7 : 6, .args = {[5] = "9", [6] = foreground}};
+    char *filename = "model", *command = "bbox", *value;
+    int tempInt;
+    warnings = 0;
+    coordinates = (s_hitbox){0};
+    @LOAD_DEPTH@
+    if(coordinates.z_background != 9 || coordinates.z_foreground != expected_depth ||
+       warnings != expected_warnings)
+    {
+        fprintf(stderr, "Unexpected body-box depth for profile %u\n", obor_profile_build);
+        abort();
+    }
+}
+
+int main(void)
+{
+    static const uint32_t profiles[] = {7369, 7391, 7419, 7420, 7530, 7533};
+    for(size_t i = 0; i < sizeof(profiles) / sizeof(*profiles); ++i)
+    {
+        obor_profile_build = profiles[i];
+        const int symmetric_depth = obor_profile_build >= 7420;
+        check_depth(NULL, symmetric_depth ? 9 : 0, 0);
+        check_depth("text", symmetric_depth ? 9 : 0, symmetric_depth ? 0 : 1);
+        check_depth("0", 0, 0);
+        check_depth("4", 4, 0);
+    }
+    return 0;
+}
+'''
+        code = code.replace('@LOAD_DEPTH@', depth)
+        code = code.replace('@IS_NUMERIC@', function(source, 'isNumeric'))
+        code = code.replace('@VALID_INT@', function(source, 'getValidInt'))
+        self.assertEqual(native_output(code, {'engine': '7533'}, engine_source=engine), '')
 
 
 if __name__=='__main__':

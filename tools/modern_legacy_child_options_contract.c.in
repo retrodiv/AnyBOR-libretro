@@ -1,0 +1,175 @@
+/* SPDX-License-Identifier: BSD-3-Clause
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me>
+ */
+#include <stdint.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <strings.h>
+#include "openbor.h"
+#undef printf
+#undef calloc
+#undef stricmp
+#define stricmp strcasecmp
+
+uint32_t obor_profile_build;
+static s_model model;
+static s_modelcache cached_models[] = {{.model = &model}};
+s_modelcache *model_cache = cached_models;
+static entity parent, child;
+static float x_at_spawn;
+static e_direction direction_at_spawn;
+static unsigned char color_default, color_parent;
+static unsigned color_index, color_calls;
+static unsigned unknown_child, unknown_aimove, unknown_aimove_modern;
+
+static void check(int condition, const char *label)
+{
+    if (!condition)
+    {
+        fprintf(stderr, "Profile %u: %s\n", obor_profile_build, label);
+        abort();
+    }
+}
+
+void borShutdown(int status, char *message, ...)
+{
+    (void)status;
+    check(0, message);
+}
+
+entity *spawn(float x, float z, float y, e_direction direction, char *name, int index, s_model *source)
+{
+    check(name == NULL && index == MODEL_INDEX_NONE && source == &model, "spawn model");
+    x_at_spawn = x;
+    direction_at_spawn = direction;
+    child.position.x = x;
+    child.position.y = y;
+    child.position.z = z;
+    child.direction = direction;
+    return &child;
+}
+
+void ent_set_colourmap(entity *actor, unsigned index)
+{
+    check(actor == &child, "colourmap target");
+    ++color_calls;
+    color_index = index;
+}
+
+static void capture_log(const char *format, ...)
+{
+    unknown_child += strstr(format, "Unknown child_spawn_config") != NULL;
+    unknown_aimove += strstr(format, "Unknown aimove option") != NULL;
+    unknown_aimove_modern += strstr(format, "Unknown AIMove flag") != NULL;
+}
+
+#define printf capture_log
+@METHODS@
+@SPAWN@
+#undef printf
+
+static void set_child_options(s_child_spawn *object, entity *parent, entity *child_entity)
+{
+    int i;
+    @AIMOVE@
+    @COLORS@
+}
+
+static void check_position(s_child_spawn *object, float initial_x, e_direction initial_direction,
+                           float final_x, e_direction final_direction)
+{
+    check(child_spawn_execute_object(object, &parent) == &child, "returned child");
+    check(x_at_spawn == initial_x && direction_at_spawn == initial_direction,
+          "position and direction visible to spawn");
+    check(child.position.x == final_x && child.direction == final_direction &&
+          child.position.y == 19.f && child.position.z == 27.f, "final child position and direction");
+}
+
+int main(void)
+{
+    static const uint32_t profiles[] = {
+        7391, 7420, 7431, 7432, 7434, 7435, 7500, 7501, 7529, 7530, 7533,
+    };
+    unsigned char *parent_maps[] = {&color_default, &color_parent};
+    parent.modeldata.colourmap = parent_maps;
+    parent.modeldata.maps_loaded = 2;
+    parent.colourmap = &color_parent;
+    parent.position.x = 100.f;
+    parent.position.y = 15.f;
+    parent.position.z = 20.f;
+
+    for (size_t p = 0; p < sizeof(profiles) / sizeof(*profiles); ++p)
+    {
+        obor_profile_build = profiles[p];
+        const int legacy_aimove = obor_profile_build < 7432u;
+        const int legacy_color = obor_profile_build < 7435u;
+        const int adjusted_spawn = obor_profile_build < 7530u;
+        s_child_spawn *object = child_spawn_allocate_object();
+        check(object->aimove == (legacy_aimove ? AIMOVE1_NONE : AIMOVE_SPECIAL_DEFAULT),
+              "initial child aimove");
+        unknown_aimove = 0;
+        check(get_aimove_constant_from_string("default") ==
+              (legacy_aimove ? AIMOVE1_NONE : AIMOVE_SPECIAL_DEFAULT), "default aimove option");
+        check(unknown_aimove == (unsigned)legacy_aimove, "historical default aimove diagnostic");
+        unknown_aimove = unknown_aimove_modern = 0;
+        check(get_aimove_constant_from_string("unsupported") == AIMOVE1_NONE &&
+              unknown_aimove == (unsigned)(obor_profile_build < 7501u) &&
+              unknown_aimove_modern == (unsigned)(obor_profile_build >= 7501u),
+              "unknown aimove diagnostic");
+        unknown_child = 0;
+        e_child_spawn_config aimove = child_spawn_get_config_bit_from_argument("aimove_parameter");
+        e_child_spawn_config index = child_spawn_get_config_bit_from_argument("color_parent_index");
+        e_child_spawn_config table = child_spawn_get_config_bit_from_argument("color_parent_table");
+        check((aimove != 0) == legacy_aimove && (index != 0) == legacy_color &&
+              (table != 0) == legacy_color, "available configuration flags");
+        check(unknown_child == 3u - legacy_aimove - 2u * legacy_color, "retired flag diagnostics");
+
+        object->model_index = 0;
+        object->position.x = 6.f;
+        object->position.y = 4.f;
+        object->position.z = 7.f;
+        parent.direction = DIRECTION_RIGHT;
+        check_position(object, adjusted_spawn ? (legacy_color ? 106.f : 94.f) : 100.f,
+                       DIRECTION_RIGHT, legacy_color ? 106.f : 94.f, DIRECTION_RIGHT);
+        object->config = CHILD_SPAWN_CONFIG_AUTOKILL_HIT;
+        check_position(object, adjusted_spawn ? 106.f : 100.f, DIRECTION_RIGHT, 106.f, DIRECTION_RIGHT);
+        object->config = CHILD_SPAWN_CONFIG_POSITION_LEVEL;
+        check_position(object, adjusted_spawn ? (legacy_color ? 106.f : 94.f) : 100.f,
+                       DIRECTION_RIGHT, legacy_color ? 106.f : 94.f, DIRECTION_RIGHT);
+        parent.direction = DIRECTION_LEFT;
+        object->config = CHILD_SPAWN_CONFIG_NONE;
+        check_position(object, adjusted_spawn ? 94.f : 100.f,
+                       adjusted_spawn ? DIRECTION_LEFT : DIRECTION_RIGHT,
+                       94.f, adjusted_spawn ? DIRECTION_LEFT : DIRECTION_RIGHT);
+        object->direction_adjust = DIRECTION_ADJUST_SAME;
+        check_position(object, adjusted_spawn ? 94.f : 100.f,
+                       adjusted_spawn ? DIRECTION_LEFT : DIRECTION_RIGHT, 94.f, DIRECTION_LEFT);
+
+        object->aimove = AIMOVE1_CHASE;
+        color_calls = 0;
+        child.modeldata.aimove = AIMOVE1_ARROW;
+        child.colourmap = &color_default;
+        set_child_options(object, &parent, &child);
+        check(child.modeldata.aimove == (legacy_aimove ? AIMOVE1_ARROW : AIMOVE1_CHASE),
+              "aimove without legacy flag");
+        check(color_calls == (unsigned)!legacy_color && child.colourmap == &color_default,
+              "colourmap without legacy flags");
+
+        color_calls = 0;
+        object->config = aimove | index | table;
+        object->color = legacy_color ? COLORSET_INDEX_PARENT_TABLE : COLORSET_INDEX_PARENT_INDEX;
+        set_child_options(object, &parent, &child);
+        check(child.modeldata.aimove == AIMOVE1_CHASE, "requested aimove");
+        check(color_calls == 1 && color_index == 1 && child.colourmap == &color_default,
+              "parent index takes precedence");
+
+        color_calls = 0;
+        object->config = table;
+        object->color = COLORSET_INDEX_PARENT_TABLE;
+        set_child_options(object, &parent, &child);
+        check(color_calls == 0 && child.colourmap == parent.colourmap, "parent colourmap table");
+        free(object);
+    }
+    return 0;
+}
