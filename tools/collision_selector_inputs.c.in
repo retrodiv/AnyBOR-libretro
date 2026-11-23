@@ -42,6 +42,7 @@ int StrCache_CreateNewFrom(const CHAR *s) {(void)s;abort();}
 #define obor_entityproperty_native(index) (index)
 #define obor_entityproperty(index) (index)
 #define obor_entity_property_index(index) (index)
+#define obor_profile_entity_native_index(index) (index)
 #undef stricmp
 #define stricmp strcasecmp
 #define _is_not_supported_by_ "'%s' is not supported by '%s'.\n"
@@ -78,6 +79,15 @@ static void equal(observation a,observation b) {
  for(int i=0;i<3;++i)CHECK(a.masks[i]==b.masks[i]);
  CHECK(a.ground==b.ground);CHECK(!strcmp(a.message,b.message));
 }
+static int expected_numeric_mask(int selector) {
+#if @HISTORICAL_TYPES@
+ if(obor_profile_build<7385u)
+  return (selector&1?TYPE_PLAYER:0)|(selector&2?TYPE_ENEMY:0)|(selector&4?TYPE_ITEM:0);
+ if(obor_profile_build<7447u)
+  return (selector&1?TYPE_NONE:0)|(selector&2?TYPE_PLAYER:0)|(selector&4?TYPE_ENEMY:0);
+#endif
+ return selector;
+}
 static void valid(int property,int selector,int named) {
  observation rows[2];
  for(int old=0;old<2;++old) {
@@ -90,7 +100,7 @@ static void valid(int property,int selector,int named) {
  if(named || !@TAGGED@) {
   CHECK(rows[0].masks[property]==types[selector]);
   CHECK(rows[0].ground==(property==0 && selector==0));
- } else {CHECK(rows[0].masks[property]==selector);CHECK(!rows[0].ground);}
+ } else {CHECK(rows[0].masks[property]==expected_numeric_mask(selector));CHECK(!rows[0].ground);}
 }
 static void sequence(int property) {
  observation rows[2];int expected=0;

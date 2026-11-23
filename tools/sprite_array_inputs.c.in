@@ -73,16 +73,15 @@ int StrCache_Pop(@POP_ARGUMENTS@) { cache[0][0]=0; return 0; }
 void StrCache_Collect(int n) { assert(n>=0 && n<4); }
 void StrCache_Copy(int n,CHAR *s) { assert(strlen(s)<sizeof(cache[n])); strcpy(StrCache_Get(n),s); }
 int StrCache_CreateNewFrom(const CHAR *s) { StrCache_Copy(0,(CHAR *)s); return 0; }
-void mapstrings_getentityproperty(ScriptVariant **v,int n) { (void)v;(void)n; }
-void mapstrings_changeentityproperty(ScriptVariant **v,int n) { (void)v;(void)n; }
-@MAPPER_TYPE@ mapstrings_entityproperty(ScriptVariant **v,int n) { (void)v;(void)n;@MAPPER_RETURN@ }
-/* Inputs below use native numeric selectors; mapping is tested separately. */
+@MAPPERS@
+/* Inputs use each profile's public numeric selectors. String mapping has its own contracts. */
 #define obor_property_index(ns,index,end) (index)
 #define obor_entity_get_property_native(index) (index)
 #define obor_entity_set_property_native(index) (index)
 #define obor_entityproperty_native(index) (index)
 #define obor_entityproperty(index) (index)
 @ENUMS@
+@SELECTORS@
 s_sprite_map *sprite_map;
 @LOADED_TYPE@ sprites_loaded;
 int sprite_map_max_items;

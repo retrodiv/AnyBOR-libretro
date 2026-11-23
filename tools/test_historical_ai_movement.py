@@ -27,9 +27,12 @@ def source_parts(engine):
     source = (SOURCE / 'src/engines' / engine / 'openbor.c').read_bytes().decode(
         'utf-8', 'surrogateescape')
     parts = {name: function(source, name) for name in FUNCTIONS}
-    parts['helpers'] = '\n'.join(function(source, name) for name in (
-        'obor_scene_counters_active', 'obor_scene_counter_adjust')) if \
-        'obor_scene_counters_active' in source else ''
+    helpers = []
+    if 'obor_scene_counters_active' in source:
+        helpers.extend(('obor_scene_counters_active', 'obor_scene_counter_adjust'))
+    if any('obor_entity_type_matches(' in body for body in parts.values()):
+        helpers.append('obor_entity_type_matches')
+    parts['helpers'] = '\n'.join(function(source, name) for name in helpers)
     return parts
 
 

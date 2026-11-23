@@ -156,7 +156,8 @@ def query_error_program(data):
     parts = dict(ENUMS='\n'.join(enums),
         VARIANTS='\n'.join(function(variants, name) for name in
             ('ScriptVariant_Clear', 'ScriptVariant_ChangeType', 'ScriptVariant_IntegerValue')),
-        NATIVE_ID=function(source, 'obor_attack_property_native'), GETTER=entry,
+        NATIVE_ID='\n'.join(function(source, name) for name in
+                            ('obor_attack_property_native', 'obor_entity_property_index')), GETTER=entry,
         CASES=','.join(queries), CONTRACTS='\n'.join(contracts),
         CONTEXTS=','.join('{%du,oracle_%s}' % (row['revision'], row['contract']) for row in data['sources']))
     code = Path(__file__).with_name('late_query_error_contract.c.in').read_text()

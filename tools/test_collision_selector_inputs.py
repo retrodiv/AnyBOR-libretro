@@ -98,6 +98,7 @@ def program(engine, profiles, *, reject_last=False):
             (engine / 'source/scriptlib/ScriptVariant.h').read_text() else 'void',
         READ_FIELDS=','.join('ent.'+field for field in fields),
         INIT_FIELDS='\n'.join('ent.'+field+'=123;' for field in fields),
+        HISTORICAL_TYPES=str(int(engine.name == '7533')),
         TAGGED=str(int('ltemp & 0x7fffffff' in setter)),
         MASK_FAST='obor_profile_build>=3596' if engine.name == '3741' else
                   '1' if engine.name == '3842' else '0',

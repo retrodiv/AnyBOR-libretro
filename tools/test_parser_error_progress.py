@@ -66,9 +66,13 @@ int main(void) {unsigned profiles[]={@PROFILES@};for(unsigned i=0;i<sizeof(profi
             call = name + '(p,1' + (',"production"' if name.endswith('2') else '') + ')'
             program = program.replace('@FUNCTION@', body).replace('@CALL@', call)
             profiles = json.loads((ROOT / 'src/pin.json').read_text())['profiles']
-            program = program.replace('@PROFILES@', ','.join(str(p.get('revision', p['build'].split('-')[0])) for p in profiles if p['engine'] == build))
-            program = program.replace('@RECOVERY@', '1' if build in ('3400', '3741') else '2')
-            # Early non-follow recovery consumes one token; later sources seek a follow token.
+            revisions = {int(p.get('revision', p['build'].split('-')[0])) for p in profiles
+                         if p['engine'] == build}
+            if build == '3842':
+                revisions.update((3809, 3810))
+            program = program.replace('@PROFILES@', ','.join(map(str, sorted(revisions))))
+            recovery = {'3400': '1', '3741': '1', '3842': '(obor_profile_build < 3810u ? 1 : 2)'}
+            program = program.replace('@RECOVERY@', recovery.get(build, '2'))
             with self.subTest(engine=build), tempfile.TemporaryDirectory(prefix='parser-error-') as directory:
                 unit, exe = Path(directory) / 'probe.c', Path(directory) / 'probe'
                 unit.write_text(program)

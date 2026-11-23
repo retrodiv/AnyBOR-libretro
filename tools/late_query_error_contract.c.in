@@ -41,8 +41,8 @@ static int obor_script_sprite_name_readable(const char *name,int limit)
 @NATIVE_ID@
 /* Mapper services preserve the supplied numeric parent and unconverted
  * child. Complete mapper behavior has its own independent contract. */
-void mapstrings_getentityproperty(ScriptVariant **args,int count){(void)args;(void)count;}
-void mapstrings_entityproperty(ScriptVariant **args,int count){(void)args;(void)count;}
+int mapstrings_getentityproperty(ScriptVariant **args,int count){(void)args;(void)count;return 1;}
+int mapstrings_entityproperty(ScriptVariant **args,int count){(void)args;(void)count;return 1;}
 #define printf report
 /* Keep the original dot-to-dropframe fallthrough in this complete branch
  * selection; accepting its diagnostic must not change its result. */

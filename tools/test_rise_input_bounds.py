@@ -76,9 +76,13 @@ def action_program(engine, profiles, *, wrong_refusal=False):
     health = ('actor.energy_state.health_current' if 'energy_state.health_current' in gate else
               'actor.energy_status.health_current' if 'energy_status.health_current' in gate else 'actor.health')
     profile_rise = 'obor_profile_uses_5134_script_ids()' in action
+    requires_back = '!obor_profile_uses_5134_script_ids()' if profile_rise else '1'
+    if engine.name == '6391' and 'const int front_only' in action:
+        # Original rear rise attacks first appear in build 6285.
+        requires_back = 'obor_profile_build >= 6285u'
     values = dict(CONFIG='#include "config.h"' if (engine / 'config.h').is_file() else '',
                   PROFILE_IDS='#include "profile_ids.h"' if profile_rise else '',
-                  REQUIRES_BACK='!obor_profile_uses_5134_script_ids()' if profile_rise else '1',
+                  REQUIRES_BACK=requires_back,
                   ANIM_TYPE=animation_type[0],
                   ANIM_ID_TYPE='animation_id_t' if re.search(r'void\s+ent_set_anim\([^;]+animation_id_t', header) else 'int',
                   TIME_TYPE=time_type[0],

@@ -23,11 +23,11 @@
       "entity_embedded": true
     },
     "3842": {
-      "entity_size": 2404,
+      "entity_size": 2416,
       "entity_alignment": 4,
       "method_size": 144,
       "method_alignment": 4,
-      "entity_method_offset": 2252,
+      "entity_method_offset": 2264,
       "layer_size": 212,
       "layer_method_offset": 48,
       "entity_embedded": true
@@ -73,11 +73,11 @@
       "entity_embedded": false
     },
     "7533": {
-      "entity_size": 2064,
+      "entity_size": 2156,
       "entity_alignment": 4,
       "method_size": 144,
       "method_alignment": 4,
-      "entity_method_offset": 1172,
+      "entity_method_offset": 1244,
       "layer_size": 224,
       "layer_method_offset": 48,
       "entity_embedded": false

@@ -271,7 +271,7 @@ int main(void)
     def test_original_ai_target_selection(self):
         engine = Path(os.environ.get('OBOR_HISTORICAL_ENGINE', ROOT / 'src/engines/7533'))
         source = (engine / 'openbor.c').read_text()
-        routines = ('diff', 'get_type_from_string', 'get_type_from_arglist',
+        routines = ('diff', 'obor_entity_deadline_value', 'get_type_from_string', 'get_type_from_arglist',
                     'faction_check_player_verses', 'faction_check_is_hostile',
                     'faction_check_can_damage', 'find_ent_here', 'normal_find_target',
                     'obor_target_is_hostile', 'obor_target_can_damage', 'common_try_grab',

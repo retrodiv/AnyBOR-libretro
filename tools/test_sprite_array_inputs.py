@@ -33,8 +33,23 @@ def program(engine, profiles):
     old_offsets = flat or engine.name == '3741'
     headers = '\n'.join(p.read_text(encoding='latin1') for p in
         [engine / 'openborscript.h', engine / 'source/openborscript/config.h'] if p.is_file())
-    mapper = re.search(r'(void|int)\s+mapstrings_entityproperty\s*\(', headers)
-    mapper_type = mapper[1] if mapper else 'void'
+    mappers = []
+    for name in ('mapstrings_getentityproperty', 'mapstrings_changeentityproperty', 'mapstrings_entityproperty'):
+        declaration = re.search(r'(void|int)\s+' + name + r'\s*\(', headers)
+        result_type = declaration[1] if declaration else 'void'
+        result = ' return 1;' if result_type == 'int' else ''
+        mappers.append(f'{result_type} {name}(ScriptVariant **v,int n) {{ (void)v;(void)n;{result} }}')
+    selectors = ''
+    selector_shift = ''
+    if engine.name == '3842':
+        selectors = function(source, 'obor_entity_property_index')
+        selector_shift = ' + (obor_profile_build >= 3858u)'
+    elif engine.name == '7533':
+        legacy_selector = re.search(r'\benum\s*\{\s*OBOR_LEGACY_EP_NOSHADOW\s*=\s*_ep_the_end\s*\+\s*1\s*\};', source)
+        if not legacy_selector:
+            raise ValueError('Missing native legacy entity selector')
+        selectors = legacy_selector[0] + '\n' + function(source, 'obor_profile_entity_native_index')
+        selector_shift = ' + (obor_profile_build < 7475u)'
     forward_sprite = engine.name == '4086'
     guards = '\n'.join(re.search(r'(?m)^#define ' + name + r'\([^\n]+(?:\n[^\n]*)*?\}\)\)', source)[0]
                        for name in ('OBOR_ANIMATION_OBJECT', 'OBOR_ANIMATION_PIXELS')) if forward_sprite else ''
@@ -46,7 +61,8 @@ def program(engine, profiles):
         owner_methods += '\n'.join(function(core, name) for name in
                                   ('obor_script_animation_owner', 'obor_script_model_animation'))
     values = dict(FORWARD_SPRITE=str(int(forward_sprite)), GUARDS=guards, OWNERS=owner_methods,
-        MAPPER_TYPE=mapper_type, MAPPER_RETURN='return 1;' if mapper_type == 'int' else '', CONFIG='#include "config.h"' if (engine / 'config.h').is_file() else '',
+        MAPPERS='\n'.join(mappers), SELECTORS=selectors,
+        CONFIG='#include "config.h"' if (engine / 'config.h').is_file() else '',
         SCRIPT_HEADER='openborscript.h' if (engine / 'openborscript.h').is_file() else 'scriptcommon.h',
         PROFILE_HEADER='#include "source/openborscript/profile_ids.h"' if engine.name == '6391' else '',
         ANIMATION_ZERO='obor_animation_public(0,obor_profile_build)' if engine.name == '4086' else 'obor_animation_to_native(0)' if engine.name == '6391' else '0',
@@ -64,7 +80,7 @@ def program(engine, profiles):
         NULL_NODE_CONTROL='' if flat else 'maps[0].node=NULL;empty_name_get();',
         GETTER=selected_dispatch(source, 'openbor_getentityproperty', [get_label]),
         SETTER=selected_dispatch(source, 'openbor_changeentityproperty', [set_label]),
-        GET_PROPERTY=get_label, SET_PROPERTY=set_label,
+        GET_PROPERTY=get_label + selector_shift, SET_PROPERTY=set_label + selector_shift,
         GET_CENTER='_gep_spritea_centerx' if old_offsets else '_ep_spritea_centerx',
         SET_CENTER='_cep_spritea_centerx' if old_offsets else '_ep_spritea_centerx',
         SET_CENTERY='_cep_spritea_centery' if old_offsets else '_ep_spritea_centery',
