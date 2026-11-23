@@ -3158,6 +3158,15 @@ static void loading_dispose(void)
     g_loading = false;
 }
 
+static bool loading_finish(void)
+{
+    bool ok = g_loading_ok;
+    loading_dispose();
+    if (ok && finish_load_game()) return true;
+    error_screen(NULL);
+    return false;
+}
+
 /* RetroArch reserves rewind before its first run. Advertise the generic PACK
  * growth allowance and all possible active-engine sections before preparation;
  * snapshots themselves remain unavailable until boot (MUST_INITIALIZE).
@@ -3350,10 +3359,7 @@ static void loading_run(void)
     }
     g_loading_first = false;
     if (g_loading_done) {
-        bool ok = g_loading_ok;
-        loading_dispose();
-        if (!ok || !finish_load_game()) {
-            error_screen(NULL);
+        if (!loading_finish()) {
             present_error_frame();
             return;
         }
@@ -3444,6 +3450,33 @@ size_t retro_serialize_size(void)
     return g_state_capacity;
 }
 
+static constexpr uint32_t kRawStateMagic = 0x3153424fU; /* OBS1 */
+
+static bool finish_startup_for_restore(const void *data, size_t size)
+{
+    /* Stock rewind can retain the zero buffer from a refused startup capture.
+     * Only a recognized state header should take the synchronous boot path. */
+    uint32_t magic;
+    if (!data || size < 2 * sizeof(magic) || size > UINT32_MAX) return false;
+    memcpy(&magic, data, sizeof(magic));
+    if (magic != kRawStateMagic && magic != OBOR_BLOCK_STATE_MAGIC) return false;
+
+    if (g_loading) {
+        /* Resume the existing preparation on its own stack, then boot on
+         * this thread. The frontend may release the state as soon as this
+         * callback returns, so complete the actual restore in this call. */
+        g_loading_yield = obor_detection_now();
+        while (!g_loading_done) loading_switch();
+        if (!loading_finish()) return false;
+    }
+    /* Engine boot returns at its first yield. Finish initial model loading
+     * so the ordinary restore runs outside any active preload parser. */
+    while (!p_startup_complete()) {
+        if (!p_run_frame()) return false;
+    }
+    return true;
+}
+
 static void profile_state_identity(const char *operation, const void *data, size_t size)
 {
     /* Diagnostic correlation only: record the complete block index (including
@@ -3499,7 +3532,7 @@ static uint32_t serialize_capture(void *data, size_t size, obor_state_ranges *ra
         env_cb(RETRO_ENVIRONMENT_GET_SAVESTATE_CONTEXT, &context);
         if (ok && written >= 72) {
             memcpy(&magic, data, sizeof(magic));
-            if (magic == 0x3153424fU)
+            if (magic == kRawStateMagic)
                 memcpy(&heap, (const uint8_t *)data + 64, sizeof(heap));
         }
         obor_profile_record("serialize", g_frame_no, profile_begin,
@@ -3568,6 +3601,9 @@ bool retro_unserialize(const void *data, size_t size)
         queue_state_fault();
         return false;
     }
+    if ((g_loading || (g_booted && !p_startup_complete())) &&
+        !finish_startup_for_restore(data, size))
+        return false;
     bool ok;
     {
         /* the snapshot spans this whole module's writable segments — the
