@@ -27110,6 +27110,7 @@ void update_loading(s_loadingbar *s,  int value, int max)
     static uint64_t lasttick = 0;
     static int last_percent = -1;
     int progress_changed = obor_loading_progress_changed(value, max, &last_percent);
+    obor_port_startup_progress(value, max);
     static uint64_t soundtick = 0;
     static uint64_t keybtick = 0;
     int pos_x = s->bar_position.x + videomodes.hShift;

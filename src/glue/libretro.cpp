@@ -102,6 +102,7 @@ static void *g_loading_stack, *g_loading_context, *g_loading_frontend;
 static uint64_t g_loading_yield;
 static uint32_t *g_loading_pixels; /* ephemeral presentation, never an engine state */
 static int g_loading_width, g_loading_height;
+static unsigned g_startup_model_percent OBOR_RUNTIME;
 static int g_width = 320, g_height = 240;
 static unsigned g_max_width = 1920, g_max_height = 1080;
 static bool g_av_announced;
@@ -1547,9 +1548,18 @@ void retro_set_controller_port_device(unsigned port, unsigned device)
     (void)device;
 }
 
+static void startup_model_progress(int completed, int total)
+{
+    if (completed <= 0 || total <= 0) return;
+    unsigned percent = completed >= total ? 100u :
+        (unsigned)((uint64_t)completed * 100 / total);
+    if (percent > g_startup_model_percent) g_startup_model_percent = percent;
+}
+
 static bool boot_engine(void)
 {
     g_startup_reported = false;
+    g_startup_model_percent = 0;
     obor_dbg("boot: pristine capture");
     pristine_capture();  /* first boot: engines still virgin — snapshot */
     obor_dbg("boot: pristine restore");
@@ -1577,6 +1587,7 @@ static bool boot_engine(void)
     boot.resource_event = engine_resource_event;
     boot.state_content = obor_state_session_settings.content;
     boot.state_compression = obor_state_session_settings.compression;
+    boot.startup_progress = startup_model_progress;
     obor_engine_region regions[OBOR_MAX_ENGINE_REGIONS];
     const size_t n_eng = sizeof(kEngineDefs) / sizeof(kEngineDefs[0]);
     static_assert(sizeof(kEngineDefs) / sizeof(kEngineDefs[0]) <= OBOR_MAX_ENGINE_REGIONS,
@@ -3452,6 +3463,19 @@ size_t retro_serialize_size(void)
 
 static constexpr uint32_t kRawStateMagic = 0x3153424fU; /* OBS1 */
 
+static bool present_startup_restore_loading(unsigned progress)
+{
+    if (!g_av_announced || !video_cb) return true;
+    if (!g_loading_pixels &&
+        !loading_image_size(g_loading_width ? g_loading_width : g_width,
+                            g_loading_height ? g_loading_height : g_height,
+                            false))
+        return true;
+    obor_loading_render(g_loading_pixels, g_loading_width, g_loading_height, progress);
+    return present_video(g_loading_pixels, g_loading_width, g_loading_height,
+                         g_loading_width);
+}
+
 static bool finish_startup_for_restore(const void *data, size_t size)
 {
     /* Stock rewind can retain the zero buffer from a refused startup capture.
@@ -3461,20 +3485,41 @@ static bool finish_startup_for_restore(const void *data, size_t size)
     memcpy(&magic, data, sizeof(magic));
     if (magic != kRawStateMagic && magic != OBOR_BLOCK_STATE_MAGIC) return false;
 
+    /* Reserve space for each measured phase. Model counts report completed
+     * work and cannot predict how long the remaining models will take. */
+    const unsigned preparation_end = 100;
+    const unsigned models_end = 950;
     if (g_loading) {
+        unsigned shown = obor_prepare_value() * preparation_end / 1000;
+        if (!present_startup_restore_loading(shown)) return false;
         /* Resume the existing preparation on its own stack, then boot on
          * this thread. The frontend may release the state as soon as this
          * callback returns, so complete the actual restore in this call. */
         g_loading_yield = obor_detection_now();
-        while (!g_loading_done) loading_switch();
+        while (!g_loading_done) {
+            loading_switch();
+            unsigned progress = obor_prepare_value() * preparation_end / 1000;
+            if (progress > shown && !g_loading_done) {
+                if (!present_startup_restore_loading(progress)) return false;
+                shown = progress;
+            }
+        }
         if (!loading_finish()) return false;
     }
     /* Engine boot returns at its first yield. Finish initial model loading
      * so the ordinary restore runs outside any active preload parser. */
-    while (!p_startup_complete()) {
+    unsigned shown = 0;
+    for (;;) {
+        unsigned progress = preparation_end +
+            g_startup_model_percent * (models_end - preparation_end) / 100;
+        if (progress > shown) {
+            if (!present_startup_restore_loading(progress)) return false;
+            shown = progress;
+        }
+        if (p_startup_complete()) break;
         if (!p_run_frame()) return false;
     }
-    return true;
+    return shown == models_end || present_startup_restore_loading(models_end);
 }
 
 static void profile_state_identity(const char *operation, const void *data, size_t size)
@@ -3601,9 +3646,8 @@ bool retro_unserialize(const void *data, size_t size)
         queue_state_fault();
         return false;
     }
-    if ((g_loading || (g_booted && !p_startup_complete())) &&
-        !finish_startup_for_restore(data, size))
-        return false;
+    bool startup_restore = g_loading || (g_booted && !p_startup_complete());
+    if (startup_restore && !finish_startup_for_restore(data, size)) return false;
     bool ok;
     {
         /* the snapshot spans this whole module's writable segments — the
@@ -3624,6 +3668,7 @@ bool retro_unserialize(const void *data, size_t size)
     }
     if (!ok && g_booted) queue_state_fault();
     if (ok) {
+        if (startup_restore && !present_startup_restore_loading(1000)) return false;
         g_last_unser = g_frame_no;
         g_reverse_has_snapshot = true;
         if (g_input_after_load) {

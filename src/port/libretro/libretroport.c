@@ -91,6 +91,7 @@ extern int obor_live_threads;
 void obor_co_restore_active(cothread_t frontend);
 static int frame_ready;
 static int boot_frame_pending;
+static void (*startup_progress_callback)(int, int) OBOR_RUNTIME;
 static unsigned preload_depth;
 /* Every supported engine sets this after its fonts, scripts, cached models
  * and object tables have finished loading. Loading-screen and timer yields
@@ -417,6 +418,12 @@ void obor_wait_frame(void)
     obor_yield_frame();
 }
 
+void obor_port_startup_progress(int completed, int total)
+{
+    if (!startup_done && startup_progress_callback)
+        startup_progress_callback(completed, total);
+}
+
 void obor_preload_begin(void)
 {
     ++preload_depth;
@@ -567,6 +574,7 @@ int32_t obor_boot(const obor_boot_info *info)
     obor_profile_build = info->profile_build;
     obor_profile_features = info->profile_features;
     preload_depth = 0;
+    startup_progress_callback = info->startup_progress;
     obor_state_session_settings.content = info->state_content;
     obor_state_session_settings.compression = info->state_compression;
     obor_arena_authorize(info->arena_reserved);

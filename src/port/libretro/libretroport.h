@@ -126,6 +126,7 @@ extern unsigned char obor_pad[4][16];
 
 /* Present a finished frame (XRGB8888) to the ABI side. Called by video.c. */
 void obor_port_submit_frame(const unsigned int *px, int w, int h, int pitch_px);
+void obor_port_startup_progress(int completed, int total);
 
 /* Mixer parameters recorded by sblaster.c. */
 extern int obor_snd_bits, obor_snd_rate, obor_snd_started;

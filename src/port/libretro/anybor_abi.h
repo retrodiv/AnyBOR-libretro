@@ -27,7 +27,7 @@
 extern "C" {
 #endif
 
-#define OBOR_ABI_VERSION 11u
+#define OBOR_ABI_VERSION 12u
 
 #define OBOR_EXIT_MEMORY_FAULT (-2)
 #define OBOR_PROFILE_ATTACK_HISTORY_FOUR (1u << 0)
@@ -114,6 +114,8 @@ typedef struct {
      * Passed at boot; these frontend preferences are not part of a savestate. */
     int32_t state_content;
     int32_t state_compression;
+    /* Model progress, sampled by the frontend at existing startup yields. */
+    void (*startup_progress)(int completed, int total);
 } obor_boot_info;
 
 /* Every function below is implemented by each linked engine object and wired

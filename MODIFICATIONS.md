@@ -216,6 +216,11 @@ native loading screen. Preparation has no game snapshot: the negotiated
 lets frontends reserve rewind. Cancellation resumes normal cleanup before
 destroying the preparation stack. No game identity or decoding recipe is added.
 
+An entry-state load uses the same startup artwork during the synchronous
+restore. The bar tracks measured preparation work and the active engine's
+startup model progress at existing yields. The last portion fills when the
+state has been restored successfully.
+
 ## Darwin platform support
 
 Darwin compilations enable `_DARWIN_C_SOURCE` before any system header is read.

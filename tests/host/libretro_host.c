@@ -241,6 +241,7 @@ static long g_nonblack_max;
 static unsigned long long g_audio_energy;
 static int g_shutdown;
 static unsigned long g_video_calls;
+static int g_trace_restore_video;
 static int g_variable_states;
 static int g_startup_complete;
 static int g_reverse_presentation;
@@ -708,6 +709,13 @@ static void video_cb(const void *data, unsigned width, unsigned height,
     g_fb = (const uint32_t *)data;
     if (!data)
         return;
+    if (g_trace_restore_video) {
+        unsigned track = width * 3 / 4, filled = 0;
+        const uint32_t *row = (const uint32_t *)((const uint8_t *)data + height * 220 / 240 * pitch);
+        for (unsigned x = (width - track) / 2; x < (width - track) / 2 + track; ++x)
+            filled += row[x] == 0x00407ac0u;
+        printf("restore loading bar: %u/%u\n", filled, track);
+    }
     long nb = 0;
     const uint8_t *rows = (const uint8_t *)data;
     for (unsigned y = 0; y < height; y++) {
@@ -1604,7 +1612,13 @@ int main(int argc, char **argv)
                     void *buf = malloc(sz);
                     if (buf && fread(buf, 1, sz, f) == sz) {
                         int live_threads = threads_before >= 0 ? count_host_threads() : -1;
+                        unsigned long video_before_restore = g_video_calls;
+                        g_trace_restore_video = getenv("OBOR_VIDEO_TRACE") != NULL;
                         int ok = p_retro_unserialize(buf, sz);
+                        if (g_trace_restore_video)
+                            printf("video callbacks during load at frame %d: %lu\n",
+                                   g_frame, g_video_calls - video_before_restore);
+                        g_trace_restore_video = 0;
                         if (ok) last_successful_load = g_frame;
                         printf("load state at frame %d: %s\n", g_frame, ok ? "ok" : "FAILED");
                         if (ok && !check_host_threads(threads_before, "restore", live_threads)) return 1;

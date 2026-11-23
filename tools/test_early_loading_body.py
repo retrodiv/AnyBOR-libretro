@@ -75,6 +75,7 @@ static int at;
 static void event(char c){assert(at+1<(int)sizeof(trace));trace[at++]=c;trace[at]=0;}
 void writeToLogFile(const char *format,...){(void)format;abort();}
 void sound_update_music(void){event('S');}
+void obor_port_startup_progress(int value,int max){assert(value==expect_value && max==100);}
 void control_update(s_playercontrols **p,int count){assert(p==playercontrolpointers && count==expect_poll);polls++;event('I');}
 unsigned timer_getinterval(unsigned freq){assert(freq==GAME_SPEED);event('R');return GAME_SPEED+1;}
 void movie_update(s_playercontrols **p){(void)p;abort();}

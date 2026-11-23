@@ -96,6 +96,7 @@ int Script_Execute(Script *s){
  Script *previous=pcurrentscript;pcurrentscript=s;calls++;queue+=2;event('L');pcurrentscript=previous;return S_OK;
 }
 void obor_yield_frame(void){yields++;obor_clock_us+=16667;}
+void obor_port_startup_progress(int value,int max){assert(value>=-1 && value<=max && max>0);}
 void sound_update_music(void){sounds++;event('S');}
 void control_update(s_playercontrols **p,int count){assert(p==playercontrolpointers && count==1);polls++;event('I');}
 void font_printf(int x,int y,int font,int layer,char *format,...){

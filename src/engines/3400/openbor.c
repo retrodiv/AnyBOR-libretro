@@ -11169,6 +11169,7 @@ static void obor_update_loading_legacy(int pos_x, int pos_y, int size_x,
 }
 
 void update_loading(s_loadingbar* s,  int value, int max) {
+    obor_port_startup_progress(value, max);
     if(obor_profile_build < 3220) {
         obor_update_loading_legacy(s->legacy_args[1] + videomodes.hShift,
                                   s->legacy_args[2] + videomodes.vShift,
