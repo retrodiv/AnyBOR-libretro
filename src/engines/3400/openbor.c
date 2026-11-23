@@ -26012,7 +26012,7 @@ void openborMain(int argc, char** argv)
 	u32 menutime = 0;
 #endif
 
-	printf("OpenBoR %s, Compile Date: " __DATE__ "\n\n", VERSION);
+	printf("OpenBoR %s, Compile Date: " __DATE__ "\n\n", OBOR_CLASSIC_VERSION_LABEL);
 
 	if(argc > 1) {
 		argl = strlen(argv[1]);
@@ -26089,7 +26089,7 @@ void openborMain(int argc, char** argv)
 				done = 1;
 			}
 
-			font_printf(5,3, 2, 0, "OpenBoR %s", VERSION);
+			font_printf(5,3, 2, 0, "OpenBoR %s", OBOR_CLASSIC_VERSION_LABEL);
 			font_printf(265,3, 2, 0, __DATE__);
 			font_printf(197,155, 2, 0, "www.LavaLit.com");
 			font_printf(190,165, 2, 0, "www.SenileTeam.com");

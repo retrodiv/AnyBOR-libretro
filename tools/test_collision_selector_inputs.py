@@ -72,7 +72,8 @@ def program(engine, profiles, *, reject_last=False):
         if selected.count('if(!varlist[i]) continue;') != 1:
             raise ValueError('One bounded native collision mapping loop required')
         mapping.append(result_type[1]+' '+name+'(ScriptVariant **varlist,int paramCount) {\n'
-                       'char *propname;int prop,i,t,native_property=varlist[1]->lVal,obor_property=varlist[1]->lVal;'
+                       'char *propname;int prop,i,t,property=varlist[1]->lVal,\n'
+                       'native_property=varlist[1]->lVal,obor_property=varlist[1]->lVal;'
                        'const char *eps=varlist[1]->lVal==10000?"candamage":'
                        'varlist[1]->lVal==10001?"hostile":"projectilehit";\n'+table[0]+'\n'+selected+'\n'+
                        ('return 1;' if result_type[1] == 'int' else '')+'\n}')

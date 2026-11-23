@@ -3,9 +3,8 @@
  * Copyright (c) 2026 retrodiv <retrodiv@proton.me> (original contributions).
  * These contributions are licensed under BSD-3-Clause; see LICENSE at the root.
  * Upstream code retains its original license and notices.
- * Own and release retained historical literal baselines, compact call
- * references, and distinguish parser storage from compiled call and jump
- * targets.
+ * Own retained literal baselines, compact call references, and preserve the
+ * original instruction display text for each profile.
  * Existing changes recorded here; this is not their implementation date.
  * See MODIFICATIONS.md and docs/modifications/3842.md
  * at the source repository root. Original notices follow below.
@@ -23,6 +22,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <stdint.h>
+#include "libretroport.h"
 
 void Instruction_InitViaToken(Instruction* pins, OpCode code, Token* pToken )
 {
@@ -423,7 +423,7 @@ void Instruction_ToString(Instruction* pins, LPSTR strRep)
 	   strcpy( strRep, "FUNCDECL " );
 	   break;
 	default:
-	   strcpy( strRep, "[unknown] " );
+	   if(obor_profile_build >= 3810u) strcpy( strRep, "[unknown] " );
 	   break;
 	}
 
@@ -432,9 +432,10 @@ void Instruction_ToString(Instruction* pins, LPSTR strRep)
 	   strcat( strRep, pins->Label);
 	if (pins->storageType == INSTRUCTION_SOURCE_TOKEN && pins->theToken &&
 	    pins->theToken->theType != END_OF_TOKENS) {
-		if(pins->OpCode==CONSTSTR) strcat( strRep, "\"");
+		int quote = obor_profile_build >= 3831u && pins->OpCode == CONSTSTR;
+		if(quote) strcat( strRep, "\"");
 	   strcat( strRep, pins->theToken->theSource );
-		if(pins->OpCode==CONSTSTR) strcat( strRep, "\"");
+		if(quote) strcat( strRep, "\"");
 	}
 
 }

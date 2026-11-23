@@ -26,6 +26,9 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <stdint.h>
+
+extern uint32_t obor_profile_build;
 
 //Constructor
 void Token_Init(Token* ptoken, MY_TOKEN_TYPE theType, LPCSTR theSource, TEXTPOS theTextPosition, ULONG charOffset)
@@ -45,6 +48,10 @@ HRESULT Token_InitFromPreprocessor(Token* ptoken, pp_token* ppToken)
 
 	switch (ppToken->theType)
 	{
+		case PP_TOKEN_DEFINED:
+			if(obor_profile_build < 3803u) goto unknown_token;
+			ptoken->theType = TOKEN_IDENTIFIER;
+			break;
 		case PP_TOKEN_IDENTIFIER:
 		case PP_TOKEN_INCLUDE:
 		case PP_TOKEN_IMPORT:
@@ -55,7 +62,6 @@ HRESULT Token_InitFromPreprocessor(Token* ptoken, pp_token* ppToken)
 		case PP_TOKEN_IFDEF:
 		case PP_TOKEN_IFNDEF:
 		case PP_TOKEN_ENDIF:
-		case PP_TOKEN_DEFINED:
 		case PP_TOKEN_WARNING:
 		case PP_TOKEN_ERROR_TEXT:
 			ptoken->theType = TOKEN_IDENTIFIER;
@@ -207,6 +213,7 @@ HRESULT Token_InitFromPreprocessor(Token* ptoken, pp_token* ppToken)
 			ptoken->theType = TOKEN_ERROR;
 			return E_FAIL;
 		default:
+		unknown_token:
 			printf("Script error: unknown token type %d\n", ppToken->theType);
 			ptoken->theType = TOKEN_ERROR;
 			return E_FAIL;

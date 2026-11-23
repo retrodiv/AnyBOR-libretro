@@ -82,6 +82,7 @@ void Varlist_Clear(Varlist *value)
     values = dict(CONFIG='#include "config.h"' if (engine / 'config.h').is_file() else '',
         SCRIPT_HEADER='openborscript.h' if (engine / 'openborscript.h').is_file() else 'scriptcommon.h',
         GIF_HEADER='#include "anigif.h"' if data['kind'] == 'typed' else '',
+        STREAM_OWNER=str(int('obor_anigif_stream_close(' in helper)),
         PREFIX_CHECKS='\n'.join(checks), HELPER=helper, BEFORE_HELPER=before,
         FREE=function(source, 'system_free'), BEFORE_FREE=before_free,
         NATIVE_VARLIST=native_varlist, SHUTDOWN=shutdown, HAS_SCRIPT=str(int(data['kind'] != 'raw')),

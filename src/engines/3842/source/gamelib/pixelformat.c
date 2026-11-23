@@ -4,8 +4,9 @@
  * These contributions are licensed under BSD-3-Clause; see LICENSE at the root.
  * Upstream code retains its original license and notices.
  * Bound clip endpoints without signed overflow while retaining native color
- * and draw-method initialization. Bound blend and tint function selection
- * while preserving valid native operations.
+ * and draw-method initialization. Select native red and blue blend channel
+ * assignment from 3860. Bound blend and tint function selection while
+ * preserving valid native operations.
  * Existing changes recorded here; this is not their implementation date.
  * See MODIFICATIONS.md and docs/modifications/3842.md
  * at the source repository root. Original notices follow below.
@@ -337,9 +338,11 @@ unsigned blend_tint32(unsigned color1, unsigned color2)
 //copy from below
 unsigned blend_rgbchannel32(unsigned color1, unsigned color2)
 {
-	unsigned b1 = color1>>16, r2 = color2>>16;
+	extern uint32_t obor_profile_build;
+	const int native_channels = obor_profile_build >= 3860u;
+	unsigned b1 = color1>>16, b2 = native_channels ? color2>>16 : color2&0xFF;
 	unsigned g1 = (color1&0xFF00)>>8, g2 = (color2&0xFF00)>>8;
-	unsigned r1 = color1&0xFF, b2 = color2&0xFF;
+	unsigned r1 = color1&0xFF, r2 = native_channels ? color2&0xFF : color2>>16;
 	return _color(	_channel(r1,r2,channelr),
 					_channel(g1,g2,channelg),
 					_channel(b1,b2,channelb));

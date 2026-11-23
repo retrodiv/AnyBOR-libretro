@@ -47,6 +47,8 @@ int StrCache_CreateNewFrom(const CHAR *s) { (void)s;abort(); }
 #define obor_entity_get_property_native(index) (index)
 #define obor_entityproperty_native(index) (index)
 #define obor_entityproperty(index) (index)
+#define obor_entity_property_index(index) (index)
+#define obor_profile_entity_native_index(index) (index)
 #undef stricmp
 #define stricmp strcasecmp
 #define _is_not_a_known_subproperty_of_ "'%s' is not a known subproperty of '%s'.\n"

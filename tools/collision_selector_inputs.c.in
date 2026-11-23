@@ -41,6 +41,7 @@ int StrCache_CreateNewFrom(const CHAR *s) {(void)s;abort();}
 #define obor_entity_set_property_native(index) (index)
 #define obor_entityproperty_native(index) (index)
 #define obor_entityproperty(index) (index)
+#define obor_entity_property_index(index) (index)
 #undef stricmp
 #define stricmp strcasecmp
 #define _is_not_supported_by_ "'%s' is not supported by '%s'.\n"
@@ -144,6 +145,14 @@ static void refused(int property) {
   text_rows[old]=observe(old,4);
  }
  equal(text_rows[0],text_rows[1]);CHECK(text_rows[0].status==E_FAIL && text_rows[0].message[0]);
+ if(obor_profile_build==3185)
+  CHECK(!strcmp(text_rows[0].message,
+   "Entity type 'unknown_type' is not supported by 'hostile' or 'candamage'\n"
+   "You must give a string for entity type.\n"));
+ if(obor_profile_build==3400)
+  CHECK(!strcmp(text_rows[0].message,
+   "Entity type 'unknown_type' is not supported by 'hostile', 'candamage', or 'projectilehit'\n"
+   "You must pass one or more string constants for entity type.\n"));
  /* Root null arguments are checked before the mask is modified. */
  for(int slot=0;slot<3;++slot){setup(property);args[slot]=NULL;CHECK(openbor_changeentityproperty(args,&out,3)==E_FAIL && !out);}
  setup(property);CHECK(openbor_changeentityproperty(args,NULL,3)==E_FAIL);

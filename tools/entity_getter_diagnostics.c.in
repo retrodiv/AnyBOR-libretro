@@ -1,0 +1,143 @@
+/* SPDX-License-Identifier: BSD-3-Clause
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me> */
+#include <limits.h>
+#include <stdarg.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include "openbor.h"
+#include "anybor_resources.h"
+
+#undef assert
+#undef printf
+#define assert(condition) do { \
+    if(!(condition)) { fprintf(stderr, "Entity query check at line %d\n", __LINE__); abort(); } \
+} while(0)
+uint32_t obor_profile_build;
+int max_attack_types=1;
+int sprite_map_max_items=1;
+unsigned int sprites_loaded=1;
+static s_sprite_map sprites[1];
+s_sprite_map *sprite_map=sprites;
+
+static char property_name[32];
+static char messages[4096];
+static size_t message_length;
+
+CHAR *StrCache_Get(int index) {
+    assert(index==0);
+    return property_name;
+}
+
+CHAR *StrCache_GetIfPresent(int index) {
+    return index==0?property_name:NULL;
+}
+
+void StrCache_Collect(int index) {
+    assert(index==0);
+}
+
+int StrCache_Pop(void) {
+    assert(0);
+    return 0;
+}
+
+size_t obor_allocation_size(const void *owner) {
+    (void)owner;
+    assert(0);
+    return 0;
+}
+
+int obor_allocation_query(const void *address, const void **base, size_t *remaining) {
+    (void)address;
+    (void)base;
+    (void)remaining;
+    assert(0);
+    return 0;
+}
+
+static int capture_message(const char *format, ...) {
+    va_list args;
+    va_start(args, format);
+    int count=vsnprintf(messages+message_length, sizeof(messages)-message_length, format, args);
+    va_end(args);
+    assert(count>=0 && (size_t)count<sizeof(messages)-message_length);
+    message_length+=(size_t)count;
+    return count;
+}
+
+#define printf capture_message
+@METHODS@
+@MAPPERS@
+@ENTRY@
+#undef printf
+
+struct query {
+    const char *property;
+    int length;
+    VARTYPE types[6];
+    LONG arguments[6];
+};
+
+static const struct query cases[]={@CASES@};
+static const unsigned revisions[]={@REVISIONS@};
+
+static void observe(const struct query *query, unsigned index) {
+    s_defense defense[1]={{.factor=1.75, .blockpower=3.5}};
+    s_attack attack={.attack_force=17, .attack_coords={7,11,19,23,29,31}}, *attacks[]={&attack};
+    int sprite_indices[]={0};
+    s_anim animation={.numframes=1, .attacks=attacks, .sprite=sprite_indices,
+                      .dropframe=41, .energycost.cost=13, .landframe.frame=5, .range.zmin=-19};
+    s_anim *animations[]={&animation};
+    entity actor={0};
+    actor.animation=&animation;
+    actor.modeldata.animation=animations;
+    actor.modeldata.animation_capacity=1;
+    actor.defense=defense;
+    actor.modeldata.edelay.mode=2;
+    actor.modeldata.flash=31;
+    actor.modeldata.icon.x=-1;
+    actor.modeldata.maps_loaded=3;
+    actor.modeldata.runspeed=1.25;
+    actor.knockdowncount=3.75;
+    actor.staydown.rise=83;
+    sprites[0].centerx=37;
+
+    assert(strlen(query->property)<sizeof(property_name));
+    strcpy(property_name, query->property);
+    ScriptVariant values[8]={
+        {.vt=VT_PTR, .ptrVal=&actor},
+        {.vt=VT_STR, .strVal=0},
+    };
+    ScriptVariant *arguments[]={values, values+1, values+2, values+3,
+                                values+4, values+5, values+6, values+7};
+    assert(query->length<=(int)(sizeof(query->arguments)/sizeof(*query->arguments)));
+    for(int i=0;i<query->length;++i) {
+        values[i+2].vt=query->types[i];
+        values[i+2].lVal=query->arguments[i];
+    }
+    ScriptVariant result={.vt=VT_INTEGER, .lVal=99}, *output=&result;
+    message_length=0;
+    HRESULT status=openbor_getentityproperty(arguments, &output, query->length+2);
+    printf("[%u,%u,%d,%d,%d,\"", obor_profile_build, index, FAILED(status)?0:1,
+           output!=NULL, output?(int)output->vt:-1);
+    for(size_t i=0;i<message_length;++i)
+        printf("%02x", (unsigned char)messages[i]);
+    fputs("\",", stdout);
+    if(SUCCEEDED(status) && output && output->vt==VT_INTEGER)
+        printf("%ld", (long)output->lVal);
+    else if(SUCCEEDED(status) && output && output->vt==VT_DECIMAL)
+        printf("%.17g", (double)output->dblVal);
+    else
+        fputs("null", stdout);
+    puts("]");
+}
+
+int main(void) {
+    for(unsigned i=0;i<sizeof(revisions)/sizeof(*revisions);++i) {
+        obor_profile_build=revisions[i];
+        for(unsigned j=0;j<sizeof(cases)/sizeof(*cases);++j)
+            observe(&cases[j], j);
+    }
+    return 0;
+}

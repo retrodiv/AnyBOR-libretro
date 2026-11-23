@@ -3,10 +3,10 @@
  * Copyright (c) 2026 retrodiv <retrodiv@proton.me> (original contributions).
  * These contributions are licensed under BSD-3-Clause; see LICENSE at the root.
  * Upstream code retains its original license and notices.
- * Select native syntax, assignment results, unary folding and diagnostics;
- * refuse unresolved control targets before recording instructions. Stop
- * terminal lexer failures and EOF recovery without changing finite
- * historical recovery.
+ * Select native syntax, assignment results, unary folding, and the original
+ * parser diagnostic and recovery rules. Validate control targets before
+ * recording instructions. Stop terminal lexer failures and EOF recovery
+ * without changing finite historical recovery.
  * Existing changes recorded here; this is not their implementation date.
  * See MODIFICATIONS.md and docs/modifications/3842.md
  * at the source repository root. Original notices follow below.
@@ -1797,5 +1797,6 @@ void Parser_Error2(Parser* pparser, PRODUCTION offender, const char* offenderStr
 #endif
             break;
         }
-	} while (!ParserSet_Follow(&(pparser->theParserSet), offender, pparser->theNextToken.theType));
+	} while (obor_profile_build >= 3810u &&
+	         !ParserSet_Follow(&(pparser->theParserSet), offender, pparser->theNextToken.theType));
 }

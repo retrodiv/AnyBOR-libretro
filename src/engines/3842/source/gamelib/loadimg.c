@@ -8,7 +8,8 @@
  * empty frame. Declare the resolved source member and original bitmap
  * dimensions for independent sprite reconstruction proof. Preserve native
  * palette-only filename probing, three-plane refusals and final RGB table
- * conversion without interpreting palette bytes as sprite dimensions. Keep
+ * conversion without interpreting palette bytes as sprite dimensions. Honor
+ * the original explicit extension and suffix search order from 3859. Keep
  * bitmap row reads within the requested output width. Preserve source-
  * defined grayscale PNG palette acceptance and identity colours with bounded
  * destination writes.
@@ -875,10 +876,58 @@ static int readpcx(unsigned char *buf, unsigned char *pal, int maxwidth, int max
 
 static int open_type = 0;
 
+static int openimage_explicit_extension(char *filename, char *packfile, int palette_only)
+{
+    static const struct {
+        const char *extension;
+        int type;
+        int (*open)(char *, char *);
+    } formats[] = {
+        {".png", OT_PNG, openpng},
+        {".gif", OT_GIF, opengif},
+        {".pcx", OT_PCX, openpcx},
+        {".bmp", OT_BMP, openbmp},
+    };
+    char name[128];
+    size_t length = strlen(filename);
+    const char *extension = length >= 4 ? filename + length - 4 : "";
+
+    for (unsigned pass = 0; pass < 2; ++pass)
+    {
+        for (unsigned i = 0; i < sizeof(formats) / sizeof(formats[0]); ++i)
+        {
+            char *candidate = filename;
+            if (pass == 0)
+            {
+                if (stricmp(extension, formats[i].extension) != 0)
+                    continue;
+            }
+            else
+            {
+                if (length >= sizeof(name) - 4)
+                    return 0;
+                snprintf(name, sizeof(name), "%s%s", filename, formats[i].extension);
+                candidate = name;
+            }
+            const int result = palette_only && formats[i].type == OT_PCX
+                ? openpcx_mode(candidate, packfile, 1) : formats[i].open(candidate, packfile);
+            if (result)
+            {
+                open_type = result == 2 ? OT_RAW_PALETTE : formats[i].type;
+                return 1;
+            }
+        }
+    }
+    return 0;
+}
+
 static int openimage_mode(char *filename, char *packfile, int palette_only){
     int pcx_result;
 	char fnam[128];
 	open_type = 0;
+
+	if(obor_profile_build >= 3859u)
+		return openimage_explicit_extension(filename, packfile, palette_only);
 
 	if(openpng(filename, packfile)){
 		open_type = OT_PNG;

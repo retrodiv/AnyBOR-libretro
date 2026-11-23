@@ -46,6 +46,7 @@ def render_reads(parts, *, scalar, components, visible_components, revision,
         raise ValueError('Unique bounded source identifiers required')
     program=r'''
 #include <assert.h>
+#include <limits.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -89,6 +90,9 @@ static int quiet_printf(const char *format,...) {(void)format;return 0;}
 static void mapstrings_getentityproperty(ScriptVariant **args,int count) {(void)args;(void)count;}
 static void mapstrings_entityproperty(ScriptVariant **args,int count) {(void)args;(void)count;}
 static int obor_entity_get_property_native(int value) {return value;}
+static int obor_entityproperty_native(int value) {return value;}
+static int obor_animation_native(int value,unsigned profile) {(void)profile;return value;}
+static size_t obor_allocation_size(const void *owner);
 /* Numeric routing is an explicit fixture in this reduced getter probe.
  * The actual attack mapper has separate namespace/registry contracts. */
 static int obor_attack_property_native(int value) {
@@ -100,6 +104,15 @@ static s_attack attacks[2][2],*attack_rows[2][2];
 static coord_t boxes[2][2][COMPONENTS];
 static short vulnerable[2][2]={{1,1},{1,1}};
 static s_anim animations[2],*table[2];
+static size_t obor_allocation_size(const void *owner) {
+ if(owner==table)return sizeof(table);
+ for(unsigned i=0;i<2;++i) {
+  if(owner==&animations[i])return sizeof(animations[i]);
+  if(owner==boxes[i])return sizeof(boxes[i]);
+  if(owner==vulnerable[i])return sizeof(vulnerable[i]);
+ }
+ return 0;
+}
 static entity actor;
 static ScriptVariant args[7],*argv[7];
 static void setup(int property,int animation,int frame,int axis) {

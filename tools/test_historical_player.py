@@ -370,8 +370,8 @@ static void expect_result(ScriptVariant *r,int has,int value) {
 int main(void) {
     /* IDs and spellings are independent observations of upstream 3780,
      * 3797, 3798, 3821 and 3842, not numbers derived from the adapter. */
-    const unsigned profiles[]={3780,3783,3789,3793,3796,3797,3798,3805,
-        3814,3818,3820,3821,3822,3824,3829,3831,3837,3839,3842};
+    const unsigned profiles[]={3780,3783,3787,3789,3792,3793,3796,3797,3798,3805,
+        3814,3818,3820,3821,3822,3824,3826,3829,3831,3837,3839,3842};
     const char *base_names[]={"colourmap","credits","ent","entity","keys",
         "lives","name","playkeys","score"};
     for(unsigned p=0;p<sizeof(profiles)/sizeof(*profiles);++p) {

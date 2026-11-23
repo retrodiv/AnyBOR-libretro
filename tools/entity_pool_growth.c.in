@@ -16,6 +16,7 @@
 #undef realloc
 #undef free
 #define DUAL @DUAL@
+#define DRAW_QUEUE @DRAW_QUEUE@
 static unsigned checks;
 uint32_t obor_profile_build;
 #define CHECK(c) do {++checks;if(!(c)){fprintf(stderr,"pool revision=%u line=%d: %s\n",obor_profile_build,__LINE__,#c);abort();}} while(0)
@@ -24,6 +25,9 @@ static int ent_list_size,ent_count,ent_max;
 #if DUAL
 static entity **ent_stack;
 static int ent_stack_size;
+#elif DRAW_QUEUE
+static entity **draw_script_entities;
+static int draw_script_count;
 #endif
 static int maxentities=999999;
 static entity foreign_entity;
@@ -92,6 +96,8 @@ static void reset(void) {
  for(unsigned i=0;i<2;++i)CHECK(!blocks[i].pointer);
 #if DUAL
  CHECK(!ent_stack && !ent_stack_size);
+#elif DRAW_QUEUE
+ CHECK(!draw_script_entities && !draw_script_count);
 #endif
  memset(events,0,sizeof(events));event_count=reservations=constructors=releases=0;
  refuse_table=refuse_actor=0;ent_count=7;ent_max=9;maxentities=999999;
@@ -103,28 +109,47 @@ static void finished(void) {
  CHECK(!ent_list && !ent_list_size && !active && !ent_count && !ent_max);
 #if DUAL
  CHECK(!ent_stack && !ent_stack_size);
+#elif DRAW_QUEUE
+ CHECK(!draw_script_entities && !draw_script_count);
 #endif
  for(unsigned i=0;i<2;++i)CHECK(!blocks[i].pointer);
 }
 static void valid(int original,int limit) {
  reset();
- CHECK((original?original_alloc_ents():alloc_ents())==1 && ent_list_size==MAX_ENTS && active==MAX_ENTS);
+ int (*allocate)(void)=original?original_alloc_ents:alloc_ents;
+#if DRAW_QUEUE
+ int queue_active=obor_profile_build>=DRAW_QUEUE;
+ if(original && queue_active)allocate=original_alloc_draw_queue;
+#endif
+ CHECK(allocate()==1 && ent_list_size==MAX_ENTS && active==MAX_ENTS);
  entity *first=ent_list[0];
  for(int i=0;i<MAX_ENTS;++i)CHECK(ent_list[i] && ent_list[i]->sortid==i*100);
 #if DUAL
  for(int i=0;i<MAX_ENTS;++i)CHECK(!ent_stack[i]);
  ent_stack[0]=first;
+#elif DRAW_QUEUE
+ if(queue_active) {
+  CHECK(draw_script_entities && obor_allocation_size(draw_script_entities)==MAX_ENTS*sizeof(*draw_script_entities));
+  for(int i=0;i<MAX_ENTS;++i)CHECK(!draw_script_entities[i]);
+  draw_script_entities[0]=first;draw_script_count=1;
+ } else CHECK(!draw_script_entities);
 #endif
  if(limit)maxentities=MAX_ENTS+1; /* Native growth may pass the nominal cap. */
- CHECK((original?original_alloc_ents():alloc_ents())==1 && ent_list_size==2*MAX_ENTS && active==2*MAX_ENTS && ent_list[0]==first);
+ CHECK(allocate()==1 && ent_list_size==2*MAX_ENTS && active==2*MAX_ENTS && ent_list[0]==first);
  for(int i=0;i<2*MAX_ENTS;++i)CHECK(ent_list[i] && ent_list[i]->sortid==i*100);
 #if DUAL
  CHECK(ent_stack[0]==first && ent_stack_size==3);
  for(int i=MAX_ENTS;i<2*MAX_ENTS;++i)CHECK(!ent_stack[i]);
+#elif DRAW_QUEUE
+ if(queue_active) {
+  CHECK(draw_script_entities[0]==first && draw_script_count==1);
+  CHECK(obor_allocation_size(draw_script_entities)==2*MAX_ENTS*sizeof(*draw_script_entities));
+  for(int i=MAX_ENTS;i<2*MAX_ENTS;++i)CHECK(!draw_script_entities[i]);
+ } else CHECK(!draw_script_entities);
 #endif
  CHECK(ent_count==7 && ent_max==9);
  maxentities=ent_list_size;unsigned calls=event_count;
- CHECK((original?original_alloc_ents():alloc_ents())==0 && event_count==calls);
+ CHECK(allocate()==0 && event_count==calls);
  free_ents();finished();
  if(original){memcpy(baseline,events,sizeof(events));baseline_count=event_count;}
  else {CHECK(event_count==baseline_count);CHECK(!memcmp(events,baseline,event_count*sizeof(*events)));}
@@ -134,6 +159,8 @@ static void refusal(int existing,unsigned reservation,unsigned actor) {
  entity **list=ent_list;
 #if DUAL
  entity **stack=ent_stack;
+#elif DRAW_QUEUE
+ entity **queue=draw_script_entities;
 #endif
  unsigned previous=active,prior_releases=releases;
  int count=ent_list_size;
@@ -148,6 +175,8 @@ static void refusal(int existing,unsigned reservation,unsigned actor) {
   if(reservation==1)CHECK(ent_list==list);
 #if DUAL
   CHECK(ent_stack==stack && ent_stack_size==3);
+#elif DRAW_QUEUE
+  CHECK(draw_script_entities==queue && !draw_script_count);
 #endif
   refuse_table=0;CHECK(alloc_ents()==1 && ent_list_size==count+MAX_ENTS);
   free_ents();finished();
@@ -186,6 +215,8 @@ int main(void) {
    refusal(existing,1,0);
 #if DUAL
    refusal(existing,2,0);
+#elif DRAW_QUEUE
+   if(obor_profile_build>=DRAW_QUEUE)refusal(existing,2,0);
 #endif
    refusal(existing,0,1);refusal(existing,0,MAX_ENTS/2);refusal(existing,0,MAX_ENTS);
   }

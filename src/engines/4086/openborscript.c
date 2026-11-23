@@ -11640,7 +11640,6 @@ HRESULT openbor_getentityproperty(ScriptVariant **varlist , ScriptVariant **pret
     int i				= 0;
     int propind ;
     int tempint			= 0;
-    int *coords;
 
     if(paramCount < 2)
     {
@@ -12229,7 +12228,7 @@ HRESULT openbor_getentityproperty(ScriptVariant **varlist , ScriptVariant **pret
     }
     case _ep_bbox:
     {
-        if(paramCount < 6
+        if(paramCount < 6 || !varlist[2] || !varlist[3] || !varlist[4] || !varlist[5]
                 || varlist[2]->vt != VT_INTEGER
                 || varlist[3]->vt != VT_INTEGER
                 || varlist[4]->vt != VT_INTEGER
@@ -12240,21 +12239,24 @@ HRESULT openbor_getentityproperty(ScriptVariant **varlist , ScriptVariant **pret
             return E_FAIL;
         }
 
-        //varlist[2]->lval;														//bbox index (multiple bbox support).
-        i		= obor_animation_native((int)varlist[3]->lVal, obor_profile_build);												//Animation parameter.
-        tempint	= varlist[4]->lVal;												//Frame parameter.
-
-        if(!ent->modeldata.animation[i]->vulnerable[tempint])
-        {
-
-            ScriptVariant_Clear(*pretvar);
+        const LONG frame = varlist[4]->lVal, coordinate = varlist[5]->lVal;
+        s_anim *animation;
+        if(varlist[3]->lVal < 0 || varlist[3]->lVal > INT_MAX || frame < 0 || coordinate < 0)
             break;
-        }
-
-        coords = ent->modeldata.animation[i]->bbox_coords[tempint];
+        i = obor_animation_native((int)varlist[3]->lVal, obor_profile_build);
+        if(i < 0 || !ent->modeldata.animation || i >= ent->modeldata.animation_capacity ||
+           (size_t)i >= obor_allocation_size(ent->modeldata.animation) /
+                        sizeof(*ent->modeldata.animation)) break;
+        animation = ent->modeldata.animation[i];
+        if(!animation || obor_allocation_size(animation) < sizeof(*animation) ||
+           frame >= animation->numframes || !animation->vulnerable || !animation->bbox_coords ||
+           (size_t)frame >= obor_allocation_size(animation->vulnerable) / sizeof(*animation->vulnerable) ||
+           (size_t)frame >= obor_allocation_size(animation->bbox_coords) / sizeof(*animation->bbox_coords) ||
+           (size_t)coordinate >= sizeof(*animation->bbox_coords) / sizeof((*animation->bbox_coords)[0]) ||
+           !animation->vulnerable[frame]) break;
 
         ScriptVariant_ChangeType(*pretvar, VT_INTEGER);
-        (*pretvar)->lVal = (LONG)coords[varlist[5]->lVal];
+        (*pretvar)->lVal = (LONG)animation->bbox_coords[frame][coordinate];
         break;
     }
     case _ep_blink:

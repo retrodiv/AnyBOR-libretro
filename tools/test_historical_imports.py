@@ -20,9 +20,144 @@ import unittest
 
 from native_sanitizers import sanitizer_environment
 from test_historical_player import function
+from test_model_constructor_ownership import run_native
 
 SOURCE = Path(os.environ.get('OBOR_TEST_SOURCE', Path(__file__).resolve().parents[1]))
 TOOLS = Path(__file__).parent
+
+
+class InstructionDisplayTests(unittest.TestCase):
+    def test_instruction_text_matches_its_original_profile(self):
+        fixture = load_contract_fixture(TOOLS / 'fixtures/profile-instruction-display-contracts.json')
+        engine = SOURCE / 'src/engines' / fixture['engine']
+        path = engine / 'source/scriptlib/Instruction.c'
+        method = function(path.read_text(encoding='latin1'), 'Instruction_ToString')
+        rows = fixture['sources']
+        revisions = {row['revision'] for row in rows}
+        self.assertEqual(len(rows), len(revisions))
+        self.assertTrue(set(fixture['boundary_controls']) <= revisions)
+        pin = json.loads((SOURCE / 'src/pin.json').read_text())
+        for profile in contract_profiles(fixture, pin['profiles']):
+            revision = int(profile.get('revision', profile['build'].split('-')[0]))
+            if profile['engine'] == fixture['engine'] and fixture['range'][0] <= revision <= fixture['range'][1]:
+                self.assertIn(revision, revisions)
+        native = r'''
+#include <stdint.h>
+#include <stdio.h>
+#include <string.h>
+#include "Instruction.h"
+#undef printf
+uint32_t obor_profile_build = @REVISION@;
+@METHOD@
+
+int main(void)
+{
+    Token string = {.theType = TOKEN_STRING_LITERAL, .theSource = "hero"};
+    Token number = {.theType = TOKEN_FLOATCONSTANT, .theSource = "1.25"};
+    Token marker = {.theType = END_OF_TOKENS};
+    Instruction cases[] = {
+        {.OpCode = 255},
+        {.OpCode = CONSTSTR, .storageType = INSTRUCTION_SOURCE_TOKEN, .theToken = &string},
+        {.OpCode = CONSTDBL, .storageType = INSTRUCTION_SOURCE_TOKEN, .theToken = &number},
+        {.OpCode = JUMP, .storageType = INSTRUCTION_SOURCE_LABEL, .Label = "target"},
+        {.OpCode = RET, .storageType = INSTRUCTION_SOURCE_TOKEN, .theToken = &marker},
+    };
+    for(unsigned i = 0; i < sizeof(cases) / sizeof(*cases); ++i)
+    {
+        char text[256] = {0};
+        Instruction_ToString(&cases[i], text);
+        printf("%s\n", text);
+    }
+    return 0;
+}
+'''.replace('@METHOD@', method)
+        for row in rows:
+            with self.subTest(revision=row['revision']):
+                result = run_native(engine, native.replace('@REVISION@', f"{row['revision']}u"))
+                self.assertEqual(result.returncode, 0, result.stderr)
+                self.assertEqual(result.stdout.splitlines(), row['observations'])
+
+
+class ParserRecoveryTests(unittest.TestCase):
+    def test_recovery_stops_at_the_original_token_for_each_profile(self):
+        fixture = load_contract_fixture(TOOLS / 'fixtures/profile-grammar-contracts.json')
+        engine = SOURCE / 'src/engines/3842'
+        path = engine / 'source/scriptlib/Parser.c'
+        source = path.read_text(encoding='latin1')
+        methods = '\n'.join(function(source, name) for name in
+                            ('_production_error_message', 'Parser_Error2'))
+        tables = {row['revision']: row for row in fixture['table_sources']}
+        native = r'''
+#include <stdarg.h>
+#include <stdint.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include "Parser.h"
+#include "anybor_content_error.h"
+#undef printf
+uint32_t obor_profile_build = @REVISION@;
+#include "ProfileGrammar.h"
+
+static int reads;
+static char diagnostic[256];
+
+HRESULT Lexer_GetNextToken(Lexer *lexer, Token *token)
+{
+    switch(++reads)
+    {
+    case 1: token->theType = TOKEN_INTCONSTANT; strcpy(token->theSource, "7"); break;
+    case 2: token->theType = TOKEN_SEMICOLON; strcpy(token->theSource, ";"); break;
+    default: abort();
+    }
+    return S_OK;
+}
+
+BOOL ParserSet_Follow(ParserSet *set, PRODUCTION production, MY_TOKEN_TYPE token)
+{
+    if(production != constant) abort();
+    return token == TOKEN_SEMICOLON;
+}
+
+HRESULT pp_error(pp_parser *parser, char *format, ...)
+{
+    va_list args;
+    va_start(args, format);
+    vsnprintf(diagnostic, sizeof(diagnostic), format, args);
+    va_end(args);
+    return E_FAIL;
+}
+
+void obor_content_error(const char *path, unsigned long row, unsigned long column,
+                        const char *reason)
+{
+    abort();
+}
+
+@METHODS@
+
+int main(void)
+{
+    Parser parser = {0};
+    parser.theNextToken.theType = TOKEN_IDENTIFIER;
+    strcpy(parser.theNextToken.theSource, "name");
+    Parser_Error2(&parser, constant, "constant");
+    printf("%d %d %s\n%s\n", !!parser.errorFound, reads, parser.theNextToken.theSource, diagnostic);
+    return 0;
+}
+'''.replace('@METHODS@', methods)
+        for row in fixture['sources']:
+            revision = row['revision']
+            table = tables[revision]
+            with self.subTest(revision=revision):
+                follow = fixture['tables'][table['table_sha256']]['follow']['constant']
+                self.assertIn('TOKEN_SEMICOLON', follow)
+                self.assertNotIn('TOKEN_INTCONSTANT', follow)
+                result = run_native(engine, native.replace('@REVISION@', f'{revision}u'))
+                self.assertEqual(result.returncode, 0, result.stderr)
+                stop = '1 2 ;' if row['features']['error_recovery_to_follow'] else '1 1 7'
+                production = "'constant'" if row['features']['error_uses_production_name'] else table['production_ids']['constant']
+                self.assertEqual(result.stdout.splitlines(), [stop, f"Invalid constant format 'name' (in production {production})"])
 
 
 class ImportTests(unittest.TestCase):
@@ -45,7 +180,8 @@ class ImportTests(unittest.TestCase):
             function((engine / 'source/utils.c').read_text(), 'searchList'),
             script_text[macro_start:macro_end], script_text[enum_start:enum_end],
             *(function(script_text, name) for name in (
-                'mapstrings_playerproperty', 'Script_MapStringConstants', 'system_rand')))))
+                'mapstrings_playerproperty', 'Script_MapInstructionConstant',
+                'Script_MapStringConstants', 'system_rand')))))
         interpreter_text = (engine / 'source/scriptlib/Interpreter.c').read_text()
         has_opcode_display = 'static int obor_profile_opcode(' in interpreter_text
         has_constant_refresh = 'static HRESULT obor_refresh_constant(' in interpreter_text
@@ -322,6 +458,88 @@ static ImportNode *scoped_import(const char *path) {
         self.assertNotIn('runtime error:', result.stderr)
         self.assertNotIn('ERROR: AddressSanitizer', result.stderr)
 
+    def test_constant_literals_map_during_compilation_of_scripts_and_imports(self):
+        fixture = load_contract_fixture(TOOLS / 'fixtures/profile-constant-mapper-contracts.json')
+        controls = {3861, 3862, 3880, 3895, 3896}
+        rows = [row for row in fixture['sources'] if row['revision'] in controls]
+        self.assertEqual({row['revision'] for row in rows}, controls)
+        for row in rows:
+            revision = row['revision']
+            with self.subTest(revision=revision):
+                result = subprocess.run([str(self.executable), str(revision), '0', 'constant-mapping',
+                    str(int(bool(row.get('unknown_mapper_diagnostic'))))], capture_output=True,
+                    text=True, timeout=20, env=sanitizer_environment())
+                self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+                observation = json.loads(result.stdout)
+                self.assertEqual(observation['status'], 'PASS')
+                self.assertEqual(observation['scenarios'], 5)
+
+    def test_native_script_compile_reset_and_mapper_phase(self):
+        from test_historical_behavior import native
+        source = (SOURCE / 'src/engines/3842/openborscript.c').read_text()
+        program = r'''
+#include <assert.h>
+#include <stdint.h>
+#include <stdio.h>
+#include <stdlib.h>
+#define FALSE 0
+#define SUCCEEDED(result) ((result)==0)
+typedef struct {int bReset;struct {const char *name;} theSymbolTable;} Interpreter;
+typedef struct {Interpreter *pinterpreter;const char *comment;} Script;
+static uint32_t obor_profile_build;
+static int events;
+static int Interpreter_CompileInstructions(Interpreter *interpreter,const char *source){
+ assert(interpreter && !source && !events);
+ events=1;return 0;
+}
+static int Script_MapStringConstants(Script *script){
+ assert(script && script->pinterpreter && script->pinterpreter->bReset==1 && events==1);
+ events=2;return 1;
+}
+static void Script_Clear(Script *script,int mode){ abort(); }
+static void shutdown(int status,const char *format,...){ abort(); }
+static void execute_init_method(Script *script,int engine,int fresh){
+ assert(script && !engine && fresh==1 && (events==1 || events==2));
+ events+=2;
+}
+@COMPILE@
+int main(void){
+ const struct {uint32_t revision; int reset, mapped;} cases[]={
+  {3787,1,1},{3792,1,1},{3807,1,1},{3808,0,1},{3826,0,1},
+  {3861,0,1},{3862,0,0},{3880,0,0},{3896,0,0}
+ };
+ for(unsigned i=0;i<sizeof(cases)/sizeof(*cases);++i){
+  obor_profile_build=cases[i].revision;
+  Interpreter interpreter={.bReset=1};
+  Script script={.pinterpreter=&interpreter};
+  events=0;
+  assert(Script_Compile(&script)==1);
+  assert(events==3+cases[i].mapped && interpreter.bReset==cases[i].reset);
+ }
+ return 0;
+}
+'''.replace('@COMPILE@', function(source, 'Script_Compile'))
+        native(program, extra_flags=('-Wno-unused-parameter',))
+
+    def test_property_literals_map_during_compilation_of_scripts_and_imports(self):
+        fixture = load_contract_fixture(TOOLS / 'fixtures/profile-forward-property-mappers.json')
+        for row in fixture['sources']:
+            revision = row['revision']
+            provider = row['providers']['playerproperty']
+            observed_name = row['observations']['playerproperty-known']['args'][1]
+            during_compile = int(provider['result_type'] == 'int')
+            with self.subTest(revision=revision):
+                result = subprocess.run([str(self.executable), str(revision), '0', 'property-mapping',
+                    str(during_compile), str(observed_name)], capture_output=True, text=True,
+                    timeout=20, env=sanitizer_environment())
+                self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+                lines = result.stdout.splitlines()
+                diagnostics = row['observations']['playerproperty-unknown']['diagnostic'].splitlines()
+                self.assertEqual(lines[:-1], diagnostics * (2 if during_compile else 0))
+                observation = json.loads(lines[-1])
+                self.assertEqual(observation['status'], 'PASS')
+                self.assertEqual(observation['scenarios'], 4)
+
     def test_native_cache_and_compiled_calls_per_profile(self):
         observations = []
         for row in self.fixture['sources']:
@@ -367,6 +585,39 @@ static ImportNode *scoped_import(const char *path) {
                 observations.append(dict(revision=row['revision'], **observation))
         if os.environ.get('OBOR_DIAGNOSTIC_OBSERVATIONS'):
             Path(os.environ['OBOR_DIAGNOSTIC_OBSERVATIONS']).write_text(json.dumps(observations, indent=2)+'\n')
+
+    def test_native_parameter_caller_per_profile(self):
+        fixture = load_contract_fixture(TOOLS / 'fixtures/profile-vm-step-contracts.json')
+        for row in fixture['sources']:
+            with self.subTest(revision=row['revision']):
+                requires_caller = row['parameter_caller_required']
+                self.assertIs(type(requires_caller), bool)
+                result = subprocess.run([str(self.executable), str(row['revision']),
+                    str(int(row['revision'] < 3779)), 'parameter-caller',
+                    str(row['opcodes'].index('PARAM')), str(int(requires_caller))],
+                    capture_output=True, text=True, timeout=20, env=sanitizer_environment())
+                self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+                observation = json.loads(result.stdout)
+                self.assertEqual(observation['status'], 'PASS')
+                self.assertEqual(observation['scenarios'], 1 + requires_caller)
+
+    def test_native_branch_targets_and_diagnostics_per_profile(self):
+        fixture = load_contract_fixture(TOOLS / 'fixtures/profile-vm-step-contracts.json')
+        names = ('JUMP', 'JUMPR', 'Branch_FALSE', 'Branch_TRUE', 'PJUMP', 'Branch_EQUAL', 'OPCODE_END')
+        for row in fixture['sources']:
+            opcodes = row['opcodes']
+            targets = [opcodes.index(name) if name in opcodes else -1 for name in names]
+            has_switch = 'Branch_EQUAL' in opcodes
+            before_step_optimization = row['error_opcode_diagnostic']
+            with self.subTest(revision=row['revision']):
+                result = subprocess.run([str(self.executable), str(row['revision']),
+                    str(int(row['revision'] < 3779)), 'branches', *map(str, targets)],
+                    capture_output=True, text=True, timeout=20, env=sanitizer_environment())
+                self.assertEqual(result.returncode, 0, result.stdout+result.stderr)
+                observation = json.loads(result.stdout)
+                self.assertEqual(observation['status'], 'PASS')
+                self.assertEqual(observation['scenarios'],
+                                 (6 + 3*has_switch) * (1 + before_step_optimization) + 1)
 
     def test_native_opcode_display_numbers_per_profile(self):
         fixture = load_contract_fixture(TOOLS / 'fixtures/profile-vm-step-contracts.json')

@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.2.54
+
+- Add selectable OpenBOR profiles v3.0 3185-dev, v3.0 3787-dev, v3.0 3792-dev,
+  v3.0 3826-dev, v3.0 3880-dev, v3.0 3896-dev, v3.0 4077-dev and v3.0 4097-dev.
+
 ## 0.2.53
 
 - Add selectable OpenBOR profiles v4.0 7612-dev and v4.0 8020-dev.

@@ -82,6 +82,10 @@ void Script_Clear(Script *value,int level)
 void anigif_close(anigif_info *value)
 {assert(kind_of(value)==FIX_GIF);event(20+FIX_GIF);value->magic=0;}
 #endif
+#if @STREAM_OWNER@
+void obor_anigif_stream_close(obor_anigif_stream *value)
+{assert(kind_of(value)==FIX_GIF);event(20+FIX_GIF);fixture_free(value);}
+#endif
 @PREFIX_CHECKS@
 #define malloc fixture_malloc
 #define calloc fixture_calloc

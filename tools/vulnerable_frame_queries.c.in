@@ -25,12 +25,14 @@ int StrCache_Pop(@POP_ARGUMENTS@){abort();}
 void StrCache_Collect(int n){(void)n;abort();}
 void StrCache_Copy(int n,CHAR *s){(void)n;(void)s;abort();}
 int StrCache_CreateNewFrom(const CHAR *s){(void)s;abort();}
-void mapstrings_getentityproperty(ScriptVariant **a,int n){(void)a;(void)n;}
+@GET_MAPPER_TYPE@ mapstrings_getentityproperty(ScriptVariant **a,int n){(void)a;(void)n;@GET_MAPPER_RETURN@}
 @MAPPER_TYPE@ mapstrings_entityproperty(ScriptVariant **a,int n){(void)a;(void)n;@MAPPER_RETURN@}
 #define obor_property_index(space,index,end) (index)
 #define obor_entity_get_property_native(index) (index)
 #define obor_entityproperty_native(index) (index)
 #define obor_entityproperty(index) (index)
+#define obor_entity_property_index(index) (index)
+#define obor_profile_entity_native_index(index) (index)
 enum {_ep_vulnerable=1,_ep_defense=2,_ep_the_end=3};
 @CONVERSIONS@
 static entity actor;

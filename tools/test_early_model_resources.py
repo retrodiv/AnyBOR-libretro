@@ -885,8 +885,12 @@ int main(void) {
             self.assertEqual(row['payload_before_cleanup'], row['payload_copies'] == 2)
             self.assertEqual(row['normal_format'].count('%s'), 2)
             self.assertLess(len(row['normal_format']), 256)
-            entries.append('{%d,%s,%d,%d}' % (row['revision'], json.dumps(row['normal_format']),
-                                             row['payload_copies'], row['payload_before_cleanup']))
+            version = row.get('version_label')
+            self.assertTrue(version is None or isinstance(version, str) and version)
+            entries.append('{%d,%s,%s,%d,%d}' % (
+                row['revision'], json.dumps(row['normal_format']),
+                json.dumps(version) if version is not None else 'VERSION',
+                row['payload_copies'], row['payload_before_cleanup']))
         engine = Path(os.environ.get('OBOR_EARLY_TEXT_ENGINE', ROOT / 'src/engines' / fixture['engine']))
         source = (engine / 'openbor.c').read_text()
         port = (ROOT / 'src/port/libretro/libretroport.c').read_text()
@@ -966,7 +970,7 @@ static void obor_free_blend_tables_x8(void){CHECK(obor_profile_build<3454);}
 @SHUTDOWN@
 #undef exit
 #undef printf
-typedef struct {unsigned revision;const char *normal_format;unsigned copies,before_cleanup;} Row;
+typedef struct {unsigned revision;const char *normal_format,*version;unsigned copies,before_cleanup;} Row;
 static Row rows[]={@ROWS@};
 static unsigned context,kind,quiet;
 int main(void) {
@@ -978,7 +982,7 @@ int main(void) {
    stops=cleanup_calls=payloads=payloads_at_cleanup=prints=credits=0;
    engine_alive=1;engine_exit_status=-1;engine_content_message[0]=0;
    if(kind==3) {
-    int n=snprintf(expected,sizeof(expected),rows[context].normal_format,VERSION,__DATE__);
+    int n=snprintf(expected,sizeof(expected),rows[context].normal_format,rows[context].version,__DATE__);
     CHECK(n>=0&&(size_t)n<sizeof(expected));
    } else {
     int n=snprintf(expected,sizeof(expected),"Finite exit payload %u / %s",kind,"sample");

@@ -54,13 +54,20 @@ class EarlySystemCallbackTests(unittest.TestCase):
         getter = re.split(r'\bswitch\s*\(index\)', method, maxsplit=1)[0]
         getter += 'switch(index){' + '\n'.join('case _e_' + name + ':' + cases['_e_' + name]['body'] for name in CASES)
         getter += 'default:return 0;}return 1;}'
+        setter, setter_cases = switch_cases(core, 'changesyspropertybyindex', 'index', outermost=True)
+        self.assertRegex(setter, r'return\s+1;\s*}$')
+        position_setter = re.split(r'\bswitch\s*\(index\)', setter, maxsplit=1)[0]
+        position_setter += ('switch(index) { case _csv_levelpos:' +
+                            setter_cases['_csv_levelpos']['body'] + 'default:return 0;}return 1;}')
         ns_start = script.index('/* Own script-visible system IDs')
         ns_end = script.index('void mapstrings_systemvariant(', ns_start)
         macro = re.search(r'(?m)^#define MAPSTRINGS\([^\n]+(?:\n[^\n]*)*?\n}', script)
         self.assertIsNotNone(macro)
         pieces = [script[ns_start:ns_end], function((engine / 'source/utils.c').read_text(), 'searchList'), macro[0],
-                  function(script, 'mapstrings_systemvariant'), getter, function(script, 'openbor_systemvariant')]
-        pieces += [function(variant, name) for name in ['ScriptVariant_ChangeType', 'ScriptVariant_Clear']]
+                  function(script, 'mapstrings_systemvariant'), getter,
+                  function(script, 'openbor_systemvariant'), position_setter]
+        pieces += [function(variant, name) for name in
+                   ('ScriptVariant_ChangeType', 'ScriptVariant_Clear', 'ScriptVariant_IntegerValue')]
         # These are source windows, not a replacement implementation of update().
         update = function(core, 'update')
         pause_at = update.index('if(!pause)')
@@ -91,6 +98,11 @@ class EarlySystemCallbackTests(unittest.TestCase):
                                          'entity_nonzero_ingame', 'global_updated_initialized', 'clear_non_gameplay']]
             checks.append('check(%d,%d,canonical_ids%s,named_indices%s,names%s,%s);' % (
                 row['revision'], len(row['names']), suffix, suffix, suffix, ','.join(str(int(x)) for x in flags)))
+        for row in rows + fixture['position_boundary_controls']:
+            self.assertIs(type(row['position_uses_level']), bool)
+            self.assertIs(type(row['position_index']), int)
+            checks.append('check_level_position(%d,%d,%d);' %
+                          (row['revision'], row['position_uses_level'], row['position_index']))
         canonical = fixture['canonical_names']
         ids = [canonical.index(name) for name in CASES]
         program = r'''
@@ -144,6 +156,13 @@ void font_printf(int x,int y,int which,int z,char *format,...){(void)x;(void)y;(
 @ARRAYS@
 static ScriptVariant input,result,*args[]={&input},*out;
 static void setup(void){memset(&input,0,sizeof(input));memset(&result,0,sizeof(result));input.vt=VT_INTEGER;out=&result;next_cache=0;diagnostic[0]=0;}
+static void check_level_position(unsigned revision,int uses_level,int index){
+ obor_profile_build=revision;
+ level=&instance;instance.pos=3;setup();input.lVal=29;
+ assert(changesyspropertybyindex(index,&input)==1 && instance.pos==29);
+ level=NULL;input.lVal=31;
+ assert(changesyspropertybyindex(index,&input)==!uses_level && instance.pos==29);
+}
 static void expected_event(char *s,int *n,char c){s[(*n)++]=c;s[*n]=0;}
 static void check(unsigned revision,int count,const int *ids,const int *resolved,const char *const *names,int inverted,int supports_always,int outside_pause,int broad_entities,int global_updated,int clear_non_gameplay){
  obor_profile_build=revision;savedata.effectvol=20;savedata.musicvol=30;savedata.soundvol=40;
@@ -184,7 +203,7 @@ static void check(unsigned revision,int count,const int *ids,const int *resolved
 }
 int main(void){@CHECKS@ puts("early_system_callbacks=1");return 0;}
 '''
-        substitutions = dict(VARIANTS='\n'.join(pieces[-2:]), PIECES='\n'.join(pieces[:-2]),
+        substitutions = dict(VARIANTS='\n'.join(pieces[-3:]), PIECES='\n'.join(pieces[:-3]),
                              CALLBACKS='\n'.join([function(script, 'Script_IsInitialized'), function(core, 'execute_updatescripts'),
                                                   function(core, 'execute_updatedscripts'), function(core, 'draw_textobjs')]),
                              COMMAND=command, WINDOW=window, ARRAYS='\n'.join(arrays), CHECKS='\n'.join(checks),

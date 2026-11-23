@@ -374,7 +374,7 @@
     "file": "LICENSES/Embedded-source-notices.txt",
     "license": "see each notice",
     "scope": "source and binary",
-    "sha256": "e2c4e6100e12c0202a9bfebe024ac0a3e058f106c41612a2943cb36f9c7f44a1",
+    "sha256": "a15cd38fa399b02f1c6c2c88729764a37c5377025e2bac66bdab7b6cbeef718e",
     "source": "Individual source headers listed in this document"
   },
   {
@@ -467,6 +467,13 @@
     "scope": "runtime or build support as described in LICENSES.md",
     "sha256": "63263614cdd29f2f93cba85e992f041b31f9fc7b4033692f31269489a8a1b177",
     "source": "https://raw.githubusercontent.com/mingw-w64/mingw-w64/v13.0.0/mingw-w64-libraries/winpthreads/COPYING"
+  },
+  {
+    "file": "LICENSES/OpenBOR-profile-3185-BSD-3-Clause.txt",
+    "license": "see notice",
+    "scope": "runtime or build support as described in LICENSES.md",
+    "sha256": "eb6e8204d12759f7fbb2fb2d7c80f2c8d7191d4643663571b68f69a2c38cce34",
+    "source": "Pinned licensing reference; see PROVENANCE.md"
   },
   {
     "file": "LICENSES/OpenBOR-profile-4153-BSD-3-Clause.txt",

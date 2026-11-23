@@ -295,7 +295,7 @@ char * casesearch(const char *dir, const char *filepath)
 	char filename[256] = {""}, *rest_of_path;
 	static char fullpath[256];
 	int i=0;
-    if(!dir || !filepath || strcspn(filepath, "/") >= sizeof(filename)) return NULL;
+    if(!dir || !filepath || filepath[0] == '/' || strcspn(filepath, "/") >= sizeof(filename)) return NULL;
 
 #ifdef VERBOSE
 	printf("casesearch: %s, %s\n", dir, filepath);
@@ -307,7 +307,6 @@ char * casesearch(const char *dir, const char *filepath)
 	rest_of_path = strchr(filepath, '/');
 	if (rest_of_path != NULL) // directory
 	{
-		if(rest_of_path-filepath <= 0) return NULL;
 		strncat(filename, filepath, rest_of_path-filepath);
 		rest_of_path++;
 	} else strcpy(filename, filepath); // file

@@ -35,7 +35,8 @@ class TextPropertyNameTests(unittest.TestCase):
             if (only is not None and engine != only) or engine == exclude:
                 continue
             with self.subTest(engine=engine),tempfile.TemporaryDirectory(prefix='text-property-names-') as temporary:
-                source=SOURCE/f'src/engines/{engine}/openborscript.c'
+                engine_source=SOURCE/f'src/engines/{engine}'
+                source=engine_source/'openborscript.c'
                 if 'OBOR_TOLERANCE_DRAFT'in os.environ:source=Path(os.environ['OBOR_TOLERANCE_DRAFT'])/'text-maps'/engine/'openborscript.c'
                 text=source.read_text()
                 declared=fixture['engines'].get(engine)
@@ -74,6 +75,7 @@ class TextPropertyNameTests(unittest.TestCase):
                 if not re.search(r'(?m)^void\s*\*\s*Script_GetStringMapFunction\s*\(',text):
                     dispatch_source=source.with_name('source').joinpath('openborscript/index.c').read_text()
                 dispatch=render_dispatch(function(dispatch_source,'Script_GetStringMapFunction'),
+                    profile_header=(engine_source/'openbor.h').read_text(encoding='utf-8', errors='surrogateescape'),
                     retained_references=['openbor_gettextobjproperty','openbor_changetextobjproperty',*methods])
                 program=r'''
 #include <assert.h>

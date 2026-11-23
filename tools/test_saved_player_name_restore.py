@@ -29,7 +29,15 @@ def program(engine, profiles, *, mode='normal'):
     copy_limit = 'MAX_NAME_LEN'
     name_helpers = ''
     replacement = 'obor_profile_copy_name(player[i].name, save->pName[i]);'
-    if replacement in source:
+    historical = 'safe_strncpy(player[i].name, save->pName[i], obor_profile_name_width());'
+    if historical in source:
+        if source.count(historical) != 1 or mode != 'normal':
+            raise ValueError('One native historical width restore required')
+        name_helpers = function((engine / 'source/utils.c').read_text(encoding='latin1'), 'safe_strncpy')
+        copy_limit = '(obor_profile_build < 6210 ? MAX_NAME_LEN : MAX_NAME_LEN - 1)'
+        before = before.replace('MAX_NAME_LEN', copy_limit)
+        after = historical
+    elif replacement in source:
         if source.count(replacement) != 1 or mode != 'normal':
             raise ValueError('One profile-aware native name restore required')
         name_helpers = '\n'.join(function(core, method) for method in

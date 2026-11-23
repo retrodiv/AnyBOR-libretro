@@ -1,0 +1,145 @@
+/* SPDX-License-Identifier: BSD-3-Clause
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me> */
+static void make_frames(int first_local)
+{
+    make_wire(0, 0, 0, first_local, 1);
+    for(int plane = 0; plane < 3; ++plane)
+    {
+        unsigned char *media = wire[plane];
+        unsigned char extension[] = {'!', 0xf9, 4, 0, 3, 0, 0, 0};
+        memmove(media + 19 + sizeof(extension), media + 19, (size_t)(wire_size - 19));
+        memcpy(media + 19, extension, sizeof(extension));
+        unsigned char second[] = {',', 0,0, 0,0, 4,0, 2,0, 0, 2, 7, 0,0,0,0,0,0,0, 0, ';'};
+        memcpy(second + 12, media + data_start + sizeof(extension), 7);
+        memcpy(media + wire_size + sizeof(extension) - 1, second, sizeof(second));
+    }
+    wire_size += 8 + 20;
+}
+
+static void print_frame(s_screen *buffer, int frame, int done, int is_rgb, unsigned nextframe, int lastdelay)
+{
+    printf("%d %d %d %u %d", frame, done, is_rgb, nextframe, lastdelay);
+    if(buffer)
+    {
+        printf(" %d %d %d %d ", buffer->width, buffer->height, buffer->pixelformat, buffer->palette != NULL);
+        int size = buffer->width * buffer->height * pixelbytes[buffer->pixelformat];
+        for(int i = 0; i < size; ++i) printf("%02x", buffer->data[i]);
+    }
+    printf("\n");
+}
+
+static void compare_sequence(int format, int rgb, int local)
+{
+    rgb_active = rgb;
+    reset_resources();
+    screenformat = format;
+    if(!rgb && local) pixelformat = PIXEL_x8;
+    const char *filename = rgb ? "clip.GIF" : "clip.gif";
+    make_frames(local);
+    printf("scenario %d %d %d\n", format, rgb, local);
+    obor_anigif_stream *stream = obor_anigif_stream_open((char *)filename, "archive");
+    assert(stream);
+    for(int step = 0; step < 5; ++step)
+    {
+        if(step) assert(obor_anigif_stream_decode(stream) == (step >= 3));
+        obor_anigif_status info = obor_anigif_stream_status(stream);
+        print_frame(obor_anigif_stream_buffer(stream), info.frame, info.done, info.is_rgb,
+            info.nextframe, info.lastdelay);
+    }
+    obor_anigif_stream_close(stream);
+    assert(!owned_live);
+    for(unsigned i = 0; i < 4; ++i) assert(!files[i].active);
+}
+
+#define time gif_clock
+#define GAME_SPEED 200
+#define FLAG_ESC 1u
+#define FLAG_ANYBUTTON 2u
+char packfile[OBOR_CONTENT_PATH_MAX] = "archive";
+static s_screen saved_background;
+static s_screen *background;
+static u32 time, newtime, bothnewkeys;
+static struct { int gamma, brightness; } savedata;
+static int sound_sync, stop_after, updates;
+
+static u32 sound_getinterval(void)
+{
+    return sound_sync ? 10 : 0xFFFFFFFFu;
+}
+
+static void spriteq_add_screen(int x, int y, int z, s_screen *buffer, void *method, int sort)
+{
+    assert(x == 8 && y == 9 && z == 0 && !method && !sort);
+    printf("queue %u", time);
+    if(buffer)
+    {
+        printf(" %d %d", buffer->width, buffer->height);
+        int stride = pixelbytes[buffer->pixelformat];
+        for(int i = 0; i < stride; ++i) printf(" %02x", buffer->data[i]);
+    }
+    puts("");
+}
+
+static void update(int which, int rendered)
+{
+    assert(which == 0 && !background && ++updates <= 16);
+    printf("update %u %d\n", time, rendered);
+    time += 3;
+    newtime += 2;
+    bothnewkeys = updates == stop_after ? FLAG_ESC : 0;
+}
+
+static void vga_vwait(void) { puts("vwait"); }
+static void standard_palette(int immediate)
+{
+    assert(immediate == 1 && background == &saved_background && time == 41 && newtime == 73);
+    puts("standard palette");
+}
+
+static void palette_set_corrected(unsigned char *palette, int a, int b, int c, int d, int e, int f)
+{
+    assert(palette && a == 1 && b == 1 && c == 1 && d == 2 && e == 2 && f == 2);
+    puts("corrected palette");
+}
+
+@PLAYER@
+
+static void play_case(int format, int rgb, int audio, int stop, int noskip, int missing)
+{
+    rgb_active = rgb;
+    reset_resources();
+    screenformat = format;
+    sound_sync = audio;
+    stop_after = stop;
+    updates = 0;
+    bothnewkeys = 0;
+    background = &saved_background;
+    time = 41;
+    newtime = 73;
+    savedata.gamma = 1;
+    savedata.brightness = 2;
+    make_frames(1);
+    printf("play %d %d %d %d %d %d\n", format, rgb, audio, stop, noskip, missing);
+    int result = obor_play_streamed_gif(missing ? "missing.gif" : "clip.gif", 8, 9, noskip);
+    printf("end %d %d\n", result, updates);
+    assert(result == (missing ? 0 : (stop && !noskip ? -1 : 1)));
+    assert(!owned_live && time == 41 && newtime == 73);
+    for(unsigned i = 0; i < 4; ++i) assert(!files[i].active);
+}
+
+int main(void)
+{
+    obor_profile_build = @PROFILES@;
+    const int formats[] = {PIXEL_8, PIXEL_16, PIXEL_32};
+    for(unsigned f = 0; f < sizeof(formats) / sizeof(formats[0]); ++f)
+        for(int rgb = 0; rgb < 2; ++rgb)
+            for(int local = 0; local < 2; ++local)
+                compare_sequence(formats[f], rgb, local);
+    play_case(PIXEL_8, 0, 0, 0, 0, 0);
+    play_case(PIXEL_16, 0, 0, 2, 0, 0);
+    play_case(PIXEL_16, 0, 0, 2, 1, 0);
+    play_case(PIXEL_32, 1, 1, 0, 0, 0);
+    play_case(PIXEL_32, 1, 1, 2, 0, 0);
+    play_case(PIXEL_32, 0, 0, 0, 0, 1);
+    return 0;
+}

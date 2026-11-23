@@ -110,6 +110,13 @@ class EarlyEntityNamespaceTests(unittest.TestCase):
                 'ids_%s%s,%d,names_%s%s,%d' % (kind, suffix, len(row['namespaces'][kind]['cases']),
                                              kind, suffix, len(row['namespaces'][kind]['names']))
                 for kind in ['get', 'change', 'aiflag', 'set_aiflag'])))
+            for group in row.get('nested_names', []):
+                self.assertIn(group['slot'], (2, 3))
+                self.assertIn(group['kind'], ('get', 'change'))
+                for index, name in enumerate(group['names']):
+                    checks.append('check_nested(%d,%d,%s,%d,%s,%d);' % (
+                        row['revision'], group['kind'] == 'change', json.dumps(group['property']),
+                        group['slot'], json.dumps(name), index if group['accepted'] else -1))
         program = r'''
 #include <assert.h>
 #include <ctype.h>
@@ -155,6 +162,22 @@ static void input(int numeric,int index,const char *name,int subnumeric,int subi
  values[2].vt=subnumeric?VT_INTEGER:VT_STR;
  if(subnumeric)values[2].lVal=subindex;else {cache[1001]=(char*)subname;values[2].strVal=1001;}
  values[3].vt=VT_INTEGER;values[3].lVal=1;
+}
+static void check_nested(unsigned revision,int setter,const char *property,int slot,const char *name,int expected) {
+ obor_profile_build=revision;
+ for(int numeric=0;numeric<2;numeric++) {
+  input(0,0,property,1,0,NULL);
+  ScriptVariant *argument=args[slot];
+  if(numeric && expected>=0) argument->lVal=expected;
+  else {cache[1001]=(char*)name;argument->vt=VT_STR;argument->strVal=1001;}
+  for(int repeat=0;repeat<2;repeat++) {
+   if(setter) mapstrings_changeentityproperty(args,slot+1);
+   else mapstrings_getentityproperty(args,slot+1);
+   assert(values[1].vt==VT_INTEGER);
+   if(expected>=0) assert(argument->vt==VT_INTEGER && argument->lVal==expected);
+   else assert(argument->vt==VT_STR && argument->strVal==1001);
+  }
+ }
 }
 static int written_flag(int id) {
  switch(id) {

@@ -10,7 +10,9 @@
  * with explicit destination capacities, and reject overflowing output path
  * joins. Compact compiler-only instruction records after resolving value
  * ownership, preserving branch and export anchors, all mutable values and
- * exactly-once pool cleanup. Select historical attack domains, environmental
+ * exactly-once pool cleanup. Select the native player, entity and level
+ * selectors, sort IDs, terrain commands, type constants and script math
+ * functions by profile. Select historical attack domains, environmental
  * damage, camera and scroll behavior, model-save loading, weapon and idle
  * order, nested scripts and numeric script selectors. Retain bounded
  * storage, safe ownership and the selected rejected-value contracts.
@@ -91,6 +93,7 @@
 #include "globals.h"
 #include <limits.h>
 #include "ImportCache.h"
+#include "transform.h"
 #include "models.h"
 
 
@@ -240,6 +243,12 @@ void _freeheapnode(void* ptr){
         return;
     }
     owner = List_GetName(&scriptheap);
+    if(owner && !strcmp(owner, "openbor_openanigif"))
+    {
+        entry->value = NULL;
+        obor_anigif_stream_close(ptr);
+        return;
+    }
 	if(owner && strcmp(owner, "openbor_allocscript") == 0 &&
        ((Script *)ptr)->magic == script_magic) {
 		Script_Clear((Script*)ptr,2);
@@ -598,6 +607,27 @@ static int obor_script_share_references(Script *destination, Script *source)
     return 1;
 }
 
+int Script_ResetVariables(Script *script)
+{
+    if(max_script_vars > 0)
+    {
+        if(script->vars)
+        {
+            for(int i = 0; i < max_script_vars; ++i)
+                ScriptVariant_Clear(script->vars + i);
+        }
+        else
+        {
+            script->vars = calloc(max_script_vars, sizeof(*script->vars));
+            if(!script->vars) return 0;
+            for(int i = 0; i < max_script_vars; ++i)
+                ScriptVariant_Init(script->vars + i);
+        }
+    }
+    script->magic = script_magic;
+    return 1;
+}
+
 void Script_Init(Script* pscript, char* theName, char* comment, int first)
 {
     if(!pscript)
@@ -606,23 +636,16 @@ void Script_Init(Script* pscript, char* theName, char* comment, int first)
         borExit(1);
         return;
     }
-	int i;
-	if(first)
-	{
-		memset(pscript, 0, sizeof(*pscript));
-		pscript->magic = script_magic;
-		if(max_script_vars>0)
-		{
-			pscript->vars = calloc(max_script_vars, sizeof(*pscript->vars));
-            if(!pscript->vars)
-            {
-                fprintf(stderr, "Unable to allocate script local variables\n");
-                borExit(1);
-                return;
-            }
-			for(i=0; i<max_script_vars; i++) ScriptVariant_Init(pscript->vars+i);
-		}
-	}
+    if(first)
+    {
+        memset(pscript, 0, sizeof(*pscript));
+        if(!Script_ResetVariables(pscript))
+        {
+            fprintf(stderr, "Unable to allocate script local variables\n");
+            borExit(1);
+            return;
+        }
+    }
 	if(!theName || !theName[0])  return; // if no name specified, only alloc the variants
 
 	if(!obor_script_replace_interpreter(pscript, theName))
@@ -755,8 +778,71 @@ int Script_AppendText(Script* pscript, char* text, char* path)
 }
 
 //return name of function from pointer to function
+static HRESULT math_angle(ScriptVariant **varlist, ScriptVariant **pretvar, int paramCount, const float *table)
+{
+    LONG angle;
+    if(paramCount < 1 || !varlist || !varlist[0] || !SUCCEEDED(ScriptVariant_IntegerValue(varlist[0], &angle)))
+    {
+        *pretvar = NULL;
+        return E_FAIL;
+    }
+    ScriptVariant_ChangeType(*pretvar, VT_DECIMAL);
+    (*pretvar)->dblVal = table[(angle % 360 + 360) % 360];
+    return S_OK;
+}
+
+static HRESULT math_sin(ScriptVariant **varlist, ScriptVariant **pretvar, int paramCount)
+{
+    return math_angle(varlist, pretvar, paramCount, sin_table);
+}
+
+static HRESULT math_cos(ScriptVariant **varlist, ScriptVariant **pretvar, int paramCount)
+{
+    return math_angle(varlist, pretvar, paramCount, cos_table);
+}
+
+static HRESULT math_sqrt(ScriptVariant **varlist, ScriptVariant **pretvar, int paramCount)
+{
+    DOUBLE value;
+    if(paramCount < 1 || !varlist || !varlist[0] || !SUCCEEDED(ScriptVariant_DecimalValue(varlist[0], &value)))
+    {
+        *pretvar = NULL;
+        return E_FAIL;
+    }
+    const float inv = invsqrt((float)value);
+    if(inv == 0.0f)
+    {
+        *pretvar = NULL;
+        return E_FAIL;
+    }
+    ScriptVariant_ChangeType(*pretvar, VT_DECIMAL);
+    (*pretvar)->dblVal = 1.0 / inv;
+    return S_OK;
+}
+
+static HRESULT openbor_openanigif(ScriptVariant **, ScriptVariant **, int);
+static HRESULT openbor_decodeanigif(ScriptVariant **, ScriptVariant **, int);
+static HRESULT openbor_getanigifinfo(ScriptVariant **, ScriptVariant **, int);
+
 static int obor_script_function_available(void *functionRef)
 {
+    if(functionRef == (void *)openbor_openanigif ||
+       functionRef == (void *)openbor_decodeanigif ||
+       functionRef == (void *)openbor_getanigifinfo)
+        return obor_profile_build >= 3873u;
+    if(functionRef == (void *)openbor_aicheckwarp ||
+       functionRef == (void *)openbor_aichecklie ||
+       functionRef == (void *)openbor_aicheckgrabbed ||
+       functionRef == (void *)openbor_aicheckgrab ||
+       functionRef == (void *)openbor_aicheckescape ||
+       functionRef == (void *)openbor_aicheckbusy ||
+       functionRef == (void *)openbor_aicheckattack ||
+       functionRef == (void *)openbor_aicheckmove ||
+       functionRef == (void *)openbor_aicheckjump ||
+       functionRef == (void *)openbor_aicheckpathblocked)
+        return obor_profile_build < 3873u;
+    if(functionRef == (void*)math_sin || functionRef == (void*)math_cos || functionRef == (void*)math_sqrt)
+        return obor_profile_build >= 3869u;
     if(functionRef == (void*)system_exit) return obor_profile_build >= 3834;
     if(functionRef == (void*)openbor_querychannel) return obor_profile_build >= 3838;
     if(functionRef == (void*)openbor_stopchannel) return obor_profile_build >= 3838;
@@ -783,6 +869,9 @@ const char* Script_GetFunctionName(void* functionRef)
 	else if (functionRef==((void*)system_clearindexedvar)) return "clearindexedvar";
 	else if (functionRef==((void*)system_clearlocalvar)) return "clearlocalvar";
 	else if (functionRef==((void*)system_free)) return "free";
+	else if (functionRef==((void*)math_sin)) return "sin";
+	else if (functionRef==((void*)math_cos)) return "cos";
+	else if (functionRef==((void*)math_sqrt)) return "sqrt";
 	else if (functionRef==((void*)openbor_systemvariant)) return "openborvariant";
 	else if (functionRef==((void*)openbor_changesystemvariant)) return "changeopenborvariant";
 	else if (functionRef==((void*)openbor_drawstring)) return "drawstring";
@@ -873,6 +962,9 @@ const char* Script_GetFunctionName(void* functionRef)
 	else if (functionRef==((void*)openbor_loadsprite)) return "loadsprite";
 	else if (functionRef==((void*)openbor_options)) return "options";
 	else if (functionRef==((void*)openbor_playgif)) return "playgif";
+	else if (functionRef==((void*)openbor_openanigif)) return "openanigif";
+	else if (functionRef==((void*)openbor_decodeanigif)) return "decodeanigif";
+	else if (functionRef==((void*)openbor_getanigifinfo)) return "getanigifinfo";
 	else if (functionRef==((void*)openbor_strinfirst)) return "strinfirst";
 	else if (functionRef==((void*)openbor_strinlast)) return "strinlast";
 	else if (functionRef==((void*)openbor_strleft)) return "strleft";
@@ -955,63 +1047,27 @@ const ScriptVariant* Script_Find_Constant(Script* pscript, const ScriptVariant* 
 
 /* Replace string constants with enum constants at compile time to speed up
    script execution. */
+int Script_MapInstructionConstant(Instruction* instruction)
+{
+    if(instruction->jumpTargetType != INSTRUCTION_TARGET_FUNCTION ||
+       !instruction->functionRef)
+        return 1;
+
+    int paramCount = Instruction_CallReferenceCount(instruction);
+    if(obor_profile_build >= 3828u) assert(paramCount<=32);
+
+    int (*mapper)(ScriptVariant**, int) = Script_GetStringMapFunction(instruction->functionRef);
+    return !mapper || mapper(Instruction_CallReferenceValues(instruction), paramCount);
+}
+
 int Script_MapStringConstants(Script* pscript)
 {
-	Interpreter* pinterpreter = pscript->pinterpreter;
-	Instruction* pInstruction;
-	ScriptVariant** params;
-	//ScriptVariant* var;
-	void (*pMapstrings)(ScriptVariant**, int);
-	int i, size, paramCount;
-#define CONVCONST 0
-#if CONVCONST
-	int j,k;
-	int flags[32];
-	Instruction *pInstruction2;
-#endif
-
-	size = List_GetSize(&(pinterpreter->theInstructionList));
-	for(i=0; i<size; i++)
-	{
-		pInstruction = &(pinterpreter->instructionStorage[i]);
-		if(pInstruction->jumpTargetType == INSTRUCTION_TARGET_FUNCTION &&
-		   pInstruction->functionRef)
-		{
-			params = Instruction_CallReferenceValues(pInstruction);
-			paramCount = Instruction_CallReferenceCount(pInstruction);
-			if(obor_profile_build >= 3828) assert(paramCount<=32);
-			// Get the pointer to the correct mapstrings function, if one exists.
-			pMapstrings = Script_GetStringMapFunction(pInstruction->functionRef);
-			if(pMapstrings)
-			{
-#if CONVCONST
-				for(j=0; j<paramCount; j++) flags[j] = params[j]->vt;
-#endif
-				// Call the mapstrings function.
-				pMapstrings(params, paramCount);
-#if CONVCONST
-				// Find the instruction containing each constant and update its value.
-				for(j=0; j<paramCount; j++)
-				{
-					//only find those that were changed
-					if(flags[j]==params[j]->vt) continue;
-					for(k=i; k>=0; k--)
-					{
-						pInstruction2 = &(pinterpreter->instructionStorage[k]);
-						if(pInstruction2->theVal2 == params[j])
-						{
-							ScriptVariant_Copy(pInstruction2->theVal, pInstruction2->theVal2);
-							break;
-						}
-					}
-					if(k<0) return 0;
-				}
-#endif
-			}
-		}
-	}
-
-	return 1;
+    if(obor_profile_build >= 3862u) return 1;
+    Interpreter* interpreter = pscript->pinterpreter;
+    int count = List_GetSize(&interpreter->theInstructionList);
+    for(int i = 0; i < count; ++i)
+        Script_MapInstructionConstant(&interpreter->instructionStorage[i]);
+    return 1;
 }
 
 // replaces the entire instruction list with a new instruction list after optimization
@@ -1181,9 +1237,18 @@ int Script_Compile(Script* pscript)
 	if(!pscript || !pscript->pinterpreter) return 1;
 	//Interpreter_OutputPCode(pscript->pinterpreter, "code");
 	result = SUCCEEDED(Interpreter_CompileInstructions(pscript->pinterpreter, NULL));
-	if(!result) {Script_Clear(pscript, 1);shutdown(1, "Can't compile script!\n");}
-	result = Script_MapStringConstants(pscript);
-	if(!result) {Script_Clear(pscript, 1);shutdown(1, "Can't compile script!\n");}
+	if(!result)
+	{
+		char message[1024] = "Can't compile script!\n";
+		if(obor_profile_build >= 3862u)
+			snprintf(message, sizeof(message), "Can't compile script '%s' %s\n",
+					 pscript->pinterpreter->theSymbolTable.name, pscript->comment ? pscript->comment : "");
+		Script_Clear(pscript, 1);
+		shutdown(1, "%s", message);
+		return 0;
+	}
+	if(obor_profile_build < 3862u)
+		Script_MapStringConstants(pscript);
 
 	if(obor_profile_build >= 3808) pscript->pinterpreter->bReset = FALSE;
 	//result = Script_DetectUnusedFunctions(pscript);
@@ -1273,6 +1338,12 @@ void Script_LoadSystemFunctions()
 					  (void*)system_clearlocalvar, "clearlocalvar");
 	List_InsertAfter(&theFunctionList,
 					  (void*)system_free, "free");
+    if(obor_profile_build >= 3869u)
+    {
+        List_InsertAfter(&theFunctionList, (void*)math_sin, "sin");
+        List_InsertAfter(&theFunctionList, (void*)math_cos, "cos");
+        List_InsertAfter(&theFunctionList, (void*)math_sqrt, "sqrt");
+    }
 	List_InsertAfter(&theFunctionList,
 					  (void*)openbor_systemvariant, "openborvariant");
 	List_InsertAfter(&theFunctionList,
@@ -1457,6 +1528,12 @@ void Script_LoadSystemFunctions()
 					  (void*)openbor_options, "options");
 	List_InsertAfter(&theFunctionList,
 					  (void*)openbor_playgif, "playgif");
+	if(obor_profile_build >= 3873u)
+	{
+		List_InsertAfter(&theFunctionList, (void *)openbor_openanigif, "openanigif");
+		List_InsertAfter(&theFunctionList, (void *)openbor_decodeanigif, "decodeanigif");
+		List_InsertAfter(&theFunctionList, (void *)openbor_getanigifinfo, "getanigifinfo");
+	}
 	List_InsertAfter(&theFunctionList,
 					  (void*)openbor_strinfirst, "strinfirst");
 	List_InsertAfter(&theFunctionList,
@@ -1485,24 +1562,34 @@ void Script_LoadSystemFunctions()
 	List_InsertAfter(&theFunctionList,
 					  (void*)openbor_trianglelist, "trianglelist");
 
+	if(obor_script_function_available((void *)openbor_aicheckwarp))
 	List_InsertAfter(&theFunctionList,
 					  (void*)openbor_aicheckwarp, "aicheckwarp");
+	if(obor_script_function_available((void *)openbor_aichecklie))
 	List_InsertAfter(&theFunctionList,
 					  (void*)openbor_aichecklie, "aichecklie");
+	if(obor_script_function_available((void *)openbor_aicheckgrabbed))
 	List_InsertAfter(&theFunctionList,
 					  (void*)openbor_aicheckgrabbed, "aicheckgrabbed");
+	if(obor_script_function_available((void *)openbor_aicheckgrab))
 	List_InsertAfter(&theFunctionList,
 					  (void*)openbor_aicheckgrab, "aicheckgrab");
+	if(obor_script_function_available((void *)openbor_aicheckescape))
 	List_InsertAfter(&theFunctionList,
 					  (void*)openbor_aicheckescape, "aicheckescape");
+	if(obor_script_function_available((void *)openbor_aicheckbusy))
 	List_InsertAfter(&theFunctionList,
 					  (void*)openbor_aicheckbusy, "aicheckbusy");
+	if(obor_script_function_available((void *)openbor_aicheckattack))
 	List_InsertAfter(&theFunctionList,
 					  (void*)openbor_aicheckattack, "aicheckattack");
+	if(obor_script_function_available((void *)openbor_aicheckmove))
 	List_InsertAfter(&theFunctionList,
 					  (void*)openbor_aicheckmove, "aicheckmove");
+	if(obor_script_function_available((void *)openbor_aicheckjump))
 	List_InsertAfter(&theFunctionList,
 					  (void*)openbor_aicheckjump, "aicheckjump");
+	if(obor_script_function_available((void *)openbor_aicheckpathblocked))
 	List_InsertAfter(&theFunctionList,
 					  (void*)openbor_aicheckpathblocked, "aicheckpathblocked");
 
@@ -1823,7 +1910,7 @@ static int obor_systemvariant_native(int property)
     return property < _sv_the_end ? property : _sv_the_end;
 }
 
-void mapstrings_systemvariant(ScriptVariant** varlist, int paramCount)
+int mapstrings_systemvariant(ScriptVariant** varlist, int paramCount)
 {
 	char* propname;
 	int prop;
@@ -1831,13 +1918,14 @@ void mapstrings_systemvariant(ScriptVariant** varlist, int paramCount)
 
     const char *names[_sv_the_end];
     int i, count = 0;
-    if(paramCount < 1 || varlist[0]->vt != VT_STR) return;
+    if(paramCount < 1 || varlist[0]->vt != VT_STR) return 1;
     for(i=0; i<_sv_the_end; ++i)
     {
         if(obor_systemvariant_available(i)) names[count++] = svlist[i];
     }
 	MAPSTRINGS(varlist[0], names, count,
 		"openborvariant: System variable name not found: '%s'\n");
+    return varlist[0]->vt != VT_STR;
 }
 
 //sample function, used for getting a system variant
@@ -3134,6 +3222,7 @@ _ep_xdir,
 _ep_z,
 _ep_zdir,
 _ep_the_end,
+_ep_sortid = _ep_the_end,
 };
 
 // arranged list, for searching
@@ -3392,12 +3481,13 @@ static const char **obor_aiflag_names(void)
     return obor_profile_build < 3797 ? before_expansion : eplist_aiflag;
 }
 
-static void obor_map_aiflag_property(ScriptVariant *property)
+static int obor_map_aiflag_property(ScriptVariant *property)
 {
     char *propname;
     int prop;
     MAPSTRINGS(property, obor_aiflag_names(), _ep_aiflag_the_end,
         "'%s' is not a known subproperty of 'aiflag'.\n");
+    return property->vt != VT_STR;
 }
 
 enum gep_attack_enum {
@@ -3492,13 +3582,14 @@ static int obor_attack_property_native(LONG property)
     return (int)property;
 }
 
-void mapstrings_attackproperty(ScriptVariant** varlist, int paramCount)
+int mapstrings_attackproperty(ScriptVariant** varlist, int paramCount)
 {
 	char* propname;
 	int prop;
-	if(paramCount<2) return;
+	if(paramCount<2) return 1;
 	MAPSTRINGS(varlist[0], eplist_attack, _ep_attack_the_end,
 		"'%s' is not a valid attack property.\n");
+    return varlist[0]->vt != VT_STR;
 }
 
 enum _ep_defense_enum {
@@ -3674,7 +3765,44 @@ enum cep_think_enum { // 2011_03_03, DC: Think types.
     _ep_th_the_end,
 };
 
-void mapstrings_entityproperty(ScriptVariant** varlist, int paramCount)
+/* Build 3858 inserts sortid before spawntype in the script's
+ * numeric selector table. Normalize it only for internal dispatch. */
+static int obor_entity_property_index(LONG selector)
+{
+    if (obor_profile_build >= 3858u)
+    {
+        if (selector == _ep_spawntype)
+            return _ep_sortid;
+        if (selector > _ep_spawntype)
+            --selector;
+    }
+    return selector >= 0 && selector < _ep_the_end ? (int)selector : -1;
+}
+
+static int obor_map_entity_selector(ScriptVariant *selector)
+{
+    if (selector->vt != VT_STR)
+        return 1;
+    const char *name = StrCache_Get(selector->strVal);
+    int index = searchList(eplist, name, _ep_the_end);
+    if (obor_profile_build >= 3858u)
+    {
+        if (name && stricmp(name, "sortid") == 0)
+            index = _ep_spawntype;
+        else if (index >= _ep_spawntype)
+            ++index;
+    }
+    if (index >= 0)
+    {
+        ScriptVariant_ChangeType(selector, VT_INTEGER);
+        selector->lVal = index;
+    }
+    else
+        printf("Property name '%s' is not supported by function getentityproperty.\n", name ? name : "");
+    return index >= 0;
+}
+
+int mapstrings_entityproperty(ScriptVariant** varlist, int paramCount)
 {
 	char* propname;
 	int prop, i;
@@ -3875,28 +4003,28 @@ void mapstrings_entityproperty(ScriptVariant** varlist, int paramCount)
 		"trap_think",
 	};
 
-	if(paramCount < 2) return;
+	if(paramCount < 2) return 1;
 
 	// map entity properties
-	MAPSTRINGS(varlist[1], eplist, _ep_the_end,
-		"Property name '%s' is not supported by function getentityproperty.\n");
+	if(!obor_map_entity_selector(varlist[1])) return 0;
 
-	if(paramCount < 3 || varlist[1]->vt != VT_INTEGER) return;
+	if(paramCount < 3 || varlist[1]->vt != VT_INTEGER) return 1;
 
-	switch (varlist[1]->lVal)
+	const int property = obor_entity_property_index(varlist[1]->lVal);
+	switch (property)
 	{
 	// map subproperties of aiflag property
 	case _ep_aiflag:
 	{
-		obor_map_aiflag_property(varlist[2]);
-		break;
+		return obor_map_aiflag_property(varlist[2]);
 	}
 	// map subproperties of Attack
 	case _ep_attack:
 	{
 		MAPSTRINGS(varlist[2], obor_profile_build >= 3843 ? eplist_attack : proplist_attack,
             obor_profile_build >= 3843 ? _ep_attack_the_end : _ep_attack_reset,
-			"Property name '%s' is not a known subproperty of 'attack'.\n");
+			obor_profile_build < 3862u ? "Property name '%s' is not a known subproperty of 'attack'.\n" : "'%s' is not a known subproperty of 'attack'.\n");
+		if(varlist[2]->vt == VT_STR) return 0;
 		break;
 	}
 	// map subproperties of defense property
@@ -3906,6 +4034,7 @@ void mapstrings_entityproperty(ScriptVariant** varlist, int paramCount)
 		{
 			MAPSTRINGS(varlist[3], proplist_defense, _ep_defense_the_end,
 				"'%s' is not a known subproperty of 'defense'.\n");
+			if(varlist[3]->vt == VT_STR) return 0;
 		}
 		break;
 	}
@@ -3913,7 +4042,8 @@ void mapstrings_entityproperty(ScriptVariant** varlist, int paramCount)
 	case _ep_dot:
 	{
 		MAPSTRINGS(varlist[2], proplist_dot, _ep_dot_the_end,
-			"Property name '%s' is not a known subproperty of 'dot'.\n");
+			obor_profile_build < 3862u ? "Property name '%s' is not a known subproperty of 'dot'.\n" : "'%s' is not a known subproperty of 'dot'.\n");
+		if(varlist[2]->vt == VT_STR) return 0;
 		break;
 	}
     // map subproperties of Edelay property
@@ -3921,76 +4051,87 @@ void mapstrings_entityproperty(ScriptVariant** varlist, int paramCount)
 	{
 		MAPSTRINGS(varlist[2], proplist_edelay, _ep_edelay_the_end,
 			"'%s' is not a known subproperty of 'edelay'.\n");
+		if(varlist[2]->vt == VT_STR) return 0;
 		break;
 	}
 	// map subproperties of Energycost
 	case _ep_energycost:
 	{
 		MAPSTRINGS(varlist[2], proplist_energycost, _ep_energycost_the_end,
-			"Property name '%s' is not a known subproperty of 'energycost'.\n");
+			obor_profile_build < 3862u ? "Property name '%s' is not a known subproperty of 'energycost'.\n" : "'%s' is not a known subproperty of 'energycost'.\n");
+		if(varlist[2]->vt == VT_STR) return 0;
 		break;
 	}
 	// map subproperties of Flash
 	case _ep_flash:
 	{
 		MAPSTRINGS(varlist[2], proplist_flash, _ep_flash_the_end,
-			"Property name '%s' is not a known subproperty of 'flash'.\n");
+			obor_profile_build < 3862u ? "Property name '%s' is not a known subproperty of 'flash'.\n" : "'%s' is not a known subproperty of 'flash'.\n");
+		if(varlist[2]->vt == VT_STR) return 0;
 		break;
 	}
     // map subproperties of Icon
 	case _ep_icon:
 	{
 		MAPSTRINGS(varlist[2], proplist_icon, _ep_icon_the_end,
-			"Property name '%s' is not a known subproperty of 'icon'.\n");
+			obor_profile_build < 3862u ? "Property name '%s' is not a known subproperty of 'icon'.\n" : "'%s' is not a known subproperty of 'icon'.\n");
+		if(varlist[2]->vt == VT_STR) return 0;
 		break;
 	}
 	// map subproperties of Knockdowncount
 	case _ep_knockdowncount:
 	{
 		MAPSTRINGS(varlist[2], proplist_knockdowncount, _ep_knockdowncount_the_end,
-			"Property name '%s' is not a known subproperty of 'knockdowncount'.\n");
+			obor_profile_build < 3862u ? "Property name '%s' is not a known subproperty of 'knockdowncount'.\n" : "'%s' is not a known subproperty of 'knockdowncount'.\n");
+		if(varlist[2]->vt == VT_STR) return 0;
 		break;
 	}
 	// map subproperties of Landframe
 	case _ep_landframe:
 	{
 		MAPSTRINGS(varlist[2], proplist_landframe, _ep_landframe_the_end,
-			"Property name '%s' is not a known subproperty of 'landframe'.\n");
+			obor_profile_build < 3862u ? "Property name '%s' is not a known subproperty of 'landframe'.\n" : "'%s' is not a known subproperty of 'landframe'.\n");
+		if(varlist[2]->vt == VT_STR) return 0;
 		break;
 	}
 	// map subproperties of Maps
 	case  _ep_maps:
 	{
 		MAPSTRINGS(varlist[2], proplist_maps, _ep_maps_the_end,
-			"Property name '%s' is not a known subproperty of 'maps'.\n");
+			obor_profile_build < 3862u ? "Property name '%s' is not a known subproperty of 'maps'.\n" : "'%s' is not a known subproperty of 'maps'.\n");
+		if(varlist[2]->vt == VT_STR) return 0;
 		break;
 	}
 	// map subproperties of Range
 	case _ep_range:
 	{
 		MAPSTRINGS(varlist[2], proplist_range, _ep_range_the_end,
-			"Property name '%s' is not a known subproperty of 'range'.\n");
+			obor_profile_build < 3862u ? "Property name '%s' is not a known subproperty of 'range'.\n" : "'%s' is not a known subproperty of 'range'.\n");
+		if(varlist[2]->vt == VT_STR) return 0;
 		break;
 	}
 	// map subproperties of Running
 	case _ep_running:
 	{
 		MAPSTRINGS(varlist[2], proplist_running, _ep_running_the_end,
-			"Property name '%s' is not a known subproperty of 'running'.\n");
+			obor_profile_build < 3862u ? "Property name '%s' is not a known subproperty of 'running'.\n" : "'%s' is not a known subproperty of 'running'.\n");
+		if(varlist[2]->vt == VT_STR) return 0;
 		break;
 	}
 	// map subproperties of Spritea
 	case _ep_spritea:
 	{
 		MAPSTRINGS(varlist[2], proplist_spritea, _ep_spritea_the_end,
-			"Property name '%s' is not a known subproperty of 'spritea'.\n");
+			obor_profile_build < 3862u ? "Property name '%s' is not a known subproperty of 'spritea'.\n" : "'%s' is not a known subproperty of 'spritea'.\n");
+		if(varlist[2]->vt == VT_STR) return 0;
 		break;
 	}
 	// map subproperties of Staydown
 	case _ep_staydown:
 	{
 		MAPSTRINGS(varlist[2], proplist_staydown, sizeof(proplist_staydown) / sizeof(*proplist_staydown),
-			"Property name '%s' is not a known subproperty of 'staydown'.\n");
+			obor_profile_build < 3862u ? "Property name '%s' is not a known subproperty of 'staydown'.\n" : "'%s' is not a known subproperty of 'staydown'.\n");
+		if(varlist[2]->vt == VT_STR) return 0;
 		break;
 	}
 	//hostile, candamage, projectilehit
@@ -3998,11 +4139,18 @@ void mapstrings_entityproperty(ScriptVariant** varlist, int paramCount)
 	case _ep_candamage:
 	case _ep_projectilehit:
 	{
+        const char *type_diagnostic = obor_profile_build < 3862u
+            ? "Entity type is not supported by 'hostile', 'candamage', or 'projectilehit'\n"
+            : obor_profile_build < 3865u ? "'%s' is not supported by 'takeaction'.\n"
+            : property == _ep_hostile ? "'%s' is not supported by 'hostile'.\n"
+            : property == _ep_candamage ? "'%s' is not supported by 'candamage'.\n"
+            : "'%s' is not supported by 'projectilehit'.\n";
 		for(i=2; i<paramCount; i++)
 		{
 			if(!varlist[i]) continue;
 			MAPSTRINGS(varlist[i], proplist_hostile_candamage, _ep_hcd_the_end,
-				"Entity type is not supported by 'hostile', 'candamage', or 'projectilehit'\n");
+				type_diagnostic);
+			if(obor_profile_build >= 3862u && varlist[i]->vt == VT_STR) return 0;
 		}
 		break;
 	}
@@ -4010,24 +4158,29 @@ void mapstrings_entityproperty(ScriptVariant** varlist, int paramCount)
 	case _ep_takeaction:
 	{
 		MAPSTRINGS(varlist[2], proplist_takeaction, _ep_ta_the_end,
-			"Action is not supported by 'takeaction'.\n");
+			obor_profile_build < 3862u ? "Action is not supported by 'takeaction'.\n" : "'%s' is not supported by 'takeaction'.\n");
+		if(varlist[2]->vt == VT_STR) return 0;
 		break;
 	}
     // 2011_03_13, DC: Think sets for think.
 	case _ep_think:
 	{
 		MAPSTRINGS(varlist[2], proplist_think, _ep_th_the_end,
-			"Value is not supported by 'think'.\n");
+			obor_profile_build < 3862u ? "Value is not supported by 'think'.\n" :
+            obor_profile_build < 3865u ? "'%s' is not supported by 'takeaction'.\n" :
+            "'%s' is not supported by 'think'.\n");
+		if(varlist[2]->vt == VT_STR) return 0;
 		break;
 	}
 	}
+    return 1;
 }
 
 
-void mapstrings_getentityproperty(ScriptVariant** varlist, int paramCount)
+int mapstrings_getentityproperty(ScriptVariant** varlist, int paramCount)
 {
-    if(obor_profile_build >= 3828) {mapstrings_entityproperty(varlist, paramCount);return;}
-    if(paramCount < 2) return;
+    if(obor_profile_build >= 3828) {mapstrings_entityproperty(varlist, paramCount);return 1;}
+    if(paramCount < 2) return 1;
 
 	char* propname;
 	int prop;
@@ -4185,13 +4338,13 @@ void mapstrings_getentityproperty(ScriptVariant** varlist, int paramCount)
         "riseattack_stall",
     };
 
-	if(paramCount < 2) return;
+	if(paramCount < 2) return 1;
 
 	// map entity properties
 	MAPSTRINGS(varlist[1], eplist, _ep_the_end,
 		"Property name '%s' is not supported by function getentityproperty.\n");
 
-	if(paramCount < 3) return;
+	if(paramCount < 3) return 1;
 
 	// map subproperties of aiflag property
 	if((varlist[1]->vt == VT_INTEGER) && (varlist[1]->lVal == _ep_aiflag))
@@ -4301,13 +4454,14 @@ void mapstrings_getentityproperty(ScriptVariant** varlist, int paramCount)
 		MAPSTRINGS(varlist[2], proplist_staydown, sizeof(proplist_staydown) / sizeof(*proplist_staydown),
 			"Property name '%s' is not a known subproperty of 'staydown'.\n");
 	}
+    return 1;
 }
 
 
-void mapstrings_changeentityproperty(ScriptVariant** varlist, int paramCount)
+int mapstrings_changeentityproperty(ScriptVariant** varlist, int paramCount)
 {
-    if(obor_profile_build >= 3828) {mapstrings_entityproperty(varlist, paramCount);return;}
-    if(paramCount < 2) return;
+    if(obor_profile_build >= 3828) {mapstrings_entityproperty(varlist, paramCount);return 1;}
+    if(paramCount < 2) return 1;
 
 	char* propname;
 	int prop, i;
@@ -4385,7 +4539,7 @@ void mapstrings_changeentityproperty(ScriptVariant** varlist, int paramCount)
 	// property name
 	MAPSTRINGS(varlist[1], eplist, _ep_the_end,
 		"Property name '%s' is not supported by function changeentityproperty.\n");
-    if(paramCount < 3) return;
+    if(paramCount < 3) return 1;
 
     // AI flag name for aiflag
 	if((varlist[1]->vt == VT_INTEGER) && (varlist[1]->lVal == _ep_aiflag))
@@ -4447,6 +4601,7 @@ void mapstrings_changeentityproperty(ScriptVariant** varlist, int paramCount)
 		MAPSTRINGS(varlist[2], proplist_think, _ep_th_the_end,
 			"Set '%s' is not supported by 'think'.\n");
 	}
+    return 1;
 }
 
 //getentityproperty(pentity, propname);
@@ -4522,7 +4677,7 @@ HRESULT openbor_getentityproperty(ScriptVariant** varlist , ScriptVariant** pret
 		printf("Function getentityproperty must have a string property name.\n");
 	}
 
-	propind = arg->lVal;
+	propind = obor_entity_property_index(arg->lVal);
 
 	switch(propind)
 	{
@@ -6333,6 +6488,12 @@ HRESULT openbor_getentityproperty(ScriptVariant** varlist , ScriptVariant** pret
 		(*pretvar)->lVal = (LONG)ent->modeldata.setlayer;
 		break;
 	}
+	case _ep_sortid:
+	{
+		ScriptVariant_ChangeType(*pretvar, VT_INTEGER);
+		(*pretvar)->lVal = (LONG)ent->sortid;
+		break;
+	}
 	case _ep_spawntype:
 	{
 		ScriptVariant_ChangeType(*pretvar, VT_INTEGER);
@@ -6347,8 +6508,12 @@ HRESULT openbor_getentityproperty(ScriptVariant** varlist , ScriptVariant** pret
 	}
 	case _ep_sprite:
 	{
-		ScriptVariant_ChangeType(*pretvar, VT_PTR);
 		i = ent->animation->sprite[ent->animpos];
+		if(!sprite_map || i < 0 || i >= sprite_map_max_items || (unsigned int)i >= sprites_loaded ||
+		   !sprite_map[i].node || !sprite_map[i].node->sprite)
+			break;
+		ScriptVariant_ChangeType(*pretvar, VT_PTR);
+
 		spr = sprite_map[i].node->sprite;
 		spr->centerx = sprite_map[i].centerx;
 		spr->centery = sprite_map[i].centery;
@@ -6770,7 +6935,7 @@ HRESULT openbor_changeentityproperty(ScriptVariant** varlist , ScriptVariant** p
 		goto changeentityproperty_error;
 	}
 
-	propind = varlist[1]->lVal;
+	propind = obor_entity_property_index(varlist[1]->lVal);
 
 	switch(propind)
 	{
@@ -7726,6 +7891,12 @@ HRESULT openbor_changeentityproperty(ScriptVariant** varlist , ScriptVariant** p
 			ent->modeldata.scroll = (float)dbltemp;
 		break;
 	}
+    case _ep_sortid:
+	{
+		if(SUCCEEDED(ScriptVariant_IntegerValue(varlist[2], &ltemp)))
+			ent->sortid = (int)ltemp;
+		break;
+	}
     case _ep_seal:
 	{
 		if(SUCCEEDED(ScriptVariant_IntegerValue(varlist[2], &ltemp)))
@@ -8180,7 +8351,7 @@ static int obor_player_property_native(int property)
     return property;
 }
 
-void mapstrings_playerproperty(ScriptVariant** varlist, int paramCount)
+int mapstrings_playerproperty(ScriptVariant** varlist, int paramCount)
 {
 	char* propname;
 	int prop;
@@ -8223,11 +8394,12 @@ void mapstrings_playerproperty(ScriptVariant** varlist, int paramCount)
         names = before_rename;
     }
 
-	if(paramCount < 2) return;
+	if(paramCount < 2) return 1;
 
 	// property name
 	MAPSTRINGS(varlist[1], names, count,
 		"Player property name '%s' is not supported yet.\n");
+    return varlist[1]->vt != VT_STR;
 }
 
 //getplayerproperty(index, propname);
@@ -8442,6 +8614,8 @@ HRESULT openbor_changeplayerproperty(ScriptVariant** varlist , ScriptVariant** p
 	{
 		if(arg->vt==VT_PTR)
 			player[index].ent = (entity*)arg->ptrVal;
+		else if(obor_profile_build >= 3855u && arg->vt == VT_EMPTY)
+			player[index].ent = NULL;
 		else goto cpperror;
 		break;
 	}
@@ -9651,7 +9825,7 @@ enum setspawnentry_enum
 	_sse_the_end,
 };
 
-void mapstrings_setspawnentry(ScriptVariant** varlist, int paramCount)
+int mapstrings_setspawnentry(ScriptVariant** varlist, int paramCount)
 {
 	char* propname;
 	int prop;
@@ -9684,8 +9858,10 @@ void mapstrings_setspawnentry(ScriptVariant** varlist, int paramCount)
 		"weapon",
 	};
 
+	if(paramCount < 1) return 1;
 	MAPSTRINGS(varlist[0], proplist, _sse_the_end,
 		"Property name '%s' is not supported by setspawnentry.\n");
+    return varlist[0]->vt != VT_STR;
 }
 
 //setspawnentry(propname, value1[, value2, value3, ...]);
@@ -9990,17 +10166,52 @@ else if(stricmp(#x, constname)==0) {\
 	v.lVal = (LONG)x;\
 } 
 
-#define ICMPSCONSTA(x, y) \
-else if(obor_profile_build >= 3826 && strnicmp(constname, #x, sizeof(#x)-1)==0 && constname[sizeof(#x)-1] >= '1' && constname[sizeof(#x)-1]<='9') \
-{ \
-	v.lVal = (LONG)(y[atoi(constname+(sizeof(#x)-1))-1]);\
+static int obor_numbered_constant_has_prefix(const char *name, const char *prefix)
+{
+    size_t length = strlen(prefix);
+    return strnicmp(name, prefix, length) == 0 &&
+           name[length] >= '1' && name[length] <= '9';
 }
 
-#define ICMPSCONSTB(x, y) \
-else if(obor_profile_build >= 3826 && strnicmp(constname, #x, sizeof(#x)-1)==0 && constname[sizeof(#x)-1] >= '1' && constname[sizeof(#x)-1]<='9') \
-{ \
-	v.lVal = (LONG)(y[atoi(constname+(sizeof(#x)-1))+OBOR_ATTACK_SPECIAL-1]);\
+static int obor_3826_animation_slot(const char *name, size_t prefix_length, int offset, int count)
+{
+    if(count <= 0 || strlen(name) < prefix_length) return -1;
+
+    /* The original matched the expanded token and still parsed after the named token. */
+    long number = strtol(name + prefix_length, NULL, 10);
+    if(number < 1L - offset || number > (long)count - offset) return -1;
+    return (int)(number + offset - 1L);
 }
+
+#define OBOR_ANIM_TOKEN_TEXT_(x) #x
+#define OBOR_ANIM_TOKEN_TEXT(x) OBOR_ANIM_TOKEN_TEXT_(x)
+#define OBOR_ANIM_COUNT_animdowns max_downs
+#define OBOR_ANIM_COUNT_animups max_ups
+#define OBOR_ANIM_COUNT_animbackwalks max_backwalks
+#define OBOR_ANIM_COUNT_animwalks max_walks
+#define OBOR_ANIM_COUNT_animidles max_idles
+#define OBOR_ANIM_COUNT_animattacks max_attacks
+#define OBOR_ANIM_COUNT_animfollows max_follows
+#define OBOR_ANIM_COUNT_animspecials max_freespecials
+
+#define OBOR_MAP_NUMBERED_CONST(NAME, EXPANDED_NAME, TABLE, OFFSET, COUNT) \
+else if(obor_profile_build >= 3826 && obor_numbered_constant_has_prefix( \
+    constname, obor_profile_build == 3826 ? EXPANDED_NAME : NAME)) \
+{ \
+    if(obor_profile_build == 3826) \
+    { \
+        int slot = obor_3826_animation_slot(constname, sizeof(NAME)-1, OFFSET, COUNT); \
+        if(TABLE && slot >= 0) v.lVal = (LONG)TABLE[slot]; \
+        else found = FALSE; \
+    } \
+    else v.lVal = (LONG)TABLE[atoi(constname + sizeof(NAME)-1) + OFFSET - 1]; \
+}
+
+#define ICMPSCONSTA(x, y) \
+OBOR_MAP_NUMBERED_CONST(#x, OBOR_ANIM_TOKEN_TEXT(x), y, 0, OBOR_ANIM_COUNT_##y)
+
+#define ICMPSCONSTB(x, y) \
+OBOR_MAP_NUMBERED_CONST(#x, OBOR_ANIM_TOKEN_TEXT(x), y, OBOR_ATTACK_SPECIAL, max_attack_types)
 
 
 #define ICMPLEGACYCONST(x) \
@@ -10008,13 +10219,15 @@ else if(obor_profile_build < 3826 && stricmp(#x, constname)==0) { \
     v.lVal = (LONG)x; \
 }
 
-void mapstrings_transconst(ScriptVariant** varlist, int paramCount)
+int mapstrings_transconst(ScriptVariant** varlist, int paramCount)
 {
+    extern int max_attack_types, max_attacks, max_backwalks, max_downs, max_follows;
+    extern int max_freespecials, max_idles, max_ups, max_walks;
 	char* constname = NULL;
 	int found = TRUE;
 	ScriptVariant v;
 
-	if(paramCount < 1) return;
+	if(paramCount < 1) return 1;
 
 	if(varlist[0]->vt == VT_STR)
 	{
@@ -10108,6 +10321,8 @@ void mapstrings_transconst(ScriptVariant** varlist, int paramCount)
 		ICMPCONST(TYPE_ENDLEVEL)
 		ICMPCONST(TYPE_NPC)
 		ICMPCONST(TYPE_PANEL)
+		else if(obor_profile_build >= 3856u && stricmp("TYPE_MAX", constname) == 0)
+			v.lVal = (LONG)TYPE_PANEL;
 		ICMPCONST(TYPE_RESERVED)
 		ICMPCONST(SUBTYPE_NONE)
 		ICMPCONST(SUBTYPE_BIKER)
@@ -10371,6 +10586,8 @@ void mapstrings_transconst(ScriptVariant** varlist, int paramCount)
 		ICMPSCONSTB(ANI_RISEATTACK, animriseattacks)
 		ICMPSCONSTB(ANI_PAIN, animpains)
 		ICMPSCONSTB(ANI_DIE, animdies)
+        else if(obor_profile_build >= 3896u && stricmp("ANI_ATTACK", constname) == 0)
+            v.lVal = (LONG)ANI_ATTACK1;
 		ICMPSCONSTA(ANI_ATTACK, animattacks)
 		ICMPSCONSTA(ANI_FOLLOW, animfollows)
 		ICMPSCONSTA(ANI_FREESPECIAL, animspecials)
@@ -10381,7 +10598,11 @@ void mapstrings_transconst(ScriptVariant** varlist, int paramCount)
 			ScriptVariant_Copy(varlist[0], &v);
 		}
 		ScriptVariant_Clear(&v);
+        if(!found && obor_profile_build >= 3862u)
+            printf("Can't find openbor constant '%s' \n", constname);
+        return found;
 	}
+    return 1;
 }
 //openborconstant(constname);
 //translate a constant by string, used to retrieve a constant or macro of openbor
@@ -10520,6 +10741,11 @@ HRESULT openbor_transconst(ScriptVariant** varlist , ScriptVariant** pretvar, in
             ScriptVariant_Clear(*pretvar);
             return S_OK;
         }
+		if(obor_profile_build < 3826u)
+		{
+			ScriptVariant_ChangeType(*pretvar, VT_INTEGER);
+			goto transconst_error;
+		}
 		ScriptVariant_ToString(varlist[0], buf);
 		printf("Can't translate constant %s\n", buf);
 	}
@@ -10568,7 +10794,7 @@ enum playerkeys_enum
 	_pk_the_end,
 };
 
-void mapstrings_playerkeys(ScriptVariant** varlist, int paramCount)
+int mapstrings_playerkeys(ScriptVariant** varlist, int paramCount)
 {
 	char* propname = NULL;
 	int i, prop;
@@ -10595,7 +10821,9 @@ void mapstrings_playerkeys(ScriptVariant** varlist, int paramCount)
 	{
 		MAPSTRINGS(varlist[i], proplist, _pk_the_end,
 			"Button name '%s' is not supported by playerkeys.");
+		if(obor_profile_build >= 3862u && varlist[i]->vt == VT_STR) return 0;
 	}
+    return 1;
 }
 
 //playerkeys(playerindex, newkey?, key1, key2, ...);
@@ -11034,7 +11262,7 @@ enum gtop_enum
 	_top_the_end,
 };
 
-void mapstrings_textobjproperty(ScriptVariant** varlist, int paramCount)
+int mapstrings_textobjproperty(ScriptVariant** varlist, int paramCount)
 {
 	char* propname = NULL;
 	int prop;
@@ -11047,12 +11275,12 @@ void mapstrings_textobjproperty(ScriptVariant** varlist, int paramCount)
 		"z",
 	};
 
-	if(paramCount < 2 || !varlist || !varlist[1]) return;
+	if(paramCount < 2 || !varlist || !varlist[1]) return 1;
 
 	if(varlist[1]->vt == VT_STR)
     {
         propname = (char *)StrCache_GetIfPresent(varlist[1]->strVal);
-        if(!propname) return;
+        if(!propname) return 0;
         for(prop = 0; prop < (int)(sizeof(proplist) / sizeof(*proplist)); ++prop)
         {
             if(!stricmp(proplist[prop], propname))
@@ -11063,13 +11291,17 @@ void mapstrings_textobjproperty(ScriptVariant** varlist, int paramCount)
             }
         }
         if(prop == (int)(sizeof(proplist) / sizeof(*proplist)))
+        {
             printf(obor_profile_build < 3821 ?
                 "Property name '%s' is not supported by function gettextobjproperty.\n" :
                 "'%s' is not a valid textobj property.\n", propname);
+            return 0;
+        }
     }
+    return 1;
 }
 
-void mapstrings_changetextobjproperty(ScriptVariant** varlist, int paramCount)
+int mapstrings_changetextobjproperty(ScriptVariant** varlist, int paramCount)
 {
     static const char *names[] = {"font", "text", "time", "x", "y", "z"};
     int property;
@@ -11077,22 +11309,23 @@ void mapstrings_changetextobjproperty(ScriptVariant** varlist, int paramCount)
     if(obor_profile_build >= 3821)
     {
         mapstrings_textobjproperty(varlist, paramCount);
-        return;
+        return 1;
     }
-    if(paramCount < 2 || !varlist || !varlist[1]) return;
-    if(varlist[1]->vt != VT_STR) return;
+    if(paramCount < 2 || !varlist || !varlist[1]) return 1;
+    if(varlist[1]->vt != VT_STR) return 1;
     name = StrCache_GetIfPresent(varlist[1]->strVal);
-    if(!name) return;
+    if(!name) return 1;
     for(property = 0; property < (int)(sizeof(names) / sizeof(*names)); ++property)
     {
         if(!stricmp(names[property], name))
         {
             ScriptVariant_ChangeType(varlist[1], VT_INTEGER);
             varlist[1]->lVal = property;
-            return;
+            return 1;
         }
     }
     printf("Property name '%s' is not supported by function changetextobjproperty.\n", name);
+    return 1;
 }
 
 static int obor_textobj_index(int index, int grow)
@@ -11743,7 +11976,7 @@ enum getbglp_enum
 	_glp_the_end,
 };
 
-void mapstrings_layerproperty(ScriptVariant** varlist, int paramCount)
+int mapstrings_layerproperty(ScriptVariant** varlist, int paramCount)
 {
 	char *propname = NULL;
 	int prop;
@@ -11781,11 +12014,13 @@ void mapstrings_layerproperty(ScriptVariant** varlist, int paramCount)
 		"water",
 	};
 
-	if(paramCount < 3) return;
+	if(paramCount < 3) return 1;
 	MAPSTRINGS(varlist[0], typelist, _glt_the_end,
 		"Type name '%s' is not supported by function getlayerproperty.\n");
+	if(obor_profile_build >= 3862u && varlist[0]->vt == VT_STR) return 0;
 	MAPSTRINGS(varlist[2], proplist, _glp_the_end,
 		"Property name '%s' is not supported by function getlayerproperty.\n");
+    return varlist[2]->vt != VT_STR;
 }
 
 HRESULT _getlayerproperty(s_layer* layer, int propind, ScriptVariant** pretvar)
@@ -12172,22 +12407,33 @@ enum levelproperty_enum
 	_lp_type,
 	_lp_wall,
 	_lp_the_end,
+	_lp_basemap,
 };
 
+enum basemap_enum { _lp_bm_map, _lp_bm_x, _lp_bm_xsize, _lp_bm_z, _lp_bm_zsize, _lp_bm_the_end };
 
-static int obor_level_property_native(int property)
+
+static int obor_level_property_native(LONG selector)
 {
+    if(obor_profile_build >= 3866u)
+    {
+        if(selector == 0) return _lp_basemap;
+        return selector > 0 && selector <= _lp_the_end ? (int)selector - 1 : _lp_the_end;
+    }
+    int property = (int)selector;
+    if(property == _lp_basemap) return _lp_the_end;
     if(obor_profile_build < 3820 && property >= _lp_type)
         return property == _lp_type ? _lp_wall : _lp_the_end;
     return property;
 }
 
-void mapstrings_levelproperty(ScriptVariant** varlist, int paramCount)
+int mapstrings_levelproperty(ScriptVariant** varlist, int paramCount)
 {
 	char *propname = NULL;
 	int prop;
 
 	static const char* proplist[] = {
+		"basemap",
 		"bgspeed",
 		"cameraxoffset",
 		"camerazoffset",
@@ -12207,11 +12453,21 @@ void mapstrings_levelproperty(ScriptVariant** varlist, int paramCount)
         "bgspeed", "cameraxoffset", "camerazoffset", "gravity", "hole",
         "maxfallspeed", "maxtossspeed", "quake", "rocking", "scrollspeed", "wall"
     };
-    const char **names = obor_profile_build < 3820 ? before_type : proplist;
-    int count = obor_profile_build < 3820 ? _lp_the_end - 1 : _lp_the_end;
-	if(paramCount < 1) return;
+    static const char *basemap_names[] = { "map", "x", "xsize", "z", "zsize" };
+    const int has_basemap = obor_profile_build >= 3866u;
+    const char **names = obor_profile_build < 3820 ? before_type : proplist + !has_basemap;
+    int count = obor_profile_build < 3820 ? _lp_the_end - 1 : _lp_the_end + has_basemap;
+	if(paramCount < 1) return 1;
 	MAPSTRINGS(varlist[0], names, count,
 		"Level property '%s' is not supported.\n");
+	if(varlist[0]->vt == VT_STR) return 0;
+    if(has_basemap && paramCount >= 3 && varlist[0]->vt == VT_INTEGER && varlist[0]->lVal == 0)
+    {
+        MAPSTRINGS(varlist[2], basemap_names, _lp_bm_the_end,
+            "'%s' is not supported by 'basemap'.\n");
+		if(varlist[2]->vt == VT_STR) return 0;
+    }
+    return 1;
 }
 
 HRESULT openbor_getlevelproperty(ScriptVariant** varlist , ScriptVariant** pretvar, int paramCount)
@@ -12322,6 +12578,60 @@ getlevelproperty_error:
 }
 
 //changelevelproperty(name, value)
+static int change_level_basemap(ScriptVariant **args, int count)
+{
+    LONG slot, x, z;
+    DOUBLE height = 0.0;
+    if(!level || count < 4 || args[2]->vt != VT_INTEGER ||
+       !SUCCEEDED(ScriptVariant_IntegerValue(args[1], &slot)) || slot < 0 || slot >= INT_MAX)
+        return 0;
+    const LONG entry = args[2]->lVal;
+    if(entry < _lp_bm_map || entry >= _lp_bm_the_end ||
+       !SUCCEEDED(ScriptVariant_IntegerValue(args[3], &x)) || x < INT_MIN || x > INT_MAX)
+        return 0;
+    if(entry == _lp_bm_map)
+    {
+        if(count < 6 || !SUCCEEDED(ScriptVariant_IntegerValue(args[4], &z)) ||
+           !SUCCEEDED(ScriptVariant_DecimalValue(args[5], &height)) ||
+           !(height >= -FLT_MAX && height <= FLT_MAX) || slot >= level->numbasemaps)
+            return 0;
+        s_basemap *map = &level->basemaps[slot];
+        if(x < 0 || z < 0 || x >= map->xsize || z >= map->zsize ||
+           (size_t)map->xsize > SIZE_MAX / sizeof(*map->map) / (size_t)map->zsize)
+            return 0;
+        const size_t cells = (size_t)map->xsize * (size_t)map->zsize;
+        if(cells > map->cells)
+        {
+            float *expanded = realloc(map->map, cells * sizeof(*expanded));
+            if(!expanded) return 0;
+            memset(expanded + map->cells, 0, (cells - map->cells) * sizeof(*expanded));
+            map->map = expanded;
+            map->cells = cells;
+        }
+        map->map[(size_t)z * (size_t)map->xsize + (size_t)x] = (float)height;
+        return 1;
+    }
+    if(slot >= level->numbasemaps)
+    {
+        const size_t maps = (size_t)slot + 1;
+        if(maps > SIZE_MAX / sizeof(*level->basemaps)) return 0;
+        s_basemap *expanded = realloc(level->basemaps, maps * sizeof(*expanded));
+        if(!expanded) return 0;
+        memset(expanded + level->numbasemaps, 0, (maps - (size_t)level->numbasemaps) * sizeof(*expanded));
+        level->basemaps = expanded;
+        level->numbasemaps = (int)maps;
+    }
+    s_basemap *map = &level->basemaps[slot];
+    switch(entry)
+    {
+    case _lp_bm_x: map->x = (int)x; break;
+    case _lp_bm_xsize: map->xsize = (int)x; break;
+    case _lp_bm_z: map->z = (int)x; break;
+    case _lp_bm_zsize: map->zsize = (int)x; break;
+    }
+    return 1;
+}
+
 HRESULT openbor_changelevelproperty(ScriptVariant** varlist , ScriptVariant** pretvar, int paramCount)
 {
 	LONG ltemp, ltemp2;
@@ -12354,6 +12664,9 @@ HRESULT openbor_changelevelproperty(ScriptVariant** varlist , ScriptVariant** pr
 
 	switch(obor_level_property_native(varlist[0]->lVal))
 	{
+	case _lp_basemap:
+		if(!change_level_basemap(varlist, paramCount)) goto clperror;
+		break;
 	case _lp_rocking:
 		if(SUCCEEDED(ScriptVariant_IntegerValue(arg, &ltemp)))
 			level->rocking = (int)ltemp;
@@ -12825,7 +13138,7 @@ enum drawmethod_enum
 };
 
 
-void mapstrings_drawmethodproperty(ScriptVariant** varlist, int paramCount)
+int mapstrings_drawmethodproperty(ScriptVariant** varlist, int paramCount)
 {
 	char *propname = NULL;
 	int prop;
@@ -12872,9 +13185,10 @@ void mapstrings_drawmethodproperty(ScriptVariant** varlist, int paramCount)
 	};
 
 
-	if(paramCount < 2) return;
+	if(paramCount < 2) return 1;
 	MAPSTRINGS(varlist[1], proplist, _dm_the_end,
 		"Property name '%s' is not supported by drawmethod.\n");
+    return varlist[1]->vt != VT_STR;
 }
 
 // changedrawmethod(entity, propertyname, value);
@@ -13347,6 +13661,75 @@ playgif_error:
 }
 
 
+static obor_anigif_stream *obor_script_gif_handle(ScriptVariant *value)
+{
+    if(!value || value->vt != VT_PTR || !value->ptrVal) return NULL;
+    Node *entry = List_GetNodeByValue(&scriptheap, value->ptrVal);
+    if(!entry || !entry->name || strcmp(entry->name, "openbor_openanigif")) return NULL;
+    return entry->value;
+}
+
+static HRESULT openbor_openanigif(ScriptVariant **varlist, ScriptVariant **pretvar, int paramCount)
+{
+    if(paramCount >= 1 && varlist[0]->vt == VT_STR)
+    {
+        obor_anigif_stream *stream = obor_anigif_stream_open(StrCache_Get(varlist[0]->strVal), packfile);
+        if(stream)
+        {
+            List_InsertAfter(&scriptheap, stream, "openbor_openanigif");
+            ScriptVariant_ChangeType(*pretvar, VT_PTR);
+            (*pretvar)->ptrVal = stream;
+            return S_OK;
+        }
+    }
+    *pretvar = NULL;
+    return E_FAIL;
+}
+
+static HRESULT openbor_decodeanigif(ScriptVariant **varlist, ScriptVariant **pretvar, int paramCount)
+{
+    obor_anigif_stream *stream = paramCount >= 1 ? obor_script_gif_handle(varlist[0]) : NULL;
+    if(!stream)
+    {
+        *pretvar = NULL;
+        return E_FAIL;
+    }
+    ScriptVariant_ChangeType(*pretvar, VT_INTEGER);
+    (*pretvar)->lVal = obor_anigif_stream_decode(stream);
+    return S_OK;
+}
+
+static HRESULT openbor_getanigifinfo(ScriptVariant **varlist, ScriptVariant **pretvar, int paramCount)
+{
+    obor_anigif_stream *stream = paramCount >= 2 ? obor_script_gif_handle(varlist[0]) : NULL;
+    if(stream && varlist[1]->vt == VT_STR)
+    {
+        const char *name = StrCache_Get(varlist[1]->strVal);
+        if(!stricmp(name, "buffer"))
+        {
+            ScriptVariant_ChangeType(*pretvar, VT_PTR);
+            (*pretvar)->ptrVal = obor_anigif_stream_buffer(stream);
+            return S_OK;
+        }
+        const obor_anigif_status status = obor_anigif_stream_status(stream);
+        LONG value;
+        if(!stricmp(name, "done")) value = status.done;
+        else if(!stricmp(name, "frame")) value = status.frame;
+        else if(!stricmp(name, "isRGB")) value = status.is_rgb;
+        else if(!stricmp(name, "width")) value = status.width;
+        else if(!stricmp(name, "height")) value = status.height;
+        else if(!stricmp(name, "nextframe")) value = status.nextframe;
+        else if(!stricmp(name, "lastdelay")) value = status.lastdelay;
+        else goto unknown_property;
+        ScriptVariant_ChangeType(*pretvar, VT_INTEGER);
+        (*pretvar)->lVal = value;
+        return S_OK;
+    }
+unknown_property:
+    *pretvar = NULL;
+    return E_FAIL;
+}
+
 // basic ai checkings, make it easier for modder to create their own think script
 HRESULT openbor_aicheckwarp(ScriptVariant** varlist , ScriptVariant** pretvar, int paramCount){
 
@@ -13630,7 +14013,7 @@ enum gfxproperty_enum
 	_gfx_the_end,
 };
 
-void mapstrings_gfxproperty(ScriptVariant** varlist, int paramCount)
+int mapstrings_gfxproperty(ScriptVariant** varlist, int paramCount)
 {
 	char *propname = NULL;
 	int prop;
@@ -13648,9 +14031,10 @@ void mapstrings_gfxproperty(ScriptVariant** varlist, int paramCount)
 	};
 
 
-	if(paramCount < 2) return;
+	if(paramCount < 2) return 1;
 	MAPSTRINGS(varlist[1], proplist, _gfx_the_end,
 		"Property name '%s' is not supported by gfxproperty.\n");
+    return varlist[1]->vt != VT_STR;
 }
 
 

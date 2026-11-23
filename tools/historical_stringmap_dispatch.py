@@ -9,7 +9,7 @@ Copyright (c) 2026 retrodiv <retrodiv@proton.me>
 import re
 
 
-def render_dispatch(source, *, retained_references,
+def render_dispatch(source, *, retained_references, profile_header=None,
                     function_name='Script_GetStringMapFunction'):
     identifier = r'[A-Za-z_]\w*'
     if (not isinstance(function_name, str) or
@@ -36,6 +36,11 @@ def render_dispatch(source, *, retained_references,
         raise ValueError('Retained addresses must exist in the native dispatcher')
     external = sorted(references - set(retained_references))
     rows = []
+    if profile_header is not None and re.search(
+            r'\bobor_profile_has_numeric_script_properties\s*\(', masked):
+        from test_historical_player import function
+        rows.extend(function(profile_header, name) for name in (
+            'obor_profile_6997_or_7039', 'obor_profile_has_numeric_script_properties'))
     for index, name in enumerate(external):
         local = 'obor_map_external_' + str(index)
         rows += ['static void ' + local + '(void){abort();}',

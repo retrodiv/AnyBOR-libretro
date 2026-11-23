@@ -3,8 +3,8 @@
  * Copyright (c) 2026 retrodiv <retrodiv@proton.me> (original contributions).
  * These contributions are licensed under BSD-3-Clause; see LICENSE at the root.
  * Upstream code retains its original license and notices.
- * Restore the header's pragma pack state so including it leaves the caller's
- * alignment untouched.
+ * Declare the streamed GIF interface and restore the caller's original
+ * structure alignment.
  * Existing changes recorded here; this is not their implementation date.
  * See MODIFICATIONS.md and docs/modifications/3842.md
  * at the source repository root. Original notices follow below.
@@ -29,6 +29,21 @@
 // ============================== This is it! ===============================
 // Should be something like this...
 
+
+/* Streamed GIF playback introduced in the 3870 profile. */
+typedef struct obor_anigif_stream obor_anigif_stream;
+
+typedef struct
+{
+    int done, frame, is_rgb, width, height, lastdelay;
+    u32 nextframe;
+} obor_anigif_status;
+
+obor_anigif_stream *obor_anigif_stream_open(char *filename, char *packfilename);
+void obor_anigif_stream_close(obor_anigif_stream *stream);
+int obor_anigif_stream_decode(obor_anigif_stream *stream);
+s_screen *obor_anigif_stream_buffer(obor_anigif_stream *stream);
+obor_anigif_status obor_anigif_stream_status(const obor_anigif_stream *stream);
 
 #define			ANIGIF_DECODE_END		0
 #define			ANIGIF_DECODE_FRAME		1

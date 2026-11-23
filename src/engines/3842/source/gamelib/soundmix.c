@@ -5,8 +5,9 @@
  * Upstream code retains its original license and notices.
  * Declare exact resident PCM content-member ranges for independently
  * verified reconstruction; preserve allocation tails and mutable mixer
- * state. Preserve each profile's WAV byte counts, sample lengths and 16-bit
- * padding with checked allocation and read sizes.
+ * state. Select the original Ogg loop seek position from 3893. Preserve each
+ * profile's WAV byte counts, sample lengths and 16-bit padding with checked
+ * allocation and read sizes.
  * Existing changes recorded here; this is not their implementation date.
  * See MODIFICATIONS.md and docs/modifications/3842.md
  * at the source repository root. Original notices follow below.
@@ -1271,7 +1272,8 @@ void sound_update_ogg(){
 						return;
 					}
 					// Seek to beginning of data
-					if(ov_pcm_seek(oggfile, loop_offset*2) != 0){
+					const u32 loop_frame = obor_profile_build < 3893u ? loop_offset*2u : loop_offset;
+					if(ov_pcm_seek(oggfile, loop_frame) != 0){
 						sound_close_music();
 						return;
 					}

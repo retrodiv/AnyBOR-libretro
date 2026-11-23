@@ -9,7 +9,7 @@ from pathlib import Path
 import re
 import unittest
 
-from contract_fixtures import load_contract_fixture, contract_revisions
+from contract_fixtures import load_contract_fixture, contract_profiles, contract_revisions
 from test_historical_common_think import ROOT, native_output
 from test_historical_player import function, switch_cases
 from test_historical_script_registry import program
@@ -56,12 +56,13 @@ def attack_program(data):
         raise ValueError('One legacy attack-name table required')
     # Extract the complete native attack-mapping branch. Other parent
     # properties and the surrounding VM are providers for this contract.
-    parsed = mapper.replace('switch (varlist[1]->lVal)', 'switch (parent)')
-    _, mapping_cases = switch_cases(parsed, 'mapstrings_entityproperty', 'parent')
-    entity_mapper = ('void mapstrings_entityproperty(ScriptVariant **varlist,int paramCount) {\n'
+    _, mapping_cases = switch_cases(mapper, 'mapstrings_entityproperty', 'property')
+    entity_mapper = (function(source, 'obor_entity_property_index') +
+        'int mapstrings_entityproperty(ScriptVariant **varlist,int paramCount) {\n'
         'char *propname;int prop;\n' + old_table[0] + '\n'
-        'if(paramCount<3){return;}\nswitch(varlist[1]->lVal){case _ep_attack:\n' +
-        mapping_cases['_ep_attack']['body'] + '\n}}\n'
+        'if(paramCount<3){return 1;}\n'
+        'switch(obor_entity_property_index(varlist[1]->lVal)){case _ep_attack:\n' +
+        mapping_cases['_ep_attack']['body'] + '\n}\nreturn 1;\n}\n'
         '#define mapstrings_getentityproperty mapstrings_entityproperty\n')
     getter, cases = switch_cases(source, 'openbor_getentityproperty', 'propind')
     for label, row in sorted(cases.items(), key=lambda item: item[1]['label_start'], reverse=True):
@@ -194,16 +195,23 @@ class LaterScriptContracts(unittest.TestCase):
         self.assertEqual({row['revision'] for row in data['sources']},
                          contract_revisions(data,data['expected_revisions']))
         source=(ROOT/'src/engines'/data['engine']/'openbor.c').read_text()
+        damage = function(source, 'common_takedamage')
+        player_routes = re.findall(r'(?m)^\s*if\([^\n]+?\)\s*(?:control_rumble|player_die)\([^;]*;', damage)
+        self.assertEqual(len(player_routes), 4)
         parts={'SET_OPPONENT':function(source,'set_opponent'),
                'EFFECTS':function(source,'checkdamageeffects'),
                'BIKER':function(source,'biker_takedamage'),
-               'CONTEXTS':','.join('{%du,%d,%d}'%(row['revision'],row['dot_owner_fallback'],
-                   row['driver_attacker_forwarded']) for row in data['sources'])}
+               'MOTION':function(source,'obor_motion_after_update'),
+               'ENTITY_TYPE':function(source,'obor_entity_type_matches'),
+               'PLAYER_ROUTES':'\n'.join(player_routes),
+               'CONTEXTS':','.join('{%du,%d,%d,%d,%d}'%(row['revision'],row['dot_owner_fallback'],
+                   row['driver_attacker_forwarded'],row['driver_think_clock'],
+                   row['compound_player_type']) for row in data['sources'])}
         code=Path(__file__).with_name('late_damage_effects_contract.c.in').read_text()
         for name,value in parts.items():code=code.replace('@'+name+'@',value)
         self.assertEqual(json.loads(native_output(code,data)),
                          {'status':'PASS','contexts':len(data['sources']),
-                          'cases':len(data['sources'])*54})
+                          'cases':len(data['sources'])*58})
 
     def test_entity_query_results_and_exact_diagnostics(self):
         data = load_contract_fixture(QUERY_FIXTURE)
@@ -215,6 +223,14 @@ class LaterScriptContracts(unittest.TestCase):
 
     def test_complete_registry_order_and_reverse_names(self):
         data = load_contract_fixture(FIXTURE)
+        revisions = {row['revision'] for row in data['sources']}
+        self.assertEqual(revisions, contract_revisions(data, data['expected_revisions']))
+        self.assertEqual(len(revisions), len(data['sources']))
+        profiles = json.loads((ROOT / 'src/pin.json').read_text())['profiles']
+        for profile in contract_profiles(data, profiles):
+            revision = int(profile.get('revision', profile['build']))
+            if profile['engine'] == data['engine'] and revision >= min(revisions):
+                self.assertIn(revision, revisions)
         code, symbols = registry_program(data)
         actual = [json.loads(line) for line in native_output(code, data).splitlines()]
         self.assertEqual(len(actual), len(data['sources']))
@@ -229,8 +245,14 @@ class LaterScriptContracts(unittest.TestCase):
 
     def test_attack_fields_ordinals_shared_state_and_partial_results(self):
         data = load_contract_fixture(ATTACK_FIXTURE)
-        self.assertEqual({row['revision'] for row in data['sources']},
-                         contract_revisions(data, data['expected_revisions']))
+        revisions = {row['revision'] for row in data['sources']}
+        self.assertEqual(revisions, contract_revisions(data, data['expected_revisions']))
+        self.assertEqual(len(revisions), len(data['sources']))
+        profiles = json.loads((ROOT / 'src/pin.json').read_text())['profiles']
+        for profile in contract_profiles(data, profiles):
+            revision = int(profile.get('revision', profile['build']))
+            if profile['engine'] == data['engine'] and revision >= min(revisions):
+                self.assertIn(revision, revisions)
         actual = [json.loads(line) for line in native_output(attack_program(data), data).splitlines()]
         self.assertEqual([row['revision'] for row in actual],
                          [row['revision'] for row in data['sources']])

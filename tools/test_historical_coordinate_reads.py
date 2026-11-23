@@ -31,7 +31,13 @@ def source_parts(engine):
     declarations=list(re.finditer(r'^[ \t]*(short|int)[ \t]+attack_coords\[([0-9]+)\];',header,re.M))
     if len(declarations)!=1:
         raise ValueError('One native coordinate shape required')
-    return (dict(entry=coordinate_entry(code),clear=function(variant,'ScriptVariant_Clear'),
+    entry = coordinate_entry(code)
+    if engine == '4086':
+        # The classic development controls precede the separate sprite query route.
+        start = entry.index('    if(obor_profile_build >= 4161 && propind == _ep_spritea)')
+        end = entry.index('    switch(propind)', start)
+        entry = entry[:start] + entry[end:]
+    return (dict(entry=entry,clear=function(variant,'ScriptVariant_Clear'),
                  change_type=function(variant,'ScriptVariant_ChangeType')),
             declarations[0][1],int(declarations[0][2]))
 
@@ -101,6 +107,25 @@ class CoordinateReadTests(unittest.TestCase):
                 with self.subTest(revision=row['revision'],engine=row['engine']):
                     subprocess.run([str(self.executables[key]),str(row['revision'])],
                         check=True,timeout=15,env=sanitizer_environment(),stdout=subprocess.DEVNULL)
+
+
+class ClassicDevelopmentCoordinateTests(unittest.TestCase):
+    def test_4097_indexed_attack_and_body_coordinates(self):
+        from test_historical_common_think import native_output
+
+        parts, scalar, components = source_parts('4086')
+        pin = json.loads((SOURCE / 'src/pin.json').read_text())
+        profile = next(row for row in pin['profiles'] if row['build'] == '4097')
+        self.assertEqual(profile['engine'], '4086')
+        self.assertEqual(profile['upstream_commit'], 'ac89c52b0557c8d64484907b874b0f8c9ef0e854')
+        self.assertEqual((scalar, components), ('int', 6))
+        for revision in (4086, 4090, 4097):
+            with self.subTest(revision=revision):
+                code = render_reads(parts, scalar=scalar, components=components, visible_components=6,
+                                    revision=revision, labels=['prepared'], check_invalid=True)
+                actual = json.loads(native_output(code, {'engine': '4086'}))
+                self.assertEqual(actual['valid_queries_each'], 48)
+                self.assertEqual(actual['defined_empty_cases_each'], 3)
 
 
 if __name__=='__main__':unittest.main()

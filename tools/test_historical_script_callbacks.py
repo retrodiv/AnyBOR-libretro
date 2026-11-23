@@ -116,5 +116,66 @@ class ScriptCallbackTests(unittest.TestCase):
                                    check=True, timeout=20, env=sanitizer_environment())
 
 
+class CompileDiagnosticTests(unittest.TestCase):
+    def test_compile_diagnostic_keeps_original_name_and_comment(self):
+        from test_historical_behavior import native
+
+        fixture = load_contract_fixture(Path(__file__).parent /
+            'fixtures/profile-compile-diagnostic-contracts.json')
+        rows = fixture['sources']
+        self.assertEqual({row['revision'] for row in rows}, set(fixture['boundary_controls']))
+        checks = []
+        for row in rows:
+            self.assertRegex(row['commit'], r'^[0-9a-f]{40}$')
+            self.assertRegex(row['source_sha256'], r'^[0-9a-f]{64}$')
+            for comment in (None, '', 'model % script'):
+                message = row['message']
+                if row['includes_name']:
+                    message = message % ('actor.c', comment or '')
+                checks.append('check(%du,%s,%s);' % (row['revision'],
+                    'NULL' if comment is None else json.dumps(comment), json.dumps(message)))
+        script = (SOURCE / 'src/engines/3842/openborscript.c').read_text()
+        native(r'''
+#include <assert.h>
+#include <stdarg.h>
+#include <stdint.h>
+#include <stdio.h>
+#include <string.h>
+#define SUCCEEDED(result) ((result)>=0)
+#define FALSE 0
+typedef struct {struct {char name[64];} theSymbolTable; int bReset;} Interpreter;
+typedef struct {Interpreter *pinterpreter; char *comment;} Script;
+static uint32_t obor_profile_build;
+static unsigned cleared,terminated;
+static char actual[1024];
+static int Interpreter_CompileInstructions(Interpreter *p,void *exported) {
+ assert(p && !exported);return -1;
+}
+static int Script_MapStringConstants(Script *p) { (void)p;assert(0);return 0; }
+static void execute_init_method(Script *p,int a,int b) { (void)p;(void)a;(void)b;assert(0); }
+static void Script_Clear(Script *p,int owner) {
+ assert(owner==1 && p->pinterpreter);
+ memset(p->pinterpreter->theSymbolTable.name,0,sizeof(p->pinterpreter->theSymbolTable.name));
+ if(p->comment)memset(p->comment,0,strlen(p->comment));
+ p->pinterpreter=NULL;p->comment=NULL;++cleared;
+}
+static void shutdown(int code,const char *format,...) {
+ assert(code==1 && cleared==1 && !terminated);
+ va_list args;va_start(args,format);vsnprintf(actual,sizeof(actual),format,args);va_end(args);
+ ++terminated;
+}
+@COMPILE@
+static void check(uint32_t revision,const char *description,const char *expected) {
+ Interpreter interpreter={.theSymbolTable.name="actor.c"};
+ char comment[64]={0};if(description)snprintf(comment,sizeof(comment),"%s",description);
+ Script script={&interpreter,description?comment:NULL};
+ obor_profile_build=revision;cleared=terminated=0;actual[0]=0;
+ assert(!Script_Compile(&script));
+ assert(cleared==1 && terminated==1 && !script.pinterpreter && !strcmp(actual,expected));
+}
+int main(void) { @CHECKS@ return 0; }
+'''.replace('@COMPILE@', function(script, 'Script_Compile')).replace('@CHECKS@', '\n'.join(checks)))
+
+
 if __name__ == '__main__':
     unittest.main()

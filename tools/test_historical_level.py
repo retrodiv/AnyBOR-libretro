@@ -60,6 +60,94 @@ def check_level_continuation(log, profile):
 
 
 class HistoricalLevelTests(unittest.TestCase):
+    def test_classic_loader_growth_notice_and_shadow_color(self):
+        from test_historical_behavior import native
+
+        source = (ENGINE / 'openbor.c').read_text()
+        level = function(source, 'load_level')
+        start = level.index('case CMD_LEVEL_SHADOWCOLOR:')
+        shadow = level[start:level.index('case CMD_LEVEL_SHADOWALPHA:', start)]
+        native(r'''
+#include <assert.h>
+#include <stdint.h>
+#include <stdlib.h>
+#include <string.h>
+
+static uint32_t obor_profile_build;
+static int growth_notices;
+
+static int capture_notice(const char *message)
+{
+    assert(!strcmp(message, "*Debug* reallocating buffer...\n"));
+    return ++growth_notices;
+}
+
+static void shutdown(int code, const char *message)
+{
+    (void)code;
+    (void)message;
+    abort();
+}
+
+static int _makecolour(int red, int green, int blue)
+{
+    return red * 65536 + green * 256 + blue;
+}
+
+#define printf capture_notice
+''' + function(source, 'buffer_append') + r'''
+#undef printf
+''' + function(source, 'parsecolor') + r'''
+
+#define GET_ARG(index) argument
+#define GET_INT_ARG(index) atoi(argument)
+static int shadowcolor(const char *argument)
+{
+    enum { CMD_LEVEL_SHADOWCOLOR = 1 };
+    struct { int shadowcolor; } next = { -1 };
+    switch (CMD_LEVEL_SHADOWCOLOR)
+    {
+''' + shadow + r'''
+    }
+    return next.shadowcolor;
+}
+#undef GET_INT_ARG
+#undef GET_ARG
+
+static void check_profile(uint32_t profile, int notice_count, int rgb_color)
+{
+    size_t capacity = 5;
+    size_t length = 0;
+    char *buffer = calloc(capacity, 1);
+    assert(buffer);
+    obor_profile_build = profile;
+    growth_notices = 0;
+    assert(buffer_append(&buffer, "pre", 3, &capacity, &length) == 3);
+    assert(growth_notices == 0);
+    assert(buffer_append(&buffer, "lude", 4, &capacity, &length) == 7);
+    assert(growth_notices == notice_count);
+    assert(buffer_append(&buffer, "!", 1, &capacity, &length) == 8);
+    assert(growth_notices == notice_count && !strcmp(buffer, "prelude!"));
+    free(buffer);
+    assert(shadowcolor("37") == 37);
+    assert(shadowcolor("12_34_56") == rgb_color);
+}
+
+int main(void)
+{
+    check_profile(3787, 1, 12);
+    check_profile(3792, 1, 12);
+    check_profile(3818, 1, 12);
+    check_profile(3819, 1, 0x0c2238);
+    check_profile(3826, 1, 0x0c2238);
+    check_profile(3837, 1, 0x0c2238);
+    check_profile(3838, 0, 0x0c2238);
+    check_profile(3880, 0, 0x0c2238);
+    check_profile(3896, 0, 0x0c2238);
+    return 0;
+}
+''')
+
     def test_compiled_script_check_distinguishes_shared_and_per_entry_locals(self):
         old = '\n'.join('[game] HISTORICAL_SPAWN_' + suffix for suffix in ('A_1', 'B_1', 'A_2'))
         modern = old.replace('A_2', 'A_1')
@@ -76,7 +164,8 @@ class HistoricalLevelTests(unittest.TestCase):
         from unittest.mock import patch
         rows = load_contract_fixture(Path(__file__).parent /
             'fixtures/profile-level-spawn-contracts.json')['sources']
-        source = function((ENGINE / 'openbor.c').read_text(), 'load_level')
+        code = (ENGINE / 'openbor.c').read_text()
+        source = function(code, 'load_level')
         start = source.index('cmd = getLevelCommand(levelcmdlist, command);')
         mapping = source[start:source.index('switch(cmd)', start)]
         start = source.index('case CMD_LEVEL_AT_SCRIPT:')
@@ -113,12 +202,14 @@ static int handle_txt_include(const char *command,void *arglist,void *filename,
 static int warning(const char *format,...) {
     assert(!strcmp(format,"Command '%s' not understood in file '%s'!\n"));++warnings;return 0;
 }
+@@EXTRACT@@
 #define printf warning
 static int run(int existing) {
-    char text[]="@script\nspawn_probe\n@end_script\nafter\n";
+    char text[]="@script\nspawn_probe\n@end_script___________\nafter\n";
     char *buf=text,*filename="level.txt",*scriptbuf=NULL,*errormessage=NULL;
     void *levelcmdlist=NULL,*arglist=NULL;char fnbuf[32],command_buffer[64];
-    char *command;int pos=0,size=(int)strlen(text),sblen=0,after=0;
+    char *command;int pos=0,size=(int)strlen(text),after=0;
+    int end_marker=(int)(strstr(text,"@end_script")-text)+11;
     struct { Script spawnscript; } next={{existing}};
     while(pos<size) {
         int length=0;while(buf[pos+length] && buf[pos+length]!='\n')++length;
@@ -130,6 +221,8 @@ static int run(int existing) {
             INLINE
             @@UNKNOWN@@
         }
+        if(cmd==CMD_LEVEL_AT_SCRIPT)
+            assert(pos==end_marker+(obor_profile_build>=3880 && obor_profile_build<3888?11:0));
         while(buf[pos] && buf[pos]!='\n')++pos;
         if(buf[pos])++pos;
     }
@@ -150,6 +243,7 @@ int main(void) {
 }
 '''
         for key, value in (('MAPPING', mapping), ('INLINE', inline), ('@@UNKNOWN@@', unknown),
+                           ('@@EXTRACT@@', function(code, 'obor_extract_inline_script')),
                            ('PROFILES', ','.join(str(row['revision']) for row in rows))):
             program = program.replace(key, value)
         with patch.dict(os.environ, sanitizer_environment()):
@@ -180,6 +274,8 @@ int main(void) {
             'obor_execute_spawn_script', 'execute_spawn_script'))
         start = source.index('case CMD_LEVEL_SPAWN1: case CMD_LEVEL_SPAWN2:')
         spawn = source[start:source.index('case CMD_LEVEL_FRONTPANEL:', start)]
+        start = source.index('case CMD_LEVEL_SPAWNSCRIPT:')
+        command = source[start:source.index('case CMD_LEVEL_AT_SCRIPT:', start)]
         program = r'''
 #include <assert.h>
 #include <stdint.h>
@@ -197,6 +293,7 @@ static int active,attempts,fail_at=-1,initialized,compiled,cleared,compile_failu
 static int executions,ids[16],locals[16];
 static int clear_ids[16];
 static void *subjects[16];
+static char script_names[2][32];
 static void *test_malloc(size_t size) {
     if(attempts++==fail_at) return NULL;
     void *p=malloc(size); assert(p); ++active; return p;
@@ -206,7 +303,9 @@ static void *test_calloc(size_t n,size_t size) {
 }
 static void test_free(void *p) { if(p) { assert(active>0);--active;free(p); } }
 static void Script_Init(Script *s,char *name,char *comment,int first) {
-    assert(!strcmp(name,"spawnscript") && !comment && first==1); memset(s,0,sizeof(*s));
+    assert(!comment && first==1 && initialized<2 && strlen(name)<sizeof(script_names[0]));
+    strcpy(script_names[initialized],name);
+    memset(s,0,sizeof(*s));
     s->initialized=1;++initialized;
 }
 static int load_script(Script *s,char *path) {
@@ -250,6 +349,25 @@ static void set_spawn(s_level *level,int cmd,int *args) {
     int i=0;
     switch(cmd) { SPAWN_CASE }
 }
+static int lcmHandleLevelCommandScripts(void *args,char *text,size_t size,Script *script,
+                                        const char *name,const char *filename,int required) {
+    (void)args;(void)text;(void)size;(void)script;(void)name;(void)filename;(void)required;
+    abort();
+}
+#define GET_ARG(n) arglist[n]
+static const char *load_spawn_command(s_level *level,s_spawn_entry *entry,char *verb,char *path) {
+    enum { CMD_LEVEL_SPAWNSCRIPT = 1 };
+    char *arglist[]={verb,path};
+    char buf[]="",filename[]="level.txt";
+    size_t pos=0,size=sizeof(buf);
+    s_spawn_entry next=*entry;
+    const char *errormessage=NULL;
+    switch(CMD_LEVEL_SPAWNSCRIPT) { LOAD_SPAWN_CASE }
+    *entry=next;
+lCleanup:
+    return errormessage;
+}
+#undef GET_ARG
 static void reset_counts(void) {
     assert(active==0);attempts=initialized=compiled=cleared=executions=compile_failure=0;
     fail_at=-1;memset(ids,0,sizeof(ids));memset(locals,0,sizeof(locals));
@@ -280,10 +398,12 @@ int main(void) {
     }
     obor_profile_build=builds[context];reset_counts();
     s_level lv={0};s_spawn_entry first={0},second={0};entity subject={17};
-    assert(obor_load_historical_spawn_script(&lv,&first,"a.c"));
-    assert(obor_load_historical_spawn_script(&lv,&first,"b.c"));
-    assert(obor_load_historical_spawn_script(&lv,&second,"A.C"));
+    assert(!load_spawn_command(&lv,&first,"SpawnScript","a.c"));
+    assert(!load_spawn_command(&lv,&first,"spawnscript","b.c"));
+    assert(!load_spawn_command(&lv,&second,"SPAWNSCRIPT","A.C"));
     assert(initialized==2 && compiled==2);
+    assert(!strcmp(script_names[0],"SpawnScript") && !strcmp(script_names[1],"spawnscript"));
+    assert(!first.spawnscript.initialized && !second.spawnscript.initialized);
     assert(first.historical_scripts->resource==second.historical_scripts->resource);
     execute_spawn_script(&first,&subject);execute_spawn_script(&second,&subject);
     assert(executions==3 && ids[0]==1 && ids[1]==2 && ids[2]==1);
@@ -303,15 +423,18 @@ int main(void) {
     assert(active==0 && cleared==2 && !lv.historical_script_cache && !lv.historical_script_calls);
     assert(clear_ids[0]==1 && clear_ids[1]==2);
     obor_clear_historical_spawn_scripts(&lv);assert(cleared==2);
+    obor_profile_build=builds[context];
     for(int failure=0;failure<3;++failure) {
         reset_counts();fail_at=failure;
-        assert(!obor_load_historical_spawn_script(&lv,&first,"a.c"));
+        assert(!strcmp(load_spawn_command(&lv,&first,"spawnscript","a.c"),
+                       "Failed loading spawn entry script!"));
         assert(!first.historical_scripts && !first.historical_scripts_tail);
         obor_clear_historical_spawn_scripts(&lv);assert(active==0);
     }
     for(int failure=0;failure<2;++failure) {
         reset_counts();compile_failure=failure;
-        assert(!obor_load_historical_spawn_script(&lv,&first,failure?"a.c":"missing"));
+        assert(!strcmp(load_spawn_command(&lv,&first,"spawnscript",failure?"a.c":"missing"),
+                       "Failed loading spawn entry script!"));
         assert(!first.historical_scripts && !lv.historical_script_cache);
         obor_clear_historical_spawn_scripts(&lv);assert(active==0 && cleared==1);
     }
@@ -321,7 +444,7 @@ int main(void) {
 }
 '''
         for key, value in (('DECLARATIONS', declarations), ('METHODS', methods),
-                           ('SPAWN_CASE', spawn),
+                           ('LOAD_SPAWN_CASE', command), ('SPAWN_CASE', spawn),
                            ('PROFILES', ','.join(str(row['revision']) for row in rows))):
             program = program.replace(key, value)
         with tempfile.TemporaryDirectory(prefix='anybor-historical-level-') as temporary:

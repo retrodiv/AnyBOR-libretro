@@ -4,7 +4,8 @@
  * These contributions are licensed under BSD-3-Clause; see LICENSE at the root.
  * Upstream code retains its original license and notices.
  * Declare the raster helpers as ordinary functions; the header only declared
- * them inline and the definitions live in transform.c.
+ * them inline and the definitions live in transform.c. Declare the native
+ * math resources shared by graphics and scripts.
  * Existing changes recorded here; this is not their implementation date.
  * See MODIFICATIONS.md and docs/modifications/3842.md
  * at the source repository root. Original notices follow below.
@@ -20,6 +21,8 @@
 
 #ifndef TRANSFORM_H
 #define TRANSFORM_H
+extern const float sin_table[], cos_table[];
+float invsqrt(float x);
 void gfx_draw_rotate(s_screen* dest, gfx_entry* src, int x, int y, int centerx, int centery, s_drawmethod* drawmethod);
 void gfx_draw_scale(s_screen *dest, gfx_entry* src, int x, int y, int centerx, int centery, s_drawmethod* drawmethod);
 void gfx_draw_water(s_screen *dest, gfx_entry* src, int x, int y, int centerx, int centery, s_drawmethod* drawmethod);

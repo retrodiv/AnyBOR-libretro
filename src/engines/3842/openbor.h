@@ -4,10 +4,11 @@
  * These contributions are licensed under BSD-3-Clause; see LICENSE at the root.
  * Upstream code retains its original license and notices.
  * Allocate collision pointer slots through the highest author-facing index
- * used by each collection. Select historical attack domains, environmental
- * damage, camera and scroll behavior, model-save loading, weapon and idle
- * order, nested scripts and numeric script selectors. Retain bounded
- * storage, safe ownership and the selected rejected-value contracts.
+ * used by each collection. Store the original entity draw callback and the
+ * level's terrain height maps. Select historical attack domains,
+ * environmental damage, camera and scroll behavior, model-save loading,
+ * weapon and idle order, nested scripts and numeric script selectors. Retain
+ * bounded storage, safe ownership and the selected rejected-value contracts.
  * Preserve source-defined argument counts, line capacities and script
  * constants for each historical profile. Track each model's allocated
  * animation-table capacity and reject lookups outside it. Declare level-
@@ -951,6 +952,7 @@ typedef struct {
 	Script*         didblock_script;                //execute when blocking attack.
 	Script*         ondoattack_script;              //execute when attack passes do_attack checks.
 	Script*			onmodelcopy_script;				//execute when set_model_ex is done
+	Script* ondraw_script;
 } s_scripts;
 
 typedef enum  {
@@ -1281,6 +1283,7 @@ typedef struct entity
 	float zdir;
 	float destx; // temporary values for ai functions
 	float destz;
+	float movex, movez;
 	float base; // Default altitude
 	float altbase; // Altitude affected by movea
 	float tossv;							// Effect of gravity
@@ -1296,6 +1299,7 @@ typedef struct entity
 	u32 timestamp;
 	u32 releasetime;
 	u32 toss_time; // Used by gravity code
+	u32 nextmove;
 	u32 stalltime;
 	u32 combotime; // For multiple-hit combo
 	u32 movetime; // For special move
@@ -1594,6 +1598,14 @@ typedef struct
 
 typedef struct
 {
+    int x, z;
+    int xsize, zsize;
+    float *map;
+    size_t cells;
+} s_basemap;
+
+typedef struct
+{
 	char* name;
 	int numspawns;
 	s_spawn_entry* spawnpoints;
@@ -1626,6 +1638,8 @@ typedef struct
 	int camerazoffset;
 	int numholes;
 	int numwalls; // Stores number of walls loaded
+	int numbasemaps;
+	s_basemap *basemaps;
 	float (*holes)[7];
 	float (*walls)[8]; // Now you can have walls for different walkable areas
 	int exit_blocked;

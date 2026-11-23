@@ -38,8 +38,10 @@ def _lookup(row, arrays, name, epoch, *, mapper):
     if row['suffix_in_mapper']:
         for call in row['suffix_calls']:
             kind, prefix, array = re.fullmatch(r'ICMPSCONST([ABC])\((\w+)(?:, (\w+))?\)', call).groups()
-            suffix = upper[len(prefix):] if upper.startswith(prefix) else ''
-            if suffix and '1' <= suffix[0] <= '9':
+            matched_prefix = row.get('expanded_suffix_prefixes', {}).get(prefix, prefix)
+            matched_suffix = upper[len(matched_prefix):] if upper.startswith(matched_prefix) else ''
+            if matched_suffix and '1' <= matched_suffix[0] <= '9':
+                suffix = upper[len(prefix):]
                 if kind == 'C':
                     return 1, _number(suffix) + row['special_slots'] - 1
                 index = _number(suffix) - 1 + (row['special_slots'] if kind == 'B' else 0)
@@ -66,8 +68,8 @@ def _lookup(row, arrays, name, epoch, *, mapper):
 def render_constant_mapper(engine, fixture):
     script = (engine / 'openborscript.c').read_text()
     start = script.index('#define IICMPCONST(')
-    macros = script[start:script.index('void mapstrings_transconst(', start)]
     mapper = function(script, 'mapstrings_transconst')
+    macros = script[start:script.index(mapper.splitlines()[0], start)]
     entry = function(script, 'openbor_transconst')
     mapped = set(re.findall(r'(?:IICMPCONST|ICMPCONST|ICMPLEGACYCONST)\((\w+)\)', mapper))
     header = (engine / 'openbor.h').read_text()
@@ -111,8 +113,9 @@ def render_constant_mapper(engine, fixture):
                 json.dumps(query), *direct, *mapped_result, *late))
         key = tuple(cases)
         table = case_tables.setdefault(key, 'source_cases_' + str(len(case_tables)))
-        checks.append('obor_profile_build=%d; check(%s,%d);' % (
-            row['revision'], table, len(cases)))
+        diagnostic = json.dumps(row.get('unknown_mapper_diagnostic', ''))
+        checks.append('obor_profile_build=%d; check(%s,%d,%s,%d);' % (
+            row['revision'], table, len(cases), diagnostic, row['unknown_empty_success']))
     tables = '\n'.join('static const Case ' + name + '[]={' + ','.join(cases) + '};'
                        for cases, name in case_tables.items())
     fills = ''.join('for(int i=0;i<64;++i)' + name + '[i]=epoch+' + str(a * 128) + '+i;'
@@ -145,7 +148,15 @@ static void ScriptVariant_Copy(ScriptVariant *to,const ScriptVariant *from){*to=
 static void ScriptVariant_ToString(ScriptVariant *v,char *buffer){
  snprintf(buffer,128,"%.100s",v->vt==VT_STR?query_text:"non-string");
 }
-static int quiet_printf(const char *format,...){(void)format;return 0;}
+static char trace[512];
+static int quiet_printf(const char *format,...){
+ size_t offset=strlen(trace);
+ va_list args;va_start(args,format);
+ int length=vsnprintf(trace+offset,sizeof(trace)-offset,format,args);
+ va_end(args);
+ assert(length>=0 && (size_t)length<sizeof(trace)-offset);
+ return length;
+}
 @DEFINITIONS@
 @MACROS@
 #define printf quiet_printf
@@ -165,25 +176,49 @@ static void verify(const Case *c,int mode,int kind,LONG value,
    obor_profile_build,c->name,mode,kind,value,result->vt,result->lVal,status);abort();
  }
 }
-static void check(const Case *rows,unsigned count){
+static void check(const Case *rows,unsigned count,const char *mapper_diagnostic,int legacy_entry){
  for(unsigned i=0;i<count;++i)for(int mode=0;mode<2;++mode){
   const Case *c=&rows[i];++cases;query_text=c->name;fill(1000);
   ScriptVariant arg={VT_STR,0,7},result={VT_INTEGER,77,0},*out=&result,*args[]={&arg};
+  char expected[512]={0};
+  trace[0]=0;
   if(mode){
    mapstrings_transconst(args,1);
    if(arg.vt!=c->map_kind || (arg.vt==VT_INTEGER && arg.lVal!=c->map_value)){
     fprintf(stderr,"constant mapper profile=%u query=%s\n",obor_profile_build,c->name);abort();
    }
    if(arg.vt==VT_STR)assert(arg.strVal==7);
+   if(arg.vt==VT_STR && *mapper_diagnostic)
+    snprintf(expected,sizeof(expected),mapper_diagnostic,c->name);
+   assert(!strcmp(trace,expected));
+   trace[0]=0;
    fill(5000);
   }
   HRESULT status=openbor_transconst(args,&out,1);
+  int expected_kind=mode?c->late_kind:c->direct_kind;
+  expected[0]=0;
+  if(expected_kind<0){
+   if(*mapper_diagnostic)snprintf(expected,sizeof(expected),mapper_diagnostic,c->name);
+   size_t used=strlen(expected);
+   snprintf(expected+used,sizeof(expected)-used,"Can't translate constant %s\n",c->name);
+  }
+  assert(!strcmp(trace,expected));
   verify(c,mode,mode?c->late_kind:c->direct_kind,
          mode?c->late_value:c->direct_value,status,&result,out);
  }
  /* Numeric input bypasses the name mapper without losing its value. */
  ScriptVariant arg={VT_INTEGER,-17,0},result={0},*out=&result,*args[]={&arg};
  assert(openbor_transconst(args,&out,1)==S_OK && out==&result && result.vt==VT_INTEGER && result.lVal==-17);
+ ++cases;
+ trace[0]=0;out=&result;
+ assert(openbor_transconst(NULL,&out,0)==E_FAIL && !out && !trace[0]);
+ ++cases;
+ arg.vt=VT_DECIMAL;
+ result=(ScriptVariant){VT_DECIMAL,77,0};
+ out=&result;
+ assert(openbor_transconst(args,&out,1)==E_FAIL && !out);
+ assert(result.vt==(legacy_entry?VT_INTEGER:VT_DECIMAL));
+ assert(!strcmp(trace,legacy_entry?"":"Can't translate constant non-string\n"));
  ++cases;
 }
 int main(void){@CHECKS@

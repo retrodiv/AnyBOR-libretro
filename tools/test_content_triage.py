@@ -382,7 +382,8 @@ class ContentTriageTests(unittest.TestCase):
         self.assertEqual(self.select('4088')[0], 4088)
         self.assertEqual(self.select('4088-4088')[0], 4107)
         self.assertEqual(self.select('408X')[0], 4086)
-        exact_only = (3968, 3970, 6453, 6997, 7039, 7091, 7369, 7391, 7420, 7612, 8020)
+        exact_only = (3185, 3787, 3792, 3826, 3880, 3896, 3968, 3970, 4077, 4097,
+                      6453, 6997, 7039, 7091, 7369, 7391, 7420, 7612, 8020)
         for revision in exact_only:
             with self.subTest(revision=revision):
                 self.assertEqual(self.select(str(revision))[0], revision)
@@ -391,6 +392,16 @@ class ContentTriageTests(unittest.TestCase):
                 self.assertNotIn(self.select('%d-%d' % (revision, revision))[0], exact_only)
         self.assertNotIn(self.select('396X')[0], (3968, 3970))
         self.assertNotEqual(self.select('645X')[0], 6453)
+
+    def test_early_development_tags_select_the_existing_engine(self):
+        for revision, engine in ((3185, 3400), (3787, 3842), (3792, 3842),
+                                 (3826, 3842), (3880, 3842), (3896, 3842),
+                                 (4077, 4086), (4097, 4086)):
+            with self.subTest(revision=revision):
+                profile, log = self.script(f'{revision}-dev', 'void main(){ movie_load("x"); }')
+                self.assertEqual(profile, revision)
+                self.assertIn(f'selection_profile={revision} selection_engine={engine}', log)
+                self.assertNotIn('filename triage', log)
 
     def test_palette_requirement_excludes_only_the_incompatible_revision(self):
         for text in (b'colourdepth 8bit\n', b'colourdepth 16bit\n', b'remap a.gif b.gif\n'):

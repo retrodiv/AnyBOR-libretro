@@ -4,6 +4,8 @@
  * These contributions are licensed under BSD-3-Clause; see LICENSE at the root.
  * Upstream code retains its original license and notices.
  * Drop comma expressions that read the variables they were meant to declare.
+ * Share the original trigonometric tables and inverse-square-root
+ * calculation with the script engine.
  * Existing changes recorded here; this is not their implementation date.
  * See MODIFICATIONS.md and docs/modifications/3842.md
  * at the source repository root. Original notices follow below.
@@ -21,6 +23,8 @@
 //         This file defines some commmon methods used by the gamelib
 ////////////////////////////////////////////////////////////////////////////
 #include <assert.h>
+#include <limits.h>
+#include <stdint.h>
 #include "globals.h"
 #include "types.h"
 #include "transform.h"
@@ -259,7 +263,8 @@ void copy_pixel_block(int bytes){
 	memcpy(cur_dest, cur_src, bytes);
 }
 
-void write_pixel(){
+static void write_raster_pixel(void)
+{
 	unsigned char ps8;
 	unsigned short ps16;
 	unsigned ps32;
@@ -281,7 +286,9 @@ void write_pixel(){
 				break;
 			case PIXEL_x8:
 				if(!(ps8=*cur_src) && transbg) return;
-				ps16 = ((unsigned short*)table)[ps8];
+				if(obor_profile_build >= 3892u && fillcolor) ps16 = fillcolor;
+                else if(table) ps16 = ((unsigned short*)table)[ps8];
+                else return;
 				break;
 			default:
 				return;
@@ -299,12 +306,21 @@ void write_pixel(){
 				break;
 			case PIXEL_x8:
 				if(!(ps8=*cur_src) && transbg) return;
-				ps32 = ((unsigned*)table)[ps8];
+				if(obor_profile_build >= 3892u && fillcolor) ps32 = fillcolor;
+                else if(table) ps32 = ((unsigned*)table)[ps8];
+                else return;
 				break;
 			default:
 				return;
 			}
-			if(fillcolor) ps32 = fillcolor;
+			if(fillcolor)
+            {
+                /* The 3892 unkeyed 32-bit fill selects the indexed writer. */
+                if(obor_profile_build >= 3892u && spf == PIXEL_32 && !transbg && !pfp32 && table)
+                    ps32 = ((unsigned*)table)[*cur_src];
+                else
+                    ps32 = fillcolor;
+            }
 			if(!pfp32) *(unsigned*)cur_dest = ps32;
 			else       *(unsigned*)cur_dest = pfp32(ps32, *(unsigned*)cur_dest);
 			break;
@@ -312,6 +328,12 @@ void write_pixel(){
 			break;
 	}
 
+}
+
+void write_pixel(void)
+{
+    /* From 3892 only the direct scale and rotation loops select a writer. */
+    if(obor_profile_build < 3892u) write_raster_pixel();
 }
 
 void dest_seek(int x, int y){
@@ -576,6 +598,109 @@ const float cos_table[] = //360
 #define _max(a,b) (((a)>(b))?(a):(b))
 #define _min(a,b) (((a)<(b))?(a):(b))
 
+static int64_t floor_fixed(int64_t value, int64_t unit)
+{
+    return value / unit - (value % unit < 0);
+}
+
+static void draw_sampled_pixel(int x, int y, int64_t sx, int64_t sy)
+{
+    if(sx < 0 || sy < 0 || sx >= trans_sw || sy >= trans_sh) return;
+    src_seek((int)sx, (int)sy);
+    dest_seek(x, y);
+    write_raster_pixel();
+}
+
+static int original_int(int64_t value)
+{
+    return value >= INT_MIN && value <= INT_MAX;
+}
+
+static void draw_fixed_scale(s_screen *dest, gfx_entry *src, int x, int y,
+                             int centerx, int centery, s_drawmethod *method)
+{
+    const int zoomx = method->scalex, zoomy = method->scaley;
+    if(zoomx <= 0 || zoomy <= 0) return;
+
+    init_gfx_global_draw_stuff(dest, src, method);
+    if(trans_sw <= 0 || trans_sh <= 0 || drawfp == draw_pixel_dummy) return;
+
+    const int64_t unit = 256;
+    const int64_t left = (int64_t)_max(xmin, 0) * unit;
+    const int64_t right = (int64_t)_min(xmax, trans_dw) * unit;
+    const int64_t top = (int64_t)_max(ymin, 0) * unit;
+    const int64_t bottom = (int64_t)_min(ymax, trans_dh) * unit;
+    const int64_t base_x = (int64_t)x * unit, base_y = (int64_t)y * unit;
+    const int64_t w = (int64_t)trans_sw * zoomx, h = (int64_t)trans_sh * zoomy;
+    const int64_t cx = ((int64_t)centerx + method->centerx) * zoomx;
+    const int64_t cy = ((int64_t)centery + method->centery) * zoomy;
+    if(left >= right || top >= bottom || !original_int(w) || !original_int(h) ||
+       !original_int(cx) || !original_int(cy) || !original_int(base_x) || !original_int(base_y))
+        return;
+
+    int64_t dx = method->flipx ? cx - w + base_x : base_x - cx;
+    const int64_t dy = method->flipy ? cy - h + base_y : base_y - cy;
+    const int64_t shift = method->flipy ? -(int64_t)method->shiftx : method->shiftx;
+    const int64_t skew_start = dy + h - base_y;
+    if(!original_int(dx) || !original_int(dy) || !original_int(skew_start)) return;
+    dx += floor_fixed(skew_start * shift, unit);
+
+    const int64_t step_x = method->flipx ? 65536 / zoomx : -65536 / zoomx;
+    const int64_t step_y = method->flipy ? 65536 / zoomy : -65536 / zoomy;
+    const int64_t source_right = method->flipx ? 0 : (int64_t)trans_sw * unit + step_x;
+    int64_t sy = method->flipy ? 0 : (int64_t)trans_sh * unit + step_y;
+    const int64_t skew = floor_fixed(shift * h, unit);
+    if(_max(dx + w, dx + w - skew) <= left || _min(dx, dx - skew) >= right ||
+       dy >= bottom || dy + h <= top)
+        return;
+
+    const int64_t row_end = _min(dy + h, bottom);
+    const int64_t row_start = _max(dy, top);
+    dx -= floor_fixed(shift * (dy + h - row_end), unit);
+    sy += floor_fixed(step_y * (dy + h - row_end), unit);
+
+    for(int64_t row = row_end - unit; row >= row_start; row -= unit, sy += step_y, dx -= shift)
+    {
+        if(dx >= right || dx + w <= left) continue;
+        int64_t sx = source_right;
+        const int64_t col_end = _min(dx + w, right);
+        const int64_t col_start = _max(dx, left);
+        sx += floor_fixed(step_x * (dx + w - col_end), unit);
+        for(int64_t col = col_end - unit; col >= col_start; col -= unit, sx += step_x)
+        {
+            draw_sampled_pixel((int)floor_fixed(col, unit), (int)floor_fixed(row, unit),
+                               floor_fixed(sx, unit), floor_fixed(sy, unit));
+        }
+    }
+}
+
+static void draw_fixed_rotation(s_screen *dest, gfx_entry *src, float sx0, float sy0,
+                                float ax, float ay, float bx, float by)
+{
+    const int64_t unit = 65536;
+    const double fixed[] = {
+        sx0 * 65536.0, sy0 * 65536.0, ax * 65536.0,
+        ay * 65536.0, bx * 65536.0, by * 65536.0
+    };
+    for(unsigned i = 0; i < sizeof(fixed) / sizeof(*fixed); ++i)
+        if(!(fixed[i] >= INT_MIN && fixed[i] < (double)INT_MAX + 1)) return;
+
+    int64_t sx_start = (int64_t)fixed[0], sy_start = (int64_t)fixed[1];
+    for(int y = ymin; y < ymax; ++y, sx_start += (int64_t)fixed[4], sy_start += (int64_t)fixed[5])
+    {
+        int64_t sx = sx_start, sy = sy_start;
+        for(int x = xmin; x < xmax; ++x, sx += (int64_t)fixed[2], sy += (int64_t)fixed[3])
+        {
+            const int64_t source_x = floor_fixed(sx, unit), source_y = floor_fixed(sy, unit);
+            if(obor_profile_build >= 3892u)
+                draw_sampled_pixel(x, y, source_x, source_y);
+            else if(source_x >= 0 && source_x < trans_sw && source_y >= 0 && source_y < trans_sh)
+                draw_pixel_gfx(dest, src, x, y, (int)source_x, (int)source_y);
+        }
+    }
+}
+
+
 
 void gfx_draw_rotate(s_screen* dest, gfx_entry* src, int x, int y, int centerx, int centery, s_drawmethod* drawmethod)
 {
@@ -586,6 +711,11 @@ void gfx_draw_rotate(s_screen* dest, gfx_entry* src, int x, int y, int centerx, 
 	zoomx = drawmethod->scalex / 256.0;
 	zoomy = drawmethod->scaley / 256.0;
 	angle = drawmethod->rotate;
+    if(obor_profile_build >= 3886u)
+    {
+        if(zoomx <= 0 || zoomy <= 0) return;
+        angle = (drawmethod->rotate % 360 + 360) % 360;
+    }
     sina = sin_table[(int)angle];
     cosa = cos_table[(int)angle];
 
@@ -614,6 +744,14 @@ void gfx_draw_rotate(s_screen* dest, gfx_entry* src, int x, int y, int centerx, 
 	xmax = _min(_max(_max(xbound[0],xbound[1]), _max(xbound[2],xbound[3])), xmax);
 	ymin = _max(_min(_min(ybound[0],ybound[1]), _min(ybound[2],ybound[3])), ymin);
 	ymax = _min(_max(_max(ybound[0],ybound[1]), _max(ybound[2],ybound[3])), ymax);
+    if(obor_profile_build >= 3886u)
+    {
+        xmin = _max(xmin, 0);
+        ymin = _max(ymin, 0);
+        xmax = _min(xmax, trans_dw);
+        ymax = _min(ymax, trans_dh);
+        if(xmin >= xmax || ymin >= ymax) return;
+    }
 	/////////////////end clipping////////////////////////////
 
 	// tricks to keep rotate not affected by flip
@@ -639,6 +777,12 @@ void gfx_draw_rotate(s_screen* dest, gfx_entry* src, int x, int y, int centerx, 
     cy = -(rx0+x)*rzoomx*sina-(ry0+y)*rzoomy*cosa+ry0; 
 	srcx0_f= cx+ymin*bx+xmin*ax;
     srcy0_f= cy+ymin*by+xmin*ay;
+    if(obor_profile_build >= 3886u)
+    {
+        draw_fixed_rotation(dest, src, srcx0_f, srcy0_f, ax, ay, bx, by);
+        return;
+    }
+
 
     for (j=ymin; j<ymax; j++)
     {
@@ -661,20 +805,15 @@ void gfx_draw_rotate(s_screen* dest, gfx_entry* src, int x, int y, int centerx, 
 
 // don't ask; go to Wikipedia if you have no fear:
 // http://en.wikipedia.org/wiki/Fast_inverse_square_root
-static float invsqrt(float x)
+float invsqrt(float x)
 {
-	float xhalf = 0.5f*x;
-	union {
-		float f;
-		int i;
-	} fi;
-	fi.f = x;
-	fi.i = 0x5f375a86- (fi.i>>1); // gives initial guess y0
-	x = fi.f; // convert bits BACK to float
-	x = x*(1.5f-xhalf*x*x); // Newton step, repeating increases accuracy
-	//x = x*(1.5f-xhalf*x*x);
-	//x = x*(1.5f-xhalf*x*x);
-	return x;
+    const float half = 0.5f * x;
+    union { float value; uint32_t bits; } representation;
+    representation.value = x;
+    const uint32_t shifted = (representation.bits >> 1) | (representation.bits & 0x80000000u);
+    representation.bits = 0x5f375a86u - shifted;
+    x = representation.value;
+    return x * (1.5f - half * x * x);
 }
 
 void gfx_quad(s_screen *dest, gfx_entry* src, 
@@ -783,6 +922,11 @@ void gfx_draw_scale(s_screen *dest, gfx_entry* src, int x, int y, int centerx, i
 // scalex scaley flipy ...
 void gfx_draw_scale(s_screen *dest, gfx_entry* src, int x, int y, int centerx, int centery, s_drawmethod* drawmethod)
 {
+    if(obor_profile_build >= 3876u)
+    {
+        draw_fixed_scale(dest, src, x, y, centerx, centery, drawmethod);
+        return;
+    }
 	float osx, sx, sy, dx, dy, w, h, cx, cy, stepdx, stepdy, beginy, endy, beginx, endx;
 	int i, j;
 	float zoomx = drawmethod->scalex / 256.0;

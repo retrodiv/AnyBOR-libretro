@@ -8,8 +8,10 @@ import json
 import os
 from pathlib import Path
 import re
+import shlex
 from test_historical_player import function
 import subprocess
+import sys
 import tempfile
 import unittest
 
@@ -255,6 +257,136 @@ class UnknownConstantsTests(unittest.TestCase):
         with patch.dict(os.environ, sanitizer_environment()):
             native(render_constant_mapper(root / 'src/engines/3842', fixture),
                    extra_flags=('-fsanitize=pointer-overflow', '-fno-sanitize-recover=all'))
+
+    def test_numbered_animation_prefixes_across_3826(self):
+        from historical_constant_mapper import render_constant_mapper
+        from test_historical_behavior import native
+        from native_sanitizers import sanitizer_environment
+        from unittest.mock import patch
+
+        root = Path(os.environ.get('OBOR_TEST_SOURCE', Path(__file__).resolve().parents[1]))
+        fixture = load_contract_fixture(Path(__file__).parent /
+            'fixtures/profile-constant-mapper-contracts.json')
+        controls = {3825, 3826, 3827}
+        rows = [row for row in fixture['sources'] if row['revision'] in controls]
+        self.assertEqual({row['revision'] for row in rows}, controls)
+        expanded = next(row['expanded_suffix_prefixes'] for row in rows if row['revision'] == 3826)
+        self.assertEqual(len(expanded), 11)
+        self.assertEqual(expanded['ANI_BACKWALK'], '79')
+        with patch.dict(os.environ, sanitizer_environment()):
+            native(render_constant_mapper(root / 'src/engines/3842', dict(fixture, sources=rows)),
+                   extra_flags=('-fsanitize=pointer-overflow', '-fno-sanitize-recover=all'))
+
+    def test_forward_property_mapper_values_diagnostics_and_status(self):
+        from native_sanitizers import sanitizer_environment
+
+        root = Path(os.environ.get('OBOR_TEST_SOURCE', Path(__file__).resolve().parents[1]))
+        engine = root / 'src/engines/3842'
+        fixture = load_contract_fixture(Path(__file__).parent /
+            'fixtures/profile-forward-property-mappers.json')
+        cases = fixture['cases']
+        rows = fixture['sources']
+        self.assertEqual({row['revision'] for row in rows}, set(fixture['boundary_controls']))
+        names = {case['case'] for case in cases}
+        self.assertEqual(len(names), len(cases))
+        mappers = {case['mapper'] for case in cases}
+        c_cases = []
+        for case in cases:
+            self.assertRegex(case['mapper'], r'^[a-z]+$')
+            self.assertTrue(0 < len(case['args']) <= 6)
+            args = ','.join(
+                '{%s,0}' % json.dumps(v) if isinstance(v, str) else '{NULL,%d}' % v
+                for v in case['args'])
+            c_cases.append('{%s,mapstrings_%s,%d,{%s}}' %
+                           (json.dumps(case['case']), case['mapper'], len(case['args']), args))
+        provider = function((engine / 'source/utils.c').read_text(), 'searchList')
+        program = r'''
+#include <assert.h>
+#include <stdarg.h>
+#include <stdint.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <strings.h>
+#include "openborscript.h"
+#undef printf
+#define stricmp strcasecmp
+uint32_t obor_profile_build;
+void writeToLogFile(const char *format,...) {
+ va_list args;va_start(args,format);vprintf(format,args);va_end(args);
+}
+void exitIfFalse(int value,const char *assertion,const char *function,const char *file,int line) {
+ if(!value){fprintf(stderr,"%s:%d (%s): %s\n",file,line,function,assertion);abort();}
+}
+typedef struct { const char *text; int number; } Argument;
+typedef struct { const char *name; int (*mapper)(ScriptVariant**,int); int count; Argument args[6]; } Case;
+static const Case cases[]={@CASES@};
+static const Case *active;
+CHAR *StrCache_Get(int index) {
+ assert(active && index>=0 && index<active->count && active->args[index].text);
+ return (CHAR*)active->args[index].text;
+}
+CHAR *StrCache_GetIfPresent(int index) { return StrCache_Get(index); }
+void ScriptVariant_ChangeType(ScriptVariant *arg,VARTYPE type) { arg->vt=type;arg->lVal=0; }
+@SEARCH@
+int main(int argc,char **argv) {
+ assert(argc==2);obor_profile_build=(uint32_t)strtoul(argv[1],NULL,10);
+ for(unsigned n=0;n<sizeof(cases)/sizeof(*cases);++n) {
+  ScriptVariant values[6]={0},*params[6]={0};active=&cases[n];
+  for(int i=0;i<active->count;++i) {
+   params[i]=&values[i];
+   if(active->args[i].text){values[i].vt=VT_STR;values[i].strVal=i;}
+   else{values[i].vt=VT_INTEGER;values[i].lVal=active->args[i].number;}
+  }
+  int status=active->mapper(params,active->count);
+  printf("@%s %d",active->name,obor_profile_build>=3862?status:-1);
+  for(int i=0;i<active->count;++i) {
+   if(values[i].vt==VT_STR){assert(values[i].strVal==i);printf(" s%d",i);}
+   else{assert(values[i].vt==VT_INTEGER);printf(" %ld",(long)values[i].lVal);}
+  }
+  puts("");
+ }
+ return 0;
+}
+'''.replace('@CASES@', ',\n'.join(c_cases)).replace('@SEARCH@', provider)
+        includes = [engine, root / 'src/port/libretro', engine / 'source',
+                    *sorted(p for p in (engine / 'source').iterdir() if p.is_dir())]
+        mac = sys.platform == 'darwin'
+        host = ['-DDARWIN=1', '-D_DARWIN_C_SOURCE=1'] if mac else ['-DLINUX=1']
+        link = ['-Wl,-dead_strip'] if mac else ['-no-pie', '-Wl,--gc-sections']
+        with tempfile.TemporaryDirectory(prefix='anybor-native-property-mappers-') as temporary:
+            probe = Path(temporary) / 'probe.c'
+            binary = probe.with_suffix('')
+            probe.write_text(program)
+            compiler = shlex.split(os.environ.get('HOST_CC', 'cc'))
+            version = subprocess.check_output([*compiler, '--version'], text=True, timeout=10)
+            # Unused game callback tables must stay discardable when linking
+            # the mapper unit by itself. The mapper code remains instrumented.
+            globals_flag = (['-mllvm', '-asan-globals=0'] if 'clang' in version.lower()
+                            else ['--param', 'asan-globals=0'])
+            flags = ['-std=gnu99', '-g', '-fsigned-char', '-fcommon', '-fgnu89-inline',
+                     '-ffunction-sections', '-fdata-sections', '-DLIBRETRO=1',
+                     '-DOBOR_ENGINE_BUILD=3842', '-DOBOR_CONTROLLED_ASSERTIONS=1',
+                     '-fsanitize=address,undefined', '-fno-sanitize-recover=all']
+            subprocess.run([*compiler, *flags, *globals_flag, *host, *('-I'+str(p) for p in includes),
+                            str(probe), str(engine / 'openborscript.c'), *link, '-lm',
+                            '-o', str(binary)], check=True, timeout=90)
+            for row in rows:
+                with self.subTest(revision=row['revision']):
+                    self.assertEqual(set(row['providers']), mappers)
+                    self.assertEqual(set(row['observations']), names)
+                    expected = []
+                    for case in cases:
+                        evidence = row['providers'][case['mapper']]
+                        self.assertEqual(evidence['commit'], row['commit'])
+                        self.assertRegex(evidence['source_sha256'], r'^[0-9a-f]{64}$')
+                        outcome = row['observations'][case['case']]
+                        status = outcome['result'] if outcome['result'] is not None else -1
+                        args = ' '.join('s%d' % i if isinstance(arg, str) else str(arg)
+                                        for i, arg in enumerate(outcome['args']))
+                        expected.append('%s@%s %d %s' % (outcome['diagnostic'], case['case'], status, args))
+                    actual = subprocess.run([str(binary), str(row['revision'])], check=True,
+                        capture_output=True, text=True, timeout=20, env=sanitizer_environment())
+                    self.assertEqual(actual.stdout.splitlines(), '\n'.join(expected).splitlines())
 
     def test_compiled_continuation_requires_executed_markers(self):
         legacy = "[game] CONSTANT_CONTRACT_BEFORE_UNKNOWN\n[game] CONSTANT_CONTRACT_EMPTY_CONTINUATION\n"

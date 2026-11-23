@@ -101,7 +101,7 @@ static char files[8][128];
 static int getModelCommand(int list,char *name) {
     (void)list;
     @LOOKUP@
-    return CMD_MODELSTXT_THE_END;
+    return 0;
 }
 static int ParseArgs(ArgList *args,const char *line,char *out) {
     size_t n=strcspn(line,"\r\n");assert(n<MAX_ARG_LEN);memcpy(out,line,n);out[n]=0;
@@ -116,7 +116,16 @@ static size_t getNewLineStart(const char *p) {
     size_t n=strcspn(p,"\r\n");if(p[n]=='\r')++n;if(p[n]=='\n')++n;return n;
 }
 static int silent_printf(const char *format,...) {
-    if(strstr(format,"not understood"))++diagnostics;
+    if(!strcmp(format,"command %s not understood in %s, line %d\n")){
+        va_list args;va_start(args,format);
+        const char *command=va_arg(args,char *);
+        const char *filename=va_arg(args,char *);
+        int line=va_arg(args,int);
+        va_end(args);
+        assert(!strcmp(command,"unknown_setting") &&
+               !strcmp(filename,custom?"data/alternate.txt":"data/models.txt") && line==13);
+        ++diagnostics;
+    }
     return 0;
 }
 static void shutdown(int status,const char *format,...) {(void)status;(void)format;abort();}
@@ -126,7 +135,7 @@ static int buffer_pakfile(const char *name,char **out,size_t *size) {
     char text[1024];int n=snprintf(text,sizeof(text),
         "maxwalks %d\nload fixture model.txt\nmaxidles %d\nmaxbackwalks %d\nmaxups %d\n"
         "maxdowns %d\nmaxattacktypes %d\nmaxfollows %d\nmaxfreespecials %d\nmaxattacks %d\n"
-        "music fixture 0\nknow fixture model.txt\n",5+seed,6+seed,4+seed,3+seed,
+        "music fixture 0\nknow fixture model.txt\nunknown_setting 1\n",5+seed,6+seed,4+seed,3+seed,
         2+seed,13+seed,8+seed,9+seed,7+seed);
     assert(n>0 && (size_t)n<sizeof(text));*size=(size_t)n;*out=malloc(*size+1);assert(*out);
     memcpy(*out,text,*size+1);return 1;
@@ -201,7 +210,7 @@ static void check(int use_custom) {
     obor_reset_model_constants();custModels=custom?(char*)"alternate.txt":NULL;
     custBkgrds=custom?(char*)"fixtures/":NULL;loadingbg[0].set=custom?3:0;
     start_selected();stage="cold-vectors";check_vectors(0);++cases;
-    assert(file_calls==(expected_early?2u:1u) && script_calls==1 && !diagnostics);
+    assert(file_calls==(expected_early?2u:1u) && script_calls==1 && diagnostics==(unsigned)!expected_early);
     assert(!strcmp(files[0],expected_early || !custom?"data/models.txt":"data/alternate.txt"));
     if(expected_early)assert(!strcmp(files[1],custom?"data/alternate.txt":"data/models.txt"));
     int *saved_walks=animwalks;
@@ -209,7 +218,8 @@ static void check(int use_custom) {
     if(expected_early)assert(animwalks==saved_walks);
     phase=2;resourceCleanUp();stage="cleanup-reload";check_vectors(expected_early);++cases;
     assert(file_calls==(expected_early?4u:3u));
-    assert(script_calls==1 && cache_calls==6 && music_calls==3 && screen_calls==3 && !diagnostics);
+    assert(script_calls==1 && cache_calls==6 && music_calls==3 && screen_calls==3);
+    assert(diagnostics==(expected_early?0u:3u));
     obor_reset_model_constants();
 }
 int main(void){@CHECKS@printf("{\"status\":\"PASS\",\"cases\":%u}\n",cases);return 0;}

@@ -81,8 +81,11 @@ s_screen *pngToScreenSized(const void *data, size_t size)
     png_read_info(png_ptr, info_ptr);
     png_get_IHDR(png_ptr, info_ptr, &width, &height, &bit_depth, &color_type, &interlace_type, NULL, NULL);
 
-    if(!width || !height || width > INT_MAX || height > INT_MAX ||
-       (size_t)width > SIZE_MAX / 4 / height) goto error2;
+    if(!width || !height || width > INT_MAX - 3 || height > INT_MAX) goto error2;
+    /* allocscreen aligns its input down to four pixels. */
+    const png_uint_32 alloc_width = (width + 3u) & ~3u;
+    if(alloc_width > INT_MAX / 4u / height) goto error2;
+    const size_t stride = (size_t)width * 4u;
 
     png_set_strip_16(png_ptr);
     png_set_packing(png_ptr);
@@ -94,7 +97,9 @@ s_screen *pngToScreenSized(const void *data, size_t size)
     {
         png_set_expand_gray_1_2_4_to_8(png_ptr);
     }
-    if(color_type == PNG_COLOR_TYPE_GRAY || color_type == PNG_COLOR_TYPE_GRAY_ALPHA)
+    const int grayscale = color_type == PNG_COLOR_TYPE_GRAY || color_type == PNG_COLOR_TYPE_GRAY_ALPHA;
+    const int original_gray_rows = obor_profile_build == 4097u && grayscale;
+    if(grayscale && !original_gray_rows)
         png_set_gray_to_rgb(png_ptr);
     if(png_get_valid(png_ptr, info_ptr, PNG_INFO_tRNS))
     {
@@ -107,14 +112,18 @@ s_screen *pngToScreenSized(const void *data, size_t size)
 #endif
 
     png_read_update_info(png_ptr, info_ptr);
-    if(png_get_rowbytes(png_ptr, info_ptr) != (size_t)width * 4) goto error2;
+    const size_t row_bytes = original_gray_rows ? stride / 2u : stride;
+    if(png_get_rowbytes(png_ptr, info_ptr) != row_bytes) goto error2;
 
-    image = allocscreen(width, height, PIXEL_32);
+    image = allocscreen(alloc_width, height, PIXEL_32);
     if(image == NULL)
     {
         goto error2;
     }
 
+    image->width = width;
+    /* The original reader leaves the rest of each grayscale row unwritten. */
+    if(original_gray_rows) memset(image->data, 0, stride * height);
     line = (u32 *)image->data;
     for(y = 0; y < height; y++)
     {

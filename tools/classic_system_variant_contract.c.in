@@ -23,6 +23,7 @@ HRESULT Interpreter_Call(Interpreter *p) { (void)p; abort(); }
 HRESULT Interpreter_EvalInstruction(Interpreter *p) { (void)p; abort(); }
 static char strings[32][128],diagnostic[4096];
 static int used[32],observed_index,delegate_calls,field_mode,unused_calls;
+static int enginecreditsScreen;
 s_lasthit lasthit;
 int StrCache_Pop(void)
 {for(int i=0;i<32;++i)if(!used[i]){used[i]=1;strings[i][0]=0;return i;}abort();}
@@ -134,6 +135,27 @@ int main(void)
             }
         }
         field_mode=1;
+        for(int slot = 0; slot < contexts[p].count; ++slot)
+        {
+            active_name = contexts[p].names[slot];
+            if(strcmp(active_name, "in_enginecreditsscreen")) continue;
+            for(int named = 0; named < 2; ++named)
+                for(int state = 0; state < 2; ++state)
+                {
+                    ScriptVariant property, result = {.vt = VT_INTEGER};
+                    ScriptVariant *args[] = {&property}, *output = &result;
+                    property_value(&property, named, active_name, slot);
+                    enginecreditsScreen = state;
+                    diagnostic[0] = 0;
+                    delegate_calls = 0;
+                    ++active_case;
+                    assert(openbor_systemvariant(args, &output, 1) == S_OK && output == &result);
+                    assert(result.vt == VT_INTEGER && result.lVal == state);
+                    assert(delegate_calls == 1 && observed_index == contexts[p].native_ids[slot] && !diagnostic[0]);
+                    ScriptVariant_Clear(&property);
+                    ScriptVariant_Clear(&result);
+                }
+        }
         for(int q=0;q<contexts[p].query_count;++q)for(int named=0;named<2;++named)
         for(int kind=0;kind<3;++kind)for(int premap=0;premap<2;++premap)
         {

@@ -40,6 +40,7 @@ static const obor_frame_assert_location obor_frame_assert_locations[] = {
     {3143, {572, 573, 574, 575, 580, 581, 582, 10396}, {"index >= 0", "a != NULL", "m != NULL", "index < a->numframes", "index >= 0", "a != NULL", "index < a->numframes", "f < self->animation->numframes"}},
     {3160, {572, 573, 574, 575, 580, 581, 582, 10396}, {"index >= 0", "a != NULL", "m != NULL", "index < a->numframes", "index >= 0", "a != NULL", "index < a->numframes", "f < self->animation->numframes"}},
     {3173, {573, 574, 575, 576, 581, 582, 583, 10384}, {"index >= 0", "a != NULL", "m != NULL", "index < a->numframes", "index >= 0", "a != NULL", "index < a->numframes", "f < self->animation->numframes"}},
+    {3185, {572, 573, 574, 575, 580, 581, 582, 10263}, {"index >= 0", "a != NULL", "m != NULL", "index < a->numframes", "index >= 0", "a != NULL", "index < a->numframes", "f < self->animation->numframes"}},
     {3192, {572, 573, 574, 575, 580, 581, 582, 10263}, {"index >= 0", "a != NULL", "m != NULL", "index < a->numframes", "index >= 0", "a != NULL", "index < a->numframes", "f < self->animation->numframes"}},
     {3201, {573, 574, 575, 576, 581, 582, 583, 10249}, {"index >= 0", "a != NULL", "m != NULL", "index < a->numframes", "index >= 0", "a != NULL", "index < a->numframes", "f < self->animation->numframes"}},
     {3204, {573, 574, 575, 576, 581, 582, 583, 0}, {"index >= 0", "a != NULL", "m != NULL", "index < a->numframes", "index >= 0", "a != NULL", "index < a->numframes", ""}},

@@ -48,19 +48,36 @@ def program(engine,profiles,*,omit_frame_bound=False):
         own=oracle['profiles'][p['build']]
         limits=data.get('mapper_limits',{}).get(p['build'],[2147483647]*3)
         context.append('{%du,%d,{%s}}'%(int(p.get('revision',p['build'].split('-')[0])),own['clear_result_on_error'],','.join(map(str,limits))))
+    original_maps = []
+    mapper_keys = ('original_mapper', 'original_property_mapper', 'original_attack_mapper')
+    for index, key in enumerate(mapper_keys):
+        body = data.get(key, '')
+        cases = []
+        for build, routes in data.get('source_maps', {}).items():
+            route = routes[index]
+            cases.append(f'case {int(build)}u:')
+            for boundary, offset in route['routes']:
+                cases.append(f'if(id < {int(boundary)}) return id {int(offset):+d};')
+            cases.append(f"return id {int(route['tail']):+d};")
+        if cases:
+            case_block = '\n'.join(cases)
+            body = body.replace('{', '\n{\nif(id >= 0) switch(obor_profile_build) {\n' + case_block + '\n}\n', 1)
+        original_maps.append(body)
+    get_mapper_returns_int = bool(re.search(r'(?m)^int mapstrings_getentityproperty\(', core))
     values=dict(CONFIG='#include "config.h"' if (engine/'config.h').is_file() else '',
         SCRIPT_HEADER='openborscript.h' if (engine/'openborscript.h').is_file() else 'scriptcommon.h',
         PROFILE_HEADER='#include "source/openborscript/profile_ids.h"' if 'original_mapper' in data else '',
         POP_ARGUMENTS='int length' if 'StrCache_Pop(int length)' in header else 'void',
         MAPPER_TYPE='int' if re.search(r'(?m)^int mapstrings_entityproperty\(',core) else 'void',
         MAPPER_RETURN='return 1;' if re.search(r'(?m)^int mapstrings_entityproperty\(',core) else '',
+        GET_MAPPER_TYPE='int' if get_mapper_returns_int else 'void',
+        GET_MAPPER_RETURN='return 1;' if get_mapper_returns_int else '',
         CONVERSIONS='\n'.join(function(variant,n) for n in ['ScriptVariant_ChangeType','ScriptVariant_Clear','ScriptVariant_IntegerValue']),
         NATIVE=native,ORIGINAL=original,MAPPER=mapper,
-        ORIGINAL_MAPPER='\n'.join(rename_identifiers(data.get(key,''),{
+        ORIGINAL_MAPPER='\n'.join(rename_identifiers(body,{
             'obor_animation_from_native':'original_animation_map',
             'obor_animation_property_from_native':'original_property_map',
-            'obor_attack_from_native':'original_attack_map'}) for key in
-            ['original_mapper','original_property_mapper','original_attack_mapper']),
+            'obor_attack_from_native':'original_attack_map'}) for body in original_maps),
         HAS_MAPPER=str(int('original_mapper' in data)),CONTEXTS=','.join(context))
     text=(HERE/'vulnerable_frame_queries.c.in').read_text()
     for k,v in values.items():text=text.replace('@'+k+'@',v)

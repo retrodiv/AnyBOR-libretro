@@ -22,7 +22,7 @@
 uint32_t obor_profile_build;
 @PROFILE_SUPPORT@
 static unsigned cases;
-static int own_requires_actor,own_integer_result;
+static int own_requires_actor,own_integer_result,own_name_limit;
 #define assert(c) do {if(!(c)){fprintf(stderr,"Player input revision=%u case=%u line=%d: %s\n",obor_profile_build,cases,__LINE__,#c);abort();}}while(0)
 HRESULT Interpreter_Call(Interpreter *p) {(void)p;abort();}
 HRESULT Interpreter_EvalInstruction(Interpreter *p) {(void)p;abort();}
@@ -97,7 +97,7 @@ HRESULT ScriptVariant_GetStringView(const ScriptVariant *arg,CHAR *buffer,size_t
 @BASELINE@
 @METHODS@
 #undef printf
-static const struct {uint32_t revision;int requires_actor,integer_result;} contexts[]={@CONTEXTS@};
+static const struct {uint32_t revision;int requires_actor,integer_result,name_limit;} contexts[]={@CONTEXTS@};
 static ScriptVariant integer(LONG n){ScriptVariant v={0};v.vt=VT_INTEGER;v.lVal=n;return v;}
 static ScriptVariant text(const char *s)
 {
@@ -187,7 +187,7 @@ static void invalid_inputs(void)
         reset(1);ScriptVariant i=integer(0),p=text("name"),v=text("valid"),r={0},*out=&r;
         if(oversized)
         {
-            size_t length = @NAME_LIMIT@ + 1;
+            size_t length = own_name_limit + 1;
             memset(strings[v.strVal], 'x', length);
             strings[v.strVal][length] = 0;
         }
@@ -279,6 +279,7 @@ int main(void)
     {
         obor_profile_build=contexts[c].revision;
         own_requires_actor=contexts[c].requires_actor;own_integer_result=contexts[c].integer_result;
+        own_name_limit=contexts[c].name_limit;
 #ifdef ENDPOINT_ONLY
         compare_valid("score",MAX_PLAYERS-1,0,1,0,0,0);
 #elif defined(PLAYER_PROPERTY_HISTORY)
@@ -295,7 +296,7 @@ int main(void)
         for(int spawned=0;spawned<2;++spawned)
         for(int setter=0;setter<2;++setter)
         for(int extra=0;extra<2;++extra)
-            compare_valid(properties[p],index,kind,spawned,setter,extra?(int)@NAME_LIMIT@:0,extra);
+            compare_valid(properties[p],index,kind,spawned,setter,extra?own_name_limit:0,extra);
         invalid_inputs();
 #endif
     }

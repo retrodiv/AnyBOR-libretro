@@ -1,0 +1,156 @@
+/* SPDX-License-Identifier: BSD-3-Clause
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me> */
+#include <assert.h>
+#include <limits.h>
+#include <stddef.h>
+#include <stdint.h>
+#include <stdio.h>
+#include <string.h>
+#include "openbor.h"
+#undef assert
+#undef printf
+#include <assert.h>
+
+uint32_t obor_profile_build = @REVISION@u;
+u32 time;
+s_level *level;
+entity *self, *smartbomber, *textbox;
+float advancex, advancey;
+int gfx_x_offset, gfx_y_offset;
+int camera_x, camera_y;
+int current_palette, light[2], shadowcolor, shadowalpha;
+int PLAYER_MIN_Z = 160, PLAYER_MAX_Z = 232;
+enum { NO_QUAKEN = 2 };
+int shadowsprites[6];
+unsigned char pal[MAX_PAL_SIZE];
+const s_drawmethod plainmethod = {0};
+unsigned int sprites_loaded = 5;
+static entity actors[4];
+static entity *slots[5];
+static entity **ent_list = slots;
+static int ent_max = 5, ent_list_size = 5;
+static entity *queued[5];
+static entity **ent_stack = queued, **draw_script_entities = queued;
+static int ent_stack_size, draw_script_count;
+static Script scripts[4];
+static s_scripts locals[4];
+static s_anim animation;
+static int sprites[] = {0, 1, 2, 3};
+static char trace[128];
+static unsigned cursor;
+static entity *script_self;
+static int inhibit_second;
+
+static void event(char kind, unsigned actor)
+{
+    assert(actor < 4 && cursor + 2 < sizeof(trace));
+    trace[cursor++] = kind;
+    trace[cursor++] = (char)('0' + actor);
+    trace[cursor] = 0;
+}
+
+int Script_IsInitialized(Script *script)
+{
+    return script && script->initialized;
+}
+
+void ScriptVariant_Init(ScriptVariant *value) { memset(value, 0, sizeof(*value)); }
+void ScriptVariant_Clear(ScriptVariant *value) { value->vt = VT_EMPTY; }
+void ScriptVariant_ChangeType(ScriptVariant *value, VARTYPE type) { value->vt = type; }
+
+int Script_Set_Local_Variant(Script *script, char *name, ScriptVariant *value)
+{
+    assert(script >= scripts && script < scripts + 4 && !strcmp(name, "self"));
+    unsigned actor = (unsigned)(script - scripts);
+    if(value->vt == VT_PTR)
+    {
+        assert(!script_self && value->ptrVal == &actors[actor]);
+        script_self = value->ptrVal;
+        event('B', actor);
+    }
+    else
+    {
+        assert(value->vt == VT_EMPTY && script_self == &actors[actor]);
+        script_self = NULL;
+        event('C', actor);
+    }
+    return 1;
+}
+
+int Script_Execute(Script *script)
+{
+    assert(script >= scripts && script < scripts + 4 && script->initialized);
+    unsigned actor = (unsigned)(script - scripts);
+    assert(script_self == &actors[actor]);
+    event('E', actor);
+    if(inhibit_second && actor == 0) actors[1].exists = 0;
+    return 1;
+}
+
+void drawenemystatus(entity *actor) { event('H', (unsigned)(actor - actors)); }
+
+void spriteq_add_sprite(int x, int y, int z, int id, s_drawmethod *method, int sortid)
+{
+    assert(id >= 0 && id < 4 && method);
+    event('S', (unsigned)id);
+}
+
+entity *check_platform(float x, float z, entity *exclude) { return NULL; }
+int checkhole(float x, float z) { return 0; }
+int checkwall(float x, float z) { return -1; }
+int checkwall_below(float x, float z, float a) { return -1; }
+int inair(entity *actor) { return 0; }
+s_drawmethod *getDrawMethod(s_anim *anim, ptrdiff_t index) { return NULL; }
+unsigned char *model_get_colourmap(s_model *model, unsigned which) { return NULL; }
+
+@CLIP@
+@CALLBACK@
+@DISPLAY@
+
+static void reset(int hide_second)
+{
+    memset(actors, 0, sizeof(actors));
+    memset(scripts, 0, sizeof(scripts));
+    animation.sprite = sprites;
+    for(unsigned i = 0; i < 4; ++i)
+    {
+        slots[i] = &actors[i];
+        actors[i].exists = i < 3;
+        actors[i].animation = &animation;
+        actors[i].animpos = i;
+        actors[i].direction = 1;
+        actors[i].modeldata.hpbarstatus.sizex = i < 2;
+        actors[i].scripts = &locals[i];
+        locals[i].ondraw_script = &scripts[i];
+        scripts[i].initialized = i != 2;
+    }
+    slots[4] = NULL;
+    self = &actors[0];
+    actors[1].blink = hide_second;
+    cursor = 0;
+    trace[0] = 0;
+    inhibit_second = 0;
+}
+
+int main(void)
+{
+    reset(1);
+    display_ents();
+    assert(!script_self && !ent_stack_size && !draw_script_count);
+    printf("[\"%s\",", trace);
+
+    cursor = 0;
+    trace[0] = 0;
+    scripts[0].initialized = 0;
+    scripts[2].initialized = 1;
+    display_ents();
+    assert(!script_self && !ent_stack_size && !draw_script_count);
+    printf("\"%s\",", trace);
+
+    reset(0);
+    inhibit_second = 1;
+    display_ents();
+    assert(!script_self && !ent_stack_size && !draw_script_count);
+    printf("\"%s\"]\n", trace);
+    return 0;
+}

@@ -1,0 +1,114 @@
+/* SPDX-License-Identifier: BSD-3-Clause
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me>
+ */
+#include <assert.h>
+#include <stdio.h>
+
+enum { TYPE_NONE, TYPE_PLAYER, SUBTYPE_BIKER };
+enum { ANI_IDLE = 1, ANI_WALK, ANI_BACKWALK, ANI_UP, ANI_DOWN, ANI_FAINT, ANI_SLEEP };
+
+typedef struct model { int health, type, subtype; } model;
+typedef struct entity {
+    model *model, modeldata;
+    int health, sleeptime, animating, idling, idlemode, walkmode;
+    int xdir, zdir;
+} entity;
+
+static unsigned obor_profile_build;
+static entity *self;
+static int time, chosen, target_animation, probes, available[32];
+static int animidles[] = { ANI_IDLE, 10, 11 }, animwalks[] = { ANI_WALK, 12, 13 };
+static int animbackwalks[] = { ANI_BACKWALK, 14, 15 }, animups[] = { ANI_UP, 16, 17 };
+static int animdowns[] = { ANI_DOWN, 18, 19 };
+static const int max_idles = 3, max_walks = 3, max_backwalks = 3, max_ups = 3, max_downs = 3;
+
+static int validanim(entity *actor, int id)
+{
+    assert(actor && id > 0 && id < 32);
+    return available[id];
+}
+
+static int normal_find_target(int id, int detect)
+{
+    assert(self && detect == 0);
+    ++probes;
+    return id == target_animation;
+}
+
+static void ent_set_anim(entity *actor, int id, int reset)
+{
+    assert(actor && reset == 0 && !chosen);
+    chosen = id;
+}
+
+@METHODS@
+@MACROS@
+
+static int select_animation(entity *actor, int family)
+{
+    switch(family) {
+        case 0: return common_idle_anim(actor);
+        case 1: return common_walk_anim(actor);
+        case 2: return common_backwalk_anim(actor);
+        case 3: return common_up_anim(actor);
+        case 4: return common_down_anim(actor);
+    }
+    return 0;
+}
+
+static void check(unsigned revision, int modes)
+{
+    model data = { 100, TYPE_PLAYER, 0 };
+    entity outside = { 0 };
+    entity actor = { .model = &data, .modeldata = data, .health = 100 };
+    obor_profile_build = revision;
+    for(int family = 0; family < 5; ++family) {
+        int base = ANI_IDLE + family, first = 10 + 2 * family, next = first + 1;
+        available[base] = available[first] = available[next] = 1;
+        actor.xdir = 5;
+        actor.zdir = -3;
+        self = &outside;
+        chosen = probes = 0;
+        target_animation = next;
+        assert(select_animation(&actor, family));
+        assert(chosen == next && probes == 2);
+        assert(self == (!modes && family == 0 ? &actor : &outside));
+        assert(actor.xdir == (family == 0 ? 0 : 5));
+        assert(actor.zdir == (family == 0 ? 0 : -3));
+
+        actor.idlemode = actor.walkmode = modes ? 2 : 0;
+        chosen = probes = 0;
+        assert(select_animation(&actor, family));
+        assert(chosen == (modes ? base : next) && probes == (modes ? 1 : 2));
+
+        chosen = probes = 0;
+        target_animation = first;
+        assert(select_animation(&actor, family));
+        assert(chosen == first && probes == 1);
+
+        available[base] = 0;
+        chosen = probes = target_animation = 0;
+        assert(!select_animation(&actor, family));
+        assert(!chosen && probes == (modes ? 1 : 2));
+        available[first] = available[next] = 0;
+        actor.idlemode = actor.walkmode = 0;
+    }
+    available[ANI_FAINT] = available[ANI_SLEEP] = 1;
+    time = actor.sleeptime = 50;
+    actor.animating = 1;
+    actor.health = 25;
+    chosen = probes = 0;
+    assert(common_idle_anim(&actor) && chosen == ANI_FAINT && !probes);
+    actor.health = 26;
+    chosen = 0;
+    assert(common_idle_anim(&actor) && chosen == ANI_SLEEP && !probes);
+    available[ANI_FAINT] = available[ANI_SLEEP] = 0;
+}
+
+int main(void)
+{
+    static const struct { unsigned revision; int modes; } profiles[] = { @PROFILES@ };
+    for(unsigned i = 0; i < sizeof(profiles) / sizeof(*profiles); ++i)
+        check(profiles[i].revision, profiles[i].modes);
+    return 0;
+}

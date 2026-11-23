@@ -7,73 +7,75 @@
  * on macOS. Keep damage-over-time updates within the native effect arrays
  * while retaining valid-slot tick and expiration calculations. Derive output
  * names from the content basename with explicit destination capacities, and
- * reject overflowing output path joins. Select historical attack domains,
- * environmental damage, camera and scroll behavior, model-save loading,
- * weapon and idle order, nested scripts and numeric script selectors. Retain
- * bounded storage, safe ownership and the selected rejected-value contracts.
- * Preserve source-defined argument counts, line capacities and script
- * constants for each historical profile. Select explicit animation-sync
- * command availability while preserving native unknown-command diagnostics
- * and implicit animation sync. Preserve each profile's model-constant load
- * phase, selected model-list limits and vector reconstruction during reload.
- * Keep script-setting writes within each profile's source availability.
- * Preserve each profile's fade pixel arithmetic, channel correction and
- * frame count. Leave multiplayer slots without a selected model available to
- * join even if game scripts preassign lives to them. Let a missing basename-
- * only PAK self-check read the active frontend content after it has been
- * validated and prepared. Allocate each model's animation pointer table
- * through the highest animation index that model uses, and bound cache, copy
- * and cleanup paths to that capacity. Ignore optional defense and offense
- * entries outside the allocated model attack-type range with a log warning
- * before accessing their tables. Yield after each newly completed model
- * during explicit model-list or level preparation, and defer states until
- * that preparation has cleaned up its intermediate parsers and handles.
- * Resize repeated weapon lists and detach borrowed lists before replacing
- * their entries. Guard an optional entity animation interpreter before
- * reading its reset state. Share identical immutable animation-frame draw
- * methods with reference-counted ownership. Select the pre-3800 player spawn
- * coordinate limit and pre-3805 ordered, cached spawn scripts by logical
- * build, with explicit level ownership and cleanup. Keep model clip
- * coordinates absolute before 3842 and relative to frame offsets and
- * projected entity positions from 3842, with bounded integer coordinate
- * arithmetic. Recalculate completed-game bonuses at the original successful
- * menu callers before 3820 and in the loader from 3820, preserving the other
- * saved-game routes and failure behavior. Return a defined null result for
- * absent colourmap models or tables while retaining valid palette fallback.
- * Keep selected palette-conversion reads bounded and reject missing maps or
- * flags, while preserving unselected slots and native allocation failure
- * callbacks. Check destination animation capacity when retaining an
- * animation across model changes, preserving the native fallback and timing.
- * Query and execute model-copy callbacks only in profiles whose original
- * build provides them. Preserve the historical projectile and landing damage
- * factor exemptions before the attack-type contract change. Preserve native
- * unknown-command handling for unavailable model-copy scripts before their
- * source boundary, retaining later loading and callback cleanup. Preserve
- * native menu key-name availability, unchanged numeric indices and unknown-
- * command diagnostics by profile. Preserve native duplicate-player name
- * comparisons and final-player countdown predicates by profile. Preserve
- * native unsigned spawn-score and model-AI sentinel semantics and signed
- * multiplier clamping by profile. Apply direct external-file buffering from
- * its native profile boundary, retaining older selected packreader behavior
- * and active-content aliases. Access script-container pointer slots with
- * byte copies, preserving record layout, pointer values and native
- * copy/cleanup order. Pointer-slot allocation and release accept byte
- * storage without imposing pointer alignment on a packed field. Preserve
- * pre-series alternate idle query order and native context restoration.
- * Retain source-defined missing-sample diagnostics for model sound commands.
- * Release each sprite owner once and complete cleanup independently of alias
- * counts. Preserve native sprite-map capacity policies, check allocation
- * extents and retain existing storage and capacity when growth is
- * unavailable. Validate sprite-node allocations and release partial
- * resources without changing existing owners. Check cached sprite
- * availability before reading metadata and ignore cache requests for absent
- * nodes. Preserve each profile's native argument-finder comment recognition
- * and retained parser bytes. Preserve source-defined colour-map cycling,
- * model rotation, selection confirmation and deadlines, camera bounds,
- * reverse scrolling and damage attribution by profile. Capture explicit
- * shutdown failure text before cleanup and bound legacy diagnostic
- * formatting. Receive layer screen outputs in naturally aligned storage
- * before assigning the packed member.
+ * reject overflowing output path joins. Select source-defined action timing,
+ * combined entity types, animation sync, entity draw callbacks, terrain
+ * heights, level exits, pause input, quake flags and panel movement by
+ * profile. Select historical attack domains, environmental damage, camera
+ * and scroll behavior, model-save loading, weapon and idle order, nested
+ * scripts and numeric script selectors. Retain bounded storage, safe
+ * ownership and the selected rejected-value contracts. Preserve source-
+ * defined argument counts, line capacities and script constants for each
+ * historical profile. Select explicit animation-sync command availability
+ * while preserving native unknown-command diagnostics and implicit animation
+ * sync. Preserve each profile's model-constant load phase, selected model-
+ * list limits and vector reconstruction during reload. Keep script-setting
+ * writes within each profile's source availability. Preserve each profile's
+ * fade pixel arithmetic, channel correction and frame count. Leave
+ * multiplayer slots without a selected model available to join even if game
+ * scripts preassign lives to them. Let a missing basename-only PAK self-
+ * check read the active frontend content after it has been validated and
+ * prepared. Allocate each model's animation pointer table through the
+ * highest animation index that model uses, and bound cache, copy and cleanup
+ * paths to that capacity. Ignore optional defense and offense entries
+ * outside the allocated model attack-type range with a log warning before
+ * accessing their tables. Yield after each newly completed model during
+ * explicit model-list or level preparation, and defer states until that
+ * preparation has cleaned up its intermediate parsers and handles. Resize
+ * repeated weapon lists and detach borrowed lists before replacing their
+ * entries. Guard an optional entity animation interpreter before reading its
+ * reset state. Share identical immutable animation-frame draw methods with
+ * reference-counted ownership. Select the pre-3800 player spawn coordinate
+ * limit and pre-3805 ordered, cached spawn scripts by logical build, with
+ * explicit level ownership and cleanup. Keep model clip coordinates absolute
+ * before 3842 and relative to frame offsets and projected entity positions
+ * from 3842, with bounded integer coordinate arithmetic. Recalculate
+ * completed-game bonuses at the original successful menu callers before 3820
+ * and in the loader from 3820, preserving the other saved-game routes and
+ * failure behavior. Return a defined null result for absent colourmap models
+ * or tables while retaining valid palette fallback. Keep selected palette-
+ * conversion reads bounded and reject missing maps or flags, while
+ * preserving unselected slots and native allocation failure callbacks. Check
+ * destination animation capacity when retaining an animation across model
+ * changes, preserving the native fallback and timing. Query and execute
+ * model-copy callbacks only in profiles whose original build provides them.
+ * Preserve the historical projectile and landing damage factor exemptions
+ * before the attack-type contract change. Preserve native unknown-command
+ * handling for unavailable model-copy scripts before their source boundary,
+ * retaining later loading and callback cleanup. Preserve native menu key-
+ * name availability, unchanged numeric indices and unknown-command
+ * diagnostics by profile. Preserve native duplicate-player name comparisons
+ * and final-player countdown predicates by profile. Preserve native unsigned
+ * spawn-score and model-AI sentinel semantics and signed multiplier clamping
+ * by profile. Apply direct external-file buffering from its native profile
+ * boundary, retaining older selected packreader behavior and active-content
+ * aliases. Access script-container pointer slots with byte copies,
+ * preserving record layout, pointer values and native copy/cleanup order.
+ * Pointer-slot allocation and release accept byte storage without imposing
+ * pointer alignment on a packed field. Preserve pre-series alternate idle
+ * query order and native context restoration. Retain source-defined missing-
+ * sample diagnostics for model sound commands. Release each sprite owner
+ * once and complete cleanup independently of alias counts. Preserve native
+ * sprite-map capacity policies, check allocation extents and retain existing
+ * storage and capacity when growth is unavailable. Validate sprite-node
+ * allocations and release partial resources without changing existing
+ * owners. Check cached sprite availability before reading metadata and
+ * ignore cache requests for absent nodes. Preserve each profile's native
+ * argument-finder comment recognition and retained parser bytes. Preserve
+ * source-defined colour-map cycling, model rotation, selection confirmation
+ * and deadlines, camera bounds, reverse scrolling and damage attribution by
+ * profile. Capture explicit shutdown failure text before cleanup and bound
+ * legacy diagnostic formatting. Receive layer screen outputs in naturally
+ * aligned storage before assigning the packed member.
  * Existing changes recorded here; this is not their implementation date.
  * See MODIFICATIONS.md and docs/modifications/3842.md
  * at the source repository root. Original notices follow below.
@@ -149,6 +151,11 @@ s_set_entry *levelsets = NULL;
 int        num_difficulties;
 
 int no_cmd_compatible = 0;
+
+static int obor_motion_after_update(void)
+{
+    return obor_profile_build == 3894u || obor_profile_build == 3896u;
+}
 
 static int obor_animation_cmd_grouped(void)
 {
@@ -758,6 +765,8 @@ unsigned int        models_loaded		= 0;
 unsigned int        models_cached		= 0;
 
 entity**            ent_list;
+static entity **draw_script_entities;
+static int draw_script_count;
 entity*             self;
 int                 ent_count			= 0;					// log count of entites
 int                 ent_max				= 0;
@@ -1003,7 +1012,7 @@ int buffer_append(char** buffer, const char* str, size_t n, size_t* bufferlen, s
 	if(appendlen>n) appendlen = n;
 	if(appendlen+*len+1>*bufferlen)
 	{
-		//printf("*Debug* reallocating buffer...\n");
+		if(obor_profile_build < 3838u) printf("*Debug* reallocating buffer...\n");
 		*buffer = realloc(*buffer, *bufferlen=appendlen+*len+1024);
 		if(*buffer==NULL) shutdown(1, "Unalbe to resize buffer.\n");
 	}
@@ -1841,7 +1850,10 @@ void execute_animation_script(entity* ent)
 	Script* cs = ent->scripts->animation_script;
 	Script* s1 = ent->model->scripts->animation_script;
 	Script* s2 = ent->defaultmodel->scripts->animation_script;
-	if(Script_IsInitialized(s1) || Script_IsInitialized(s2))
+	const int reuse_initialization = obor_profile_build >= 3884u;
+	const int current_initialized = Script_IsInitialized(s1);
+	const int default_initialized = reuse_initialization ? Script_IsInitialized(s2) : 0;
+	if(current_initialized || (reuse_initialization ? default_initialized : Script_IsInitialized(s2)))
 	{
 		/* A model can acquire its animation script before the entity-local
 		 * interpreter is created (for example during scripted map entities).
@@ -1861,15 +1873,15 @@ void execute_animation_script(entity* ent)
 		ScriptVariant_ChangeType(&tempvar, VT_INTEGER);
 		tempvar.lVal = (LONG)ent->animation->index;
 		Script_Set_Local_Variant(cs, "animhandle",   &tempvar);
-		if(Script_IsInitialized(s1)){
+		if(reuse_initialization ? current_initialized : Script_IsInitialized(s1)){
 			Script_Copy(cs, s1, 0);
 			Script_Execute(cs);
 		}
-		if(ent->model!=ent->defaultmodel && Script_IsInitialized(s2)){
+		if(ent->model!=ent->defaultmodel && (reuse_initialization ? default_initialized : Script_IsInitialized(s2))){
 			Script_Copy(cs, s2, 0);
 			Script_Execute(cs);
 		}
-		if(obor_profile_build >= 3813 && Script_IsInitialized(s1)){
+		if(obor_profile_build >= 3813 && !reuse_initialization && Script_IsInitialized(s1)){
 			Script_Copy(cs, s1, 0);
 		}
 		//clear to save variant space
@@ -2413,6 +2425,23 @@ void execute_onmodelcopy_script(entity* ent, entity* old)
 	}
 }
 
+static void execute_ondraw_script(entity* ent)
+{
+	ScriptVariant tempvar;
+	Script* cs = ent && ent->scripts ? ent->scripts->ondraw_script : NULL;
+	if(cs && Script_IsInitialized(cs))
+	{
+		ScriptVariant_Init(&tempvar);
+		ScriptVariant_ChangeType(&tempvar, VT_PTR);
+		tempvar.ptrVal = (VOID*)ent;
+		Script_Set_Local_Variant(cs, "self", &tempvar);
+		Script_Execute(cs);
+		//clear to save variant space
+		ScriptVariant_Clear(&tempvar);
+		Script_Set_Local_Variant(cs, "self", &tempvar);
+	}
+}
+
 void execute_entity_key_script(entity* ent)
 {
 	ScriptVariant tempvar;
@@ -2457,7 +2486,7 @@ static void obor_clear_historical_spawn_scripts(s_level *lv)
 }
 
 static int obor_load_historical_spawn_script(s_level *lv, s_spawn_entry *entry,
-                                            char *path)
+                                            char *name, char *path)
 {
     obor_level_spawn_resource **slot = &lv->historical_script_cache;
     obor_level_spawn_resource *resource;
@@ -2472,7 +2501,7 @@ static int obor_load_historical_spawn_script(s_level *lv, s_spawn_entry *entry,
         resource->path = malloc(length + 1);
         if(!resource->path) { free(resource); return 0; }
         memcpy(resource->path, path, length + 1);
-        Script_Init(&resource->script, "spawnscript", NULL, 1);
+        Script_Init(&resource->script, name, NULL, 1);
         if(!load_script(&resource->script, path) || !Script_Compile(&resource->script))
         {
             Script_Clear(&resource->script, 2);
@@ -5558,6 +5587,8 @@ void lcmHandleCommandType(ArgList* arglist, s_model* newchar, char* filename) {
 		newchar->no_adjust_base         = 0;
 	}
 	else if(stricmp(value, "steamer")==0){
+		if(obor_profile_build == 3894u || obor_profile_build == 3896u)
+			newchar->offscreenkill = 80;
 		newchar->type = TYPE_STEAMER;
 	}
 	// my new types   7-1-2005
@@ -5923,11 +5954,65 @@ void lcmHandleCommandWeapons(ArgList* arglist, s_model* newchar) {
 		}
 	}
 }
-void lcmHandleCommandScripts(ArgList* arglist, Script* script, char* scriptname, char* filename) {
-	Script_Init(script, scriptname, filename, 0);
-	if(load_script(script, GET_ARGP(1)))
-		Script_Compile(script);
-	else shutdown(1, "Unable to load %s '%s' in file '%s'.\n", scriptname, GET_ARGP(1), filename);
+static int obor_extract_inline_script(const char *text, size_t available, char **body, size_t *consumed)
+{
+    static const char opener[] = "@script";
+    static const char closer[] = "@end_script";
+    const size_t open_size = sizeof(opener) - 1, close_size = sizeof(closer) - 1;
+    *body = NULL;
+    *consumed = 0;
+    if(available < open_size) return 0;
+    size_t start = 0;
+    while(start <= available - open_size && memcmp(text + start, opener, open_size) != 0)
+        ++start;
+    if(start > available - open_size || available < close_size) return 0;
+    start += open_size;
+    size_t end = start;
+    while(end <= available - close_size && memcmp(text + end, closer, close_size) != 0)
+        ++end;
+    if(end > available - close_size) return 0;
+    const size_t length = end - start;
+    char *content = malloc(length + 1);
+    if(!content) return 0;
+    memcpy(content, text + start, length);
+    content[length] = '\0';
+    *body = content;
+    *consumed = end + close_size;
+    return 1;
+}
+
+static size_t lcmHandleCommandScripts(ArgList *arglist, const char *text, size_t available,
+                                      Script *script, char *scriptname, char *filename, int compile)
+{
+    size_t consumed = 0;
+    const char *argument = GET_ARGP(1);
+    int loaded;
+    Script_Init(script, scriptname, filename, 0);
+    if(obor_profile_build >= 3880u && stricmp(argument, "@script") == 0)
+    {
+        char *body;
+        loaded = obor_extract_inline_script(text, available, &body, &consumed) &&
+                 Script_AppendText(script, body, filename);
+        free(body);
+    }
+    else
+        loaded = load_script(script, GET_ARGP(1));
+    if(!loaded)
+        shutdown(1, "Unable to load %s '%s' in file '%s'.\n", scriptname, argument, filename);
+    else if(compile)
+        Script_Compile(script);
+    return consumed;
+}
+
+static size_t lcmHandleLevelCommandScripts(ArgList *arglist, const char *text, size_t available,
+                                           Script *script, char *scriptname, char *filename, int compile)
+{
+    if(obor_profile_build >= 3894u && !Script_ResetVariables(script))
+    {
+        shutdown(1, "Unable to allocate script local variables.\n");
+        return 0;
+    }
+    return lcmHandleCommandScripts(arglist, text, available, script, scriptname, filename, compile);
 }
 
 //alloc a new model, and everything thats required,
@@ -6096,6 +6181,8 @@ static int model_animation_reserve(s_model* model, int animation_id)
 void update_model_loadflag(s_model* model, char unload) {
 	model->unload = unload;
 }
+
+enum { NO_QUAKE = 1, NO_QUAKEN = 2 };
 
 s_model* load_cached_model(char * name, char * owner, char unload)
 {
@@ -6266,7 +6353,8 @@ s_model* load_cached_model(char * name, char * owner, char unload)
 		if(ParseArgs(&arglist,buf+pos,argbuf)){
 			command = GET_ARG(0);
 			cmd = getModelCommand(modelcmdlist, command);
-            if(obor_profile_build < 3793 && cmd == CMD_MODEL_ONMODELCOPYSCRIPT)
+            if((obor_profile_build < 3793 && cmd == CMD_MODEL_ONMODELCOPYSCRIPT) ||
+               (obor_profile_build < 3875u && cmd == CMD_MODEL_ONDRAWSCRIPT))
                 cmd = (modelCommands)0;
             if(obor_profile_build < 3841 && cmd == CMD_MODEL_SYNC)
                 cmd = (modelCommands)0;
@@ -6320,7 +6408,10 @@ s_model* load_cached_model(char * name, char * owner, char unload)
 					newchar->nolife = GET_INT_ARG(1);
 					break;
 				case CMD_MODEL_MAKEINV:	// Mar 12, 2005 - If a value is supplied, corresponds to amount of time the player spawns invincible
-					newchar->makeinv = GET_INT_ARG(1) * GAME_SPEED;
+					if(obor_profile_build >= 3864u)
+						newchar->makeinv = GET_FLOAT_ARG(1) * GAME_SPEED;
+					else
+						newchar->makeinv = GET_INT_ARG(1) * GAME_SPEED;
 					if(GET_INT_ARG(2)) newchar->makeinv = -newchar->makeinv;
 					break;
 				case CMD_MODEL_RISEINV:
@@ -6346,7 +6437,13 @@ s_model* load_cached_model(char * name, char * owner, char unload)
 					newchar->bounce = GET_INT_ARG(1);
 					break;
 				case CMD_MODEL_NOQUAKE:  // Mar 12, 2005 - Flag to determine if entity shakes screen
-					newchar->noquake = GET_INT_ARG(1);
+					if (obor_profile_build >= 3890u)
+                    {
+                        newchar->noquake |= GET_INT_ARG(1) ? NO_QUAKE : 0;
+                        newchar->noquake |= GET_INT_ARG(2) ? NO_QUAKEN : 0;
+                    }
+                    else
+                        newchar->noquake = GET_INT_ARG(1);
 					break;
 				case CMD_MODEL_BLOCKBACK:	// Flag to determine if attacks can be blocked from behind
 					newchar->blockback = GET_INT_ARG(1);
@@ -7154,67 +7251,76 @@ case CMD_MODEL_PALETTE:
 					break;
 				case CMD_MODEL_SCRIPT:
 					//load the update script
-					lcmHandleCommandScripts(&arglist, newchar->scripts->update_script, "updateentityscript", filename);
+					pos += lcmHandleCommandScripts(&arglist, buf + pos, size - (size_t)pos, newchar->scripts->update_script, "updateentityscript", filename, 1);
 					break;
 				case CMD_MODEL_THINKSCRIPT:
-					lcmHandleCommandScripts(&arglist, newchar->scripts->think_script, "thinkscript", filename);
+					pos += lcmHandleCommandScripts(&arglist, buf + pos, size - (size_t)pos, newchar->scripts->think_script, "thinkscript", filename, 1);
 					break;
 				case CMD_MODEL_TAKEDAMAGESCRIPT:
-					lcmHandleCommandScripts(&arglist, newchar->scripts->takedamage_script, "takedamagescript", filename);
+					pos += lcmHandleCommandScripts(&arglist, buf + pos, size - (size_t)pos, newchar->scripts->takedamage_script, "takedamagescript", filename, 1);
 					break;
 				case CMD_MODEL_ONFALLSCRIPT:
-					lcmHandleCommandScripts(&arglist, newchar->scripts->onfall_script, "onfallscript", filename);
+					pos += lcmHandleCommandScripts(&arglist, buf + pos, size - (size_t)pos, newchar->scripts->onfall_script, "onfallscript", filename, 1);
 					break;
 				case CMD_MODEL_ONPAINSCRIPT:
-					lcmHandleCommandScripts(&arglist, newchar->scripts->onpain_script, "onpainscript", filename);
+					pos += lcmHandleCommandScripts(&arglist, buf + pos, size - (size_t)pos, newchar->scripts->onpain_script, "onpainscript", filename, 1);
 					break;
 				case CMD_MODEL_ONBLOCKSSCRIPT:
-					lcmHandleCommandScripts(&arglist, newchar->scripts->onblocks_script, "onblocksscript", filename);
+					pos += lcmHandleCommandScripts(&arglist, buf + pos, size - (size_t)pos, newchar->scripts->onblocks_script, "onblocksscript", filename, 1);
 					break;
 				case CMD_MODEL_ONBLOCKWSCRIPT:
-					lcmHandleCommandScripts(&arglist, newchar->scripts->onblockw_script, "onblockwscript", filename);
+					pos += lcmHandleCommandScripts(&arglist, buf + pos, size - (size_t)pos, newchar->scripts->onblockw_script, "onblockwscript", filename, 1);
 					break;
 				case CMD_MODEL_ONBLOCKOSCRIPT:
-					lcmHandleCommandScripts(&arglist, newchar->scripts->onblocko_script, "onblockoscript", filename);
+					pos += lcmHandleCommandScripts(&arglist, buf + pos, size - (size_t)pos, newchar->scripts->onblocko_script, "onblockoscript", filename, 1);
 					break;
 				case CMD_MODEL_ONBLOCKZSCRIPT:
-					lcmHandleCommandScripts(&arglist, newchar->scripts->onblockz_script, "onblockzscript", filename);
+					pos += lcmHandleCommandScripts(&arglist, buf + pos, size - (size_t)pos, newchar->scripts->onblockz_script, "onblockzscript", filename, 1);
 					break;
 				case CMD_MODEL_ONBLOCKASCRIPT:
-					lcmHandleCommandScripts(&arglist, newchar->scripts->onblocka_script, "onblockascript", filename);
+					pos += lcmHandleCommandScripts(&arglist, buf + pos, size - (size_t)pos, newchar->scripts->onblocka_script, "onblockascript", filename, 1);
 					break;
 				case CMD_MODEL_ONMOVEXSCRIPT:
-					lcmHandleCommandScripts(&arglist, newchar->scripts->onmovex_script, "onmovexscript", filename);
+					pos += lcmHandleCommandScripts(&arglist, buf + pos, size - (size_t)pos, newchar->scripts->onmovex_script, "onmovexscript", filename, 1);
 					break;
 				case CMD_MODEL_ONMOVEZSCRIPT:
-					lcmHandleCommandScripts(&arglist, newchar->scripts->onmovez_script, "onmovezscript", filename);
+					pos += lcmHandleCommandScripts(&arglist, buf + pos, size - (size_t)pos, newchar->scripts->onmovez_script, "onmovezscript", filename, 1);
 					break;
 				case CMD_MODEL_ONMOVEASCRIPT:
-					lcmHandleCommandScripts(&arglist, newchar->scripts->onmovea_script, "onmoveascript", filename);
+					pos += lcmHandleCommandScripts(&arglist, buf + pos, size - (size_t)pos, newchar->scripts->onmovea_script, "onmoveascript", filename, 1);
 					break;
 				case CMD_MODEL_ONDEATHSCRIPT:
-					lcmHandleCommandScripts(&arglist, newchar->scripts->ondeath_script, "ondeathscript", filename);
+					pos += lcmHandleCommandScripts(&arglist, buf + pos, size - (size_t)pos, newchar->scripts->ondeath_script, "ondeathscript", filename, 1);
 					break;
 				case CMD_MODEL_ONKILLSCRIPT:
-					lcmHandleCommandScripts(&arglist, newchar->scripts->onkill_script, "onkillscript", filename);
+					pos += lcmHandleCommandScripts(&arglist, buf + pos, size - (size_t)pos, newchar->scripts->onkill_script, "onkillscript", filename, 1);
 					break;
 				case CMD_MODEL_DIDBLOCKSCRIPT:
-					lcmHandleCommandScripts(&arglist, newchar->scripts->didblock_script, "didblockscript", filename);
+					pos += lcmHandleCommandScripts(&arglist, buf + pos, size - (size_t)pos, newchar->scripts->didblock_script, "didblockscript", filename, 1);
 					break;
 				case CMD_MODEL_ONDOATTACKSCRIPT:
-					lcmHandleCommandScripts(&arglist, newchar->scripts->ondoattack_script, "ondoattackscript", filename);
+					pos += lcmHandleCommandScripts(&arglist, buf + pos, size - (size_t)pos, newchar->scripts->ondoattack_script, "ondoattackscript", filename, 1);
 					break;
 				case CMD_MODEL_DIDHITSCRIPT:
-					lcmHandleCommandScripts(&arglist, newchar->scripts->didhit_script, "didhitscript", filename);
+					pos += lcmHandleCommandScripts(&arglist, buf + pos, size - (size_t)pos, newchar->scripts->didhit_script, "didhitscript", filename, 1);
 					break;
 				case CMD_MODEL_ONSPAWNSCRIPT:
-					lcmHandleCommandScripts(&arglist, newchar->scripts->onspawn_script, "onspawnscript", filename);
+					pos += lcmHandleCommandScripts(&arglist, buf + pos, size - (size_t)pos, newchar->scripts->onspawn_script, "onspawnscript", filename, 1);
+					break;
+				case CMD_MODEL_ONDRAWSCRIPT:
+					pos += lcmHandleCommandScripts(&arglist, buf + pos, size - (size_t)pos, newchar->scripts->ondraw_script, "ondrawscript", filename, 1);
 					break;
 				case CMD_MODEL_ONMODELCOPYSCRIPT:
                     if(obor_profile_build >= 3793)
-					lcmHandleCommandScripts(&arglist, newchar->scripts->onmodelcopy_script, "onmodelcopyscript", filename);
+					pos += lcmHandleCommandScripts(&arglist, buf + pos, size - (size_t)pos, newchar->scripts->onmodelcopy_script, "onmodelcopyscript", filename, 1);
 					break;
 				case CMD_MODEL_ANIMATIONSCRIPT:
+					if(obor_profile_build >= 3880u)
+					{
+						pos += lcmHandleCommandScripts(&arglist, buf + pos, size - (size_t)pos,
+						    newchar->scripts->animation_script, "animationscript", filename, 0);
+						break;
+					}
 					Script_Init(newchar->scripts->animation_script, "animationscript", filename, 0);
 					if(!load_script(newchar->scripts->animation_script, GET_ARG(1))) {
 						shutdownmessage = "Unable to load animation script!";
@@ -7223,7 +7329,7 @@ case CMD_MODEL_PALETTE:
 					//dont compile, until at end of this function
 					break;
 				case CMD_MODEL_KEYSCRIPT:
-					lcmHandleCommandScripts(&arglist, newchar->scripts->key_script, "entitykeyscript", filename);
+					pos += lcmHandleCommandScripts(&arglist, buf + pos, size - (size_t)pos, newchar->scripts->key_script, "entitykeyscript", filename, 1);
 					break;
 				case CMD_MODEL_ANIM:
 					{
@@ -7943,8 +8049,11 @@ case CMD_MODEL_PALETTE:
 						value = GET_ARG(1);
 						//printf("frame count: %d\n",framecount);
 						//printf("Load sprite '%s'...\n", value);
-						index = loadsprite(value, offset[0], offset[1],nopalette?PIXEL_x8:PIXEL_8);//don't use palette for the sprite since it will one palette from the entity's remap list in 24bit mode
-						if(pixelformat==PIXEL_x8 && !nopalette)
+						if(obor_profile_build >= 3880u && stricmp(value, "none") == 0)
+							index = -1;
+						else
+							index = loadsprite(value, offset[0], offset[1],nopalette?PIXEL_x8:PIXEL_8);//don't use palette for the sprite since it will one palette from the entity's remap list in 24bit mode
+						if((index >= 0 || obor_profile_build < 3880u) && pixelformat==PIXEL_x8 && !nopalette)
 						{
 							// for old mod just give it a default palette
 							if(newchar->palette==NULL)
@@ -8918,7 +9027,7 @@ int load_models()
 					noatk_duration =  GET_FLOAT_ARG(1);
 					break;
 				default:
-					if(cmd>=CMD_MODELSTXT_THE_END) printf("command %s not understood in %s, line %d\n", command, filename, line);
+					if(obor_profile_build < 3828u || cmd>=CMD_MODELSTXT_THE_END) printf("command %s not understood in %s, line %d\n", command, filename, line);
 					break;
 			}
 		}
@@ -9775,6 +9884,8 @@ void free_level(s_level* lv)
 	if(lv->textobjs) free(lv->textobjs);
 	if(lv->holes) free(lv->holes);
 	if(lv->walls) free(lv->walls);
+	for(i = 0; i < lv->numbasemaps; ++i) free(lv->basemaps[i].map);
+	free(lv->basemaps);
 	if(lv->palettes) free(lv->palettes);
 	if(lv->blendings) free(lv->blendings);
 
@@ -9848,7 +9959,7 @@ void unload_level(){
 
 void load_level(char *filename){
 	char *buf = NULL;
-	size_t size, len, sblen;
+	size_t size, len;
 	ptrdiff_t pos, oldpos;
 	char *command;
 	char *value;
@@ -10394,15 +10505,21 @@ void load_level(char *filename){
 						break;
 					case CMD_LEVEL_LEVELSCRIPT:
 						tempscript = &(level->level_script);
-						scriptname = command;
+						scriptname = obor_profile_build >= 3880u ? "levelscript" : command;
 						break;
 					case CMD_LEVEL_ENDLEVELSCRIPT:
 						tempscript = &(level->endlevel_script);
-						scriptname = command;
+						scriptname = obor_profile_build >= 3880u ? "endlevelscript" : command;
 						break;
 					default:
 						assert(0);
 
+				}
+				if(obor_profile_build >= 3880u)
+				{
+					pos += lcmHandleLevelCommandScripts(&arglist, buf + pos, size - (size_t)pos,
+					    tempscript, scriptname, filename, 1);
+					break;
 				}
 				value = GET_ARG(1);
 				if(!Script_IsInitialized(tempscript))
@@ -10630,7 +10747,10 @@ void load_level(char *filename){
 				break;
 			case CMD_LEVEL_AGGRESSION:
 				// Aggression can be set per spawn.
-				next.aggression = next.aggression + GET_INT_ARG(1);
+				if(obor_profile_build >= 3864u)
+					next.aggression = GET_INT_ARG(1);
+				else
+					next.aggression += GET_INT_ARG(1);
 				break;
 			case CMD_LEVEL_CREDIT:
 				next.credit = GET_INT_ARG(1);
@@ -10644,9 +10764,15 @@ void load_level(char *filename){
 				next.a = GET_FLOAT_ARG(3);
 				break;
 			case CMD_LEVEL_SPAWNSCRIPT:
+                if(obor_profile_build >= 3880u)
+                {
+                    pos += lcmHandleLevelCommandScripts(&arglist, buf + pos, size - (size_t)pos,
+                        &next.spawnscript, "Level spawn entry script", filename, 0);
+                    break;
+                }
                 if(obor_profile_build < 3805)
                 {
-                    if(!obor_load_historical_spawn_script(level, &next, GET_ARG(1)))
+                    if(!obor_load_historical_spawn_script(level, &next, GET_ARG(0), GET_ARG(1)))
                     {
                         errormessage = "Failed loading spawn entry script!";
                         goto lCleanup;
@@ -10661,26 +10787,27 @@ void load_level(char *filename){
 				}
 				break;
 			case CMD_LEVEL_AT_SCRIPT:
-				if(!Script_IsInitialized(&next.spawnscript))
-					Script_Init(&next.spawnscript, "Level spawn entry script", filename, 0);
-				while(strncmp(buf+pos, "@script", 7)){
-					pos++;
-				}
-				pos += 7;
-				sblen = 0;
-				while(strncmp(buf+pos, "@end_script", 11)){
-					sblen++; pos++;
-				}
-				scriptbuf = malloc(sblen+1);
-				strncpy(scriptbuf, buf+pos-sblen, sblen);
-				scriptbuf[sblen] = 0;
-				if(!Script_AppendText(&next.spawnscript, scriptbuf, filename)){
-					errormessage = "Unable to parse level spawn entry script.\n";
-					goto lCleanup;
-				}
-				free(scriptbuf); scriptbuf = NULL;
-				pos += 11;
-				break;
+            {
+                if(!Script_IsInitialized(&next.spawnscript))
+                    Script_Init(&next.spawnscript, "Level spawn entry script", filename, 0);
+                const size_t remaining = size - (size_t)pos;
+                size_t consumed;
+                if(!obor_extract_inline_script(buf + pos, remaining, &scriptbuf, &consumed) ||
+                   !Script_AppendText(&next.spawnscript, scriptbuf, filename))
+                {
+                    errormessage = "Unable to parse level spawn entry script.\n";
+                    goto lCleanup;
+                }
+                free(scriptbuf);
+                scriptbuf = NULL;
+                if(obor_profile_build >= 3880u && obor_profile_build < 3888u)
+                {
+                    const size_t skipped = remaining - consumed;
+                    consumed += skipped < sizeof("@end_script") - 1 ? skipped : sizeof("@end_script") - 1;
+                }
+                pos += consumed;
+                break;
+            }
 			case CMD_LEVEL_AT:
 				// Place entry on queue
 				next.at = GET_INT_ARG(1);
@@ -10964,6 +11091,7 @@ void pausemenu()
 {
 	int pauselector = 0;
 	int quit = 0;
+	int controller = 0;
 	s_screen* pausebuffer = allocscreen(videomodes.hRes, videomodes.vRes, screenformat);
 
 	copyscreen(pausebuffer, vscreen);
@@ -10972,6 +11100,17 @@ void pausemenu()
 	spriteq_add_screen(0, 0, MIN_INT, pausebuffer, NULL, 0);
 	spriteq_lock();
 
+	if (obor_profile_build >= 3889u && levelsets && current_set >= 0 && current_set < num_difficulties)
+	{
+		for (int i = 0; i < levelsets[current_set].maxplayers && i < MAX_PLAYERS; ++i)
+		{
+			if (player[i].ent && (player[i].newkeys & FLAG_START))
+			{
+				controller = i;
+				break;
+			}
+		}
+	}
 	pause = 2;
 	bothnewkeys = 0;
 	while(!quit)
@@ -10981,15 +11120,16 @@ void pausemenu()
 		_menutextm((pauselector==1), 0, 0, "End Game");
 
 		update(1,0);
+		const u32 keys = obor_profile_build >= 3889u ? player[controller].newkeys : bothnewkeys;
 
-		if(bothnewkeys & (FLAG_MOVEUP|FLAG_MOVEDOWN)){
+		if(keys & (FLAG_MOVEUP|FLAG_MOVEDOWN)){
 			pauselector ^= 1;
 			sound_play_sample(SAMPLE_BEEP, 0, savedata.effectvol,savedata.effectvol, 100);
 		}
-		if(bothnewkeys & FLAG_START){
+		if(keys & FLAG_START){
 			if(pauselector){
 				player[0].lives = player[1].lives = player[2].lives = player[3].lives = 0; //4player
-				endgame = 1;
+				endgame = obor_profile_build >= 3882u ? 2 : 1;
 			}
 			quit = 1;
 			sound_pause_music(0);
@@ -10997,14 +11137,14 @@ void pausemenu()
 			sound_play_sample(SAMPLE_BEEP2, 0, savedata.effectvol,savedata.effectvol, 100);
 			pauselector = 0;
 		}
-		if(bothnewkeys & FLAG_ESC){
+		if(keys & FLAG_ESC){
 			quit = 1;
 			sound_pause_music(0);
 			sound_pause_sample(0);
 			sound_play_sample(SAMPLE_BEEP2, 0, savedata.effectvol,savedata.effectvol, 100);
 			pauselector = 0;
 		}
-		if(bothnewkeys & FLAG_SCREENSHOT){
+		if(keys & FLAG_SCREENSHOT){
 			pause = 1;
 			sound_pause_music(1);
 			sound_pause_sample(1);
@@ -11685,6 +11825,9 @@ void free_ents()
 	if(!ent_list) return;
 	for(i=0; i<ent_list_size; i++) free_ent(ent_list[i]);
 	free(ent_list);
+	free(draw_script_entities);
+	draw_script_entities = NULL;
+	draw_script_count = 0;
 	ent_list = NULL;
 	ent_list_size = ent_max = ent_count = 0;
 }
@@ -11735,12 +11878,23 @@ int alloc_ents()
 
     /* Keep the native count visible to the allocation/construction calls. */
     ent_list_size = total;
-    if(!ent_list) grown = malloc(sizeof(*ent_list) * (size_t)total);
+    if(!ent_list && obor_profile_build < 3877u) grown = malloc(sizeof(*ent_list) * (size_t)total);
     else grown = realloc(ent_list, sizeof(*ent_list) * (size_t)total);
     if(!grown) { ent_list_size = first; return 0; }
     ent_list = grown;
     /* AnyBOR: initialize the new pointer slots before partial cleanup. */
     memset(ent_list + first, 0, sizeof(*ent_list) * (size_t)MAX_ENTS);
+    if(obor_profile_build >= 3877u)
+    {
+        entity **queue = realloc(draw_script_entities, sizeof(*queue) * (size_t)total);
+        if(!queue)
+        {
+            ent_list_size = first;
+            return 0;
+        }
+        draw_script_entities = queue;
+        memset(queue + first, 0, sizeof(*queue) * (size_t)MAX_ENTS);
+    }
 
     for(i = first; i < total; ++i)
     {
@@ -11768,7 +11922,7 @@ static int common_anim_series(entity* ent, int arraya[], int maxa, int forcemode
 
 		if (validanim(ent, iAni) && iAni != defaulta)                               //Valid and not Default animation??
 		{
-			if (normal_find_target(iAni,0))                                         //Opponent in range of current animation?
+			if ((obor_profile_build >= 3872u && forcemode) || normal_find_target(iAni,0))                                         //Opponent in range of current animation?
 			{
 				ent_set_anim(ent, iAni, 0);                                         //Set animation.
 				return 1;                                                           //Return 1 and exit.
@@ -12190,7 +12344,12 @@ void update_frame(entity* ent, int f)
 		move = (float)(anim->move?anim->move[f]:0);
 		movez = (float)(anim->movez?anim->movez[f]:0);
 		if(self->direction==0) move = -move;
-		if(movez || move)
+		if(obor_motion_after_update())
+		{
+			self->movex += move;
+			self->movez += movez;
+		}
+		else if(movez || move)
 		{
 			if(self->trymove)
 			{
@@ -12252,9 +12411,10 @@ void update_frame(entity* ent, int f)
 	}
 
 	//spawn / summon /unsummon features
-	if(anim->spawnframe && anim->spawnframe[0] == f && anim->subentity) ent_spawn_ent(self);
+	const int trigger_subentity = obor_profile_build >= 3883u ? anim->subentity >= 0 : anim->subentity != 0;
+	if(anim->spawnframe && anim->spawnframe[0] == f && trigger_subentity) ent_spawn_ent(self);
 
-	if(anim->summonframe && anim->summonframe[0] == f && anim->subentity)
+	if(anim->summonframe && anim->summonframe[0] == f && trigger_subentity)
 	{
 		//subentity is dead
 		if(!self->subentity || self->subentity->dead) ent_summon_ent(self);
@@ -12350,7 +12510,8 @@ void ent_set_anim(entity *ent, int aninum, int resetable)
 	if(ani->numframes == 0)
 		return;
 
-	if(ent->animation && ani->sync>=0 && ent->animation->sync==ani->sync){
+	if(ent->animation && ((obor_profile_build >= 3857u && (resetable & 2)) ||
+	   (ani->sync >= 0 && ent->animation->sync == ani->sync))){
 		animpos = ent->animpos;
 		if(animpos>=ani->numframes)
 			animpos = 0;
@@ -12447,6 +12608,11 @@ void ent_copy_uninit(entity* ent, s_model* oldmodel)
 
 
 //if syncAnim is set, only change animation reference
+static int obor_entity_type_matches(int type, int category)
+{
+    return obor_profile_build >= 3856u ? (type & category) != 0 : type == category;
+}
+
 void ent_set_model(entity * ent, char * modelname, int syncAnim)
 {
 	s_model *m = NULL;
@@ -12474,7 +12640,7 @@ void ent_set_model(entity * ent, char * modelname, int syncAnim)
 	{
 		ent->attacking = 0;
 
-		if((!selectScreen && !time) || ent->modeldata.type != TYPE_PLAYER)
+		if((!selectScreen && !time) || !obor_entity_type_matches(ent->modeldata.type, TYPE_PLAYER))
 		{
 			// use new playerselect spawn anim
 			if( validanim(ent,ANI_SPAWN))
@@ -12482,7 +12648,7 @@ void ent_set_model(entity * ent, char * modelname, int syncAnim)
 			else
 				ent_set_anim(ent, ANI_IDLE, 0);
 		}
-		else if(!selectScreen && time && ent->modeldata.type == TYPE_PLAYER)
+		else if(!selectScreen && time && obor_entity_type_matches(ent->modeldata.type, TYPE_PLAYER))
 		{
 			// mid-level respawn
 			if( validanim(ent, ANI_RESPAWN))
@@ -12580,10 +12746,16 @@ entity * spawn(float x, float z, float a, int direction, char * name, int index,
 			e->nextthink = time + 1;
 			ent_set_colourmap(e, 0);
 			e->lifespancountdown = model->lifespan; // new life span countdown
-			if((e->modeldata.type & (TYPE_PLAYER|TYPE_SHOT)) && level && (level->nohit || savedata.mode)) e->modeldata.hostile &= ~TYPE_PLAYER;
-			if(e->modeldata.type==TYPE_PLAYER) e->playerindex = currentspawnplayer;
+			if ((e->modeldata.type & (TYPE_PLAYER | TYPE_SHOT)) &&
+			    ((level && level->nohit) || (savedata.mode && (level || obor_profile_build >= 3856u))))
+			{
+			    e->modeldata.hostile &= ~TYPE_PLAYER;
+			    if (obor_profile_build >= 3856u)
+			        e->modeldata.candamage &= ~TYPE_PLAYER;
+			}
+			if(obor_entity_type_matches(e->modeldata.type, TYPE_PLAYER)) e->playerindex = currentspawnplayer;
 
-			if(e->modeldata.type == TYPE_TEXTBOX) textbox = e;
+			if(obor_entity_type_matches(e->modeldata.type, TYPE_TEXTBOX)) textbox = e;
 
 			strncpy(e->name, e->modeldata.name, MAX_NAME_LEN);
 			// copy back the value
@@ -12635,7 +12807,7 @@ void kill(entity *victim)
 	if(!victim || !victim->exists)
 		return;
 
-	if(victim->modeldata.type == TYPE_SHOT && player[(int)victim->playerindex].ent)
+	if(obor_entity_type_matches(victim->modeldata.type, TYPE_SHOT) && player[(int)victim->playerindex].ent)
 		player[(int)victim->playerindex].ent->cantfire = 0;
 
 	ent_unlink(victim);
@@ -12704,7 +12876,7 @@ void kill(entity *victim)
 			if(self->landed_on_platform == victim) self->landed_on_platform = NULL;
 			if(self->hithead == victim) self->hithead = NULL;
 			if(self->lasthit == victim) self->lasthit = NULL;
-			if(!textbox && self->modeldata.type == TYPE_TEXTBOX)
+			if(!textbox && obor_entity_type_matches(self->modeldata.type, TYPE_TEXTBOX))
 			textbox = self;
 		}
 	}
@@ -12727,7 +12899,7 @@ void kill_all()
 	}
 	textbox = smartbomber = NULL;
 	time = 0;
-	ent_count = ent_max = 0;
+	ent_count = ent_max = draw_script_count = 0;
 	if(ent_list_size>MAX_ENTS){ //shrinking...
 		free_ents();
 		alloc_ents(); //this shouldn't return 0, because the list shrinks...
@@ -12747,7 +12919,7 @@ int checkhit(entity *attacker, entity *target, int counter)
 
 	if(attacker == target || !target->animation->bbox_coords ||
 	!attacker->animation->attacks || !target->animation->vulnerable[target->animpos] ||
-	((attacker->modeldata.type == TYPE_PLAYER && target->modeldata.type == TYPE_PLAYER) && savedata.mode)) return 0;
+	(obor_profile_build < 3856u && (attacker->modeldata.type == TYPE_PLAYER && target->modeldata.type == TYPE_PLAYER) && savedata.mode)) return 0;
 
 	z1 = attacker->z; z2 = target->z;
 	coords1 = attacker->animation->attacks[attacker->animpos]->attack_coords;
@@ -13419,12 +13591,14 @@ void do_attack(entity *e)
 						e->toss_time += attack->pause_add;      // So jump height pauses in midair
 						e->nextanim += attack->pause_add;       //Pause animation for a bit
 						e->nextthink += attack->pause_add;      // So anything that auto moves will pause
+						if(obor_motion_after_update()) e->nextmove += attack->pause_add;
 						e->pausetime = time + attack->pause_add ; //UT: temporary solution
 					}
 
 					self->toss_time += attack->pause_add;       // So jump height pauses in midair
 					self->nextanim += attack->pause_add;        //Pause animation for a bit
 					self->nextthink += attack->pause_add;       // So anything that auto moves will pause
+					if(obor_motion_after_update()) self->nextmove += attack->pause_add;
 
 				}
 				else
@@ -13606,11 +13780,15 @@ void check_gravity()
 			}
 			else self->hithead = NULL;
 			// gravity, antigravity factors
-			self->a += self->tossv;
+			if(obor_motion_after_update()) self->a += self->tossv * 100.0 / GAME_SPEED;
+			else self->a += self->tossv;
 			if(self->animation->dive) gravity = 0;
 			else gravity = (level?level->gravity:default_level_gravity) * (1.0-self->modeldata.antigravity-self->antigravity);
 			if(self->modeldata.subject_to_gravity>0)
-				self->tossv += gravity;
+			{
+				if(obor_motion_after_update()) self->tossv += gravity * 100.0 / GAME_SPEED;
+				else self->tossv += gravity;
+			}
 
 			fmin = (level?level->maxfallspeed:default_level_maxfallspeed);
 			fmax = (level?level->maxtossspeed:default_level_maxtossspeed);
@@ -13660,9 +13838,9 @@ void check_gravity()
 					self->xdir /= self->animation->bounce;
 					self->zdir /= self->animation->bounce;
 					toss(self, (-self->tossv)/self->animation->bounce);
-					if(level && !self->modeldata.noquake) level->quake = 4;    // Don't shake if specified
+					if(level && !(obor_profile_build >= 3890u ? self->modeldata.noquake & NO_QUAKE : self->modeldata.noquake)) level->quake = 4;    // Don't shake if specified
 					if(SAMPLE_FALL >= 0) sound_play_sample(SAMPLE_FALL, 0, savedata.effectvol,savedata.effectvol, 100);
-					if(self->modeldata.type == TYPE_PLAYER) control_rumble(self->playerindex, 100*(int)self->tossv/2);
+					if(obor_entity_type_matches(self->modeldata.type, TYPE_PLAYER)) control_rumble(self->playerindex, 100*(int)self->tossv/2);
 					for(i=0; i<MAX_PLAYERS; i++) control_rumble(i, 75*(int)self->tossv/2);
 				}
 				else if((!self->animation->seta || self->animation->seta[self->animpos]<0) &&
@@ -13709,7 +13887,7 @@ void check_gravity()
 				// in case landing, set hithead to NULL
 				self->hithead = NULL;
 			}// end of if - land checking
-			self->toss_time = time + (GAME_SPEED/100);
+			self->toss_time = time + (obor_motion_after_update() ? 1 : GAME_SPEED/100);
 		}// end of if  - in-air checking
 
 	}//end of if
@@ -13725,7 +13903,7 @@ void check_lost()
 		((level->scrolldir==SCROLL_UP || level->scrolldir==SCROLL_DOWN) && (self->z-self->a<-osk || self->z-self->a>videomodes.vRes + osk))		) )
 		|| self->a < 2*PIT_DEPTH) //self->z<100000, so weapon item won't be killed
 	{
-		if(self->modeldata.type==TYPE_PLAYER)
+		if(obor_entity_type_matches(self->modeldata.type, TYPE_PLAYER))
 		player_die();
 		else
 		kill(self);
@@ -13797,7 +13975,7 @@ void check_ai()
 {
 	entity* plat;
 	// check moving platform
-	if((plat=self->landed_on_platform) &&
+	if(!obor_motion_after_update() && (plat=self->landed_on_platform) &&
 		(plat->xdir || plat->zdir) &&
 		(plat->nextthink <= time || (plat->update_mark & 2)) &&// plat is updated before self or will be updated this loop
 		testplatform(plat,self->x,self->z, NULL) &&
@@ -13838,7 +14016,7 @@ void check_ai()
 		execute_think_script(self);
 
 		// A.I. move
-		if (self->xdir || self->zdir)
+		if (!obor_motion_after_update() && (self->xdir || self->zdir))
 		{
 			if(self->trymove)
 			{
@@ -13869,6 +14047,31 @@ void check_ai()
 }
 
 
+static float check_basemap(float x, float z)
+{
+    const float no_map = obor_profile_build >= 3879u ? -1000.0f : 0.0f;
+    float base = no_map;
+    float maximum = 0.0f;
+    if(!level) return 0.0f;
+    if(!((double)x >= INT_MIN && (double)x < (double)INT_MAX + 1.0 &&
+         (double)z >= INT_MIN && (double)z < (double)INT_MAX + 1.0))
+        return no_map;
+    for(int i = 0; i < level->numbasemaps; ++i)
+    {
+        const s_basemap *map = &level->basemaps[i];
+        const int64_t xi = (int64_t)(int)x - map->x;
+        const int64_t zi = (int64_t)(int)z - map->z;
+        if(!map->map || xi < 0 || zi < 0 || xi >= map->xsize || zi >= map->zsize)
+            continue;
+        const uint64_t cell = (uint64_t)zi * (uint64_t)map->xsize + (uint64_t)xi;
+        if(cell >= map->cells)
+            continue;
+        base = map->map[cell];
+        if(base > maximum) maximum = base;
+    }
+    return obor_profile_build >= 3879u && base == -1000.0f ? base : maximum;
+}
+
 void update_animation()
 {
 	int f, wall, hole;
@@ -13881,36 +14084,55 @@ void update_animation()
 		else if(self->modeldata.facing == 2 || level->facing == 2) self->direction = 0;
 		else if((self->modeldata.facing == 3 || level->facing == 3) && (level->scrolldir & SCROLL_RIGHT)) self->direction = 1;
 		else if((self->modeldata.facing == 3 || level->facing == 3) && (level->scrolldir & SCROLL_LEFT)) self->direction = 0;
-		if(self->modeldata.type == TYPE_PANEL)
+		if (obor_profile_build >= 3891u)
 		{
-			self->x += scrolldx * ((float)(self->modeldata.speed));
-			if(level->scrolldir==SCROLL_UP)
-			{
-				self->a += scrolldy * ((float)(self->modeldata.speed));
-			}
-			else if(level->scrolldir==SCROLL_DOWN)
-			{
-				self->a -= scrolldy * ((float)(self->modeldata.speed));
-			}
-			else
-			{
-				self->a -= scrolldy * ((float)(self->modeldata.speed));
-			}
+		    float scroll_speed = 0.0f;
+		    if (obor_entity_type_matches(self->modeldata.type, TYPE_PANEL))
+		        scroll_speed += self->modeldata.speed;
+		    if (self->modeldata.scroll)
+		        scroll_speed += self->modeldata.scroll;
+		    if (scroll_speed)
+		    {
+		        self->x += scrolldx * scroll_speed;
+		        if (level->scrolldir == SCROLL_UP)
+		            scroll_speed = -scroll_speed;
+		        self->a -= scrolldy * scroll_speed;
+		        self->base = self->a;
+		    }
 		}
-		if(self->modeldata.scroll)
+		else
 		{
-			self->x += scrolldx * ((float)(self->modeldata.scroll));
-			if(level->scrolldir==SCROLL_UP)
+			if(obor_entity_type_matches(self->modeldata.type, TYPE_PANEL))
 			{
-				self->a += scrolldy * ((float)(self->modeldata.scroll));
+				self->x += scrolldx * ((float)(self->modeldata.speed));
+				if(level->scrolldir==SCROLL_UP)
+				{
+					self->a += scrolldy * ((float)(self->modeldata.speed));
+				}
+				else if(level->scrolldir==SCROLL_DOWN)
+				{
+					self->a -= scrolldy * ((float)(self->modeldata.speed));
+				}
+				else
+				{
+					self->a -= scrolldy * ((float)(self->modeldata.speed));
+				}
 			}
-			else if(level->scrolldir==SCROLL_DOWN)
+			if(self->modeldata.scroll)
 			{
-				self->a -= scrolldy * ((float)(self->modeldata.scroll));
-			}
-			else
-			{
-				self->a -= scrolldy * ((float)(self->modeldata.scroll));
+				self->x += scrolldx * ((float)(self->modeldata.scroll));
+				if(level->scrolldir==SCROLL_UP)
+				{
+					self->a += scrolldy * ((float)(self->modeldata.scroll));
+				}
+				else if(level->scrolldir==SCROLL_DOWN)
+				{
+					self->a -= scrolldy * ((float)(self->modeldata.scroll));
+				}
+				else
+				{
+					self->a -= scrolldy * ((float)(self->modeldata.scroll));
+				}
 			}
 		}
 	}
@@ -13945,7 +14167,7 @@ void update_animation()
 	if(self->modeldata.escapehits && !self->inpain) self->escapecount = 0;
 
 	if(self->nextanim == time ||
-		(self->modeldata.type == TYPE_TEXTBOX && self->modeldata.subtype != SUBTYPE_NOSKIP &&
+		(obor_entity_type_matches(self->modeldata.type, TYPE_TEXTBOX) && self->modeldata.subtype != SUBTYPE_NOSKIP &&
 		 (bothnewkeys&(FLAG_JUMP|FLAG_ATTACK|FLAG_ATTACK2|FLAG_ATTACK3|FLAG_ATTACK4|FLAG_SPECIAL))))// Textbox will autoupdate if a valid player presses an action button
 	{    // Now you can display text and cycle through with any jump/attack/special unless SUBTYPE_NOSKIP
 
@@ -14031,7 +14253,8 @@ void update_animation()
 			wall = checkwall_below(self->x, self->z, self->a);
 		else wall = -1;
 
-		if(self->modeldata.subject_to_hole>0)
+		float basemap_height = obor_profile_build >= 3879u ? check_basemap(self->x, self->z) : -1000.0f;
+		if(basemap_height == -1000.0f && self->modeldata.subject_to_hole>0)
 		{
 			hole = (wall<0&&!other)?checkhole(self->x, self->z):0;
 
@@ -14069,10 +14292,18 @@ void update_animation()
 				self->base = 0;
 			}
 		}
+
+		if(obor_profile_build >= 3866u && (obor_profile_build < 3878u || self->base != -1000.0f))
+		{
+			if(obor_profile_build < 3879u)
+				basemap_height = check_basemap(self->x, self->z);
+			if(basemap_height > self->base)
+				self->base = basemap_height;
+		}
 	}
 
 	// Code for when entities move (useful for moving platforms, etc)
-	if(other && other != self )
+	if(!obor_motion_after_update() && other && other != self)
 	{
 		// a bit complex, other->nextanim == time means other is behind self and not been updated,
 		// update_mark & 1 means other is updated in this loop and before self
@@ -14370,6 +14601,101 @@ void adjust_bind(entity* e)
 	}
 }
 
+static void obor_apply_entity_motion(entity *actor)
+{
+    entity *previous = self;
+    self = actor;
+
+    if(!is_frozen(self) && self->nextmove <= time)
+    {
+        float x = self->x, z = self->z;
+        if(self->trymove)
+        {
+            if(self->grabbing && (obor_profile_build == 3894u || self->grabwalking))
+            {
+                if(self->grabbing->trymove) check_link_move(self->movex, self->movez);
+                else self->trymove(self->movex, self->movez);
+            }
+            else if(!self->link || (obor_profile_build == 3896u && self->grabbing))
+                self->trymove(self->movex, self->movez);
+        }
+        else
+        {
+            self->x += self->movex;
+            self->z += self->movez;
+        }
+
+        if(obor_profile_build == 3894u)
+        {
+            self->movex = x - self->x;
+            self->movez = z - self->z;
+        }
+        else
+        {
+            self->movex = self->x - x;
+            self->movez = self->z - z;
+        }
+        self->nextmove = time + 1;
+    }
+    else
+        self->movex = self->movez = 0;
+    self->update_mark |= 4;
+    self = previous;
+}
+
+static void obor_entity_post_update(entity *actor)
+{
+    entity *platform;
+    self = actor;
+    self->update_mark &= ~3u;
+
+    if(!(self->update_mark & 4))
+    {
+        if((platform = self->landed_on_platform) &&
+           (platform->movex || platform->movez) &&
+           testplatform(platform, self->x, self->z, NULL) &&
+           self->a <= platform->a + platform->animation->platform[platform->animpos][7])
+        {
+            if(!(platform->update_mark & 4)) obor_apply_entity_motion(platform);
+            if(obor_profile_build == 3894u)
+            {
+                self->movex += platform->movex;
+                self->movez += platform->movez;
+            }
+            else if(platform->movex || platform->movez)
+            {
+                if(self->trymove)
+                {
+                    if(self->grabbing && self->grabbing->trymove)
+                        check_link_move(platform->movex, platform->movez);
+                    else if(!self->link || self->grabbing)
+                        self->trymove(platform->movex, platform->movez);
+                }
+                else
+                {
+                    self->x += platform->movex;
+                    self->z += platform->movez;
+                }
+            }
+        }
+        obor_apply_entity_motion(self);
+    }
+
+    if(self->bound) adjust_bind(self);
+}
+
+static void obor_finish_entity_tick(entity *actor)
+{
+    if(obor_motion_after_update())
+    {
+        if(actor->exists) obor_entity_post_update(actor);
+        return;
+    }
+
+    actor->update_mark = 0;
+    if(actor->exists && actor->bound) adjust_bind(actor);
+}
+
 // arrenge the list reduce its length
 void arrange_ents()
 {
@@ -14380,11 +14706,7 @@ void arrange_ents()
 	{
 		for(i=0; i<ent_max; i++)
 		{
-			ent_list[i]->update_mark = 0;
-			if(ent_list[i]->exists && ent_list[i]->bound)
-			{
-				adjust_bind(ent_list[i]);
-			}
+			obor_finish_entity_tick(ent_list[i]);
 		}
 	}
 	else
@@ -14400,11 +14722,7 @@ void arrange_ents()
 				ent_list[ind] = temp;
 				ind++;
 			}
-			ent_list[i]->update_mark = 0;
-			if(ent_list[i]->exists && ent_list[i]->bound)
-			{
-				adjust_bind(ent_list[i]);
-			}
+			obor_finish_entity_tick(ent_list[i]);
 		}
 		ent_max = ent_count;
 	}
@@ -14427,6 +14745,7 @@ void update_ents()
 			if(is_frozen(self)){expand_time(self);}
 			else
 			{
+				if(obor_motion_after_update()) self->movex = self->movez = 0;
 				execute_updateentity_script(self);// execute a script
 				if(!self->exists) continue;
 				check_ai();// check ai
@@ -14438,6 +14757,11 @@ void update_ents()
 				check_attack();// Collission detection
 				if(!self->exists) continue;
 				update_health();// Update displayed health
+				if(obor_motion_after_update())
+				{
+					self->movex += self->xdir * 100.0 / GAME_SPEED;
+					self->movez += self->zdir * 100.0 / GAME_SPEED;
+				}
 			}
 		}
 	}//end of for
@@ -14467,7 +14791,8 @@ void display_ents()
 	s_drawmethod shadowmethod;
 	int use_mirror = (level && level->mirror);
 
-	int scrx = screenx - gfx_x_offset, scry = screeny - gfx_y_offset;
+	const int camera_x = screenx, camera_y = screeny;
+	int scrx = camera_x - gfx_x_offset, scry = camera_y - gfx_y_offset;
 
 	if(level) shadowz = SHADOW_Z;
 	else shadowz = MIN_INT + 100;
@@ -14477,6 +14802,20 @@ void display_ents()
 		if(ent_list[i] && ent_list[i]->exists)
 		{
 			e = ent_list[i];
+			if(obor_profile_build >= 3877u)
+			{
+				if(e->scripts && e->scripts->ondraw_script && Script_IsInitialized(e->scripts->ondraw_script) &&
+				   draw_script_entities && draw_script_count < ent_list_size)
+					draw_script_entities[draw_script_count++] = e;
+			}
+			else if(obor_profile_build >= 3875u)
+				execute_ondraw_script(e);
+			if (obor_profile_build >= 3890u)
+			{
+				const int ignore_quake = e->modeldata.noquake & NO_QUAKEN;
+				scrx = camera_x - (ignore_quake ? 0 : gfx_x_offset);
+				scry = camera_y - (ignore_quake ? 0 : gfx_y_offset);
+			}
 			if(e->modeldata.hpbarstatus.sizex)
 			{
 				drawenemystatus(e);
@@ -14741,6 +15080,9 @@ void display_ents()
 			}
 		}// end of if(ent_list[i]->exists)
 	}// end of for
+	for(i = 0; i < draw_script_count; ++i)
+		execute_ondraw_script(draw_script_entities[i]);
+	draw_script_count = 0;
 }
 
 
@@ -15160,7 +15502,7 @@ void set_weapon(entity* ent, int wpnum, int anim_flag) // anim_flag added for sc
     if(obor_profile_build < 3793) obor_apply_weapon_model(ent, wpnum, anim_flag);
 //printf("setweapon: %d \n", wpnum);
 
-	if(ent->modeldata.type == TYPE_PLAYER) // save current weapon for player's weaploss 3
+	if(obor_entity_type_matches(ent->modeldata.type, TYPE_PLAYER)) // save current weapon for player's weaploss 3
 	{
 		if(ent->modeldata.weaploss[0] >= 3) player[(int)ent->playerindex].weapnum = wpnum;
 		else player[(int)ent->playerindex].weapnum = level->setweap;
@@ -15312,13 +15654,17 @@ int perform_atchain()
 
 	if(self->modeldata.atchain[self->combostep[0]-1]==0) // 0 means the chain ends
 	{
-		self->combostep[0] = 0;
-		return 0;
+		if(obor_profile_build < 3855u || !self->modeldata.atchain[0])
+		{
+			self->combostep[0] = 0;
+			return 0;
+		}
+		self->combostep[0] = 1;
 	}
 
 	if(validanim(self,animattacks[self->modeldata.atchain[self->combostep[0]-1]-1]) )
 	{
-		if(((self->combostep[0]==1||!(self->modeldata.combostyle&1)) && self->modeldata.type==TYPE_PLAYER) ||  // player should use attack 1st step without checking range
+		if(((self->combostep[0]==1||!(self->modeldata.combostyle&1)) && obor_entity_type_matches(self->modeldata.type, TYPE_PLAYER)) ||  // player should use attack 1st step without checking range
 		   (!(self->modeldata.combostyle&1) && normal_find_target(animattacks[self->modeldata.atchain[0]-1],0)) || // normal chain just checks the first attack in chain(guess no one like it)
 		   ((self->modeldata.combostyle&1) && normal_find_target(animattacks[self->modeldata.atchain[self->combostep[0]-1]-1],0))) // combostyle 1 checks all anyway
 		{
@@ -15637,18 +15983,18 @@ void common_lie()
 		if(self->modeldata.falldie == 2) set_death(self, self->damagetype, 0);
 		if(!self->modeldata.nodieblink || (self->modeldata.nodieblink == 1 && !self->animating))
 		{    // Now have the option to blink or not
-			self->takeaction = (self->modeldata.type == TYPE_PLAYER)?player_blink:suicide;
+			self->takeaction = (obor_entity_type_matches(self->modeldata.type, TYPE_PLAYER))?player_blink:suicide;
 			self->blink = 1;
 			self->stalltime  = time + GAME_SPEED * 2;
 		}
 		else if(self->modeldata.nodieblink == 2  && !self->animating)
 		{
-			self->takeaction = (self->modeldata.type == TYPE_PLAYER)?player_die:suicide;
+			self->takeaction = (obor_entity_type_matches(self->modeldata.type, TYPE_PLAYER))?player_die:suicide;
 
 		}
 		else if(self->modeldata.nodieblink == 3  && !self->animating)
 		{
-			if(self->modeldata.type == TYPE_PLAYER)
+			if(obor_entity_type_matches(self->modeldata.type, TYPE_PLAYER))
 			{
 				self->takeaction = player_die;
 
@@ -15881,7 +16227,7 @@ void common_block()
         set_idle(self);
         return;
     }
-	int hb1 = self->modeldata.holdblock && self->modeldata.type==TYPE_PLAYER &&
+	int hb1 = self->modeldata.holdblock && obor_entity_type_matches(self->modeldata.type, TYPE_PLAYER) &&
 		(obor_profile_build < 3799 || !self->inpain || (obor_profile_build >= 3801 && (self->modeldata.holdblock&2))); //inpain = blockpain
 	int hb2 = hb1 && (unsigned int)self->playerindex < MAX_PLAYERS &&
         (player[(unsigned int)self->playerindex].keys & FLAG_SPECIAL);
@@ -15939,7 +16285,7 @@ entity* drop_item(entity* e)
 			if(item->z-item->a < advancey) item->z = advancey + 10;
 			else if(item->z-item->a > advancey + videomodes.vRes) item->z = advancey + videomodes.vRes - 10;
 		}
-		if(e->boss && item->modeldata.type==TYPE_ENEMY) item->boss = 1;
+		if(e->boss && obor_entity_type_matches(item->modeldata.type, TYPE_ENEMY)) item->boss = 1;
 	}
 	return item;
 }
@@ -15983,7 +16329,7 @@ void checkdeath()
 	if(self->health>0) return;
 	self->dead = 1;
 	//be careful, since the opponent can be other types
-	if(self->opponent && self->opponent->modeldata.type == TYPE_PLAYER)
+	if(self->opponent && obor_entity_type_matches(self->opponent->modeldata.type, TYPE_PLAYER))
 	{
 		addscore(self->opponent->playerindex, self->modeldata.score);    // Add score to the player
 	}
@@ -16001,7 +16347,7 @@ void checkdeath()
 	if(self->boss){
 		self->boss = 0;
 		--level->bosses;
-		if(!level->bosses && self->modeldata.type == TYPE_ENEMY){
+		if(!level->bosses && obor_entity_type_matches(self->modeldata.type, TYPE_ENEMY)){
 			kill_all_enemies();
 			level_completed = 1;
 		}
@@ -16166,7 +16512,7 @@ void checkhitscore(entity* other, s_attack* attack)
 {
 	entity* opp = self->opponent;
 	if(!opp) return;
-	if(opp && opp!=self && opp->modeldata.type == TYPE_PLAYER)
+	if(opp && opp!=self && obor_entity_type_matches(opp->modeldata.type, TYPE_PLAYER))
 	{    // Added obstacle so explosions can hurt enemies
 		addscore(opp->playerindex, attack->attack_force*self->modeldata.multiple);    // New multiple variable
 		control_rumble(opp->playerindex, attack->attack_force*2);
@@ -16273,10 +16619,10 @@ int common_takedamage(entity *other, s_attack* attack)
 	// is it dead now?
 	checkdeath();
 
-	if(self->modeldata.type == TYPE_PLAYER) control_rumble(self->playerindex, attack->attack_force * 3);
+	if(obor_entity_type_matches(self->modeldata.type, TYPE_PLAYER)) control_rumble(self->playerindex, attack->attack_force * 3);
 	if(self->a<=PIT_DEPTH && self->dead)
 	{
-		if(self->modeldata.type == TYPE_PLAYER) player_die();
+		if(obor_entity_type_matches(self->modeldata.type, TYPE_PLAYER)) player_die();
 		else kill(self);
 		return 1;
 	}
@@ -16325,12 +16671,12 @@ int common_takedamage(entity *other, s_attack* attack)
 			//set_fall(entity *iFall, int type, int reset, entity* other, int force, int drop)
 			if(!set_fall(self, self->damagetype, 1, other, attack->attack_force, attack->attack_drop, attack->no_block, attack->guardcost, attack->jugglecost, attack->pause_add))
 			{
-				if(self->modeldata.type == TYPE_PLAYER) player_die();
+				if(obor_entity_type_matches(self->modeldata.type, TYPE_PLAYER)) player_die();
 				else kill(self);
 				return 1;
 			}
 		}
-		if(self->modeldata.type == TYPE_PLAYER) control_rumble(self->playerindex, attack->attack_force * 3);
+		if(obor_entity_type_matches(self->modeldata.type, TYPE_PLAYER)) control_rumble(self->playerindex, attack->attack_force * 3);
 	}
 	else if(attack->grab && !attack->no_pain)
 	{
@@ -16891,7 +17237,7 @@ int common_trymove(float xdir, float zdir)
 
 	//-------------hole checking ---------------------
 	// Don't walk into a hole or walk off platforms into holes
-	if( self->modeldata.type!=TYPE_PLAYER && self->idling &&
+	if( !obor_entity_type_matches(self->modeldata.type, TYPE_PLAYER) && self->idling &&
 		(!self->animation->seta||self->animation->seta[self->animpos]<0) &&
 		self->modeldata.subject_to_hole>0 && !inair(self) &&
 		!(self->modeldata.aimove&AIMOVE2_IGNOREHOLES))
@@ -16981,7 +17327,7 @@ int common_trymove(float xdir, float zdir)
 	//----------------end of wall checking--------------
 
 	//------------------ grab/throw checking------------------
-	if(self->modeldata.type==TYPE_PLAYER &&
+	if(obor_entity_type_matches(self->modeldata.type, TYPE_PLAYER) &&
 		(rand()&7)==0 &&
 		(validanim(self,ANI_THROW) ||
 		 validanim(self,ANI_GRAB)) && self->idling &&
@@ -17073,7 +17419,7 @@ void common_attack_finish()
 
 	self->xdir = self->zdir = 0;
 
-	if(self->modeldata.type == TYPE_PLAYER)
+	if(obor_entity_type_matches(self->modeldata.type, TYPE_PLAYER))
 	{
 		self->takeaction = NULL;
 		set_idle(self);
@@ -18101,7 +18447,7 @@ int biker_move()
 		else self->xdir = (self->direction)?((float)1.7 + randf((float)0.6)):(-((float)1.7 + randf((float)0.6)));
 	}
 
-	self->nextthink = time + THINK_SPEED / 2;
+	if(!obor_motion_after_update()) self->nextthink = time + THINK_SPEED / 2;
 	return 1;
 }
 
@@ -18173,10 +18519,11 @@ int arrow_move(){
 				self->attacking = 0;
 				self->health = 0;
 				self->projectile = 0;
-				if(self->direction == 0) self->xdir = (float)-1.2;
-				else if(self->direction == 1) self->xdir = (float)1.2;
+				const float recoil = obor_motion_after_update() ? 2.4f : 1.2f;
+				if(self->direction == 0) self->xdir = -recoil;
+				else if(self->direction == 1) self->xdir = recoil;
 				self->damage_on_landing = 0;
-				toss(self, 2.5 + randf(1));
+				toss(self, obor_motion_after_update() ? 5 + randf(2) : 2.5 + randf(1));
 				self->modeldata.no_adjust_base = 0;
 				self->modeldata.subject_to_wall = self->modeldata.subject_to_platform = self->modeldata.subject_to_hole = self->modeldata.subject_to_gravity = 1;
 				set_fall(self, ATK_NORMAL, 0, self, 100000, 0, 0, 0, 0, 0);
@@ -18184,7 +18531,7 @@ int arrow_move(){
 		}
 	}
 	self->autokill |= self->ptype;
-	self->nextthink = time + THINK_SPEED / 2;
+	if(!obor_motion_after_update()) self->nextthink = time + THINK_SPEED / 2;
 	return 1;
 }
 
@@ -18194,7 +18541,7 @@ int bomb_move()
 	if(inair(self) && self->toexplode == 1) {
 		if(self->direction == 0) self->xdir = -self->modeldata.speed;
 		else if(self->direction == 1) self->xdir = self->modeldata.speed;
-		self->nextthink = time + THINK_SPEED / 2;
+		if(!obor_motion_after_update()) self->nextthink = time + THINK_SPEED / 2;
 	}else if(self->takeaction != bomb_explode){
 
 		self->takeaction = bomb_explode;
@@ -18241,9 +18588,10 @@ int star_move(){
 			self->attacking = 0;
 			self->health = 0;
 			self->projectile = 0;
-			self->xdir = (self->direction)?(-1.2):1.2;
+			if(obor_motion_after_update()) self->xdir = self->direction ? -2.2f : 2.4f;
+			else self->xdir = self->direction ? -1.2f : 1.2f;
 			self->damage_on_landing = 0;
-			toss(self, 2.5 + randf(1));
+			toss(self, obor_motion_after_update() ? 5 + randf(2) : 2.5 + randf(1));
 			set_fall(self, ATK_NORMAL, 0, self, 100000, 0, 0, 0, 0, 0);
 		}
 	}
@@ -18255,7 +18603,7 @@ int star_move(){
 		if(self->modeldata.nodieblink == 2) self->animating = 0;
 	}
 
-	self->nextthink = time + THINK_SPEED / 2;
+	if(!obor_motion_after_update()) self->nextthink = time + THINK_SPEED / 2;
 	return 1;
 }
 
@@ -18374,7 +18722,7 @@ int common_move()
 				ent = other;
 			}else{
 				if(target && (self->modeldata.subtype == SUBTYPE_CHASE ||
-				(self->modeldata.type == TYPE_NPC && self->parent)))
+				(obor_entity_type_matches(self->modeldata.type, TYPE_NPC) && self->parent)))
 					// try chase a target
 					aimove |= AIMOVE1_CHASE;
 
@@ -18562,7 +18910,7 @@ void decide_stalker(){
 	for(i=0; i<ent_max; i++){
 		ent = ent_list[i];
 
-		if(ent->exists && !ent->dead && ent->modeldata.type == TYPE_ENEMY ){
+		if(ent->exists && !ent->dead && obor_entity_type_matches(ent->modeldata.type, TYPE_ENEMY) ){
 			if(ent->x>firstplayer->x) r++;
 			else l++;
 
@@ -18805,9 +19153,9 @@ int check_energy(int which, int ani)
 		enemies, or npcs. */
 		if(!(iCost[2]==iType													//Disabled by type?
 			|| (iCost[2]==-1)													//Disabled for all?
-			|| (iCost[2]==-2 && (iType == TYPE_ENEMY || iType == TYPE_NPC))		//Disabled for all AI?
-			|| (iCost[2]==-3 && (iType == TYPE_PLAYER || iType == TYPE_NPC))	//Disabled for players & NPCs?
-			|| (iCost[2]==-4 && (iType == TYPE_PLAYER || iType == TYPE_ENEMY))))//Disabled for all AI?
+			|| (iCost[2]==-2 && (obor_entity_type_matches(iType, TYPE_ENEMY) || obor_entity_type_matches(iType, TYPE_NPC)))		//Disabled for all AI?
+			|| (iCost[2]==-3 && (obor_entity_type_matches(iType, TYPE_PLAYER) || obor_entity_type_matches(iType, TYPE_NPC)))	//Disabled for players & NPCs?
+			|| (iCost[2]==-4 && (obor_entity_type_matches(iType, TYPE_PLAYER) || obor_entity_type_matches(iType, TYPE_ENEMY)))))//Disabled for all AI?
 		{
 			iCost[0] = self->modeldata.animation[ani]->energycost.cost;			//Get energy cost amount
 			iCost[1] = self->modeldata.animation[ani]->energycost.mponly;		//Get energy cost type.
@@ -20377,7 +20725,7 @@ void dropweapon(int flag)
 	}
 	if(flag < 2)
 	{
-		if(self->modeldata.type == TYPE_PLAYER)
+		if(obor_entity_type_matches(self->modeldata.type, TYPE_PLAYER))
 		{
 			if(player[self->playerindex].weapnum)
 				set_weapon(self, player[self->playerindex].weapnum, 0);
@@ -20419,7 +20767,7 @@ void drop_all_enemies()
 	{
 		if(ent_list[i]->exists &&
 			ent_list[i]->health>0 &&
-			ent_list[i]->modeldata.type==TYPE_ENEMY &&
+			obor_entity_type_matches(ent_list[i]->modeldata.type, TYPE_ENEMY) &&
 			!ent_list[i]->owner &&    // Don't want to knock down a projectile
 			!ent_list[i]->frozen &&    // Don't want to unfreeze a frozen enemy
 			!ent_list[i]->modeldata.nomove &&
@@ -20464,7 +20812,7 @@ void kill_all_enemies()
 	{
 		if(  ent_list[i]->exists
 			&& ent_list[i]->health>0
-			&& ent_list[i]->modeldata.type==TYPE_ENEMY
+			&& obor_entity_type_matches(ent_list[i]->modeldata.type, TYPE_ENEMY)
 			&& ent_list[i]->takedamage)
 		{
 			self = ent_list[i];
@@ -20484,7 +20832,7 @@ void smart_bomb(entity* e, s_attack* attack)    // New method for smartbombs
 	entity * tmpself = NULL;
 
 	hostile = e->modeldata.hostile;
-	if(e->modeldata.type == TYPE_PLAYER)
+	if(obor_entity_type_matches(e->modeldata.type, TYPE_PLAYER))
 		hostile &= ~(TYPE_PLAYER);
 
 	tmpself = self;
@@ -20548,7 +20896,7 @@ entity * knife_spawn(char *name, int index, float x, float z, float a, int direc
 	else {e = spawn(x, z, a, direction, "Knife", -1, NULL);                            if(!e) return NULL; e->ptype = 0; e->a = a;}
 
 	if(e==NULL) return NULL;
-	else if(self->modeldata.type == TYPE_PLAYER) e->modeldata.type = TYPE_SHOT;
+	else if(obor_entity_type_matches(self->modeldata.type, TYPE_PLAYER)) e->modeldata.type = TYPE_SHOT;
 	else e->modeldata.type = self->modeldata.type;
 
 	if(self->animation->energycost.cost > 0 && nocost) self->cantfire = 1;    // Can't fire if still exists on screen
@@ -20570,6 +20918,7 @@ entity * knife_spawn(char *name, int index, float x, float z, float a, int direc
 	e->modeldata.aiattack = AIATTACK1_NOATTACK;
 	e->remove_on_attack = e->modeldata.remove;
 	e->autokill = e->modeldata.nomove;
+	if(obor_motion_after_update()) e->modeldata.speed *= 2;
 
 	ent_set_colourmap(e, map);
 
@@ -20627,6 +20976,7 @@ entity * bomb_spawn(char *name, int index, float x, float z, float a, int direct
 	e->takedamage = common_takedamage;
 	e->remove_on_attack = 0;
 	e->autokill = e->modeldata.nomove;
+	if(obor_motion_after_update()) e->modeldata.speed *= 2;
 
 
 	// Ok, some old mods use type none, will have troubles.
@@ -20662,7 +21012,7 @@ int star_spawn(float x, float z, float a, int direction){ // added entity to kno
 		e->owner = self;    // Added so enemy projectiles don't hit the owner
 		e->attacking = 1;
 		e->nograb = 1;    // Prevents trying to grab a projectile
-		e->xdir = fd/2 * (float)i;
+		e->xdir = (obor_motion_after_update() ? fd : fd/2) * (float)i;
 		e->think = common_think;
 		e->nextthink = time+1;
 		e->trymove = NULL;
@@ -20703,13 +21053,14 @@ void steam_think()
 // for the "trap" type   7-1-2005  trap start
 void trap_think()
 {
-	if(self->x < advancex-80 || self->x > advancex+(videomodes.hRes+80)){
+	if(!obor_motion_after_update() &&
+	   (self->x < advancex-80 || self->x > advancex+(videomodes.hRes+80))){
 		//        kill(self);   // 6-2-2005 removed temporarily
 		return;
 	}
 
 	self->attacking = 1;
-	self->nextthink = time + 1;
+	if(!obor_motion_after_update()) self->nextthink = time + 1;
 }
 //    7-1-2005  trap end
 
@@ -20732,7 +21083,8 @@ void steam_spawn(float x, float z, float a){
 
 void steamer_think()
 {
-	if(self->x < advancex-80 || self->x > advancex+(videomodes.hRes+80)){
+	if(!obor_motion_after_update() &&
+	   (self->x < advancex-80 || self->x > advancex+(videomodes.hRes+80))){
 		kill(self);
 		return;
 	}
@@ -20782,9 +21134,9 @@ entity * homing_find_target(int type){
 
 void bike_crash(){
 	int i;
-	if(self->direction) self->xdir = 2;
-	else self->xdir = -2;
-	self->nextthink = time + THINK_SPEED / 2;
+	const float speed = obor_motion_after_update() ? 4 : 2;
+	self->xdir = self->direction ? speed : -speed;
+	if(!obor_motion_after_update()) self->nextthink = time + THINK_SPEED / 2;
 	for(i=0; i<levelsets[current_set].maxplayers; i++) control_rumble(i, 100);
 	//if(self->x < advancex-100 || self->x > advancex+(videomodes.hRes+100)) kill(self);
 }
@@ -20814,7 +21166,7 @@ int biker_takedamage(entity *other, s_attack* attack)
 	self->attacking = 1;
 	if(!self->modeldata.offscreenkill) self->modeldata.offscreenkill = 100;
 	self->think = bike_crash;
-	self->nextthink = time + THINK_SPEED;
+	if(!obor_motion_after_update()) self->nextthink = time + THINK_SPEED;
 	// well, this is the real entity, the driver who take the damage
 	if((driver = drop_driver(self)))
 	{
@@ -20865,7 +21217,7 @@ int obstacle_takedamage(entity *other, s_attack* attack)
 
 	//self->pain_time = time + (attack->pain_time?attack->pain_time:(GAME_SPEED / 5));
 	set_opponent(other, self);
-	if(self->opponent && self->opponent->modeldata.type==TYPE_PLAYER)
+	if(self->opponent && obor_entity_type_matches(self->opponent->modeldata.type, TYPE_PLAYER))
 	{
 		control_rumble(self->opponent->playerindex, 75);
 	}
@@ -21827,6 +22179,13 @@ void movie_save(s_playercontrols ** pctrls)
 #endif
 
 
+static void sample_update_interval(void)
+{
+	interval = timer_getinterval(GAME_SPEED);
+	if(interval > GAME_SPEED) interval = 1;
+	if(interval > GAME_SPEED/4) interval = GAME_SPEED/4;
+}
+
 void inputrefresh()
 {
 	int p;
@@ -21860,9 +22219,7 @@ void inputrefresh()
 	{
 #endif
 		 control_update(playercontrolpointers, MAX_PLAYERS);
-		 interval = timer_getinterval(GAME_SPEED); // so interval can be logged into movie
-		 if(interval > GAME_SPEED) interval = GAME_SPEED/GAME_SPEED;
-		 if(interval > GAME_SPEED/4) interval = GAME_SPEED/4;
+		 if(obor_profile_build < 3867u) sample_update_interval();
 
 #ifndef DISABLE_MOVIE
 	}
@@ -21991,11 +22348,18 @@ void draw_textobjs()
 
 void update(int ingame, int usevwait)
 {
-	newtime = 0;
+	if(obor_profile_build >= 3867u)
+	{
+		sample_update_interval();
+		if(obor_profile_build == 3867u && !interval) goto update_done;
+	}
+	else
+		newtime = 0;
 	inputrefresh();
 
 	if ((!pause && ingame == 1) || alwaysupdate) execute_updatescripts();
 
+	if(obor_profile_build >= 3867u) newtime = 0;
 	if(!pause)
 	{
 		if(ingame == 1 || selectScreen) execute_keyscripts();
@@ -22033,6 +22397,11 @@ void update(int ingame, int usevwait)
 						}
 					}
 				}
+				if(obor_profile_build >= 3867u)
+				{
+					update_scrolled_bg();
+					if(level->type!=2) updatestatus();
+				}
 			}
 			if(ingame==1 || selectScreen) update_ents();
 			++time;
@@ -22046,8 +22415,11 @@ void update(int ingame, int usevwait)
 
 	if(ingame == 1 && !pause)
 	{
-		update_scrolled_bg();
-		if(level->type!=2) updatestatus();
+		if(obor_profile_build < 3867u)
+		{
+			update_scrolled_bg();
+			if(level->type!=2) updatestatus();
+		}
 
 		draw_scrolled_bg();
 		if(level->type!=2) predrawstatus();
@@ -22109,6 +22481,7 @@ void update(int ingame, int usevwait)
 #endif
 	}
 
+update_done:
 	if(usevwait) vga_vwait();
 	video_copy_screen(vscreen);
 	spriteq_clear();
@@ -22307,6 +22680,11 @@ void display_credits()
 
 	if(savedata.logo != 1) return;
 	fade_out(0, 0);
+	if(obor_profile_build >= 3876u)
+	{
+		kill_all();
+		unload_level();
+	}
 	unload_background();
 
 	bothnewkeys = 0;
@@ -22466,7 +22844,11 @@ void shutdown(int status, char *msg, ...)
 		freeCommandList(levelordercmdlist);
 
 	freeModelList();
-
+	if(savelevel)
+	{
+		free(savelevel);
+		savelevel = NULL;
+	}
 	freefilenamecache();
 
 
@@ -22646,6 +23028,61 @@ static void update_backbuffer(s_screen* backbuffer, s_screen** gifbuffer){
 
 
 
+static int obor_play_streamed_gif(char *filename, int x, int y, int noskip)
+{
+    s_screen *saved_background = background;
+    const int sync_to_sound = sound_getinterval() != 0xFFFFFFFFu;
+    const u32 saved_time = time;
+    const u32 saved_newtime = newtime;
+    u32 milliseconds = 0;
+    u32 lasttime = 0;
+    int result = 0;
+    time = 0;
+    background = NULL;
+
+    obor_anigif_stream *stream = obor_anigif_stream_open(filename, packfile);
+    if(stream)
+    {
+        result = 1;
+        obor_anigif_status status = obor_anigif_stream_status(stream);
+        while(!status.done)
+        {
+            if(milliseconds >= status.nextframe)
+            {
+                obor_anigif_stream_decode(stream);
+                status = obor_anigif_stream_status(stream);
+            }
+            s_screen *buffer = obor_anigif_stream_buffer(stream);
+            spriteq_add_screen(x, y, 0, buffer, NULL, 0);
+            if(status.frame == 0)
+            {
+                vga_vwait();
+                if(screenformat == PIXEL_8 && buffer && buffer->palette)
+                    palette_set_corrected(buffer->palette, savedata.gamma, savedata.gamma, savedata.gamma,
+                                          savedata.brightness, savedata.brightness, savedata.brightness);
+                update(0, 0);
+            }
+            else update(0, 1);
+
+            if(sync_to_sound) milliseconds += sound_getinterval();
+            else milliseconds += (time - lasttime) * 1000 / GAME_SPEED;
+            lasttime = time;
+            if(!noskip && (bothnewkeys & (FLAG_ESC | FLAG_ANYBUTTON)))
+            {
+                result = -1;
+                break;
+            }
+        }
+        obor_anigif_stream_close(stream);
+    }
+    time = saved_time;
+    newtime = saved_newtime;
+    background = saved_background;
+    standard_palette(1);
+    if(!result) printf("\nWarning, an error occurred while playing animated gif file '%s'.\n", filename ? filename : "");
+    return result;
+}
+
 // ----------------------------------------------------------------------------
 
 // Returns 0 on error, -1 on escape
@@ -22664,6 +23101,8 @@ int playgif(char *filename, int x, int y, int noskip){
 	s_screen* backbuffer = NULL, *gifbuffer[3] = {NULL, NULL, NULL}, *tempbg = background;
 	static anigif_info info[3];
 	int isRGB = (pixelformat==PIXEL_x8);
+
+    if(obor_profile_build >= 3870u) return obor_play_streamed_gif(filename, x, y, noskip);
 
 	strcpy(tname, filename);
 	if(stricmp(tname + strlen(tname)-4, ".gif")==0) tname[strlen(tname)-4] = 0;
@@ -23207,7 +23646,7 @@ int playlevel(char *filename)
 	kill_all();
 	unload_level();
 
-	return type==2 || (player[0].lives > 0 || player[1].lives > 0 || player[2].lives > 0|| player[3].lives > 0); //4player
+	return (type==2 && (obor_profile_build < 3882u || endgame != 2)) || (player[0].lives > 0 || player[1].lives > 0 || player[2].lives > 0|| player[3].lives > 0); //4player
 }
 
 

@@ -4,7 +4,35 @@ SPDX-License-Identifier: BSD-3-Clause
 Copyright (c) 2026 retrodiv <retrodiv@proton.me>
 """
 import re
+from pathlib import Path
+
+from test_early_jump_walkoff import braced_statement
 from test_historical_player import function
+
+
+def render_selection_flow(source, header, revisions):
+    """Link menu and join decisions to a deterministic clock and model providers."""
+    menu = function(source, 'selectplayer')
+    default_layout = menu.index('else // without select.txt')
+    player_loop = 'for(i=0; i<set->maxplayers; i++)'
+    layout = menu.rindex(player_loop, 0, default_layout)
+    status = function(source, 'updatestatus')
+    start = status.index(player_loop)
+    next_loop = status.find(player_loop, start+len(player_loop))
+    first_loop = status[start:next_loop] if next_loop != -1 else status[start:]
+    preview = (function(source, 'spawnexample')
+               if re.search(r'(?m)^static\s+entity\s*\*\s*spawnexample\(', source) else '')
+    parts = {
+        'CLOCK': '\n'.join(re.search(r'(?m)^#define\s+'+name+r'\b[^\n]*', header)[0]
+                           for name in ('GAME_SPEED', 'COUNTER_SPEED', 'MAX_NAME_LEN')),
+        'PREVIEW': preview,
+        'LAYOUT': braced_statement(menu[layout:default_layout], player_loop),
+        'SELECTION': braced_statement(menu, 'while(!(exit || escape))'),
+        'JOIN': braced_statement(first_loop, player_loop),
+        'REVISIONS': ','.join(str(revision)+'u' for revision in revisions),
+    }
+    template = Path(__file__).with_name('selection_flow_contract.c.in').read_text()
+    return re.sub(r'@([A-Z_]+)@', lambda match: parts[match[1]], template)
 
 
 def render_selection_runtime(engine, fixture):

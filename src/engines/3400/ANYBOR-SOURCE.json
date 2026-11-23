@@ -17,7 +17,7 @@
       "upstream_sha256": null
     },
     "openbor.c": {
-      "distributed_sha256": "6238d34581d925ad8d373f5e2b83ce8bd79fdfe38c3eba6e4797bf46b41f28dd",
+      "distributed_sha256": "ddca1e0b882f2b2bde37f554b0e9c6b30bc7feba875fad207d1c65e5bd78a234",
       "modified": true,
       "summary": "Apply the port's engine corrections and select the PC video configuration on macOS. Keep damage-over-time updates within the native effect arrays while retaining valid-slot tick and expiration calculations. Derive output names from the content basename with explicit destination capacities, and reject overflowing output path joins. Leave multiplayer slots without a selected model available to join even if game scripts preassign lives to them. Let a missing basename-only PAK self-check read the active frontend content after it has been validated and prepared. Allocate each model's animation pointer table through the highest animation index that model uses, and bound cache, copy and cleanup paths to that capacity. Ignore optional defense and offense entries outside the configured attack-type range with a log warning before accessing their tables. Yield after each newly completed model during explicit model-list or level preparation, and defer states until that preparation has cleaned up its intermediate parsers and handles. Validate playable-model lookup before using the result and retain the missing-model diagnostic with controlled engine stop. Fall back when legacy content names missing model, level, scene or background overrides. Keep selected palette-conversion reads bounded and reject missing maps or flags, while preserving unselected slots and native allocation failure callbacks. Access script-container pointer slots with byte copies, preserving record layout, pointer values and native copy/cleanup order. Release each sprite owner once and complete cleanup independently of alias counts. Preserve native sprite-map capacity policies, check allocation extents and retain existing storage and capacity when growth is unavailable. Validate sprite-node allocations and release partial resources without changing existing owners. Retire only the released level's owned stream bytes and extent metadata. Preserve source-defined model-allocation failure feedback. Preserve script-save values with explicit 32-bit fields, owned names, live references and profile-defined indexed capacity. Preserve native session-save ordering, movie-menu availability, layer loading, water clocks, shadow predicates and camera progress for each profile. Capture explicit shutdown failure text before cleanup and bound legacy diagnostic formatting.",
       "topics": [
@@ -57,7 +57,7 @@
       "upstream_sha256": "8d70c8b55eba868e6dfe09d3f1139104195506c83beedf889f3544cabbb48ed8"
     },
     "openbor.h": {
-      "distributed_sha256": "75caea3892130f4e0ebc87c676d20484435c9e2a29d721eb9b3e840dd0f0bbbf",
+      "distributed_sha256": "262e5edb95975ee91d2123b88e7aeef462be4509f0539662007e62c8d4f303f1",
       "modified": true,
       "summary": "Allocate collision pointer slots through the highest author-facing index used by each collection. Track each model's allocated animation-table capacity and reject lookups outside it. Track initialized owned stream bytes independently of native size, bound cursor reads and preserve buffer-base append/save behavior and native slot policy. Declare the historical transform interface, path query and layer records used by the shared runtime.",
       "topics": [
@@ -70,7 +70,7 @@
       "upstream_sha256": "47e3db32c70d173e16edf0dca15207a185d113cc09cca46685e6589c318bad23"
     },
     "openborscript.c": {
-      "distributed_sha256": "f0fe5961f1b16edd9c53b32f4abb043becefc7f5b09157f15b12c963b4dced04",
+      "distributed_sha256": "1e726dff3dbbd434bb76322e7eaeb4c8092e023b7baa36f437543c244bdc2f61",
       "modified": true,
       "summary": "Keep the dormant constant-lowering diagnostic compatible with the single-value instruction layout, map string constants from direct contiguous instruction storage, and own complete dynamically allocated script variable names through slot reuse and shutdown. Derive output names from the content basename with explicit destination capacities, and reject overflowing output path joins. Compact compiler-only instruction records after resolving value ownership, preserving branch and export anchors, all mutable values and exactly-once pool cleanup. Retain shared interpreters through the last script reference while preserving independent variables, replacement and native callbacks. Resolve text-property names within the actual table bounds while preserving native numeric selectors. Reject missing colourtable indices and keep selector arithmetic and table reads defined. Use the declared staydown name-table length for lookup. Transfer loaded stream buffers through aligned local outputs while preserving native record layout and results. Close owned input files after stream loading and on buffer allocation failure. Terminate fixed-cache stream line and argument results and preserve appended bytes with checked conversion and output allocation. Track initialized owned stream bytes independently of native size, bound cursor reads and preserve buffer-base append/save behavior and native slot policy.",
       "topics": [
@@ -297,7 +297,7 @@
       "upstream_sha256": "a7ff19177bb6c3d61095d5d8aafb335b311654bbe89a37958bce8eaae8d981a0"
     },
     "source/gamelib/obor_command_assert.h": {
-      "distributed_sha256": "566a9b9532ef9d45f44d0f1caad766250883ecc17e4abfcda43a4b58535b75be",
+      "distributed_sha256": "5b91c6233cad8979c5a761832988b3ec9fa4216b36e90092acdfcad2752e6144",
       "modified": true,
       "summary": "Preserve source-owned command-table allocation diagnostics and controlled engine termination for historical profiles.",
       "topics": [
@@ -307,7 +307,7 @@
       "upstream_sha256": null
     },
     "source/gamelib/obor_frame_assert.h": {
-      "distributed_sha256": "d4a40edca263ae32a3bcf1ee07fecac57146207b492bc39328d53b66d077b248",
+      "distributed_sha256": "07f7e4d551e26ce87c8d73e5464ba6c1bc716e3f5dc7e2546bed28b6d52801ea",
       "modified": true,
       "summary": "Preserve source-owned drawing and frame diagnostics with bounded access and controlled engine termination.",
       "topics": [
@@ -317,7 +317,7 @@
       "upstream_sha256": null
     },
     "source/gamelib/obor_image_assert.h": {
-      "distributed_sha256": "28a9422da8d472e45be5cb4eafc6d948dde72f002013e5177038a7c6a3cb810a",
+      "distributed_sha256": "bf216e6f4926291c65fb3aa0fdbfede5b4fd60e70543d9ab937a0c2f7ee17c51",
       "modified": true,
       "summary": "Preserve source-owned image failure diagnostics and controlled core termination for historical profiles.",
       "topics": [
@@ -832,7 +832,7 @@
       "upstream_sha256": "caa94af01feec48313574fcdb38815834a355bbbc8d789b395441975f2d061be"
     },
     "source/scriptlib/Parser.c": {
-      "distributed_sha256": "0d3d122b28ee1ca2594c837b10760db9de7b692c26ed0b866ae2b94721ad7c04",
+      "distributed_sha256": "7c536892d76274d24e8177eb716addb701de0285da1935bb2c8d094986113d5a",
       "modified": true,
       "summary": "Preserve native parser instruction, label and expression allocation failure feedback. Stop terminal lexer failures and EOF recovery without changing finite historical recovery.",
       "topics": [

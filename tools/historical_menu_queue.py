@@ -115,6 +115,14 @@ static void check(unsigned revision,const int *level_call,int only_new,int alway
  spritequeue_len=spriteq_old_len=spriteq_locked=0;
  spriteq_add_screen(0,0,0,old_image,NULL,0);spriteq_add_screen(0,0,1,new_image,NULL,0);
  spriteq_old_len=1;
+ if(revision==3185 || revision==3365 || revision==3366){
+  at=0;trace[0]=0;draw_count=draw_mask=0;
+  native_spriteq_draw(vscreen,0,0,0);
+  assert(draw_mask==(revision==3366?1:3));
+  at=0;trace[0]=0;draw_count=draw_mask=0;spriteq_locked=1;
+  native_spriteq_draw(vscreen,1,0,0);
+  assert(draw_mask==(revision==3366?0:2));
+ }
  for(unsigned menu=0;menu<sizeof(menu_calls)/sizeof(*menu_calls);++menu)
  for(int has_level=0;has_level<2;++has_level)for(int locked=0;locked<2;++locked)
  for(int selection=0;selection<2;++selection)for(int always=0;always<=always_available;++always)

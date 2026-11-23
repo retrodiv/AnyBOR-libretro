@@ -42,6 +42,10 @@
       "present": false,
       "clear_result_on_error": false
     },
+    "3185": {
+      "present": false,
+      "clear_result_on_error": false
+    },
     "3192": {
       "present": false,
       "clear_result_on_error": false
@@ -790,7 +794,15 @@
       "present": true,
       "clear_result_on_error": false
     },
+    "3787": {
+      "present": true,
+      "clear_result_on_error": false
+    },
     "3789": {
+      "present": true,
+      "clear_result_on_error": false
+    },
+    "3792": {
       "present": true,
       "clear_result_on_error": false
     },
@@ -819,6 +831,10 @@
       "clear_result_on_error": false
     },
     "3824": {
+      "present": true,
+      "clear_result_on_error": false
+    },
+    "3826": {
       "present": true,
       "clear_result_on_error": false
     },
@@ -855,6 +871,14 @@
       "clear_result_on_error": true
     },
     "3854": {
+      "present": true,
+      "clear_result_on_error": true
+    },
+    "3880": {
+      "present": true,
+      "clear_result_on_error": true
+    },
+    "3896": {
       "present": true,
       "clear_result_on_error": true
     },
@@ -902,6 +926,10 @@
       "present": true,
       "clear_result_on_error": true
     },
+    "4077": {
+      "present": true,
+      "clear_result_on_error": true
+    },
     "4079": {
       "present": true,
       "clear_result_on_error": true
@@ -923,6 +951,10 @@
       "clear_result_on_error": true
     },
     "4088": {
+      "present": true,
+      "clear_result_on_error": true
+    },
+    "4097": {
       "present": true,
       "clear_result_on_error": true
     },
@@ -1226,11 +1258,79 @@
       "present": true,
       "clear_result_on_error": true
     },
+    "6175": {
+      "present": true,
+      "clear_result_on_error": true
+    },
+    "6196": {
+      "present": true,
+      "clear_result_on_error": true
+    },
+    "6203": {
+      "present": true,
+      "clear_result_on_error": true
+    },
+    "6212": {
+      "present": true,
+      "clear_result_on_error": true
+    },
+    "6223": {
+      "present": true,
+      "clear_result_on_error": true
+    },
+    "6240": {
+      "present": true,
+      "clear_result_on_error": true
+    },
+    "6245": {
+      "present": true,
+      "clear_result_on_error": true
+    },
+    "6258": {
+      "present": true,
+      "clear_result_on_error": true
+    },
+    "6271": {
+      "present": true,
+      "clear_result_on_error": true
+    },
+    "6276": {
+      "present": true,
+      "clear_result_on_error": true
+    },
+    "6291": {
+      "present": true,
+      "clear_result_on_error": true
+    },
+    "6297": {
+      "present": true,
+      "clear_result_on_error": true
+    },
+    "6301": {
+      "present": true,
+      "clear_result_on_error": true
+    },
+    "6315": {
+      "present": true,
+      "clear_result_on_error": true
+    },
+    "6325": {
+      "present": true,
+      "clear_result_on_error": true
+    },
     "6330": {
       "present": true,
       "clear_result_on_error": true
     },
     "6330-lns-010g": {
+      "present": true,
+      "clear_result_on_error": true
+    },
+    "6385": {
+      "present": true,
+      "clear_result_on_error": true
+    },
+    "6390": {
       "present": true,
       "clear_result_on_error": true
     },
@@ -1250,11 +1350,27 @@
       "present": true,
       "clear_result_on_error": true
     },
+    "6453": {
+      "present": true,
+      "clear_result_on_error": true
+    },
     "6510": {
       "present": true,
       "clear_result_on_error": true
     },
+    "6997": {
+      "present": true,
+      "clear_result_on_error": true
+    },
+    "7039": {
+      "present": true,
+      "clear_result_on_error": true
+    },
     "7086": {
+      "present": true,
+      "clear_result_on_error": true
+    },
+    "7091": {
       "present": true,
       "clear_result_on_error": true
     },
@@ -1263,6 +1379,18 @@
       "clear_result_on_error": true
     },
     "7142": {
+      "present": true,
+      "clear_result_on_error": true
+    },
+    "7369": {
+      "present": true,
+      "clear_result_on_error": true
+    },
+    "7391": {
+      "present": true,
+      "clear_result_on_error": true
+    },
+    "7420": {
       "present": true,
       "clear_result_on_error": true
     },
@@ -1282,7 +1410,15 @@
       "present": true,
       "clear_result_on_error": true
     },
+    "7612": {
+      "present": true,
+      "clear_result_on_error": true
+    },
     "7735": {
+      "present": true,
+      "clear_result_on_error": true
+    },
+    "8020": {
       "present": true,
       "clear_result_on_error": true
     },
@@ -1352,10 +1488,729 @@
           2147483598,
           2147483646,
           2147483645
+        ],
+        "6175": [
+          2147483598,
+          2147483646,
+          2147483645
+        ],
+        "6196": [
+          2147483598,
+          2147483646,
+          2147483645
+        ],
+        "6203": [
+          2147483598,
+          2147483646,
+          2147483645
+        ],
+        "6212": [
+          2147483598,
+          2147483646,
+          2147483645
+        ],
+        "6223": [
+          2147483598,
+          2147483646,
+          2147483645
+        ],
+        "6240": [
+          2147483598,
+          2147483646,
+          2147483645
+        ],
+        "6245": [
+          2147483598,
+          2147483646,
+          2147483645
+        ],
+        "6258": [
+          2147483598,
+          2147483646,
+          2147483645
+        ],
+        "6271": [
+          2147483598,
+          2147483646,
+          2147483645
+        ],
+        "6276": [
+          2147483598,
+          2147483646,
+          2147483645
+        ],
+        "6291": [
+          2147483626,
+          2147483646,
+          2147483645
+        ],
+        "6297": [
+          2147483630,
+          2147483646,
+          2147483645
+        ],
+        "6301": [
+          2147483632,
+          2147483646,
+          2147483645
+        ],
+        "6315": [
+          2147483647,
+          2147483646,
+          2147483646
+        ],
+        "6325": [
+          2147483647,
+          2147483646,
+          2147483646
+        ],
+        "6385": [
+          2147483645,
+          2147483647,
+          2147483646
+        ],
+        "6390": [
+          2147483645,
+          2147483647,
+          2147483646
+        ],
+        "6453": [
+          2147483646,
+          2147483647,
+          2147483647
         ]
       },
       "original_property_mapper": "static inline int obor_animation_property_from_native(int id)\n{\n    /* ENTITY_COLLISION occupies slot 5 only in the later enum. */\n    if(obor_profile_build == 5134 || obor_profile_build == 6119)\n        return id < 5 ? id : id + 1;\n    return obor_profile_build == 6330 && id >= ANI_PROP_ENTITY_COLLISION ? id + 1 : id;\n}\n",
-      "original_attack_mapper": "static inline int obor_attack_from_native(int id)\n{\n    if(id < 0) return id;\n    /* 5134/6119 use TIMEOVER=19 and omit LOSE and BOSS_DEATH. */\n    if(obor_profile_build == 5134 || obor_profile_build == 6119)\n        return id < 19 ? id : (id == 19 ? 20 : id + 2);\n    if(obor_profile_build == 6510)\n    {\n        switch(id)\n        {\n            case 15: return ATK_BOSS_DEATH;\n            case 16: return ATK_ITEM;\n            case 17: return ATK_LAND;\n            case 18: return ATK_LIFESPAN;\n            case 19: return ATK_LOSE;\n            case 20: return ATK_PIT;\n            case 21: return ATK_TIMEOVER;\n            default: return id;\n        }\n    }\n    return id >= ATK_BOSS_DEATH ? id + 1 : id;\n}\n"
+      "original_attack_mapper": "static inline int obor_attack_from_native(int id)\n{\n    if(id < 0) return id;\n    /* 5134/6119 use TIMEOVER=19 and omit LOSE and BOSS_DEATH. */\n    if(obor_profile_build == 5134 || obor_profile_build == 6119)\n        return id < 19 ? id : (id == 19 ? 20 : id + 2);\n    if(obor_profile_build == 6510)\n    {\n        switch(id)\n        {\n            case 15: return ATK_BOSS_DEATH;\n            case 16: return ATK_ITEM;\n            case 17: return ATK_LAND;\n            case 18: return ATK_LIFESPAN;\n            case 19: return ATK_LOSE;\n            case 20: return ATK_PIT;\n            case 21: return ATK_TIMEOVER;\n            default: return id;\n        }\n    }\n    return id >= ATK_BOSS_DEATH ? id + 1 : id;\n}\n",
+      "source_maps": {
+        "6175": [
+          {
+            "routes": [
+              [
+                195,
+                0
+              ]
+            ],
+            "tail": 49
+          },
+          {
+            "routes": [
+              [
+                5,
+                0
+              ]
+            ],
+            "tail": 1
+          },
+          {
+            "routes": [
+              [
+                19,
+                0
+              ],
+              [
+                20,
+                1
+              ]
+            ],
+            "tail": 2
+          }
+        ],
+        "6196": [
+          {
+            "routes": [
+              [
+                195,
+                0
+              ]
+            ],
+            "tail": 49
+          },
+          {
+            "routes": [
+              [
+                5,
+                0
+              ]
+            ],
+            "tail": 1
+          },
+          {
+            "routes": [
+              [
+                19,
+                0
+              ],
+              [
+                20,
+                1
+              ]
+            ],
+            "tail": 2
+          }
+        ],
+        "6203": [
+          {
+            "routes": [
+              [
+                195,
+                0
+              ]
+            ],
+            "tail": 49
+          },
+          {
+            "routes": [
+              [
+                5,
+                0
+              ]
+            ],
+            "tail": 1
+          },
+          {
+            "routes": [
+              [
+                19,
+                0
+              ],
+              [
+                20,
+                1
+              ]
+            ],
+            "tail": 2
+          }
+        ],
+        "6212": [
+          {
+            "routes": [
+              [
+                195,
+                0
+              ]
+            ],
+            "tail": 49
+          },
+          {
+            "routes": [
+              [
+                5,
+                0
+              ]
+            ],
+            "tail": 1
+          },
+          {
+            "routes": [
+              [
+                19,
+                0
+              ],
+              [
+                20,
+                1
+              ]
+            ],
+            "tail": 2
+          }
+        ],
+        "6223": [
+          {
+            "routes": [
+              [
+                195,
+                0
+              ]
+            ],
+            "tail": 49
+          },
+          {
+            "routes": [
+              [
+                5,
+                0
+              ]
+            ],
+            "tail": 1
+          },
+          {
+            "routes": [
+              [
+                19,
+                0
+              ],
+              [
+                20,
+                1
+              ]
+            ],
+            "tail": 2
+          }
+        ],
+        "6240": [
+          {
+            "routes": [
+              [
+                195,
+                0
+              ]
+            ],
+            "tail": 49
+          },
+          {
+            "routes": [
+              [
+                5,
+                0
+              ]
+            ],
+            "tail": 1
+          },
+          {
+            "routes": [
+              [
+                19,
+                0
+              ],
+              [
+                20,
+                1
+              ]
+            ],
+            "tail": 2
+          }
+        ],
+        "6245": [
+          {
+            "routes": [
+              [
+                195,
+                0
+              ]
+            ],
+            "tail": 49
+          },
+          {
+            "routes": [
+              [
+                5,
+                0
+              ]
+            ],
+            "tail": 1
+          },
+          {
+            "routes": [
+              [
+                19,
+                0
+              ],
+              [
+                20,
+                1
+              ]
+            ],
+            "tail": 2
+          }
+        ],
+        "6258": [
+          {
+            "routes": [
+              [
+                195,
+                0
+              ]
+            ],
+            "tail": 49
+          },
+          {
+            "routes": [
+              [
+                5,
+                0
+              ]
+            ],
+            "tail": 1
+          },
+          {
+            "routes": [
+              [
+                19,
+                0
+              ],
+              [
+                20,
+                1
+              ]
+            ],
+            "tail": 2
+          }
+        ],
+        "6271": [
+          {
+            "routes": [
+              [
+                195,
+                0
+              ]
+            ],
+            "tail": 49
+          },
+          {
+            "routes": [
+              [
+                5,
+                0
+              ]
+            ],
+            "tail": 1
+          },
+          {
+            "routes": [
+              [
+                19,
+                0
+              ],
+              [
+                20,
+                1
+              ]
+            ],
+            "tail": 2
+          }
+        ],
+        "6276": [
+          {
+            "routes": [
+              [
+                195,
+                0
+              ]
+            ],
+            "tail": 49
+          },
+          {
+            "routes": [
+              [
+                5,
+                0
+              ]
+            ],
+            "tail": 1
+          },
+          {
+            "routes": [
+              [
+                19,
+                0
+              ],
+              [
+                20,
+                1
+              ]
+            ],
+            "tail": 2
+          }
+        ],
+        "6291": [
+          {
+            "routes": [
+              [
+                199,
+                0
+              ],
+              [
+                223,
+                2
+              ]
+            ],
+            "tail": 21
+          },
+          {
+            "routes": [
+              [
+                5,
+                0
+              ]
+            ],
+            "tail": 1
+          },
+          {
+            "routes": [
+              [
+                19,
+                0
+              ],
+              [
+                20,
+                1
+              ]
+            ],
+            "tail": 2
+          }
+        ],
+        "6297": [
+          {
+            "routes": [
+              [
+                199,
+                0
+              ],
+              [
+                223,
+                2
+              ],
+              [
+                225,
+                21
+              ],
+              [
+                229,
+                12
+              ]
+            ],
+            "tail": 17
+          },
+          {
+            "routes": [
+              [
+                5,
+                0
+              ]
+            ],
+            "tail": 1
+          },
+          {
+            "routes": [
+              [
+                19,
+                0
+              ],
+              [
+                20,
+                1
+              ]
+            ],
+            "tail": 2
+          }
+        ],
+        "6301": [
+          {
+            "routes": [
+              [
+                199,
+                0
+              ],
+              [
+                223,
+                2
+              ],
+              [
+                225,
+                21
+              ],
+              [
+                230,
+                12
+              ],
+              [
+                231,
+                13
+              ]
+            ],
+            "tail": 15
+          },
+          {
+            "routes": [
+              [
+                5,
+                0
+              ]
+            ],
+            "tail": 1
+          },
+          {
+            "routes": [
+              [
+                19,
+                0
+              ],
+              [
+                20,
+                1
+              ]
+            ],
+            "tail": 2
+          }
+        ],
+        "6315": [
+          {
+            "routes": [
+              [
+                237,
+                0
+              ],
+              [
+                239,
+                7
+              ],
+              [
+                246,
+                -2
+              ]
+            ],
+            "tail": 0
+          },
+          {
+            "routes": [
+              [
+                5,
+                0
+              ]
+            ],
+            "tail": 1
+          },
+          {
+            "routes": [
+              [
+                21,
+                0
+              ]
+            ],
+            "tail": 1
+          }
+        ],
+        "6325": [
+          {
+            "routes": [
+              [
+                237,
+                0
+              ],
+              [
+                239,
+                7
+              ],
+              [
+                246,
+                -2
+              ]
+            ],
+            "tail": 0
+          },
+          {
+            "routes": [
+              [
+                5,
+                0
+              ]
+            ],
+            "tail": 1
+          },
+          {
+            "routes": [
+              [
+                21,
+                0
+              ]
+            ],
+            "tail": 1
+          }
+        ],
+        "6385": [
+          {
+            "routes": [
+              [
+                244,
+                0
+              ]
+            ],
+            "tail": 2
+          },
+          {
+            "routes": [],
+            "tail": 0
+          },
+          {
+            "routes": [
+              [
+                21,
+                0
+              ]
+            ],
+            "tail": 1
+          }
+        ],
+        "6390": [
+          {
+            "routes": [
+              [
+                244,
+                0
+              ]
+            ],
+            "tail": 2
+          },
+          {
+            "routes": [],
+            "tail": 0
+          },
+          {
+            "routes": [
+              [
+                21,
+                0
+              ]
+            ],
+            "tail": 1
+          }
+        ],
+        "6453": [
+          {
+            "routes": [
+              [
+                245,
+                -1
+              ]
+            ],
+            "tail": 1
+          },
+          {
+            "routes": [],
+            "tail": 0
+          },
+          {
+            "routes": [
+              [
+                15,
+                0
+              ],
+              [
+                16,
+                6
+              ],
+              [
+                18,
+                -1
+              ],
+              [
+                20,
+                0
+              ],
+              [
+                21,
+                -3
+              ],
+              [
+                22,
+                -1
+              ]
+            ],
+            "tail": 0
+          }
+        ]
+      }
     },
     "7142": {
       "getter": "HRESULT openbor_getentityproperty(ScriptVariant **varlist , ScriptVariant **pretvar, int paramCount)\n{\n    if(!pretvar) return E_FAIL;\n    if(paramCount >= 2 && (!*pretvar || !varlist || !varlist[0] || !varlist[1] ||\n        (paramCount >= 3 && !varlist[2] &&\n         !((varlist[1]->vt == VT_INTEGER && varlist[1]->lVal >= 0 &&\n            varlist[1]->lVal < _ep_the_end && varlist[1]->lVal == _ep_defense) ||\n           (varlist[1]->vt == VT_STR && StrCache_GetIfPresent(varlist[1]->strVal) &&\n            !stricmp(StrCache_GetIfPresent(varlist[1]->strVal), \"defense\"))))))\n        { *pretvar = NULL; return E_FAIL; }\n\n    entity *ent\t\t\t= NULL;\n    ScriptVariant *arg\t= NULL;\n    ScriptVariant *arg1\t= NULL;\n    s_sprite *spr;\n    LONG ltemp, ltemp2;\n    int i\t\t\t\t= 0;\n    int propind ;\n    int tempint\t\t\t= 0;\n\n    if(paramCount < 2)\n    {\n        *pretvar = NULL;\n        return E_FAIL;\n    }\n\n    ScriptVariant_Clear(*pretvar);\n    mapstrings_entityproperty(varlist, paramCount);\n\n    arg = varlist[0];\n    if(arg->vt != VT_PTR && arg->vt != VT_EMPTY)\n    {\n        printf(\"Function getentityproperty must have a valid entity handle.\\n\");\n        *pretvar = NULL;\n        return E_FAIL;\n    }\n    ent = (entity *)arg->ptrVal; //retrieve the entity\n    if(!ent)\n    {\n        return S_OK;\n    }\n\n    arg = varlist[1];\n    if(arg->vt != VT_INTEGER)\n    {\n        printf(\"Function getentityproperty must have a string property name.\\n\");\n    }\n\n    propind = arg->lVal;\n\n    switch(propind){\ncase _ep_vulnerable:\n    {\n        if(paramCount == 2)\n        {\n            i\t\t= ent->animnum;\n            tempint\t= ent->animpos;\n        }\n        else if(paramCount < 4\n                || varlist[2]->vt != VT_INTEGER\n                || varlist[3]->vt != VT_INTEGER)\n        {\n            printf(\"\\n Error, getentityproperty({ent}, \\\"vulnerable\\\", {animation}, {frame}): parameters missing or invalid. \\n\");\n            *pretvar = NULL;\n            return E_FAIL;\n        }\n        else\n        {\n            i\t\t= varlist[2]->lVal;\t\t\t\t\t\t\t\t\t\t\t\t//Animation parameter.\n            tempint\t= varlist[3]->lVal;\t\t\t\t\t\t\t\t\t\t\t\t//Frame parameter.\n        }\n        ScriptVariant_ChangeType(*pretvar, VT_INTEGER);\n        (*pretvar)->lVal = (LONG)ent->modeldata.animation[i]->vulnerable[tempint];\n        break;\n    }\n    \ndefault:*pretvar=NULL;return E_FAIL;}return S_OK;}\n"

@@ -75,6 +75,7 @@ ScriptVariant* Script_Get_Global_Variant(char* theName);
 int Script_Set_Global_Variant(char* theName, ScriptVariant* var);
 ScriptVariant* Script_Get_Local_Variant(Script* cs, char* theName);
 int Script_Set_Local_Variant(Script* cs, char* theName, ScriptVariant* var);
+int Script_ResetVariables(Script *script);
 void Script_Init(Script* pscript, char* theName, char* comment, int first);
 Script* alloc_script();
 void Script_Copy(Script* pdest, Script* psrc, int localclear);
@@ -123,7 +124,7 @@ HRESULT openbor_changeplayerproperty(ScriptVariant** varlist , ScriptVariant** p
 HRESULT openbor_changeentityproperty(ScriptVariant** varlist , ScriptVariant** pretvar, int paramCount);
 HRESULT openbor_getplayerproperty(ScriptVariant** varlist , ScriptVariant** pretvar, int paramCount);
 HRESULT openbor_changeattackproperty(ScriptVariant** varlist , ScriptVariant** pretvar, int paramCount);
-void mapstrings_attackproperty(ScriptVariant** varlist, int paramCount);
+int mapstrings_attackproperty(ScriptVariant** varlist, int paramCount);
 HRESULT openbor_getentityproperty(ScriptVariant** varlist , ScriptVariant** pretvar, int paramCount);
 HRESULT openbor_clearspawnentry(ScriptVariant** varlist , ScriptVariant** pretvar, int paramCount);
 HRESULT openbor_setspawnentry(ScriptVariant** varlist , ScriptVariant** pretvar, int paramCount);
@@ -244,20 +245,21 @@ HRESULT openbor_loadscript(ScriptVariant** varlist , ScriptVariant** pretvar, in
 HRESULT openbor_compilescript(ScriptVariant** varlist , ScriptVariant** pretvar, int paramCount);
 HRESULT openbor_executescript(ScriptVariant** varlist , ScriptVariant** pretvar, int paramCount);
 
-void mapstrings_systemvariant(ScriptVariant** varlist, int paramCount);
-void mapstrings_entityproperty(ScriptVariant** varlist, int paramCount);
-void mapstrings_getentityproperty(ScriptVariant** varlist, int paramCount);
-void mapstrings_changeentityproperty(ScriptVariant** varlist, int paramCount);
-void mapstrings_playerproperty(ScriptVariant** varlist, int paramCount);
-void mapstrings_setspawnentry(ScriptVariant** varlist, int paramCount);
-void mapstrings_transconst(ScriptVariant** varlist, int paramCount);
-void mapstrings_playerkeys(ScriptVariant** varlist, int paramCount);
-void mapstrings_textobjproperty(ScriptVariant** varlist, int paramCount);
-void mapstrings_changetextobjproperty(ScriptVariant** varlist, int paramCount);
-void mapstrings_layerproperty(ScriptVariant** varlist, int paramCount);
-void mapstrings_drawmethodproperty(ScriptVariant** varlist, int paramCount);
-void mapstrings_gfxproperty(ScriptVariant** varlist, int paramCount);
-void mapstrings_levelproperty(ScriptVariant** varlist, int paramCount);
+int mapstrings_systemvariant(ScriptVariant** varlist, int paramCount);
+int mapstrings_entityproperty(ScriptVariant** varlist, int paramCount);
+int mapstrings_getentityproperty(ScriptVariant** varlist, int paramCount);
+int mapstrings_changeentityproperty(ScriptVariant** varlist, int paramCount);
+int mapstrings_playerproperty(ScriptVariant** varlist, int paramCount);
+int mapstrings_setspawnentry(ScriptVariant** varlist, int paramCount);
+int Script_MapInstructionConstant(Instruction* instruction);
+int mapstrings_transconst(ScriptVariant** varlist, int paramCount);
+int mapstrings_playerkeys(ScriptVariant** varlist, int paramCount);
+int mapstrings_textobjproperty(ScriptVariant** varlist, int paramCount);
+int mapstrings_changetextobjproperty(ScriptVariant** varlist, int paramCount);
+int mapstrings_layerproperty(ScriptVariant** varlist, int paramCount);
+int mapstrings_drawmethodproperty(ScriptVariant** varlist, int paramCount);
+int mapstrings_gfxproperty(ScriptVariant** varlist, int paramCount);
+int mapstrings_levelproperty(ScriptVariant** varlist, int paramCount);
 
 
 enum systemvariant_enum

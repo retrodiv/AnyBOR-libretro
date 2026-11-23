@@ -67,10 +67,19 @@ def program(engine, profiles, *, reject_last_slot=False, history=None, name_capa
         for assignment in ('prop = arg->lVal;', 'prop = varlist[1]->lVal;'):
             if baseline.count(assignment) == 1:
                 baseline = baseline.replace(assignment, assignment + '\n    prop = obor_playerproperty_native(prop);')
+    if 'obor_player_property_index(' in methods:
+        legacy = re.search(r'(?ms)^enum\s*\{\s*OBOR_LEGACY_PLAYER_PROPERTY_COUNT\s*=.*?^\};', core)
+        if legacy is None:
+            raise ValueError('Native legacy player property ordinals required')
+        enums += '\n' + legacy[0]
+        for assignment in ('prop = arg->lVal;', 'prop = varlist[1]->lVal;'):
+            if baseline.count(assignment) == 1:
+                baseline = baseline.replace(assignment, assignment + '\n    prop = obor_player_property_index(prop);')
     support = []
     names = ['obor_uses_early_player_properties', 'obor_player_property_native',
                  'obor_player_get_property_native', 'obor_player_set_property_native',
                  'obor_playerproperty_order', 'obor_playerproperty_native',
+                 'obor_legacy_player_properties', 'obor_player_property_index',
                  'obor_playerproperty_consumes_value',
                  'mapstrings_playerproperty', 'mapstrings_getplayerproperty',
                  'mapstrings_changeplayerproperty']
@@ -83,11 +92,9 @@ def program(engine, profiles, *, reject_last_slot=False, history=None, name_capa
         if len(selected) == size:
             break
     support = [selected[name] for name in names if name in selected]
-    name_limit = '(sizeof(player[0].name) - 1)'
     if 'obor_profile_name_limit(' in methods:
         support.append(function((engine / 'openbor.c').read_text(encoding='latin1'),
                                 'obor_profile_name_limit'))
-        name_limit = '((size_t)obor_profile_name_limit())'
     lines = core.splitlines(keepends=True)
     first = next((i for i, line in enumerate(lines) if line.startswith('#define MAPSTRINGS(')), None)
     macro = ''
@@ -104,11 +111,12 @@ def program(engine, profiles, *, reject_last_slot=False, history=None, name_capa
     contexts = []
     for profile in profiles:
         own = oracle['profiles'][profile['build']]
-        contexts.append('{%du,%d,%d}' % (
-            own['revision'], own['getter_requires_actor'], own['setter_integer_result']))
+        name_limit = own['name_limit'] - ('+' not in own['name_declaration'])
+        contexts.append('{%du,%d,%d,%d}' % (
+            own['revision'], own['getter_requires_actor'], own['setter_integer_result'], name_limit))
     history_code = ''
     if history:
-        contexts = ['{%du,0,0}' % row['revision'] for row in history['sources']]
+        contexts = ['{%du,0,0,0}' % row['revision'] for row in history['sources']]
         contracts = []
         numbers = []
         for case in history['contracts']:
@@ -132,12 +140,12 @@ def program(engine, profiles, *, reject_last_slot=False, history=None, name_capa
             'obor_profile_has_player_status_property(' in profile_calls):
         profile_support += '#include "source/openborscript/profile_ids.h"\n'
     if name_capacity is not None:
-        contexts = ['{%du,0,0}' % row['revision'] for row in name_capacity]
+        contexts = ['{%du,0,0,0}' % row['revision'] for row in name_capacity]
         limits = ','.join(str(row['name_bytes']) for row in name_capacity)
         profile_support += ('#define NAME_CAPACITY_CONTRACT 1\n'
                             f'static const size_t expected_name_limits[] = {{{limits}}};\n')
     if player_status is not None:
-        contexts = ['{%du,0,0}' % row['revision'] for row in player_status]
+        contexts = ['{%du,0,0,0}' % row['revision'] for row in player_status]
         records = ',\n'.join('{%d,%d,%d}' % (row['status_ordinal'], row['weapnum_ordinal'], row['weapon_ordinal'])
                               for row in player_status)
         history_code = (HERE / 'player_status_property_contract.c.in').read_text().replace('@ROWS@', records)
@@ -151,7 +159,7 @@ def program(engine, profiles, *, reject_last_slot=False, history=None, name_capa
         SEARCH=function((engine / 'source/utils.c').read_text(encoding='latin1'), 'searchList'),
         VARIANTS='\n'.join(function(variant, n) for n in conversions),
         METHODS=methods, BASELINE=baseline, CONTEXTS=','.join(contexts),
-        PROFILE_SUPPORT=profile_support, NAME_LIMIT=name_limit,
+        PROFILE_SUPPORT=profile_support,
         HISTORY_FLAG='#define PLAYER_PROPERTY_HISTORY 1' if history else '',
         HISTORICAL_CASES=history_code,
         HAS_HISTORY=str(int(engine.name in ['4432', '6391', '7142', '7533'])),

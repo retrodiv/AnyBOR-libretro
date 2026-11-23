@@ -21,12 +21,12 @@ void StrCache_Collect(int index) {(void)index;abort();}
 int StrCache_Pop(@POP_ARGUMENTS@) {abort();}
 void StrCache_Copy(int index,CHAR *text) {(void)index;(void)text;abort();}
 int StrCache_CreateNewFrom(const CHAR *text) {(void)text;abort();}
-void mapstrings_getentityproperty(ScriptVariant **args,int count) {(void)args;(void)count;}
-@MAPPER_TYPE@ mapstrings_entityproperty(ScriptVariant **args,int count) {(void)args;(void)count;@MAPPER_RETURN@}
+@MAPPER_STUBS@
 #define obor_property_index(space,index,end) (index)
 #define obor_entity_get_property_native(index) (index)
 #define obor_entityproperty_native(index) (index)
 #define obor_entityproperty(index) (index)
+#define obor_entity_property_index(index) (index)
 @ENUM@
 @AXIS@
 enum {@OUTER@=1};

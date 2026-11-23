@@ -547,6 +547,17 @@ static void check_profile(unsigned revision,const expectation *expected) {
  char load[]="LoAd",set[]="SeT";
  assert(getModelstxtCommand(models,load)==CMD_MODELSTXT_LOAD && !strcmp(load,"load"));
  assert(getLevelOrderCommand(order,set)==CMD_LEVELORDER_SET && !strcmp(set,"set"));
+ if(revision==3185) {
+  size_t active_model_commands=0;
+  for(const Node *entry=modelcmdlist->first;entry;entry=entry->next) {
+   char command[64];assert(strlen(entry->name)<sizeof(command));strcpy(command,entry->name);
+   if(obor_profile_model_command(modelcmdlist,command))++active_model_commands;
+  }
+  assert(active_model_commands==271 && levelcmdlist->size==90 && order->size==110);
+  char scroll[]="ScRoLlSpEeD",subclass[]="SuBcLaSs";
+  assert(!getLevelCommand(levelcmdlist,scroll));
+  assert(!obor_profile_model_command(modelcmdlist,subclass));
+ }
  freeCommandList(models);freeCommandList(order);
  assert(!obor_lookup_command(NULL,"name",0));
  assert(!obor_lookup_command(modelcmdlist,NULL,1));

@@ -72,7 +72,10 @@ def program(engine, profiles, *, wrong_query=False):
         text_owner = name == 's_level' and engine.name in ('6391','7142','7533','8023')
         position_delta = 8 if text_owner else 0
         tail_delta = 0
-        if engine.name == '4086':
+        if engine.name == '3842' and name == 's_level':
+            # The level keeps a count and a pointer for its basemaps.
+            position_delta += 12
+        elif engine.name == '4086':
             # Parent and entity type precede the spawn script. Vertical
             # background speed precedes the inline level scripts.
             position_delta = 12 if name == 's_spawn_entry' else 4 if name == 's_level' else 0
@@ -80,6 +83,15 @@ def program(engine, profiles, *, wrong_query=False):
             # Two level flags precede the scripts. Array ownership, spawn
             # views and lifecycle flags follow the scripts.
             position_delta, tail_delta = 8, 24
+        elif engine.name == '6391' and name == 's_spawn_entry':
+            # Both name fields gained a terminator, shifting the aligned Script.
+            position_delta += 4
+            for field in ('music', 'alias'):
+                checks.append('_Static_assert(sizeof(((%s*)0)->%s)==sizeof(((%s*)0)->%s)+1,"Spawn field terminator");' %
+                              (name, field, before, field))
+        elif engine.name == '7142' and name == 's_level':
+            # The level also owns its palette blending array and count.
+            position_delta += 16
         if text_owner:
             checks += [
                 '_Static_assert(sizeof(((s_level*)0)->obor_text_tables)==8,"One text ownership pointer");',

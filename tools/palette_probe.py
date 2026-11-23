@@ -44,7 +44,8 @@ def program(image_source, engine_source):
         helper = ('#define malloc model_palette_allocate\n#define free model_palette_release\n'
                   + function(engine_source, 'obor_load_model_palette') + '#undef malloc\n#undef free\n')
     palette_loader = ''.join(function(engine_source, name)
-                             for name in ('_load_palette16', '_load_palette32', 'load_palette'))
+                             for name in ('_load_palette16', '_load_palette32',
+                                          'obor_load_act_palette', 'load_palette'))
     return (PREFIX + pcx + image_source[auto:interface] + '\n' + function(image_source, 'loadimagepalette')
             + '\n' + palette_loader + MODEL_PREFIX.replace('@MODEL_PALETTE_HELPER@', helper)
             + model_cases[0] + MODEL_SUFFIX + MAIN)

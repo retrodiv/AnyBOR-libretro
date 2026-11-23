@@ -7,7 +7,97 @@ Copyright (c) 2026 retrodiv <retrodiv@proton.me>
 """
 import re
 
-from test_historical_player import function
+from test_historical_player import function, switch_cases
+
+
+def render_sound_callers(engine, rows):
+    model = (engine / 'openbor.c').read_text()
+    script = (engine / 'openborscript.c').read_text()
+    _, commands = switch_cases(model, 'load_cached_model', 'cmd', outermost=True)
+    names = ('DIESOUND', 'SOUND', 'HITFX', 'BLOCKFX')
+    parts = {
+        'COMMANDS': '\n'.join('case '+name+':'+commands['CMD_MODEL_'+name]['body'] for name in names),
+        'PLAYBACK': function(script, 'openbor_playsample'),
+        'PROFILES': '\n'.join('check(%du,%d);' % (row['revision'],row['fixed_slots']) for row in rows),
+    }
+    source = r'''
+#include <assert.h>
+#include <stddef.h>
+#include <stdint.h>
+#include <stdio.h>
+#include <string.h>
+#include <strings.h>
+#define stricmp strcasecmp
+#define GET_ARG(index) (filename)
+typedef int32_t LONG;
+typedef int HRESULT;
+enum { S_OK=0, E_FAIL=-1, VT_EMPTY=0, VT_INTEGER=1 };
+#define FAILED(hr) ((hr)<0)
+typedef struct { int vt; LONG lVal; } ScriptVariant;
+static uint32_t obor_profile_build;
+static struct { int effectvol; } savedata={43};
+static struct { int diesound; } actor,*newchar=&actor;
+static struct { int hitsound,blocksound; } attack;
+static int soundtoplay, loads, load_option, played, looped;
+
+static int ScriptVariant_IntegerValue(ScriptVariant *value,LONG *output) {
+    if(value->vt!=VT_INTEGER) return E_FAIL;
+    *output=value->lVal;
+    return S_OK;
+}
+static void ScriptVariant_ChangeType(ScriptVariant *value,int type) { value->vt=type; }
+static int sound_load_sample(const char *file,const char *pack,int option) {
+    assert(!strcmp(file,"sample") && !strcmp(pack,"fixture"));
+    ++loads;load_option=option;
+    return 17;
+}
+static int sound_play_sample(int id,unsigned priority,int left,int right,unsigned speed) {
+    ++played;
+    if(id<0) return -1;
+    assert(id==17 && priority==0 && left==43 && right==43 && speed==100);
+    return 29;
+}
+static int sound_loop_sample(int id,unsigned priority,int left,int right,unsigned speed) {
+    ++looped;
+    assert(id==17 && priority==3 && left==32 && right==37 && speed==105);
+    return 31;
+}
+enum { DIESOUND,SOUND,HITFX,BLOCKFX };
+static void command(int mode,const char *filename) {
+    const char *packfile="fixture";
+    switch(mode) { @COMMANDS@ }
+}
+@PLAYBACK@
+static void check(uint32_t revision,int fixed_slots) {
+    obor_profile_build=revision;
+    loads=0;load_option=-1;
+    for(int mode=DIESOUND;mode<=BLOCKFX;++mode) {
+        command(mode,"sample");
+        assert(loads==mode+1 && load_option==!fixed_slots);
+    }
+    assert(actor.diesound==17 && soundtoplay==17 && attack.hitsound==17 && attack.blocksound==17);
+    command(HITFX,"NoNe");
+    assert(loads==4 && attack.hitsound==-1);
+    ScriptVariant values[]={{VT_INTEGER,17},{VT_INTEGER,3},{VT_INTEGER,32},
+                            {VT_INTEGER,37},{VT_INTEGER,105},{VT_INTEGER,1}};
+    ScriptVariant *args[]={values,values+1,values+2,values+3,values+4,values+5};
+    ScriptVariant result={VT_EMPTY,0},*output=&result;
+    played=looped=0;
+    assert(openbor_playsample(args,&output,1)==S_OK && played==1 && looped==0);
+    assert(fixed_slots?!output:output==&result && result.vt==VT_INTEGER && result.lVal==29);
+    output=&result;
+    assert(openbor_playsample(args,&output,6)==S_OK && played==1 && looped==1);
+    assert(fixed_slots?!output:output==&result && result.vt==VT_INTEGER && result.lVal==31);
+    output=&result;
+    assert(openbor_playsample(args,&output,0)==(fixed_slots?E_FAIL:S_OK));
+    assert(played==(fixed_slots?1:2) && looped==1);
+    assert(fixed_slots?!output:output==&result && result.lVal==-1);
+    values[0].vt=VT_EMPTY;output=&result;
+    assert(openbor_playsample(args,&output,1)==E_FAIL && !output);
+}
+int main(void) { @PROFILES@ return 0; }
+'''
+    return re.sub(r'@([A-Z_]+)@',lambda match:parts[match[1]],source)
 
 
 def render_sound_cache(engine, rows):

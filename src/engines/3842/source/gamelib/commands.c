@@ -4,7 +4,8 @@
  * These contributions are licensed under BSD-3-Clause; see LICENSE at the root.
  * Upstream code retains its original license and notices.
  * Convert the command-list lookup result to its command enumeration
- * explicitly instead of through a plain pointer cast.
+ * explicitly instead of through a plain pointer cast. Add the source-defined
+ * entity draw script directive to the model command table.
  * Existing changes recorded here; this is not their implementation date.
  * See MODIFICATIONS.md and docs/modifications/3842.md
  * at the source repository root. Original notices follow below.
@@ -276,6 +277,7 @@ List* createModelCommandList(void) {
 	LIST_ADD(CMD_MODEL_DIDHITSCRIPT, "didhitscript");
 	LIST_ADD(CMD_MODEL_ONSPAWNSCRIPT, "onspawnscript");
 	LIST_ADD(CMD_MODEL_ONMODELCOPYSCRIPT, "onmodelcopyscript");
+	LIST_ADD(CMD_MODEL_ONDRAWSCRIPT, "ondrawscript");
 	LIST_ADD(CMD_MODEL_ANIMATIONSCRIPT, "animationscript");
 	LIST_ADD(CMD_MODEL_KEYSCRIPT, "keyscript");
 	LIST_ADD(CMD_MODEL_ANIM, "anim");

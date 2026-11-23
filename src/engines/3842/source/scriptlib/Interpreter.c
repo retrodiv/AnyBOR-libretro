@@ -24,6 +24,7 @@
  * Copyright (c) 2004 - 2013 OpenBOR Team
  */
 
+#include "openborscript.h"
 #include "Interpreter.h"
 #include "ImportCache.h"
 #include <string.h>
@@ -634,6 +635,8 @@ HRESULT Interpreter_CompileInstructions(Interpreter* pinterpreter, List *exports
 			List_Solidify(pInstruction->theRefList);
 			//cache the return value
 			Instruction_NewData(pInstruction);
+            if(obor_profile_build >= 3862u && !Script_MapInstructionConstant(pInstruction))
+                hr = E_FAIL;
 			List_GotoNext(&(pinterpreter->theInstructionList));
 			if(((Instruction*)List_Retrieve(&(pinterpreter->theInstructionList)))->OpCode != CLEAN){
 				Stack_Push(&(pinterpreter->theDataStack), pInstruction->theVal);
@@ -958,6 +961,13 @@ static int obor_profile_opcode(OpCode code)
     return value;
 }
 
+static HRESULT obor_take_script_branch(Interpreter *interpreter, const Instruction *instruction)
+{
+    if(!instruction->ptheJumpTarget) return E_FAIL;
+    interpreter->pCurrentInstruction = instruction->ptheJumpTarget;
+    return S_OK;
+}
+
 HRESULT Interpreter_EvalInstruction(Interpreter* pinterpreter)
 {
 	HRESULT hr = S_OK;
@@ -1114,6 +1124,11 @@ HRESULT Interpreter_EvalInstruction(Interpreter* pinterpreter)
 		case PARAM:
 			//copy value from the cached parameter
 			//assert(pinterpreter->pCurrentCall);
+			if(obor_profile_build < 3831u && !pinterpreter->pCurrentCall)
+			{
+				hr = E_FAIL;
+				break;
+			}
 			currentCall = pinterpreter->pCurrentCall;
 			{
 				int* referenceIndex = Instruction_CallReferenceIndex(currentCall);
@@ -1138,31 +1153,31 @@ HRESULT Interpreter_EvalInstruction(Interpreter* pinterpreter)
 	   // return
 	   case JUMPR:
 			pinterpreter->pReturnEntry = pinterpreter->pCurrentInstruction;
-			pinterpreter->pCurrentInstruction = pInstruction->ptheJumpTarget;
+			hr = obor_take_script_branch(pinterpreter, pInstruction);
 			break;
 
 		 //Jump to the specified label
 		case JUMP:
 		case PJUMP:
-			pinterpreter->pCurrentInstruction = pInstruction->ptheJumpTarget;
+			hr = obor_take_script_branch(pinterpreter, pInstruction);
 			break;
 
 		 //Jump if the top two ScriptVariants are equal
 		case Branch_EQUAL:
 			if(ScriptVariant_Eq(pInstruction->theVal, pInstruction->theRef2)->lVal)
-				pinterpreter->pCurrentInstruction = pInstruction->ptheJumpTarget;
+				hr = obor_take_script_branch(pinterpreter, pInstruction);
 			break;
 
 		 //Jump if the top ScriptVariant resolves to false
 		case Branch_FALSE:
 			if(!ScriptVariant_IsTrue(pInstruction->theVal))
-				pinterpreter->pCurrentInstruction = pInstruction->ptheJumpTarget;
+				hr = obor_take_script_branch(pinterpreter, pInstruction);
 			break;
 
 		 //Jump if the top ScriptVariant resolves to true
 		case Branch_TRUE:
 			if(ScriptVariant_IsTrue(pInstruction->theVal))
-				pinterpreter->pCurrentInstruction = pInstruction->ptheJumpTarget;
+				hr = obor_take_script_branch(pinterpreter, pInstruction);
 			break;
 
 		 //Set the m_bCallCompleted flag to true so we know to stop evalutating

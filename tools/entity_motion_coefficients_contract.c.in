@@ -1,0 +1,143 @@
+/* SPDX-License-Identifier: BSD-3-Clause
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me> */
+#include <assert.h>
+#include <stdint.h>
+#include <stdio.h>
+#include "openbor.h"
+#undef assert
+#undef printf
+#include <assert.h>
+
+uint32_t obor_profile_build;
+u32 time = 100;
+entity *self;
+s_videomodes videomodes;
+float advancex;
+float default_level_gravity = -0.5f;
+static s_level scene;
+s_level *level;
+static struct {int maxplayers;} levelsets[] = {{2}};
+static int current_set;
+static unsigned steam_calls, kill_calls, rumble_calls;
+static entity target, attacker;
+static entity *driver_attacker;
+
+unsigned int rand32(void) { return 9; }
+float randf(float max) { return 0.25f * max; }
+void toss(entity *actor, float lift) { actor->tossv = lift; }
+void kill(entity *actor) { assert(actor == self); ++kill_calls; }
+void steam_spawn(float x, float z, float a)
+{
+    assert(x == self->x && z == self->z && a == self->a);
+    ++steam_calls;
+}
+void control_rumble(int port, int duration)
+{
+    assert(port == (int)rumble_calls && duration == 100);
+    ++rumble_calls;
+}
+static int take_damage(entity *other, s_attack *attack)
+{
+    assert(self == &target && attack->attack_force == 7);
+    driver_attacker = other;
+    return 1;
+}
+
+@MOTION@
+@TRAP@
+@STEAMER@
+@BIKE@
+
+static void gravity_tick(void)
+{
+    float gravity;
+    @GRAVITY@
+    @TOSS_TIME@
+}
+
+static void impact_pause(entity *e, s_attack *attack)
+{
+    @SELF_PAUSE@
+    @OTHER_PAUSE@
+}
+
+static void arrow_recoil(void) { @ARROW@ }
+static void star_recoil(void) { @STAR@ }
+static void knife_speed(entity *e) { @KNIFE_SPEED@ }
+static void bomb_speed(entity *e) { @BOMB_SPEED@ }
+static void star_launch(entity *e, float fd, int i) { @STAR_LAUNCH@ }
+static void driver_hit(entity *other, s_attack *attack) { @DRIVER@ }
+@CADENCE@
+
+int main(void)
+{
+    obor_profile_build = @REVISION@;
+    self = &target;
+    level = &scene;
+    scene.gravity = -1;
+    s_anim animation = {0};
+    target.animation = &animation;
+    target.modeldata.subject_to_gravity = 1;
+    target.a = 4;
+    target.tossv = 2;
+    gravity_tick();
+    printf("{\"gravity\":[%.4f,%.4f,%u]", target.a, target.tossv, target.toss_time);
+    s_attack attack = {.attack_force = 7, .pause_add = 5};
+    impact_pause(&attacker, &attack);
+    printf(",\"pause\":[%u,%u,%u,%u,%u,%u,%u,%u]",
+           target.toss_time, target.nextmove, target.nextanim, target.nextthink,
+           attacker.toss_time, attacker.nextmove, attacker.nextanim, attacker.nextthink);
+
+    printf(",\"recoil\":[");
+    for(int direction = 0; direction < 2; ++direction)
+    {
+        target.direction = direction;
+        arrow_recoil();
+        printf("%s%.4f,%.4f", direction ? "," : "", target.xdir, target.tossv);
+        star_recoil();
+        printf(",%.4f,%.4f", target.xdir, target.tossv);
+    }
+    target.modeldata.speed = 2.5f;
+    knife_speed(&target);
+    printf("],\"launch\":[%.4f", target.modeldata.speed);
+    target.modeldata.speed = 3.5f;
+    bomb_speed(&target);
+    printf(",%.4f", target.modeldata.speed);
+    for(int i = -2; i <= 2; i += 4)
+    {
+        star_launch(&target, 2.5f, i);
+        printf(",%.4f", target.xdir);
+    }
+
+    printf("],\"cadence\":[");
+    @CADENCE_CHECKS@
+    videomodes.hRes = 320;
+    target.x = -81;
+    target.attacking = 0;
+    target.nextthink = 0;
+    trap_think();
+    printf("],\"trap\":[%d,%u", (int)target.attacking, target.nextthink);
+    target.x = 120;
+    trap_think();
+    printf(",%d,%u],\"steamer\":[", (int)target.attacking, target.nextthink);
+    target.x = -81;
+    target.nextthink = 0;
+    steamer_think();
+    printf("%u,%u,%u", steam_calls, kill_calls, target.nextthink);
+    target.x = 120;
+    steamer_think();
+    printf(",%u,%u,%u],\"bike\":[", steam_calls, kill_calls, target.nextthink);
+    for(int direction = 0; direction < 2; ++direction)
+    {
+        target.nextthink = 0;
+        target.direction = direction;
+        rumble_calls = 0;
+        bike_crash();
+        printf("%s%.4f,%u,%u", direction ? "," : "", target.xdir, target.nextthink, rumble_calls);
+    }
+    target.takedamage = take_damage;
+    driver_hit(&attacker, &attack);
+    assert(driver_attacker == self || driver_attacker == &attacker);
+    printf("],\"driver_owner\":%d}\n", driver_attacker == &attacker);
+    return 0;
+}

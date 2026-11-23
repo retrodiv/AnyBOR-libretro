@@ -141,6 +141,12 @@ static void expect_result(ScriptVariant *r,int has,int value) {
                             'typedef '+long_type+' LONG;\ntypedef int HRESULT;')
     prefix = prefix.replace('CONVERSION', conversion).replace('ENUM', enum)
     prefix = prefix.replace('MACRO', macro).replace('METHODS', methods)
+    mapper_returns = set(re.findall(
+        r'(?m)^[ \t]*(void|int)\s+mapstrings_(?:get|change)?playerproperty\s*\(', methods))
+    if len(mapper_returns) != 1:
+        raise ValueError('Player mappers must have one native return type')
+    mapper_return = mapper_returns.pop()
+    main = re.sub(r'\bvoid (?=\(\*(?:get_map|set_map)\))', mapper_return + ' ', main)
     return prefix + stubs + '\n' + dispatch + '\n' + main
 
 
@@ -312,6 +318,15 @@ int main(int argc, char **argv) {
         if(profile<3682) { expect_set_error(status,ent_has);assert(player[0].ent==&subject); }
         else {
             assert(status==S_OK && player[0].ent==&replacement);expect_result(&r,ent_has,1);
+        }
+        if(profile >= 3797) {
+            reset();prop=text("entity");ent_value=(ScriptVariant){0};
+            status=set(&prop,&ent_value,NULL,&r,&ent_has);
+            assert(!ent_has);
+            if(profile >= 3855)
+                assert(status==S_OK && player[0].ent==NULL);
+            else
+                assert(status==E_FAIL && player[0].ent==&subject);
         }
         /* The old setter's compiler mapper requires its value argument. */
         reset();index=integer(0);prop=text("score");

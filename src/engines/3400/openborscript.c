@@ -1445,6 +1445,7 @@ static const obor_system_namespace *obor_system_property_namespace(void) {
     case 3143u:
     case 3160u:
     case 3173u:
+    case 3185u:
     case 3192u:
     case 3208u:
     case 3273u:
@@ -6161,6 +6162,7 @@ static const obor_property_namespace *obor_get_property_namespace(void) {
     case 3143u:
     case 3160u:
     case 3173u:
+    case 3185u:
     case 3192u:
     case 3208u:
     case 3273u:
@@ -6252,6 +6254,7 @@ static const obor_property_namespace *obor_set_property_namespace(void) {
     case 3143u:
     case 3160u:
     case 3173u:
+    case 3185u:
     case 3192u:
         return &obor_set_property_namespace_0_table;
     case 3208u:
@@ -6326,6 +6329,7 @@ static const obor_property_namespace *obor_get_aiflag_namespace(void) {
     case 3143u:
     case 3160u:
     case 3173u:
+    case 3185u:
     case 3192u:
     case 3208u:
     case 3273u:
@@ -6382,6 +6386,7 @@ static const obor_property_namespace *obor_set_aiflag_namespace(void) {
     case 3143u:
     case 3160u:
     case 3173u:
+    case 3185u:
     case 3192u:
     case 3208u:
     case 3273u:
@@ -6677,7 +6682,9 @@ void mapstrings_changeentityproperty(ScriptVariant** varlist, int paramCount)
 		{
 			if(!varlist[i]) continue;
 			MAPSTRINGS(varlist[i], proplist_hostile_candamage, _cep_hcd_the_end,
-				"Entity type '%s' is not supported by 'hostile', 'candamage', or 'projectilehit'\n");
+				(obor_profile_build == 3185
+				 ? "Entity type '%s' is not supported by 'hostile' or 'candamage'\n"
+				 : "Entity type '%s' is not supported by 'hostile', 'candamage', or 'projectilehit'\n"));
 		}
 	}
 
@@ -7111,7 +7118,9 @@ HRESULT openbor_changeentityproperty(ScriptVariant** varlist , ScriptVariant** p
 				/* AnyBOR: validate collision selector extent. */
 				if((unsigned int)(int)ltemp >= sizeof(entitytypes) / sizeof(*entitytypes))
 				{
-					printf("You must pass one or more string constants for entity type.\n");
+					printf("%s", obor_profile_build == 3185
+					 ? "You must give a string for entity type.\n"
+					 : "You must pass one or more string constants for entity type.\n");
 					goto changeentityproperty_error;
 				}
 				/* AnyBOR: native collision value follows. */
@@ -7123,7 +7132,9 @@ HRESULT openbor_changeentityproperty(ScriptVariant** varlist , ScriptVariant** p
 			}
 			else
 			{
-				printf("You must pass one or more string constants for entity type.\n");
+				printf("%s", obor_profile_build == 3185
+					 ? "You must give a string for entity type.\n"
+					 : "You must pass one or more string constants for entity type.\n");
 				goto changeentityproperty_error;
 			}
 		}
@@ -7535,7 +7546,9 @@ HRESULT openbor_changeentityproperty(ScriptVariant** varlist , ScriptVariant** p
 				/* AnyBOR: validate collision selector extent. */
 				if((unsigned int)(int)ltemp >= sizeof(entitytypes) / sizeof(*entitytypes))
 				{
-					printf("You must pass one or more string constants for entity type.\n");
+					printf("%s", obor_profile_build == 3185
+					 ? "You must give a string for entity type.\n"
+					 : "You must pass one or more string constants for entity type.\n");
 					goto changeentityproperty_error;
 				}
 				/* AnyBOR: native collision value follows. */
@@ -7544,7 +7557,9 @@ HRESULT openbor_changeentityproperty(ScriptVariant** varlist , ScriptVariant** p
 			}
 			else
 			{
-				printf("You must pass one or more string constants for entity type.\n");
+				printf("%s", obor_profile_build == 3185
+					 ? "You must give a string for entity type.\n"
+					 : "You must pass one or more string constants for entity type.\n");
 				goto changeentityproperty_error;
 			}
 		}

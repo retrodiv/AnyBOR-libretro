@@ -20,9 +20,12 @@
  */
 
 #include "Parser.h"
+#include <stdint.h>
 #ifdef LIBRETRO
 #include "anybor_content_error.h"
 #endif
+
+extern uint32_t obor_profile_build;
 
 Parser* pcurParser = NULL;
 
@@ -323,7 +326,8 @@ void Parser_External_decl2(Parser* pparser, BOOL variableonly )
 	}
 	// not a comma, semicolon, or initializer, so must be a function declaration
 	else if (variableonly==FALSE && ParserSet_First(&(pparser->theParserSet), funcDecl, pparser->theNextToken.theType )){
-		Parser_AddInstructionViaToken(pparser, FUNCDECL, &token, (Label)token.theSource );
+		OpCode declaration = obor_profile_build < 3337u ? NOOP : FUNCDECL;
+		Parser_AddInstructionViaToken(pparser, declaration, &token, (Label)token.theSource );
 		Parser_AddInstructionViaToken(pparser, PUSH, (Token*)NULL, NULL );
 		Parser_FuncDecl(pparser );
 		Parser_Comp_stmt_Label(pparser, pparser->theRetLabel );

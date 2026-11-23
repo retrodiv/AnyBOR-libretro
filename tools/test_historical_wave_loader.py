@@ -124,6 +124,15 @@ class WaveLoaderTests(unittest.TestCase):
 
 
 class SoundCacheTests(unittest.TestCase):
+    def test_model_sound_commands_and_script_playback(self):
+        from historical_sound_cache import render_sound_callers
+        from test_historical_behavior import native
+        fixture = load_contract_fixture(Path(__file__).with_name('fixtures') / 'profile-sound-cache-contracts.json')
+        rows = fixture['sources']
+        self.assertTrue(set(fixture['boundary_controls']) <= {row['revision'] for row in rows})
+        with patch.dict(os.environ, sanitizer_environment()):
+            native(render_sound_callers(SOURCE / 'src/engines/3842', rows))
+
     def test_sample_slots_lifetime_playback_and_model_cache_per_profile(self):
         from historical_sound_cache import render_sound_cache
         from test_historical_behavior import native

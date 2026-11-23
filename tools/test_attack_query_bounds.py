@@ -46,13 +46,19 @@ def program(engine, profiles, *, remove_frame_guard=False):
     else:
         ordinal = 'return id;'
     axis = re.search(r'enum\s+_axis_enum\s*\{[^{}]+\}\s*;', source)
+    mapper_stubs = []
+    for name in ('mapstrings_getentityproperty', 'mapstrings_entityproperty'):
+        signature = re.search(r'(?m)^(void|int)\s+' + name + r'\(', source)
+        if signature:
+            result = 'return 1;' if signature[1] == 'int' else ''
+            mapper_stubs.append(f'{signature[1]} {name}(ScriptVariant **args,int count) '
+                                f'{{(void)args;(void)count;{result}}}')
     values = dict(ENUM=enum[0], NAMESPACES=namespaces, ORDINAL=ordinal,
                   PREFIX_DEPENDENCY='enum {_gep_defense=2,_gep_the_end=3};' if engine.name == '3400' else
                       'enum {_ep_defense=2,_ep_the_end=3};',
                   AXIS=axis[0] if engine.name == '4086' and axis else '', GETTER=getter,
                   OUTER=outer, FORCE=prefix+'force', COORDS=prefix+'coords', DROPV=prefix+'dropv',
-                  MAPPER_TYPE='int' if engine.name == '4086' else 'void',
-                  MAPPER_RETURN='return 1;' if engine.name == '4086' else '',
+                  MAPPER_STUBS='\n'.join(mapper_stubs),
                   POP_ARGUMENTS='int length' if 'StrCache_Pop(int length)' in
                       (engine / 'source/scriptlib/ScriptVariant.h').read_text() else 'void',
                   CONVERSIONS='\n'.join(function(variant, name) for name in

@@ -131,6 +131,34 @@
       "original_program_sha256": "24505e4459b1ee59074cc633487b0bd448877281a4f989ca86a1145d3fb135da"
     },
     {
+      "profile": "3787",
+      "engine": "3842",
+      "observations": 221112,
+      "matrix_sha256": "5f2df90dc2d8bccbbb93bd7aae0dbeab6282fd02ad9bd291853c6007c4bdd9e8",
+      "source_reference": "https://github.com/DCurrent/openbor/blob/7107dfda3a417aea1f1cf31a82f241b0ce99ba8f/engine/source/gamelib/font.c",
+      "source_commit": "7107dfda3a417aea1f1cf31a82f241b0ce99ba8f",
+      "source_files_sha256": {
+        "source/gamelib/bitmap.c": "3b85fa2711c1928e848477b0e616ffd232c0f0404921027436a5675d9c91d081",
+        "source/gamelib/sprite.c": "e9cd34f72ad7a536ba93319ab9ed449554dfd9ea5a3e01ed2fd50652b5dd9013",
+        "source/gamelib/spritex8p16.c": "3ec21a32e45e76a615db7e31adf64efca1b7163053e17fb69bcbeb04ea23141c",
+        "source/gamelib/spritex8p32.c": "4be72035d7e1885c8c9482e46e18b476677bf9615a681a3eec1f396b8eef12d5",
+        "source/gamelib/pixelformat.c": "e1a8a45eec419058dcbc5ae73681410bb80f73abca6341285e0ba3dd1622ad20",
+        "source/gamelib/spriteq.c": "bed8373f0376107367f0bd7d3c41e3aabe2e3492bf0ed8d09c5aebe5888020ad",
+        "source/gamelib/screen.c": "1e79ad4df7b5db84c963331e59f659acddde97fcf35ad12f65ebfce84cf77fb6",
+        "source/gamelib/font.c": "b3560f53d7534234b1c40bf3427b14eb6473c71e46d459b147540b7f857ecdce",
+        "source/gamelib/font.h": "95a23ea831bf158538c56b8f3f630c933191a29744f12aa493a98fb437fe7a94",
+        "openbor.c": "6ad6d3164279862ea05232e97a8202d32cc61b3c8600cc6b65144e502254e830"
+      },
+      "original_program_sha256": "9c9e94ec442940c8e97d8f19524c313bd1aa22edee656d333ca8c6165080ca1f",
+      "oracle_execution": "Reused the measured 3839 raster after checking the exact original units and generated program.",
+      "oracle_source_equivalence": {
+        "anchor_profile": "3839",
+        "measured_original_program_sha256": "24505e4459b1ee59074cc633487b0bd448877281a4f989ca86a1145d3fb135da",
+        "current_generated_program_sha256": "9c9e94ec442940c8e97d8f19524c313bd1aa22edee656d333ca8c6165080ca1f",
+        "evidence": "Same rendering source units and generated raster program. Transform declarations differ only by inline on 3787."
+      }
+    },
+    {
       "profile": "3789",
       "engine": "3842",
       "observations": 221112,
@@ -150,6 +178,34 @@
         "openbor.c": "6ad6d3164279862ea05232e97a8202d32cc61b3c8600cc6b65144e502254e830"
       },
       "original_program_sha256": "24505e4459b1ee59074cc633487b0bd448877281a4f989ca86a1145d3fb135da"
+    },
+    {
+      "profile": "3792",
+      "engine": "3842",
+      "observations": 221112,
+      "matrix_sha256": "5f2df90dc2d8bccbbb93bd7aae0dbeab6282fd02ad9bd291853c6007c4bdd9e8",
+      "source_reference": "https://github.com/DCurrent/openbor/blob/9cbf94bbba71839b647b223fa3cb03b90a88fb2e/engine/source/gamelib/font.c",
+      "source_commit": "9cbf94bbba71839b647b223fa3cb03b90a88fb2e",
+      "source_files_sha256": {
+        "source/gamelib/bitmap.c": "3b85fa2711c1928e848477b0e616ffd232c0f0404921027436a5675d9c91d081",
+        "source/gamelib/sprite.c": "e9cd34f72ad7a536ba93319ab9ed449554dfd9ea5a3e01ed2fd50652b5dd9013",
+        "source/gamelib/spritex8p16.c": "3ec21a32e45e76a615db7e31adf64efca1b7163053e17fb69bcbeb04ea23141c",
+        "source/gamelib/spritex8p32.c": "4be72035d7e1885c8c9482e46e18b476677bf9615a681a3eec1f396b8eef12d5",
+        "source/gamelib/pixelformat.c": "e1a8a45eec419058dcbc5ae73681410bb80f73abca6341285e0ba3dd1622ad20",
+        "source/gamelib/spriteq.c": "bed8373f0376107367f0bd7d3c41e3aabe2e3492bf0ed8d09c5aebe5888020ad",
+        "source/gamelib/screen.c": "1e79ad4df7b5db84c963331e59f659acddde97fcf35ad12f65ebfce84cf77fb6",
+        "source/gamelib/font.c": "b3560f53d7534234b1c40bf3427b14eb6473c71e46d459b147540b7f857ecdce",
+        "source/gamelib/font.h": "95a23ea831bf158538c56b8f3f630c933191a29744f12aa493a98fb437fe7a94",
+        "openbor.c": "2be4b70d53a28a193e5765d550f154d2c2b81d4b5cd72443ba0a568b74ef2128"
+      },
+      "original_program_sha256": "9c9e94ec442940c8e97d8f19524c313bd1aa22edee656d333ca8c6165080ca1f",
+      "oracle_execution": "Reused the measured 3839 raster after checking the exact original units and generated program.",
+      "oracle_source_equivalence": {
+        "anchor_profile": "3839",
+        "measured_original_program_sha256": "24505e4459b1ee59074cc633487b0bd448877281a4f989ca86a1145d3fb135da",
+        "current_generated_program_sha256": "9c9e94ec442940c8e97d8f19524c313bd1aa22edee656d333ca8c6165080ca1f",
+        "evidence": "Same rendering source units and generated raster program. Transform declarations differ only by inline on 3787."
+      }
     },
     {
       "profile": "3793",
@@ -297,6 +353,34 @@
         "openbor.c": "02b8a2f6e31e8b183f9268bab9a229ad5cfdb5c67b2879d7c51249658490a713"
       },
       "original_program_sha256": "24505e4459b1ee59074cc633487b0bd448877281a4f989ca86a1145d3fb135da"
+    },
+    {
+      "profile": "3826",
+      "engine": "3842",
+      "observations": 221112,
+      "matrix_sha256": "5f2df90dc2d8bccbbb93bd7aae0dbeab6282fd02ad9bd291853c6007c4bdd9e8",
+      "source_reference": "https://github.com/DCurrent/openbor/blob/7f8db3e494b600125795cae3406bce3b0bda3216/engine/source/gamelib/font.c",
+      "source_commit": "7f8db3e494b600125795cae3406bce3b0bda3216",
+      "source_files_sha256": {
+        "source/gamelib/bitmap.c": "3b85fa2711c1928e848477b0e616ffd232c0f0404921027436a5675d9c91d081",
+        "source/gamelib/sprite.c": "e9cd34f72ad7a536ba93319ab9ed449554dfd9ea5a3e01ed2fd50652b5dd9013",
+        "source/gamelib/spritex8p16.c": "3ec21a32e45e76a615db7e31adf64efca1b7163053e17fb69bcbeb04ea23141c",
+        "source/gamelib/spritex8p32.c": "4be72035d7e1885c8c9482e46e18b476677bf9615a681a3eec1f396b8eef12d5",
+        "source/gamelib/pixelformat.c": "e1a8a45eec419058dcbc5ae73681410bb80f73abca6341285e0ba3dd1622ad20",
+        "source/gamelib/spriteq.c": "bed8373f0376107367f0bd7d3c41e3aabe2e3492bf0ed8d09c5aebe5888020ad",
+        "source/gamelib/screen.c": "1e79ad4df7b5db84c963331e59f659acddde97fcf35ad12f65ebfce84cf77fb6",
+        "source/gamelib/font.c": "b3560f53d7534234b1c40bf3427b14eb6473c71e46d459b147540b7f857ecdce",
+        "source/gamelib/font.h": "95a23ea831bf158538c56b8f3f630c933191a29744f12aa493a98fb437fe7a94",
+        "openbor.c": "952432ed33df133c780008e6acd082b67f237153af2713c7413da42873f5ed72"
+      },
+      "original_program_sha256": "9c9e94ec442940c8e97d8f19524c313bd1aa22edee656d333ca8c6165080ca1f",
+      "oracle_execution": "Reused the measured 3839 raster after checking the exact original units and generated program.",
+      "oracle_source_equivalence": {
+        "anchor_profile": "3839",
+        "measured_original_program_sha256": "24505e4459b1ee59074cc633487b0bd448877281a4f989ca86a1145d3fb135da",
+        "current_generated_program_sha256": "9c9e94ec442940c8e97d8f19524c313bd1aa22edee656d333ca8c6165080ca1f",
+        "evidence": "Same rendering source units and generated raster program. Transform declarations differ only by inline on 3787."
+      }
     },
     {
       "profile": "3829",
@@ -493,6 +577,52 @@
         "measured_original_program_sha256": "d21b1581e8c5c60aa1aaa8ded21a0f02f26097b5fddf971211e64580c7aa0a91",
         "evidence": "The seven raster units and the loading, rendering and metric functions are identical to the original anchor. Removed vertex declarations and the sprite_get_pixel prototype do not affect these font paths. The 3854 header adds only the mask-loader prototype; its unload also frees masks, which are absent in this ordinary font matrix."
       }
+    },
+    {
+      "profile": "3880",
+      "engine": "3842",
+      "observations": 221112,
+      "matrix_sha256": "5f2df90dc2d8bccbbb93bd7aae0dbeab6282fd02ad9bd291853c6007c4bdd9e8",
+      "source_reference": "https://github.com/DCurrent/openbor/blob/884ba387789859f6ded198bc2eb3095ce05ea443/engine/source/gamelib/font.c",
+      "source_commit": "884ba387789859f6ded198bc2eb3095ce05ea443",
+      "source_files_sha256": {
+        "source/gamelib/font.h": "c4ca134c575e5c3ed51ea46adbc03e24c7add209aad4218e01f2179b9d7e1d8e",
+        "source/gamelib/types.h": "f6ae137948720c400bf451838abf8da8b25fe3de9b32da84913008d78818b8bd",
+        "source/gamelib/transform.h": "e073c90d022467103a401af4004580db9fb4230499ac1cc3e03ea8a36a30441a",
+        "source/gamelib/font.c": "ca366d643a3fa3ce46d28195f0f2c76168442f8149c94b4bd441cd7943542218",
+        "source/gamelib/screen.c": "1e79ad4df7b5db84c963331e59f659acddde97fcf35ad12f65ebfce84cf77fb6",
+        "source/gamelib/bitmap.c": "3b85fa2711c1928e848477b0e616ffd232c0f0404921027436a5675d9c91d081",
+        "source/gamelib/sprite.c": "82614bcf3814ac7606d7a13b34a8f00e74ff94bbf09d6893b2eaef06e49a3eb6",
+        "source/gamelib/spritex8p16.c": "80a8cd382e8589a3334b22c094071c5bb2b11fba569bd2ea40bba4f60b0e864e",
+        "source/gamelib/spritex8p32.c": "bc7d53055defe283c3ba055cf5f58dca2e7e483fdf7893d12a9596e8e60853f2",
+        "source/gamelib/pixelformat.c": "0e78cab39c244d3507236d98779b01f211423059c42220cc82d3e7247e99535e",
+        "source/gamelib/spriteq.c": "bed8373f0376107367f0bd7d3c41e3aabe2e3492bf0ed8d09c5aebe5888020ad"
+      },
+      "original_program_sha256": "e984031baa5d180a3e176cf37b9ed6d3101527e0f1d8c3d1ccd9a181e240ca5b",
+      "oracle_execution": "Measured from this original using the declared font raster oracle."
+    },
+    {
+      "profile": "3896",
+      "engine": "3842",
+      "observations": 221112,
+      "matrix_sha256": "5f2df90dc2d8bccbbb93bd7aae0dbeab6282fd02ad9bd291853c6007c4bdd9e8",
+      "source_reference": "https://github.com/DCurrent/openbor/blob/2e876d36df8b53edb0cdf3d2762eceb9e7e4aad4/engine/source/gamelib/font.c",
+      "source_commit": "2e876d36df8b53edb0cdf3d2762eceb9e7e4aad4",
+      "source_files_sha256": {
+        "source/gamelib/font.h": "c4ca134c575e5c3ed51ea46adbc03e24c7add209aad4218e01f2179b9d7e1d8e",
+        "source/gamelib/types.h": "f6ae137948720c400bf451838abf8da8b25fe3de9b32da84913008d78818b8bd",
+        "source/gamelib/transform.h": "89a43152042dcd1e2e7b4c020e94e53c28b716a48aada3f13a0f4fce9d64edf6",
+        "source/gamelib/font.c": "ca366d643a3fa3ce46d28195f0f2c76168442f8149c94b4bd441cd7943542218",
+        "source/gamelib/screen.c": "1e79ad4df7b5db84c963331e59f659acddde97fcf35ad12f65ebfce84cf77fb6",
+        "source/gamelib/bitmap.c": "3b85fa2711c1928e848477b0e616ffd232c0f0404921027436a5675d9c91d081",
+        "source/gamelib/sprite.c": "82614bcf3814ac7606d7a13b34a8f00e74ff94bbf09d6893b2eaef06e49a3eb6",
+        "source/gamelib/spritex8p16.c": "80a8cd382e8589a3334b22c094071c5bb2b11fba569bd2ea40bba4f60b0e864e",
+        "source/gamelib/spritex8p32.c": "bc7d53055defe283c3ba055cf5f58dca2e7e483fdf7893d12a9596e8e60853f2",
+        "source/gamelib/pixelformat.c": "0e78cab39c244d3507236d98779b01f211423059c42220cc82d3e7247e99535e",
+        "source/gamelib/spriteq.c": "bed8373f0376107367f0bd7d3c41e3aabe2e3492bf0ed8d09c5aebe5888020ad"
+      },
+      "original_program_sha256": "e984031baa5d180a3e176cf37b9ed6d3101527e0f1d8c3d1ccd9a181e240ca5b",
+      "oracle_execution": "Measured from this original using the declared font raster oracle."
     }
   ]
 }

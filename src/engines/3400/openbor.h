@@ -73,11 +73,13 @@
 #define		pause				borPause
 #define		shutdown			borShutdown
 
+#define OBOR_CLASSIC_VERSION_LABEL (obor_profile_build == 3185u ? "v3.0 Build 3173" : VERSION)
+
 #define DEFAULT_SHUTDOWN_MESSAGE \
     (obor_profile_build < 3078 ? \
     "OpenBoR %s, Compile Date: " __DATE__ "\nPresented by Team Senile.\nThis Version is unofficial and based on the Senile Source Code.\n\nSpecial thanks to SEGA and SNK.\n\n" : \
     "OpenBOR %s, Compile Date: " __DATE__ "\nPresented by Senile Team.\nThis Version is unofficial and based on the Senile source code.\n\nSpecial thanks to SEGA and SNK.\n\n"), \
-    VERSION
+    OBOR_CLASSIC_VERSION_LABEL
 
 #define		COMPATIBLEVERSION	0x00030000
 #define		CV_SAVED_GAME		0x00021276

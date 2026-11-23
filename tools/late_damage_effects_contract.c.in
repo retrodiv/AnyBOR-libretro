@@ -15,6 +15,7 @@ entity *self;
 u32 time;
 static entity *driver_service,*callback_self,*callback_other;
 static unsigned callbacks,checks,deaths;
+static unsigned player_feedback, player_losses;
 unsigned char *model_get_colourmap(s_model *model,unsigned which){(void)model;(void)which;abort();}
 void ent_set_colourmap(entity *ent,unsigned map){(void)ent;(void)map;abort();}
 int inair(entity *ent){(void)ent;return 0;}
@@ -27,10 +28,20 @@ void checkdeath(void){assert(!self->health);++deaths;}
 static int take_damage(entity *other,s_attack *attack){
     assert(attack->attack_force==7);++callbacks;callback_self=self;callback_other=other;return 1;
 }
+void control_rumble(int player, int strength){
+    assert(player==2 && strength==21);
+    ++player_feedback;
+}
+void player_die(void){++player_losses;}
+@MOTION@
+@ENTITY_TYPE@
+static void exercise_player_routes(s_attack *attack){
+    @PLAYER_ROUTES@
+}
 @SET_OPPONENT@
 @EFFECTS@
 @BIKER@
-struct context {uint32_t revision;int dot_fallback,driver_attacker;};
+struct context {uint32_t revision;int dot_fallback,driver_attacker,driver_clock,compound_player;};
 static const struct context contexts[]={@CONTEXTS@};
 int main(void){
     static entity victim,opponent,driver;
@@ -62,7 +73,8 @@ int main(void){
             assert(biker_takedamage(attacker,&attack)==1 && self==&victim);
             if(painless){assert(checks==1 && !callbacks && !deaths && self->health==100);}
             else {
-                assert(!checks && deaths==1 && self->health==0 && self->nextthink==time+THINK_SPEED);
+                assert(!checks && deaths==1 && self->health==0);
+                assert(self->nextthink==(context->driver_clock ? time+THINK_SPEED : 0));
                 assert(callbacks==(unsigned)(present && callback));
                 if(present){
                     assert(driver.drop==1 && driver.direction==1);
@@ -70,6 +82,16 @@ int main(void){
                     else assert(driver.health==13);
                 }
             }
+            ++cases;
+        }
+        const int types[]={TYPE_PLAYER,TYPE_ENEMY,TYPE_PLAYER|TYPE_ENEMY,0};
+        for(unsigned i=0;i<sizeof(types)/sizeof(*types);++i){
+            self=&victim;self->modeldata.type=types[i];self->playerindex=2;
+            s_attack attack={0};attack.attack_force=7;
+            player_feedback=player_losses=0;
+            exercise_player_routes(&attack);
+            unsigned expected=(i==0 || (i==2 && context->compound_player)) ? 2 : 0;
+            assert(player_feedback==expected && player_losses==expected);
             ++cases;
         }
     }

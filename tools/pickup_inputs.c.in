@@ -40,6 +40,7 @@ static void reset(unsigned position,unsigned speed,int nomove)
     actor.@X@=positions[position][0];actor.@Z@=positions[position][1];
     target_actor.@X@=positions[position][2];target_actor.@Z@=positions[position][3];
     actor.@SPEED@=speeds[speed];actor.@NO_MOVE@=nomove?@NO_MOVE_VALUE@:0;
+    @MOVE_SETUP@
     actor.@VX@=31;actor.@VZ@=37;actor.running=1;
 #if @HAS_DEST@
     actor.destx=41;actor.destz=43;

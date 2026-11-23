@@ -26,7 +26,16 @@ def program(engine, profiles, *, omit_tail_initialization=False):
     native = function(core, 'alloc_ents')
     release = function(core, 'free_ents')
     snapshots = combat_snapshot_support(core) if 'obor_collect_model_snapshots' in release else ''
-    original = load_contract_fixture(FIXTURE)['engines'][engine.name]['alloc_ents']
+    oracle = load_contract_fixture(FIXTURE)['engines'][engine.name]
+    original = rename_identifiers(oracle['alloc_ents'], {'alloc_ents': 'original_alloc_ents'})
+    controls = oracle.get('draw_queue_boundary', [])
+    draw_queue = oracle.get('draw_queue_alloc_ents')
+    if bool(controls) != bool(draw_queue) or (controls and
+            (len(controls) != 2 or controls[1] != controls[0] + 1)):
+        raise ValueError('An adjacent source boundary is required for the draw queue')
+    if draw_queue:
+        draw_queue = rename_identifiers(draw_queue, {'alloc_ents': 'original_alloc_draw_queue',
+                                                     'ent_stack': 'draw_script_entities'})
     if omit_tail_initialization:
         line = 'memset(ent_list + first, 0, sizeof(*ent_list) * (size_t)MAX_ENTS);'
         if native.count(line) != 1:
@@ -35,8 +44,8 @@ def program(engine, profiles, *, omit_tail_initialization=False):
     values = dict(
         CONFIG='#include "config.h"' if (engine / 'config.h').is_file() else '',
         DUAL=str(int('ent_stack' in native)),
-        ROUTINES='\n'.join([snapshots, release, native,
-                            rename_identifiers(original, {'alloc_ents': 'original_alloc_ents'})]),
+        DRAW_QUEUE=str(controls[1] if controls else 0),
+        ROUTINES='\n'.join([snapshots, release, native, original, draw_queue or '']),
         PROFILES=','.join(str(int(p.get('revision', p['build'].split('-')[0])))+'u' for p in profiles))
     text = (HERE / 'entity_pool_growth.c.in').read_text()
     for key, value in values.items():
@@ -55,6 +64,9 @@ class EntityPoolGrowthTests(unittest.TestCase):
             with self.subTest(engine=build):
                 self.assertTrue(profiles)
                 engine = ROOT / 'src/engines' / build
+                present = {int(p.get('revision', p['build'].split('-')[0])) for p in profiles}
+                controls = oracle['engines'][build].get('draw_queue_boundary', [])
+                profiles += [{'build': str(rev)} for rev in controls if rev not in present]
                 result = run_native(engine, program(engine, profiles))
                 self.assertEqual(result.returncode, 0, result.stdout+result.stderr)
                 value = json.loads(result.stdout)

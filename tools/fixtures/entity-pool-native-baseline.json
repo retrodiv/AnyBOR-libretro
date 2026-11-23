@@ -4,7 +4,12 @@
   "source_notice": "Original fragments retain OpenBOR source notices and licenses in their engine trees. Control metadata: Copyright (c) 2026 retrodiv <retrodiv@proton.me>, BSD-3-Clause.",
   "engines": {
     "3842": {
-      "alloc_ents": "int alloc_ents()\n{\n\tint i;\n\n\tif(ent_list_size>=maxentities) return 0;\n\n\tent_list_size += MAX_ENTS;\n\n\tif(!ent_list) ent_list = malloc(sizeof(*ent_list)*ent_list_size);\n\telse ent_list = realloc(ent_list, sizeof(*ent_list)*ent_list_size);\n\n\tif(!ent_list) goto alloc_ents_error;\n\n\tfor(i=ent_list_size-MAX_ENTS; i<ent_list_size; i++)\n\t{\n\t\tent_list[i] = alloc_ent();\n\t\tif(!ent_list[i])\n\t\t{\n\t\t\t goto alloc_ents_error;\n\t\t}\n\t\tent_list[i]->sortid = i*100;\n\t}\n\t//ent_count = ent_max = 0;\n\treturn 1;\n\nalloc_ents_error:\n\tfree_ents();\n\treturn 0;\n}"
+      "alloc_ents": "int alloc_ents()\n{\n\tint i;\n\n\tif(ent_list_size>=maxentities) return 0;\n\n\tent_list_size += MAX_ENTS;\n\n\tif(!ent_list) ent_list = malloc(sizeof(*ent_list)*ent_list_size);\n\telse ent_list = realloc(ent_list, sizeof(*ent_list)*ent_list_size);\n\n\tif(!ent_list) goto alloc_ents_error;\n\n\tfor(i=ent_list_size-MAX_ENTS; i<ent_list_size; i++)\n\t{\n\t\tent_list[i] = alloc_ent();\n\t\tif(!ent_list[i])\n\t\t{\n\t\t\t goto alloc_ents_error;\n\t\t}\n\t\tent_list[i]->sortid = i*100;\n\t}\n\t//ent_count = ent_max = 0;\n\treturn 1;\n\nalloc_ents_error:\n\tfree_ents();\n\treturn 0;\n}",
+      "draw_queue_alloc_ents": "int alloc_ents()\n{\n\tint i;\n\n\tif(ent_list_size>=maxentities) return 0;\n\n\tent_list_size += MAX_ENTS;\n\n\tent_list = realloc(ent_list, sizeof(*ent_list)*ent_list_size);\n\tent_stack = realloc(ent_stack, sizeof(*ent_list)*ent_list_size);\n\n\tfor(i=ent_list_size-MAX_ENTS; i<ent_list_size; i++)\n\t{\n\t\tent_list[i] = alloc_ent();\n\t\tent_list[i]->sortid = i*100;\n\t\tent_stack[i] = NULL;\n\t}\n\t//ent_count = ent_max = 0;\n\treturn 1;\n}",
+      "draw_queue_boundary": [
+        3876,
+        3877
+      ]
     },
     "4086": {
       "alloc_ents": "int alloc_ents()\n{\n    int i;\n\n    if(ent_list_size >= maxentities)\n    {\n        return 0;\n    }\n\n    ent_list_size += MAX_ENTS;\n\n    ent_list = realloc(ent_list, sizeof(*ent_list) * ent_list_size);\n    ent_stack = realloc(ent_stack, sizeof(*ent_list) * ent_list_size);\n\n    for(i = ent_list_size - MAX_ENTS; i < ent_list_size; i++)\n    {\n        ent_list[i] = alloc_ent();\n        ent_list[i]->sortid = i * 100;\n        ent_stack[i] = NULL;\n    }\n    //ent_count = ent_max = 0;\n    return 1;\n}"

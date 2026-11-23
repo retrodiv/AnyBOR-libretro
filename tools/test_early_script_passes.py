@@ -26,6 +26,90 @@ FIXTURE = Path(__file__).parent / 'fixtures/profile-early-script-passes.json'
 
 
 class EarlyScriptPassTests(unittest.TestCase):
+    def test_original_function_declaration_opcode_and_listing(self):
+        from test_historical_behavior import native
+
+        script = ROOT / 'src/engines/3400/source/scriptlib'
+        parser = function((script / 'Parser.c').read_text(), 'Parser_External_decl2')
+        start = parser.index('else if (variableonly==FALSE && ParserSet_First')
+        end = parser.index('\n\telse Parser_Error', start)
+        declaration = parser[start + len('else '):end]
+        header = (script / 'Instruction.h').read_text()
+        opcodes = re.search(r'typedef enum OpCode\s*\{[^}]+\}\s*OpCode;', header)[0]
+        display = function((script / 'Instruction.c').read_text(), 'Instruction_ToString')
+        native(r'''
+#include <assert.h>
+#include <stdint.h>
+#include <string.h>
+
+@OPCODES@
+typedef const char *Label;
+typedef char *LPSTR;
+enum { FALSE, END_OF_TOKENS = 0, IDENTIFIER, funcDecl };
+enum { INSTRUCTION_SOURCE_TOKEN, INSTRUCTION_SOURCE_LABEL };
+typedef struct { const char *theSource; int theType; } Token;
+typedef struct { OpCode OpCode; int storageType; Label Label; Token *theToken; } Instruction;
+typedef struct { int theParserSet; Token theNextToken; Label theRetLabel; } Parser;
+
+static uint32_t obor_profile_build;
+static Instruction instructions[4];
+static int count, parsed_declaration, parsed_body;
+
+static int ParserSet_First(const int *set, int production, int token_type)
+{
+    assert(*set == 0 && production == funcDecl);
+    return token_type == IDENTIFIER;
+}
+
+static void Parser_AddInstructionViaToken(Parser *parser, OpCode opcode, Token *token, Label label)
+{
+    assert(count < 4 && parser->theNextToken.theType == IDENTIFIER);
+    assert(!label || (token && !strcmp(label, token->theSource)));
+    instructions[count++] = (Instruction){opcode, INSTRUCTION_SOURCE_TOKEN, label, token};
+}
+
+static void Parser_FuncDecl(Parser *parser)
+{
+    assert(parser->theNextToken.theType == IDENTIFIER && count == 2);
+    ++parsed_declaration;
+}
+
+static void Parser_Comp_stmt_Label(Parser *parser, Label label)
+{
+    assert(!strcmp(label, parser->theRetLabel) && count == 2 && parsed_declaration == 1);
+    ++parsed_body;
+}
+
+@DISPLAY@
+
+static void check(uint32_t profile, OpCode opcode, const char *expected)
+{
+    Parser input = {0, {"helper", IDENTIFIER}, "return"};
+    Parser *pparser = &input;
+    Token token = {"helper", IDENTIFIER};
+    int variableonly = FALSE;
+    char output[128];
+    count = parsed_declaration = parsed_body = 0;
+    obor_profile_build = profile;
+    @DECLARATION@
+    assert(count == 4 && parsed_declaration == 1 && parsed_body == 1);
+    assert(instructions[0].OpCode == opcode && !strcmp(instructions[0].Label, "helper"));
+    assert(instructions[1].OpCode == PUSH && instructions[2].OpCode == POP && instructions[3].OpCode == RET);
+    Instruction_ToString(&instructions[0], output);
+    assert(!strcmp(output, expected));
+}
+
+int main(void)
+{
+    check(3185, NOOP, "NOOP helper");
+    check(3192, NOOP, "NOOP helper");
+    check(3336, NOOP, "NOOP helper");
+    check(3337, FUNCDECL, "FUNCDECL helper");
+    check(3400, FUNCDECL, "FUNCDECL helper");
+    return 0;
+}
+'''.replace('@OPCODES@', opcodes).replace('@DISPLAY@', display).replace('@DECLARATION@', declaration))
+
     def test_compiler_and_call_feedback(self):
         from test_historical_player import switch_cases
         fixture = load_contract_fixture(FIXTURE.with_name('profile-early-interpreter-feedback.json'))

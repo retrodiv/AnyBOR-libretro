@@ -1,0 +1,142 @@
+/* SPDX-License-Identifier: BSD-3-Clause
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me> */
+#include <assert.h>
+#include <limits.h>
+#include <stddef.h>
+#include <stdint.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <strings.h>
+#include "types.h"
+#include "screen.h"
+#include "anigif.h"
+#undef printf
+#undef assert
+#include <assert.h>
+uint32_t obor_profile_build;
+int screenformat,pixelformat,pixelbytes[5]={1,1,2,3,4};
+static unsigned checks,attempts,refuse_attempt,owned_live;
+#define CHECK(x) do { ++checks;assert(x); } while(0)
+@COLORS@
+static struct allocation { unsigned char *pointer;size_t size;int live; } owned[32];
+static void check_canary(const struct allocation *entry) {
+ for(size_t i=0;i<32;++i)CHECK(entry->pointer[entry->size+i]==0xa5);
+}
+static void *owned_malloc(size_t size) {
+ if(++attempts==refuse_attempt)return NULL;
+ CHECK(size<=8192);
+ for(unsigned i=0;i<32;++i)if(!owned[i].live) {
+  unsigned char *p=malloc(size+32);CHECK(p);memset(p,0,size);memset(p+size,0xa5,32);
+  owned[i]=(struct allocation){p,size,1};++owned_live;return p;
+ }
+ abort();
+}
+static void *owned_calloc(size_t count,size_t size) {
+ CHECK(!count || size<=SIZE_MAX/count);return owned_malloc(count*size);
+}
+static void owned_free(void *pointer) {
+ if(!pointer)return;
+ for(unsigned i=0;i<32;++i)if(owned[i].live && owned[i].pointer==pointer) {
+  check_canary(&owned[i]);owned[i].live=0;--owned_live;free(pointer);return;
+ }
+ assert(!"GIF release without owned allocation");
+}
+s_screen *allocscreen(int width,int height,int format) {
+ CHECK(width>0 && width<=8 && height>0 && height<=4);
+ size_t bytes=(size_t)width*(size_t)height*(size_t)pixelbytes[format];
+ s_screen *s=owned_malloc(sizeof(*s)+bytes+1024);
+ if(!s)return NULL;
+ s->width=width;s->height=height;s->pixelformat=format;s->palette=NULL;
+ return s;
+}
+void clearscreen(s_screen *screen) {
+ CHECK(screen);memset(screen->data,0,(size_t)screen->width*(size_t)screen->height*(size_t)pixelbytes[(int)screen->pixelformat]);
+}
+static unsigned char wire[3][2048];
+static int wire_size,data_start,rgb_active,read_refusal;
+static const char *opening_name;
+static const char *plane_names[]={"clipr.gif","clipg.gif","clipb.gif"};
+static struct file {int active,position,plane;} files[4];
+static void reset_resources(void) {
+ CHECK(!owned_live);
+ for(unsigned i=0;i<4;++i)CHECK(!files[i].active);
+ attempts=refuse_attempt=0;read_refusal=0;memset(owned,0,sizeof(owned));
+ screenformat=PIXEL_32;pixelformat=rgb_active?PIXEL_x8:PIXEL_32;
+ opening_name="clip.gif";
+}
+#ifndef testpackfile
+int testpackfile(const char *name,const char *pack) {
+ CHECK(pack && !strcmp(pack,"archive"));
+ if(!rgb_active)return -1;
+ for(int i=0;i<3;++i)if(!strcmp(name,plane_names[i]))return 1;
+ return -1;
+}
+#endif
+int openpackfile(const char *name,const char *pack) {
+ CHECK(name && pack && !strcmp(pack,"archive"));
+ int plane=0;
+ if(rgb_active) {for(plane=0;plane<3 && strcmp(name,plane_names[plane]);++plane){}CHECK(plane<3);}
+ else if(strcmp(name,opening_name)) return -1;
+ for(unsigned i=0;i<4;++i)if(!files[i].active) {
+  files[i]=(struct file){1,0,plane};return (int)i;
+ }
+ abort();
+}
+int readpackfile(int handle,void *out,int length) {
+ CHECK(handle>=0 && handle<4 && files[handle].active && length>=0);
+ struct file *f=&files[handle];
+ if(read_refusal && f->position>=data_start && length>1) {
+  int result=read_refusal==1?-1:0;read_refusal=0;return result;
+ }
+ int count=wire_size-f->position;if(count>length)count=length;CHECK(count>=0);
+ memcpy(out,wire[f->plane]+f->position,(size_t)count);f->position+=count;return count;
+}
+int seekpackfile(int handle,int offset,int whence) {
+ CHECK(handle>=0 && handle<4 && files[handle].active);
+ int position=whence==SEEK_SET?offset:whence==SEEK_CUR?files[handle].position+offset:wire_size+offset;
+ if(position<0) {position=0;}
+ if(position>wire_size) {position=wire_size;}
+ files[handle].position=position;return position;
+}
+int closepackfile(int handle) {
+ if(handle==-1)return -1;
+ CHECK(handle>=0 && handle<4 && files[handle].active);files[handle].active=0;return 0;
+}
+#define stricmp strcasecmp
+#define malloc owned_malloc
+#define calloc owned_calloc
+#define free owned_free
+@FREE_SCREEN@
+@DECODER@
+#undef malloc
+#undef calloc
+#undef free
+static void make_wire(int kind,int left,int top,int local,int palette) {
+ for(int plane=0;plane<3;++plane) {
+  unsigned char *w=wire[plane];int n=0;
+  memcpy(w,"GIF89a",6);n=6;
+  unsigned char header[]={4,0,2,0,0,0,0};header[4]=palette?0x80:0;
+  memcpy(w+n,header,sizeof(header));n+=(int)sizeof(header);
+  if(palette) {
+   memset(w+n,0,6);w[n+3]=rgb_active && plane!=0?0:20;
+   w[n+4]=rgb_active && plane!=1?0:40;w[n+5]=rgb_active && plane!=2?0:60;n+=6;
+  }
+  w[n++]=',';
+  unsigned char descriptor[]={0,0,0,0,4,0,2,0,0};
+  descriptor[0]=(unsigned char)left;descriptor[1]=(unsigned char)((unsigned)left>>8);
+  descriptor[2]=(unsigned char)top;descriptor[3]=(unsigned char)((unsigned)top>>8);descriptor[8]=local?0x80:0;
+  memcpy(w+n,descriptor,sizeof(descriptor));n+=(int)sizeof(descriptor);
+  if(local) {unsigned char pal[]={0,0,0,50,70,90};memcpy(w+n,pal,6);n+=6;}
+  w[n++]=kind==2?1:2;
+  unsigned long long bits=0;int shift=0;
+  if(kind==1) {
+   int codes[]={4,1,6,7,5},widths[]={3,3,3,3,4};
+   for(int i=0;i<5;++i){bits|=(unsigned long long)codes[i]<<shift;shift+=widths[i];}
+  } else if(kind==3) {bits=4u|(7u<<3)|(5u<<6);shift=9;}
+  else {for(int i=0;i<8;++i){bits|=4ull<<shift;shift+=3;bits|=1ull<<shift;shift+=3;}bits|=5ull<<shift;shift+=3;}
+  int bytes=(shift+7)/8;w[n++]=(unsigned char)bytes;data_start=n;
+  for(int i=0;i<bytes;++i)w[n++]=(unsigned char)(bits>>(8*i));
+  w[n++]=0;w[n++]=';';wire_size=n;
+ }
+}

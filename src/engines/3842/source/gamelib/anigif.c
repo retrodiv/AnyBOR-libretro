@@ -3,8 +3,8 @@
  * Copyright (c) 2026 retrodiv <retrodiv@proton.me> (original contributions).
  * These contributions are licensed under BSD-3-Clause; see LICENSE at the root.
  * Upstream code retains its original license and notices.
- * Check GIF decoder storage and palette bounds while preserving the decoded
- * pixels of valid images.
+ * Preserve the original legacy decoder and streamed GIF frames, palettes and
+ * timing from 3870.
  * Existing changes recorded here; this is not their implementation date.
  * See MODIFICATIONS.md and docs/modifications/3842.md
  * at the source repository root. Original notices follow below.
@@ -461,3 +461,192 @@ int anigif_decode(s_screen * screen, int *delay, int x, int y, unsigned char* pa
 
 
 
+
+#include <limits.h>
+
+/* The 3870 decoder gives each plane its own file, palette and timing. Reuse
+ * the bounded image and extension readers above for both decoder interfaces. */
+struct obor_anigif_stream
+{
+    struct
+    {
+        anigif_info decoder;
+        unsigned char global_palette[1024];
+        unsigned char local_palette[1024];
+        s_screen *image;
+        u32 nextframe;
+    } planes[3];
+    s_screen *composite;
+    int is_rgb, frame, done;
+};
+
+static void obor_anigif_stream_release(obor_anigif_stream *stream)
+{
+    for(int n = 0; n < 3; ++n)
+    {
+        if(stream->planes[n].decoder.handle >= 0)
+            anigif_close(&stream->planes[n].decoder);
+        freescreen(&stream->planes[n].image);
+    }
+    freescreen(&stream->composite);
+}
+
+void obor_anigif_stream_close(obor_anigif_stream *stream)
+{
+    if(!stream) return;
+    obor_anigif_stream_release(stream);
+    free(stream);
+}
+
+obor_anigif_stream *obor_anigif_stream_open(char *filename, char *packfilename)
+{
+    char channel_name[256];
+    int is_rgb = pixelformat == PIXEL_x8;
+    size_t basename;
+    if(!filename) return NULL;
+    basename = strlen(filename);
+    if(basename >= 4 && !stricmp(filename + basename - 4, ".gif")) basename -= 4;
+    if(basename > sizeof(channel_name) - sizeof("_.gif")) return NULL;
+    memcpy(channel_name, filename, basename);
+    memcpy(channel_name + basename, "_.gif", sizeof("_.gif"));
+    if(is_rgb)
+    {
+        for(int n = 0; n < 3; ++n)
+        {
+            channel_name[basename] = "rgb"[n];
+            if(testpackfile(channel_name, packfilename) < 0) is_rgb = 0;
+        }
+    }
+
+    obor_anigif_stream *stream = calloc(1, sizeof(*stream));
+    if(!stream) return NULL;
+    stream->is_rgb = is_rgb;
+    for(int n = 0; n < 3; ++n) stream->planes[n].decoder.handle = -1;
+    const int planes = is_rgb ? 3 : 1;
+    for(int n = 0; n < planes; ++n)
+    {
+        channel_name[basename] = "rgb"[n];
+        stream->planes[n].decoder.noblackenbg = is_rgb;
+        if(!anigif_open(is_rgb ? channel_name : filename, packfilename,
+                        stream->planes[n].global_palette, &stream->planes[n].decoder))
+            goto open_error;
+    }
+
+    const gifheaderstruct *header = &stream->planes[0].decoder.gif_header;
+    int width = SwapLSB16(header->screenwidth);
+    int height = SwapLSB16(header->screenheight);
+    if(!height || width > (INT_MAX - 2048) / height / pixelbytes[screenformat])
+        goto open_error;
+    if(is_rgb)
+    {
+        stream->composite = allocscreen(width, height, screenformat);
+        if(!stream->composite) goto open_error;
+        clearscreen(stream->composite);
+    }
+    for(int n = planes - 1; n >= 0; --n)
+    {
+        stream->planes[n].image = allocscreen(width, height, screenformat);
+        if(!stream->planes[n].image) goto open_error;
+        clearscreen(stream->planes[n].image);
+    }
+    return stream;
+
+open_error:
+    obor_anigif_stream_close(stream);
+    return NULL;
+}
+
+static int obor_anigif_stream_step(anigif_info *decoder, s_screen *image,
+                                  unsigned char *local_palette)
+{
+    gifblockstruct block;
+    unsigned char marker;
+    if(readpackfile(decoder->handle, &marker, 1) != 1) return ANIGIF_DECODE_END;
+    if(marker == '!') gifextension(decoder);
+    if(marker != ',') return ANIGIF_DECODE_RETRY;
+    if(readpackfile(decoder->handle, &block, sizeof_iblock) != sizeof_iblock)
+        return ANIGIF_DECODE_END;
+    if(block.flags & 0x80)
+    {
+        unsigned char colors[768] = {0};
+        int bytes = 3 * (1 << ((block.flags & 7) + 1));
+        if(readpackfile(decoder->handle, colors, bytes) != bytes)
+            return ANIGIF_DECODE_END;
+        if(!decoder->noblackenbg) colors[0] = colors[1] = colors[2] = 0;
+        switch(PAL_BYTES)
+        {
+        case 768:
+            memcpy(local_palette, colors, sizeof(colors));
+            break;
+        case 512:
+            for(int i = 0; i < 256; ++i)
+            {
+                unsigned short value = colour16(colors[3*i], colors[3*i+1], colors[3*i+2]);
+                memcpy(local_palette + 2*i, &value, sizeof(value));
+            }
+            break;
+        case 1024:
+            for(int i = 0; i < 256; ++i)
+            {
+                unsigned int value = colour32(colors[3*i], colors[3*i+1], colors[3*i+2]);
+                memcpy(local_palette + 4*i, &value, sizeof(value));
+            }
+            break;
+        }
+        decoder->local_pal = local_palette;
+    }
+    block.left = SwapLSB16(block.left);
+    block.top = SwapLSB16(block.top);
+    block.width = SwapLSB16(block.width);
+    block.height = SwapLSB16(block.height);
+    decodegifblock(decoder, image, image->width, image->height, &block);
+    return ANIGIF_DECODE_FRAME;
+}
+
+int obor_anigif_stream_decode(obor_anigif_stream *stream)
+{
+    if(!stream || stream->done) return 1;
+    const int planes = stream->is_rgb ? 3 : 1;
+    for(int n = 0; n < planes; ++n)
+    {
+        anigif_info *decoder = &stream->planes[n].decoder;
+        int code;
+        do
+        {
+            code = obor_anigif_stream_step(decoder, stream->planes[n].image,
+                                          stream->planes[n].local_palette);
+        } while(code == ANIGIF_DECODE_RETRY);
+        stream->planes[n].nextframe += decoder->lastdelay * 10u;
+        if(code == ANIGIF_DECODE_END)
+        {
+            stream->done = 1;
+            obor_anigif_stream_release(stream);
+            return 1;
+        }
+    }
+    if(stream->is_rgb && (screenformat == PIXEL_16 || screenformat == PIXEL_32))
+    {
+        s_screen *image = stream->composite;
+        size_t bytes = (size_t)image->width * image->height * pixelbytes[screenformat];
+        for(size_t i = 0; i < bytes; ++i)
+            image->data[i] = stream->planes[0].image->data[i] |
+                             stream->planes[1].image->data[i] |
+                             stream->planes[2].image->data[i];
+    }
+    ++stream->frame;
+    return 0;
+}
+
+s_screen *obor_anigif_stream_buffer(obor_anigif_stream *stream)
+{
+    return stream->is_rgb ? stream->composite : stream->planes[0].image;
+}
+
+obor_anigif_status obor_anigif_stream_status(const obor_anigif_stream *stream)
+{
+    const s_screen *image = stream->planes[0].image;
+    return (obor_anigif_status){ .done = stream->done, .frame = stream->frame,
+        .is_rgb = stream->is_rgb, .width = image ? image->width : 0,
+        .height = image ? image->height : 0,
+        .nextframe = stream->planes[0].nextframe, .lastdelay = stream->planes[0].decoder.lastdelay };
+}

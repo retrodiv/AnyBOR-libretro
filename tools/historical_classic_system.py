@@ -28,8 +28,9 @@ def system_program(root, data):
     callbacks = []
     for name in ('getsyspropertybyindex', 'changesyspropertybyindex'):
         body, cases = switch_cases(core, name, 'index', outermost=True)
+        fields = selected + ('_sv_in_enginecreditsscreen',) if name == 'getsyspropertybyindex' else selected
         callback = (body[:body.index('switch(index)')] + 'switch(index){' +
-            ''.join('case '+key+':'+cases[key]['body'] for key in selected) +
+            ''.join('case '+key+':'+cases[key]['body'] for key in fields) +
             'default:'+cases['default']['body'] + '}\nreturn 1;\n}\n')
         callbacks.append(rename_identifiers(callback, {name:'probe_'+name}))
     dispatcher = function(source, 'Script_GetStringMapFunction')

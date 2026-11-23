@@ -39,7 +39,7 @@ class EarlyGraphicsOffsetTests(unittest.TestCase):
         getter = re.split(r'\bswitch\s*\(index\)', method, maxsplit=1)[0]
         getter += 'switch(index){' + '\n'.join(
             'case _e_' + name + ':' + cases['_e_' + name]['body']
-            for name in ['gfx_x_offset', 'gfx_y_offset', 'gfx_y_offset_adj'])
+            for name in ['gfx_x_offset', 'gfx_y_offset', 'gfx_y_offset_adj', 'maxplayers'])
         getter += 'default:return 0;}return 1;}'
         ns_start = script.index('/* Own script-visible system IDs')
         ns_end = script.index('void mapstrings_systemvariant(', ns_start)
@@ -94,6 +94,7 @@ static s_bitmap *texture;
 static s_videomodes videomodes;
 static s_level instance,*level=&instance;
 static int gfx_x_offset,gfx_y_offset,gfx_y_offset_adj;
+static int current_set,maxplayers[MAX_DIFFICULTIES]={2,4};
 static int lasthitc,lasthitt;
 static float lasthita,lasthitx,lasthitz,advancex,advancey,scrollminz,scrollmaxz,blockade;
 static unsigned char slowmotion[2],pal[MAX_PAL_SIZE],neontable[MAX_PAL_SIZE];
@@ -149,6 +150,7 @@ static void verify_apis(int modern,int n,const char **names,const int *ids,const
   name(names[i]);mapstrings_changesystemvariant(args,2);
   assert(input.vt==VT_INTEGER && input.lVal==i && !diagnostic[0]);
   if(!strcmp(names[i],"lasthita")){set_numeric(i,43);assert(lasthita==43 && gfx_x_offset==17 && gfx_y_offset==31);}
+  if(!strcmp(names[i],"xpos")){set_numeric(i,-23);assert(advancex==-23);}
   if(!strcmp(names[i],"ypos")){set_numeric(i,47);assert(advancey==47);}
   assert(ids[i]==i+(modern?0:(i>=2?3:0)));
  }
@@ -168,13 +170,24 @@ static void verify_apis(int modern,int n,const char **names,const int *ids,const
   name(gfx[i]);out=&result;memset(&result,0,sizeof(result));
   int available=getters[i]>=0;
   HRESULT status=openbor_systemvariant(args,&out,1);
-  if(!available){assert(status==E_FAIL && !out);continue;}
+  if(!available){
+   if(status!=E_FAIL || out)fprintf(stderr,"Profile %u exposes %s with status %d\n",obor_profile_build,gfx[i],status);
+   assert(status==E_FAIL && !out);continue;
+  }
   assert(status==S_OK && out==&result && result.vt==VT_INTEGER);
   assert(input.vt==VT_INTEGER && input.lVal==getters[i]);
   assert(result.lVal==(i==0?gfx_x_offset:i==1?gfx_y_offset:gfx_y_offset_adj));
   level=NULL;out=&result;result.vt=VT_INTEGER;result.lVal=99;
   assert(!getsyspropertybyindex(&result,getters[i]) && result.vt==VT_INTEGER && result.lVal==99);
   level=&instance;
+ }
+ if(obor_profile_build==3185 || obor_profile_build==3192){
+  for(current_set=0;current_set<2;++current_set){
+   name("maxplayers");out=&result;
+   assert(openbor_systemvariant(args,&out,1)==S_OK && out==&result);
+   assert(result.vt==VT_INTEGER && result.lVal==maxplayers[current_set]);
+  }
+  current_set=0;
  }
 }
 static void verify_position(int position_without_level){

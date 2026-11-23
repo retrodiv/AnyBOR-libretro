@@ -39,7 +39,8 @@ class EarlySpriteLineTests(unittest.TestCase):
         for p,x,cx,scale,flip,mode in cases:
             self.assertTrue(0<=p<len(packets) and -16<=x<=16 and -8<=cx<=8)
             self.assertTrue(1<=scale<=512 and flip in (0,1) and 0<=mode<=3)
-        self.assertEqual(len(oracles),3)
+        self.assertTrue(oracles)
+        self.assertTrue(all(0 <= row['epoch'] < len(oracles) for row in rows))
         for era in oracles:
             self.assertEqual(len(era),3)
             for unit in era:
@@ -52,7 +53,8 @@ class EarlySpriteLineTests(unittest.TestCase):
         main=main.replace('@CASES@',','.join('{'+','.join(map(str,c))+'}'for c in cases))
         def words(image):return '{'+','.join('0x'+image[i:i+8]+'U'for i in range(0,len(image),8))+'}'
         values=','.join('{'+','.join('{'+','.join(words(image)for image in unit)+'}'for unit in era)+'}'for era in oracles)
-        main=main.replace('@ORACLES@','static const uint32_t oracles[3][3][%d][72]={%s};'%(len(cases),values))
+        main=main.replace('@ORACLES@','static const uint32_t oracles[%d][3][%d][72]={%s};'%(
+            len(oracles),len(cases),values))
         main=main.replace('@CHECKS@','\n'.join('check(%d,%d);'%(r['revision'],r['epoch'])for r in rows))
         compiler=shlex.split(os.environ.get('HOST_CC','cc'))
         flags=['-std=gnu11','-O0','-g','-UNDEBUG','-DLIBRETRO=1','-DOBOR_ENGINE_BUILD='+fixture['engine'],

@@ -67,3 +67,24 @@ def backwalk_program(root, data):
     if re.search(r'@[A-Z_]+@', text):
         raise ValueError('Unresolved native walking contract input')
     return text
+
+
+def animation_selection_program(root, data):
+    source = (root / 'src/engines' / data['engine'] / 'openbor.c').read_text()
+    methods = ('common_anim_series', 'common_idle_anim')
+    directions = ('walk', 'backwalk', 'up', 'down')
+    macros = []
+    for direction in directions:
+        name = f'common_{direction}_anim'
+        macro = re.search(rf'^#define {name}\(ent\) \\\n[^\n]+', source, re.M)
+        if macro is None:
+            raise ValueError(f'Missing native animation selector {name}')
+        macros.append(macro[0])
+    parts = dict(
+        METHODS='\n'.join(function(source, name) for name in methods),
+        MACROS='\n'.join(macros),
+        PROFILES=','.join('{%du,%d}' % (row['revision'], row['mode_selectors'])
+                          for row in data['sources']),
+    )
+    text = Path(__file__).with_name('classic_animation_selection.c.in').read_text()
+    return re.sub(r'@([A-Z_]+)@', lambda match: parts[match[1]], text)

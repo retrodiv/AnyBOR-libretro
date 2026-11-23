@@ -31,7 +31,9 @@ class EarlyV3ProfileTests(unittest.TestCase):
             sys.path.insert(0, str(HERE.parent))
             from run_guarded import require_limits
             require_limits()
-        cls.contracts = json.loads(FIXTURE.read_text())['profiles']
+        fixture = json.loads(FIXTURE.read_text())
+        cls.contracts = fixture['profiles']
+        cls.development_boundaries = fixture['development_boundaries']
         cls.temporary = tempfile.TemporaryDirectory(prefix='anybor-early-profiles-')
         cls.work = Path(cls.temporary.name)
         cls.executables = {}
@@ -235,6 +237,29 @@ class EarlyV3ProfileTests(unittest.TestCase):
             with self.subTest(profile=profile, shutdown=case['input']):
                 self.assertEqual(self.observe(row, 'credit_entry', case['input']),
                                  case['output'], row['references'])
+
+    def test_4097_native_source_boundaries(self):
+        pins = json.loads((SOURCE / 'src/pin.json').read_text())
+        registered = {str(row['build']): row for row in pins['profiles'] if row['engine'] == '4086'}
+        self.assertEqual({row['profile'] for row in self.development_boundaries},
+                         {'4086', '4089', '4090', '4094', '4095', '4096', '4097'})
+        for row in self.development_boundaries:
+            profile = row['profile']
+            self.assertEqual(row['engine'], '4086')
+            self.assertRegex(row['source_commit'], r'^[0-9a-f]{40}$')
+            if profile == '4097':
+                self.assertEqual(registered[profile]['upstream_commit'], row['source_commit'])
+                self.assertEqual(set(row['observations']), {'collision', 'frame_boxes', 'credits',
+                                                           'menu_state', 'credit_entry', 'level_commands'})
+            for kind, cases in row['observations'].items():
+                self.assertTrue(cases)
+                for case in cases:
+                    with self.subTest(profile=profile, kind=kind, input=case['input']):
+                        actual = self.observe(row, kind, case['input'])
+                        if kind == 'credits':
+                            actual = hashlib.sha256(json.dumps(
+                                actual, sort_keys=True, separators=(',', ':')).encode()).hexdigest()
+                        self.assertEqual(actual, case['expected'])
 
     def check_shutdown_format(self, profile):
         row = next(p for p in self.contracts if p['profile'] == profile)

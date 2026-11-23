@@ -300,7 +300,7 @@ class LooseCasePathTests(unittest.TestCase):
             nested = case / 'Assets/Actors/Player'
             nested.mkdir(parents=True)
             (nested / 'Frame.GIF').write_bytes(b'authored')
-            parts = ['A' * 190, 'B' * 190, 'C' * 190]
+            parts = [letter * 190 for letter in 'ABCDEFGHIJKL']
             long_folder = case.joinpath(*parts)
             long_folder.mkdir(parents=True)
             (long_folder / 'Frame.GIF').write_bytes(b'authored')
@@ -311,7 +311,12 @@ class LooseCasePathTests(unittest.TestCase):
                 packfile = unit.read_text(encoding='latin1')
                 body = function(packfile, 'casesearch')
                 if 'packfile_path_capacity()' in body:
-                    body = function(packfile, 'packfile_path_capacity') + '\n' + body
+                    capacity = function(packfile, 'packfile_path_capacity')
+                    if 'PACKFILE_PATH_STORAGE' in capacity:
+                        storage = next(line for line in packfile.splitlines()
+                                       if line.startswith('#define PACKFILE_PATH_STORAGE '))
+                        capacity = storage + '\n' + capacity
+                    body = capacity + '\n' + body
                 source, binary = work / (engine + '.c'), work / engine
                 source.write_text(r'''
 #include <assert.h>
@@ -325,7 +330,22 @@ class LooseCasePathTests(unittest.TestCase):
 #define stricmp strcasecmp
 uint32_t obor_profile_build;
 static void obor_profile_casesearch_assert(void) { abort(); }
+static unsigned open_directories;
+static DIR *counted_opendir(const char *path) {
+    DIR *dir = opendir(path);
+    if(dir) ++open_directories;
+    return dir;
+}
+static int counted_closedir(DIR *dir) {
+    assert(open_directories > 0);
+    --open_directories;
+    return closedir(dir);
+}
+#define opendir counted_opendir
+#define closedir counted_closedir
 @FUNCTION@
+#undef opendir
+#undef closedir
 int main(int argc, char **argv) {
     assert(argc == 3);
     obor_profile_build = (uint32_t)strtoul(argv[1], NULL, 10);
@@ -350,12 +370,20 @@ int main(int argc, char **argv) {
     assert(casesearch(".", nested_oversized) == NULL);
     assert(casesearch(NULL, "leaf.gif") == NULL);
     assert(casesearch(".", NULL) == NULL);
+#if OBOR_ENGINE_BUILD == 3842
+    assert(open_directories == 0);
+    assert(casesearch(".", "/leaf.gif") == NULL);
+    assert(open_directories == 0);
+    assert(casesearch(".", "assets//actors/player/frame.gif") == NULL);
+    assert(open_directories == 0);
+#endif
     puts(argv[1]);
     return 0;
 }
 '''.replace('@FUNCTION@', body))
                 command = shlex.split(os.environ.get('HOST_CC', 'cc')) + [
                     '-std=gnu99', '-O1', '-g', '-Wall', '-Wextra', '-Werror',
+                    '-DOBOR_ENGINE_BUILD=' + engine,
                     '-Wno-unused-function', '-Wno-error=deprecated-declarations',
                     '-fsanitize=address,undefined', '-fno-sanitize-recover=all',
                     str(source), '-o', str(binary)]

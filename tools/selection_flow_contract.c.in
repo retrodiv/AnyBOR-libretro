@@ -1,0 +1,191 @@
+/* SPDX-License-Identifier: BSD-3-Clause
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me> */
+#include <assert.h>
+#include <stdio.h>
+#include <string.h>
+#include <strings.h>
+#include <stdlib.h>
+
+#define stricmp strcasecmp
+#define MAX_PLAYERS 4
+#define PLAYER_LIVES 3
+#define CONTINUES 5
+@CLOCK@
+enum { FLAG_START=1, FLAG_ANYBUTTON=2, FLAG_MOVELEFT=4, FLAG_MOVERIGHT=8,
+       FLAG_MOVEUP=16, FLAG_MOVEDOWN=32, FLAG_ESC=64, ANI_PICK=0 };
+typedef struct { struct {int mode;} loop; } Animation;
+typedef struct {
+    const char *name;
+    int health, mp, maps_loaded;
+    struct {int frozen, hide_start, hide_end;} maps;
+    Animation *animation[1];
+} s_model;
+typedef struct {
+    s_model modeldata, *model;
+    int animating, direction, colourmap;
+    unsigned stalltime;
+} entity;
+typedef struct {int maxplayers, continuescore;} s_set_entry;
+typedef struct {
+    char name[MAX_NAME_LEN+1];
+    int lives, credits, hasplayed, joining, colourmap, spawnhealth, spawnmp, score;
+    unsigned newkeys, playkeys, releasekeys;
+    entity *ent;
+} Player;
+static Player player[4];
+static entity preview;
+static Animation animation;
+static s_model models[2];
+static s_set_entry levelsets[1];
+static struct {int settime,noreset;} stage, *level=&stage;
+static struct {int effectvol;} savedata={23};
+static struct {int hShift,vShift;} videomodes={4,6};
+static unsigned obor_profile_build, time, bothnewkeys, updates, pending_ticks;
+static int current_set, credits, creditscheat, noshare, sameplayer, colourselect;
+static int freezeall,nojoin,nodropen,timeleft,SAMPLE_BEEP=1,SAMPLE_BEEP2=2,SAMPLE_JOIN=3;
+static char skipselect[4][MAX_NAME_LEN+1];
+static int psmenu[4][4], spdirection[4];
+static int spawn_x, spawn_y, confirmed, looping, ready_draws, ready_x, ready_y;
+static int palette_calls, sound_calls, join_events, drop_events, indexed_model_calls;
+
+static void shutdown(int status,const char *message,...) {
+    (void)status; (void)message; abort();
+}
+static s_model *findmodel(const char *name) {
+    if(!strcmp(name, models[0].name)) return &models[0];
+    assert(!strcmp(name, models[1].name));
+    return &models[1];
+}
+static s_model *nextplayermodel(s_model *model) {
+    return model==&models[0]?&models[1]:&models[0];
+}
+static s_model *prevplayermodel(s_model *model) { return nextplayermodel(model); }
+static s_model *nextplayermodeln(s_model *model,int slot) {
+    assert(slot==0); ++indexed_model_calls;
+    return nextplayermodel(model);
+}
+static s_model *prevplayermodeln(s_model *model,int slot) {
+    assert(slot==0); ++indexed_model_calls;
+    return prevplayermodel(model);
+}
+static int nextcolourmap(s_model *model,int colour) {
+    assert(model==&models[0] || model==&models[1]);
+    return colour<0?(model==&models[0]?1:2):(colour+1)%(model->maps_loaded+1);
+}
+static int prevcolourmap(s_model *model,int colour) {
+    return colour>0?colour-1:model->maps_loaded;
+}
+static entity *spawn(float x,float y,float z,int direction,const char *name,int index,s_model *model) {
+    assert(z==0 && name==NULL && index==-1 && model);
+    spawn_x=(int)x;spawn_y=(int)y;
+    preview=(entity){.modeldata=*model,.model=model,.direction=direction,.animating=1};
+    return &preview;
+}
+static void ent_set_model(entity *actor,const char *name,int animation_id) {
+    assert(actor==&preview && animation_id==0);
+    actor->model=findmodel(name);actor->modeldata=*actor->model;
+}
+static void ent_set_colourmap(entity *actor,int colour) {
+    assert(actor==&preview);
+    actor->colourmap=colour;++palette_calls;
+}
+static int validanim(entity *actor,int animation_id) {
+    assert(actor==&preview && animation_id==ANI_PICK);
+    return actor->modeldata.animation[ANI_PICK]!=NULL;
+}
+static void ent_set_anim(entity *actor,int animation_id,int reset) {
+    assert(validanim(actor,animation_id) && reset==0);
+    actor->animating=1;confirmed=1;
+}
+static void font_printf(int x,int y,int font,int layer,const char *text,...) {
+    assert(font==0 && layer==0 && !strcmp(text,"Ready!"));
+    ready_x=x;ready_y=y;++ready_draws;
+}
+static void sound_play_sample(int id,int channel,int a,int b,int speed) {
+    assert(id>=1 && id<=3 && channel==0 && a==23 && b==23 && speed==100);
+    ++sound_calls;
+}
+static void update(int background,int scores) {
+    assert(!background && !scores && updates<32);
+    time+=GAME_SPEED/2;
+    ++updates;
+    const unsigned keys[]={0,FLAG_MOVERIGHT,FLAG_MOVEUP,FLAG_ANYBUTTON};
+    player[0].newkeys=updates<sizeof(keys)/sizeof(*keys)?keys[updates]:0;
+    if(confirmed && ++pending_ticks>=2 && !looping) preview.animating=0;
+}
+static void spawnplayer(int slot) { assert(slot==0);player[slot].ent=&preview;++join_events; }
+static void execute_join_script(int slot) { assert(slot==0);++join_events; }
+static void drop_all_enemies(void) { ++drop_events; }
+
+@PREVIEW@
+static void menu(int explicit_layout) {
+    int i,x,tperror=0,exit=0,escape=0,players_busy=0,players_ready=0;
+    unsigned exitdelay=0;
+    entity *example[4]={0};
+    int players[4]={1},immediate[4]={1},ready[4]={0},cmap[4]={0,1,2,3};
+    s_set_entry *set=levelsets;
+    if(explicit_layout) {
+        player[0].lives=1;
+        @LAYOUT@
+    }
+    @SELECTION@
+    (void)tperror;
+    assert(!escape && example[0]==&preview && confirmed);
+}
+static void join_step(void) {
+    int i,x,tperror=0;
+    s_model *model=NULL;
+    s_set_entry *set=levelsets;
+    @JOIN@
+    (void)tperror;
+}
+static void reset(void) {
+    memset(player,0,sizeof(player));memset(psmenu,0,sizeof(psmenu));
+    preview=(entity){0};levelsets[0]=(s_set_entry){.maxplayers=2,.continuescore=2};
+    models[0]=(s_model){.name="first",.health=101,.mp=42,.maps_loaded=4,.animation={&animation}};
+    models[1]=(s_model){.name="second",.health=117,.mp=44,.maps_loaded=5,.animation={&animation}};
+    credits=3;noshare=sameplayer=nojoin=freezeall=nodropen=0;colourselect=1;
+    time=4*GAME_SPEED;stage.settime=17;
+    timeleft=-1;updates=pending_ticks=bothnewkeys=0;
+    confirmed=looping=ready_draws=ready_x=ready_y=0;
+    palette_calls=sound_calls=indexed_model_calls=join_events=drop_events=0;
+}
+static void observe_menu(int scenario) {
+    reset();
+    looping=scenario==2;
+    animation.loop.mode=looping;
+    if(scenario==1) { psmenu[0][2]=9;psmenu[0][3]=24; }
+    menu(scenario==1);
+    printf("[%d,%d,%u,%u,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d]\n",scenario,credits,updates,time,
+           spawn_x,spawn_y,preview.colourmap,player[0].colourmap,palette_calls,sound_calls,
+           indexed_model_calls,ready_draws,ready_x,ready_y,!strcmp(player[0].name,models[1].name));
+}
+static void observe_join(int scenario) {
+    reset();
+    player[0].score=41;player[0].playkeys=FLAG_START;
+    join_step();
+    int initial_colour=player[0].colourmap;
+    const unsigned choice[]={FLAG_MOVERIGHT,FLAG_MOVELEFT,FLAG_MOVEUP,FLAG_MOVEDOWN};
+    player[0].playkeys=choice[(scenario-3)%4];
+    join_step();
+    if(scenario==7) {
+        sameplayer=1;strcpy(player[1].name,player[0].name);player[1].ent=&preview;
+    }
+    if(scenario==8) freezeall=1;
+    if(scenario==9) nojoin=1;
+    player[0].playkeys=FLAG_ANYBUTTON;
+    join_step();
+    printf("[%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d]\n",scenario,credits,initial_colour,
+           player[0].colourmap,player[0].joining,player[0].lives,player[0].spawnhealth,player[0].spawnmp,
+           player[0].score,timeleft,join_events,drop_events,indexed_model_calls);
+}
+int main(void) {
+    const unsigned revisions[]={@REVISIONS@};
+    for(unsigned i=0;i<sizeof(revisions)/sizeof(*revisions);++i) {
+        obor_profile_build=revisions[i];
+        printf("%u\n",obor_profile_build);
+        for(int scenario=0;scenario<3;++scenario) observe_menu(scenario);
+        for(int scenario=3;scenario<10;++scenario) observe_join(scenario);
+    }
+    return 0;
+}

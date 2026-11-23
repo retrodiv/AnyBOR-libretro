@@ -57,6 +57,178 @@ class ModelPaletteNone(unittest.TestCase):
             with self.subTest(revision=oracle['revision'], case=oracle['case']):
                 self.assertEqual(result, oracle)
 
+    def test_3842_frame_palette_mask_and_blank_sprite(self):
+        engine = SOURCE / 'src/engines/3842'
+        source = (engine / 'openbor.c').read_text()
+        _, cases = switch_cases(source, 'load_cached_model', 'cmd', outermost=True)
+        frame = cases['CMD_MODEL_FRAME']['body']
+        first = frame.index('if(obor_profile_build >= 3880u && stricmp(value, "none") == 0)')
+        last = frame.index('// Adjust coords:', first)
+        script = (engine / 'openborscript.c').read_text()
+        _, getter = switch_cases(script, 'openbor_getentityproperty', 'propind', outermost=True)
+        draw = function(source, 'display_ents')
+        draw_condition = re.search(r'if\((f<sprites_loaded)\)', draw)[1]
+        loaded_type = re.search(r'(?m)^(unsigned int)\s+sprites_loaded\s*=', source)[1]
+        profiles = json.loads((SOURCE / 'src/pin.json').read_text())['profiles']
+        revisions = {int(row.get('revision', row['build'])) for row in profiles
+                     if row['engine'] == '3842'} | {3879, 3880, 3896}
+        rows = ','.join('{%d,%d}' % (revision, revision >= 3880) for revision in sorted(revisions))
+        native_output(r'''
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <strings.h>
+#include "openbor.h"
+#undef assert
+#undef malloc
+#undef free
+#include <assert.h>
+#ifndef stricmp
+#define stricmp strcasecmp
+#endif
+uint32_t obor_profile_build;
+int pixelformat, screenformat = PIXEL_32, pixelbytes[5] = {1, 1, 2, 3, 4};
+@LOADED_TYPE@ sprites_loaded = 2;
+int sprite_map_max_items = 2;
+static s_sprite sprites[2];
+static s_sprite_list nodes[2];
+static s_sprite_map entries[2], *sprite_map = entries;
+static int image_result, palette_refused, sprite_calls, palette_calls, requested_format;
+char packfile[OBOR_CONTENT_PATH_MAX] = "frame-fixture.pak";
+static const char *filename;
+
+int loadsprite(char *name, int x, int y, int format)
+{
+    assert(!strcmp(name, filename) && x == 2 && y == 3);
+    ++sprite_calls;
+    requested_format = format;
+    if(image_result >= 0) sprites[0].pixelformat = format;
+    return image_result;
+}
+
+int loadimagepalette(char *name, char *package, unsigned char *palette)
+{
+    assert(!strcmp(name, filename) && package == packfile && palette);
+    ++palette_calls;
+    if(palette_refused) return 0;
+    memset(palette, 17, PAL_BYTES);
+    return 1;
+}
+
+static int frame_image(s_model *newchar, char *value, int nopalette, int *pending_mask)
+{
+    int index, offset[2] = {2, 3}, maskindex = *pending_mask;
+    char *shutdownmessage = NULL;
+    @ROUTING@
+    *pending_mask = maskindex;
+    return index;
+lCleanup:
+    assert(shutdownmessage && !strcmp(shutdownmessage, "Failed to load palette!"));
+    return -2;
+}
+
+void ScriptVariant_ChangeType(ScriptVariant *value, VARTYPE type)
+{
+    value->vt = type;
+}
+
+static ScriptVariant query_sprite(int current)
+{
+    s_anim animation = {.sprite = &current};
+    entity actor = {.animation = &animation};
+    entity *ent = &actor;
+    ScriptVariant value = {.vt = VT_EMPTY}, *result = &value, **pretvar = &result;
+    int i;
+    s_sprite *spr;
+    enum { _ep_sprite = 1 };
+    switch(_ep_sprite) {case _ep_sprite: @QUERY@}
+    return value;
+}
+
+static int render_frame(int f)
+{
+    return @DRAW_CONDITION@;
+}
+
+int main(void)
+{
+    const struct { unsigned revision; int blank_frame; } profiles[] = {@PROFILES@};
+    const struct {
+        int blank, image, mode, no_palette, own_palette, mask, palette_refused;
+    } scenarios[] = {
+        {0,  0, PIXEL_x8, 0, 0, 0, 0}, {0,  0, PIXEL_x8, 0, 1, 1, 0},
+        {0,  0, PIXEL_x8, 1, 0, 1, 0}, {0,  0, PIXEL_8,  0, 0, 1, 0},
+        {0,  0, PIXEL_x8, 0, 0, 1, 1}, {0, -1, PIXEL_x8, 0, 0, 1, 0},
+        {0, -1, PIXEL_x8, 0, 0, 1, 1}, {1,  0, PIXEL_x8, 0, 0, 1, 0},
+        {1,  0, PIXEL_x8, 0, 1, 1, 0}, {1, -1, PIXEL_x8, 0, 0, 1, 1},
+        {1,  0, PIXEL_x8, 1, 0, 0, 0}, {1, -1, PIXEL_8,  0, 0, 1, 0},
+    };
+    char image[] = "sprite", blank[] = "NoNe";
+    for(unsigned i = 0; i < 2; ++i)
+    {
+        nodes[i].sprite = &sprites[i];
+        sprite_map[i].node = &nodes[i];
+    }
+    for(unsigned p = 0; p < sizeof(profiles)/sizeof(*profiles); ++p)
+    {
+        obor_profile_build = profiles[p].revision;
+        for(unsigned i = 0; i < sizeof(scenarios)/sizeof(*scenarios); ++i)
+        {
+            s_model model = {0};
+            unsigned char sprite_palette[1024];
+            int mask = scenarios[i].mask ? 1 : -1;
+            int skip_image = profiles[p].blank_frame && scenarios[i].blank;
+            int index = skip_image ? -1 : scenarios[i].image;
+            int use_palette = scenarios[i].mode == PIXEL_x8 && !scenarios[i].no_palette &&
+                              (!profiles[p].blank_frame || index >= 0);
+            int read_palette = use_palette && !scenarios[i].own_palette;
+            int stop = read_palette && scenarios[i].palette_refused;
+            int link_mask = !stop && index >= 0 && scenarios[i].mask;
+            if(scenarios[i].own_palette)
+            {
+                model.palette = malloc(PAL_BYTES);
+                assert(model.palette);
+                memset(model.palette, 23, PAL_BYTES);
+            }
+            char *name = scenarios[i].blank ? blank : image;
+            filename = name;
+            sprites[0] = (s_sprite){.palette = sprite_palette, .pixelformat = PIXEL_16};
+            pixelformat = scenarios[i].mode;
+            image_result = scenarios[i].image;
+            palette_refused = scenarios[i].palette_refused;
+            sprite_calls = palette_calls = 0;
+            requested_format = -1;
+            int result = frame_image(&model, name, scenarios[i].no_palette, &mask);
+            assert(result == (stop ? -2 : index));
+            assert(sprite_calls == !skip_image && palette_calls == read_palette);
+            assert(requested_format == (skip_image ? -1 : scenarios[i].no_palette ? PIXEL_x8 : PIXEL_8));
+            assert(!!model.palette == (scenarios[i].own_palette || read_palette));
+            if(model.palette && !stop)
+                assert(model.palette[PAL_BYTES - 1] == (scenarios[i].own_palette ? 23 : 17));
+            assert(sprites[0].palette == (use_palette && index >= 0 && !stop ? model.palette : sprite_palette));
+            assert(sprites[0].pixelformat == (index < 0 ? PIXEL_16 :
+                (use_palette && !stop ? PIXEL_x8 : requested_format)));
+            assert(sprites[0].mask == (link_mask ? &sprites[1] : NULL));
+            assert(mask == (scenarios[i].mask && !link_mask ? 1 : -1));
+            if(!stop)
+            {
+                ScriptVariant sprite = query_sprite(result);
+                assert(render_frame(result) == (index >= 0));
+                if(index >= 0)
+                    assert(sprite.vt == VT_PTR && sprite.ptrVal == &sprites[0]);
+                else
+                    assert(sprite.vt == VT_EMPTY);
+            }
+            free(model.palette);
+        }
+    }
+    return 0;
+}
+'''.replace('@ROUTING@', frame[first:last]).replace('@PROFILES@', rows)
+            .replace('@QUERY@', getter['_ep_sprite']['body'])
+            .replace('@DRAW_CONDITION@', draw_condition).replace('@LOADED_TYPE@', loaded_type),
+            {'engine': '3842'}, engine_source=engine, extra_cflags=('-fgnu89-inline',))
+
 
 def model_palette_cases(source):
     method = function(source, 'load_cached_model')

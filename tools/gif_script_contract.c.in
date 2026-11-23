@@ -1,0 +1,149 @@
+/* SPDX-License-Identifier: BSD-3-Clause
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me> */
+#include "List.h"
+#include "ScriptVariant.h"
+#undef assert
+#include <assert.h>
+
+char packfile[OBOR_CONTENT_PATH_MAX] = "archive";
+static List scriptheap, theFunctionList;
+static struct { int marker; } spawnentry;
+typedef struct { int magic; } Script;
+#define script_magic 0x73636f
+static void Script_Clear(Script *script, int mode) { abort(); }
+static int obor_script_cleanup_active(void *value) { return 0; }
+
+typedef struct { ScriptVariant value; } s_variantnode;
+static s_variantnode **global_var_list;
+static ScriptVariant *indexed_var_list;
+static int max_global_vars, max_indexed_vars, max_global_var_index;
+static int numfilestreams;
+static struct { char *buf; size_t obor_capacity; } *filestreams;
+static void obor_script_variable_names_clear(void) { abort(); }
+void StrCache_Clear(void) {}
+static void ImportCache_Clear(void) {}
+
+static char *text[] = {
+    "clip.gif", "missing.gif", "buffer", "done", "FrAmE", "isRGB", "WiDtH",
+    "height", "nextframe", "lastdelay", "unknown",
+};
+
+CHAR *StrCache_Get(int index)
+{
+    assert(index >= 0 && (size_t)index < sizeof(text) / sizeof(*text));
+    return text[index];
+}
+
+int StrCache_Pop(void) { abort(); }
+void StrCache_Collect(int index) { abort(); }
+
+@LIST@
+@VARIANTS@
+@CALLS@
+
+static ScriptVariant open_stream(int filename, HRESULT expected)
+{
+    ScriptVariant input = {.vt = VT_STR, .strVal = filename};
+    ScriptVariant *args[] = {&input};
+    ScriptVariant result, *out = &result;
+    ScriptVariant_Init(out);
+    HRESULT status = openbor_openanigif(args, &out, 1);
+    assert(status == expected);
+    printf("open %s %d %d\n", text[filename], status == S_OK, out != NULL);
+    if(expected == S_OK) assert(out == &result && result.vt == VT_PTR && result.ptrVal);
+    else assert(!out);
+    return result;
+}
+
+static void query_status(ScriptVariant *stream)
+{
+    for(int property = 2; property < 11; ++property)
+    {
+        ScriptVariant name = {.vt = VT_STR, .strVal = property};
+        ScriptVariant *args[] = {stream, &name};
+        ScriptVariant result, *out = &result;
+        ScriptVariant_Init(out);
+        HRESULT status = openbor_getanigifinfo(args, &out, 2);
+        printf("query %s ", text[property]);
+        if(property == 10)
+        {
+            assert(status == E_FAIL && !out);
+            puts("unknown");
+        }
+        else if(property == 2)
+        {
+            assert(status == S_OK && out == &result && result.vt == VT_PTR);
+            const s_screen *image = result.ptrVal;
+            if(image)
+                printf("%d %d %d %02x\n", image->width, image->height,
+                       image->pixelformat, image->data[0]);
+            else puts("empty");
+        }
+        else
+        {
+            assert(status == S_OK && out == &result && result.vt == VT_INTEGER);
+            printf("%d\n", (int)result.lVal);
+        }
+    }
+}
+
+static void decode(ScriptVariant *value, int expected)
+{
+    ScriptVariant *args[] = {value};
+    ScriptVariant result, *out = &result;
+    ScriptVariant_Init(out);
+    assert(openbor_decodeanigif(args, &out, 1) == S_OK);
+    assert(out == &result && result.vt == VT_INTEGER && result.lVal == expected);
+    printf("decode %d\n", (int)result.lVal);
+}
+
+static void release(ScriptVariant *value)
+{
+    ScriptVariant *args[] = {value};
+    ScriptVariant result, *out = &result;
+    ScriptVariant_Init(out);
+    assert(system_free(args, &out, 1) == S_OK && !out);
+    assert(!List_GetSize(&scriptheap) && !owned_live);
+    printf("released\n");
+}
+
+static void check_stream(int rgb, int stop_early)
+{
+    rgb_active = rgb;
+    reset_resources();
+    make_wire(0, 0, 0, 0, 1);
+    printf("script %d %d\n", rgb, stop_early);
+    List_Init(&scriptheap);
+    List_Init(&theFunctionList);
+    ScriptVariant stream = open_stream(0, S_OK);
+    assert(List_GetSize(&scriptheap) == 1);
+    query_status(&stream);
+    decode(&stream, 0);
+    query_status(&stream);
+    if(stop_early)
+        Script_Global_Clear();
+    else
+    {
+        decode(&stream, 1);
+        query_status(&stream);
+        decode(&stream, 1);
+        release(&stream);
+        Script_Global_Clear();
+    }
+    assert(!List_GetSize(&scriptheap) && !owned_live);
+    for(unsigned i = 0; i < 4; ++i) assert(!files[i].active);
+}
+
+int main(void)
+{
+    obor_profile_build = @PROFILES@;
+    reset_resources();
+    List_Init(&scriptheap);
+    open_stream(1, E_FAIL);
+    assert(!List_GetSize(&scriptheap) && !owned_live);
+    List_Clear(&scriptheap);
+    for(int rgb = 0; rgb < 2; ++rgb)
+        for(int stop_early = 0; stop_early < 2; ++stop_early)
+            check_stream(rgb, stop_early);
+    return 0;
+}

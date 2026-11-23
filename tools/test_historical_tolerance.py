@@ -32,7 +32,8 @@ class HistoricalToleranceTests(unittest.TestCase):
     def test_actual_level_and_text_setters(self):
         source = native('openborscript.c')
         start=source.index('enum levelproperty_enum')
-        declarations=source[start:source.index('void mapstrings_levelproperty',start)]
+        level_mapper=function(source, 'mapstrings_levelproperty')
+        declarations=source[start:source.index(level_mapper,start)]
         start=source.index('enum drawmethod_enum')
         declarations+=source[start:source.index('};',start)+2]
         methods='\n'.join(function(source,n) for n in (
@@ -41,6 +42,9 @@ class HistoricalToleranceTests(unittest.TestCase):
             'mapstrings_changetextobjproperty',
             'obor_textobj_index','obor_textobj_store','obor_textobj_format',
             'openbor_changetextobjproperty','openbor_settextobj','openbor_cleartextobj'))
+        basemap_provider = ('static int change_level_basemap(ScriptVariant **args, int count)\n'
+                            '{ (void)args; (void)count; abort(); }\n'
+                            if 'change_level_basemap(' in methods else '')
         program=r'''
 #include <assert.h>
 #include <limits.h>
@@ -95,7 +99,7 @@ typedef struct {int rocking,type,cameraxoffset,camerazoffset,quake;
 static Level storage,*level=&storage;
 enum {_top_font,_top_text,_top_time,_top_x,_top_y,_top_z,_top_the_end};
 
-'''+declarations+methods+r'''
+'''+basemap_provider+declarations+methods+r'''
 static ScriptVariant integer(LONG v) {return (ScriptVariant){.vt=VT_INTEGER,.lVal=v};}
 static ScriptVariant string(const char *v) {return (ScriptVariant){.vt=VT_STR,.strVal=v};}
 static ScriptVariant literal_level(const char *text) {
@@ -177,7 +181,7 @@ static void exercise(unsigned profile) {
  printf("tolerance_profile=%u level_boundary=3820 text_boundary=3821 passed\n",profile);
 }
 int main(void) {
- const unsigned profiles[]={3780,3783,3789,3793,3797,3801,3802,3805,3814,3818,3819,3820,3821,3822,3824,3829,3831,3837,3839,3842};
+ const unsigned profiles[]={3780,3783,3787,3789,3792,3793,3797,3801,3802,3805,3814,3818,3819,3820,3821,3822,3824,3826,3829,3831,3837,3839,3842};
  for(unsigned i=0;i<sizeof(profiles)/sizeof(*profiles);i++)exercise(profiles[i]);
  reset();free(storage.textobjs);return 0;
 }
@@ -195,7 +199,85 @@ int main(void) {
             self.assertEqual(result.returncode,0,result.stdout+result.stderr)
             print(result.stdout,flush=True)
 
+    def test_defined_identifier_at_script_lexer_boundary(self):
+        engine = ENGINE / 'source'
+        script = engine / 'scriptlib'
+        preprocessor = engine / 'preprocessorlib'
+        program = r'''
+#include "Lexer.h"
+#include <assert.h>
+#include <stdarg.h>
+#include <stdint.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+
+uint32_t obor_profile_build;
+static char diagnostic[128];
+
+char *get_full_path(char *filename) { return filename; }
+void exitIfFalse(int value, const char *expression, const char *method, const char *file, int line)
+{
+    (void)expression;(void)method;(void)file;(void)line;
+    if (!value) abort();
+}
+
+void writeToLogFile(const char *format, ...)
+{
+    va_list args;
+    va_start(args, format);
+    int length = vsnprintf(diagnostic, sizeof(diagnostic), format, args);
+    va_end(args);
+    assert(length >= 0 && (size_t)length < sizeof(diagnostic));
+}
+
+static void check(uint32_t revision, int accepted)
+{
+    char source[] = "defined ordinary\n";
+    pp_context context;
+    Lexer lexer;
+    Token token = {0};
+    TEXTPOS start = {1, 0};
+    obor_profile_build = revision;
+    diagnostic[0] = '\0';
+    pp_context_init(&context);
+    Lexer_Init(&lexer, &context, "fixture.c", source, start);
+    assert(Lexer_GetNextToken(&lexer, &token) == (accepted ? S_OK : E_FAIL));
+    assert(token.theType == (accepted ? TOKEN_IDENTIFIER : TOKEN_ERROR));
+    assert(!strcmp(token.theSource, "defined"));
+    char expected[128] = "";
+    if (!accepted)
+        snprintf(expected, sizeof(expected), "Script error: unknown token type %d\n", PP_TOKEN_DEFINED);
+    assert(!strcmp(diagnostic, expected));
+    assert(Lexer_GetNextToken(&lexer, &token) == S_OK && token.theType == TOKEN_IDENTIFIER);
+    assert(!strcmp(token.theSource, "ordinary"));
+    assert(Lexer_GetNextToken(&lexer, &token) == S_OK && token.theType == TOKEN_EOF);
+    Lexer_Clear(&lexer);
+    pp_context_destroy(&context);
+}
+
+int main(void)
+{
+    check(3787, 1);
+    check(3792, 1);
+    check(3801, 1);
+    check(3802, 0);
+    check(3803, 1);
+    check(3826, 1);
+    return 0;
+}
+'''
+        includes = [script, preprocessor, engine, engine / 'gamelib', SOURCE / 'src/port/libretro']
+        units = [script / 'Lexer.c', script / 'List.c', *(preprocessor / name for name in (
+            'pp_parser.c', 'pp_lexer.c', 'pp_expr.c'))]
+        self.compile_run(program, ['-DPP_TEST=1', '-DSAFEALLOC_H=1', '-Dstricmp=strcasecmp',
+            '-Dstrnicmp=strncasecmp', *['-I' + str(path) for path in includes], *map(str, units)])
+
     def test_actual_preprocessor_reserved_names_and_expansion(self):
+        fixture = load_contract_fixture(Path(__file__).parent / 'fixtures/profile-preprocessor-contracts.json')
+        controls = {3761,3769,3773,3780,3783,3789,3793,3797,3801,3802,3805,
+                    3814,3818,3822,3824,3829,3831,3837,3839,3842}
+        profiles = sorted(controls | {row['revision'] for row in fixture['sources']})
         # Compile the complete actual lexer/parser/expression/list path, with its standalone IO stubs.
         with tempfile.TemporaryDirectory(prefix='historical-pp-source-') as name:
             parser=Path(name)/'pp_parser.c';parser.write_text(native('pp_parser.c' if DRAFT else 'source/preprocessorlib/pp_parser.c'))
@@ -223,19 +305,20 @@ static void check(unsigned profile,char *source,int accepted,const char *wanted)
  pp_context_destroy(&context);
 }
 int main(void) {
- const unsigned profiles[]={3761,3769,3773,3780,3783,3789,3793,3797,3801,3802,3805,3814,3818,3822,3824,3829,3831,3837,3839,3842};
+ const unsigned profiles[]={PROFILES};
  for(unsigned i=0;i<sizeof(profiles)/sizeof(*profiles);i++) {
   unsigned p=profiles[i];
   check(p,"#define __LINE__ 77\n__LINE__\n",p<3802,p<3802?"77":NULL);
   check(p,"#define __FILE__ 88\n__FILE__\n",p<3802,p<3802?"88":NULL);
   check(p,"#undef __DATE__\n#define __DATE__ 99\n__DATE__\n",p<3802,p<3802?"99":NULL);
+  check(p,"#undef __TIME__\n#define __TIME__ 101\n__TIME__\n",p<3802,p<3802?"101":NULL);
   check(p,"#define defined 55\ndefined\n",p<3802,"55");
   check(p,"#define regular 17\nregular\n",1,"17");
   check(p,"#ifdef \"unterminated\nTOKEN\n#endif\n",0,NULL);
  }
  return 0;
 }
-'''
+'''.replace('PROFILES', ','.join(str(revision) for revision in profiles))
             script=ENGINE/'source/scriptlib';pp=ENGINE/'source/preprocessorlib'
             extra=['-DPP_TEST=1','-DSAFEALLOC_H=1','-Dstricmp=strcasecmp','-Dstrnicmp=strncasecmp','-I',str(script),'-I',str(pp),'-I',str(ENGINE/'source'),'-I',str(ENGINE/'source/gamelib'),'-I',str(SOURCE/'src/port/libretro'),str(parser),str(DRAFT/'lexers/3842/pp_lexer.c' if DRAFT else pp/'pp_lexer.c'),str(pp/'pp_expr.c'),str(script/'List.c')]
             self.compile_run(program,extra)

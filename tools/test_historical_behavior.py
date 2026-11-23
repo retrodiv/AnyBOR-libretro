@@ -494,6 +494,64 @@ int main(void) {
         actual = [json.loads(line) for line in native_output(shutdown_program(ROOT, data), data).splitlines()]
         self.assertEqual(actual, [dict(revision=r, cases=5, status='PASS') for r in revisions])
 
+    def test_classic_3185_embedded_version_label(self):
+        from test_historical_common_think import native_output
+        engine = ROOT / 'src/engines/3400'
+        body = function((engine / 'openbor.c').read_text(), 'openborMain')
+        banner = next(line.strip() for line in body.splitlines()
+                      if line.strip().startswith('printf("OpenBoR %s, Compile Date:'))
+        menu = next(line.strip() for line in body.splitlines()
+                    if line.strip().startswith('font_printf(5,3, 2, 0, "OpenBoR %s"'))
+        program = r'''
+#include <stdint.h>
+#include <stdio.h>
+#include "openbor.h"
+#undef printf
+
+uint32_t obor_profile_build;
+
+static void record(const char *format, const char *label)
+{
+    (void)format;
+    puts(label);
+}
+
+static void emit_banner(void)
+{
+#define printf record
+    @BANNER@
+#undef printf
+}
+
+static void record_menu(int x, int y, int z, int font, const char *format, const char *label)
+{
+    record(format, label);
+}
+
+static void emit_menu(void)
+{
+#define font_printf record_menu
+    @MENU@
+#undef font_printf
+}
+
+int main(void)
+{
+    const uint32_t revisions[] = {3184, 3185, 3186, 3400};
+    for(unsigned i = 0; i < sizeof(revisions) / sizeof(*revisions); ++i)
+    {
+        obor_profile_build = revisions[i];
+        emit_banner();
+        emit_menu();
+        record(DEFAULT_SHUTDOWN_MESSAGE);
+    }
+    return 0;
+}
+'''.replace('@BANNER@', banner).replace('@MENU@', menu)
+        actual = native_output(program, {'engine': '3400'}).splitlines()
+        self.assertEqual(actual, ['v3.0 Build 3400'] * 3 + ['v3.0 Build 3173'] * 3
+                         + ['v3.0 Build 3400'] * 6)
+
     def test_classic_text_property_tables_cached_ids_and_valid_fields(self):
         from historical_classic_text import text_property_program
         from test_historical_common_think import native_output
@@ -526,7 +584,8 @@ int main(void) {
         actual = [json.loads(line) for line in native_output(system_program(ROOT, data), data).splitlines()]
         missing = {'lasthity', 'in_enginecreditsscreen', 'synthetic_unknown_system'}
         self.assertEqual(actual, [dict(revision=row['revision'], cases=16*len(row['properties'])+
-            4*len(missing-set(row['properties']))+48*len(row['queries'])+8, status='PASS')
+            4*len(missing-set(row['properties']))+48*len(row['queries'])+8+
+            4*int('in_enginecreditsscreen' in row['properties']), status='PASS')
             for row in data['sources']])
 
     def test_classic_animation_height_loading_and_original_getter_component(self):
@@ -1451,6 +1510,24 @@ int main(void) {
         actual = [json.loads(line) for line in native_output(backwalk_program(ROOT, data), data).splitlines()]
         self.assertEqual(actual, [dict(revision=r, cases=len(data['cases']), status='PASS') for r in revisions])
 
+    def test_classic_idle_and_walk_animation_selection(self):
+        from historical_classic_movement import animation_selection_program
+
+        data = load_contract_fixture(Path(__file__).parent /
+            'fixtures/profile-classic-animation-selection-contracts.json')
+        rows = data['sources']
+        revisions = {row['revision'] for row in rows}
+        self.assertEqual(len(revisions), len(rows))
+        self.assertTrue(set(data['boundary_controls']) <= revisions)
+        profiles = json.loads((ROOT / 'src/pin.json').read_text())['profiles']
+        for profile in contract_profiles(data, profiles, source_range=tuple(data['range'])):
+            if profile['engine'] == data['engine']:
+                self.assertIn(int(profile.get('revision', profile['build'])), revisions)
+        for row in rows:
+            self.assertIs(type(row['mode_selectors']), bool)
+            self.assertRegex(row['commit'], r'^[0-9a-f]{40}$')
+        native(animation_selection_program(ROOT, data))
+
     def test_classic_time_expansion_and_antigravity_property(self):
         from historical_classic_movement import program
         from native_sanitizers import sanitizer_environment
@@ -1567,6 +1644,10 @@ int main(void) {
                    extra_flags=('-Wno-error=misleading-indentation',
                                 '-fsanitize=pointer-overflow', '-fno-sanitize-recover=all'))
 
+    def test_inline_model_and_level_scripts_match_source_boundaries(self):
+        from historical_model_callbacks import render_inline_script_loading
+        native(render_inline_script_loading(ROOT / 'src/engines/3842'))
+
     def test_callback_entry_storage_matches_each_source_profile(self):
         from historical_script_callbacks import render_callback_storage
         from native_sanitizers import sanitizer_environment
@@ -1678,6 +1759,24 @@ int main(void) {
         with patch.dict(os.environ, sanitizer_environment()):
             native(render_selection_runtime(ROOT / 'src/engines/3842', fixture),
                    extra_flags=('-fsanitize=pointer-overflow', '-fno-sanitize-recover=all'))
+
+    def test_native_player_menu_and_join_flow(self):
+        from historical_selection_runtime import render_selection_flow
+        from test_historical_common_think import native_output
+        fixture = load_contract_fixture(Path(__file__).parent / 'fixtures/profile-selection-flow.json')
+        rows = fixture['sources']
+        revisions = [row['revision'] for row in rows]
+        self.assertEqual(revisions, sorted(contract_revisions(fixture, fixture['expected_revisions'])))
+        self.assertTrue(set(fixture['boundary_controls']) <= set(revisions))
+        engine = ROOT / 'src/engines' / fixture['engine']
+        program = render_selection_flow((engine / 'openbor.c').read_text(),
+                                        (engine / 'openbor.h').read_text(), revisions)
+        output = iter(native_output(program, fixture).splitlines())
+        for row in rows:
+            self.assertEqual(int(next(output)), row['revision'])
+            for name, expected in zip(fixture['scenarios'], fixture['contracts'][row['contract']], strict=True):
+                self.assertEqual(json.loads(next(output)), expected, (row['revision'], name))
+        self.assertIsNone(next(output, None))
 
     def test_saved_game_playable_reset_matches_source_profiles(self):
         from historical_model_selectors import render_playable_reset
@@ -1810,7 +1909,7 @@ int main(void) {
             self.assertEqual(row['setter_requires_initialized_owner'], row['revision'] < 3814)
             self.assertEqual(row['setter_collects_at_capacity'], row['revision'] >= 3815)
             self.assertEqual(row['animation_saves_local_context'], row['revision'] >= 3813)
-            self.assertEqual(row['animation_rebinds_current_model'], row['animation_saves_local_context'])
+            self.assertEqual(row['animation_rebinds_current_model'], 3813 <= row['revision'] < 3884)
             self.assertEqual(row['nested_option_registered'], row['revision'] >= 3806)
             self.assertEqual(row['cmd_option_registered'], row['revision'] >= 3823)
             self.assertTrue(row['getter_requires_initialized_owner'])
@@ -1943,6 +2042,48 @@ int main(void) {
         with patch.dict(os.environ, sanitizer_environment()):
             native(render_animation_names(engine, fixture),
                    extra_flags=('-fsanitize=pointer-overflow', '-fno-sanitize-recover=all'))
+
+    def test_steamer_type_sets_offscreen_distance_in_its_source_profiles(self):
+        from test_historical_common_think import native_output
+        profiles = json.loads((ROOT / 'src/pin.json').read_text())['profiles']
+        revisions = {int(row.get('revision', row['build'])) for row in profiles
+                     if row['engine'] == '3842'} | {3893, 3894, 3895, 3896}
+        engine = ROOT / 'src/engines/3842'
+        handler = function((engine / 'openbor.c').read_text(), 'lcmHandleCommandType')
+        rows = ','.join('{%d,%d}' % (rev, rev in {3894, 3896}) for rev in sorted(revisions))
+        native_output(r'''
+#include <stdlib.h>
+#include <strings.h>
+#include "openbor.h"
+#undef assert
+#include <assert.h>
+#ifndef stricmp
+#define stricmp strcasecmp
+#endif
+uint32_t obor_profile_build;
+void shutdown(int status, char *message, ...){(void)status;(void)message;abort();}
+@HANDLER@
+int main(void)
+{
+    const struct { unsigned revision; int sets_distance; } rows[] = {@ROWS@};
+    const int previous_distances[] = {0, 127};
+    char type[] = "StEaMeR", filename[] = "model.test";
+    ArgList args = {.count=2, .args={[1]=type}};
+    for(unsigned i=0; i<sizeof(rows)/sizeof(*rows); ++i)
+    {
+        obor_profile_build = rows[i].revision;
+        for(unsigned j=0; j<sizeof(previous_distances)/sizeof(*previous_distances); ++j)
+        {
+            s_model model = {.offscreenkill=previous_distances[j]};
+            lcmHandleCommandType(&args, &model, filename);
+            assert(model.type == TYPE_STEAMER);
+            assert(model.offscreenkill == (rows[i].sets_distance ? 80 : previous_distances[j]));
+        }
+    }
+    return 0;
+}
+'''.replace('@HANDLER@', handler).replace('@ROWS@', rows), {'engine': '3842'},
+            extra_cflags=('-fgnu89-inline',))
 
     def test_hud_icon_palettes_follow_each_source_owner(self):
         from historical_hud_icons import render_hud_icons
@@ -4224,6 +4365,7 @@ void ent_set_anim(entity *e,int animation,int reset) {
  seen_flags=status(e);seen_pain=e->inpain;
 }
 @PAINFLAGS@
+@TYPE_MATCH@
 @COMMON@
 @BLOCKPAIN@
 static int primary(s_player *pl,int notinair) {
@@ -4248,13 +4390,15 @@ static void check(int legacy,int ignore,int painbit,int recovery,int old_player,
  s_anim animation={0};animation.numframes=1;s_anim *animations[512]={0};
  entity actor,other;self=&actor;max_attack_types=attack_count;
  for(int i=0;i<64;++i)block_ids[i]=i?300+i:ANI_BLOCKPAIN;
- for(int hold=0;hold<4;++hold)for(int type=0;type<2;++type)for(int pain=0;pain<2;++pain)
+ for(int hold=0;hold<4;++hold)for(int type=0;type<3;++type)for(int pain=0;pain<2;++pain)
  for(int animate=0;animate<2;++animate)for(int key=0;key<2;++key)for(int valid=0;valid<2;++valid) {
   ++test_case;init(self,animations);self->modeldata.holdblock=hold;
-  self->modeldata.type=type?TYPE_PLAYER:TYPE_ENEMY;self->inpain=pain;self->animating=animate;
+  self->modeldata.type=type==0?TYPE_ENEMY:type==1?TYPE_PLAYER:TYPE_PLAYER|TYPE_ENEMY;
+  self->inpain=pain;self->animating=animate;
   animations[ANI_BLOCK]=valid?&animation:NULL;player[0].keys=key?FLAG_SPECIAL:0;
   self->takeaction=common_block;
-  int hb=hold && type && (ignore || !pain || (painbit && (hold&2)));
+  int player_type=type==1 || (type==2 && obor_profile_build>=3856);
+  int hb=hold && player_type && (ignore || !pain || (painbit && (hold&2)));
   int rec=!legacy && recovery && pain && (hold&2) && !animate && valid;
   int finish=legacy?!animate:!rec && ((hb&&!key)||(!animate&&(!hb||!key)));
   common_block();assert(idles==finish && animations_seen==rec);
@@ -4320,6 +4464,7 @@ static void check(int legacy,int ignore,int painbit,int recovery,int old_player,
 }
 int main(void) {@CHECKS@return 0;}
 '''.replace('@PAINFLAGS@', macro).replace('@COMMON@', function(source, 'common_block'))
+           .replace('@TYPE_MATCH@', function(source, 'obor_entity_type_matches'))
            .replace('@BLOCKPAIN@', function(source, 'set_blockpain')).replace('@PRIMARY@', primary)
            .replace('@TAIL@', tail).replace('@CHECKS@', '\n'.join(checks)), includes, flags)
 
@@ -4417,6 +4562,100 @@ static void check(int early,int attack_count) {
 int main(void) {@CHECKS@return 0;}
 '''.replace('@PAINFLAGS@', macro).replace('@METHOD@', function(source, 'set_pain'))
            .replace('@CHECKS@', '\n'.join(checks)), includes, flags)
+
+    def test_idle_callback_and_projectile_damage_factor_boundaries(self):
+        rows, source, includes, flags = self._block_pain_inputs()
+        checks = '\n'.join('obor_profile_build = %du; check(%d, %d);' % (
+            row['revision'], row['idle_callback_first'], row['projectiles_skip_factors']) for row in rows)
+        native(r'''
+#include <assert.h>
+#include <stdint.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include "openbor.h"
+
+uint32_t obor_profile_build;
+entity *self;
+static int max_attack_types = 1;
+static int idle_calls, idle_flags, reported_force;
+
+#undef assert
+#define assert(condition) do { if (!(condition)) { \
+    fprintf(stderr, "Idle and damage contract: revision=%u line=%d\n", obor_profile_build, __LINE__); \
+    abort(); \
+} } while (0)
+
+HRESULT Interpreter_Call(Interpreter *p) {(void)p;abort();}
+HRESULT Interpreter_EvalInstruction(Interpreter *p) {(void)p;abort();}
+
+static int flags_of(const entity *ent)
+{
+    return ent->idling | ent->attacking << 1 | ent->inpain << 2 |
+        ent->jumping << 3 | ent->blocking << 4;
+}
+
+static void common_idle_anim(entity *ent)
+{
+    ++idle_calls;
+    idle_flags = flags_of(ent);
+    ent->inpain = 1;
+}
+
+void execute_takedamage_script(entity *ent, entity *other, int force,
+        int drop, int type, int noblock, int guard, int juggle, int pause)
+{
+    assert(ent == self && other && !drop && !type && !noblock && !guard && !juggle && !pause);
+    reported_force = force;
+}
+
+void execute_ondeath_script(entity *ent, entity *other, int force,
+        int drop, int type, int noblock, int guard, int juggle, int pause)
+{
+    abort();
+}
+
+@IDLE@
+@DAMAGE@
+
+static void check(int idle_first, int legacy_factors)
+{
+    entity actor = {0};
+    actor.attacking = actor.inpain = actor.jumping = actor.blocking = 1;
+    idle_calls = 0;
+    assert(set_idle(&actor) == 1 && idle_calls == 1);
+    assert(idle_flags == (idle_first ? 30 : 1));
+    assert(flags_of(&actor) == (idle_first ? 1 : 5));
+
+    entity attacker = {0};
+    s_defense defense[] = {{.factor = 0.5f}};
+    float offense[] = {1.5f};
+    s_attack attack = {.attack_force = 20, .attack_type = 0};
+    self = &actor;
+    actor.modeldata.health = 100;
+    actor.defense = defense;
+    actor.offense_factors = attacker.offense_factors = offense;
+    for (int landing = 0; landing <= 1; ++landing)
+    for (int same = 0; same <= 1; ++same)
+    for (int projectile = 0; projectile <= 1; ++projectile)
+    {
+        entity *other = same ? &actor : &attacker;
+        other->projectile = projectile;
+        actor.damage_on_landing = landing;
+        actor.health = 100;
+        reported_force = -1;
+        checkdamage(other, &attack);
+        int force = legacy_factors && (projectile || (same && landing)) ? 20 : 15;
+        assert(actor.health == 100 - force && reported_force == force);
+    }
+}
+
+int main(void)
+{
+    @CHECKS@
+    return 0;
+}
+'''.replace('@IDLE@', function(source, 'set_idle')).replace('@DAMAGE@', function(source, 'checkdamage'))
+           .replace('@CHECKS@', checks), includes, flags)
 
     def test_historical_filter_requests_preserve_unfiltered_pixels(self):
         pin = json.loads((ROOT / 'src/pin.json').read_text())
@@ -4797,7 +5036,10 @@ int main(void) {
         for engine in sorted({r['engine'] for r in rows}):
             with self.subTest(engine=engine):
                 source = (ROOT / 'src/engines' / engine / 'openbor.c').read_text()
-                functions = '\n'.join(function(source, n) for n in ('ent_set_model', 'set_model_ex'))
+                names = ('ent_set_model', 'set_model_ex')
+                if engine == '3842':
+                    names = ('obor_entity_type_matches', *names)
+                functions = '\n'.join(function(source, name) for name in names)
                 counters = '' if engine != '3741' else '\n'.join(function(source, n) for n in (
                     'obor_scene_counters_active', 'obor_scene_counter_adjust'))
                 checks = []
@@ -4981,6 +5223,74 @@ int main(void) {@CHECKS@assert(cases==@TOTAL@);return 0;}
                 program = re.sub(r'^[ \t]+', lambda m: m.group(0).expandtabs(4), program, flags=re.MULTILINE)
                 native(program, extra_flags=('-Wno-unused-function', '-Wno-unused-variable',
                     '-Wno-error=misleading-indentation'))
+
+    def test_classic_weapon_model_and_player_record_order(self):
+        fixture = load_contract_fixture(Path(__file__).parent / 'fixtures/profile-model-switch-contracts.json')
+        rows = [row for row in fixture['sources'] if row['engine'] == '3842']
+        code = (ROOT / 'src/engines/3842/openbor.c').read_text()
+        methods = '\n'.join(function(code, name) for name in (
+            'obor_entity_type_matches', 'obor_apply_weapon_model', 'set_weapon'))
+        checks = '\n'.join('obor_profile_build = %du; check(%d, %d);' % (
+            row['revision'], row['weapon_model_first'], row['weapon_player_type_is_mask']) for row in rows)
+        native(r'''
+#include <assert.h>
+#include <stddef.h>
+#include <stdint.h>
+
+enum { TYPE_PLAYER = 1, TYPE_ENEMY = 2 };
+typedef struct { int type, numweapons, *weapon, weaploss[1]; } s_model;
+typedef struct { s_model modeldata, *defaultmodel; int playerindex; } entity;
+static struct { int weapnum; } player[1];
+static struct { int setweap; } stage = {9}, *level = &stage;
+static uint32_t obor_profile_build;
+static int changed_loss, saved_at_change, model_index, model_sync, model_calls;
+static s_model *selected_model;
+
+static void set_model_ex(entity *ent, char *name, int index, s_model *model, int sync)
+{
+    assert(name == NULL);
+    ++model_calls;
+    saved_at_change = player[0].weapnum;
+    model_index = index;
+    selected_model = model;
+    model_sync = sync;
+    ent->modeldata.weaploss[0] = changed_loss;
+}
+
+@METHODS@
+
+static void check(int first, int player_mask)
+{
+    s_model default_model = {0};
+    int models[] = {17, 0};
+    const int types[] = {TYPE_PLAYER, TYPE_ENEMY, TYPE_PLAYER | TYPE_ENEMY};
+    for (int wp = 0; wp <= 3; ++wp)
+    for (int anim = 0; anim <= 1; ++anim)
+    for (int kind = 0; kind < 3; ++kind)
+    for (int old_loss = 2; old_loss <= 3; ++old_loss)
+    for (changed_loss = 2; changed_loss <= 3; ++changed_loss)
+    {
+        entity actor = {{types[kind], 2, models, {old_loss}}, &default_model, 0};
+        int is_player = kind == 0 || (kind == 2 && player_mask);
+        int equipped = (first ? changed_loss : old_loss) >= 3 ? wp : level->setweap;
+        player[0].weapnum = -1;
+        model_calls = 0;
+        set_weapon(&actor, wp, anim);
+        assert(model_calls == 1);
+        assert(saved_at_change == (!first && is_player ? equipped : -1));
+        assert(player[0].weapnum == (is_player ? equipped : -1));
+        assert(model_index == (wp == 1 ? 17 : -1));
+        assert(selected_model == (wp == 1 ? NULL : &default_model));
+        assert(model_sync == (wp == 1 ? !anim : 1));
+    }
+}
+
+int main(void)
+{
+    @CHECKS@
+    return 0;
+}
+'''.replace('@METHODS@', methods).replace('@CHECKS@', checks))
 
     def test_campaign_and_selection_match_each_source_profile(self):
         fixture = load_contract_fixture(Path(__file__).parent /
@@ -5862,18 +6172,18 @@ int main(void) {
             self.assertEqual(row['engine'], '3842')
             self.assertRegex(row['commit'], r'^[0-9a-f]{40}$')
             self.assertEqual(set(row['source_sha256']), {'ent_default_init', 'ent_set_anim',
-                'update_animation', 'set_idle', 'set_weapon', 'common_idle_anim'})
+                'update_animation', 'set_idle', 'set_weapon', 'common_idle_anim', 'common_try_wander'})
             for digest in row['source_sha256'].values():
                 self.assertRegex(digest, r'^[0-9a-f]{64}$')
             extra.append(row['revision'])
         boundary = fixture.get('_contract_boundaries')
         required = ({revision for engine, revision in boundary['profiles'] if engine == '3842'}
-                    if boundary is not None else {3761, 3769, 3773})
+                    if boundary is not None else {3761, 3769, 3773, *fixture['boundary_controls']})
         self.assertEqual(set(extra), required)
         profiles = sorted(set(extra) | set(range(3780, 3843)))
         source = (ENGINE / 'openbor.c').read_text()
         methods = '\n'.join(function(source, name) for name in (
-            'obor_apply_weapon_model', 'set_weapon', 'set_idle', 'common_block'))
+            'obor_entity_type_matches', 'obor_apply_weapon_model', 'set_weapon', 'set_idle', 'common_block'))
         idle = function(source, 'common_idle_anim')
         start = idle.index('if(obor_profile_build >= 3819 && self->idling)')
         idle_bit = idle[start:idle.index(';', start)+1]
@@ -5936,10 +6246,12 @@ int main(void) {
         object.modeldata.sleepwait=5;object.sleeptime=7;animation_time(&object,ANI_BLOCK);
         assert(object.sleeptime==(profile<3819?105:7));
         object.sleeptime=7;animation_time(&object,ANI_SLEEP);assert(object.sleeptime==7);
-        for(int idling=0;idling<=3;++idling)for(int sleep=0;sleep<=1;++sleep) {
-            object.idling=idling;object.animnum=sleep?ANI_SLEEP:ANI_BLOCK;object.animating=0;object.sleeptime=7;
+        for(int idling=0;idling<=3;++idling)for(int sleep=0;sleep<=1;++sleep)
+        for(int animating=0;animating<=1;++animating) {
+            object.idling=idling;object.animnum=sleep?ANI_SLEEP:ANI_BLOCK;
+            object.animating=animating;object.sleeptime=7;
             frame_time();
-            int changed=profile<3819?0:(profile<3824?(!sleep&&(idling&2)):(!(idling&2)||sleep));
+            int changed=profile<3819?0:(profile<3824?(!sleep&&(idling&2)):(!(idling&2)||(sleep&&!animating)));
             assert(object.sleeptime==(changed?105:7));
         }
         object.sleeptime=time;object.animating=0;
@@ -6059,8 +6371,14 @@ int main(void) {
         start = build.index('memcpy(animpains,')
         initialization = build[start:build.rindex('}')]
         script = (ENGINE / 'openborscript.c').read_text()
-        start = script.index('#define ICMPSCONSTB(')
-        macro = script[start:script.index('void mapstrings_transconst(', start)]
+        start = script.index('static int obor_numbered_constant_has_prefix(')
+        macro = script[start:script.index('mapstrings_transconst(', start)].rsplit('\n', 1)[0]
+        pain = re.search(r'(?m)^#define\s+ANI_PAIN\s+[^\r\n]+', header)[0]
+        mapper = load_contract_fixture(Path(__file__).parent /
+            'fixtures/profile-constant-mapper-contracts.json')
+        controls = {row['revision'] for row in mapper['sources'] if row['revision'] in (3826, 3827)}
+        self.assertEqual(controls, {3826, 3827})
+        revisions = sorted(set(attack_domain_revisions()) | controls)
         native(r'''
 #include <assert.h>
 #include <stdint.h>
@@ -6072,6 +6390,8 @@ CONSTANTS
 HELPERS
 #define strnicmp strncasecmp
 typedef long LONG;
+ANI_PAIN_DEFINE
+enum { FALSE=0 };
 MACRO
 static int pains[20],falls[20],rises[20],riseattacks[20],blkpains[20],deaths[20];
 static int *animpains,*animfalls,*animrises,*animriseattacks,*animblkpains,*animdies;
@@ -6079,9 +6399,10 @@ static int max_attack_types,maxanim;
 static void initialize(void) { int i; INITIALIZATION }
 static int lookup(const char *constname) {
     struct { LONG lVal; } v={0};
+    int found=1;
     if(0) { }
     ICMPSCONSTB(ANI_PAIN,animpains)
-    return (int)v.lVal;
+    return found ? (int)v.lVal : 0;
 }
 int main(void) {
     for(int i=0;i<20;++i) pains[i]=falls[i]=rises[i]=riseattacks[i]=blkpains[i]=deaths[i]=100+i;
@@ -6099,13 +6420,14 @@ int main(void) {
             assert((*tables[i])[OBOR_ATTACK_BASE]==500+(int)i*2);
             assert((*tables[i])[max_attack_types]==12345);
         }
-        assert(lookup("ANI_PAIN11")==((profile<3826 || profile==3830)?0:500));
-        assert(lookup("ANI_PAIN12")==((profile<3826 || profile==3830)?0:501));
+        assert(lookup("ANI_PAIN11")==((profile<3827 || profile==3830)?0:500));
+        assert(lookup("ANI_PAIN12")==((profile<3827 || profile==3830)?0:501));
         for(unsigned i=0;i<6;++i)free(*tables[i]);
     }
 }
 '''.replace('CONSTANTS', constants).replace('HELPERS', helpers)
-           .replace('MACRO', macro).replace('INITIALIZATION', initialization).replace('PROFILES', ','.join(map(str, attack_domain_revisions()))))
+           .replace('ANI_PAIN_DEFINE', pain).replace('MACRO', macro).replace('INITIALIZATION', initialization)
+           .replace('PROFILES', ','.join(map(str, revisions))))
 
     def test_environment_damage_keeps_the_selected_type_and_health_contract(self):
         source = (ENGINE / 'openbor.c').read_text()
@@ -6116,6 +6438,7 @@ int main(void) {
 #include <stdint.h>
 #include <string.h>
 enum { ATK_LAND=16,ATK_PIT,ATK_LIFESPAN,ATK_TIMEOVER, TYPE_PLAYER=1,
+    TYPE_OBSTACLE=8,
     SCROLL_UP=2,SCROLL_DOWN=4,DEFAULT_OFFSCREEN_KILL=1000,COUNTER_SPEED=400,GAME_SPEED=200 };
 #define PIT_DEPTH (-10)
 typedef struct { int attack_type,attack_force; float dropv[3]; } s_attack;
@@ -6131,14 +6454,15 @@ static struct { int hRes,vRes; } videomodes={320,240};
 static struct { entity *ent; } player[4];
 static struct { int effectvol; } savedata;
 static int max_attack_types,level_completed,endgame,SAMPLE_TIMEOVER=-1,timeleft,showtimeover;
-static int damage_calls,kind,force,previous_health,killed;
+static int damage_calls,kind,force,previous_health,killed,player_deaths;
 static float advancex,advancey,default_model_dropv[3];
 static s_attack emptyattack;
 static int is_frozen(entity *e) { assert(e==self);return 0; }
 static void kill(entity *e) { assert(e==self);++killed; }
-static void player_die(void) { ++killed; }
+static void player_die(void) { ++killed;++player_deaths; }
 static void damage(entity *e,s_attack *a) { assert(e==self);++damage_calls;kind=a->attack_type;force=a->attack_force;previous_health=e->health; }
 static void sound_play_sample(int id,int priority,int left,int right,int speed) { (void)id;(void)priority;(void)left;(void)right;(void)speed;assert(0); }
+TYPE_MATCH
 LOST
 TIMEOVER
 static void land(void) { s_attack attack; LANDING }
@@ -6164,11 +6488,14 @@ int main(void) {
             reset();object.takedamage=0;if(expired)object.lifespancountdown=-1;else object.a=-11;
             check_lost();assert(killed==1 && damage_calls==0);
         }
+        reset();player_deaths=0;object.a=2*PIT_DEPTH-1;object.modeldata.type=TYPE_PLAYER|TYPE_OBSTACLE;
+        check_lost();assert(killed==1 && damage_calls==0 && player_deaths==(profile>=3856));
         reset();player[0].ent=&object;level_completed=0;level->type=0;
         time_over();assert(damage_calls==1 && kind==(profile<3830?max_attack_types:ATK_TIMEOVER));
     }
 }
-'''.replace('LOST', function(source, 'check_lost'))
+'''.replace('TYPE_MATCH', function(source, 'obor_entity_type_matches'))
+           .replace('LOST', function(source, 'check_lost'))
            .replace('TIMEOVER\n', function(source, 'time_over') + '\n')
            .replace('LANDING', landing).replace('PROFILES', ','.join(map(str, attack_domain_revisions()))))
 
@@ -6294,6 +6621,7 @@ int main(void) {
     const unsigned profiles[]={PROFILES};
     const char *names[]={"normal","normal1","normal2","normal10","normal11",
         "normal12","normal2147483647","item","land","pit","lifespan","timeover","ALL"};
+    const int named_types[]={ATK_ITEM,ATK_LAND,ATK_PIT,ATK_LIFESPAN,ATK_TIMEOVER};
     for(unsigned p=0;p<sizeof(profiles)/sizeof(*profiles);++p) {
         obor_profile_build=profiles[p];
         assert(OBOR_ATTACK_BASE==(profiles[p]<3830?16:20));
@@ -6313,20 +6641,42 @@ int main(void) {
                 int suffix_index=suffix+(profiles[p]<3831?6:10)-1;
                 float spare=suffix && suffix_index==max_attack_types ? 0.25f : 123;
                 assert(data.defense[max_attack_types].factor==spare && data.offense_factors[max_attack_types]==spare);
-                if(n==0) assert(data.defense[ATK_NORMAL].factor==0.25f);
-                if(n==1) {
-                    if(profiles[p]>=3831) assert(data.defense[ATK_NORMAL].factor==0.25f);
-                    else { assert(data.defense[ATK_NORMAL].factor==0); assert(data.defense[16].factor==0.25f); }
+                if(n==0) {
+                    assert(data.defense[ATK_NORMAL].factor==0.25f);
+                    assert(data.offense_factors[ATK_NORMAL]==0.25f);
                 }
-                if(n==2) assert(data.defense[ATK_NORMAL2].factor==0.25f);
+                if(n==1) {
+                    const float normal=profiles[p]>=3831?0.25f:0;
+                    assert(data.defense[ATK_NORMAL].factor==normal);
+                    assert(data.offense_factors[ATK_NORMAL]==normal);
+                    if(profiles[p]<3831) {
+                        assert(data.defense[16].factor==0.25f);
+                        assert(data.offense_factors[16]==0.25f);
+                    }
+                }
+                if(n==2 || n==3) {
+                    const int type=n==2?ATK_NORMAL2:ATK_NORMAL10;
+                    assert(data.defense[type].factor==0.25f);
+                    assert(data.offense_factors[type]==0.25f);
+                }
                 if(n==4 || n==5) {
                     int index=(n==4?11:12)+(profiles[p]<3831?6:10)-1;
                     assert(warnings==(index>max_attack_types?2:0));
                     if(index<=max_attack_types) assert(data.defense[index].factor==0.25f && data.offense_factors[index]==0.25f);
                 }
                 if(n==6) assert(warnings==2);
-                if(n==7) assert(data.defense[ATK_ITEM].factor==(profiles[p]>=3831?0.25f:0));
-                if(n>=8 && n<=11 && profiles[p]<3831) assert(data.defense[0].factor==0);
+                if(n>=7 && n<=11) {
+                    const int type=named_types[n-7];
+                    if(profiles[p]>=3831) {
+                        assert(data.defense[type].factor==0.25f);
+                        assert(data.offense_factors[type]==0.25f);
+                    } else {
+                        for(int i=0;i<max_attack_types;++i) {
+                            assert(data.defense[i].factor==0);
+                            assert(data.offense_factors[i]==0);
+                        }
+                    }
+                }
                 if(n==12) {
                     for(int i=0;i<max_attack_types;++i) {
                         int environmental=i==ATK_PIT || i==ATK_LIFESPAN || i==ATK_TIMEOVER;

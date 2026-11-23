@@ -74,6 +74,9 @@ static void Script_Init(Script *s,char *name,char *filename,int first){
     ++inits;s->initialized=1;
 }
 static int load_script(Script *s,char *path){assert(s==&callback && !strcmp(path,"body.c"));++loads;return 1;}
+static int Script_AppendText(Script *s,char *text,char *filename){
+    (void)s;(void)text;(void)filename;abort();
+}
 static int Script_Compile(Script *s){assert(s==&callback && s->initialized);++compiles;return 1;}
 static void ScriptVariant_Init(ScriptVariant *v){*v=(ScriptVariant){0};}
 static void ScriptVariant_ChangeType(ScriptVariant *v,int type){v->vt=type;}
@@ -104,7 +107,8 @@ static int tracked_printf(const char *format,...){
 #define printf tracked_printf
 static void parse(char *command){
     Model *newchar=&model;ArgList arglist={{command,"body.c"}};
-    char *filename="model.test",namebuf[32]={0},*buf=NULL;ptrdiff_t pos=0;size_t size=0;
+    char *filename="model.test",namebuf[32]={0},line[]="onmodelcopyscript body.c";
+    char *buf=line;ptrdiff_t pos=0;size_t size=sizeof(line)-1;
     char *fnbuf=namebuf;modelCommands cmd=selected_command(command);
     switch(cmd){@CASE@@DEFAULT@}
 }
@@ -133,8 +137,176 @@ int main(void){@CHECKS@
 }
 '''.replace('@ENUM@', enum).replace('@COMMAND_ID@', command_id).replace('@GETTERS@', '\n'.join(
         function(commands, name) for name in ('getCommandlistCommand', 'getModelCommand'))).replace(
-        '@LOOKUP@', lookup).replace('@SCRIPT_LOADER@', function(source, 'lcmHandleCommandScripts')).replace(
+        '@LOOKUP@', lookup).replace('@SCRIPT_LOADER@', '\n'.join(function(source, name) for name in
+            ('obor_extract_inline_script', 'lcmHandleCommandScripts'))).replace(
         '@INCLUDE_BODY@', function(source, 'handle_txt_include').replace(
             'handle_txt_include(', 'native_handle_txt_include(', 1)).replace('@CASE@', case).replace(
         '@DEFAULT@', default).replace('@CALLBACK@', function(source, 'execute_onmodelcopy_script')).replace(
         '@CONDITION@', condition).replace('@CHECKS@', checks)
+
+
+def render_inline_script_loading(engine):
+    source = (engine / 'openbor.c').read_text()
+    script = (engine / 'openborscript.c').read_text()
+    level = function(source, 'load_level')
+    start = level.index('case CMD_LEVEL_AT_SCRIPT:')
+    spawn = level[start:level.index('case CMD_LEVEL_AT:', start)]
+    loader = '\n'.join(function(source, name) for name in
+                       ('obor_extract_inline_script', 'lcmHandleCommandScripts', 'lcmHandleLevelCommandScripts'))
+    variables = '\n'.join(function(script, name) for name in
+                          ('Script_ResetVariables', 'openbor_getscriptvar', 'openbor_setscriptvar'))
+    return r'''
+#include <assert.h>
+#include <stdint.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <strings.h>
+
+#define stricmp strcasecmp
+#define GET_ARGP(index) (arglist->value)
+#define FAILED(result) ((result) < 0)
+#define script_magic 0x73636f
+static uint32_t obor_profile_build;
+static int max_script_vars = 2;
+typedef struct { char *value; } ArgList;
+typedef int HRESULT;
+typedef long LONG;
+enum { S_OK = 0, E_FAIL = -1, VT_EMPTY = 0, VT_INTEGER = 1 };
+typedef struct { int vt; LONG lVal; } ScriptVariant;
+typedef struct {
+    int magic;
+    ScriptVariant *vars;
+    unsigned initialized, appended, loaded, compiled;
+} Script;
+static Script *pcurrentscript;
+enum { CMD_LEVEL_AT_SCRIPT = 1 };
+
+static void ScriptVariant_Clear(ScriptVariant *var) { *var = (ScriptVariant){0}; }
+static void ScriptVariant_Init(ScriptVariant *var) { ScriptVariant_Clear(var); }
+static void ScriptVariant_ChangeType(ScriptVariant *var, int type) { var->vt = type; }
+static void ScriptVariant_Copy(ScriptVariant *to, ScriptVariant *from) { *to = *from; }
+static HRESULT ScriptVariant_IntegerValue(ScriptVariant *var, LONG *value)
+{
+    assert(var->vt == VT_INTEGER);
+    *value = var->lVal;
+    return S_OK;
+}
+
+static int Script_IsInitialized(Script *script) { return script->initialized != 0; }
+static void Script_Init(Script *script, char *name, char *file, int first)
+{
+    assert(name && file && first == 0);
+    ++script->initialized;
+}
+static int Script_AppendText(Script *script, char *body, char *file)
+{
+    assert(script->initialized && file && !strcmp(body, "\nvoid main() {}\n"));
+    ++script->appended;
+    return 1;
+}
+static int load_script(Script *script, char *path)
+{
+    assert(script->initialized && (!strcmp(path, "entry.c") || !strcmp(path, "@script")));
+    ++script->loaded;
+    return 1;
+}
+static void Script_Compile(Script *script) { ++script->compiled; }
+static void shutdown(int code, const char *message, ...)
+{
+    (void)code;
+    (void)message;
+    abort();
+}
+
+@VARIABLES@
+@LOADER@
+
+static size_t read_spawn(char *buf, size_t size, Script *output)
+{
+    size_t pos = 0;
+    char *scriptbuf = NULL, *filename = "level.txt";
+    const char *errormessage = NULL;
+    struct { Script spawnscript; } next = {*output};
+    switch(CMD_LEVEL_AT_SCRIPT)
+    {
+        @SPAWN@
+    }
+    *output = next.spawnscript;
+    return pos;
+lCleanup:
+    assert(errormessage);
+    free(scriptbuf);
+    abort();
+}
+
+static void check_script_variables(Script *script, int available)
+{
+    ScriptVariant index = {VT_INTEGER, 1}, value = {VT_INTEGER, 37}, output = {0};
+    ScriptVariant *args[] = {&index, &value}, *result = &output;
+    pcurrentscript = script;
+    assert(openbor_getscriptvar(args, &result, 1) == (available ? S_OK : E_FAIL));
+    if(available)
+    {
+        assert(result == &output && output.vt == VT_EMPTY && script->magic == script_magic);
+        assert(openbor_setscriptvar(args, &result, 2) == S_OK && output.lVal == 1);
+        assert(openbor_getscriptvar(args, &result, 1) == S_OK && output.lVal == 37);
+    }
+    else
+    {
+        assert(!result && !script->vars);
+        result = &output;
+        assert(openbor_setscriptvar(args, &result, 2) == E_FAIL && !result);
+    }
+}
+
+int main(void)
+{
+    char text[] = "entity @script\nvoid main() {}\n@end_script\n0123456789 next";
+    const size_t end = sizeof("entity @script\nvoid main() {}\n@end_script") - 1;
+    const unsigned builds[] = {3879, 3880, 3887, 3888, 3893, 3894, 3896};
+    const unsigned inline_model[] = {0, 1, 1, 1, 1, 1, 1};
+    const size_t spawn_gap[] = {0, 11, 11, 0, 0, 0, 0};
+    const int level_variables[] = {0, 0, 0, 0, 0, 1, 1};
+    char *body = NULL;
+    size_t consumed = 0;
+    assert(!obor_extract_inline_script("@script\n", 8, &body, &consumed));
+    assert(!body && !consumed);
+    for(size_t i = 0; i < sizeof(builds) / sizeof(*builds); ++i)
+    {
+        obor_profile_build = builds[i];
+        Script model = {0}, spawn = {0};
+        ArgList file = {"entry.c"}, inline_source = {"@script"};
+        assert(lcmHandleCommandScripts(&file, text, sizeof(text)-1, &model, "model", "model.txt", 1) == 0);
+        assert(model.initialized == 1 && model.loaded == 1 && model.compiled == 1 && !model.appended);
+        assert(lcmHandleCommandScripts(&inline_source, text, sizeof(text)-1, &model, "model", "model.txt", 0)
+               == inline_model[i] * end);
+        assert(model.initialized == 2 && model.loaded == 2 - inline_model[i] && model.compiled == 1);
+        assert(model.appended == inline_model[i]);
+        assert(read_spawn(text, sizeof(text)-1, &spawn) == end + spawn_gap[i]);
+        assert(read_spawn(text, end+2, &spawn) == end + (spawn_gap[i] ? 2 : 0));
+        assert(spawn.initialized == 1 && spawn.appended == 2 && !spawn.compiled);
+        check_script_variables(&model, 0);
+        check_script_variables(&spawn, 0);
+        if(inline_model[i])
+        {
+            Script level = {0}, named_spawn = {0};
+            assert(lcmHandleLevelCommandScripts(&file, text, sizeof(text)-1, &level,
+                                               "level", "level.txt", 1) == 0);
+            assert(level.compiled == 1 && level.loaded == 1);
+            check_script_variables(&level, level_variables[i]);
+            assert(lcmHandleLevelCommandScripts(&inline_source, text, sizeof(text)-1, &level,
+                                               "level", "level.txt", 1) == end);
+            assert(level.compiled == 2 && level.appended == 1);
+            check_script_variables(&level, level_variables[i]);
+            assert(lcmHandleLevelCommandScripts(&file, text, sizeof(text)-1, &named_spawn,
+                                               "spawn", "level.txt", 0) == 0);
+            assert(named_spawn.loaded == 1 && !named_spawn.compiled);
+            check_script_variables(&named_spawn, level_variables[i]);
+            free(level.vars);
+            free(named_spawn.vars);
+        }
+    }
+    return 0;
+}
+'''.replace('@VARIABLES@', variables).replace('@LOADER@', loader).replace('@SPAWN@', spawn)

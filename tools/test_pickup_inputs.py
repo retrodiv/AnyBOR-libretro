@@ -33,6 +33,9 @@ def program(engine, profiles, *, reject_alias=False):
     structured = 'self->position.x' in helper
     vector_speed = 'self->modeldata.speed.x' in helper
     has_dest = 'self->destx' in helper
+    legacy_flags = 'obor_profile_static_move_flags(' in helper
+    if legacy_flags:
+        helper = function(core, 'obor_profile_static_move_flags') + '\n' + helper
     own = oracle['engines'][engine.name]
     distance = function(core, 'diff')
     # Only pickup presence is changed; the native distance routine is exact.
@@ -48,6 +51,7 @@ def program(engine, profiles, *, reject_alias=False):
         SPEED='modeldata.speed.x' if vector_speed else 'modeldata.speed',
         NO_MOVE='modeldata.move_config_flags' if vector_speed else 'modeldata.nomove',
         NO_MOVE_VALUE='MOVE_CONFIG_NO_MOVE' if vector_speed else '1',
+        MOVE_SETUP='actor.modeldata.legacy_static_move_flags=actor.modeldata.move_config_flags;' if legacy_flags else '',
         HAS_DEST=str(int(has_dest)), HELPER=helper, DISTANCE=distance,
         ORIGINAL=rename_identifiers(own['helper'], {'common_try_pick': 'original_pick'}),
         CONTEXTS=','.join(contexts))

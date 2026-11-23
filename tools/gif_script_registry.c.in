@@ -1,0 +1,44 @@
+/* SPDX-License-Identifier: BSD-3-Clause
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me> */
+#include <assert.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+
+static volatile int unexpected;
+static unsigned obor_profile_build;
+static int theFunctionList;
+
+@STUBS@
+
+static struct registration { const char *name; void *function; int registered; } observed[] = {
+@ENTRIES@
+};
+
+static void List_InsertAfter(int *list, void *entry, const char *name)
+{
+    assert(list == &theFunctionList);
+    for(unsigned i = 0; i < sizeof(observed) / sizeof(*observed); ++i)
+    {
+        struct registration *item = &observed[i];
+        if(strcmp(item->name, name)) continue;
+        assert(!item->registered && item->function == entry);
+        item->registered = 1;
+    }
+}
+
+static void List_Reset(int *list) { assert(list == &theFunctionList); }
+
+@REGISTRY@
+
+int main(void)
+{
+    obor_profile_build = @REVISION@;
+    Script_LoadSystemFunctions();
+    for(unsigned i = 0; i < sizeof(observed) / sizeof(*observed); ++i)
+    {
+        const struct registration *item = &observed[i];
+        printf("%s %d %s\n", item->name, item->registered, Script_GetFunctionName(item->function));
+    }
+    return 0;
+}

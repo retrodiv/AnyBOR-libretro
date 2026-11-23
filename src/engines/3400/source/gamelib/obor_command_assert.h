@@ -45,6 +45,7 @@ static const obor_command_assert_location obor_command_assert_locations[] = {
     {3173, {13, 0, 310, 0}, {"createModelCommandList", "", "createLevelCommandList", ""}},
     {3181, {17, 0, 318, 0}, {"createModelCommandList", "", "createLevelCommandList", ""}},
     {3182, {17, 0, 318, 435}, {"createModelCommandList", "", "createLevelCommandList", "createLevelOrderCommandList"}},
+    {3185, {17, 0, 318, 435}, {"createModelCommandList", "", "createLevelCommandList", "createLevelOrderCommandList"}},
     {3192, {17, 0, 318, 435}, {"createModelCommandList", "", "createLevelCommandList", "createLevelOrderCommandList"}},
     {3208, {17, 0, 328, 445}, {"createModelCommandList", "", "createLevelCommandList", "createLevelOrderCommandList"}},
     {3243, {17, 0, 328, 441}, {"createModelCommandList", "", "createLevelCommandList", "createLevelOrderCommandList"}},

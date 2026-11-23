@@ -18,8 +18,290 @@ from native_allocation_policy import bind_named_allocation_support
 
 ROOT = Path(os.environ.get('OBOR_TEST_SOURCE', Path(__file__).resolve().parents[1]))
 ENGINE = Path(os.environ.get('OBOR_HISTORICAL_ENGINE', ROOT / 'src/engines/3842'))
-PROFILES = (3780, 3783, 3789, 3793, 3797, 3805, 3814, 3818,
-            3819, 3820, 3821, 3822, 3824, 3829, 3831, 3837, 3839, 3842)
+PROFILES = (3780, 3783, 3787, 3789, 3792, 3793, 3797, 3805, 3814, 3818,
+            3819, 3820, 3821, 3822, 3824, 3826, 3829, 3831, 3837, 3839, 3842)
+
+
+def motion_phase_program(source, revision):
+    from test_early_jump_walkoff import braced_statement
+    animation = function(source, 'update_animation')
+    platform = re.search(r'if\((?:!obor_motion_after_update\(\) && )?other && other != self\s*\)',
+                         animation)
+    if 'static void obor_apply_entity_motion(' in source:
+        motion = function(source, 'obor_motion_after_update')
+        post = '\n'.join(function(source, method) for method in
+                         ('obor_apply_entity_motion', 'obor_entity_post_update', 'obor_finish_entity_tick'))
+    elif 'static void _domove(' in source:
+        motion = ''
+        post = function(source, '_domove') + function(source, 'ent_post_update')
+    else:
+        motion = post = ''
+    values = dict(MOTION=motion, POST=post, LINK=function(source, 'check_link_move'),
+                  AI=function(source, 'check_ai'), ARRANGE=function(source, 'arrange_ents'),
+                  UPDATE=function(source, 'update_ents'),
+                  FRAME=braced_statement(function(source, 'update_frame'), 'if(level && (anim->move || anim->movez))'),
+                  PLATFORM_ANIMATION=braced_statement(animation, platform[0]) if platform else '',
+                  REVISION=str(revision))
+    template = Path(__file__).with_name('entity_motion_phase_contract.c.in').read_text()
+    return re.sub(r'@([A-Z_]+)@', lambda token: values[token[1]], template)
+
+
+def motion_coefficients_program(source, revision):
+    gravity = function(source, 'check_gravity')
+    pause = function(source, 'do_attack')
+    arrow = function(source, 'arrow_move')
+    star = function(source, 'star_move')
+    biker = function(source, 'biker_takedamage')
+
+    def pause_update(actor):
+        timeline = re.findall(r'(?m)^.*\b' + actor + r'->(?:toss_time|nextmove|nextanim|nextthink)'
+                              r'\s*\+= attack->pause_add;[^\n]*', pause)
+        if len(timeline) not in (3, 4):
+            raise ValueError('Expected the complete native impact clock update')
+        return '\n'.join(timeline)
+
+    def projectile_speed(method):
+        code = function(source, method)
+        return re.search(r'(?m)^\s*e->autokill = e->modeldata.nomove;'
+                         r'(?:\n[ \t]*(?:if\(obor_motion_after_update\(\)\) )?'
+                         r'e->modeldata.speed \*= 2;)?', code)[0]
+
+    cadence = []
+    cadence_checks = []
+    for index, method in enumerate(('biker_move', 'arrow_move', 'bomb_move', 'star_move', 'biker_takedamage')):
+        clock = re.search(r'(?m)^\s*(?:if\(!obor_motion_after_update\(\)\) )?'
+                          r'self->nextthink = time \+ THINK_SPEED(?: / 2)?;', function(source, method))
+        cadence.append(f'static void cadence_{index}(void) {{ {clock[0] if clock else ""} }}')
+        cadence_checks.append(f'target.nextthink = 0; cadence_{index}(); '
+                              f'printf("{"," if index else ""}%u", target.nextthink);')
+    values = dict(
+        MOTION=function(source, 'obor_motion_after_update') if 'static int obor_motion_after_update(' in source else '',
+        TRAP=function(source, 'trap_think'), STEAMER=function(source, 'steamer_think'), BIKE=function(source, 'bike_crash'),
+        GRAVITY=gravity[gravity.index('// gravity, antigravity factors'):gravity.index('fmin =')],
+        TOSS_TIME=re.search(r'self->toss_time = time \+ [^;]+;', gravity)[0],
+        SELF_PAUSE=pause_update('self'), OTHER_PAUSE=pause_update('e'),
+        ARROW=arrow.split('self->projectile = 0;', 1)[1].split('self->modeldata.no_adjust_base = 0;', 1)[0],
+        STAR=star.split('self->projectile = 0;', 1)[1].split('set_fall(', 1)[0],
+        KNIFE_SPEED=projectile_speed('knife_spawn'), BOMB_SPEED=projectile_speed('bomb_spawn'),
+        STAR_LAUNCH=re.search(r'e->xdir = [^;]+;', function(source, 'star_spawn'))[0],
+        DRIVER=re.search(r'if\(self->takedamage\) self->takedamage\([^;]+;', biker.split('drop_driver(self)', 1)[1])[0],
+        CADENCE='\n'.join(cadence), CADENCE_CHECKS='\n'.join(cadence_checks), REVISION=str(revision))
+    template = Path(__file__).with_name('entity_motion_coefficients_contract.c.in').read_text()
+    return re.sub(r'@([A-Z_]+)@', lambda token: values[token[1]], template)
+
+
+class ForwardMotionPhaseContracts(unittest.TestCase):
+    def test_native_tick_grab_and_platform_displacement(self):
+        from test_historical_common_think import native_output
+        fixture = load_contract_fixture(Path(__file__).with_name('fixtures') /
+                                        'profile-3842-motion-phase.json')
+        rows = fixture['sources']
+        revisions = {row['revision'] for row in rows}
+        self.assertEqual(len(rows), len(revisions))
+        self.assertTrue(set(fixture['boundary_controls']) <= revisions)
+        engine = ROOT / 'src/engines' / fixture['engine']
+        source = (engine / 'openbor.c').read_text(encoding='latin1')
+        profiles = json.loads((ROOT / 'src/pin.json').read_text())['profiles']
+        for profile in contract_profiles(fixture, profiles):
+            revision = int(profile.get('revision', profile['build']))
+            if profile['engine'] == fixture['engine'] and revision >= 3880:
+                self.assertIn(revision, revisions)
+        for row in rows:
+            with self.subTest(revision=row['revision']):
+                self.assertRegex(row['commit'], r'^[0-9a-f]{40}$')
+                self.assertRegex(row['source_sha256'], r'^[0-9a-f]{64}$')
+                actual = native_output(motion_phase_program(source, row['revision']), fixture,
+                                       extra_cflags=('-fgnu89-inline',))
+                expected = fixture['observations'][row['observations']]
+                self.assertEqual([json.loads(line) for line in actual.splitlines()], expected)
+
+    def test_native_gravity_impact_and_projectile_values(self):
+        from test_historical_common_think import native_output
+        fixture = load_contract_fixture(Path(__file__).with_name('fixtures') /
+                                        'profile-3842-motion-phase.json')
+        engine = ROOT / 'src/engines' / fixture['engine']
+        source = (engine / 'openbor.c').read_text(encoding='latin1')
+        for row in fixture['sources']:
+            with self.subTest(revision=row['revision']):
+                actual = native_output(motion_coefficients_program(source, row['revision']), fixture,
+                                       extra_cflags=('-fgnu89-inline',))
+                self.assertEqual(json.loads(actual), fixture['coefficients'][row['coefficients']])
+
+
+def draw_script_program(source, revision):
+    values = {
+        'REVISION': str(revision),
+        'DISPLAY': function(source, 'display_ents'),
+        'CALLBACK': function(source, 'execute_ondraw_script') if 'void execute_ondraw_script(' in source else '',
+        'CLIP': '\n'.join(function(source, name) for name in
+                          ('obor_model_clip_coordinate', 'obor_model_clip_screen'))
+                if 'void obor_model_clip_screen(' in source else '',
+    }
+    template = Path(__file__).with_name('entity_draw_script_contract.c.in').read_text()
+    return re.sub(r'@([A-Z_]+)@', lambda token: values[token[1]], template)
+
+
+class ForwardDrawScriptContracts(unittest.TestCase):
+    def test_native_draw_script_order_and_local_self(self):
+        from test_historical_common_think import native_output
+        fixture = load_contract_fixture(Path(__file__).with_name('fixtures') /
+                                        'profile-3842-draw-script.json')
+        engine = ROOT / 'src/engines' / fixture['engine']
+        source = (engine / 'openbor.c').read_text(encoding='latin1')
+        rows = fixture['sources']
+        revisions = {row['revision'] for row in rows}
+        self.assertEqual(len(revisions), len(rows))
+        self.assertTrue(set(fixture['boundary_controls']) <= revisions)
+        profiles = json.loads((ROOT / 'src/pin.json').read_text())['profiles']
+        for profile in contract_profiles(fixture, profiles):
+            revision = int(profile.get('revision', profile['build']))
+            if profile['engine'] == fixture['engine'] and revision >= min(revisions):
+                self.assertIn(revision, revisions)
+        for row in rows:
+            with self.subTest(revision=row['revision']):
+                self.assertRegex(row['commit'], r'^[0-9a-f]{40}$')
+                self.assertRegex(row['source_sha256'], r'^[0-9a-f]{64}$')
+                actual = native_output(draw_script_program(source, row['revision']), fixture,
+                                       extra_cflags=('-fgnu89-inline',))
+                self.assertEqual(json.loads(actual), fixture['observations'][row['observations']])
+
+
+class ForwardUpdatePhaseContracts(unittest.TestCase):
+    def test_input_clock_scrolling_and_status_update_order(self):
+        from test_historical_behavior import native
+        engine = ROOT / 'src/engines/3842'
+        core = (engine / 'openbor.c').read_text()
+        header = (engine / 'openbor.h').read_text()
+        definitions = '\n'.join(re.search(r'^#define\s+' + name + r'\s+\d+', header, re.M)[0]
+                                for name in ('GAME_SPEED', 'MAX_SPECIAL_INPUTS'))
+        self.assertIn('#ifndef DISABLE_MOVIE\n#define DISABLE_MOVIE\n#endif', core)
+        update = function(core, 'update')
+        prefix = update[:update.index('\n\tif(!ingame)')]
+        tail = update[update.index('\nupdate_done:'):]
+        profiles = json.loads((ROOT / 'src/pin.json').read_text())['profiles']
+        revisions = {int(p.get('revision', p['build'])) for p in profiles
+                     if p['engine'] == '3842'} | {3866, 3867, 3868}
+        code = r'''
+#include <assert.h>
+#include <stdio.h>
+#include <stdint.h>
+#include <string.h>
+
+#define DISABLE_MOVIE 1
+@DEFINITIONS@
+#define MAX_PLAYERS 4
+#define FLAG_MOVELEFT 1
+#define FLAG_MOVERIGHT 2
+#define FLAG_BACKWARD 4
+#define FLAG_FORWARD 8
+typedef uint32_t u32;
+typedef struct {u32 keyflags,newkeyflags;} controls;
+typedef struct {u32 movetime;int direction;} entity;
+typedef struct {
+    u32 releasekeys,keys,newkeys,playkeys,combokey[MAX_SPECIAL_INPUTS],inputtime[MAX_SPECIAL_INPUTS];
+    int joining,credits,combostep;
+    entity *ent;
+} s_player;
+typedef struct {int noslow,settime,type;} level_state;
+static level_state scene;
+static level_state *level = &scene;
+static s_player player[MAX_PLAYERS];
+static controls control[MAX_PLAYERS];
+static controls *playercontrolpointers[] = {control,control+1,control+2,control+3};
+static int pause,alwaysupdate,selectScreen,level_completed,tospeedup,freezeall,noshare,credits;
+static int slowmotion[3];
+static u32 time,newtime,interval,timeleft,bothkeys,bothnewkeys;
+static uint32_t obor_profile_build;
+static unsigned reading;
+static char trace[96];
+static unsigned length;
+static int screen;
+#define vscreen (&screen)
+static void mark(char code)
+{
+    assert(length + 1 < sizeof(trace));
+    trace[length++] = code;
+    trace[length] = 0;
+}
+
+static unsigned timer_getinterval(int speed)
+{
+    assert(speed == GAME_SPEED);
+    mark('T');
+    return reading;
+}
+
+static void control_update(controls **ports, int count)
+{
+    assert(ports == playercontrolpointers && count == MAX_PLAYERS);
+    mark('I');
+}
+
+static void execute_updatescripts(void)
+{
+    assert(newtime == (obor_profile_build < 3867 ? 0 : 777));
+    mark('U');
+}
+
+static void execute_keyscripts(void) { assert(newtime == 0); mark('K'); }
+static void update_scroller(void) { mark('S'); }
+static void update_scrolled_bg(void) { mark('B'); }
+static void updatestatus(void) { mark('H'); }
+static void update_ents(void) { mark('E'); }
+static void time_over(void) { assert(0); }
+static void clearscreen(int *buffer) { assert(buffer == vscreen); mark('C'); }
+static void draw_scrolled_bg(void) { mark('D'); }
+static void predrawstatus(void) { mark('P'); }
+static void drawstatus(void) { mark('R'); }
+static void draw_textobjs(void) { mark('X'); }
+static void vga_vwait(void) { mark('V'); }
+static void video_copy_screen(int *buffer) { assert(buffer == vscreen); mark('F'); }
+static void spriteq_clear(void) { mark('Q'); }
+static void check_music(void) { mark('G'); }
+static void sound_update_music(void) { mark('M'); }
+@SAMPLE@
+@INPUT@
+@UPDATE@
+
+static void check(unsigned delta, int type, const char *expected)
+{
+    freezeall = 1;
+    scene.type = type;
+    reading = delta;
+    time = 20;
+    newtime = 777;
+    length = trace[0] = 0;
+    update(1, 1);
+    if(strcmp(trace, expected))
+    {
+        fprintf(stderr, "update order profile=%u delta=%u type=%d actual=%s expected=%s\n",
+                obor_profile_build, delta, type, trace, expected);
+        assert(0);
+    }
+    assert(time == 20 + delta);
+    assert(newtime == (obor_profile_build == 3867 && delta == 0 ? 777 : time));
+}
+
+int main(void)
+{
+    const unsigned revisions[] = {@REVISIONS@};
+    for(unsigned i = 0; i < sizeof(revisions)/sizeof(*revisions); ++i)
+    {
+        obor_profile_build = revisions[i];
+        int per_tick = obor_profile_build >= 3867;
+        check(2, 1, per_tick ? "TIUKSBHESBHECDPRXVFQGM" : "ITUKSESECBHDPRXVFQGM");
+        check(2, 2, per_tick ? "TIUKSBESBECDXVFQGM" : "ITUKSESECBDXVFQGM");
+        check(0, 1, obor_profile_build == 3867 ? "TVFQGM" :
+                      per_tick ? "TIUKCDPRXVFQGM" : "ITUKCBHDPRXVFQGM");
+    }
+    return 0;
+}
+'''
+        native(code.replace('@SAMPLE@', function(core, 'sample_update_interval'))
+                   .replace('@INPUT@', function(core, 'inputrefresh'))
+                   .replace('@UPDATE@', prefix + tail)
+                   .replace('@DEFINITIONS@', definitions)
+                   .replace('@REVISIONS@', ','.join(map(str, sorted(revisions)))))
 
 
 class PanelOptionalContracts(unittest.TestCase):
@@ -116,6 +398,114 @@ class FrontpanelNormalization(unittest.TestCase):
 
 
 class LevelLifecycleContracts(unittest.TestCase):
+    def test_3842_joining_reset_credits_and_shutdown(self):
+        from test_historical_behavior import native
+        source = (ROOT / 'src/engines/3842/openbor.c').read_text()
+        credits = function(source, 'display_credits')
+        first = credits.index('if(savedata.logo != 1) return;')
+        last = credits.index('bothnewkeys = 0;', first)
+        shutdown = function(source, 'shutdown')
+        shutdown = shutdown[shutdown.index('freeModelList();'):shutdown.index('freefilenamecache();')
+                            + len('freefilenamecache();')]
+        play = function(source, 'playlevel')
+        first_player = play.index('for(i=0; i<levelsets[current_set].maxplayers; i++)',
+                                  play.index('type = level->type;'))
+        last_player = play.index('//execute a script when level started', first_player)
+        profiles = json.loads((ROOT / 'src/pin.json').read_text())['profiles']
+        revisions = {int(p.get('revision', p['build'])) for p in profiles
+                     if p['engine'] == '3842'} | {3844, 3845, 3862, 3863, 3875, 3876}
+        program = r'''
+#include <assert.h>
+#include <stdint.h>
+#include <stdlib.h>
+#include <string.h>
+
+static uint32_t obor_profile_build;
+static struct { int logo; } savedata;
+static char trace[16];
+static unsigned length;
+static int *savelevel;
+
+static void record(char value)
+{
+    assert(length + 1 < sizeof(trace));
+    trace[length++] = value;
+    trace[length] = 0;
+}
+
+static void fade_out(int sound, int duration) { assert(!sound && !duration); record('F'); }
+static void kill_all(void) { record('K'); }
+static void unload_level(void) { record('L'); }
+static void unload_background(void) { record('B'); }
+static void freeModelList(void) { record('M'); }
+static void freefilenamecache(void) { record('N'); }
+static void release_save(int *slot) { assert(slot == savelevel); record('S'); free(slot); }
+static void credits_prefix(void) { @CREDITS@ }
+#define free release_save
+static void shutdown_resources(void) { @SHUTDOWN@ }
+#undef free
+
+typedef struct { int rush[2]; } entity;
+typedef struct {
+    int lives, newkeys, playkeys, weapnum, joining;
+    char name[8];
+    entity *ent;
+} Player;
+static Player player[2];
+static entity actor;
+static struct { int maxplayers; } levelsets[] = {{2}};
+typedef struct { int setweap; } Level;
+static Level scene = {7}, *level = &scene;
+static int current_set;
+static void spawnplayer(int player_index)
+{
+    assert(player_index == 0);
+    player[player_index].ent = &actor;
+    record('P');
+}
+
+static void level_players(void) { int i; @PLAYERS@ }
+
+int main(void)
+{
+    const unsigned revisions[] = {@REVISIONS@};
+    for(unsigned p = 0; p < sizeof(revisions)/sizeof(*revisions); ++p)
+    {
+        obor_profile_build = revisions[p];
+        length = trace[0] = 0;
+        savedata.logo = 0;
+        credits_prefix();
+        assert(length == 0);
+        savedata.logo = 1;
+        credits_prefix();
+        assert(!strcmp(trace, obor_profile_build >= 3876 ? "FKLB" : "FB"));
+
+        length = trace[0] = 0;
+        savelevel = malloc(sizeof(*savelevel));
+        assert(savelevel);
+        shutdown_resources();
+        assert(!savelevel && !strcmp(trace, "MSN"));
+        length = trace[0] = 0;
+        shutdown_resources();
+        assert(!strcmp(trace, "MN"));
+
+        length = trace[0] = 0;
+        player[0] = (Player){.lives=1,.newkeys=3,.playkeys=5,.joining=1,.name="player"};
+        player[1] = (Player){.lives=2,.joining=1};
+        actor.rush[1] = 17;
+        level_players();
+        assert(!strcmp(trace, "P") && player[0].ent == &actor && actor.rush[1] == 0);
+        assert(player[0].newkeys == 0 && player[0].playkeys == 0 && player[0].weapnum == 7);
+        assert(player[0].joining == (obor_profile_build < 3845));
+        assert(!player[1].ent && player[1].joining == 1);
+    }
+    return 0;
+}
+'''
+        native(program.replace('@CREDITS@', credits[first:last]).replace('@SHUTDOWN@', shutdown)
+                      .replace('@PLAYERS@', play[first_player:last_player])
+                      .replace('@REVISIONS@', ','.join(map(str, sorted(revisions)))))
+
     def test_native_playable_resets_offsets_and_level_exit_order(self):
         from test_historical_common_think import native_output
         data = load_contract_fixture(Path(__file__).with_name('fixtures') /
@@ -311,7 +701,10 @@ def level_runtime_program(script, header, variants, utils, profiles, original=Fa
             raise AssertionError('Missing complete native type ' + name)
         records.append(header[start:start + end.end()])
     declarations = []
-    for name in ('levelproperty_enum', 'drawmethod_enum'):
+    enum_names = ['levelproperty_enum', 'drawmethod_enum']
+    if 'enum basemap_enum {' in script:
+        enum_names.append('basemap_enum')
+    for name in enum_names:
         start = script.index('enum ' + name)
         declarations.append(script[start:script.index('};', start) + 2])
     start = script.index('#define MAPSTRINGS(')
@@ -323,6 +716,9 @@ def level_runtime_program(script, header, variants, utils, profiles, original=Fa
     methods = '\n'.join(function(script, name) for name in (
         'mapstrings_levelproperty', 'mapstrings_drawmethodproperty',
         'openbor_getlevelproperty', 'openbor_changelevelproperty'))
+    if 'change_level_basemap(' in methods:
+        helpers += ('\nstatic int change_level_basemap(ScriptVariant **args, int count)\n'
+                    '{ (void)args; (void)count; abort(); }\n')
     converters = '\n'.join(function(variants, name) for name in (
         'ScriptVariant_ChangeType', 'ScriptVariant_IntegerValue', 'ScriptVariant_DecimalValue'))
     lowering = function(script, 'Script_GetStringMapFunction')
@@ -442,6 +838,39 @@ static void exercise(unsigned profile) {
     hr=openbor_changelevelproperty(v,&out,2);assert(hr==S_OK && storage.quake==18);
     assert(profile<3820?(out==&result && result.lVal==111):out==NULL);
     trace("numeric_set",hr,out,a);
+    const char *scalar_names[]={"bgspeed","cameraxoffset","camerazoffset","gravity",
+        "maxfallspeed","maxtossspeed","quake","rocking","scrollspeed","type"};
+    for(unsigned field=0;field<sizeof(scalar_names)/sizeof(*scalar_names);++field) {
+        reset();
+        a[0]=string(40,(char*)scalar_names[field]);
+        mapstrings_levelproperty(v,1);
+        a[1]=(ScriptVariant){.vt=VT_DECIMAL,.dblVal=51.75};
+        result=integer(111);out=&result;
+        hr=openbor_changelevelproperty(v,&out,2);
+        int supported=field!=9 || profile>=3820;
+        int fractional=field>=3 && field<=5;
+        double after[]={storage.bgspeed,storage.cameraxoffset,storage.camerazoffset,
+            storage.gravity,storage.maxfallspeed,storage.maxtossspeed,storage.quake,
+            storage.rocking,storage.scrollspeed,storage.type};
+        assert(hr==(supported?S_OK:E_FAIL));
+        assert(after[field]==(supported?(fractional?51.75:51):30));
+        assert(profile<3820 && supported?(out==&result && result.lVal==111):out==NULL);
+        if(field==9) {
+            result=integer(111);out=&result;
+            hr=openbor_getlevelproperty(v,&out,1);
+            assert(supported?(hr==S_OK && out==&result && result.lVal==51):(hr==E_FAIL && !out));
+        }
+        if(supported) {
+            a[1]=(ScriptVariant){0};result=integer(111);out=&result;
+            hr=openbor_changelevelproperty(v,&out,2);
+            assert(hr==(profile<3820?S_OK:E_FAIL));
+            assert(profile<3820?(out==&result && result.lVal==0):out==NULL);
+            double unchanged[]={storage.bgspeed,storage.cameraxoffset,storage.camerazoffset,
+                storage.gravity,storage.maxfallspeed,storage.maxtossspeed,storage.quake,
+                storage.rocking,storage.scrollspeed,storage.type};
+            assert(unchanged[field]==after[field]);
+        }
+    }
     /* Original bulk setters read varlist[3] for every slot. Successful array
        getters fall through to E_FAIL; do not accidentally repair either. */
     const char *names[]={"hole","wall"};
@@ -531,7 +960,7 @@ static int record_diagnostic(const char *format,...) {
                     checks.append('obor_profile_build=%d;check(%d,%s,%d,%d);' % (
                         row['revision'], row['legacy_string_only_api'], tables[names],
                         len(names), row['draw_enabled_index']))
-                    total += 600 + 4 * (len(names) + 3) + 3 + (4 if len(names) == 11 else 0)
+                    total += 640 + 4 * (len(names) + 3) + 3 + (4 if len(names) == 11 else 0)
                 definitions = '\n'.join('static const char *%s[]={%s};' % (
                     name, ','.join(json.dumps(s) for s in values)) for values, name in tables.items())
                 if engine == '3842':
@@ -543,13 +972,15 @@ static int record_diagnostic(const char *format,...) {
                         checks.append('obor_profile_build=%d;diagnostic_boundary(%s,%s);' % (
                             control['revision'], json.dumps(message), json.dumps(control['setter_message'])))
                         total += 1
+                        checks.append('type_boundary(%d);' % control['has_type_property'])
+                        total += 1
                 program = prefix + route + r'''
 static unsigned cases;
 #undef assert
 #define assert(c) do {if(!(c)){fprintf(stderr,"Level property: revision=%u case=%u line=%d\n",obor_profile_build,cases,__LINE__);abort();}}while(0)
 enum {F_BG,F_CAMX,F_CAMZ,F_GRAVITY,F_FALL,F_TOSS,F_QUAKE,F_ROCK,F_SCROLL,F_TYPE,F_HOLE,F_WALL,F_INVALID};
 static const char *queries[]={"bgspeed","BGSPEED","cameraxoffset","camerazoffset","gravity",
- "maxfallspeed","maxtossspeed","quake","rock","rocking","scrollspeed","hole","wall","invalid","ROCK"};
+ "maxfallspeed","maxtossspeed","quake","rock","rocking","scrollspeed","type","hole","wall","invalid","ROCK"};
 static int field(const char *name) {
  const char *names[]={"bgspeed","cameraxoffset","camerazoffset","gravity","maxfallspeed",
   "maxtossspeed","quake","rocking","scrollspeed","type","hole","wall"};
@@ -588,7 +1019,7 @@ static ScriptVariant selector(int mode,const char *name,int index) {
 }
 static void map_literal(ScriptVariant **args,int mode,int count,void *function) {
  if(!mode) {
-  void (*mapper)(ScriptVariant**,int)=(void(*)(ScriptVariant**,int))compiler_mapper(function);
+  @MAPPER_RETURN@ (*mapper)(ScriptVariant**,int)=(@MAPPER_RETURN@(*)(ScriptVariant**,int))compiler_mapper(function);
   if(mapper)mapper(args,count);
  }
 }
@@ -709,9 +1140,25 @@ static void diagnostic_boundary(const char *message,const char *setter_message) 
  assert(openbor_changelevelproperty(args,&out,2)==E_FAIL && !out);
  assert(result.vt==VT_INTEGER && result.lVal==911 && !strcmp(diagnostic,setter_message));
 }
+static void type_boundary(int available) {
+ ++cases;reset();*diagnostic=0;
+ ScriptVariant property=string(40,"type"),result=integer(911),*out=&result,*v[]={&property};
+ map_literal(v,0,1,(void*)openbor_getlevelproperty);
+ assert(openbor_getlevelproperty(v,&out,1)==(available?S_OK:E_FAIL));
+ if(!available) {
+  assert(out==NULL && property.vt==VT_STR && strstr(diagnostic,"Level property 'type' is not supported."));
+  return;
+ }
+ assert(!*diagnostic && property.vt==VT_INTEGER && property.lVal==10);
+ assert(out==&result && result.vt==VT_INTEGER && result.lVal==storage.type);
+ ScriptVariant value=integer(2),*args[]={&property,&value};
+ assert(openbor_changelevelproperty(args,&out,2)==S_OK && storage.type==2 && !*diagnostic);
+}
 @DEFINITIONS@
 int main(void) {@CHECKS@assert(cases==@TOTAL@);return 0;}
 '''
+                mapper_return = re.search(r'\b(void|int) mapstrings_levelproperty\(', prefix)[1]
+                program = program.replace('@MAPPER_RETURN@', mapper_return)
                 program = program.replace('@DEFINITIONS@', definitions).replace('@CHECKS@', '\n'.join(checks)).replace('@TOTAL@', str(total))
                 program = re.sub(r'^[ \t]+', lambda m: m.group(0).expandtabs(4),
                                  program, flags=re.MULTILINE)

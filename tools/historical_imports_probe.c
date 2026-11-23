@@ -127,7 +127,7 @@ static HRESULT reenter_call(ScriptVariant **args,ScriptVariant **result,int coun
  if(*result)ScriptVariant_Clear(*result);return status;
 }
 typedef struct { Interpreter *pinterpreter; } ProbeScript;
-void mapstrings_playerproperty(ScriptVariant **args,int count);
+int mapstrings_playerproperty(ScriptVariant **args,int count);
 static int disable_mapping;
 static HRESULT mapped_property(ScriptVariant **args,ScriptVariant **result,int count) {
  assert(count==2 && args && args[0] && args[1]);
@@ -135,7 +135,22 @@ static HRESULT mapped_property(ScriptVariant **args,ScriptVariant **result,int c
  assert(args[1]->vt==VT_INTEGER);
  ScriptVariant_Copy(*result,args[1]);return S_OK;
 }
+static unsigned constant_mapper_calls;
+static int mapstrings_transconst(ScriptVariant **args,int count) {
+ if(count<1 || args[0]->vt!=VT_STR)return 1;
+ ++constant_mapper_calls;
+ if(!strcmp(StrCache_Get(args[0]->strVal),"TYPE_MAX")) {
+  ScriptVariant_ChangeType(args[0],VT_INTEGER);args[0]->lVal=1024;
+ }
+ return args[0]->vt!=VT_STR;
+}
+static HRESULT openbor_transconst(ScriptVariant **args,ScriptVariant **result,int count) {
+ mapstrings_transconst(args,count);
+ if(count!=1 || args[0]->vt!=VT_INTEGER)return E_FAIL;
+ ScriptVariant_Copy(*result,args[0]);return S_OK;
+}
 static void *Script_GetStringMapFunction(void *function) {
+ if(function==(void*)openbor_transconst)return (void*)mapstrings_transconst;
  return !disable_mapping && function==(void*)mapped_property?(void*)mapstrings_playerproperty:NULL;
 }
 static unsigned fixture_rand32(void) { return 17; }
@@ -158,6 +173,10 @@ int openpackfile(const char *name,const char *package) {
  else if(!strcmp(key,"collision.c"))text=collision;
  else if(!strcmp(key,"parent.c"))text=parent;
  else if(!strcmp(key,"bad.c"))text="void unfinished(";
+ else if(!strcmp(key,"knownconstant.c"))text="int imported() { return openborconstant(\"TYPE_MAX\"); }";
+ else if(!strcmp(key,"unknownconstant.c"))text="int imported() { return openborconstant(\"AUTHORED_UNKNOWN\"); }";
+ else if(!strcmp(key,"knownproperty.c"))text="int imported() { return property(0,\"name\"); }";
+ else if(!strcmp(key,"unknownproperty.c"))text="int imported() { return property(0,\"authored_missing\"); }";
  if(!text)return -1;
  for(int i=0;i<16;++i)if(!handles[i].active) {
   handles[i].text=text;handles[i].at=0;handles[i].active=1;return i;
@@ -271,7 +290,7 @@ static void alias_case(const char *text,int literal,int expected_type,LONG value
  Instruction *call=native_call(&interpreter,mapped_property);
  ScriptVariant **args=Instruction_CallReferenceValues(call);
  assert(Instruction_CallReferenceCount(call)==2);
- if(literal)assert(args[1]->vt==VT_STR);
+ if(literal)assert(args[1]->vt==(obor_profile_build>=3862?VT_INTEGER:VT_STR));
  ProbeScript script={&interpreter};assert(Script_MapStringConstants(&script));
  if(literal)assert(args[1]->vt==VT_INTEGER && args[1]->lVal==value);
  execute(&interpreter);
@@ -313,6 +332,89 @@ static int diagnostics(int call_code,int argument_code) {
  diagnostic_case("int f(int a){return a;}void main(){observe(f());}",call_code,argument_code,1,1);
  diagnostic_case("int f(){reject();return 7;}void main(){observe(f());}",call_code,argument_code,2,0);
  diagnostic_case("void main(){if(0)observe(1);else reject();observe(2);}",call_code,argument_code,1,0);
+ return finish();
+}
+static int parameter_caller(int opcode, int requires_caller) {
+ Interpreter interpreter;
+ ++scenario;
+ assert(SUCCEEDED(compile(&interpreter,"int pair(int a,int b){return a+b;}void main(){observe(pair(7,12));}")));
+ observed_count=0;
+ execute(&interpreter);
+ assert(observed_count==1 && observed_type==VT_INTEGER && observed_integer==19);
+ Interpreter_Clear(&interpreter);
+ clear_cache();
+ if(requires_caller) {
+  ScriptVariant value={0};
+  ScriptVariant_ChangeType(&value,VT_INTEGER);
+  value.lVal=19;
+  Instruction instructions[2]={{.OpCode=PARAM,.step=1,.theVal=&value},{0}};
+  Interpreter without_caller={.pCurrentInstruction=instructions};
+  char expected[64];
+  snprintf(expected,sizeof(expected),"\nOpCode: %d\n",opcode);
+  ++scenario;
+  messages[0]=0;
+  assert(Interpreter_EvalInstruction(&without_caller)==E_FAIL);
+  assert(without_caller.pCurrentInstruction==instructions+1);
+  assert(value.vt==VT_INTEGER && value.lVal==19);
+  assert(!strcmp(messages,expected));
+ }
+ return finish();
+}
+static void branch_case(OpCode code, int condition, int taken, int has_target, int original_opcode) {
+ ScriptVariant value={0}, comparison={0};
+ ScriptVariant_ChangeType(&value, VT_INTEGER);
+ ScriptVariant_ChangeType(&comparison, VT_INTEGER);
+ value.lVal=condition;
+ comparison.lVal=1;
+ Instruction instructions[5]={0};
+ Instruction *instruction=&instructions[0];
+ instruction->OpCode=code;
+ instruction->step=1;
+ instruction->theVal=&value;
+ instruction->theRef2=&comparison;
+ instruction->ptheJumpTarget=has_target?&instructions[3]:NULL;
+ Interpreter interpreter={.pCurrentInstruction=instruction};
+ char expected[64]="";
+ if(taken && !has_target)
+  snprintf(expected, sizeof(expected), "\nOpCode: %d\n", original_opcode);
+ ++scenario;
+ messages[0]=0;
+ HRESULT result=Interpreter_EvalInstruction(&interpreter);
+ assert(FAILED(result)==(taken && !has_target));
+ assert(interpreter.pCurrentInstruction==&instructions[taken && has_target?4:1]);
+ assert(interpreter.pReturnEntry==(code==JUMPR?instruction:NULL));
+ assert(!strcmp(messages, expected));
+}
+static int branches(int jump_code, int return_code, int false_code, int true_code,
+                    int pop_code, int equal_code, int end_code) {
+ assert((pop_code>=0)==(equal_code>=0));
+ const int requires_target=obor_profile_build<3831;
+ branch_case(JUMP, 0, 1, 1, jump_code);
+ branch_case(JUMPR, 0, 1, 1, return_code);
+ if(pop_code>=0) branch_case(PJUMP, 0, 1, 1, pop_code);
+ if(requires_target) {
+  branch_case(JUMP, 0, 1, 0, jump_code);
+  branch_case(JUMPR, 0, 1, 0, return_code);
+  if(pop_code>=0) branch_case(PJUMP, 0, 1, 0, pop_code);
+ }
+ const OpCode conditions[]={Branch_FALSE, Branch_TRUE, Branch_EQUAL};
+ const int opcodes[]={false_code, true_code, equal_code};
+ for(unsigned i=0;i<sizeof(conditions)/sizeof(*conditions);++i) {
+  if(opcodes[i]<0) continue;
+  for(int value=0;value<2;++value) {
+   int taken=conditions[i]==Branch_FALSE?!value:value;
+   branch_case(conditions[i], value, taken, 1, opcodes[i]);
+   if(requires_target) branch_case(conditions[i], value, taken, 0, opcodes[i]);
+  }
+ }
+ Instruction unsupported={.OpCode=OPCODE_END, .step=1};
+ Interpreter interpreter={.pCurrentInstruction=&unsupported};
+ char expected[64];
+ snprintf(expected, sizeof(expected), requires_target?"\nOpCode: %d\n":"\nUn-handled OpCode: %d\n", end_code);
+ ++scenario;
+ messages[0]=0;
+ assert(FAILED(Interpreter_EvalInstruction(&interpreter)));
+ assert(!strcmp(messages, expected));
  return finish();
 }
 static int opcode_numbers(const char *values) {
@@ -472,8 +574,70 @@ static int grammar_tables(void) {
  }
  printf("]}\n");List_Clear(&theFunctionList);StrCache_Clear();retire_arena();return 0;
 }
+static int constant_mapping(int during_compile) {
+ Interpreter interpreter;
+ ProbeScript script={&interpreter};
+ const char *known="void main() { observe(openborconstant(\"TYPE_MAX\")); }";
+ const char *unknown="void main() { openborconstant(\"AUTHORED_UNKNOWN\"); }";
+ ++scenario;
+ assert(SUCCEEDED(compile(&interpreter,known)));
+ Instruction *call=native_call(&interpreter,openbor_transconst);
+ ScriptVariant **args=Instruction_CallReferenceValues(call);
+ assert(constant_mapper_calls==(unsigned)during_compile);
+ assert(args[0]->vt==(during_compile?VT_INTEGER:VT_STR));
+ assert(Script_MapStringConstants(&script));
+ assert(args[0]->vt==VT_INTEGER && args[0]->lVal==1024 && constant_mapper_calls==1);
+ execute(&interpreter);assert(observed_count==1 && observed_type==VT_INTEGER && observed_integer==1024);
+ Interpreter_Clear(&interpreter);clear_cache();
+
+ ++scenario;constant_mapper_calls=0;
+ assert(SUCCEEDED(compile(&interpreter,unknown))==!during_compile);
+ assert(constant_mapper_calls==(unsigned)during_compile);
+ Interpreter_Clear(&interpreter);clear_cache();
+
+ ++scenario;constant_mapper_calls=observed_count=0;
+ assert(SUCCEEDED(compile(&interpreter,"#import \"knownconstant.c\"\nvoid main() { observe(imported()); }")));
+ assert(constant_mapper_calls==(unsigned)during_compile);
+ execute(&interpreter);assert(observed_count==1 && observed_type==VT_INTEGER && observed_integer==1024);
+ assert(constant_mapper_calls==1);
+ Interpreter_Clear(&interpreter);clear_cache();
+
+ ++scenario;constant_mapper_calls=0;
+ ImportNode *node=ImportCache_ImportFile("unknownconstant.c");
+ assert((node==NULL)==during_compile);
+ assert(constant_mapper_calls==(unsigned)during_compile);
+ if(node)release(node);
+ clear_cache();
+
+ ++scenario;constant_mapper_calls=0;
+ assert(SUCCEEDED(compile(&interpreter,"void main() { openborconstant(); openborconstant(7); }")));
+ assert(constant_mapper_calls==0);
+ Interpreter_Clear(&interpreter);clear_cache();return finish();
+}
+
+static int property_mapping(int during_compile,int expected_name) {
+ Interpreter interpreter;
+ alias_case("void main() { observe(property(0,\"name\")); }",1,VT_INTEGER,expected_name,NULL);
+
+ ++scenario;
+ assert(SUCCEEDED(compile(&interpreter,"void main() { property(0,\"authored_missing\"); }"))==!during_compile);
+ Interpreter_Clear(&interpreter);clear_cache();
+
+ ++scenario;observed_count=0;
+ assert(SUCCEEDED(compile(&interpreter,"#import \"knownproperty.c\"\nvoid main() { observe(imported()); }")));
+ execute(&interpreter);
+ assert(observed_count==1 && observed_type==VT_INTEGER && observed_integer==expected_name);
+ Interpreter_Clear(&interpreter);clear_cache();
+
+ ++scenario;
+ ImportNode *node=ImportCache_ImportFile("unknownproperty.c");
+ assert((node==NULL)==during_compile);
+ if(node)release(node);
+ clear_cache();return finish();
+}
+
 int main(int argc,char **argv) {
- assert(argc>=3 && argc<=7);obor_profile_build=(uint32_t)strtoul(argv[1],NULL,10);int legacy=atoi(argv[2]);
+ assert(argc>=3 && (argc<=7 || argc==11));obor_profile_build=(uint32_t)strtoul(argv[1],NULL,10);int legacy=atoi(argv[2]);
  List_Init(&theFunctionList);List_InsertAfter(&theFunctionList,(void*)marker,"marker");
  List_InsertAfter(&theFunctionList,(void*)other,"other");
  List_InsertAfter(&theFunctionList,(void*)observe,"observe");
@@ -481,11 +645,17 @@ int main(int argc,char **argv) {
  List_InsertAfter(&theFunctionList,(void*)reenter_call,"reenter");
  List_InsertAfter(&theFunctionList,(void*)system_rand,"rand");ImportCache_Init();
  List_InsertAfter(&theFunctionList,(void*)mapped_property,"property");
+ List_InsertAfter(&theFunctionList,(void*)openbor_transconst,"openborconstant");
+ if(argc==11 && !strcmp(argv[3],"branches"))return branches(atoi(argv[4]),atoi(argv[5]),
+  atoi(argv[6]),atoi(argv[7]),atoi(argv[8]),atoi(argv[9]),atoi(argv[10]));
  if(argc==6 && !strcmp(argv[3],"diagnostics"))return diagnostics(atoi(argv[4]),atoi(argv[5]));
+ if(argc==6 && !strcmp(argv[3],"parameter-caller"))return parameter_caller(atoi(argv[4]),atoi(argv[5]));
+ if(argc==6 && !strcmp(argv[3],"property-mapping"))return property_mapping(atoi(argv[4]),atoi(argv[5]));
  if(argc>=6){assert(!strcmp(argv[3],"aliases"));
   if(argc==7){assert(!strcmp(argv[6],"nomap"));disable_mapping=1;}
   return aliases(atoi(argv[4]),atoi(argv[5]));}
  if(argc==5 && !strcmp(argv[3],"opcodes"))return opcode_numbers(argv[4]);
+ if(argc==5 && !strcmp(argv[3],"constant-mapping"))return constant_mapping(atoi(argv[4]));
  if(argc==5) {assert(!strcmp(argv[3],"mapper"));return mapper_arguments((unsigned)strtoul(argv[4],NULL,10));}
  if(argc==4 && !strcmp(argv[3],"calls"))return call_contracts();
  if(argc==4 && !strcmp(argv[3],"constants"))return constants();

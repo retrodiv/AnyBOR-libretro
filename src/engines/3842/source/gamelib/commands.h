@@ -1,3 +1,15 @@
+/* AnyBOR modification record: 2026-09-12.
+ * Port maintained by retrodiv <retrodiv@proton.me>.
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me> (original contributions).
+ * These contributions are licensed under BSD-3-Clause; see LICENSE at the root.
+ * Upstream code retains its original license and notices.
+ * Declare the shared level alpha-mask command without changing the model
+ * command namespace. Declare the model draw script directive.
+ * Existing changes recorded here; this is not their implementation date.
+ * See MODIFICATIONS.md and docs/modifications/3842.md
+ * at the source repository root. Original notices follow below.
+ */
+
 /*
  * OpenBOR - http://www.LavaLit.com
  * -
@@ -397,6 +409,7 @@ typedef enum modelCommand {
 	CMD_MODEL_DIDHITSCRIPT,
 	CMD_MODEL_ONSPAWNSCRIPT,
 	CMD_MODEL_ONMODELCOPYSCRIPT,
+	CMD_MODEL_ONDRAWSCRIPT,
 	CMD_MODEL_ANIMATIONSCRIPT,
 	CMD_MODEL_KEYSCRIPT,
 	CMD_MODEL_ANIM,

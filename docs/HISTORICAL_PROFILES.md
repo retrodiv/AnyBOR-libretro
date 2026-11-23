@@ -1,7 +1,7 @@
 # Choosing a profile
 
 Selectable engine profiles: v3.0 3020-dev, v3.0 3057, v3.0 3062, v3.0 3073, v3.0 3081, v3.0 3109,
-v3.0 3117, v3.0 3143, v3.0 3160, v3.0 3173, v3.0 3192, v3.0 3208, v3.0 3273, v3.0 3288, v3.0 3303,
+v3.0 3117, v3.0 3143, v3.0 3160, v3.0 3173, v3.0 3185-dev, v3.0 3192, v3.0 3208, v3.0 3273, v3.0 3288, v3.0 3303,
 v3.0 3307, v3.0 3310, v3.0 3311, v3.0 3316, v3.0 3317, v3.0 3318, v3.0 3327, v3.0 3328, v3.0 3330,
 v3.0 3332, v3.0 3335, v3.0 3337, v3.0 3340, v3.0 3341, v3.0 3342, v3.0 3350, v3.0 3351, v3.0 3352,
 v3.0 3353, v3.0 3354, v3.0 3355, v3.0 3356, v3.0 3357, v3.0 3360, v3.0 3361, v3.0 3362, v3.0 3365,
@@ -22,11 +22,11 @@ v3.0 3686, v3.0 3689, v3.0 3690, v3.0 3691, v3.0 3692, v3.0 3693, v3.0 3694, v3.
 v3.0 3701, v3.0 3703, v3.0 3704, v3.0 3707, v3.0 3708, v3.0 3709, v3.0 3710, v3.0 3711, v3.0 3713,
 v3.0 3714, v3.0 3715, v3.0 3716, v3.0 3722, v3.0 3725, v3.0 3726, v3.0 3727, v3.0 3728, v3.0 3729,
 v3.0 3730, v3.0 3732, v3.0 3738, v3.0 3740, v3.0 3741, v3.0 3742-dev, v3.0 3761-dev, v3.0 3769,
-v3.0 3773, v3.0 3780, v3.0 3783, v3.0 3789, v3.0 3793, v3.0 3797, v3.0 3805, v3.0 3814, v3.0 3818,
-v3.0 3822, v3.0 3824, v3.0 3829, v3.0 3831, v3.0 3837, v3.0 3839, v3.0 3842, v3.0 3846,
-v3.0 3847-dev, v3.0 3849, v3.0 3854, v3.0 3968-dev, v3.0 3970-dev, v3.0 3978, v3.0 3984, v3.0 3993,
-v3.0 3994, v3.0 4011, v3.0 4046, v3.0 4051, v3.0 4054, v3.0 4055, v3.0 4079, v3.0 4080, v3.0 4082,
-v3.0 4085, v3.0 4086, v3.0 4088-dev, v3.0 4107, v3.0 4111, v3.0 4129, v3.0 4153, v3.0 4161-dev,
+v3.0 3773, v3.0 3780, v3.0 3783, v3.0 3787-dev, v3.0 3789, v3.0 3792-dev, v3.0 3793, v3.0 3797, v3.0 3805, v3.0 3814, v3.0 3818,
+v3.0 3822, v3.0 3824, v3.0 3826-dev, v3.0 3829, v3.0 3831, v3.0 3837, v3.0 3839, v3.0 3842, v3.0 3846,
+v3.0 3847-dev, v3.0 3849, v3.0 3854, v3.0 3880-dev, v3.0 3896-dev, v3.0 3968-dev, v3.0 3970-dev, v3.0 3978, v3.0 3984, v3.0 3993,
+v3.0 3994, v3.0 4011, v3.0 4046, v3.0 4051, v3.0 4054, v3.0 4055, v3.0 4077-dev, v3.0 4079, v3.0 4080, v3.0 4082,
+v3.0 4085, v3.0 4086, v3.0 4088-dev, v3.0 4097-dev, v3.0 4107, v3.0 4111, v3.0 4129, v3.0 4153, v3.0 4161-dev,
 v3.0 4183-dev, v3.0 4213, v3.0 4283-dev, v3.0 4287, v3.0 4316, v3.0 4317, v3.0 4320, v3.0 4321,
 v3.0 4328, v3.0 4330, v3.0 4332, v3.0 4334, v3.0 4336, v3.0 4342, v3.0 4343, v3.0 4344, v3.0 4346,
 v3.0 4349, v3.0 4352, v3.0 4366, v3.0 4367-dev, v3.0 4377, v3.0 4379, v3.0 4383, v3.0 4385,
@@ -307,7 +307,7 @@ corrections. An earlier profile never requests unsafe memory behavior.
 |3823|conditional|Animation commands use the original default grouping and early-return policy, with nocmdcompatible controlling the later contract.|
 |3824|conditional|The idle/sleep timer guard and finished-animation behavior follow this boundary.|
 |3825|conditional|Sleep activation changes from an inclusive to a strict deadline.|
-|3826|conditional|Earlier profiles retain fixed numbered animation constants and resolve other animation suffixes at runtime, using their original offsets and clamps within table bounds. From this boundary, configured suffixes resolve in the constant mapper. Unknown textual constants return empty earlier and are rejected later.|
+|3826|conditional|Earlier profiles retain fixed numbered animation constants and resolve other animation suffixes at runtime. The 3826 mapper accepts the original compiled prefixes, which preserve the `ANI_ATTACK` and `ANI_FOLLOW` family names. From 3827 the mapper recognizes all thirteen numbered animation families by name. Unknown textual constants return empty before 3826 and are rejected from 3826.|
 |3828|conditional|Entity getters and setters use their separate subproperty mappings and diagnostics before this boundary, for compiler literals and runtime calls. Earlier unsupported unary operands clear to empty; supported numeric values follow the earlier contract without unsafe signed overflow. The compiler mapping pass limits native calls to 32 arguments from this revision; earlier profiles retain their dynamic argument lists. Other selector sub-enum orders are unchanged.|
 |3830|conditional|Attack-table size, environmental damage typing/health and Defense ALL are selected together, retaining bounded storage.|
 |3831|conditional|Attack extension offsets, exported environmental constants, default animation slots and Offense ALL follow this revision. Earlier profiles refresh literal values before runtime unary operations and print their own opcode numbers on execution failure. Unary constant folding and expression-statement instruction removal follow the selected parser contract.|
@@ -628,6 +628,7 @@ Profiles are compatibility selections. Several profiles use one physical source 
 | v3.0 3143 | `3400` |
 | v3.0 3160 | `3400` |
 | v3.0 3173 | `3400` |
+| v3.0 3185-dev | `3400` |
 | v3.0 3192 | `3400` |
 | v3.0 3208 | `3400` |
 | v3.0 3273 | `3400` |
@@ -815,7 +816,9 @@ Profiles are compatibility selections. Several profiles use one physical source 
 | v3.0 3773 | `3842` |
 | v3.0 3780 | `3842` |
 | v3.0 3783 | `3842` |
+| v3.0 3787-dev | `3842` |
 | v3.0 3789 | `3842` |
+| v3.0 3792-dev | `3842` |
 | v3.0 3793 | `3842` |
 | v3.0 3797 | `3842` |
 | v3.0 3805 | `3842` |
@@ -823,6 +826,7 @@ Profiles are compatibility selections. Several profiles use one physical source 
 | v3.0 3818 | `3842` |
 | v3.0 3822 | `3842` |
 | v3.0 3824 | `3842` |
+| v3.0 3826-dev | `3842` |
 | v3.0 3829 | `3842` |
 | v3.0 3831 | `3842` |
 | v3.0 3837 | `3842` |
@@ -832,6 +836,8 @@ Profiles are compatibility selections. Several profiles use one physical source 
 | v3.0 3847-dev | `3842` |
 | v3.0 3849 | `3842` |
 | v3.0 3854 | `3842` |
+| v3.0 3880-dev | `3842` |
+| v3.0 3896-dev | `3842` |
 | v3.0 3968-dev | `4086` |
 | v3.0 3970-dev | `4086` |
 | v3.0 3978 | `4086` |
@@ -843,12 +849,14 @@ Profiles are compatibility selections. Several profiles use one physical source 
 | v3.0 4051 | `4086` |
 | v3.0 4054 | `4086` |
 | v3.0 4055 | `4086` |
+| v3.0 4077-dev | `4086` |
 | v3.0 4079 | `4086` |
 | v3.0 4080 | `4086` |
 | v3.0 4082 | `4086` |
 | v3.0 4085 | `4086` |
 | v3.0 4086 | `4086` |
 | v3.0 4088-dev | `4086` |
+| v3.0 4097-dev | `4086` |
 | v3.0 4107 | `4086` |
 | v3.0 4111 | `4086` |
 | v3.0 4129 | `4086` |
@@ -963,14 +971,49 @@ primary RetroPad supplies the original keyboard actions. Other ports use the
 original gamepad toggle. The profile also preserves the original startup order,
 video menu positions and victory animation selection.
 
+## Early development profiles
+
+The 3185 profile reports the original command, drawing and image diagnostic
+locations and uses the original names and numeric indices for system and entity
+properties. The 3787 profile follows its native remap warning and respawn
+selection. The 3792 and 3826 profiles retain their original waveform reads
+and constant resolution, respectively.
+
+The 3880 and 3896 profiles use their original action timing, combined entity
+type checks, animation sync, sort ID access, explicit image selection, script
+math functions, draw callback order, scripted terrain heights and inline script
+loading. Their level readers follow the script-terminator position used by
+each original build. Literal property and `openborconstant` names are mapped
+during compilation, including in imported scripts. Unknown names trigger
+the original mapper diagnostics.
+Streamed GIF playback retains each channel's palette and frame clock. Scripts
+can open and decode a GIF stream and query its frame, timing and display buffer.
+The 3896 profile uses the original level exit and pause input rules, frame
+selection, quake flags, panel scroll height and Ogg loop seek position.
+Its level and named spawn scripts initialize their own indexed script variables.
+The script constant `ANI_ATTACK` resolves to `ANI_ATTACK1` in this profile.
+
+The 4077 profile uses its original loading bar defaults and block rules.
+The 4097 profile admits background and foreground alpha masks with its
+original layer-loading order. Direct background PNGs retain the grayscale
+row bytes written by the original reader. Unwritten pixel bytes are cleared.
+
 ## Baselines and complete file inventories
 
 | OpenBOR build | Pinned commit | File inventory |
 |---|---|---|
+| v3.0 3185-dev | `284c9577158021438de966a3c2343980823661de` | [Early development profiles](#early-development-profiles) |
 | v3.0 3400 | `66fa1529897131ca51528967fbb21ee124e45775` | [v3.0 3400](modifications/3400.md) |
 | v3.0 3741 | `00bcc4947748e8af10d030a82b60520bbd402e30` | [v3.0 3741](modifications/3741.md) |
+| v3.0 3787-dev | `7107dfda3a417aea1f1cf31a82f241b0ce99ba8f` | [Early development profiles](#early-development-profiles) |
+| v3.0 3792-dev | `9cbf94bbba71839b647b223fa3cb03b90a88fb2e` | [Early development profiles](#early-development-profiles) |
+| v3.0 3826-dev | `7f8db3e494b600125795cae3406bce3b0bda3216` | [Early development profiles](#early-development-profiles) |
 | v3.0 3842 | `1f702a991ace7fa31884262e458a85e351f62713` | [v3.0 3842](modifications/3842.md) |
+| v3.0 3880-dev | `884ba387789859f6ded198bc2eb3095ce05ea443` | [Early development profiles](#early-development-profiles) |
+| v3.0 3896-dev | `2e876d36df8b53edb0cdf3d2762eceb9e7e4aad4` | [Early development profiles](#early-development-profiles) |
+| v3.0 4077-dev | `2ce936335f442fbdb0d95694dc01fb71c1819a3e` | [Early development profiles](#early-development-profiles) |
 | v3.0 4086 | `af23dc9c2316bb7853bb266ccf40986aa9765aeb` | [v3.0 4086](modifications/4086.md) |
+| v3.0 4097-dev | `ac89c52b0557c8d64484907b874b0f8c9ef0e854` | [Early development profiles](#early-development-profiles) |
 | v3.0 4432 | `2566cbee6185025e6a69d2aa1823b15c7a154ff9` | [v3.0 4432](modifications/4432.md) |
 | v3.0 6391 | `494708eb34e71d1afda237873907701c4ec3a569` | [v3.0 6391](modifications/6391.md) |
 | v3.0 6997-dev | `203d148433ac86ac51c131564d14c2465f8af80b` | [Selected contracts](#6997-7039-and-7091) |

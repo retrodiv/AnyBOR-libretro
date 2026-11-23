@@ -1,7 +1,7 @@
 {
   "core_name": "AnyBOR",
   "core_basename": "anybor_libretro",
-  "version": "0.2.53",
+  "version": "0.2.54",
   "fallback_build": "6391",
   "profiles": [
     {
@@ -126,6 +126,19 @@
       "upstream_date": "2011-03-10",
       "upstream_branch": "preserved upstream first-parent history",
       "covers": "Historical automatic or exact-tag profile."
+    },
+    {
+      "build": "3185",
+      "engine": "3400",
+      "major": "v3.0",
+      "stage": "dev",
+      "automatic": false,
+      "tagged": true,
+      "triage": false,
+      "upstream_commit": "284c9577158021438de966a3c2343980823661de",
+      "upstream_date": "2011-03-10",
+      "upstream_branch": "development revision",
+      "covers": "Upstream development revision; exact filename tag or core option"
     },
     {
       "build": "3192",
@@ -2363,6 +2376,19 @@
       "auto_until": 3783
     },
     {
+      "build": "3787",
+      "engine": "3842",
+      "major": "v3.0",
+      "stage": "dev",
+      "automatic": false,
+      "tagged": true,
+      "triage": false,
+      "upstream_commit": "7107dfda3a417aea1f1cf31a82f241b0ce99ba8f",
+      "upstream_date": "2013-01-30",
+      "upstream_branch": "development revision",
+      "covers": "Upstream development revision; exact filename tag or core option"
+    },
+    {
       "build": "3789",
       "engine": "3842",
       "covers": "Historical automatic or explicit logical profile on physical Build 3842",
@@ -2370,6 +2396,19 @@
       "major": "v3.0",
       "tagged": true,
       "auto_until": 3789
+    },
+    {
+      "build": "3792",
+      "engine": "3842",
+      "major": "v3.0",
+      "stage": "dev",
+      "automatic": false,
+      "tagged": true,
+      "triage": false,
+      "upstream_commit": "9cbf94bbba71839b647b223fa3cb03b90a88fb2e",
+      "upstream_date": "2013-02-01",
+      "upstream_branch": "development revision",
+      "covers": "Upstream development revision; exact filename tag or core option"
     },
     {
       "build": "3793",
@@ -2433,6 +2472,19 @@
       "major": "v3.0",
       "tagged": true,
       "auto_until": 3824
+    },
+    {
+      "build": "3826",
+      "engine": "3842",
+      "major": "v3.0",
+      "stage": "dev",
+      "automatic": false,
+      "tagged": true,
+      "triage": false,
+      "upstream_commit": "7f8db3e494b600125795cae3406bce3b0bda3216",
+      "upstream_date": "2013-02-16",
+      "upstream_branch": "development revision",
+      "covers": "Upstream development revision; exact filename tag or core option"
     },
     {
       "build": "3829",
@@ -2532,6 +2584,32 @@
       "upstream_commit": "764da976f45a65bf0e768ed50406c7815875656a",
       "upstream_date": "2013-03-02",
       "upstream_branch": "legacy trunk"
+    },
+    {
+      "build": "3880",
+      "engine": "3842",
+      "major": "v3.0",
+      "stage": "dev",
+      "automatic": false,
+      "tagged": true,
+      "triage": false,
+      "upstream_commit": "884ba387789859f6ded198bc2eb3095ce05ea443",
+      "upstream_date": "2013-03-29",
+      "upstream_branch": "development revision",
+      "covers": "Upstream development revision; exact filename tag or core option"
+    },
+    {
+      "build": "3896",
+      "engine": "3842",
+      "major": "v3.0",
+      "stage": "dev",
+      "automatic": false,
+      "tagged": true,
+      "triage": false,
+      "upstream_commit": "2e876d36df8b53edb0cdf3d2762eceb9e7e4aad4",
+      "upstream_date": "2013-04-10",
+      "upstream_branch": "development revision",
+      "covers": "Upstream development revision; exact filename tag or core option"
     },
     {
       "build": "3968",
@@ -2690,6 +2768,19 @@
       "covers": "Official historical automatic or exact-tag profile on source tree4086"
     },
     {
+      "build": "4077",
+      "engine": "4086",
+      "major": "v3.0",
+      "stage": "dev",
+      "automatic": false,
+      "tagged": true,
+      "triage": false,
+      "upstream_commit": "2ce936335f442fbdb0d95694dc01fb71c1819a3e",
+      "upstream_date": "2014-03-27",
+      "upstream_branch": "development revision",
+      "covers": "Upstream development revision; exact filename tag or core option"
+    },
+    {
       "build": "4079",
       "revision": "4079",
       "engine": "4086",
@@ -2763,6 +2854,19 @@
       "upstream_date": "2014-11-14",
       "upstream_branch": "legacy trunk",
       "covers": "Exact Build tag or core option only; excluded from weak-tag and content triage"
+    },
+    {
+      "build": "4097",
+      "engine": "4086",
+      "major": "v3.0",
+      "stage": "dev",
+      "automatic": false,
+      "tagged": true,
+      "triage": false,
+      "upstream_commit": "ac89c52b0557c8d64484907b874b0f8c9ef0e854",
+      "upstream_date": "2014-12-11",
+      "upstream_branch": "development revision",
+      "covers": "Upstream development revision; exact filename tag or core option"
     },
     {
       "build": "4107",
@@ -4234,10 +4338,58 @@
   ],
   "source_revisions": [
     {
+      "build": "3185",
+      "commit": "284c9577158021438de966a3c2343980823661de",
+      "license_file": "LICENSES/OpenBOR-profile-3185-BSD-3-Clause.txt",
+      "license_sha256": "eb6e8204d12759f7fbb2fb2d7c80f2c8d7191d4643663571b68f69a2c38cce34"
+    },
+    {
       "build": "3451",
       "commit": "b38a0a6dd38dc5b638e895183f4ed4df469300ae",
       "license_file": "LICENSES/OpenBOR-3400.txt",
       "license_sha256": "0854d130894ce6dafecc0b067b30eb26b8661bdcfca246f96c0677fd7d7c1e2a"
+    },
+    {
+      "build": "3787",
+      "commit": "7107dfda3a417aea1f1cf31a82f241b0ce99ba8f",
+      "license_file": "LICENSES/OpenBOR-3842.txt",
+      "license_sha256": "dcb763dc21d44d294ad1914f1dbaeb5417cf31e8d39dc6a867fe4d8731bbc98f"
+    },
+    {
+      "build": "3792",
+      "commit": "9cbf94bbba71839b647b223fa3cb03b90a88fb2e",
+      "license_file": "LICENSES/OpenBOR-3842.txt",
+      "license_sha256": "dcb763dc21d44d294ad1914f1dbaeb5417cf31e8d39dc6a867fe4d8731bbc98f"
+    },
+    {
+      "build": "3826",
+      "commit": "7f8db3e494b600125795cae3406bce3b0bda3216",
+      "license_file": "LICENSES/OpenBOR-3842.txt",
+      "license_sha256": "dcb763dc21d44d294ad1914f1dbaeb5417cf31e8d39dc6a867fe4d8731bbc98f"
+    },
+    {
+      "build": "3880",
+      "commit": "884ba387789859f6ded198bc2eb3095ce05ea443",
+      "license_file": "LICENSES/OpenBOR-3842.txt",
+      "license_sha256": "dcb763dc21d44d294ad1914f1dbaeb5417cf31e8d39dc6a867fe4d8731bbc98f"
+    },
+    {
+      "build": "3896",
+      "commit": "2e876d36df8b53edb0cdf3d2762eceb9e7e4aad4",
+      "license_file": "LICENSES/OpenBOR-3842.txt",
+      "license_sha256": "dcb763dc21d44d294ad1914f1dbaeb5417cf31e8d39dc6a867fe4d8731bbc98f"
+    },
+    {
+      "build": "4077",
+      "commit": "2ce936335f442fbdb0d95694dc01fb71c1819a3e",
+      "license_file": "LICENSES/OpenBOR-4086.txt",
+      "license_sha256": "dcb763dc21d44d294ad1914f1dbaeb5417cf31e8d39dc6a867fe4d8731bbc98f"
+    },
+    {
+      "build": "4097",
+      "commit": "ac89c52b0557c8d64484907b874b0f8c9ef0e854",
+      "license_file": "LICENSES/OpenBOR-profile-4153-BSD-3-Clause.txt",
+      "license_sha256": "3f12a435af24fce556b67e4c97a45fa750bccb9d3a17ff25209311b865efe3fb"
     },
     {
       "build": "6997",

@@ -9,13 +9,15 @@ import os
 from pathlib import Path
 import shlex
 import shutil
+import struct
 import subprocess
 import sys
 import tempfile
 import unittest
+import zlib
 
 from historical_bitmap_dimensions import render_bitmap_dimensions
-from make_fixture import png
+from make_fixture import chunk, png
 from native_sanitizers import sanitizer_environment
 from test_color_blends import compile_checked
 
@@ -145,6 +147,130 @@ class BitmapDimensionTests(unittest.TestCase):
         for row in self.fixture['contexts']:
             with self.subTest(engine=row['engine'], revision=row['revision']):
                 self.check_context(row['engine'], row['revision'])
+
+
+DIRECT_PNG_PROBE = r'''
+#include <assert.h>
+#include <stddef.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include "types.h"
+#include "screen.h"
+#include "packfile.h"
+#undef printf
+#undef assert
+#include <assert.h>
+
+uint32_t obor_profile_build;
+static FILE *member;
+static unsigned opens, closes;
+int loadscreen32(char *filename, char *packfile, s_screen **screen);
+
+void *checkAlloc(void *ptr, size_t size, const char *func, const char *file, int line)
+{
+    (void)size; (void)func; (void)file; (void)line;
+    return ptr;
+}
+void exitIfFalse(int value, const char *condition, const char *func, const char *file, int line)
+{
+    if(value) return;
+    fprintf(stderr, "%s:%d %s: %s\n", file, line, func, condition);
+    abort();
+}
+
+int openpackfile(const char *filename, const char *packfile)
+{
+    assert(!member && !strcmp(packfile, "direct-image-control"));
+    ++opens;
+    member = fopen(filename, "rb");
+    return member ? 0 : -1;
+}
+int seekpackfile(int handle, int offset, int whence)
+{
+    assert(handle == 0 && member);
+    return fseek(member, offset, whence) ? -1 : (int)ftell(member);
+}
+int readpackfile(int handle, void *buffer, int length)
+{
+    assert(handle == 0 && member && length >= 0);
+    return (int)fread(buffer, 1, length, member);
+}
+int closepackfile(int handle)
+{
+    assert(handle == 0 && member);
+    ++closes;
+    int result = fclose(member);
+    member = NULL;
+    return result;
+}
+int main(int argc, char **argv)
+{
+    assert(argc == 4);
+    obor_profile_build = (uint32_t)strtoul(argv[1], NULL, 10);
+    const unsigned pixel_bytes = (unsigned)strtoul(argv[3], NULL, 10);
+    s_screen *screen = allocscreen(4, 1, PIXEL_32);
+    assert(screen && loadscreen32(argv[2], "direct-image-control", &screen));
+    assert(screen->pixelformat == PIXEL_32 && pixel_bytes <= (unsigned)screen->width * 4);
+    const unsigned char *data = (const unsigned char *)screen + offsetof(s_screen, data);
+    printf("%d %d %u %u", screen->width, screen->height, opens, closes);
+    for(int row = 0; row < screen->height; ++row)
+        for(unsigned i = 0; i < pixel_bytes; ++i)
+            printf(" %u", data[(size_t)row * screen->width * 4u + i]);
+    puts("");
+    assert(!member);
+    freescreen(&screen);
+    assert(!screen);
+    return 0;
+}
+'''
+
+
+def direct_png(width, color, pixels):
+    raw = b''.join(b'\0' + bytes(row) for row in pixels)
+    return (b'\x89PNG\r\n\x1a\n' + chunk(b'IHDR', struct.pack('>IIBBBBB', width, len(pixels), 8, color, 0, 0, 0))
+            + chunk(b'IDAT', zlib.compress(raw)) + chunk(b'IEND', b''))
+
+
+class DirectBackgroundPngTests(unittest.TestCase):
+    def test_classic_direct_png_pixels_and_member_paths(self):
+        compiler, flags, links = native_context('4086')
+        engine = SOURCE / 'src/engines/4086/source'
+        with tempfile.TemporaryDirectory(prefix='anybor-direct-png-') as directory:
+            work = Path(directory)
+            probe = work / 'direct.c'
+            probe.write_text(DIRECT_PNG_PROBE)
+            binary = work / 'direct'
+            units = [engine / name for name in ('gamelib/loadimg.c', 'gamelib/screen.c',
+                                               'gamelib/pixelformat.c', 'pnglib/pngdec.c')]
+            compile_checked(compiler + flags + [str(probe), *map(str, units), *links, '-o', str(binary)])
+            for revision in (4097, 4107):
+                for width, color in ((4, 2), (4, 0), (4, 4), (5, 2)):
+                    with self.subTest(revision=revision, width=width, color=color):
+                        self.check_pixels(binary, work, revision, width, color)
+
+    def check_pixels(self, binary, work, revision, width, color):
+        path = work / 'background.png'
+        components = {2: 3, 0: 1, 4: 2}[color]
+        rows = [list(range(start, start + width * components)) for start in (9, 51)]
+        path.write_bytes(direct_png(width, color, rows))
+        legacy_gray = revision == 4097 and color in (0, 4)
+        expected = []
+        for row in rows:
+            for index in range(0, len(row), components):
+                pixel = row[index:index + components]
+                if color == 2:
+                    expected.extend([*pixel, 255])
+                elif legacy_gray:
+                    expected.extend(pixel if color == 4 else [pixel[0], 255])
+                else:
+                    expected.extend([pixel[0]] * 3 + [pixel[1] if color == 4 else 255])
+            if legacy_gray:
+                expected.extend([0] * (width * 2))
+        for argument, openings in ((path, 1), (path.with_suffix(''), 2)):
+            output = subprocess.check_output([str(binary), str(revision), str(argument), str(width * 4)],
+                                             text=True, timeout=10, env=sanitizer_environment())
+            self.assertEqual(list(map(int, output.split())), [width, len(rows), openings, 1, *expected])
 
 
 if __name__ == '__main__':

@@ -65,15 +65,18 @@ class EntityMapperSplitTests(unittest.TestCase):
         start=source.index('enum entityproperty_enum')
         # Keep complete mapping declarations and bodies. Getter storage helpers
         # following the final mapper are outside this contract.
-        mappers=[function(source,name).rstrip('\n') for name in (
-            'mapstrings_getentityproperty','mapstrings_changeentityproperty','mapstrings_entityproperty')
-            if re.search(r'(?m)^void\s+'+name+r'\s*\([^;{}]*\)\s*\{',source)]
+        mapper_names = ('mapstrings_getentityproperty', 'mapstrings_changeentityproperty', 'mapstrings_entityproperty')
+        signatures = {name: match[1] for name in mapper_names if (match := re.search(
+            r'(?m)^(int|void)\s+' + name + r'\s*\([^;{}]*\)\s*\{', source))}
+        mappers = [function(source, name).rstrip('\n') for name in signatures]
         self.assertTrue(mappers)
+        self.assertEqual(len(set(signatures.values())), 1)
+        mapper_result = next(iter(signatures.values()))
         stop=max(source.index(body,start)+len(body) for body in mappers)
         declarations=source[start:stop]
         # Older prepared controls expose only the merged mapper. Keep those
         # compilable so this test detects their argument/diagnostic differences.
-        if 'void mapstrings_getentityproperty(' not in declarations:
+        if 'mapstrings_getentityproperty' not in signatures:
             declarations+='\n#define mapstrings_getentityproperty mapstrings_entityproperty\n'
             declarations+='#define mapstrings_changeentityproperty mapstrings_entityproperty\n'
         dispatcher=function(source,'Script_GetStringMapFunction')
@@ -89,7 +92,7 @@ class EntityMapperSplitTests(unittest.TestCase):
             prefixes.append(prefix+'}\n')
         owned={'openbor_getentityproperty','openbor_changeentityproperty','mapstrings_entityproperty',
                'mapstrings_getentityproperty','mapstrings_changeentityproperty'}
-        owned.update(re.findall(r'(?m)^(?:static\s+)?void\s+(mapstrings_\w+)\s*'
+        owned.update(re.findall(r'(?m)^(?:static\s+)?(?:void|int)\s+(mapstrings_\w+)\s*'
                                 r'\([^;{}]*\)\s*\{', declarations))
         references=set(re.findall(r'\(void\s*\*\)\s*([A-Za-z_]\w*)',dispatcher))
         stubs='\n'.join('static void '+name+'(void) {}' for name in sorted((references-owned)|actions))
@@ -144,7 +147,7 @@ struct contract {unsigned revision;int get_count;const struct rule *get;int set_
 @ARRAYS@
 static const struct query_group queries[]={@QUERIES@};
 static const struct contract contracts[]={@CONTRACTS@};
-typedef void (*map_fn)(ScriptVariant**,int);
+typedef @MAP_RESULT@ (*map_fn)(ScriptVariant**,int);
 static ScriptVariant text(const char *word){
  ScriptVariant value={0};ScriptVariant_ChangeType(&value,VT_STR);
  assert(strlen(word)<sizeof(cache[0]));strcpy(StrCache_Get(value.strVal),word);return value;
@@ -227,7 +230,7 @@ int main(void){
         values={'CONVERSIONS':conversions,'LOOKUP':lookup,'MACRO':macro,'STUBS':stubs,
                 'DECLARATIONS':declarations,'PREFIXES':'\n'.join(prefixes),'DISPATCH':dispatcher,
                 'ARRAYS':'\n'.join(arrays),'QUERIES':''.join(query_rows),
-                'CONTRACTS':''.join(contracts),'PARENTS':parent_array}
+                'CONTRACTS':''.join(contracts),'PARENTS':parent_array,'MAP_RESULT':mapper_result}
         program=re.sub(r'@('+'|'.join(values)+')@',lambda match:values[match[1]],program)
         native(program,extra_flags=['-Wno-unused-variable','-Wno-unused-function',
                                     '-Wno-unused-const-variable'])
