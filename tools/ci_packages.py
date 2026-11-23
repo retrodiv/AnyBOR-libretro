@@ -25,6 +25,7 @@ PACKAGES = {
     'state-windows': ('python3', 'wine64', 'wine', 'gcc-mingw-w64-x86-64-posix'),
 }
 INDEX_SECONDS = 120
+RECOVERY_INDEX_SECONDS = 165
 
 
 def apt_commands(role, *, root=False):
@@ -35,7 +36,9 @@ def apt_commands(role, *, root=False):
         '-o', 'Acquire::http::Timeout=30', '-o', 'Acquire::https::Timeout=30',
         '-o', 'DPkg::Lock::Timeout=60', '-o', 'Dpkg::Use-Pty=0']
     packages = list(PACKAGES[role])
-    return [prefix + ['update'],
+    index_options = ['-o', 'Acquire::Languages=none',
+                     '-o', 'Acquire::IndexTargets::deb::CNF::DefaultEnabled=false']
+    return [prefix + index_options + ['update'],
             prefix + ['install', '-y', '--no-install-recommends', *packages]]
 
 
@@ -117,7 +120,8 @@ def install_packages(role):
                 print('APT recovery: official Ubuntu archive and security mirrors', flush=True)
             update, install = selected
             try:
-                run_phase(update, INDEX_SECONDS, phase='index', attempt=attempt+1)
+                run_phase(update, RECOVERY_INDEX_SECONDS if attempt else INDEX_SECONDS,
+                          phase='index', attempt=attempt+1)
                 run_phase(install + ['--download-only'], 180 if not attempt else 240,
                           phase='download', attempt=attempt+1)
             except subprocess.CalledProcessError:

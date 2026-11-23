@@ -35,13 +35,21 @@ def constants_fixture(members):
 
 
 def check_constants_continuation(log, profile, restarts=0):
-    legacy = int(profile) < 3826
-    expected = ['CONSTANT_CONTRACT_BEFORE_UNKNOWN']
-    if legacy:
-        expected.append('CONSTANT_CONTRACT_EMPTY_CONTINUATION')
+    revision = int(profile)
     markers = re.findall(r'(?m)^(?:\[(?:OpenBOR(?::[0-9]+)?|game)\][ \t]*)?'
                          r'(CONSTANT_CONTRACT_[A-Z_]+)[ \t]*\r?$', log)
     exception = "There's an exception while executing script" in log
+    if revision >= 3862:
+        diagnostics = ('engine boot failed', "Can't find openbor constant 'SYNTHETIC_UNKNOWN_CONSTANT'",
+                       "Script compile error in 'updated': openborconstant")
+        if markers or exception or any(message not in log for message in diagnostics):
+            raise RuntimeError('Historical literal-constant diagnostic differs: ' + log)
+        return
+
+    legacy = revision < 3826
+    expected = ['CONSTANT_CONTRACT_BEFORE_UNKNOWN']
+    if legacy:
+        expected.append('CONSTANT_CONTRACT_EMPTY_CONTINUATION')
     if markers != expected * (1 + restarts) or exception == legacy:
         raise RuntimeError('Historical unknown-constant contract differs: ' + log)
 
@@ -393,10 +401,17 @@ int main(int argc,char **argv) {
         modern = ("[OpenBOR] CONSTANT_CONTRACT_BEFORE_UNKNOWN\n"
                   "There's an exception while executing script updated\n"
                   'log("CONSTANT_CONTRACT_EMPTY_CONTINUATION\\n");')
+        compile_diagnostic = ("[OpenBOR] engine boot failed\n"
+                              "Can't find openbor constant 'SYNTHETIC_UNKNOWN_CONSTANT'\n"
+                              "Script compile error in 'updated': openborconstant line 8, column 18\n")
         check_constants_continuation(legacy, '3824')
-        check_constants_continuation(modern, '3829')
+        check_constants_continuation(modern, '3861')
+        check_constants_continuation(compile_diagnostic, '3862')
         check_constants_continuation(legacy + legacy, '3780', restarts=1)
         for log, profile in ((legacy, '3829'), (modern, '3780'),
+                             (modern, '3862'), (compile_diagnostic, '3861'),
+                             (compile_diagnostic + modern, '3880'),
+                             (compile_diagnostic.splitlines()[0], '3880'),
                              (legacy + legacy, '3780'),
                              ('log("CONSTANT_CONTRACT_BEFORE_UNKNOWN");', '3780')):
             with self.subTest(profile=profile), self.assertRaises(RuntimeError):

@@ -221,7 +221,8 @@ def main():
                 options.update(OBOR_SAVE_AT=120, OBOR_SAVE_STATE=state,
                                OBOR_LOAD_AT=121, OBOR_LOAD_STATE=state, OBOR_RESET_AT=140)
             result = run(profile['build'], constants_pak,
-                         "historical unknown-constant continuation", **options)
+                         "historical unknown-constant contract",
+                         system_dir=work / (profile['build'] + '-constant-probe'), **options)
             check_constants_continuation(result, profile['build'], restarts=int(legacy))
             if legacy:
                 if (not state.is_file() or

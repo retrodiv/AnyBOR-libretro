@@ -10,7 +10,7 @@ import unittest
 from unittest.mock import patch
 import subprocess
 
-from ci_packages import (INDEX_SECONDS, PACKAGES, apt_commands, bounded_command,
+from ci_packages import (INDEX_SECONDS, RECOVERY_INDEX_SECONDS, PACKAGES, apt_commands, bounded_command,
                          install_packages, main, missing_packages)
 
 
@@ -39,6 +39,8 @@ class CIPackagesTests(unittest.TestCase):
                                'Acquire::https::Timeout=30', 'DPkg::Lock::Timeout=60'):
                     self.assertIn(option, cmd)
             self.assertEqual(commands[0][-1], 'update')
+            self.assertIn('Acquire::Languages=none', commands[0])
+            self.assertIn('Acquire::IndexTargets::deb::CNF::DefaultEnabled=false', commands[0])
             self.assertIn('--no-install-recommends', commands[1])
             self.assertEqual(commands[1][-len(PACKAGES[role]):], list(PACKAGES[role]))
             self.assertEqual(apt_commands(role, root=True)[0][0], 'apt-get')
@@ -66,7 +68,11 @@ class CIPackagesTests(unittest.TestCase):
         self.assertIn('--no-download', commands[4])
         self.assertTrue(any(option.startswith('Dir::Etc::sourcelist=') for option in commands[2]))
         self.assertFalse(any(option.startswith('Dir::Etc::sourcelist=') for option in commands[0]))
+        self.assertIn('Acquire::Languages=none', commands[2])
+        self.assertIn('Acquire::IndexTargets::deb::CNF::DefaultEnabled=false', commands[2])
+        self.assertIn(str(RECOVERY_INDEX_SECONDS), commands[2])
         self.assertIn('180', commands[1]);self.assertIn('240', commands[3])
+        self.assertLess(sum(int(cmd[cmd.index('--kill-after=5s') + 1]) for cmd in commands), 900)
 
     def test_install_failure_is_not_retried_or_disguised_as_a_mirror_failure(self):
         import subprocess
