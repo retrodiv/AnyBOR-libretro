@@ -67,7 +67,7 @@
       "upstream_sha256": "cee8b05ccf51961ac3847f2b41e879f14aeb05d6d4030ca898ffcb3eb13b06bb"
     },
     "openbor.h": {
-      "distributed_sha256": "28c8233aacf7017618dc734058a9418bd1a0b29079aa245c044ff3452b81de56",
+      "distributed_sha256": "7ddacce3e12af870f1ed16de70f2771d1ba2bf809082c96fb2ab4fe12b5c72c2",
       "modified": true,
       "summary": "Allocate collision pointer slots through the highest author-facing index used by each collection. Track each model's allocated animation-table capacity and reject lookups outside it. Declare the shared typed profile fields and explicit native saved-record layouts without changing the selected wire format. Adapt cheat masks to the native script-visible numbering. Retain the original integer setting for running after landing, native type interpretation for entity searches and validity flags for historical HUD bar modes.",
       "topics": [

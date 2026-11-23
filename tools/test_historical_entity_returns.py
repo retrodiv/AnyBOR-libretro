@@ -200,9 +200,11 @@ class EntityReturnTests(unittest.TestCase):
                 entry,actions=scalar_entry(script,['_ep_x','_ep_z','_ep_a','_ep_position'])
                 enumeration=re.search(r'(?m)^enum\s+entityproperty_enum\s*\{[\s\S]*?\};',script)
                 self.assertIsNotNone(enumeration)
+                mappers = sorted(set(re.findall(r'\b(mapstrings_\w+)\(', entry)))
                 program=render_position_setters(entry=entry,enumeration=enumeration[0],
                     decimal=function(variant,'ScriptVariant_DecimalValue'),
-                    mapping_names=sorted(set(re.findall(r'\b(mapstrings_\w+)\(',entry))),
+                    mapping_names=mappers, integer_mappers=[name for name in mappers
+                        if function(script, name).lstrip().startswith('int ')],
                     actions=sorted(actions),contracts=row['contracts'],symbol='checked_position_unit')
                 program+='\nint main(void){unsigned n=checked_position_unit();printf("{\\"status\\":\\"PASS\\",\\"checks\\":%u}\\n",n);return 0;}\n'
                 work=Path(folder);code=work/'probe.c';executable=work/'probe'

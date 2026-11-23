@@ -91,6 +91,9 @@ static void mapstrings_getentityproperty(ScriptVariant **args,int count) {(void)
 static void mapstrings_entityproperty(ScriptVariant **args,int count) {(void)args;(void)count;}
 static int obor_entity_get_property_native(int value) {return value;}
 static int obor_entityproperty_native(int value) {return value;}
+static int obor_entity_property_index(LONG value) {
+    return value >= 0 && value < _ep_the_end ? (int)value : -1;
+}
 static int obor_animation_native(int value,unsigned profile) {(void)profile;return value;}
 static size_t obor_allocation_size(const void *owner);
 /* Numeric routing is an explicit fixture in this reduced getter probe.

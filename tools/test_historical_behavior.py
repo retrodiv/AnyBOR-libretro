@@ -625,7 +625,7 @@ int main(void)
             source, re.MULTILINE)
         energy = re.search(r'enum gep_energycost_enum\s*\{[^}]+\};', source)
         self.assertTrue(actor_scope and properties and energy)
-        original = {4079, 4080, 4082, 4085, 4086, 4088, 4107, 4111, 4129, 4153, 4161}
+        original = {4077, 4079, 4080, 4082, 4085, 4086, 4088, 4097, 4107, 4111, 4129, 4153, 4161}
         pin = json.loads((ROOT / 'src/pin.json').read_text())
         # The forward source family has its own model-animation contract.
         # This contract retains the original current-animation component.
@@ -5383,6 +5383,7 @@ static struct {char *skipselect[4];int maxplayers,noselect,noshowhof;} set_recor
 static struct {int flag,level,stage,pLives[4],pScores[4],pColourmap[4],pWeapnum[4],pSpawnhealth[4],pSpawnmp[4],credits,times_completed;char pName[4][32];} save_record,*save=&save_record;
 static struct {int type,settime;} level_record,*level=&level_record;
 static int current_level,current_stage,credits,bonus,level_override,freezeall,nojoin,presence,status_count;
+static int endgame;
 static char trace[64],lookup_name[32];
 static void event(char ch) {size_t n=strlen(trace);assert(n+1<sizeof(trace));trace[n]=ch;trace[n+1]=0;}
 static int loadScriptFile(void) {event('R');return 1;}
@@ -5431,6 +5432,7 @@ static void skip_start(void) {int players[4]={0};@SKIP_START@}
 #undef assert
 #define assert(c) do{if(!(c)){fprintf(stderr,"Campaign revision=%u case=%u line=%d\n",obor_profile_build,cases,__LINE__);abort();}}while(0)
 static void check(int runtime,int saved_flag,int save_phase,int initial_flag,int type2,int faded,int hof,int quick) {
+ endgame=0;
  for(int restored=0;restored<2;++restored)for(int flag=0;flag<3;++flag)
  for(int new_before=0;new_before<2;++new_before)for(int nosave_before=0;nosave_before<2;++nosave_before)
  for(int kind=0;kind<3;++kind) {

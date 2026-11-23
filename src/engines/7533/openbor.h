@@ -4141,7 +4141,7 @@ typedef struct entity
 
 static inline int obor_entity_dead_script_get(const entity *actor)
 {
-    return obor_profile_build < 7488u ? actor->legacy_dead : actor->death_state & DEATH_STATE_DEAD;
+    return obor_profile_build < 7488u ? actor->legacy_dead : (int)(actor->death_state & DEATH_STATE_DEAD);
 }
 
 static inline void obor_entity_dead_script_set(entity *actor, int value)

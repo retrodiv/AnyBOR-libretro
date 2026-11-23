@@ -58,6 +58,11 @@ int nextcolourmapn(s_model *model, int initial, int slot)
     assert(model == &playable && slot == preview_slot && initial == preview_origin);
     return 3;
 }
+int nextcolourmap(s_model *model, int colour)
+{
+    assert(model == &playable && colour == player[preview_slot].colourmap);
+    return 3;
+}
 #else
 static int nextcolourmap(s_model *model, int colour) { abort(); }
 #endif

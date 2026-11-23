@@ -48,9 +48,16 @@ class NativeTextMapperTests(unittest.TestCase):
                 options.update({key:model[key] for key in ['return_type','input_setup'] if key in model})
                 declarations=enums+'\n'+function((root/'source/utils.c').read_text(),'searchList')
                 declarations+='\n'+'\n'.join(function(script,name) for name in model.get('extra_methods',[]))
+                method = function(script, method_name)
+                if options.get('return_type') == 'void' and method.lstrip().startswith('int '):
+                    declarations += '\n' + method
+                    native_name = method_name
+                    method_name += '_probe'
+                    method = (f'void {method_name}(ScriptVariant **args, int count) '
+                              f'{{ (void){native_name}(args, count); }}')
                 code=render_string_mapper(**options,method_name=method_name,
                     declarations=declarations,
-                    method=function(script,method_name))
+                    method=method)
                 work=Path(temporary);source=work/'probe.c'
                 source.write_text(bind_named_allocation_support(code, root));binary=work/'probe'
                 includes=[root/'source/scriptlib',root,SOURCE/'src/port/libretro',root/'source',

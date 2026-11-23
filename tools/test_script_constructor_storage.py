@@ -39,6 +39,11 @@ def program(engine, profiles, *, wrong_magic=False):
     if len(providers)!=1:
         raise ValueError('One own native constructor stop alias required')
     after = function(source, 'alloc_script')
+    script_init = function(source, 'Script_Init')
+    if 'Script_ResetVariables(' in script_init:
+        variant = (engine / 'source/scriptlib/ScriptVariant.c').read_text(encoding='latin1')
+        script_init = (function(variant, 'ScriptVariant_Clear') + '\n' +
+                       function(source, 'Script_ResetVariables') + '\n' + script_init)
     if wrong_magic:
         if after.count('pscript->magic = script_magic;')!=1:
             raise ValueError('One native Script magic initialization required')
@@ -50,7 +55,7 @@ def program(engine, profiles, *, wrong_magic=False):
         BEFORE_ALLOC=rename_identifiers(oracle['alloc_script'], {'alloc_script':'before_alloc_script','Varlist_Init':'before_init'}),
         AFTER_ALLOC=after,
         BEFORE_SCRIPT_INIT=rename_identifiers(oracle['Script_Init'], dict(providers,Script_Init='before_script_init',Varlist_Init='before_init')),
-        AFTER_SCRIPT_INIT=rename_identifiers(function(source,'Script_Init'),providers),
+        AFTER_SCRIPT_INIT=rename_identifiers(script_init,providers),
         CALL_BEFORE_INIT=init_call('before_script_init','value','1'),
         CALL_AFTER_INIT=init_call('Script_Init','value','1'),
         CALL_BEFORE_REUSE=init_call('before_script_init','value','0'),

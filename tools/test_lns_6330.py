@@ -608,7 +608,7 @@ int main(void) {
             'METHODS': '\n'.join(function(source, name) for name in ('clearbuttons',
                 'obor_profile_settings_bytes', 'obor_profile_settings_io',
                 'obor_profile_read_settings', 'obor_profile_write_settings')),
-            'BACKEND': (function(input_code, 'key_down') + function(input_code, 'control_update')
+            'BACKEND': (function(overlay, 'key_down') + function(input_code, 'control_update')
                         + function(rumble, 'obor_get_rumble') + function(rumble, 'control_rumble')),
             'EVENTS': '\n'.join(line + f'\n    check_event(port, enabled, durations[{i}]);'
                                 for i, line in enumerate(events)),
@@ -654,7 +654,7 @@ int main(void) {
         setter = function(script, 'openbor_changeplayerproperty')
         properties = ('disablekeys', 'playkeys', 'keys', 'newkeys', 'releasekeys')
         control = CONTROL_SOURCE.read_text()
-        control = control[control.index('static int flag_to_index('):]
+        update = control[control.index('static int flag_to_index('):]
         native_player_fields = '\n'.join(re.search(r'(?m)^\s*u64\s+' + name + r';', header)[0].strip()
             for name in (*properties, 'prevkeys'))
         parts = {
@@ -664,7 +664,7 @@ int main(void) {
                 if re.match(r'^#define (?:OBOR_KEY(?:BASE|SPAN)?\b|JOY_MAX_INPUTS\b)', line)),
             'PLAYER_FIELDS': native_player_fields,
             'COMBO_HISTORY': re.search(r'(?m)^\s*u(?:32|64) combokey\[MAX_SPECIAL_INPUTS\];', header)[0].strip(),
-            'METHODS': '\n'.join(function(control, name) for name in ('key_down', 'control_update'))
+            'METHODS': function(control, 'key_down') + function(update, 'control_update')
                 + '\n'.join(function(source, name) for name in ('inputrefresh', 'player_check_special', 'match_combo')),
             'PROFILE_WIDTH': re.search(r'(?m)^\s*const bool early_input_masks = [^;]+;', setter)[0],
             'SETTERS': '\n'.join(outer_case(setter, '_pp_' + name) for name in properties),
@@ -771,9 +771,12 @@ int main(void) {
         originals = '\n'.join(fragments(row['function'], key) for key, row in data['contexts'].items())
         declarations = '\n'.join(re.search(r'^#define\s+' + name + r'[^\r\n]*', header, re.M).group()
             for name in ('MAX_NAME_LEN', 'MAX_PLAYERS'))
+        ids = (ENGINE / 'source/openborscript/profile_ids.h').read_text()
+        methods = '\n'.join((function((ENGINE / 'source/utils.c').read_text(), 'safe_strncpy'),
+            function(header, 'obor_profile_name_width'), function(ids, 'obor_profile_has_player_status')))
         program = (FIXTURE.parent / 'lns-6330-playgame-contract.c.in').read_text()
         native(program.replace('@ABI@', json.dumps(str(ABI))).replace('@LIMITS@', declarations)
-            .replace('@CANDIDATE@', fragments(source, 'candidate')).replace('@ORIGINALS@', originals),
+            .replace('@CANDIDATE@', methods + '\n' + fragments(source, 'candidate')).replace('@ORIGINALS@', originals),
             extra_flags=('-Wno-sign-compare', '-Wno-unused-parameter'))
 
     def test_saved_menu_finished_version_slot_switch_and_safety_match_source(self):
@@ -1299,6 +1302,9 @@ int main(void) {
         if 'obor_profile_has_player_status()' in source:
             ids = (ENGINE / 'source/openborscript/profile_ids.h').read_text()
             palette += '\n' + function(ids, 'obor_profile_has_player_status')
+        if 'obor_copy_display_name(' in source:
+            palette += '\n' + function(header, 'obor_profile_name_width') + '\n' + function(source, 'obor_copy_display_name')
+            palette += '\n' + function((ENGINE / 'source/utils.c').read_text(), 'safe_strncpy')
         if 'obor_initial_colourmap(' in source:
             palette += """
 static int nextcolourmap(s_model *model, int colour) { assert(0); return -1; }
@@ -1613,6 +1619,14 @@ static int obor_select_colourmap(s_model *model, int colour, int slot,
         original = json.loads((FIXTURE.parent / 'lns-6330-model-original.json').read_text())
         enum = re.search(r'typedef enum modelCommand\s*\{[^}]+\}\s*modelCommands;', declarations).group()
         registration = function(commands, 'createModelCommandList')
+        header = (ENGINE / 'openbor.h').read_text()
+        ids = (ENGINE / 'source/openborscript/profile_ids.h').read_text()
+        helpers = '\n'.join(function(ids, name) for name in (
+            'obor_profile_uses_5134_script_ids', 'obor_profile_has_animation_entity_collision',
+            'obor_profile_has_edge_range', 'obor_profile_has_lose_attack_slot',
+            'obor_profile_uses_loose_attack_name'))
+        helpers += '\n' + '\n'.join(function(header, name) for name in (
+            'obor_profile_has_classic_boomerang', 'obor_profile_has_custom_boomerang'))
         cases = ''
         for label in original['commands']:
             start = source.index('            case ' + label + ':')
@@ -1676,7 +1690,7 @@ int main(void) {
  return 0;
 }
 '''.replace('@ABI@', json.dumps(str(ABI))).replace('@ENUM@', enum)
-            .replace('@REGISTRATION@', registration).replace('@CASES@', cases)
+            .replace('@REGISTRATION@', helpers + '\n' + registration).replace('@CASES@', cases)
             .replace('@ORIGINAL_CASES@', original['command_cases'])
             .replace('@INIT@', initializers).replace('@ORIGINAL_INIT@', original['initializers']),
                extra_flags=('-Wno-int-to-pointer-cast',))

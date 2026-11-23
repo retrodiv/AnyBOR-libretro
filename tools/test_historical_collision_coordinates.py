@@ -53,6 +53,7 @@ def program(engine,rows):
     code=render_collision(parts,scalar=scalar,components=components,
         ranges=first['ranges'],tolerance_bonus=first['tolerance_bonus'],
         separation_padding=first.get('separation_padding',1),
+        coop_filters_players=first.get('coop_filters_players',True),
         revision=first['revision'],labels=['prepared_source'])
     marker='int main(void) {'
     if code.count(marker)!=1:
@@ -78,7 +79,8 @@ class CollisionCoordinateTests(unittest.TestCase):
         cls.groups={}
         for row in cls.rows:
             cls.groups.setdefault((row['engine'],row['ranges'],row['tolerance_bonus'],
-                                   row.get('separation_padding',1)),[]).append(row)
+                                   row.get('separation_padding',1),
+                                   row.get('coop_filters_players',True)),[]).append(row)
         cls.executables={}
         for index,(key,rows) in enumerate(cls.groups.items()):
             code=cls.work/('contract-%d.c'%index);executable=code.with_suffix('')

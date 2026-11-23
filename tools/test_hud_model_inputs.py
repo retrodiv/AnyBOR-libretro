@@ -40,7 +40,9 @@ def declarations(core):
 
 def program(engine, profiles, *, alter_lookup=False):
     core = (engine / 'openbor.c').read_text(encoding='latin1')
-    original = load_contract_fixture(FIXTURE)['engines'][engine.name]
+    fixture = load_contract_fixture(FIXTURE)
+    original = fixture['engines'][engine.name]
+    timer_controls = fixture.get('timer_display_overrides', {}).get(engine.name, [])
     providers = {name: 'fixture_' + name for name in (
         'findmodel', 'prevplayermodel', 'nextplayermodel', 'prevplayermodeln',
         'nextplayermodeln', 'nextcolourmap', 'prevcolourmap', 'nextcolourmapn',
@@ -55,6 +57,8 @@ def program(engine, profiles, *, alter_lookup=False):
     if 'static void obor_draw_status_performance(' in core:
         performance = function(core, 'obor_draw_status_performance')
         bodies.append(rename_identifiers(performance, providers))
+    if 'static int obor_has_rush_combo(' in core:
+        bodies.append(function(core, 'obor_has_rush_combo'))
     if 'obor_profile_copy_name(' in core:
         bodies.extend(function(core, name) for name in
                       ('obor_profile_name_limit', 'obor_profile_copy_name'))
@@ -68,6 +72,13 @@ def program(engine, profiles, *, alter_lookup=False):
         names = {name: label + '_' + name for name in original}
         for name, baseline in original.items():
             body = baseline if label == 'original' else function(core, name)
+            if label == 'original' and name == 'updatestatus' and timer_controls:
+                start = body.index('    if (is_total_timeover) timetoshow =')
+                end = body.index('    if(go_time > _time)', start)
+                branches = [f"if(obor_profile_build == {row['revision']}u) {{\n{row['statements']}\n}}"
+                            for row in timer_controls]
+                body = (body[:start] + '\nelse '.join(branches) + '\nelse {\n' +
+                        body[start:end] + '\n}\n' + body[end:])
             if label == 'original' and name == 'updatestatus' and engine.name == '4432':
                 # The 4283–4402 callers use nojoin for confirmation and
                 # prompts, without applying it to the inactive-player arm.

@@ -44,6 +44,12 @@ s_modelcache *model_cache;
         globals_ += 'const s_defense default_defense={0};\n'
     if modern:
         globals_ += 'const s_offense default_offense={0};\n'
+    default_defense = ''
+    if 'obor_profile_default_defense()' in constructor + modern_storage:
+        legacy = re.search(r'const s_defense legacy_default_defense\s*=\s*\{[^}]*\};', game)
+        if legacy:
+            globals_ += 'static ' + legacy[0] + '\n'
+        default_defense = function(game, 'obor_profile_default_defense')
     if 'global_config.' in constructor:
         globals_ += 's_global_config global_config={.game_speed=GAME_SPEED_DEFAULT};\n'
     script_allocator = '''static void fixture_alloc_scripts(s_scripts *scripts) {
@@ -62,10 +68,13 @@ s_modelcache *model_cache;
         raise ValueError('One native constructor diagnostic required')
     if 'obor_profile_animation_base()' in constructor:
         constructor = function(game, 'obor_profile_animation_base') + '\n' + constructor
+    if 'obor_init_model_faction(' in constructor:
+        constructor = '\n'.join(function(game, name) for name in
+            ('obor_entity_deadline_value', 'obor_unspecified_type_mask', 'obor_init_model_faction')) + '\n' + constructor
     values = dict(CONFIG='#include "config.h"' if (engine / 'config.h').is_file() else '',
                   SCRIPT_HEADER=header, GLOBALS=globals_, SCRIPT_ALLOCATOR=script_allocator,
                   MODERN_STORAGE=modern_storage, DIAGNOSTIC=diagnostic[0], CONSTRUCTOR=constructor,
-                  DEFAULT_DEFENSE=function(game, 'obor_profile_default_defense') if 'obor_profile_default_defense()' in constructor else '',
+                  DEFAULT_DEFENSE=default_defense,
                   HASFREE=function(game, 'hasFreetype'),
                   RELEASE=function(game, 'obor_model_release_constructor_storage'), MODEL_COPY=copy,
                   SCRIPTS_TYPE='s_scripts' if inline else 's_scripts *', CASE=case,

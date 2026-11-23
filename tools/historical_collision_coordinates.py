@@ -11,7 +11,8 @@ import re
 
 
 def render_collision(parts, *, scalar, components, ranges, tolerance_bonus,
-                     revision, labels, threshold_only=False, separation_padding=1):
+                     revision, labels, threshold_only=False, separation_padding=1,
+                     coop_filters_players=True):
     if (not isinstance(parts, dict) or set(parts) !=
             {'checkhit', 'bbox', 'bboxz', 'attackz', 'frame_coordinates'} or
             any(not isinstance(value, str) or not value.strip() or
@@ -19,7 +20,8 @@ def render_collision(parts, *, scalar, components, ranges, tolerance_bonus,
         raise ValueError('Bounded exact collision and loader source components required')
     if scalar not in ('short', 'int') or type(components) is not int or components not in (5, 6):
         raise ValueError('Explicit native scalar and coordinate array extent required')
-    if any(type(value) is not bool for value in (ranges, tolerance_bonus, threshold_only)) or (ranges and components != 6):
+    if any(type(value) is not bool for value in
+           (ranges, tolerance_bonus, threshold_only, coop_filters_players)) or (ranges and components != 6):
         raise ValueError('Explicit compatible range and default-tolerance expectations required')
     if type(separation_padding) is not int or separation_padding not in (0, 1):
         raise ValueError('Explicit zero or one unit separation padding required')
@@ -127,7 +129,7 @@ static hit_result reference_hit(const entity *a,const entity *b,int counter) {
  hit_result result={0};
  if(a==b || !b->animation->bbox_coords || !a->animation->attacks ||
     !b->animation->vulnerable[b->animpos] ||
-    (a->modeldata.type==TYPE_PLAYER && b->modeldata.type==TYPE_PLAYER && savedata.mode))return result;
+    (@COOP_FILTER@ && a->modeldata.type==TYPE_PLAYER && b->modeldata.type==TYPE_PLAYER && savedata.mode))return result;
  const s_attack *attack=a->animation->attacks[a->animpos];
  if(counter && (!b->animation->attacks || !b->animation->attacks[b->animpos] ||
     b->animation->attacks[b->animpos]->counterattack>attack->counterattack))return result;
@@ -220,7 +222,7 @@ int main(void) {
 '''
     values = dict(SCALAR=scalar, COMPONENTS=str(components), RANGES=str(int(ranges)),
                   BONUS=str(int(tolerance_bonus)), REVISION=str(revision),
-                  PADDING=str(separation_padding),
+                  PADDING=str(separation_padding), COOP_FILTER=str(int(coop_filters_players)),
                   CHECKHIT=parts['checkhit'], BBOX=parts['bbox'], BBOXZ=parts['bboxz'],
                   ATTACKZ=parts['attackz'], FRAME=parts['frame_coordinates'],
                   CALLS='\n'.join(('threshold_checks();' if threshold_only else

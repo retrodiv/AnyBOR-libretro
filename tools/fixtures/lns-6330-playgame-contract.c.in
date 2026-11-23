@@ -8,11 +8,12 @@
 #include <stdarg.h>
 #include @ABI@
 @LIMITS@
-typedef struct {int lives,credits,score,colourmap,weapnum,spawnhealth,spawnmp,hasplayed;char name[MAX_NAME_LEN];uintptr_t unused[3];void *ent;} Player;
+enum { PLAYER_NO_STATUS };
+typedef struct {int lives,credits,score,colourmap,weapnum,spawnhealth,spawnmp,hasplayed,status;char name[MAX_NAME_LEN];uintptr_t unused[3];void *ent;} Player;
 typedef struct {unsigned level,stage,credits,times_completed;int flag,pLives[4],pCredits[4],pScores[4],pColourmap[4],pWeapnum[4],pSpawnhealth[4],pSpawnmp[4];char pName[4][MAX_NAME_LEN],allowSelectArgs[64];} Save;
 typedef struct {int maxplayers,numlevels,noselect,noshowhof;} Set;
 typedef struct {char *skipselect[4],*filename;} Level;
-static unsigned obor_profile_features;
+static unsigned obor_profile_build,obor_profile_features;
 static Player player[MAX_PLAYERS];
 static int flags[MAX_PLAYERS],current_level,current_stage,credits,bonus,nofadeout;
 static char skipselect[MAX_PLAYERS][MAX_NAME_LEN],branch_name[32];
@@ -38,6 +39,7 @@ static void sound_close_music(void) {record(8,branch_name);}
 @ORIGINALS@
 #undef printf
 static void setup(unsigned family,unsigned names,unsigned lives) {
+ obor_profile_build=family?6330u:6391u;
  obor_profile_features=family==2?OBOR_PROFILE_LNS_6330:0;memset(player,0xa5,sizeof(player));memset(skipselect,0x6b,sizeof(skipselect));
  memset(&save_data,0,sizeof(save_data));strcpy(save_data.allowSelectArgs,"AUTHORED");
  for(unsigned p=0;p<4;++p) {

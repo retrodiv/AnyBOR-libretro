@@ -36,6 +36,10 @@ def program(engine,layout,mode,cases):
     code=render_hitpause(matches[0][0],revision=int(engine),
         legacy_field=layout['legacy_field'] if mode=='frame' else None,
         timer_field=layout['timer_field'] if mode=='timer' else None,cases=cases)
+    if 'obor_motion_after_update(' in matches[0][0]:
+        helper = function(text, 'obor_motion_after_update')
+        code = code.replace('static void hitpause_under_test(',
+                            helper + '\nstatic void hitpause_under_test(', 1)
     marker='int main(void){'
     if code.count(marker)!=1:
         raise ValueError('One authored native pause entry required')

@@ -1384,9 +1384,12 @@ int main(void)
             name_helpers = '\n'.join(function(core, name) for name in
                                      ('obor_profile_name_limit', 'obor_profile_copy_name'))
         methods = '\n'.join(function(source, name) for name in methods)
-        if 'obor_profile_uses_5134_script_ids(' in setter + methods:
+        profile_helpers = [name for name in (
+            'obor_profile_uses_5134_script_ids', 'obor_profile_has_boss_counters')
+            if name + '(' in setter + methods]
+        if profile_helpers:
             profile_ids = (engine / 'source/openborscript/profile_ids.h').read_text()
-            name_helpers += function(profile_ids, 'obor_profile_uses_5134_script_ids') + '\n'
+            name_helpers += '\n'.join(function(profile_ids, name) for name in profile_helpers) + '\n'
         values = {
             'VARIANTS': '\n'.join(function(variant, name) for name in ('ScriptVariant_Clear',
                                       'ScriptVariant_ChangeType', 'ScriptVariant_IntegerValue', 'ScriptVariant_DecimalValue')),

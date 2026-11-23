@@ -162,6 +162,10 @@ int main(void)
                         "blocked=%d same=%d player=%d trace=%d lookups=%u/%u navigation=%u/%u\n",
                         obor_profile_build,seed,keys[k],frozen,blocked,same,memcmp(expected,player,sizeof(player)),
                         expected_trace!=trace_hash,expected_lookups,lookup_count,expected_nav,nav_count);
+                fprintf(stderr,"ticks=%llu/%llu prior=%d/%d display=%d/%d go=%d/%d credits=%d/%d\n",
+                        (unsigned long long)expected_time,(unsigned long long)timeleft,
+                        expected_old,oldtime,expected_show,fixture_display_state,
+                        expected_go,gosound,expected_credits,credits);
                 return 1;
             }
         }

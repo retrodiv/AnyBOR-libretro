@@ -10,7 +10,7 @@ import re
 
 
 def render_position_setters(*, entry, enumeration, decimal, mapping_names, actions,
-                            contracts, symbol):
+                            contracts, symbol, integer_mappers=()):
     for value, limit in [(entry, 65536), (enumeration, 32768), (decimal, 8192)]:
         if not isinstance(value, str) or not 0 < len(value) <= limit or '\0' in value:
             raise ValueError('Bounded native callback, enumeration and conversion required')
@@ -23,6 +23,8 @@ def render_position_setters(*, entry, enumeration, decimal, mapping_names, actio
             not 0 < len(mapping_names) <= 4 or any(not identifier(n) for n in mapping_names) or
             len(set(mapping_names)) != len(mapping_names)):
         raise ValueError('Distinct bounded native mapper and unit symbols required')
+    if not isinstance(integer_mappers, (list, tuple)) or not set(integer_mappers) <= set(mapping_names):
+        raise ValueError('Integer mapper declarations require a known native mapper')
     if (not isinstance(actions, list) or len(actions) > 128 or
             any(not identifier(n) for n in actions) or actions != sorted(set(actions)) or
             set(actions) & set(mapping_names)):
@@ -36,9 +38,18 @@ def render_position_setters(*, entry, enumeration, decimal, mapping_names, actio
     names = ['openbor_changeentityproperty', 'ScriptVariant_DecimalValue',
              'obor_profile_build', *mapping_names, *actions]
     namespace = '\n'.join('#define %s %s_%s' % (n, symbol, n) for n in names)
-    mappers = '\n'.join('void %s(ScriptVariant **args,int count) {'
-        'CHECK(args && count>=3 && args[1] && args[1]->vt==VT_INTEGER);}' % n
+    mappers = '\n'.join('%s %s(ScriptVariant **args,int count) {'
+        'CHECK(args && count>=3 && args[1] && args[1]->vt==VT_INTEGER);%s}' %
+        ('int' if n in integer_mappers else 'void', n, 'return 1;' if n in integer_mappers else '')
         for n in mapping_names)
+    if 'obor_entity_property_index(' in entry:
+        mappers += '''
+/* These inputs use the setter's normalized property selectors. */
+static int obor_entity_property_index(LONG value) {
+    CHECK(value >= 0 && value < _ep_the_end);
+    return (int)value;
+}
+'''
     code = r'''
 @NAMESPACE@
 #include <stdint.h>

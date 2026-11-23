@@ -64,8 +64,8 @@ static int fixture_lookup(const char *name) {
 #define shutdown fixture_shutdown
 #define borShutdown fixture_shutdown
 @DIAGNOSTIC@
-@MODERN_STORAGE@
 @DEFAULT_DEFENSE@
+@MODERN_STORAGE@
 #define alloc_all_scripts fixture_alloc_scripts
 #define get_cached_model_index fixture_lookup
 @CONSTRUCTOR@

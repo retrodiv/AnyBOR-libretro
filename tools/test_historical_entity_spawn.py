@@ -41,12 +41,14 @@ class ItemSpawnRecordContracts(unittest.TestCase):
         methods += (('obor_profile_name_limit', 'obor_profile_copy_name') if physical == '4432'
                     else ('initialize_item_carry',))
         methods += ('smartspawn', 'drop_item', 'drop_driver')
+        support = function((engine / 'source/utils.c').read_text(encoding='latin-1'),
+                           'safe_strncpy') if physical == '6391' else ''
         values = {
             'DEFAULTS': re.search(r'next\.index = next\.(?:itemindex|item_properties\.index) = next\.weaponindex = -1;', loader)[0],
             'LEVEL_REASON': re.search(r'next\.spawntype = (?:1|SPAWN_TYPE_LEVEL);', loader)[0],
             'COMMANDS': ', '.join('CMD_LEVEL_' + n for n in commands),
             'CASES': '\n'.join('case CMD_LEVEL_' + n + ':' + cases['CMD_LEVEL_' + n]['body'] for n in commands),
-            'METHODS': '\n'.join(function(core, name) for name in methods),
+            'METHODS': support + '\n'.join(function(core, name) for name in methods),
             'ROWS': ','.join('{%du,%d,%d,%d}' % (row['revision'], row['alias_limit'], row['item_reason'],
                                                       row['driver_reason']) for row in rows),
         }
@@ -74,6 +76,8 @@ class PlayerAndWeaponSpawnContracts(unittest.TestCase):
         methods = ['spawnplayer', 'spawnexample']
         if physical == '4432':
             methods[:0] = ['obor_profile_name_limit', 'obor_profile_copy_name']
+        elif physical == '6391':
+            methods[:0] = ['obor_copy_display_name', 'obor_select_colourmap', 'obor_initial_colourmap']
         selection = function(source, 'selectplayer')
         conditions = re.findall(r'(?m)^\s*const int (?:saved_selection|historical_resume)\s*=.*?;', selection)
         reset, = re.findall(r'(?m)^\s*if\([^;]*?\)\s*(?:\{\s*)?reset_playable_list\(1\);\s*(?:\})?',
@@ -457,8 +461,8 @@ def source_parts(engine):
         'utf-8', 'surrogateescape')
     parts = {name: function(source, name) for name in ('spawn', 'kill')}
     parts['helpers'] = '\n'.join(function(source, name) for name in (
-        'obor_scene_counters_active', 'obor_scene_counter_adjust')) if \
-        'obor_scene_counters_active' in source else ''
+        'obor_entity_type_matches', 'obor_scene_counters_active', 'obor_scene_counter_adjust')
+        if name + '(' in source)
     return parts
 
 

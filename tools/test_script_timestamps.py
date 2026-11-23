@@ -6,7 +6,6 @@ Copyright (c) 2026 retrodiv <retrodiv@proton.me>
 import json
 import os
 from pathlib import Path
-import re
 import subprocess
 import tempfile
 import unittest
@@ -30,13 +29,6 @@ def property_body(source, function, property_name):
 class ProfileScriptBoundariesTests(unittest.TestCase):
     def test_nextanim_is_a_timestamp_in_every_profile(self):
         source = (ENGINE / 'openborscript.c').read_text()
-        header = (ENGINE / 'openbor.h').read_text()
-        header = re.sub(r'/\*.*?\*/|//[^\n]*', '', header, flags=re.S)
-        families = {'e_animations', 'e_animation_properties', 'e_entity_type_sub',
-                    'e_spawn_type', 'e_attack_types', 'e_level_properties'}
-        enums = '\n'.join('typedef enum {' + body + '} ' + name + ';'
-            for body, name in re.findall(r'typedef\s+enum[^{}]*\{([^{}]*)\}\s*(\w+)\s*;', header, re.S)
-            if name in families)
         pins = json.loads((SOURCE / 'src/pin.json').read_text())
         revisions = [str(row.get('revision', row['build'])) for row in pins['profiles']
                      if row['engine'] == '6391']
@@ -46,9 +38,7 @@ class ProfileScriptBoundariesTests(unittest.TestCase):
         program = r'''
 #include <assert.h>
 #include <stdint.h>
-ENUMS
 static uint32_t obor_profile_build;
-#include "source/openborscript/profile_ids.h"
 typedef long LONG;
 typedef struct { LONG lVal; int vt; } ScriptVariant;
 typedef struct { unsigned int nextanim; } entity;
@@ -85,12 +75,12 @@ int main(void) {
     }
     return 0;
 }
-'''.replace('ENUMS', enums).replace('GETTER', getter).replace('SETTER', setter).replace('PROFILES', ','.join(revisions))
+'''.replace('GETTER', getter).replace('SETTER', setter).replace('PROFILES', ','.join(revisions))
         with tempfile.TemporaryDirectory(prefix='anybor-profile-timestamps-') as temporary:
             work = Path(temporary)
             (work / 'probe.c').write_text(program)
             subprocess.run(['cc', '-std=c11', '-Wall', '-Wextra', '-Werror', '-Wno-error=deprecated-declarations',
-                            '-fsanitize=address,undefined', '-g', '-I', str(ENGINE),
+                            '-fsanitize=address,undefined', '-g',
                             str(work / 'probe.c'), '-o', str(work / 'probe')], check=True, timeout=60)
             subprocess.run([str(work / 'probe')], check=True, timeout=20)
 

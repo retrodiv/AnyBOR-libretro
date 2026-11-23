@@ -17,20 +17,10 @@ import unittest
 
 from historical_spawn_lookup import render_spawn_lookup
 from native_sanitizers import sanitizer_environment
-from test_historical_player import function
+from test_historical_entity_spawn import source_parts
 
 SOURCE = Path(os.environ.get('OBOR_TEST_SOURCE', Path(__file__).resolve().parents[1]))
 CONTRACT_PATH = Path(__file__).parent / 'fixtures/profile-spawn-lookup-contracts.json'
-
-
-def source_parts(engine):
-    source = (SOURCE / 'src/engines' / engine / 'openbor.c').read_bytes().decode(
-        'utf-8', 'surrogateescape')
-    parts = {name: function(source, name) for name in ('spawn', 'kill')}
-    parts['helpers'] = '\n'.join(function(source, name) for name in (
-        'obor_scene_counters_active', 'obor_scene_counter_adjust')) if \
-        'obor_scene_counters_active' in source else ''
-    return parts
 
 
 def program(engine, rows, contracts):
