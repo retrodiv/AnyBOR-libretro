@@ -459,7 +459,7 @@
       "upstream_sha256": "3d6178293aaec327311528ab0ada0b8cad4443d4c703803a05b189105c86e861"
     },
     "source/gamelib/transform.c": {
-      "distributed_sha256": "eef9c86d0f53686770bea8b5140517d205c1b4910f68bab93c006ae665cded6c",
+      "distributed_sha256": "513171b4d9d8fae6a10bb53ea6cff56a179bd7f6146bde856eafbd6ab58771a5",
       "modified": true,
       "summary": "Drop comma expressions that read the variables they were meant to declare. Share the original trigonometric tables and inverse-square-root calculation with the script engine.",
       "topics": [

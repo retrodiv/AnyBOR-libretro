@@ -21,21 +21,33 @@ ROOT = Path(os.environ.get('OBOR_TEST_SOURCE', HERE.parent))
 FIXTURE = HERE / 'fixtures/entity-pool-native-baseline.json'
 
 
+def allocator_with_prototype(source):
+    # The probe selects native and original routines through one typed pointer.
+    signature = 'int alloc_ents()'
+    if source.startswith(signature):
+        return 'int alloc_ents(void)' + source[len(signature):]
+    if source.startswith('int alloc_ents(void)'):
+        return source
+    raise ValueError('The entity pool probe requires a zero-argument allocator')
+
+
 def program(engine, profiles, *, omit_tail_initialization=False):
     core = (engine / 'openbor.c').read_text(encoding='latin1')
-    native = function(core, 'alloc_ents')
+    native = allocator_with_prototype(function(core, 'alloc_ents'))
     release = function(core, 'free_ents')
     snapshots = combat_snapshot_support(core) if 'obor_collect_model_snapshots' in release else ''
     oracle = load_contract_fixture(FIXTURE)['engines'][engine.name]
-    original = rename_identifiers(oracle['alloc_ents'], {'alloc_ents': 'original_alloc_ents'})
+    original = rename_identifiers(allocator_with_prototype(oracle['alloc_ents']),
+                                  {'alloc_ents': 'original_alloc_ents'})
     controls = oracle.get('draw_queue_boundary', [])
     draw_queue = oracle.get('draw_queue_alloc_ents')
     if bool(controls) != bool(draw_queue) or (controls and
             (len(controls) != 2 or controls[1] != controls[0] + 1)):
         raise ValueError('An adjacent source boundary is required for the draw queue')
     if draw_queue:
-        draw_queue = rename_identifiers(draw_queue, {'alloc_ents': 'original_alloc_draw_queue',
-                                                     'ent_stack': 'draw_script_entities'})
+        draw_queue = rename_identifiers(allocator_with_prototype(draw_queue),
+                                        {'alloc_ents': 'original_alloc_draw_queue',
+                                         'ent_stack': 'draw_script_entities'})
     if omit_tail_initialization:
         line = 'memset(ent_list + first, 0, sizeof(*ent_list) * (size_t)MAX_ENTS);'
         if native.count(line) != 1:

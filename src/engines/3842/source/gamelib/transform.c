@@ -702,8 +702,15 @@ static void draw_fixed_rotation(s_screen *dest, gfx_entry *src, float sx0, float
 
 
 
+/* Preserve the original float rounding before selecting source pixels. */
+#if defined(__GNUC__) && !defined(__clang__)
+__attribute__((optimize("fp-contract=off")))
+#endif
 void gfx_draw_rotate(s_screen* dest, gfx_entry* src, int x, int y, int centerx, int centery, s_drawmethod* drawmethod)
 {
+#if defined(__clang__)
+#pragma clang fp contract(off)
+#endif
 	float zoomx, zoomy, rzoomx, rzoomy, sina, cosa, ax, ay, bx, by, rx0, ry0, cx, cy, srcx0_f, srcx_f, srcy0_f, srcy_f, angle;
 	int i, j, srcx, srcy;
 	int xbound[4], ybound[4];
