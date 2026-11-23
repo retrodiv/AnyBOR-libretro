@@ -276,7 +276,7 @@
       "upstream_sha256": "1cd9bad27b7c481f5a84bcf5ad3e3d195e4785ea0f11937480aee273ad42758e"
     },
     "source/gamelib/loadimg.c": {
-      "distributed_sha256": "09c4d1c684434e8c77b8df05751cce7fb0b89e47c1cbc93410b19366a9ca6739",
+      "distributed_sha256": "9aa6903b5195732fd9b95c022afa595c5c6939990fdc02a0d8913857256fd547",
       "modified": true,
       "summary": "Validate legacy PCX sprite headers, read uncompressed indexed PCX scanlines, and represent RIFF/WAVE paths used as animation frames with an empty frame. Declare the resolved source member and original bitmap dimensions for independent sprite reconstruction proof. Preserve native palette-only filename probing, three-plane refusals and final RGB table conversion without interpreting palette bytes as sprite dimensions. Honor the original explicit extension and suffix search order from 3859. Keep bitmap row reads within the requested output width. Preserve source-defined grayscale PNG palette acceptance and identity colours with bounded destination writes.",
       "topics": [

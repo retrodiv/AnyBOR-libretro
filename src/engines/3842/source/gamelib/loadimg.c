@@ -878,6 +878,7 @@ static int open_type = 0;
 
 static int openimage_explicit_extension(char *filename, char *packfile, int palette_only)
 {
+    #pragma pack(push, 8)
     static const struct {
         const char *extension;
         int type;
@@ -888,6 +889,7 @@ static int openimage_explicit_extension(char *filename, char *packfile, int pale
         {".pcx", OT_PCX, openpcx},
         {".bmp", OT_BMP, openbmp},
     };
+    #pragma pack(pop)
     char name[128];
     size_t length = strlen(filename);
     const char *extension = length >= 4 ? filename + length - 4 : "";

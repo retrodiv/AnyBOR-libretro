@@ -26,14 +26,14 @@ class Reconstructed6392Tests(unittest.TestCase):
         source = (ENGINE / 'openbor.c').read_text()
         attack = function(source, 'do_attack')
         anchor = '        const int juggle_on_fall ='
-        support = ''
-        if anchor in attack:
-            profile_ids = (ENGINE / 'source/openborscript/profile_ids.h').read_text()
-            support = function(profile_ids, 'obor_profile_uses_5134_script_ids')
-        else:
+        if anchor not in attack:
             anchor = '        // If in the air, then check the juggle cost.'
         start = attack.index(anchor)
         reject = attack[start:attack.index('        temp = self;', start)]
+        support = ''
+        if 'obor_profile_uses_5134_script_ids(' in reject:
+            profile_ids = (ENGINE / 'source/openborscript/profile_ids.h').read_text()
+            support = function(profile_ids, 'obor_profile_uses_5134_script_ids')
         debit = re.search(r'if\(inair\(self\)\)\s*\{\s*'
                           r'self->modeldata.jugglepoints.current = '
                           r'self->modeldata.jugglepoints.current - attack->jugglecost;[^}]*\}',

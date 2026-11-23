@@ -17,7 +17,7 @@ static s_move move;
 static s_move *moves[] = {&move};
 static float platform_surfaces[1][8];
 static s_terrain walls[1], holes[1];
-static s_level stage = {.walls = walls, .holes = holes};
+static s_level stage;
 s_level *level = &stage;
 static int wall_index, in_hole;
 static unsigned inherited_gravity, hole_callbacks, unlinks;
@@ -159,6 +159,8 @@ static void check_hole_and_basemap(void)
 
 int main(void)
 {
+    stage.walls = walls;
+    stage.holes = holes;
     const unsigned revisions[] = {7369, 7389, 7390, 7391, 7420, 7426, 7427, 7434, 7435, 7533};
     for (size_t i = 0; i < sizeof(revisions) / sizeof(*revisions); ++i)
     {

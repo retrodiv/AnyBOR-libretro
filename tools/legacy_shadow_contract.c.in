@@ -177,7 +177,8 @@ static void check_terrain_shadows(void)
     static s_anim platform_animation = {.platform = platform_shape};
     static entity actor, platform;
     static s_terrain walls[] = {{.height = 6}, {.height = 3}};
-    static s_level stage = {.numwalls = 2, .walls = walls};
+    static s_level stage = {.numwalls = 2};
+    stage.walls = walls;
     actor.animation = &animation;
     actor.position.x = 100.75f;
     actor.position.y = 12.f;

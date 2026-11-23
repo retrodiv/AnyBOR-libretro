@@ -41,7 +41,7 @@ fail:
 
 modelCommands getModelCommand(List *list, char *usercommand)
 {
-    return (modelCommands) getCommandlistCommand(list, usercommand);
+    return (modelCommands)(uintptr_t)getCommandlistCommand(list, usercommand);
 }
 
 modelstxtCommands getModelstxtCommand(List *list, char *usercommand)

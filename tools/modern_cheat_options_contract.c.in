@@ -82,9 +82,9 @@ static LONG read_cheat_constant(const char *constname)
 #undef printf
 #define printf record_diagnostic
 #undef _menutext
-#define _menutext(selected, column, line, text) record_row(column, text)
+#define _menutext(selected, column, line, text) ((void)(line), record_row(column, text))
 #undef _menutextm
-#define _menutextm(selected, line, shift, text) record_message(text)
+#define _menutextm(selected, line, shift, text) ((void)(line), record_message(text))
 #undef Tr
 #define Tr(text) (text)
 #define update(...) menu_frame()

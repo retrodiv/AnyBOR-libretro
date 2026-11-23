@@ -470,13 +470,15 @@ static void check_animation_and_model_members(entity *actor, int legacy_names)
 {
     static s_anim first_animation = {.numframes = 9}, second_animation = {.numframes = 10};
     static s_model first_model, first_default, second_model, second_default;
-    static entity donor = {.object_type = OBJECT_TYPE_ENTITY, .animation = &second_animation,
-                           .model = &second_model, .defaultmodel = &second_default};
+    static entity donor = {.object_type = OBJECT_TYPE_ENTITY};
     const struct {char *name; const char *constant; void *starting; void *replacement;} properties[] = {
         {"animation", "ENTITY_PROPERTY_ANIMATION", &first_animation, &second_animation},
         {"model", "ENTITY_PROPERTY_MODEL", &first_model, &second_model},
         {"model_default", "ENTITY_PROPERTY_MODEL_DEFAULT", &first_default, &second_default},
     };
+    donor.animation = &second_animation;
+    donor.model = &second_model;
+    donor.defaultmodel = &second_default;
     actor->animation = &first_animation;
     actor->model = &first_model;
     actor->defaultmodel = &first_default;

@@ -625,7 +625,7 @@
       "upstream_sha256": "c4e98bd87c81e2941474a09ab0e0c95eb283717e46489df1442f9dfee3f900a8"
     },
     "source/openborscript/commands.c": {
-      "distributed_sha256": "1c30349ed7b52b530ea5cd048a794e8c3f2ebe7976379f27f62c02cc6f457540",
+      "distributed_sha256": "7855418474e5c053f122a32881e83ac9e491ac04745519e72a608d2fe509d7eb",
       "modified": true,
       "summary": "Convert the command-list lookup result to its command enumeration explicitly instead of through a plain pointer cast.",
       "topics": [

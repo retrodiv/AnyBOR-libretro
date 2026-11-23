@@ -301,9 +301,21 @@ class LooseCasePathTests(unittest.TestCase):
             nested.mkdir(parents=True)
             (nested / 'Frame.GIF').write_bytes(b'authored')
             parts = [letter * 190 for letter in 'ABCDEFGHIJKL']
-            long_folder = case.joinpath(*parts)
-            long_folder.mkdir(parents=True)
-            (long_folder / 'Frame.GIF').write_bytes(b'authored')
+            # Create the fixture one component at a time on hosts with a
+            # shorter maximum path than the query passed to the engine.
+            directory = os.open(case, os.O_RDONLY | os.O_DIRECTORY)
+            try:
+                for part in parts:
+                    os.mkdir(part, dir_fd=directory)
+                    child = os.open(part, os.O_RDONLY | os.O_DIRECTORY, dir_fd=directory)
+                    os.close(directory)
+                    directory = child
+                file = os.open('Frame.GIF', os.O_WRONLY | os.O_CREAT | os.O_EXCL,
+                               0o600, dir_fd=directory)
+                with os.fdopen(file, 'wb') as fixture:
+                    fixture.write(b'authored')
+            finally:
+                os.close(directory)
             long_query = '/'.join(parts + ['Frame.GIF']).lower()
             for entry in pin['engines']:
                 engine = entry['build']
