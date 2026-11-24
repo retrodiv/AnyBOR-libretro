@@ -350,6 +350,13 @@ void obor_fault_abort(uint32_t kind, uintptr_t address)
     siglongjmp(guard->resume, 1);
 }
 
+#if defined(__linux__) && !defined(__ANDROID__)
+void obor_fault_low_ram(void)
+{
+    if (current_guard()) obor_fault_abort(OBOR_FAULT_LOW_RAM, 0);
+}
+#endif
+
 static void memory_signal(int signal, siginfo_t *info, void *context)
 {
     fault_guard *guard = current_guard();

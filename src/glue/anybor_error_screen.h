@@ -5,6 +5,7 @@
 
 #include <stdint.h>
 #include <string.h>
+#include "anybor_abi.h"
 #include "anybor_hankaku.h"
 
 #define OBOR_ERROR_WIDTH 320
@@ -74,8 +75,10 @@ static void obor_error_render(uint32_t *pixels, const char *game,
     obor_error_wrapped(pixels, 82, engine, 82);
     obor_error_line(pixels, 10, 106, "PROBLEM:");
     obor_error_wrapped(pixels, 118, reason, 190);
-    obor_error_line(pixels, 10, 207, "Change Engine build in Core Options,");
-    obor_error_line(pixels, 10, 219, "then select Restart to try again.");
+    if (!reason || strcmp(reason, OBOR_LOW_RAM_MESSAGE)) {
+        obor_error_line(pixels, 10, 207, "Change Engine build in Core Options,");
+        obor_error_line(pixels, 10, 219, "then select Restart to try again.");
+    }
 }
 
 #endif

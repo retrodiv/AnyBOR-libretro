@@ -365,6 +365,9 @@ int obor_protect_call(void (*execute)(void *), void *context, const char *phase)
             else if (fault.kind == OBOR_FAULT_STATE)
                 snprintf(engine_fault_message, sizeof(engine_fault_message),
                          "State restore failed after modifying engine memory.\nDuring: %s", phase);
+            else if (fault.kind == OBOR_FAULT_LOW_RAM)
+                snprintf(engine_fault_message, sizeof(engine_fault_message),
+                         "%s", OBOR_LOW_RAM_MESSAGE);
             else
             snprintf(engine_fault_message, sizeof(engine_fault_message),
 #ifdef _WIN32

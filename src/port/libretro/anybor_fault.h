@@ -4,7 +4,8 @@
 #define OBOR_FAULT_H
 #include <stdint.h>
 #include <stddef.h>
-enum { OBOR_FAULT_MEMORY = 1, OBOR_FAULT_ALLOCATOR, OBOR_FAULT_STACK, OBOR_FAULT_STATE };
+enum { OBOR_FAULT_MEMORY = 1, OBOR_FAULT_ALLOCATOR, OBOR_FAULT_STACK,
+       OBOR_FAULT_STATE, OBOR_FAULT_LOW_RAM };
 #define OBOR_STACK_EMERGENCY_BYTES (64U * 1024U)
 typedef struct {
     uint32_t code;
@@ -25,6 +26,11 @@ int obor_fault_run_stack(void (*execute)(void *), void *context,
 /* dlmalloc's fatal corruption/usage hooks call this before entering CRT abort.
  * A worker/out-of-scope call retains the ordinary abort behaviour. */
 void obor_fault_abort(uint32_t kind, uintptr_t address) __attribute__((noreturn));
+#if defined(__linux__) && !defined(__ANDROID__)
+/* Call after releasing the heap lock. Calls outside the engine guard keep
+ * the allocator's normal NULL result. */
+void obor_fault_low_ram(void);
+#endif
 void obor_fault_allocator_activity(int entering);
 /* POSIX watcher workers have no recovery/longjmp target. The engine owner
  * pins signal dispatch before publishing a worker and releases it after join,

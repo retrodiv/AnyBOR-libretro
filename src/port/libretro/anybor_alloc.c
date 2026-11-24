@@ -23,6 +23,7 @@
 
 #include "anybor_abi.h" /* OBOR_ARENA_BASE_VA / OBOR_ARENA_MAX_SZ */
 #include "anybor_fault.h"
+#include "anybor_runtime.h"
 #include "anybor_write_watch.h"
 #include "anybor_resources.h"
 void obor_state_owned_discard(void);
@@ -72,11 +73,70 @@ void obor_state_coded_discard(void);
 #endif
 #define OBOR_STACK_RESERVE (16ULL * 1024 * 1024)
 
+#if defined(__linux__) && !defined(__ANDROID__)
+#define OBOR_CHECK_LINUX_RAM 1
+#else
+#define OBOR_CHECK_LINUX_RAM 0
+#endif
+
 static char *arena_brk;  /* current break (grows, never shrinks) */
 static char *arena_lim;  /* end of the reservation */
 /* Sum of complete live dlmalloc chunks.  Maintaining it at the wrapped API
  * avoids a full heap walk merely to decide whether sparse encoding pays. */
 static uint64_t arena_live_chunk_bytes;
+
+#if OBOR_CHECK_LINUX_RAM
+/* MAP_NORESERVE can succeed even when later writes would trigger the OOM
+ * killer. Budget the whole arena extent, including pages not yet touched.
+ * Recheck available RAM as it grows to account for other consumers. */
+static size_t arena_ram_limit OBOR_RUNTIME;
+static size_t arena_ram_credit OBOR_RUNTIME;
+static __thread int arena_ram_refused;
+static const size_t ram_headroom = 128U << 20;
+
+extern FILE *__real_fopen(const char *, const char *);
+extern int __real_fclose(FILE *);
+
+static size_t linux_available_ram(void)
+{
+    /* The heap lock is held on the growth path. Keep this system read out
+     * of the engine's resource tracking and path wrappers. */
+    FILE *file = __real_fopen("/proc/meminfo", "r");
+    if (!file) return SIZE_MAX;
+    char line[128];
+    size_t available = SIZE_MAX;
+    while (fgets(line, sizeof(line), file)) {
+        unsigned long long kib;
+        if (sscanf(line, "MemAvailable: %llu kB", &kib) != 1)
+            continue;
+        if (kib <= SIZE_MAX / 1024)
+            available = (size_t)kib * 1024;
+        break;
+    }
+    __real_fclose(file);
+    return available;
+}
+
+static int arena_ram_admit(size_t growth)
+{
+    size_t used = (size_t)(arena_brk - OBOR_ARENA_BASE);
+    if (used > arena_ram_limit || growth > arena_ram_limit - used)
+        return 0;
+    if (growth > arena_ram_credit) {
+        size_t available = linux_available_ram();
+        size_t spare = available > ram_headroom ? available - ram_headroom : 0;
+        if (growth > spare) return 0;
+        /* Bound the amount awarded from one reading, even after a large
+         * allocation. Most small allocator extensions use this credit. */
+        size_t credit = spare - growth;
+        const size_t interval = 8U << 20;
+        arena_ram_credit = credit < interval ? credit : interval;
+    } else {
+        arena_ram_credit -= growth;
+    }
+    return 1;
+}
+#endif
 
 char *obor_arena_base(void) { return OBOR_ARENA_BASE; }
 char *obor_stack_ptr(void) { return OBOR_ARENA_BASE + OBOR_GUARD_SZ; }
@@ -116,6 +176,11 @@ static int arena_init(void)
         return 0;
     }
     mprotect(OBOR_ARENA_BASE, OBOR_GUARD_SZ, PROT_NONE);
+#endif
+#if OBOR_CHECK_LINUX_RAM
+    size_t available = linux_available_ram();
+    arena_ram_limit = available > ram_headroom ? available - ram_headroom : 0;
+    arena_ram_credit = 0;
 #endif
     arena_brk = OBOR_ARENA_BASE + OBOR_STACK_RESERVE;
     arena_lim = OBOR_ARENA_BASE + OBOR_ARENA_MAX;
@@ -165,6 +230,9 @@ int obor_arena_grow_to(size_t used)
 #if defined(_WIN32)
         if (!VirtualAlloc(arena_brk, (size_t)(want - arena_brk), MEM_COMMIT,
                           PAGE_READWRITE))
+            return 0;
+#elif OBOR_CHECK_LINUX_RAM
+        if (!arena_ram_admit((size_t)(want - arena_brk)))
             return 0;
 #endif
         arena_brk = want;
@@ -292,11 +360,16 @@ static void *obor_morecore(intptr_t incr)
         return (void *)-1; /* MFAIL */
     if (incr <= 0)
         return arena_brk; /* no trim support; report current break */
-    if (arena_brk + incr > arena_lim)
+    if ((size_t)incr > (size_t)(arena_lim - arena_brk))
         return (void *)-1;
 #if defined(_WIN32)
     if (!VirtualAlloc(arena_brk, (size_t)incr, MEM_COMMIT, PAGE_READWRITE))
         return (void *)-1;
+#elif OBOR_CHECK_LINUX_RAM
+    if (!arena_ram_admit((size_t)incr)) {
+        arena_ram_refused = 1;
+        return (void *)-1;
+    }
 #endif
     void *old = arena_brk;
     arena_brk += incr;
@@ -1251,11 +1324,30 @@ static void profile_large_alloc(const char *kind, size_t bytes, void *result,
                 kind, (unsigned long long)bytes, result, caller);
 }
 
+static void allocation_begin(void)
+{
+#if OBOR_CHECK_LINUX_RAM
+    arena_ram_refused = 0;
+#endif
+    obor_fault_allocator_activity(1);
+}
+
+static void allocation_end(const void *result)
+{
+    obor_fault_allocator_activity(0);
+#if OBOR_CHECK_LINUX_RAM
+    if (!result && arena_ram_refused)
+        obor_fault_low_ram();
+#else
+    (void)result;
+#endif
+}
+
 void *__wrap_malloc(size_t n)
 {
-    obor_fault_allocator_activity(1);
+    allocation_begin();
     void *result = dlmalloc(n);
-    obor_fault_allocator_activity(0);
+    allocation_end(result);
     if (result)
         arena_live_chunk_bytes += chunksize(mem2chunk(result));
     profile_large_alloc("malloc", n, result, __builtin_return_address(0));
@@ -1265,9 +1357,9 @@ void *__wrap_malloc(size_t n)
 
 void *__wrap_calloc(size_t n, size_t sz)
 {
-    obor_fault_allocator_activity(1);
+    allocation_begin();
     void *result = dlcalloc(n, sz);
-    obor_fault_allocator_activity(0);
+    allocation_end(result);
     if (result)
         arena_live_chunk_bytes += chunksize(mem2chunk(result));
     size_t bytes = sz && n > SIZE_MAX / sz ? SIZE_MAX : n * sz;
@@ -1280,9 +1372,9 @@ void *__wrap_realloc(void *p, size_t n)
 {
     if (!p || in_arena(p)) {
         size_t old_chunk = p ? chunksize(mem2chunk(p)) : 0;
-        obor_fault_allocator_activity(1);
+        allocation_begin();
         void *result = dlrealloc(p, n);
-        obor_fault_allocator_activity(0);
+        allocation_end(result);
         if (result) {
             obor_resources_forget_owner(p);
             profile_live_remove(p);
@@ -1321,9 +1413,9 @@ void __wrap_free(void *p)
 char *__wrap_strdup(const char *s)
 {
     size_t n = strlen(s) + 1;
-    obor_fault_allocator_activity(1);
+    allocation_begin();
     char *d = (char *)dlmalloc(n);
-    obor_fault_allocator_activity(0);
+    allocation_end(d);
     if (d) {
         arena_live_chunk_bytes += chunksize(mem2chunk(d));
         memcpy(d, s, n);

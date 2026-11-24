@@ -30,6 +30,7 @@ extern "C" {
 #define OBOR_ABI_VERSION 12u
 
 #define OBOR_EXIT_MEMORY_FAULT (-2)
+#define OBOR_LOW_RAM_MESSAGE "Not enough RAM to run this game."
 #define OBOR_PROFILE_ATTACK_HISTORY_FOUR (1u << 0)
 #define OBOR_PROFILE_SELECTION_ESCAPE_9 (1u << 1)
 #define OBOR_PROFILE_LNS_6330 (1u << 2)
