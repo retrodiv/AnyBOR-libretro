@@ -90,7 +90,7 @@
     "NOTICE.txt": "6a490e400674c0667aed3a1ead42fc380bea3e15c4e9c5d243fb7171703bb2f0",
     "PROVENANCE.md": "ffa19c18ebee5aa7e7665acc2a16a25e9d5e437fcbb9eacf0c1b0193e7bfee1f",
     "README.md": "77cff355f9fb5658912c7e0b4d7914134cfab1c23b6b2188433b63bd649dc3f5",
-    "SBOM.spdx.json": "aee14549bf257fa7b3ac99b4c9df59b154907b98cd20c7b94209161f7f279e4d",
+    "SBOM.spdx.json": "be229245b215d964713de6d4a4c8c0a58f6260c4033d74a2b8631a650ed7058b",
     "SECURITY.md": "3aaf7f8f89ef7abc1cac8d4f25f358a5529410673fa04d97ddc123ae21f96f4b",
     "anybor_libretro.info": "083a01051f0c5a610372ffe4d6f45b23cb94c6b652c4e17b556da59de7a19f95",
     "docs/ANYBOR.md": "01a3e0ceb799eb807205884a37e653e77a6c820a8e6821fff227b63ce7bff85d",
@@ -2979,7 +2979,7 @@
     "src/glue/anybor_engine_executables.h": "7614b46be69675b8213800e3e7da388a7c37c1cffb57d3f1cb5fb7bcc2163805",
     "src/glue/anybor_engine_identity.h": "5419b31620c56e859365c3845c7d318ca77840a5c89e2b1f65e26dc9b4ea0773",
     "src/glue/anybor_engine_resources.h": "8196f17ba5110e51c4b71388f005e3beb26c2cc72aaf0fb559a255c10842223b",
-    "src/glue/anybor_engines.h": "d1024632a76e0c5c407d857256a5336238ce764a99f1ce5c21e973838501f9fb",
+    "src/glue/anybor_engines.h": "86d51f36baa8c90463474497b1e2009c2f65499c766fc8043b277cb1d3766f41",
     "src/glue/anybor_error_screen.h": "8db0c375fc7e5f090d5207efcb419d5ee35faabb566a5d2f0f043b98d1f5ced7",
     "src/glue/anybor_file64.h": "cc85ee17c861670ba08272bbd80495c34fb262f7be31f711b769af4ee210780a",
     "src/glue/anybor_game_content.h": "e20106cfbfb443afa760098c8a72d3dbdeb7723da1c01445ac714deb6d2f528d",
@@ -3026,7 +3026,7 @@
     "src/glue/exports.macho": "97150280ad24c4636b55e7fa760bbb3060bd9b200716547c5b939899751fde31",
     "src/glue/exports.map": "6313cbda366a9d3f60c42ace4a660baf39b6037f40a92bf486741a424c754c50",
     "src/glue/libretro.cpp": "b4451f58cf9e4a9d62d2ed0605a1d8ed36af0af5a0ba8f4ad8e539e28d072036",
-    "src/pin.json": "5565276ed8a1e7a8e647ce63e0bc776127ba7c402808b93b0e882146297b4696",
+    "src/pin.json": "248a83e52eedc3979060fad7c08ee3032283db226bdc248464ec7431ccf07afc",
     "src/port/libretro/anybor_abi.h": "2007b7091d16b1a28724b24d210551326490ec386da3162c636746f620572915",
     "src/port/libretro/anybor_adpcm.c": "40eed9f1f6f51f7b3a8d06083b7033945c014d763b896e6319e5e637b475ccc6",
     "src/port/libretro/anybor_alloc.c": "cd4632a00f3ec1e880f085fb2ec7c26c9616412975fca6bed5388ed280d1d135",
@@ -3191,7 +3191,7 @@
     "tools/ai_prepare_contract.c.in": "40e1b6d32a43c86df5bae5f10e38830fc4bd5ffc125d2896e641b0410f640adb",
     "tools/ai_script_callers_contract.c.in": "233dc5596dfc13e44785fc01ac3e0021ecea66bdafdfcdc4ba7217ce1ae58b5d",
     "tools/airborne_state_contract.c.in": "7d903a26cb7388e370cfe245d0081d02c6fdfc14b57dc1bf63508d0f9ecfc5d3",
-    "tools/allocation_ranges_contract.c.in": "2dc2015af01d1cff030f9a135872d87af3e00e41afc95010053de96124aa92d1",
+    "tools/allocation_ranges_contract.c.in": "c5ee5a8864bb671f15eddf9a665494b553caacff70fe53d32f1b7bc8c8378966",
     "tools/animation_default_groups.c.in": "1b47a3892d7df5d5becb26cb394a48caff8018b6faf3a774ee3bb08b9813afe8",
     "tools/animation_delay_contract.c.in": "f9826f0b5478d4901ff6dff8759beff28195f7336edfb0758589b43b165b05c0",
     "tools/animation_dispatch_contract.c.in": "e6456cf20b465b5f0e8ca91f603f13c87c94035b90fd2e63b36220aa25536b0f",
@@ -5403,5 +5403,5 @@
     "tools/zoom_pixels.c.in": "b1964154c7ee6eb28300e75a8cfff5bc7cc59d1e8f544e42bfa7f1fd3ba21763"
   },
   "schema": 1,
-  "version": "0.2.62"
+  "version": "0.2.63"
 }

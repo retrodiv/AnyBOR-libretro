@@ -27,6 +27,20 @@ void obor_write_watch_abandon(void) {}
 #endif
 void obor_fault_allocator_activity(int active) { (void)active; }
 void obor_fault_abort(uint32_t kind, uintptr_t address) { (void)kind; (void)address; abort(); }
+#if OBOR_CHECK_LINUX_RAM
+/* Match the port's linker wrappers using a stable host-memory reading. */
+FILE *__real_fopen(const char *path, const char *mode)
+{
+    assert(!strcmp(path, "/proc/meminfo") && !strcmp(mode, "r"));
+    FILE *file = tmpfile();
+    assert(file);
+    if(fputs("MemAvailable: 1048576 kB\n", file) == EOF) abort();
+    rewind(file);
+    return file;
+}
+int __real_fclose(FILE *file) { return fclose(file); }
+void obor_fault_low_ram(void) { abort(); }
+#endif
 void *__real_malloc(size_t bytes) { return malloc(bytes); }
 void *__real_realloc(void *pointer, size_t bytes) { return realloc(pointer, bytes); }
 void __real_free(void *pointer) { free(pointer); }
