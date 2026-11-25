@@ -110,7 +110,7 @@ unsigned blend_half(register unsigned color1, register unsigned color2)
 // color2 bg colour
 ////////////////////////////////////////////////////////////////////
 
-unsigned char* create_multiply32_tbl(){
+unsigned char* create_multiply32_tbl(void){
 	unsigned i, j;
 	unsigned char* tbl = (unsigned char*)malloc(256*256);
 	if(!tbl) return NULL;
@@ -133,7 +133,7 @@ unsigned blend_multiply32(register unsigned color1, register unsigned color2)
 				  _multiply(color1&0xFF,color2&0xFF));
 }
 
-unsigned char* create_screen32_tbl(){
+unsigned char* create_screen32_tbl(void){
 	unsigned i, j;
 	unsigned char* tbl = (unsigned char*)malloc(256*256);
 	if(!tbl) return NULL;
@@ -155,7 +155,7 @@ unsigned blend_screen32(register unsigned color1, register unsigned color2)
 				  _screen(color1&0xFF,color2&0xFF));
 }
 
-unsigned char* create_overlay32_tbl(){
+unsigned char* create_overlay32_tbl(void){
 	unsigned i, j;
 	unsigned char* tbl = (unsigned char*)malloc(256*256);
 	if(!tbl) return NULL;
@@ -181,7 +181,7 @@ unsigned blend_overlay32(register unsigned color1, register unsigned color2)
 				  _overlay(b1,b2));
 }
 
-unsigned char* create_hardlight32_tbl(){
+unsigned char* create_hardlight32_tbl(void){
 	unsigned i, j;
 	unsigned char* tbl = (unsigned char*)malloc(256*256);
 	if(!tbl) return NULL;
@@ -207,7 +207,7 @@ unsigned blend_hardlight32(register unsigned color1, register unsigned color2)
 				  _hardlight(b1,b2));
 }
 
-unsigned char* create_dodge32_tbl(){
+unsigned char* create_dodge32_tbl(void){
 	unsigned i, j;
 	unsigned char* tbl = (unsigned char*)malloc(256*256);
 	if(!tbl) return NULL;
@@ -231,7 +231,7 @@ unsigned blend_dodge32(register unsigned color1, register unsigned color2)
 	return _color(r>255?255:r, g>255?255:g, b>255?255:b);
 }
 
-unsigned char* create_half32_tbl(){
+unsigned char* create_half32_tbl(void){
 	unsigned i, j;
 	unsigned char* tbl = (unsigned char*)malloc(256*256);
 	if(!tbl) return NULL;
@@ -285,7 +285,7 @@ unsigned blend_channel32(register unsigned color1, register unsigned color2, reg
 #define _channel16(src,dest,alpha) (((src*alpha)+(dest*(255-alpha)))>>8)
 #define _color16(r,g,b) ( ((r)<<11)|((g)<<5)|b )
 
-unsigned char* create_multiply16_tbl(){
+unsigned char* create_multiply16_tbl(void){
 	unsigned i, j;
 	unsigned char* tbl = (unsigned char*)malloc(32*32+64*64);
 	if(!tbl) return NULL;
@@ -308,7 +308,7 @@ unsigned short blend_multiply16(unsigned short color1, unsigned short color2)
 	return _color16(_multiply16(_r1,_r2,0x1F), _multiply16(_g1,_g2,0x3F), _multiply16(_b1,_b2,0x1F));
 }
 
-unsigned char* create_screen16_tbl(){
+unsigned char* create_screen16_tbl(void){
 	unsigned i, j;
 	unsigned char* tbl = (unsigned char*)malloc(32*32+64*64);
 	if(!tbl) return NULL;
@@ -330,7 +330,7 @@ unsigned short blend_screen16(unsigned short color1, unsigned short color2)
 	return _color16(_screen16(_r1,_r2,0x1F), _screen16(_g1,_g2,0x3F), _screen16(_b1,_b2,0x1F));
 }
 
-unsigned char* create_overlay16_tbl(){
+unsigned char* create_overlay16_tbl(void){
 	unsigned i, j;
 	unsigned char* tbl = (unsigned char*)malloc(32*32+64*64);
 	if(!tbl) return NULL;
@@ -356,7 +356,7 @@ unsigned short blend_overlay16(unsigned short color1, unsigned short color2)
 	return _color16(_overlay16(r1,r2,0x10,0x1F),_overlay16(g1,g2,0x20,0x3F),_overlay16(b1,b2,0x10,0x1F));
 }
 
-unsigned char* create_hardlight16_tbl(){
+unsigned char* create_hardlight16_tbl(void){
 	unsigned i, j;
 	unsigned char* tbl = (unsigned char*)malloc(32*32+64*64);
 	if(!tbl) return NULL;
@@ -382,7 +382,7 @@ unsigned short blend_hardlight16(unsigned short color1, unsigned short color2)
 	return _color16(_hardlight16(r1,r2,0x10,0x1F),_hardlight16(g1,g2,0x20,0x3F),_hardlight16(b1,b2,0x10,0x1F));
 }
 
-unsigned char* create_dodge16_tbl(){
+unsigned char* create_dodge16_tbl(void){
 	unsigned i, j;
 	unsigned char* tbl = (unsigned char*)malloc(32*32+64*64);
 	if(!tbl) return NULL;
@@ -420,7 +420,7 @@ unsigned short blend_dodge16(unsigned short color1, unsigned short color2)
 	return _color16(r,g,b);
 }
 
-unsigned char* create_half16_tbl(){
+unsigned char* create_half16_tbl(void){
 	unsigned i, j;
 	unsigned char* tbl = (unsigned char*)malloc(32*32+64*64);
 	if(!tbl) return NULL;

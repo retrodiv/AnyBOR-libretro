@@ -90,7 +90,7 @@
     "NOTICE.txt": "9ec5214fd5a86aeafc58bd23cde013e55da48f8e44b331f8054797ae6dae7283",
     "PROVENANCE.md": "780c5b3846148ade2a6d2989c62e72a94ba3629288cbb6538fe2363efbefedaf",
     "README.md": "d61b36421afc31ec641994b891e1b2cc439cdee9d2865f3ee83422e0c5d3ee56",
-    "SBOM.spdx.json": "e73f3db42ffa8451fdfa058265c88a4d713dada23d661dd4f087e26c572fcaed",
+    "SBOM.spdx.json": "411709095028375c25572660da4ceed03fbdd403180942bdde7a7997c624fa13",
     "SECURITY.md": "3aaf7f8f89ef7abc1cac8d4f25f358a5529410673fa04d97ddc123ae21f96f4b",
     "anybor_libretro.info": "083a01051f0c5a610372ffe4d6f45b23cb94c6b652c4e17b556da59de7a19f95",
     "docs/ANYBOR.md": "6605d7a791f600d978f7de109796a115e371f540a2651f304a683069ec32453d",
@@ -1784,7 +1784,7 @@
     "src/deps/zlib/zlibConfig.cmake.in": "2be5bbd8a8ca8e616832a2e14a3deff82996ca454249cc7f95e02bf596973f01",
     "src/deps/zlib/zutil.c": "1279908a15580224a2c1f377555ffdd150327fed71801aa77fc35978dcb741c8",
     "src/deps/zlib/zutil.h": "a12243cc6d338ffad0c8e3500fbc05bc7fdcdc25a469393b1c2f7e5df307fff3",
-    "src/engines/3400/ANYBOR-SOURCE.json": "894de12053d6f3a73f72a30683cb35a4f226f07ba7a8fbd08fd71cc14f90ca7d",
+    "src/engines/3400/ANYBOR-SOURCE.json": "4b3efa69b12783fdf80caade3f642cfab90a7d3df1c20f1be8728308e6366ed5",
     "src/engines/3400/LICENSE": "f3801b6b2e30b61eb1254d1fc98676dd28b21c124731833f78e853a47f09a9e0",
     "src/engines/3400/Makefile.libretro": "e7ce9ae7726b66483094246af700245a02613e31a5cb3fec9caaddf06c777ad1",
     "src/engines/3400/openbor.c": "0e63945a2c8257a1035577d2cf0f29601115daf2e92f8149d7a6e7aa9e95f8f1",
@@ -1820,7 +1820,7 @@
     "src/engines/3400/source/gamelib/packfile.h": "96d7e2207bdbbf6f84d5c7400d237d28c651b0744c6f13c43d717d65a1239313",
     "src/engines/3400/source/gamelib/palette.c": "74c6bdeba36ceeaeafac9f16230015570ed01f7b7445c5c15147755c6f150d0c",
     "src/engines/3400/source/gamelib/palette.h": "5060886538a973cab663e3351a6acb373a59f1687dda7d499066c4bb94ee0d9b",
-    "src/engines/3400/source/gamelib/pixelformat.c": "9384f295ac3ad181212972cee3a11773d66624916118357485a256e65d0c81ff",
+    "src/engines/3400/source/gamelib/pixelformat.c": "635396eaac26f07fb3f7d082cb5cbc8de388f90246b079d5cb4d1cdef0ddab28",
     "src/engines/3400/source/gamelib/screen.c": "a2bf3a8bb15caed063e7402ba54df234ebd8a579186491349f5b63f92949549e",
     "src/engines/3400/source/gamelib/screen.h": "870cf7cbe3048fac843974fa759864a8a2d79e73069630954d29bcd5856be409",
     "src/engines/3400/source/gamelib/screen16.c": "a64af9346f2f1ba3c8a1e20794eae2df969da143b882f73df6694f579f241607",
@@ -2979,7 +2979,7 @@
     "src/glue/anybor_engine_executables.h": "7614b46be69675b8213800e3e7da388a7c37c1cffb57d3f1cb5fb7bcc2163805",
     "src/glue/anybor_engine_identity.h": "bfb8da7038d2ccc517373f76ae7bb1953a993e2a8086fd936dba7ea7c4d8ec28",
     "src/glue/anybor_engine_resources.h": "8196f17ba5110e51c4b71388f005e3beb26c2cc72aaf0fb559a255c10842223b",
-    "src/glue/anybor_engines.h": "708332e49adf9b00a2cb41f65fb84fb91df0cc3088317066621c84f235b181d2",
+    "src/glue/anybor_engines.h": "82da7594af160f4a5031e4c8417a3d659f92438cbf157e02db8d71a98691a4bb",
     "src/glue/anybor_error_screen.h": "8db0c375fc7e5f090d5207efcb419d5ee35faabb566a5d2f0f043b98d1f5ced7",
     "src/glue/anybor_file64.h": "cc85ee17c861670ba08272bbd80495c34fb262f7be31f711b769af4ee210780a",
     "src/glue/anybor_file_io.h": "575e074bbc6b99075200042c3579a580276320c7f6c32cf189539acec29dd68d",
@@ -3031,7 +3031,7 @@
     "src/glue/exports.macho": "97150280ad24c4636b55e7fa760bbb3060bd9b200716547c5b939899751fde31",
     "src/glue/exports.map": "6313cbda366a9d3f60c42ace4a660baf39b6037f40a92bf486741a424c754c50",
     "src/glue/libretro.cpp": "163b7d2ecf8336ed701d8fc13edfcf4199f7f02203aaa5b29e9645abfb2c65d4",
-    "src/pin.json": "23c9ad83e8b020ebcdfbd371fcf6fab3cb4e4608ed995bef9da0ca45d3193150",
+    "src/pin.json": "6bb99d530dc870f57b417a5556768b103579d025385792c3337523205c82de3e",
     "src/port/libretro/anybor_abi.h": "4aa2a3b7bb3e8f05d26ef01f4de2b27c68acddf5857e1528651713dd4b75008e",
     "src/port/libretro/anybor_adpcm.c": "40eed9f1f6f51f7b3a8d06083b7033945c014d763b896e6319e5e637b475ccc6",
     "src/port/libretro/anybor_alloc.c": "cd4632a00f3ec1e880f085fb2ec7c26c9616412975fca6bed5388ed280d1d135",
@@ -5414,5 +5414,5 @@
     "tools/zoom_pixels.c.in": "b1964154c7ee6eb28300e75a8cfff5bc7cc59d1e8f544e42bfa7f1fd3ba21763"
   },
   "schema": 1,
-  "version": "0.2.69"
+  "version": "0.2.70"
 }

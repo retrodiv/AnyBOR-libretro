@@ -394,7 +394,7 @@
       "upstream_sha256": "f3496a84488681e9907d45c5436d50e2ff64db79698963cb999ee96cc9ef2e05"
     },
     "source/gamelib/pixelformat.c": {
-      "distributed_sha256": "9384f295ac3ad181212972cee3a11773d66624916118357485a256e65d0c81ff",
+      "distributed_sha256": "635396eaac26f07fb3f7d082cb5cbc8de388f90246b079d5cb4d1cdef0ddab28",
       "modified": true,
       "summary": "Bound clip endpoints without signed overflow while retaining native color and draw-method initialization.",
       "topics": [
