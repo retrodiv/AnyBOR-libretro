@@ -34,13 +34,25 @@ def read_ppm(path):
 def check_option_order(result, profile_count, capacity, version):
     """Check complete registration, including every manual build range."""
     assert profile_count > 0 and capacity >= 4
-    expected = ["anybor_crt_tv", "anybor_analog", "anybor_rumble", "anybor_macros",
+    expected = ["anybor_crt_tv", "anybor_crt_oversize_handling", "anybor_os_screen_orientation",
+                "anybor_image_rotation", "anybor_analog", "anybor_rumble", "anybor_macros",
                 "anybor_engine", "anybor_engine_3000_3499", "anybor_engine_3500_3749",
                 "anybor_engine_3750_3999", "anybor_engine_4000_4999", "anybor_engine_5000_plus"]
     expected += ["anybor_state_content", "anybor_state_compression", "anybor_gamelog",
                  "anybor_clear_local_data", "anybor_clear_game_cache", "anybor_clear_all_caches"]
     orders = re.findall(r"^option_order=([^\r\n]*)$", result, re.M)
     assert orders and all(order.split("|") == expected for order in orders), result
+
+
+def rotate(frame, turn):
+    width, height, pixels = frame
+    rows = [pixels[y * width * 3:(y + 1) * width * 3] for y in range(height)]
+    matrix = [[row[x:x + 3] for x in range(0, len(row), 3)] for row in rows]
+    if turn == "Left":
+        return height, width, b"".join(pixel for col in reversed(list(zip(*matrix))) for pixel in col)
+    if turn == "Right":
+        return height, width, b"".join(pixel for col in zip(*matrix[::-1]) for pixel in col)
+    return width, height, b"".join(pixel for row in matrix[::-1] for pixel in row[::-1])
 
 
 def main():
@@ -65,7 +77,8 @@ def main():
             system = work / (engine + "-" + label)
             system.mkdir()
             env = {k: v for k, v in os.environ.items() if not k.startswith("OBOR_")}
-            env.update(OBOR_ENGINE=engine, OBOR_VIDEO_TRACE="1", OBOR_CHECK_FDS="1")
+            env.update(OBOR_ENGINE=engine, OBOR_VIDEO_TRACE="1", OBOR_CHECK_FDS="1",
+                       OBOR_CHECK_GEOMETRY="extent")
             env.update({key: str(value) for key, value in options.items()})
             if options.get("OBOR_SAVE_STATE"):
                 Path(options["OBOR_SAVE_STATE"]).unlink(missing_ok=True)
@@ -248,6 +261,76 @@ def main():
                 _, toggled = run("6412", pak, label + "-toggle-off", label,
                                  OBOR_CRT_TV="On", OBOR_CRT_TOGGLE_AT=100)
                 assert toggled == native, "Disabling CRT must restore the complete native frame"
+
+        def make_grid_pak(width, height):
+            members = make_fixture.files()
+            members["data/video.txt"] = ("video %dx%d\n" % (width, height)).encode("ascii")
+            image = make_fixture.png(width, height, lambda x, y: 1 + ((x // 7 + y // 11) % 3))
+            for name in members:
+                if name.startswith("data/bgs/"):
+                    members[name] = image
+            pak = work / ("rotation-%dx%d.pak" % (width, height))
+            make_fixture.write_pak(pak, members)
+            return pak
+
+        crt = dict(OBOR_CRT_TV="On", OBOR_HOST_ACCEPT_ROTATION=1)
+        portrait = make_grid_pak(224, 288)
+        _, native = run("6412", portrait, "portrait-native", "224x288")
+        _, horizontal = run("6412", portrait, "portrait-horizontal", "640x480", **crt)
+        for turn, size in (("Left", "288x224"), ("Right", "288x224"), ("Upside Down", "224x288")):
+            result, turned = run("6412", portrait, "crt-off-" + turn, size,
+                                 OBOR_IMAGE_ROTATION=turn, OBOR_CRT_ORIENTATION="Vertical",
+                                 OBOR_CRT_OVERSIZE="W:Keep H:240", OBOR_HOST_ACCEPT_ROTATION=1)
+            assert turned == rotate(native, turn) and "rotation=" not in result
+        _, left = run("6412", portrait, "portrait-left", "288x224", OBOR_IMAGE_ROTATION="Left", **crt)
+        assert left == rotate(native, "Left")
+        result, vertical = run("6412", portrait, "portrait-vertical", "288x224",
+                               OBOR_CRT_ORIENTATION="Vertical", **crt)
+        assert vertical == rotate(native, "Right")
+        assert rotate(vertical, "Left") == native
+        assert "rotation=1 frame=0 accepted=1" in result and "aspect=0.777778" in result
+        assert "rotation=0 " in result, "Unload must release the paired turn"
+        _, inverted = run("6412", portrait, "portrait-vertical-inverted", "288x224",
+                          OBOR_CRT_ORIENTATION="Vertical", OBOR_IMAGE_ROTATION="Upside Down", **crt)
+        assert inverted == left
+        result, cancelled = run("6412", portrait, "portrait-cancelled", "640x480",
+                                OBOR_CRT_ORIENTATION="Vertical", OBOR_IMAGE_ROTATION="Right", **crt)
+        assert cancelled == horizontal
+        assert "rotation=3 frame=0 accepted=1" in result and "aspect=0.750000" in result
+        result, refused = run("6412", portrait, "portrait-refused", "480x640",
+                              OBOR_CRT_TV="On", OBOR_CRT_ORIENTATION="Vertical", OBOR_IMAGE_ROTATION="Right")
+        assert refused == rotate(horizontal, "Right")
+        assert "rotation=3 frame=0 accepted=0" in result and "rotation=0 frame=0 accepted=0" in result
+        state = work / "rotation.state"
+        for before, size, expected, request in (("Horizontal", "288x224", vertical, 1),
+                                                 ("Vertical", "640x480", horizontal, 0)):
+            result, changed = run("6412", portrait, "live-from-" + before, size,
+                                  OBOR_CRT_ORIENTATION=before, OBOR_CRT_ORIENTATION_TOGGLE_AT=100,
+                                  OBOR_SAVE_AT=90, OBOR_SAVE_STATE=state, OBOR_LOAD_AT=120,
+                                  OBOR_LOAD_STATE=state, OBOR_RESET_AT=140, **crt)
+            assert changed == expected
+            assert f"rotation={request} frame=100 accepted=1" in result
+
+        wide = make_grid_pak(1920, 1080)
+        for mode, width, height, border in (("W:640 H:480", 640, 480, 60),
+                                             ("W:Keep H:480", 1920, 480, 60),
+                                             ("W:320 H:240", 320, 240, 30),
+                                             ("W:Keep H:240", 1920, 240, 30)):
+            result, frame = run("6412", wide, "wide-" + mode.replace(" ", "-"), f"{width}x{height}",
+                                OBOR_CRT_OVERSIZE=mode, **crt)
+            assert "aspect=1.333333" in result
+            stride = width * 3
+            pixels = frame[2]
+            assert not any(pixels[:border * stride]) and not any(pixels[-border * stride:])
+            assert any(pixels[border * stride:(border + 1) * stride])
+            assert any(pixels[-(border + 1) * stride:-border * stride])
+        wide = make_grid_pak(1080, 1920)
+        result, frame = run("6412", wide, "vertical-keep", "1920x480", OBOR_CRT_OVERSIZE="W:Keep H:480",
+                            OBOR_CRT_ORIENTATION="Vertical", **crt)
+        assert "aspect=0.750000" in result
+        stride = 1920 * 3
+        assert not any(frame[2][:60 * stride]) and not any(frame[2][-60 * stride:])
+        assert any(frame[2][60 * stride:61 * stride]) and any(frame[2][-61 * stride:-60 * stride])
         print("CRT runtime regressions: OK", flush=True)
 
 

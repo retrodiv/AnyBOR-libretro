@@ -142,9 +142,9 @@ static bool obor_content_engine_value(const char *value)
  * own grammar and cannot introduce configuration sections from a string. */
 static bool obor_content_rule_section(const char *text, size_t n, obor_content_rules &rules)
 {
-    const char *prefix = "[pak-imohash:";
-    bool zip = n >= 12 && !strncmp(text, "[zip-imohash:", 12);
-    if (zip) prefix = "[zip-imohash:";
+    const char zip_prefix[] = "[imohash:zip:";
+    bool zip = n >= sizeof(zip_prefix)-1 && !strncmp(text, zip_prefix, sizeof(zip_prefix)-1);
+    const char *prefix = zip ? zip_prefix : "[imohash:pak:";
     const size_t prefix_size = strlen(prefix);
     const char suffix[] = ".overrides]";
     if (n != prefix_size + 32 + sizeof(suffix)-1 ||

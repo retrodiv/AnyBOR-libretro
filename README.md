@@ -111,10 +111,15 @@ range. It is checked under user emulation; real hardware remains unverified.
 Protected-page tracking, hot-page handling and preparation use the same
 policies as the other Linux targets.
 
-Video allocation follows the known content size or starts at 1920x1080 when
-the mode is not yet known. Larger modes expand it on demand; smaller modes
-and CRT option changes reuse the existing allocation. Bounds cover both the
-native raster and its CRT output. Restored frames reannounce their geometry.
+In the **Video** core options, **Adjust for 4:3 CRT TV** fits the game raster
+to a CRT canvas. **OS Screen Orientation** supplies the axes set by the
+system. **Image Rotation** turns the complete picture, including the interface.
+**CRT Oversize Handling** selects the fit for images that exceed the CRT
+limits. See [CRT presentation and image rotation](docs/ANYBOR.md#crt-presentation-and-image-rotation).
+
+Video allocation follows the output size or starts at 1920x1080 when the
+mode is unknown. Larger modes expand it on demand. Smaller modes reuse the
+existing allocation. Restored frames reannounce their geometry as needed.
 Growing the allocation requires frontend support for AV-info changes;
 geometry-only updates remain the fallback when that request is refused.
 
@@ -378,7 +383,8 @@ See [configuration and examples](docs/CONTENT_TRANSFORMS.md).
 
 ## Per-content engine settings
 
-External `AnyBOR.ini` rules can select an engine by a PAK's size and imohash.
+External `AnyBOR.ini` rules can select an engine with
+`imohash:pak:<digest>` for a PAK or `imohash:zip:<digest>` for a ZIP.
 A `.anybor` descriptor can select a relative PAK and optionally its engine,
 including inside a ZIP. Both `engine = 6330` and `engine = v3.0 6330` are accepted.
 A manual core-option choice takes priority. See

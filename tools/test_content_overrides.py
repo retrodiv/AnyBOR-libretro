@@ -40,7 +40,7 @@ int main(int argc,char **argv) {
   fseek(f,0,SEEK_END);long size=ftell(f);unsigned char digest[16];
   bool ok=size>=0&&obor_imohash_read(obor_content_hash_read,f,(uint64_t)size,digest);
   fclose(f);if(!ok)return 3;
-  printf("pak-imohash:");for(unsigned i=0;i<16;++i)printf("%02x",digest[i]);puts("");return 0;
+  printf("imohash:pak:");for(unsigned i=0;i<16;++i)printf("%02x",digest[i]);puts("");return 0;
  }
  if(argc!=5)return 2;
  char out[4096]={0},engine[48]={0},evidence[4608]={0};
@@ -197,12 +197,15 @@ class ContentOverrideTests(unittest.TestCase):
     def test_malformed_duplicate_and_unsupported_selectors_are_rejected(self):
         good = self.ini()
         for text in (good+good, good+'engine=6391\n', good.replace('engine', 'unknown'),
-                     good.replace('pak-imohash:', 'sha256:'), good.replace('.overrides]', ']'),
+                     good.replace('imohash:pak:', 'sha256:'), good.replace('.overrides]', ']'),
                      good.replace('engine = 6330', 'engine = Auto'),
-                     f'[{self.key}.overrides]\n', good.replace(':', ':0', 1),
-                     '[pak-imohash:18446744073709551616:'+'a'*32+'.overrides]\nengine=6330\n',
-                     good.replace('pak-imohash:', 'imohash:'),
-                     good.replace('pak-imohash:', 'zip-imohash:')*2,
+                     f'[{self.key}.overrides]\n', good.replace('imohash:pak:', 'imohash:pak:0'),
+                     '[imohash:pak:18446744073709551616:'+'a'*32+'.overrides]\nengine=6330\n',
+                     good.replace('imohash:pak:', 'imohash:'),
+                     good.replace('imohash:pak:', 'imohash:rar:'),
+                     good.replace('imohash:pak:', 'pak-imohash:'),
+                     good.replace('imohash:pak:', 'zip-imohash:'),
+                     good.replace('imohash:pak:', 'imohash:zip:')*2,
                      good+'\0', 'x'*(524288+1)):
             with self.subTest(text=text[:100]):
                 (self.system / 'AnyBOR.ini').write_text(text)
@@ -213,11 +216,11 @@ class ContentOverrideTests(unittest.TestCase):
                    '80'*9+'02'+'11'*6, '80'*10+'11'*6)
         for kind in ('pak', 'zip'):
             for digest in invalid:
-                self.ini(key=f'{kind}-imohash:{digest}')
+                self.ini(key=f'imohash:{kind}:{digest}')
                 self.assertEqual(self.route_content()[0]['ok'], '0', digest)
             # UINT64_MAX is canonical, but no sample read is needed for this PAK.
             digest = 'ff'*9+'01'+'00'*6
-            self.ini(key=f'{kind}-imohash:{digest}')
+            self.ini(key=f'imohash:{kind}:{digest}')
             result, log = self.route_content()
             self.assertEqual(result['ok'], '1', log)
             self.assertEqual(result['engine'], '')
@@ -329,6 +332,7 @@ class ContentOverrideTests(unittest.TestCase):
             run = self.process(['python3', script, path])
             self.assertEqual(run.returncode, 0, run.stderr)
             self.assertEqual(run.stdout.strip(), self.file_key(path, kind))
+            self.assertRegex(run.stdout.strip(), rf'^imohash:{kind}:[0-9a-f]{{32}}$')
         unknown = self.folder / 'game.txt'
         unknown.write_bytes(b'x')
         self.assertNotEqual(self.process(['python3', script, unknown]).returncode, 0)
@@ -345,7 +349,7 @@ class ContentOverrideTests(unittest.TestCase):
                 result, log = self.route_content(target)
                 self.assertEqual(result['ok'], '1', log)
                 self.assertEqual(result['engine'], '3740')
-                self.assertIn('AnyBOR.ini zip-imohash:', result['evidence'])
+                self.assertIn('AnyBOR.ini imohash:zip:', result['evidence'])
         self.ini('6330')
         self.assertEqual(self.route_content(outer)[0]['engine'], '6330')
         (self.system / 'AnyBOR.ini').unlink()

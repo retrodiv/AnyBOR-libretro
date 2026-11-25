@@ -76,7 +76,7 @@ def selector(stream, size, kind='pak'):
         remaining >>= 7
         if not remaining:
             break
-    return f'{kind}-imohash:{digest.hex()}'
+    return f'imohash:{kind}:{digest.hex()}'
 
 
 def main():

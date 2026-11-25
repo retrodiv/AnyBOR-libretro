@@ -139,7 +139,10 @@ The macros account for the active character's facing direction.
 
 | Option | Key | Default and effect |
 |---|---|---|
-| Adjust for 4:3 CRT TV | `anybor_crt_tv` | **Off**. Fit images wider than 364 pixels or taller than 244 pixels into 640x480, preserving their aspect with borders and sharp-bilinear scaling. Smaller images outside 4:3 +/-10% receive native-pixel black padding to 4:3, then the size limits are checked again. Applies during play; see the [video contract](#video-contract-adjust-for-43-crt-tv) for thresholds and examples. |
+| Adjust for 4:3 CRT TV | `anybor_crt_tv` | **Off**. Fits the complete image to the CRT canvas. See [CRT presentation and image rotation](#crt-presentation-and-image-rotation). |
+| CRT Oversize Handling | `anybor_crt_oversize_handling` | **W:640 H:480**. Chooses how to fit images that exceed the CRT limits. |
+| OS Screen Orientation | `anybor_os_screen_orientation` | **Horizontal**. Choose Horizontal for a system rotation of 0° or 180° and Vertical for 90° or 270°. |
+| Image Rotation | `anybor_image_rotation` | **None**. Left and Right rotate the complete game image by 90°. Upside Down rotates it by 180°. |
 | Left analog stick as D-pad | `anybor_analog` | **On**. Adds movement with the left stick. |
 | Rumble | `anybor_rumble` | **On**. Forwards game hit vibration. |
 | Special move macros (L2/R2/L3/R3) | `anybor_macros` | **On**. Executes supported character move sequences. |
@@ -231,14 +234,12 @@ ambiguous or incomplete metadata retains the existing detection rules.
 An accompanying executable's **Build** label without a number is inconclusive;
 its compile date does not supply a build.
 
-When no higher-priority clue supplies a build, a bounded PAK text scan combines
-known command, animation, native-function and literal-constant introductions
-and removals into an inclusive range, then keeps v3.0 6391 when it satisfies that range. Requirements beyond it
-select the first compatible intervening era up to v4.0 7735; requirements
-beyond that stable release select the latest compatible snapshot, currently
-v4.0 8023-dev. Explicit filename intervals retain their highest-profile /
-next-revision policy. Ordinary unlabelled inference offers only automatic
-profiles, including the official releases v3.0 4453, v3.0 4456 and v3.0 6330.
+Unlabelled PAK inference combines bounded observations of commands, animations,
+native calls, literal constants and literal properties. Each requirement
+narrows the set of automatic profiles. The newest profile satisfying all
+requirements wins when the evidence narrows the selection. With only shared
+early requirements or conflicting evidence, Auto keeps its fallback.
+See [content evidence](AUTO_SELECTION_RULES.md).
 Test profiles v3.0 4454-dev, v3.0 4510-dev, v3.0 6392-dev, v3.0 6412-dev,
 v3.0 6453-dev and v3.0 6510-dev are available through an exact filename Build
 tag or a manual choice. The v3.0 6453-dev profile requires one of those
@@ -288,21 +289,26 @@ supply a fallback when no exact syntax rule fires.
 Choose **v3.0 4453** explicitly or use a filename tagged **Build 4453** to select
 that profile. It uses 32-bit color and ignores `colourdepth`.
 
-### Video contract: Adjust for 4:3 CRT TV
+### CRT presentation and image rotation
 
-`Video > Adjust for 4:3 CRT TV` defaults to `Off`. With it enabled, games keep
-their native resolution, aspect and pixels when their width is at most 364,
-their height is at most 244, and their aspect is within 4:3 +/-10%
-(inclusive 1.2 through 22/15, approximately 1.4666667). Small images outside
-that interval receive centred black padding on one axis to reach 4:3 without
-resampling. Fractional extents round up; opposite borders may differ by one
-pixel. The size limits are then checked again, including the padding.
-If the width is greater than 364 **or** the height is greater than 244,
-the complete original image is
-scaled to fit inside a 640x480 frame with a 4:3 display aspect. The image keeps
-its original aspect ratio without cropping. Wider-than-4:3 images have centred
-black borders above and below; narrower images have borders on the left and
-right. An exact 4:3 image fills the frame.
+The Video options apply to the completed game frame, including its interface.
+**Adjust for 4:3 CRT TV** exposes **CRT Oversize Handling** and
+**OS Screen Orientation**. The OS setting supplies the CRT axes and the
+system sets its own rotation angle. **Image Rotation** applies with CRT
+adjustment on or off. Left and Right swap the CRT axes before fitting.
+
+| OS Screen Orientation | Image Rotation | Width × height limit in game coordinates | Canvas aspect |
+| --- | --- | --- | --- |
+| Horizontal | None or Upside Down | 364×244 | 4:3 |
+| Horizontal | Left or Right | 244×364 | 3:4 |
+| Vertical | None or Upside Down | 244×364 | 3:4 |
+| Vertical | Left or Right | 364×244 | 4:3 |
+
+Images within both inclusive limits and within ±10% of the canvas aspect
+keep their native dimensions and pixels. Other small images receive centred
+black padding on one axis to reach the canvas aspect. Fractional extents round
+up. The core then checks both limits again. If either dimension exceeds its
+limit, the oversize mode fits the complete original image to the canvas.
 
 For example, 320x180 becomes 320x240 with 30 black rows above and below;
 320x200 becomes 320x240 with 20 rows on each side. A square 240x240 image
@@ -312,7 +318,7 @@ image inside 640x480 with 80 black rows above and below. Likewise, 364x244
 requires padding and then a 640x480 frame. A 368x240 image becomes 640x417,
 while 320x256 becomes 600x480. Each dimension is checked independently.
 
-With the option set to `On`, the standard OpenBOR video modes become:
+With CRT adjustment on and the default oversize, orientation and rotation settings:
 
 | Mode | Internal resolution | Original aspect | Output frame | Game image inside the frame | Black borders: top / bottom |
 |---|---|---|---|---|---|
@@ -324,23 +330,45 @@ With the option set to `On`, the standard OpenBOR video modes become:
 | 5 | 800x600 | 4:3 | 640x480 | 640x480 | None |
 | 6 | 960x540 | 16:9 | 640x480 | 640x360 | 60 / 60 pixels |
 
-With `Off`, each mode keeps its internal resolution as the output frame,
-without borders added by the core. With `On`, mode 0 stays below both limits
-and **remains 320x240**. Mode 2 uses the 640x480 frame at identity scale and
-also keeps its native pixels. The other modes are scaled to the image
-dimensions above, without cropping. Scaled dimensions are truncated to whole pixels, giving
-362 image lines in mode 1 and 426 in mode 3. None of these seven modes gains
-left or right borders.
+The following example uses a 1920×1080 raster, a horizontal screen and no image rotation.
 
-The output frame and border sizes refer to pixels submitted to the frontend,
-not the physical CRT scan mode.
-Changes apply during play. Scaling uses
-sharp bilinear: integer enlargements stay crisp, while fractional scales
-interpolate at pixel edges to reduce uneven text strokes and scrolling shimmer.
-This changes the image submitted to the frontend; it does not reduce the
-engine's internal drawing resolution or guarantee a frame rate.
-The frontend controls the physical TV mode and interlacing;
-use the core-provided aspect ratio or 4:3 in its video settings.
+| CRT Oversize Handling | Frame sent to the frontend | Picture inside the frame | Black lines at the top and bottom |
+| --- | --- | --- | --- |
+| `W:640 H:480` | 640×480 | 640×360 | 60 each |
+| `W:Keep H:480` | 1920×480 | 1920×360 | 60 each |
+| `W:320 H:240` | 320×240 | 320×180 | 30 each |
+| `W:Keep H:240` | 1920×240 | 1920×180 | 30 each |
+
+The 480-line modes use sharp bilinear filtering. The 240-line modes use a
+weighted area filter. **Keep** preserves samples along the variable axis,
+which is the width of a horizontal canvas or the height of a vertical canvas
+in game coordinates. A narrow image can gain black samples along this axis.
+The reported aspect accounts for the canvas even when its sample dimensions
+have different proportions.
+
+With **Vertical** and **None**, a 1080×1920 image in `W:Keep H:480` fits
+as 360×1920 within a 480×1920 canvas. If the frontend accepts a paired
+rotation request, the core sends that canvas as 1920×480 and the frontend
+compensates for the framebuffer turn. If the frontend declines, the core
+applies the selected **Image Rotation** in software with the same CRT limits.
+The frontend controls the physical CRT mode and refresh rate.
+
+These examples use the default oversize mode and a frontend that accepts core rotation requests.
+
+| Game raster | System rotation | OS Screen Orientation | Image Rotation | Canvas before rotation | Frame sent |
+| --- | --- | --- | --- | --- | --- |
+| 224×288 | None | Horizontal | None | 640×480, with a centered 373×480 picture | 640×480 |
+| 224×288 | Left | Vertical | None | Native 224×288 | 288×224 |
+| 224×288 | None | Horizontal | Left | Native 224×288 | 288×224 |
+| 224×288 | Left | Vertical | Right | 640×480, with a centered 373×480 picture | 640×480 |
+| 288×216 | None | Horizontal | None | Native 288×216 | 288×216 |
+| 288×216 | Left | Vertical | None | 480×640, with a centered 480×360 picture | 640×480 |
+| 288×216 | Left | Vertical | Right | Native 288×216 | 288×216 |
+
+Video options apply during play and persist across Restart and state restoration.
+Changing **OS Screen Orientation** changes the fit while preserving the chosen
+image turn. The frontend combines its system rotation with each updated core
+rotation request.
 
 ## Files and directories
 

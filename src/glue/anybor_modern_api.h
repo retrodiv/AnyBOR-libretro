@@ -40,10 +40,14 @@ static const char *const kModernConstants[] = {
 
 enum { OBOR_MODERN_FILES = 4096, OBOR_MODERN_DIRECTORY = 65536,
        OBOR_MODERN_SOURCE = 2 << 20, OBOR_MODERN_BYTES = 16 << 20 };
+enum obor_modern_role {
+    OBOR_MODERN_UNUSED, OBOR_MODERN_SCRIPT, OBOR_MODERN_MODEL_INDEX, OBOR_MODERN_MODEL,
+    OBOR_MODERN_LEVEL_INDEX, OBOR_MODERN_LEVEL
+};
 struct obor_modern_entry {
     char name[256];
     unsigned start, size;
-    bool required;
+    obor_modern_role role;
 };
 struct obor_modern_state {
     obor_content_scan clock;
@@ -51,14 +55,19 @@ struct obor_modern_state {
     unsigned count, queued, queue[OBOR_MODERN_FILES];
     unsigned calls, shadows;
     bool constant, constant_shadow;
+    unsigned char native[sizeof(g_bound_native)];
+    unsigned char contracts[sizeof(g_bound_contracts)];
 };
+
+enum { OBOR_NATIVE_CALL = 1, OBOR_NATIVE_SHADOW = 2 };
 
 /* These are engine loader paths, shared by every game. Only existing roots
  * and their imports are inspected; unused bundled source is not evidence. */
-static bool modern_root(const char *name)
+static obor_modern_role modern_root(const char *name)
 {
-    if (!strcmp(name, "data/models.txt")) return true;
-    if (strncmp(name, "data/scripts/", 13)) return false;
+    if (!strcmp(name, "data/models.txt")) return OBOR_MODERN_MODEL_INDEX;
+    if (g_content_infer && !strcmp(name, "data/levels.txt")) return OBOR_MODERN_LEVEL_INDEX;
+    if (strncmp(name, "data/scripts/", 13)) return OBOR_MODERN_UNUSED;
     name += 13;
     static const char *const roots[] = {
         "update.c", "updated.c", "updatelogic.c", "updatedlogic.c",
@@ -67,33 +76,39 @@ static bool modern_root(const char *name)
         "respawnall.c", "dieall.c", "timetick.c", "loading.c",
     };
     for (size_t i = 0; i < sizeof(roots) / sizeof(roots[0]); ++i)
-        if (!strcmp(name, roots[i])) return true;
+        if (!strcmp(name, roots[i])) return OBOR_MODERN_SCRIPT;
     static const char *const numbered[] = { "score", "key", "join", "respawn", "die" };
     for (size_t i = 0; i < sizeof(numbered) / sizeof(numbered[0]); ++i) {
         size_t n = strlen(numbered[i]);
         if (!strncmp(name, numbered[i], n) && name[n] >= '1' && name[n] <= '4' &&
-            !strcmp(name + n + 1, ".c")) return true;
+            !strcmp(name + n + 1, ".c")) return OBOR_MODERN_SCRIPT;
+    }
+    return OBOR_MODERN_UNUSED;
+}
+
+static bool modern_require(obor_modern_state *s, const char *name, obor_modern_role role)
+{
+    unsigned lo = 0, hi = s->count;
+    while (lo < hi) {
+        if (!content_budget(&s->clock, 1)) return false;
+        unsigned mid = lo + (hi - lo) / 2;
+        int cmp = strcmp(name, s->entries[mid].name);
+        if (!cmp) {
+            if (s->entries[mid].role == OBOR_MODERN_UNUSED) {
+                s->entries[mid].role = role;
+                s->queue[s->queued++] = mid;
+            }
+            return s->entries[mid].role == role;
+        }
+        if (cmp < 0) hi = mid; else lo = mid + 1;
     }
     return false;
 }
 
-/* models.txt supplies the engine's model paths. A bundled, unreferenced
- * model does not establish a requirement. Only literal load/cache entries
- * are followed; no names, hashes or game identities select an engine. */
-static bool modern_models(obor_modern_state *s, const char *data, size_t n);
-
-static bool modern_require(obor_modern_state *s, const char *name)
+static int modern_compare_names(const void *left, const void *right)
 {
-    for (unsigned i = 0; i < s->count; ++i) {
-        if (!content_budget(&s->clock, 1)) return false;
-        if (strcmp(s->entries[i].name, name)) continue;
-        if (!s->entries[i].required) {
-            s->entries[i].required = true;
-            s->queue[s->queued++] = i;
-        }
-        return true;
-    }
-    return false;
+    return strcmp(static_cast<const obor_modern_entry *>(left)->name,
+                  static_cast<const obor_modern_entry *>(right)->name);
 }
 
 static unsigned modern_function_bit(const char *name)
@@ -106,41 +121,140 @@ static unsigned modern_function_bit(const char *name)
 static bool modern_import(obor_modern_state *s, const char *from, const char *name)
 {
     /* Literal relative imports are resolved against the importing file. */
-    if (modern_require(s, name)) return true;
+    if (modern_require(s, name, OBOR_MODERN_SCRIPT)) return true;
     const char *slash = strrchr(from, '/');
     if (!slash || strstr(name, "..") || name[0] == '/' || strchr(name, ':')) return false;
     char path[256];
     int n = snprintf(path, sizeof(path), "%.*s/%s", (int)(slash - from), from, name);
-    return n >= 0 && (size_t)n < sizeof(path) && modern_require(s, path);
+    return n >= 0 && (size_t)n < sizeof(path) && modern_require(s, path, OBOR_MODERN_SCRIPT);
 }
 
-static bool modern_models(obor_modern_state *s, const char *data, size_t n)
+static bool modern_script(obor_modern_state *s, const char *name, const char *data, size_t n);
+
+static char *modern_text_word(char *&cursor)
 {
-    size_t p = 0;
+    while (isspace((unsigned char)*cursor)) ++cursor;
+    if (!*cursor || *cursor == '#') return NULL;
+    bool quoted = *cursor == '"';
+    if (quoted) ++cursor;
+    char *word = cursor;
+    while (*cursor && (quoted ? *cursor != '"' : !isspace((unsigned char)*cursor) && *cursor != '#'))
+        ++cursor;
+    if (quoted && !*cursor) return NULL;
+    if (*cursor == '#') *cursor = 0;
+    else if (*cursor) *cursor++ = 0;
+    return word;
+}
+
+static void modern_path_fold(char *path)
+{
+    for (; *path; ++path)
+        *path = *path == '\\' ? '/' : (char)tolower((unsigned char)*path);
+}
+
+static bool modern_model_script_command(const char *command)
+{
+    static const char *const commands[] = {
+        "animationscript", "didblockscript", "didhitscript", "inholescript", "keyscript",
+        "modelloadscript", "modelunloadscript", "on_bind_update_other_to_self_script",
+        "on_bind_update_self_to_other_script", "onblockascript", "onblockoscript",
+        "onblockpscript", "onblocksscript", "onblockwscript", "onblockyscript",
+        "onblockzscript", "ondeathscript", "ondoattackscript", "ondrawscript",
+        "onentitycollisionscript", "onfallscript", "onkillscript", "onmodelcopyscript",
+        "onmoveascript", "onmovexscript", "onmoveyscript", "onmovezscript",
+        "onpainscript", "onspawnscript", "script", "takedamagescript", "thinkscript",
+    };
+    for (const char *name : commands)
+        if (!strcmp(command, name)) return true;
+    return false;
+}
+
+static bool modern_level_script_command(const char *command)
+{
+    static const char *const commands[] = {
+        "endlevelscript", "keyscript", "levelscript", "spawnscript", "updatedlogicscript",
+        "updatedscript", "updatelogicscript", "updatescript",
+    };
+    for (const char *name : commands)
+        if (!strcmp(command, name)) return true;
+    return false;
+}
+
+/* Only literal loader references join the graph. */
+static bool modern_data(obor_modern_state *s, const obor_modern_entry *entry, const char *data, size_t n)
+{
+    bool animation = false;
+    size_t p = 0, inline_start = n;
     while (p < n) {
+        size_t start = p;
         size_t end = p;
         while (end < n && data[end] != '\n') {
             ++end;
             if (!content_budget(&s->clock, 1)) return false;
         }
-        if (end - p >= 1024) return false;
-        char line[1024], command[256], model[256], path[256];
-        memcpy(line, data + p, end - p); line[end - p] = 0;
         p = end < n ? end + 1 : end;
-        if (sscanf(line, "%255s %255s %255s", command, model, path) != 3) continue;
-        for (char *c = command; *c; ++c) *c = (char)tolower((unsigned char)*c);
-        if (strcmp(command, "load") && strcmp(command, "cache")) continue;
-        size_t len = strlen(path);
-        if (len > 1 && path[0] == '"' && path[len - 1] == '"') {
-            memmove(path, path + 1, len - 2); path[len - 2] = 0;
+        char line[1024];
+        if (end - start >= sizeof(line)) {
+            if (inline_start < n) continue;
+            return false;
         }
-        for (char *c = path; *c; ++c) {
-            *c = (char)tolower((unsigned char)*c);
-            if (*c == '\\') *c = '/';
+        memcpy(line, data + start, end - start); line[end - start] = 0;
+        char *cursor = line;
+        char *command = modern_text_word(cursor);
+        if (!command) continue;
+        modern_path_fold(command);
+        if (inline_start < n) {
+            if (!strcmp(command, "@end")) {
+                if (!modern_script(s, entry->name, data + inline_start, start - inline_start)) return false;
+                inline_start = n;
+            }
+            continue;
         }
-        if (!modern_require(s, path)) return false;
+        if (entry->role == OBOR_MODERN_MODEL_INDEX) {
+            if (strcmp(command, "load") && strcmp(command, "cache")) {
+                if (g_content_infer && content_contract_lookup(OBOR_CT_MODEL_DEFAULT, command)) {
+                    unsigned required = !strcmp(command, "dropv") ? 3 : 1;
+                    unsigned matched = 0;
+                    for (; matched < required; ++matched) {
+                        char *value = modern_text_word(cursor), *end = NULL;
+                        if (!value) break;
+                        strtod(value, &end);
+                        if (end == value || *end) break;
+                    }
+                    if (matched == required)
+                        content_contract_record(s->contracts, OBOR_CT_MODEL_DEFAULT, command);
+                }
+                continue;
+            }
+            if (!modern_text_word(cursor)) return false;
+            char *path = modern_text_word(cursor);
+            if (!path) return false;
+            modern_path_fold(path);
+            if (!modern_require(s, path, OBOR_MODERN_MODEL)) return false;
+        } else if (entry->role == OBOR_MODERN_LEVEL_INDEX) {
+            if (strcmp(command, "file")) continue;
+            char *path = modern_text_word(cursor);
+            if (!path) return false;
+            modern_path_fold(path);
+            if (!modern_require(s, path, OBOR_MODERN_LEVEL)) return false;
+        } else if (!strcmp(command, "@script")) {
+            inline_start = start + (size_t)(cursor - line);
+        } else if (entry->role == OBOR_MODERN_MODEL ? modern_model_script_command(command) :
+                   modern_level_script_command(command)) {
+            char *path = modern_text_word(cursor);
+            if (!path) return false;
+            modern_path_fold(path);
+            if (!strcmp(path, "@script")) inline_start = start + (size_t)(cursor - line);
+            else if (!modern_require(s, path, OBOR_MODERN_SCRIPT)) return false;
+        } else if (entry->role == OBOR_MODERN_MODEL && !strcmp(command, "anim")) {
+            animation = modern_text_word(cursor) != NULL;
+        } else if (animation && !strcmp(command, "jumpframe")) {
+            const char *argument = modern_text_word(cursor);
+            if (argument && !strcasecmp(argument, "this") && modern_text_word(cursor))
+                content_contract_record(s->contracts, OBOR_CT_MODEL_ARGUMENT, command);
+        }
     }
-    return true;
+    return inline_start == n;
 }
 
 static bool modern_script(obor_modern_state *s, const char *name, const char *data, size_t n)
@@ -166,28 +280,56 @@ static bool modern_script(obor_modern_state *s, const char *name, const char *da
                 while (content_lex(&s->clock, data, end, &p, arg)) {
                     s->shadows |= modern_function_bit(arg);
                     if (!strcmp(arg, "openborconstant")) s->constant_shadow = true;
+                    if (g_content_infer) {
+                        if (content_contract_selector(arg) || content_rule(kContentFunctions, arg))
+                            s->clock.ambiguous_scripts = true;
+                        size_t index = content_native_index(OBOR_REGISTRY_FUNCTION, arg);
+                        if (index < sizeof(s->native)) s->native[index] |= OBOR_NATIVE_SHADOW;
+                    }
                 }
             } else return false; /* conditional/generated source is inconclusive */
             p = end;
             previous[0] = previous_kind = 0;
             continue;
         }
+        if (g_content_infer && kind == 'i') {
+            content_contract_script(&s->clock, token, previous_kind, previous, data, n, p, s->contracts);
+            content_script_bounds(&s->clock, token, previous_kind, previous, data, n, p, false);
+        }
+        if (g_content_infer && kind == 'i' &&
+            (!strcmp(token, "getentityproperty") || !strcmp(token, "openborvariant"))) {
+            bool entity = !strcmp(token, "getentityproperty");
+            char argument[64];
+            if (content_contract_argument(&s->clock, data, n, p, entity ? 1 : 0, argument)) {
+                size_t property = content_native_index(
+                    entity ? OBOR_REGISTRY_ENTITY_READ : OBOR_REGISTRY_SYSTEM_READ, argument);
+                if (property < sizeof(s->native)) s->native[property] |= OBOR_NATIVE_CALL;
+            }
+        }
         unsigned bit = kind == 'i' ? modern_function_bit(token) : 0;
+        size_t index = g_content_infer && kind == 'i' ?
+            content_native_index(OBOR_REGISTRY_FUNCTION, token) : sizeof(s->native);
         bool constant = kind == 'i' && !strcmp(token, "openborconstant");
-        if (bit || constant) {
+        if (bit || constant || index < sizeof(s->native)) {
             size_t q = p;
             char next[64];
             if (content_lex(&s->clock, data, n, &q, next) == '(') {
-                if (previous_kind == 'i' && strcmp(previous, "return")) {
+                bool declaration = previous_kind == 'i' && strcmp(previous, "return");
+                if (index < sizeof(s->native))
+                    s->native[index] |= declaration ? OBOR_NATIVE_SHADOW : OBOR_NATIVE_CALL;
+                if (declaration) {
                     s->shadows |= bit;
                     if (constant) s->constant_shadow = true;
                 } else if (bit) s->calls |= bit;
-                else if (content_lex(&s->clock, data, n, &q, next) == 's') {
+                else if (constant && content_lex(&s->clock, data, n, &q, next) == 's') {
                     bool known = false;
                     for (size_t i = 0; i < sizeof(kModernConstants) / sizeof(kModernConstants[0]); ++i)
                         if (!strcmp(next, kModernConstants[i])) known = true;
-                    if (known && content_lex(&s->clock, data, n, &q, next) == ')')
-                        s->constant = true;
+                    if (g_content_infer) index = content_native_index(OBOR_REGISTRY_CONSTANT, next);
+                    if (content_lex(&s->clock, data, n, &q, next) == ')') {
+                        if (known) s->constant = true;
+                        if (index < sizeof(s->native)) s->native[index] |= OBOR_NATIVE_CALL;
+                    }
                 }
             }
         }
@@ -197,7 +339,7 @@ static bool modern_script(obor_modern_state *s, const char *name, const char *da
     return s->clock.complete;
 }
 
-static int obor_modern_api_build(const char *path)
+static int obor_modern_api_build(const char *path, obor_content_rule *bound_script)
 {
     FILE *fp = fopen(path, "rb");
     if (!fp) return 0;
@@ -238,16 +380,16 @@ static int obor_modern_api_build(const char *path)
         bool text = len > 4 && !strcmp(name + len - 4, ".txt");
         if (!source && !text) continue;
         if (s.count == OBOR_MODERN_FILES) goto done;
-        for (unsigned i = 0; i < s.count; ++i) {
-            if (!content_budget(&s.clock, 1) || !strcmp(name, s.entries[i].name)) goto done;
-        }
         obor_modern_entry *entry = s.entries + s.count++;
         snprintf(entry->name, sizeof(entry->name), "%s", name);
         entry->start = start; entry->size = size;
-        if (modern_root(name)) {
-            entry->required = true;
-            s.queue[s.queued++] = s.count - 1;
-        }
+    }
+    qsort(s.entries, s.count, sizeof(*s.entries), modern_compare_names);
+    for (unsigned i = 0; i < s.count; ++i) {
+        obor_modern_entry *entry = s.entries + i;
+        if (i && !strcmp(entry[-1].name, entry->name)) goto done;
+        entry->role = modern_root(entry->name);
+        if (entry->role != OBOR_MODERN_UNUSED) s.queue[s.queued++] = i;
     }
     if (!s.queued) goto done;
     buffer = (char *)malloc(OBOR_MODERN_SOURCE);
@@ -258,25 +400,39 @@ static int obor_modern_api_build(const char *path)
             !content_budget(&s.clock, 4096) || obor_file_seek64(fp, entry->start, SEEK_SET) ||
             fread(buffer, 1, entry->size, fp) != entry->size) goto done;
         bytes += entry->size;
-        if (!strcmp(entry->name, "data/models.txt")) {
-            if (!modern_models(&s, buffer, entry->size)) goto done;
-            content_text(&s.clock, buffer, entry->size);
-            if (!s.clock.complete) goto done;
-        } else if (strstr(entry->name, ".txt") &&
-                   !strcmp(entry->name + strlen(entry->name) - 4, ".txt")) {
+        if (entry->role != OBOR_MODERN_SCRIPT) {
+            if ((g_content_infer || entry->role == OBOR_MODERN_MODEL_INDEX) &&
+                !modern_data(&s, entry, buffer, entry->size)) goto done;
             content_text(&s.clock, buffer, entry->size);
             if (!s.clock.complete) goto done;
         } else if (!modern_script(&s, entry->name, buffer, entry->size)) goto done;
     }
     if (obor_detection_expired(s.clock.started)) goto done;
+    for (size_t i = 0; i < sizeof(g_bound_native); ++i) {
+        obor_registry_kind kind = kNativeRequirements[i].kind;
+        bool ambiguous = kind == OBOR_REGISTRY_CONSTANT ? s.constant_shadow :
+            kind != OBOR_REGISTRY_FUNCTION && s.clock.ambiguous_scripts;
+        g_bound_native[i] = s.native[i] == OBOR_NATIVE_CALL && !ambiguous;
+    }
+    for (size_t i = 0; i < sizeof(g_bound_contracts); ++i)
+        g_bound_contracts[i] = s.contracts[i] &&
+            (!s.clock.ambiguous_scripts || !content_contract_is_script(kContentContracts[i].kind));
     if (s.constant && !s.constant_shadow) result = 7556;
-    if (s.clock.script_seen && !s.clock.ambiguous_scripts)
+    if (s.clock.script_seen && !s.clock.ambiguous_scripts) {
+        if (g_content_infer)
+            *bound_script = {"bound script APIs", s.clock.script_lower, s.clock.script_upper};
         content_bounds(&s.clock, s.clock.script_lower, s.clock.script_upper, false);
+    }
     if (s.clock.lower > 6391 && s.clock.lower > result) result = s.clock.lower;
     for (size_t i = 0; i < sizeof(kModernFunctions) / sizeof(kModernFunctions[0]); ++i)
         if ((s.calls & ~s.shadows) & (1u << i))
             if (kModernFunctions[i].lower > result) result = kModernFunctions[i].lower;
 done:
+    /* Complete declarations in a bound model remain facts even when a later
+     * dependency cannot be read. Script bindings require the full closure. */
+    for (size_t i = 0; i < sizeof(g_bound_contracts); ++i)
+        if (!content_contract_is_script(kContentContracts[i].kind) && s.contracts[i])
+            g_bound_contracts[i] = 1;
     free(buffer); free(s.entries); fclose(fp);
     return result;
 }

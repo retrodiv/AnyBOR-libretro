@@ -181,7 +181,7 @@ static bool obor_content_override(const char *system, const obor_content_choice 
             for (unsigned i=0;i<rules.count;++i)
                 if (rules.rows[i].zip==zip && rules.rows[i].size==(uint64_t)st.st_size && !strcmp(rules.rows[i].hash,hex)) {
                     snprintf(engine,48,"%s",rules.rows[i].engine);
-                    snprintf(evidence,capacity,"AnyBOR.ini %s-imohash:%s", zip ? "zip" : "pak", hex);
+                    snprintf(evidence,capacity,"AnyBOR.ini imohash:%s:%s", zip ? "zip" : "pak", hex);
                     return true;
                 }
         }

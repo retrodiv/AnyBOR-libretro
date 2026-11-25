@@ -21,6 +21,9 @@
  *   OBOR_REPLAY_AUDIO=file   bounded PCM callback evidence for that trace range
  *   OBOR_GAMELOG=On|Off   set the Forward game log core option
  *   OBOR_CRT_TV=On|Off / OBOR_CRT_TOGGLE_AT=N[,N...]   CRT option and live toggles
+ *   OBOR_CRT_ORIENTATION=Horizontal|Vertical / OBOR_CRT_ORIENTATION_TOGGLE_AT=N[,N...]
+ *   OBOR_CRT_OVERSIZE / OBOR_IMAGE_ROTATION          Same values as the core options
+ *   OBOR_HOST_ACCEPT_ROTATION=1                      Accept frontend rotation requests
  *   OBOR_VIDEO_TRACE=1 / OBOR_OPTIONS_VERSION=0|2   video/option diagnostics
  *   OBOR_HOST_STATE_CONTENT=Smart|Full / OBOR_HOST_STATE_COMPRESSION=On|Off
  *   OBOR_SET_STATE_OPTIONS_AT=frame:Smart|Full:On|Off  frontend-only change
@@ -231,6 +234,7 @@ static char g_savedir[1024];
 static char g_engine_opt[32] = "auto";
 static int g_var_dirty = 1;
 static const char *g_crt_opt;
+static const char *g_crt_orientation;
 
 static const uint32_t *g_fb;
 static unsigned g_fw, g_fh;
@@ -546,6 +550,12 @@ static bool env_cb(unsigned cmd, void *data)
         return true;
     case RETRO_ENVIRONMENT_SET_PIXEL_FORMAT:
         return *(enum retro_pixel_format *)data == RETRO_PIXEL_FORMAT_XRGB8888;
+    case RETRO_ENVIRONMENT_SET_ROTATION: {
+        bool accepted = getenv("OBOR_HOST_ACCEPT_ROTATION") != NULL;
+        if (getenv("OBOR_VIDEO_TRACE"))
+            printf("rotation=%u frame=%d accepted=%d\n", *(const unsigned *)data, g_frame, accepted);
+        return accepted;
+    }
     case RETRO_ENVIRONMENT_GET_SYSTEM_DIRECTORY:
         *(const char **)data = g_sysdir;
         return true;
@@ -564,6 +574,8 @@ static bool env_cb(unsigned cmd, void *data)
         if (!strcmp(storage_var->key, "anybor_clear_all_caches")) storage_env = "OBOR_CLEAR_ALL_CACHES";
         if (!strcmp(storage_var->key, "anybor_state_content")) storage_env = "OBOR_HOST_STATE_CONTENT";
         if (!strcmp(storage_var->key, "anybor_state_compression")) storage_env = "OBOR_HOST_STATE_COMPRESSION";
+        if (!strcmp(storage_var->key, "anybor_crt_oversize_handling")) storage_env = "OBOR_CRT_OVERSIZE";
+        if (!strcmp(storage_var->key, "anybor_image_rotation")) storage_env = "OBOR_IMAGE_ROTATION";
         if (storage_env && getenv(storage_env)) {
             storage_var->value = getenv(storage_env);
             return true;
@@ -572,6 +584,10 @@ static bool env_cb(unsigned cmd, void *data)
         struct retro_variable *var = (struct retro_variable *)data;
         if (!strcmp(var->key, "anybor_crt_tv") && g_crt_opt) {
             var->value = g_crt_opt;
+            return true;
+        }
+        if (!strcmp(var->key, "anybor_os_screen_orientation") && g_crt_orientation) {
+            var->value = g_crt_orientation;
             return true;
         }
         if (!strcmp(var->key, "anybor_gamelog") && getenv("OBOR_GAMELOG")) {
@@ -693,10 +709,12 @@ static void video_cb(const void *data, unsigned width, unsigned height,
                      size_t pitch)
 {
     ++g_video_calls;
-    if (getenv("OBOR_CHECK_GEOMETRY") &&
+    const char *check_geometry = getenv("OBOR_CHECK_GEOMETRY");
+    if (check_geometry &&
         (width != g_geometry.base_width || height != g_geometry.base_height ||
          width > g_geometry.max_width || height > g_geometry.max_height ||
-         g_geometry.aspect_ratio != (float)width / (float)height)) {
+         g_geometry.aspect_ratio <= 0.0f ||
+         (strcmp(check_geometry, "extent") && g_geometry.aspect_ratio != (float)width / height))) {
         fprintf(stderr, "video geometry was not announced before frame %d: %ux%u\n",
                 g_frame, width, height);
         exit(1);
@@ -931,6 +949,7 @@ int main(int argc, char **argv)
         snprintf(g_engine_opt, sizeof(g_engine_opt), "%s", eng);
     parse_input_env();
     g_crt_opt = getenv("OBOR_CRT_TV");
+    g_crt_orientation = getenv("OBOR_CRT_ORIENTATION");
 
 #ifdef _WIN32
     _mkdir(g_sysdir);
@@ -1264,6 +1283,11 @@ int main(int argc, char **argv)
         }
         if (selected_frame(getenv("OBOR_CRT_TOGGLE_AT"), g_frame)) {
             g_crt_opt = g_crt_opt && !strcmp(g_crt_opt, "On") ? "Off" : "On";
+            g_var_dirty = 1;
+        }
+        if (selected_frame(getenv("OBOR_CRT_ORIENTATION_TOGGLE_AT"), g_frame)) {
+            g_crt_orientation = g_crt_orientation && !strcmp(g_crt_orientation, "Vertical") ?
+                                "Horizontal" : "Vertical";
             g_var_dirty = 1;
         }
         int rw_popped = 0;

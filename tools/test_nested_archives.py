@@ -188,7 +188,7 @@ static FILE *traced_fopen(const char *path,const char *mode) {
         outer=self.folder/'outside.anybor'
         outer.write_text('[anybor]\npayload=content.zip\n[overrides]\nengine=3400\n')
         pak_key=selector(io.BytesIO(payload),len(payload))
-        data=archive.read_bytes();zip_key=selector(io.BytesIO(data),len(data)).replace('pak-imohash:','zip-imohash:')
+        data=archive.read_bytes();zip_key=selector(io.BytesIO(data),len(data),'zip')
         pak_rule=f'[{pak_key}.overrides]\nengine=6330\n'
         zip_rule=f'[{zip_key}.overrides]\nengine=3740\n'
         for rules,expected in ((pak_rule+zip_rule,'3740'),(pak_rule,'6330'),('','3400')):

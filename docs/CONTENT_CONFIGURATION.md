@@ -3,8 +3,8 @@
 A manual engine choice in the core options takes priority over external engine
 settings. With automatic selection enabled, the order is:
 
-1. A matching `zip-imohash` engine rule in the system directory's `AnyBOR.ini`.
-2. A matching `pak-imohash` engine rule in that INI.
+1. A matching `imohash:zip:<digest>` engine rule in the system directory's `AnyBOR.ini`.
+2. A matching `imohash:pak:<digest>` engine rule in that INI.
 3. The engine declared by the external `.anybor` descriptor.
 4. The engine declared by the descriptor inside the ZIP.
 5. Verified engine-executable identities, followed by filename/content detection.
@@ -22,13 +22,14 @@ descriptor preserves automatic detection. `Auto` is not an engine override value
 ## AnyBOR.ini
 
 Place `AnyBOR.ini` in the frontend's system directory. Each rule selects an
-engine for an original PAK or complete ZIP identified by its standard imohash. The prefix specifies which file is identified:
+engine for an original PAK or complete ZIP identified by its standard imohash.
+The selector includes the file kind.
 
 ```ini
-[pak-imohash:0123456789abcdef0123456789abcdef.overrides]
+[imohash:pak:0123456789abcdef0123456789abcdef.overrides]
 engine = v3.0 6330
 
-[zip-imohash:fedcba9876543210fedcba9876543210.overrides]
+[imohash:zip:fedcba9876543210fedcba9876543210.overrides]
 engine = v3.0 6391
 ```
 
@@ -39,15 +40,16 @@ python3 tools/content_key.py /path/to/content.pak
 python3 tools/content_key.py /path/to/content.zip
 ```
 
-The utility emits `pak-imohash` for `.pak`/`.spk` and `zip-imohash` for `.zip`,
-case insensitive by extension. Replace each example selector with its output. The bare `imohash` selector prefix is not accepted.
+The utility emits `imohash:pak:<digest>` for `.pak` or `.spk` and
+`imohash:zip:<digest>` for `.zip`, with case-insensitive extension matching.
+Replace each example selector with its output.
 
-A `pak-imohash` rule identifies the original PAK before any content
+A rule with `imohash:pak:<digest>` identifies the original PAK before any content
 preparation. A selected PAK inside a ZIP uses the same identity as its loose copy; the ZIP's name, compression and auxiliary files are not part of this
 selector. These rules do not choose between multiple PAKs inside a ZIP: use a
 descriptor to select the payload first. Unpacked games have no PAK identity.
 
-A `zip-imohash` rule identifies the complete original ZIP, including its
+A rule with `imohash:zip:<digest>` identifies the complete original ZIP, including its
 compressed representation, descriptor and auxiliary files. Renaming the ZIP
 preserves the identity; repacking or changing its contents can change it. The
 rule applies to the game selected by ordinary ZIP loading, including an unpacked

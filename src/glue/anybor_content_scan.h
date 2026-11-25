@@ -146,6 +146,7 @@ static const obor_content_rule kContentSystemQueries[] = {
 static int g_content_lower, g_content_upper;
 static bool g_content_range_seen, g_content_scan_complete;
 static bool g_content_triage;
+static bool g_content_infer;
 struct obor_content_evidence { char name[64]; int lower, upper; bool script; };
 static obor_content_evidence g_content_evidence[128];
 static size_t g_content_evidence_count;
@@ -273,6 +274,75 @@ static char content_lex(obor_content_scan *s, const char *data, size_t n, size_t
 }
 
 #include "anybor_content_contracts.h"
+#include "anybor_native_registry.h"
+
+static unsigned char g_bound_native[sizeof(kNativeRequirements) / sizeof(*kNativeRequirements)];
+
+static size_t content_native_index(obor_registry_kind kind, const char *name)
+{
+    size_t lo = 0, hi = sizeof(g_bound_native);
+    while (lo < hi) {
+        size_t mid = lo + (hi - lo) / 2;
+        int cmp = (int)kind - (int)kNativeRequirements[mid].kind;
+        if (!cmp) cmp = strcmp(name, kNativeRequirements[mid].name);
+        if (!cmp) return mid;
+        if (cmp < 0) hi = mid; else lo = mid + 1;
+    }
+    return sizeof(g_bound_native);
+}
+
+static bool content_native_allows(size_t index, int build)
+{
+    const auto &rule = kNativeRequirements[index];
+    for (unsigned i = rule.first; i < rule.first + rule.count; ++i)
+        if (build >= kNativeSpans[i].first && build <= kNativeSpans[i].last) return true;
+    return false;
+}
+
+static void content_script_bounds(obor_content_scan *s, const char *token,
+                                  char previous_kind, const char *previous,
+                                  const char *data, size_t n, size_t pos, bool record)
+{
+    bool declaration = previous_kind == 'i' && strcmp(previous, "return");
+    const obor_content_rule *function = content_rule(kContentFunctions, token);
+    if (function) {
+        if (declaration) s->ambiguous_scripts = true;
+        else {
+            size_t q = pos;
+            char next[64];
+            if (content_lex(s, data, n, &q, next) == '(')
+                content_bounds(s, function->lower, function->upper, true, record ? function->name : NULL);
+        }
+    }
+    if (!strcmp(token, "openborconstant")) {
+        if (declaration) s->ambiguous_scripts = true;
+        size_t q = pos;
+        char arg[64];
+        if (content_lex(s, data, n, &q, arg) == '(' &&
+            content_lex(s, data, n, &q, arg) == 's') {
+            const obor_content_rule *rule = content_rule(kContentConstants, arg);
+            int lower = rule ? rule->lower : 0, upper = rule ? rule->upper : INT_MAX;
+            if (!strncmp(arg, "atk_normal", 10)) {
+                const char *suffix = arg + 10;
+                int number = 0;
+                while (isdigit((unsigned char)*suffix) && number <= 60)
+                    number = number * 10 + (*suffix++ - '0');
+                if (!*suffix && number >= 1 && number <= 60) lower = 3851;
+            }
+            char closing[64];
+            if (lower && content_lex(s, data, n, &q, closing) == ')')
+                content_bounds(s, lower, upper, true, record ? arg : NULL);
+        }
+    }
+    if (!strcmp(token, "openborvariant") || !strcmp(token, "changeopenborvariant")) {
+        if (declaration) s->ambiguous_scripts = true;
+        char arg[64];
+        if (content_contract_argument(s, data, n, pos, 0, arg)) {
+            const obor_content_rule *rule = content_rule(kContentSystemQueries, arg);
+            if (rule) content_bounds(s, rule->lower, rule->upper, true, record ? arg : NULL);
+        }
+    }
+}
 
 static void content_script(obor_content_scan *s, const char *data, size_t n)
 {
@@ -283,51 +353,17 @@ static void content_script(obor_content_scan *s, const char *data, size_t n)
          * declaration of this builtin anywhere in the sampled PAK also makes
          * all native constant evidence uncertain, irrespective of file order. */
         if (kind == '#') s->ambiguous_scripts = true;
-        if (kind == 'i') content_contract_script(s, token, previous_kind, previous, data, n, pos);
-        const obor_content_rule *function = kind == 'i' ? content_rule(kContentFunctions, token) : NULL;
-        if (function) {
-            if (previous_kind == 'i' && strcmp(previous, "return")) s->ambiguous_scripts = true;
-            else {
-                size_t q = pos;
-                char next[64];
-                if (content_lex(s, data, n, &q, next) == '(')
-                    content_bounds(s, function->lower, function->upper, true, function->name);
-            }
-        }
-        if (kind == 'i' && !strcmp(token, "openborconstant")) {
-            if (previous_kind == 'i' && strcmp(previous, "return")) s->ambiguous_scripts = true;
-            size_t q = pos;
-            char arg[64];
-            if (content_lex(s, data, n, &q, arg) == '(' &&
-                content_lex(s, data, n, &q, arg) == 's') {
-                const obor_content_rule *rule = content_rule(kContentConstants, arg);
-                int lower = rule ? rule->lower : 0, upper = rule ? rule->upper : INT_MAX;
-                if (!strncmp(arg, "atk_normal", 10)) {
-                    const char *suffix = arg + 10;
-                    int number = 0;
-                    while (isdigit((unsigned char)*suffix) && number <= 60)
-                        number = number * 10 + (*suffix++ - '0');
-                    if (!*suffix && number >= 1 && number <= 60) lower = 3851;
-                }
-                char closing[64];
-                if (lower && content_lex(s, data, n, &q, closing) == ')')
-                    content_bounds(s, lower, upper, true, arg);
-            }
-        }
-        if (kind == 'i' && (!strcmp(token, "openborvariant") || !strcmp(token, "changeopenborvariant"))) {
-            if (previous_kind == 'i' && strcmp(previous, "return")) s->ambiguous_scripts = true;
-            char arg[64];
-            if (content_contract_argument(s, data, n, pos, 0, arg)) {
-                const obor_content_rule *rule = content_rule(kContentSystemQueries, arg);
-                if (rule) content_bounds(s, rule->lower, rule->upper, true, arg);
-            }
+        if (kind == 'i') {
+            content_contract_script(s, token, previous_kind, previous, data, n, pos);
+            content_script_bounds(s, token, previous_kind, previous, data, n, pos, true);
         }
         /* Keep old function-name estimates, but do not read quoted prose or
          * declarations as calls. Imported/local names suppress these below. */
         if (kind == 'i' && token[0] && previous_kind != 'i') {
             size_t q = pos;
             char next[64];
-            if (content_lex(s, data, n, &q, next) == '(') content_hint(s, token);
+            if (content_lex(s, data, n, &q, next) == '(')
+                content_hint(s, token);
         }
         snprintf(previous, sizeof(previous), "%s", token);
         previous_kind = kind;
@@ -358,15 +394,18 @@ static void content_text(obor_content_scan *s, const char *data, size_t n)
         }
         if (!s->complete) break;
         if (!strcmp(command, "@end") && inline_start < n) {
-            content_script(s, data + inline_start, p - inline_start);
+            if (!g_content_infer) content_script(s, data + inline_start, p - inline_start);
             inline_start = n;
         } else if (!strcmp(command, "@script")) inline_start = end < n ? end + 1 : n;
         else if (inline_start == n && command[0] && arg[0] && strncmp(command, "//", 2)) {
             content_contract_model(command, arg);
             const obor_content_rule *rule = content_rule(kContentCommands, command);
             if (!strcmp(command, "anim")) rule = content_rule(kContentAnimations, arg);
-            if (rule) content_bounds(s, rule->lower, rule->upper, false, rule->name);
-            else content_hint(s, command);
+            /* The bound models.txt parser observes defaults in context. */
+            if (!g_content_infer || !content_contract_lookup(OBOR_CT_MODEL_DEFAULT, command)) {
+                if (rule) content_bounds(s, rule->lower, rule->upper, false, rule->name);
+                else content_hint(s, command);
+            }
             if ((!strcmp(command, "script") || !strcmp(command, "animationscript")) &&
                 !strcmp(arg, "@script")) content_bounds(s, 3880, INT_MAX, false, "inline-script");
         }
@@ -386,12 +425,15 @@ static unsigned content_u32(const unsigned char *p)
 static int build_from_content(const char *pak_path)
 {
     content_contract_reset();
+    memset(g_bound_native, 0, sizeof(g_bound_native));
     g_content_evidence_count = 0;
     g_content_lower = 1; g_content_upper = INT_MAX;
     g_content_range_seen = false; g_content_scan_complete = false;
-    int modern = obor_modern_api_build(pak_path);
+    obor_content_rule bound_script = {};
+    int modern = obor_modern_api_build(pak_path, &bound_script);
     obor_content_scan s = {1, INT_MAX, 1, INT_MAX, 0, 0, false, false, false, true, 0,
                           obor_detection_now()};
+    if (bound_script.name) content_bounds(&s, bound_script.lower, bound_script.upper, false, bound_script.name);
     FILE *fp = fopen(pak_path, "rb");
     if (!fp) return 0;
     unsigned char h[12];
@@ -420,7 +462,7 @@ static int build_from_content(const char *pak_path)
         }
         bool script = len > 2 && (!strcmp(name + len - 2, ".c") || !strcmp(name + len - 2, ".h"));
         bool text = len > 4 && !strncmp(name, "data/", 5) && !strcmp(name + len - 4, ".txt");
-        if (!script && !text) continue;
+        if ((!script || g_content_infer) && !text) continue;
         if (count == MAX_FILES || size > MAX_FILE_BYTES || size > MAX_BYTES - bytes) { s.complete = false; break; }
         entries[count++] = {start, size, script};
         bytes += size;
@@ -428,7 +470,7 @@ static int build_from_content(const char *pak_path)
     bool directory_complete = s.complete;
     /* A bounded directory prefix can still prove the presence of model
      * commands. Do not renew the deadline or exceed the collected file/byte
-     * limits, and keep unlabelled inference's existing all-or-nothing policy. */
+     * limits. A completed dependency scan supplies any script constraints. */
     if (!directory_complete && g_content_triage && !obor_detection_expired(s.started))
         s.complete = true;
     char *buffer = s.complete ? (char *)malloc(MAX_FILE_BYTES) : NULL;

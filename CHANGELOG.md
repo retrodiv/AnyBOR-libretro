@@ -194,7 +194,7 @@
 
 ## 0.2.14 — ZIP content settings
 
-- Select profiles with distinct `zip-imohash` and `pak-imohash` INI rules containing only the digest, recovering the file size from standard imohash; replace the bare `imohash` selector prefix.
+- Select profiles with distinct ZIP and PAK imohash rules in `AnyBOR.ini`, deriving the file size from the digest.
 - Load ZIPs through external `.anybor` descriptors with the same content selection, validation and save namespace as direct ZIP loading.
 - Prioritize manual choices, ZIP rules, PAK rules, external descriptors and internal ZIP descriptors before automatic detection.
 

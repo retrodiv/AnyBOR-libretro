@@ -80,14 +80,15 @@ static uint64_t profile_triage_distance(const obor_profile_def *profile, int leg
     return result;
 }
 
-static void profile_triage_log_rules(const obor_profile_def *best, int legacy)
+static void profile_triage_log_rules(const obor_profile_def *best, int legacy, bool unlabelled = false)
 {
     for (size_t i = 0; i < sizeof(kContentContracts) / sizeof(kContentContracts[0]); ++i) {
-        if (!content_contract_active(i)) continue;
+        if (!content_contract_active(i) && !(unlabelled && g_bound_contracts[i])) continue;
         const obor_contract_rule *rule = &kContentContracts[i];
         log_cb(RETRO_LOG_INFO, "[OpenBOR] content rule kind=%d name=%s bounds=%d-%d flags=%u selected=%s\n",
                (int)rule->kind, rule->name, rule->lower, rule->upper, rule->flags,
-               content_contract_allows(rule, best->build, best->engine_build) ? "supported" : "tag-conflict");
+               content_contract_allows(rule, best->build, best->engine_build) ? "supported" :
+                   unlabelled ? "incompatible" : "tag-conflict");
     }
     if (legacy && g_contract_valid && !g_contract_scripts_ambiguous)
         log_cb(RETRO_LOG_INFO, "[OpenBOR] content rule legacy-attack bounds=1-4166 selected=%s\n",
@@ -159,6 +160,61 @@ static int profile_triage_exact_select(int declared, int legacy)
            "[OpenBOR] exact tag triage %d; candidate %d conflicts with proved content; closest compatible profile %d\n",
            declared, candidate->build, best->build);
     profile_triage_log_rules(best, legacy);
+    return best->build;
+}
+
+static bool profile_content_allows(const obor_profile_def *profile, bool legacy_attack)
+{
+    if (legacy_attack && profile->build > 4166) return false;
+    if (profile_triage_distance(profile, 0)) return false;
+    for (size_t i = 0; i < sizeof(g_bound_contracts); ++i)
+        if (g_bound_contracts[i] &&
+            !content_contract_allows(&kContentContracts[i], profile->build, profile->engine_build)) return false;
+    for (size_t i = 0; i < sizeof(g_bound_native); ++i)
+        if (g_bound_native[i] && !content_native_allows(i, profile->build)) return false;
+    return true;
+}
+
+static void profile_content_log_rules(const obor_profile_def *profile, bool legacy_attack)
+{
+    profile_triage_log_rules(profile, 0, true);
+    if (legacy_attack)
+        log_cb(RETRO_LOG_INFO, "[OpenBOR] legacy-attack bounds=1-4166 supported by profile %s\n",
+               profile->name);
+    static const char *const registry_kinds[] = {"function", "constant", "system query", "entity getter"};
+    for (size_t i = 0; i < sizeof(g_bound_native); ++i)
+        if (g_bound_native[i])
+            log_cb(RETRO_LOG_INFO, "[OpenBOR] bound native %s %s %s by profile %s\n",
+                   registry_kinds[kNativeRequirements[i].kind], kNativeRequirements[i].name,
+                   content_native_allows(i, profile->build) ? "supported" : "unsupported", profile->name);
+}
+
+static int profile_content_select(bool legacy_attack, int fallback_build, bool &contradiction)
+{
+    const obor_profile_def *best = NULL, *fallback = NULL;
+    bool narrowed = false;
+    contradiction = false;
+    for (const auto &profile : kProfiles) {
+        if (!profile.automatic || !profile_is_revision(&profile)) continue;
+        if (profile.build == fallback_build) fallback = &profile;
+        if (!profile_content_allows(&profile, legacy_attack)) {
+            if (profile.build >= OBOR_FALLBACK_BUILD) narrowed = true;
+            continue;
+        }
+        if (!best || profile.build > best->build) best = &profile;
+    }
+    /* An old minimum alone is shared by later eras and cannot place content
+     * in one of them. Keep the ordinary fallback until evidence narrows it. */
+    if (!narrowed) return 0;
+    if (!best) {
+        contradiction = true;
+        log_cb(RETRO_LOG_WARN,
+               "[OpenBOR] content requirements have no common automatic profile; using %s.\n",
+               legacy_attack ? "the legacy API route" : "fallback");
+        if (fallback) profile_content_log_rules(fallback, legacy_attack);
+        return 0;
+    }
+    profile_content_log_rules(best, legacy_attack);
     return best->build;
 }
 #endif

@@ -1,7 +1,7 @@
-# Content evidence for build tags
+# Content evidence for automatic profile selection
 
 Manual selection is authoritative. In Auto, matching external `AnyBOR.ini`
-`zip-imohash` rules take priority over `pak-imohash` rules, then external
+`imohash:zip:<digest>` rules take priority over `imohash:pak:<digest>` rules, then external
 descriptor engine settings, internal ZIP descriptor settings, verified
 engine-executable identities and filename/content evidence. Explicit settings
 name an available profile, including a development or modified variant. See
@@ -149,12 +149,34 @@ version by themselves. Built-in content-evidence rules do not use game identitie
 or game-content hashes.
 The reconstructed test profile has no invented content signature.
 
-Unlabelled content retains the existing inference/fallback policy. The
-official releases v3.0 4453, v3.0 4456 and v3.0 6330 participate in ordinary automatic
-routing. Unidentified executable declarations and unlabelled inference do not select
-nonautomatic test profiles. Loose mod directories retain metadata routing;
-the packed-content analysis applies to prepared PACK content.
+When the priority cascade reaches unlabelled PACK inference, it intersects
+the profiles allowed by each observed command, native call, literal constant
+or literal property. Native lookups use the original script registries and
+getters for each automatic profile. A name can have several disjoint periods
+of availability. For example, `srand` and `getanimationproperty` together
+require a profile that registers both calls.
 
-A minimum requirement older than every automatic profile does not locate
-content inside a retained historical era. Ordinary fallback and any proved
-upper bound determine that selection.
+The dependency scan follows engine script entry points and literal imports.
+It also reads referenced and inline scripts in models declared by
+`data/models.txt` and levels declared by `data/levels.txt`. Unresolved
+dependencies, conditional preprocessing and shadowed names leave the affected
+script evidence inconclusive.
+
+The detector checks argument forms when availability of the name alone
+cannot distinguish profiles.
+
+| Context | Form | Requirement | Upstream change |
+|---|---|---|---|
+|Native call|One to five arguments to `playsample`|from 3706|[`b70e6fd6`](https://github.com/DCurrent/openbor/commit/b70e6fd6228923e71565dbb5849fda1fc6d97a86)|
+|Animation directive in a bound model|`jumpframe this` followed by a velocity argument|from 3681|[`e86a5c32`](https://github.com/DCurrent/openbor/commit/e86a5c32f6303ab0d8432dfe2575b17dc2af5baf)|
+|Model defaults in `data/models.txt`|`grabdistance` with a numeric argument or `dropv` with three numeric arguments|from 3681|[`e86a5c32`](https://github.com/DCurrent/openbor/commit/e86a5c32f6303ab0d8432dfe2575b17dc2af5baf)|
+|Model defaults in `data/models.txt`|`offscreen_noatk_factor` with a numeric argument|from 3683|[`b79ec28e`](https://github.com/DCurrent/openbor/commit/b79ec28e381f0b94f811c9e989759e92f5d02e51)|
+
+When evidence narrows the selection, the highest automatic profile that
+satisfies every requirement wins. Early minimums alone keep the configured
+fallback. Contradictory requirements retain the fallback and produce a log
+diagnostic. The legacy attack-property route contributes its established
+upper bound to the same selection for unlabelled content, with its original
+priority and fallback. Verified executables, explicit choices, filename
+declarations and the bound modified-profile capability retain their priority.
+Loose mod directories use metadata routing.

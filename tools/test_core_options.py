@@ -36,7 +36,8 @@ def program(glue, header):
                  glue.index('\nvoid retro_set_environment(')]
     registration = function(glue, 'retro_set_environment')
     helpers = glue[glue.index('struct engine_option_group {'):glue.index('static bool g_analog')]
-    option_readers = '\n'.join(function(glue, name) for name in ('opt_is_on', 'state_option'))
+    option_readers = '\n'.join(function(glue, name)
+                               for name in ('opt_is_on', 'state_option', 'update_option_visibility'))
     fixtures = [('actual', actual)]
     for count in (0, 1, capacity - 3, capacity - 2):
         # Exercise empty groups and the last usable ABI slot, with long labels.
@@ -83,16 +84,17 @@ struct frontend_fixture {
     std::vector<option_snapshot> options;
     const retro_core_options_v2 *retained_v2;
     const retro_variable *retained_legacy;
-    const char *selected, *option_value, *groups[5];
+    const char *selected, *option_value, *crt, *groups[5];
     std::vector<int> builds;
-    bool visible[5], display_supported;
+    bool visible[5], oversize_visible, orientation_visible, display_supported;
     unsigned display_calls;
     bool (*update_display)(void);
 };
 static frontend_fixture *active;
 static unsigned registration_checks, selection_checks;
 static const char *const expected_keys[]={
-    "anybor_crt_tv","anybor_analog","anybor_rumble","anybor_macros","anybor_engine",
+    "anybor_crt_tv","anybor_crt_oversize_handling","anybor_os_screen_orientation","anybor_image_rotation",
+    "anybor_analog","anybor_rumble","anybor_macros","anybor_engine",
     "anybor_engine_3000_3499","anybor_engine_3500_3749","anybor_engine_3750_3999",
     "anybor_engine_4000_4999","anybor_engine_5000_plus",
     "anybor_state_content","anybor_state_compression","anybor_gamelog",
@@ -120,7 +122,7 @@ static int group_for(int build) {
     assert(!"unassigned profile");return -1;
 }
 static int group_key(const char *key) {
-    for (unsigned i=0;i<5;++i) if (!strcmp(key,expected_keys[5+i])) return (int)i;
+    for (unsigned i=0;i<5;++i) if (!strcmp(key,expected_keys[8+i])) return (int)i;
     return -1;
 }
 static void check_values(const option_snapshot &option) {
@@ -140,6 +142,12 @@ static void check_values(const option_snapshot &option) {
     }
     if (option.key=="anybor_state_content") assert(option.default_value==OBOR_STATE_CONTENT_DEFAULT);
     if (option.key=="anybor_state_compression") assert(option.default_value==OBOR_STATE_COMPRESSION_DEFAULT);
+    if (option.key=="anybor_crt_oversize_handling")
+        assert(option.values==std::vector<std::string>({"W:640 H:480","W:Keep H:480","W:320 H:240","W:Keep H:240"}));
+    if (option.key=="anybor_os_screen_orientation")
+        assert(option.values==std::vector<std::string>({"Horizontal","Vertical"}));
+    if (option.key=="anybor_image_rotation")
+        assert(option.values==std::vector<std::string>({"None","Left","Right","Upside Down"}));
 }
 static void read_v2(const retro_core_options_v2 *options) {
     assert(options && options->definitions && options->categories);
@@ -155,7 +163,7 @@ static void read_v2(const retro_core_options_v2 *options) {
             option.values.push_back(def->values[i].value);
         assert(i<RETRO_NUM_CORE_OPTION_VALUES_MAX && !def->values[i].label);
         assert(def->category_key);
-        const char *category = !strcmp(def->key,"anybor_crt_tv") ? "video" :
+        const char *category = active->options.size()<4 ? "video" :
             (!strcmp(def->key,"anybor_analog") || !strcmp(def->key,"anybor_rumble") || !strcmp(def->key,"anybor_macros")) ? "input" :
             !strncmp(def->key,"anybor_clear_",13) ? "development" : "system";
         assert(!strcmp(def->category_key,category));
@@ -214,7 +222,8 @@ static bool environment(unsigned command,void *data) {
         int group=group_key(var->key);
         if (group>=0) {var->value=active->groups[group];return var->value!=NULL;}
         assert(known);
-        var->value=!strcmp(var->key,"anybor_engine")?active->selected:active->option_value;
+        var->value=!strcmp(var->key,"anybor_engine")?active->selected:
+                   !strcmp(var->key,"anybor_crt_tv") && active->crt?active->crt:active->option_value;
         return true;
     }
     if (command==RETRO_ENVIRONMENT_SET_CORE_OPTIONS_UPDATE_DISPLAY_CALLBACK) {
@@ -223,8 +232,12 @@ static bool environment(unsigned command,void *data) {
     }
     if (command==RETRO_ENVIRONMENT_SET_CORE_OPTIONS_DISPLAY) {
         const retro_core_option_display *display=(const retro_core_option_display*)data;
-        int group=group_key(display->key);assert(group>=0);
-        active->visible[group]=display->visible;++active->display_calls;
+        int group=group_key(display->key);
+        if (group>=0) active->visible[group]=display->visible;
+        else if (!strcmp(display->key,"anybor_crt_oversize_handling")) active->oversize_visible=display->visible;
+        else if (!strcmp(display->key,"anybor_os_screen_orientation")) active->orientation_visible=display->visible;
+        else assert(!"unexpected visibility hint");
+        ++active->display_calls;
         return active->display_supported;
     }
     assert(!"unexpected environment call");return false;
@@ -234,7 +247,7 @@ static bool environment(unsigned command,void *data) {
     calls = []
     for name, declarations in fixtures:
         source += '\nnamespace ' + name + ' {\n' + declarations + '\n'
-        source += 'static retro_environment_t env_cb;\n' + helpers + '\n' + registration + '\n' + option_readers
+        source += 'static retro_environment_t env_cb;\n' + helpers + '\n' + option_readers + '\n' + registration
         source += r'''
 void run(void) {
     char output[48];get_engine_option(output,sizeof(output));assert(!strcmp(output,"Auto"));
@@ -265,7 +278,15 @@ void run(void) {
             // Storage remains valid after registration returns and on repeated registration.
             if (fixture.retained_v2) read_v2(fixture.retained_v2);else read_legacy(fixture.retained_legacy);
             assert(fixture.options==captured);
-            assert(fixture.update_display && fixture.display_calls==5);
+            assert(fixture.update_display && fixture.display_calls==7);
+            assert(!fixture.oversize_visible && !fixture.orientation_visible);
+            fixture.crt="On";
+            assert(fixture.update_display()==fixture.display_supported);
+            assert(fixture.oversize_visible && fixture.orientation_visible);
+            fixture.crt="Off";
+            assert(fixture.update_display()==fixture.display_supported);
+            assert(!fixture.oversize_visible && !fixture.orientation_visible);
+            fixture.crt=NULL;
             for (unsigned g=0;g<5;++g) assert(fixture.visible[g]==(repeat!=0));
             assert(!fixture.update_display());
             fixture.selected="On";fixture.update_display();
@@ -353,7 +374,8 @@ printf("registrations=%u selections=%u\n",registration_checks,selection_checks);
 class CoreOptionTests(unittest.TestCase):
     def test_crt_option_order_checks_complete_grouped_registration(self):
         from test_crt import check_option_order
-        keys = ['anybor_crt_tv', 'anybor_analog', 'anybor_rumble', 'anybor_macros',
+        keys = ['anybor_crt_tv', 'anybor_crt_oversize_handling', 'anybor_os_screen_orientation',
+                'anybor_image_rotation', 'anybor_analog', 'anybor_rumble', 'anybor_macros',
                 'anybor_engine', 'anybor_engine_3000_3499', 'anybor_engine_3500_3749',
                 'anybor_engine_3750_3999', 'anybor_engine_4000_4999', 'anybor_engine_5000_plus',
                 'anybor_state_content', 'anybor_state_compression', 'anybor_gamelog',

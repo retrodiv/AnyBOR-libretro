@@ -64,6 +64,13 @@ static uint32_t crt_reference_pixel(const uint32_t *src, int w, int h, int pitch
     return result;
 }
 
+static void compose_fixed(uint32_t *dst, const uint32_t *src, int w, int h, int pitch)
+{
+    obor_crt_frame frame = {640, 480, 640, 480, 1, 0, 0};
+    obor_crt_fit(&frame, w, h);
+    obor_crt_present(dst, &frame, src, w, h, pitch);
+}
+
 static void test_crt_filter(void)
 {
     const struct { int w, h; } cases[] = {
@@ -97,7 +104,7 @@ static void test_crt_filter(void)
         for (y = 0; y < h; ++y)
             for (x = 0; x < w; ++x)
                 source[y * pitch + x] = (uint32_t)(x * 12347u + y * 97813u) & 0xffffffu;
-        obor_crt_compose(frame, source, w, h, pitch);
+        compose_fixed(frame, source, w, h, pitch);
         for (y = 0; y < 480; ++y)
             for (x = 0; x < 640; ++x) {
                 uint32_t actual = frame[y * 640 + x], expected;
@@ -125,7 +132,7 @@ static void test_crt_filter(void)
         for (y = 0; y < 272; ++y)
             for (x = 0; x < 480; ++x)
                 source[y * 480 + x] = (x + phase) % 3 == 1 ? 0xffffffu : 0;
-        obor_crt_compose(frame, source, 480, 272, 480);
+        compose_fixed(frame, source, 480, 272, 480);
         for (x = 0; x < 640; ++x)
             assert(frame[180 * 640 + x] ==
                    crt_reference_pixel(source, 480, 272, 480, x, 121, 640, 362, 2));
@@ -164,7 +171,7 @@ static void test_crt(void)
     for (n = 0; n < sizeof(source) / sizeof(source[0]); ++n)
         source[n] = 0x123456;
     for (n = 0; n < sizeof(cases) / sizeof(cases[0]); ++n) {
-        obor_crt_compose(frame, source, cases[n].w, cases[n].h, 960);
+        compose_fixed(frame, source, cases[n].w, cases[n].h, 960);
         for (y = 0; y < 480; ++y)
             for (x = 0; x < 640; ++x)
                 assert(frame[y * 640 + x] ==
@@ -176,13 +183,10 @@ static void test_crt(void)
     for (y = 0; y < 240; ++y)
         for (x = 0; x < 320; ++x)
             source[y * 960 + x] = (uint32_t)(y * 320 + x + 1);
-    obor_crt_compose(frame, source, 320, 240, 960);
+    compose_fixed(frame, source, 320, 240, 960);
     for (y = 0; y < 480; ++y)
         for (x = 0; x < 640; ++x)
             assert(frame[y * 640 + x] == (uint32_t)((y / 2) * 320 + x / 2 + 1));
-    obor_crt_compose(frame, source, 4097, 1, 4097);
-    for (n = 0; n < sizeof(frame) / sizeof(frame[0]); ++n)
-        assert(frame[n] == 0);
 }
 
 static void test_crt_presentation(void)
@@ -221,26 +225,28 @@ static void test_crt_presentation(void)
     static uint32_t scaled[640 * 480];
     uint32_t *frame = guarded + 1;
     size_t n, p;
-    int x, y, out_w, out_h;
-    assert(!obor_crt_output_size(0, 240, &out_w, &out_h));
-    assert(out_w == 0 && out_h == 240);
-    assert(!obor_crt_output_size(4097, 1, &out_w, &out_h));
-    assert(!obor_crt_output_size(1, -1, &out_w, &out_h));
+    int x, y;
+    obor_crt_frame invalid = obor_crt_layout(0, 240, 0, OBOR_CRT_640_480);
+    assert(invalid.width == 0 && invalid.height == 240);
+    invalid = obor_crt_layout(4097, 1, 0, OBOR_CRT_640_480);
+    assert(invalid.width == 4097 && invalid.height == 1);
+    invalid = obor_crt_layout(1, -1, 0, OBOR_CRT_640_480);
+    assert(invalid.width == 1 && invalid.height == -1);
     for (n = 0; n < sizeof(cases) / sizeof(cases[0]); ++n) {
         int w = cases[n].w, h = cases[n].h, pitch = w + 3;
-        int adapted = obor_crt_output_size(w, h, &out_w, &out_h);
+        obor_crt_frame layout = obor_crt_layout(w, h, 0, OBOR_CRT_640_480);
+        int out_w = layout.width, out_h = layout.height;
         int fitted = out_w == 640 && out_h == 480;
         assert(out_w == cases[n].out_w && out_h == cases[n].out_h);
-        assert(adapted == (fitted || out_w != w || out_h != h));
         for (p = 0; p < sizeof(guarded) / sizeof(guarded[0]); ++p)
             guarded[p] = 0xdeadbeefu;
         memset(source, 0xa5, sizeof(source));
         for (y = 0; y < h; ++y)
             for (x = 0; x < w; ++x)
                 source[y * pitch + x] = (uint32_t)(1 + x * 73 + y * 251);
-        obor_crt_present(frame, source, w, h, pitch);
+        obor_crt_present(frame, &layout, source, w, h, pitch);
         if (fitted) {
-            obor_crt_compose(scaled, source, w, h, pitch);
+            compose_fixed(scaled, source, w, h, pitch);
             assert(!memcmp(frame, scaled, sizeof(scaled)));
         } else {
             for (y = 0; y < out_h; ++y)
@@ -258,6 +264,39 @@ static void test_crt_presentation(void)
     }
 }
 
+static void test_crt_oversize_modes(void)
+{
+    const struct { int w, h, iw, ih; } expected[] = {
+        {640, 480, 640, 360}, {1920, 480, 1920, 360},
+        {320, 240, 320, 180}, {1920, 240, 1920, 180}
+    };
+    for (int mode = OBOR_CRT_640_480; mode <= OBOR_CRT_KEEP_240; ++mode) {
+        obor_crt_frame wide = obor_crt_layout(1920, 1080, 0, (enum obor_crt_oversize)mode);
+        obor_crt_frame tall = obor_crt_layout(1080, 1920, 1, (enum obor_crt_oversize)mode);
+        assert(wide.width == expected[mode].w && wide.height == expected[mode].h);
+        assert(wide.image_width == expected[mode].iw && wide.image_height == expected[mode].ih);
+        assert(tall.width == wide.height && tall.height == wide.width);
+        assert(tall.image_width == wide.image_height && tall.image_height == wide.image_width);
+        assert(wide.area_filter == (mode >= OBOR_CRT_320_240));
+        assert(tall.area_filter == wide.area_filter);
+    }
+    obor_crt_frame limit = obor_crt_layout(244, 320, 1, OBOR_CRT_320_240);
+    assert(limit.width == 244 && limit.height == 320);
+    limit = obor_crt_layout(245, 320, 1, OBOR_CRT_320_240);
+    assert(limit.width == 240 && limit.height == 320 && limit.area_filter);
+    obor_crt_frame capped = obor_crt_layout(320, 4096, 0, OBOR_CRT_KEEP_480);
+    assert(capped.width == 4096 && capped.height == 480);
+    assert(capped.image_width == 320 && capped.image_height == 480);
+    assert(capped.aspect == (4.0f * 4096) / (3.0f * 5462));
+
+    /* Source padding and fractional footprint weights on the reduced axis. */
+    const uint32_t source[] = {0xff0000, 0, 0, 0xabcdef, 0, 0, 0x00ff00, 0xabcdef};
+    uint32_t dst[2];
+    const obor_crt_frame reduced = {2, 1, 2, 1, 1, 1, 0};
+    obor_crt_present(dst, &reduced, source, 3, 2, 4);
+    assert(dst[0] == 0x550000 && dst[1] == 0x005500);
+}
+
 static unsigned hits[65][65];
 static void pixel(int x, int y, void *unused)
 {
@@ -272,6 +311,7 @@ int main(void)
     test_crt();
     test_crt_filter();
     test_crt_presentation();
+    test_crt_oversize_modes();
     test_state_padding();
     assert(sizeof(UInt64) == 8 && sizeof(SInt64) == 8);
     assert(Swap16(0x1234) == 0x3412);

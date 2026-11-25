@@ -245,12 +245,135 @@ class ContentTriageTests(unittest.TestCase):
 
     def test_unlabelled_modern_requirements_use_available_official_profiles(self):
         for source, expected in (
-                ('void main(){get_global_config_property(0);}', 7530),
-                ('void main(){log(openborconstant("GLOBAL_CONFIG_PROPERTY_AJSPECIAL"));}', 7556),
-                ('void main(){load_palette(0,"x");}', 7735),
-                ('void main(){get_flash_property(0);}', 7735),
+                ('void main(){get_global_config_property(0);}', 8023),
+                ('void main(){log(openborconstant("GLOBAL_CONFIG_PROPERTY_AJSPECIAL"));}', 8023),
+                ('void main(){load_palette(0,"x");}', 8023),
+                ('void main(){get_flash_property(0);}', 8023),
                 ('void main(){get_music_channel_property(0);}', 7735)):
             self.assertEqual(self.script('', source)[0], expected, source)
+
+    def test_unlabelled_native_registry_intersects_discontinuous_availability(self):
+        cases = (
+            ('getanimationproperty(self, 0, "animhits");', 4213),
+            ('srand(7); getanimationproperty(self, 0, "animhits");', 4079),
+            ('srand(7);', 6391),
+            ('getbglayerproperty(0, "xratio");', 3482),
+            ('get_recursive_damage_property(0, 0);', 7735),
+        )
+        for calls, expected in cases:
+            with self.subTest(calls=calls):
+                profile, log = self.script('', 'void main(){' + calls + '}')
+                self.assertEqual(profile, expected, log)
+        profile, log = self.script('', 'void main(){getbglayerproperty(0,"xratio");movie_load("x");}')
+        self.assertEqual(profile, 6391, log)
+        self.assertIn('no common automatic profile', log)
+
+    def test_legacy_attack_route_uses_other_requirements_to_refine_untagged_content(self):
+        source = 'void main(){getentityproperty(self,"attack","damage",0,0);getpixel(screen,0,0,0);}'
+        profile, log = self.script('', source)
+        self.assertEqual(profile, 3626, log)
+        self.assertIn('(legacy script API)', log)
+        self.assertIn('legacy-attack bounds=1-4166', log)
+
+    def test_unlabelled_bound_names_ignore_dormant_shadowed_and_conditional_source(self):
+        for call in (b'getbglayerproperty(0,"xratio");', b'getpixel(screen,0,0,0);'):
+            dormant = {'data/scripts/unused.c': b'void main(){' + call + b'}'}
+            self.assertEqual(self.select('', dormant)[0], 6391)
+        for script in (
+                b'#if CUSTOM\ngetbglayerproperty(0,"xratio");\n#endif\n',
+                b'#define getbglayerproperty other\ngetbglayerproperty(0,"xratio");\n',
+                b'void getbglayerproperty(int n, char key){}\n'
+                b'void main(){getbglayerproperty(0,"xratio");}',
+                b'void main(){log("getbglayerproperty(0, xratio)");}'):
+            with self.subTest(script=script):
+                profile, log = self.select('', {'data/scripts/update.c': script})
+                self.assertEqual(profile, 6391, log)
+
+    def test_unlabelled_bound_import_retains_api_facts_across_scan_limits(self):
+        members = {f'data/unused/{i}.txt': b'# unused\n' for i in range(805)}
+        members['data/scripts/update.c'] = b'#import "helper.c"\nvoid main(){helper();}'
+        members['data/scripts/helper.c'] = b'void helper(){getplayerproperty(0,"weaponum");}'
+        profile, log = self.select('', members)
+        self.assertEqual(profile, 3818, log)
+        self.assertIn('name=weaponum bounds=1-3820', log)
+        self.assertIn('scan incomplete', log)
+
+    def test_unlabelled_constant_is_a_complete_literal_of_the_native_call(self):
+        profile, log = self.script('', 'void main(){openborconstant("PLAYER_MAX_Z");}')
+        self.assertEqual(profile, 7142, log)
+        profile, log = self.script('', 'void main(){openborconstant("MAX_PANELS");}')
+        self.assertEqual(profile, 3994, log)
+        self.assertIn('bound native constant max_panels', log)
+        for source in (
+                'void main(){log("MAX_PANELS");}',
+                'void main(){openborconstant("MAX_PANELS"+suffix);}',
+                '#define openborconstant local\nvoid main(){openborconstant("MAX_PANELS");}'):
+            self.assertEqual(self.script('', source)[0], 6391, source)
+
+    def test_unlabelled_entity_getter_and_system_query_require_literal_properties(self):
+        profile, log = self.script('', 'void main(){getentityproperty(self,"grabdistance");}')
+        self.assertEqual(profile, 8023, log)
+        self.assertIn('bound native entity getter grabdistance', log)
+        profile, log = self.script('', 'void main(){openborvariant("cheats");}')
+        self.assertEqual(profile, 7142, log)
+        self.assertIn('bound native system query cheats', log)
+        for source in ('getentityproperty(self, "grabdistance" + suffix);',
+                       'getentityproperty(self, key);', 'openborvariant("grabdistance");'):
+            self.assertEqual(self.script('', 'void main(){' + source + '}')[0], 6391)
+
+    def test_unlabelled_registry_follows_referenced_models_and_their_scripts(self):
+        members = {'data/models.txt': b'load hero "data/chars/hero name.txt"\n',
+                   'data/chars/hero name.txt': b'name hero\nthinkscript data/scripts/think.c\n',
+                   'data/scripts/think.c': b'void main(){getbglayerproperty(0,"xratio");}'}
+        self.assertEqual(self.select('', members)[0], 3482)
+        members['data/chars/hero name.txt'] = (
+            b'name hero\nanim idle\n@script\ngetbglayerproperty(0,"xratio");\n@end\n')
+        self.assertEqual(self.select('', members)[0], 3482)
+
+    def test_unlabelled_registry_follows_scripts_of_declared_levels(self):
+        members = {'data/levels.txt': b'set test\nfile data/levels/stage.txt\n',
+                   'data/levels/stage.txt': b'levelscript data/scripts/stage.c\n',
+                   'data/scripts/stage.c': b'void main(){getpixel(screen,0,0,0);}'}
+        self.assertEqual(self.select('', members)[0], 3626)
+        members['data/levels.txt'] = b'set test\n'
+        self.assertEqual(self.select('', members)[0], 6391)
+
+    def test_unlabelled_playsample_argument_count_controls_compatibility(self):
+        for args, expected in (('0,0,100,100,100,0', 3554),
+                               ('getglobalvar("sound,index")', 6391)):
+            with self.subTest(args=args):
+                profile, log = self.script('', 'void main(){openborvariant("canvas");'
+                                           'playsample(' + args + ');}')
+                self.assertEqual(profile, expected, log)
+                if expected == 6391:
+                    self.assertIn('no common automatic profile', log)
+
+    def test_unlabelled_model_rules_are_scoped_to_their_command_and_argument(self):
+        members = {'data/models.txt': b'load hero data/chars/hero.txt\n',
+                   'data/chars/hero.txt': b'name hero\nanim idle\njumpframe 0 3 2\n',
+                   'data/scripts/update.c': b'void main(){getpixel(screen,0,0,0);}'}
+        self.assertEqual(self.select('', members)[0], 3626)
+        members['data/chars/hero.txt'] = b'name hero\nanim idle\njumpframe this 3 2\n'
+        profile, log = self.select('', members)
+        self.assertEqual(profile, 6391, log)
+        self.assertIn('no common automatic profile', log)
+        members['data/chars/hero.txt'] = b'name hero\ngrabdistance 20\n'
+        self.assertEqual(self.select('', members)[0], 3626)
+        members['data/models.txt'] += b'grabdistance 20\n'
+        profile, log = self.select('', members)
+        self.assertEqual(profile, 6391, log)
+        self.assertIn('no common automatic profile', log)
+
+    def test_unlabelled_uses_early_offscreen_factor_boundary_in_models_index(self):
+        members = {'data/models.txt': b'offscreen_noatk_factor 0.5\n',
+                   'data/scripts/update.c': b'void main(){openborvariant("usesave");}'}
+        profile, log = self.select('', members)
+        self.assertEqual(profile, 3854, log)
+        self.assertIn('name=offscreen_noatk_factor bounds=3683-', log)
+        members['data/chars/loose.txt'] = members.pop('data/models.txt')
+        profile, log = self.select('', members)
+        self.assertEqual(profile, 3854, log)
+        self.assertNotIn('offscreen_noatk_factor bounds=', log)
 
     def test_missing_modern_profiles_respect_api_additions_and_retirements(self):
         for name in ('copy_palette', 'get_palette_property', 'set_palette_property',
@@ -453,14 +576,14 @@ class ContentTriageTests(unittest.TestCase):
                        '#define CUSTOM 1\nvoid main(){unload_model(0);}'):
             self.assertEqual(self.script('6XXX',source)[0],6391,source)
 
-    def test_scan_limits_keep_positive_model_facts_without_changing_no_tag_policy(self):
+    def test_scan_limits_keep_positive_model_facts_with_and_without_tag(self):
         members={'data/chars/first.txt':b'boomerang 1\n'}
         members.update(('data/unused/%d.txt'%i,b'name unused\n') for i in range(805))
         profile,log=self.select('6XXX',members)
         self.assertEqual(profile,6330)
         self.assertIn('scan incomplete',log)
         self.assertIn('name=boomerang bounds=',log)
-        self.assertEqual(self.select('',members)[0],6391)
+        self.assertEqual(self.select('',members)[0],6330)
         members['data/chars/first.txt']=b'remap first.gif second.gif\n'
         self.assertEqual(self.select('44XX',members)[0],4456)
 
@@ -480,10 +603,9 @@ class ContentTriageTests(unittest.TestCase):
         self.assertEqual(profile,4456)
         self.assertIn('scan incomplete',log)
 
-    def test_without_tag_retains_the_existing_content_scan(self):
-        # The extra property rule is used only to refine an imprecise tag.
-        self.assertEqual(self.script('', 'void main(){getplayerproperty(0,"weaponum");}')[0],6391)
-        self.assertEqual(self.script('', 'void main(){get_global_config_property(0);}')[0],7530)
+    def test_unlabelled_content_applies_literal_property_constraints(self):
+        self.assertEqual(self.script('', 'void main(){getplayerproperty(0,"weaponum");}')[0], 3818)
+        self.assertEqual(self.script('', 'void main(){getplayerproperty(0,"weapnum");}')[0], 6391)
 
     def test_every_rule_has_a_syntactic_probe_and_checked_native_boundaries(self):
         rules=subprocess.check_output([str(self.host),'--rules'],text=True,timeout=8).splitlines()
@@ -503,6 +625,8 @@ class ContentTriageTests(unittest.TestCase):
                     actual=subprocess.check_output([str(self.host),'--rule-probe',ident,str(build),str(engine)],
                                                    text=True,timeout=8)
                     self.assertEqual(int(actual),int(expected),(row,build,engine))
+            if kind >= 14:
+                continue  # Dedicated unlabelled dependency tests exercise these observations.
             if kind==0: source='void main(){'+name+'();}'
             elif kind==1: source='void main(){openborconstant("'+name+'");}'
             elif kind==3: source='void main(){getplayerproperty(0,"'+name+'");}'

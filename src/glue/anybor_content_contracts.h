@@ -3,15 +3,16 @@
 #ifndef OBOR_CONTENT_CONTRACTS_H
 #define OBOR_CONTENT_CONTRACTS_H
 #define OBOR_CONTENT_CONTRACT_GAPS 1
-/* Syntax facts for refining imprecise or unavailable exact declarations. The source boundaries
- * and branch exceptions are documented in docs/AUTO_SELECTION_RULES.md.
+/* Syntax facts for automatic profile selection. The source boundaries and
+ * branch exceptions are documented in docs/AUTO_SELECTION_RULES.md.
  * This header follows content_lex; no source is executed during detection. */
 enum obor_contract_kind {
     OBOR_CT_FUNCTION, OBOR_CT_CONSTANT, OBOR_CT_COMMAND,
     OBOR_CT_PLAYER, OBOR_CT_PLAYER_WRITE, OBOR_CT_LEVEL,
     OBOR_CT_SYSTEM, OBOR_CT_AIFLAG_READ, OBOR_CT_ATTACK_NAME,
     OBOR_CT_PALETTE, OBOR_CT_ENTITY, OBOR_CT_DRAW_WRITE,
-    OBOR_CT_SPRITE_READ, OBOR_CT_SPRITE_WRITE
+    OBOR_CT_SPRITE_READ, OBOR_CT_SPRITE_WRITE, OBOR_CT_CALL_ARITY,
+    OBOR_CT_MODEL_ARGUMENT, OBOR_CT_MODEL_DEFAULT
 };
 enum { OBOR_CT_NO_4453 = 1, OBOR_CT_OLD_ANIMATION_BRANCH = 2 };
 struct obor_contract_rule {
@@ -44,6 +45,7 @@ static const obor_contract_rule kContentContracts[] = {
     { "changedrawmethod", OBOR_CT_FUNCTION, 3551, INT_MAX, 0, 0, 0 },
     { "copy_palette", OBOR_CT_FUNCTION, 7582, INT_MAX, 0, 0, 0 },
     { "custboomerang", OBOR_CT_COMMAND, 1, 6376, 0, 0, 0 },
+    { "dropv", OBOR_CT_MODEL_DEFAULT, 3681, INT_MAX, 0, 0, 0 },
     { "ebox", OBOR_CT_COMMAND, 6332, INT_MAX, 0, 0, 0 },
     { "exit", OBOR_CT_FUNCTION, 3834, INT_MAX, 0, 0, 0 },
     { "free_drawmethod", OBOR_CT_FUNCTION, 6982, 7581, 0, 0, 0 },
@@ -60,6 +62,8 @@ static const obor_contract_rule kContentContracts[] = {
     { "get_sound_property", OBOR_CT_FUNCTION, 7871, INT_MAX, 0, 0, 0 },
     { "getgfxproperty", OBOR_CT_FUNCTION, 3627, INT_MAX, 0, 0, 0 },
     { "getpixel", OBOR_CT_FUNCTION, 3565, 3626, 0, 0, 0 },
+    { "grabdistance", OBOR_CT_MODEL_DEFAULT, 3681, INT_MAX, 0, 0, 0 },
+    { "jumpframe", OBOR_CT_MODEL_ARGUMENT, 3681, INT_MAX, 0, 0, 0 },
     { "keys", OBOR_CT_PLAYER_WRITE, 3798, INT_MAX, 0, 0, 0 },
     { "land", OBOR_CT_ATTACK_NAME, 3831, INT_MAX, 0, 0, 0 },
     { "lifespan", OBOR_CT_ATTACK_NAME, 3831, INT_MAX, 0, 0, 0 },
@@ -68,6 +72,7 @@ static const obor_contract_rule kContentContracts[] = {
     { "movie_play", OBOR_CT_FUNCTION, 7964, INT_MAX, 0, 0, 0 },
     { "movie_stop", OBOR_CT_FUNCTION, 7964, INT_MAX, 0, 0, 0 },
     { "music_channel", OBOR_CT_SYSTEM, 7590, 7887, 0, 0, 0 },
+    { "offscreen_noatk_factor", OBOR_CT_MODEL_DEFAULT, 3683, INT_MAX, 0, 0, 0 },
     { "offsetx", OBOR_CT_SPRITE_READ, 3350, INT_MAX, 0, 3609, 4179 },
     { "offsetx", OBOR_CT_SPRITE_WRITE, 3350, 3608, 0, 0, 0 },
     { "offsety", OBOR_CT_SPRITE_READ, 3350, INT_MAX, 0, 3609, 4179 },
@@ -77,6 +82,7 @@ static const obor_contract_rule kContentContracts[] = {
     { "onmodelcopyscript", OBOR_CT_COMMAND, 3793, INT_MAX, 0, 0, 0 },
     { "pain_time", OBOR_CT_AIFLAG_READ, 3367, 3796, 0, 0, 0 },
     { "pit", OBOR_CT_ATTACK_NAME, 3831, INT_MAX, 0, 0, 0 },
+    { "playsample(1..5)", OBOR_CT_CALL_ARITY, 3706, INT_MAX, 0, 0, 0 },
     { "remap", OBOR_CT_COMMAND, 1, INT_MAX, OBOR_CT_NO_4453, 0, 0 },
     { "sample_play_id", OBOR_CT_SYSTEM, 3838, INT_MAX, 0, 0, 0 },
     { "scrollmaxx", OBOR_CT_SYSTEM, 3783, INT_MAX, 0, 0, 0 },
@@ -108,10 +114,12 @@ static const obor_contract_rule kContentContracts[] = {
 };
 static bool g_contract_valid, g_contract_scripts_ambiguous;
 static unsigned char g_contract_seen[sizeof(kContentContracts) / sizeof(kContentContracts[0])];
+static unsigned char g_bound_contracts[sizeof(g_contract_seen)];
 
 static void content_contract_reset(void)
 {
     memset(g_contract_seen, 0, sizeof(g_contract_seen));
+    memset(g_bound_contracts, 0, sizeof(g_bound_contracts));
     g_contract_valid = false;
     g_contract_scripts_ambiguous = true;
 }
@@ -132,19 +140,22 @@ static const obor_contract_rule *content_contract_lookup(obor_contract_kind kind
     return NULL;
 }
 
-static void content_contract_observe(obor_contract_kind kind, const char *name)
+static void content_contract_record(unsigned char *seen, obor_contract_kind kind, const char *name)
 {
-    if (!g_content_triage) return;
     const obor_contract_rule *rule = content_contract_lookup(kind, name);
-    if (rule) g_contract_seen[rule - kContentContracts] = 1;
+    if (rule) seen[rule - kContentContracts] = 1;
+}
+
+static bool content_contract_is_script(obor_contract_kind kind)
+{
+    return kind != OBOR_CT_COMMAND && kind != OBOR_CT_ATTACK_NAME && kind != OBOR_CT_PALETTE &&
+        kind != OBOR_CT_MODEL_ARGUMENT && kind != OBOR_CT_MODEL_DEFAULT;
 }
 
 static bool content_contract_active(size_t i)
 {
-    if (!g_contract_valid || !g_contract_seen[i]) return false;
-    obor_contract_kind kind = kContentContracts[i].kind;
-    bool script = kind != OBOR_CT_COMMAND && kind != OBOR_CT_ATTACK_NAME && kind != OBOR_CT_PALETTE;
-    return !script || !g_contract_scripts_ambiguous;
+    return g_contract_valid && g_contract_seen[i] &&
+        (!content_contract_is_script(kContentContracts[i].kind) || !g_contract_scripts_ambiguous);
 }
 
 static bool content_contract_allows(const obor_contract_rule *rule, int profile, int engine)
@@ -200,9 +211,53 @@ static bool content_contract_argument(obor_content_scan *s, const char *data,
     return false;
 }
 
+static bool content_contract_selector(const char *name)
+{
+    static const char *const names[] = {
+        "changeentityproperty", "changedrawmethod", "changelevelproperty", "changeopenborvariant",
+        "changeplayerproperty", "getentityproperty", "getlevelproperty", "getplayerproperty",
+        "openborconstant", "openborvariant", "playsample",
+    };
+    for (const char *selector : names)
+        if (!strcmp(name, selector)) return true;
+    return false;
+}
+
+/* Only classify a complete call within the same lookahead budget used for
+ * literal arguments. Commas inside nested calls or strings are not separators. */
+static int content_call_arity(obor_content_scan *s, const char *data, size_t n, size_t pos)
+{
+    size_t end = n - pos > 4096 ? pos + 4096 : n;
+    char token[64];
+    if (content_lex(s, data, end, &pos, token) != '(') return -1;
+    int arity = 0;
+    unsigned depth = 0;
+    char expected[64];
+    bool argument = false;
+    char kind;
+    while (s->complete && (kind = content_lex(s, data, end, &pos, token))) {
+        if (!depth && kind == ')') return argument ? arity + 1 : arity ? -1 : 0;
+        if (!depth && kind == ',') {
+            if (!argument) return -1;
+            ++arity;
+            argument = false;
+            continue;
+        }
+        if (kind == '(' || kind == '[' || kind == '{') {
+            if (depth == sizeof(expected)) return -1;
+            expected[depth++] = kind == '(' ? ')' : kind == '[' ? ']' : '}';
+        } else if (kind == ')' || kind == ']' || kind == '}') {
+            if (!depth || kind != expected[--depth]) return -1;
+        }
+        argument = true;
+    }
+    return -1;
+}
+
 static void content_contract_script(obor_content_scan *s, const char *name,
                                     char previous_kind, const char *previous,
-                                    const char *data, size_t n, size_t pos)
+                                    const char *data, size_t n, size_t pos,
+                                    unsigned char *seen = g_contract_seen)
 {
     if (!g_content_triage) return;
     bool native = content_contract_lookup(OBOR_CT_FUNCTION, name) != NULL;
@@ -213,7 +268,8 @@ static void content_contract_script(obor_content_scan *s, const char *name,
     bool entity = !strcmp(name, "getentityproperty");
     bool entity_write = !strcmp(name, "changeentityproperty");
     bool draw_write = !strcmp(name, "changedrawmethod");
-    if (!(native || player || level || system || constant || entity || entity_write || draw_write)) return;
+    bool sample = g_content_infer && seen != g_contract_seen && !strcmp(name, "playsample");
+    if (!(native || player || level || system || constant || entity || entity_write || draw_write || sample)) return;
     if (previous_kind == 'i' && strcmp(previous, "return")) {
         s->ambiguous_scripts = true;
         return;
@@ -221,35 +277,40 @@ static void content_contract_script(obor_content_scan *s, const char *name,
     size_t q = pos;
     char arg[64], next[64];
     if (content_lex(s, data, n, &q, next) != '(') return;
-    if (native) content_contract_observe(OBOR_CT_FUNCTION, name);
+    if (native) content_contract_record(seen, OBOR_CT_FUNCTION, name);
     if (constant && content_contract_argument(s, data, n, pos, 0, arg))
-        content_contract_observe(OBOR_CT_CONSTANT, arg);
+        content_contract_record(seen, OBOR_CT_CONSTANT, arg);
     if (player && content_contract_argument(s, data, n, pos, 1, arg)) {
-        content_contract_observe(OBOR_CT_PLAYER, arg);
-        if (!strcmp(name, "changeplayerproperty")) content_contract_observe(OBOR_CT_PLAYER_WRITE, arg);
+        content_contract_record(seen, OBOR_CT_PLAYER, arg);
+        if (!strcmp(name, "changeplayerproperty")) content_contract_record(seen, OBOR_CT_PLAYER_WRITE, arg);
     }
     if (level && content_contract_argument(s, data, n, pos, 0, arg))
-        content_contract_observe(OBOR_CT_LEVEL, arg);
+        content_contract_record(seen, OBOR_CT_LEVEL, arg);
     if (system && content_contract_argument(s, data, n, pos, 0, arg))
-        content_contract_observe(OBOR_CT_SYSTEM, arg);
+        content_contract_record(seen, OBOR_CT_SYSTEM, arg);
     if (draw_write && content_contract_argument(s, data, n, pos, 1, arg))
-        content_contract_observe(OBOR_CT_DRAW_WRITE, arg);
+        content_contract_record(seen, OBOR_CT_DRAW_WRITE, arg);
+    if (sample) {
+        int arity = content_call_arity(s, data, n, pos);
+        if (arity >= 1 && arity <= 5) content_contract_record(seen, OBOR_CT_CALL_ARITY, "playsample(1..5)");
+    }
     if ((entity || entity_write) && content_contract_argument(s, data, n, pos, 1, arg) &&
         !strcmp(arg, "spritea") && content_contract_argument(s, data, n, pos, 2, arg))
-        content_contract_observe(entity ? OBOR_CT_SPRITE_READ : OBOR_CT_SPRITE_WRITE, arg);
+        content_contract_record(seen, entity ? OBOR_CT_SPRITE_READ : OBOR_CT_SPRITE_WRITE, arg);
     if (entity && content_contract_argument(s, data, n, pos, 1, arg)) {
-        content_contract_observe(OBOR_CT_ENTITY, arg);
+        content_contract_record(seen, OBOR_CT_ENTITY, arg);
         if (!strcmp(arg, "aiflag") && content_contract_argument(s, data, n, pos, 2, arg))
-            content_contract_observe(OBOR_CT_AIFLAG_READ, arg);
+            content_contract_record(seen, OBOR_CT_AIFLAG_READ, arg);
     }
 }
 
 static void content_contract_model(const char *command, const char *argument)
 {
-    content_contract_observe(OBOR_CT_COMMAND, command);
+    if (!g_content_triage) return;
+    content_contract_record(g_contract_seen, OBOR_CT_COMMAND, command);
     if (!strcmp(command, "defense") || !strcmp(command, "offense"))
-        content_contract_observe(OBOR_CT_ATTACK_NAME, argument);
+        content_contract_record(g_contract_seen, OBOR_CT_ATTACK_NAME, argument);
     if (!strcmp(command, "colourdepth"))
-        content_contract_observe(OBOR_CT_PALETTE, argument);
+        content_contract_record(g_contract_seen, OBOR_CT_PALETTE, argument);
 }
 #endif
