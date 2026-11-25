@@ -9802,22 +9802,6 @@ s_model *load_cached_model(char *name, char *owner, char unload)
                 //disable special effects
                 drawmethod.flag = 0;
                 break;
-            case CMD_MODEL_ATTACK:
-            case CMD_MODEL_ATTACK1:
-            case CMD_MODEL_ATTACK2:
-            case CMD_MODEL_ATTACK3:
-            case CMD_MODEL_ATTACK4:
-            case CMD_MODEL_ATTACK5:
-            case CMD_MODEL_ATTACK6:
-            case CMD_MODEL_ATTACK7:
-            case CMD_MODEL_ATTACK8:
-            case CMD_MODEL_ATTACK9:
-            case CMD_MODEL_ATTACK10:
-            case CMD_MODEL_SHOCK:
-            case CMD_MODEL_BURN:
-            case CMD_MODEL_STEAL:
-            case CMD_MODEL_FREEZE:
-            case CMD_MODEL_ITEMBOX:
             case CMD_MODEL_ATTACK_BLOCK_COST:
                 attack.guardcost = GET_INT_ARG(1);
                 break;
@@ -9997,6 +9981,22 @@ s_model *load_cached_model(char *name, char *owner, char unload)
             case CMD_MODEL_ATTACK_TAG:
                 attack.tag = GET_INT_ARG(1);
                 break;
+            case CMD_MODEL_ATTACK:
+            case CMD_MODEL_ATTACK1:
+            case CMD_MODEL_ATTACK2:
+            case CMD_MODEL_ATTACK3:
+            case CMD_MODEL_ATTACK4:
+            case CMD_MODEL_ATTACK5:
+            case CMD_MODEL_ATTACK6:
+            case CMD_MODEL_ATTACK7:
+            case CMD_MODEL_ATTACK8:
+            case CMD_MODEL_ATTACK9:
+            case CMD_MODEL_ATTACK10:
+            case CMD_MODEL_SHOCK:
+            case CMD_MODEL_BURN:
+            case CMD_MODEL_STEAL:
+            case CMD_MODEL_FREEZE:
+            case CMD_MODEL_ITEMBOX:
             case CMD_MODEL_ATTACK_ETC:
                 abox[0] = GET_INT_ARG(1);
                 abox[1] = GET_INT_ARG(2);

@@ -51,6 +51,7 @@ void shutdown(int status,char *format,...){
  vsnprintf(diagnostic,sizeof(diagnostic),format,args);va_end(args);longjmp(stopped,1);
 }
 static s_model model;static s_attack attack;static int bbox[6],abox[6];
+static const s_axis_f default_model_dropv = {.x = 1.2f, .y = 3.0f};
 static s_scripts *parser_scripts;
 static List *modelcmdlist;
 static int service_success=1,model_calls,sound_calls,include_calls,init_calls,compile_calls,load_calls,append_calls;
@@ -97,7 +98,7 @@ void Script_Copy(Script *to,Script *from,int method){assert(traversal && method=
 static ptrdiff_t dispatch(char *input){
  ArgList arglist={0};char argbuf[MAX_ARG_LEN]={0};char *buf=input,*filename="unit-model",*command=NULL,*value=NULL;
  char fnbuf[512]={0};size_t size=strlen(input);ptrdiff_t pos=0;
- s_model *newchar=&model;modelCommands cmd=0;char *packfile="unit.pak";
+ s_model *newchar=&model;modelCommands cmd=0;char *packfile="unit.pak";int tempInt;
  @PREFIX@
  switch(cmd){@CASES@ default:@DEFAULT@}
  }
@@ -199,6 +200,47 @@ static void legacy_controls(void){
  initialize();assert(run("blockflash","none",0,&failed)==0 && !failed && !diagnostic[0] && attack.blockflash==-1 && model.bflash==79);
  initialize();assert(run("blockfx","none",0,&failed)==0 && !failed && !diagnostic[0] && attack.blocksound==8 && sound_calls==1 && !strcmp(service_argument,"none"));
 }
+
+static void legacy_attack_controls(void)
+{
+    static const char *const names[] = {
+        "attack", "attack1", "attack2", "attack3", "attack4", "attack5",
+        "attack6", "attack7", "attack8", "attack9", "attack10", "attack11",
+        "shock", "burn", "steal", "freeze", "itembox"
+    };
+    static const unsigned revisions[] = {@LEGACY_REVISIONS@};
+
+    for(unsigned row = 0; row < sizeof(revisions) / sizeof(*revisions); ++row)
+    {
+        obor_profile_build = revisions[row];
+        modelcmdlist = createModelCommandList();
+        assert(modelcmdlist);
+        for(unsigned index = 0; index < sizeof(names) / sizeof(*names); ++index)
+        {
+            int failed;
+            active_case = 10500 + index;
+            initialize();
+            attack.guardcost = 13;
+            assert(run(names[index], "0 2 11 13 5 1 7 8 9 10", 0, &failed) == 0);
+            assert(!failed && !diagnostic[0] && !include_calls);
+            assert(abox[0] == 0 && abox[1] == 2 && abox[2] == 11 && abox[3] == 13);
+            assert(attack.attack_force == 5 && attack.guardcost == 13);
+            assert(attack.no_block == 7 && attack.no_flash == 8 && attack.pause_add == 9);
+            assert(attack.attack_coords[4] == 10);
+            assert(attack.attack_drop == (strcmp(names[index], "freeze") != 0));
+        }
+
+        int failed;
+        active_case = 10599;
+        assert(run("attack", "0", 0, &failed) == 0);
+        assert(!failed && !diagnostic[0]);
+        assert(abox[0] == 0 && abox[1] == 0 && abox[2] == 0 && abox[3] == 0);
+        assert(attack.attack_force == 0 && attack.guardcost == 13);
+        freeCommandList(modelcmdlist);
+        modelcmdlist = NULL;
+    }
+}
+
 int main(void){
  _Static_assert(sizeof(int)==4,"native signed integer extent");assert(sizeof(commands)/sizeof(*commands)==60);
  for(unsigned row=0;row<sizeof(contexts)/sizeof(*contexts);++row){
@@ -209,5 +251,6 @@ int main(void){
   freeCommandList(modelcmdlist);modelcmdlist=NULL;free_all_scripts(&parser_scripts);assert(!parser_scripts);allocator_reset();
   printf("{\"revision\":%u,\"status\":\"PASS\"}\n",obor_profile_build);
  }
+ legacy_attack_controls();
  return 0;
 }

@@ -16,7 +16,7 @@ from test_historical_player import function, switch_cases
 FIXTURE = Path(__file__).with_name('fixtures') / 'profile-forward-model-parser-contracts.json'
 
 
-def program(data, engine):
+def program(data, engine, legacy_revisions):
     source = (engine / 'openbor.c').read_text()
     commands = (engine / 'source/gamelib/commands.c').read_text()
     utility = (engine / 'source/utils.c').read_text()
@@ -31,7 +31,14 @@ def program(data, engine):
     selected = [row['symbol'] for row in data['commands'] if row['kind'] != 'unhandled']
     selected += ['CMD_MODEL_RUNNING', 'CMD_MODEL_BBOX', 'CMD_MODEL_HITFLASH',
                  'CMD_MODEL_BLOCKFLASH', 'CMD_MODEL_HITFX', 'CMD_MODEL_BLOCKFX']
-    arms = ''.join('case ' + name + ':' + cases[name]['body'] for name in selected)
+    attack_start = min(cases[name]['label_start'] for name in
+                       ('CMD_MODEL_ATTACK', 'CMD_MODEL_ATTACK_BLOCK_COST'))
+    attack_end = cases['CMD_MODEL_ATTACKZ']['label_start']
+    # Keep the attack labels and every intervening arm in source order.
+    # Reconstructing individual arms could hide a fall-through into a new case.
+    arms = ''.join('case ' + name + ':' + cases[name]['body'] for name in selected
+                   if not attack_start <= cases[name]['label_start'] < attack_end)
+    arms += loader[attack_start:attack_end]
     rows = []
     for row in data['sources']:
         admitted = set(row['admitted'])
@@ -64,6 +71,7 @@ def program(data, engine):
         LIST='#include ' + json.dumps(str(engine / 'source/scriptlib/List.c')),
         NUMBERS=definitions, COMMANDS=command_functions, PREFIX=prefix, CASES=arms,
         DEFAULT=cases['default']['body'], CONTEXTS=','.join(rows), FIELDS='\n'.join(field_cases),
+        LEGACY_REVISIONS=','.join(map(str, legacy_revisions)),
         COMMAND_ROWS=','.join(command_rows),
         VALUES=','.join('{%s,%.17g,%.17g,%.17g,%d}' %
             (json.dumps(row['text']), row['integer'], row['floating'], row['float_integer'], row['warning'])
@@ -87,12 +95,17 @@ class ForwardModelParserTests(unittest.TestCase):
         self.assertEqual(len(revisions), len(data['sources']))
         self.assertEqual((min(revisions), max(revisions)), tuple(data['range']))
         self.assertTrue(set(data['boundary_controls']) <= revisions)
-        for profile in contract_profiles(data, json.loads((ROOT / 'src/pin.json').read_text())['profiles']):
+        profiles = json.loads((ROOT / 'src/pin.json').read_text())['profiles']
+        for profile in contract_profiles(data, profiles):
             revision = int(profile.get('revision', profile['build']))
             if profile['engine'] == data['engine'] and data['range'][0] <= revision <= data['range'][1]:
                 self.assertIn(revision, revisions)
         engine = Path(os.environ.get('OBOR_MODEL_PARSER_ENGINE', ROOT / 'src/engines' / data['engine']))
-        actual = [json.loads(line) for line in native_output(program(data, engine), data, engine_source=engine).splitlines()]
+        legacy_revisions = sorted({int(profile.get('revision', profile['build']))
+                                   for profile in profiles if profile['engine'] == data['engine']})
+        self.assertTrue(legacy_revisions)
+        output = native_output(program(data, engine, legacy_revisions), data, engine_source=engine)
+        actual = [json.loads(line) for line in output.splitlines()]
         self.assertEqual(actual, [dict(revision=row['revision'], status='PASS') for row in data['sources']])
 
 
