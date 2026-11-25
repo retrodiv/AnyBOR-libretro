@@ -48,6 +48,8 @@ typedef struct s_level_entry s_level_entry;
 static uint32_t obor_profile_build;
 static unsigned cases,control_calls;
 static int argument,current_set,defaultmaxplayers,num_difficulties;
+static void *level;
+static int current_level;
 static int pattern,frontend_all,requested,extent;
 static u32 interval,time=100,bothkeys,bothnewkeys;
 static s_set_entry *levelsets;
@@ -65,6 +67,10 @@ static void control_update(Control **ports,int count){
 }
 static u32 timer_getinterval(int speed){
     assert(speed==GAME_SPEED);return pattern==0?GAME_SPEED+1:pattern==1?GAME_SPEED/4+1:pattern==2?3:0;
+}
+static unsigned obor_play_interval(unsigned speed,int level_index){
+    assert(level_index==-1);
+    return timer_getinterval(speed);
 }
 @STOP_PROVIDER@
 @BODIES@

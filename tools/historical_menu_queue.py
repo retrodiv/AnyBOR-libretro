@@ -81,6 +81,7 @@ void drawstatus(void){event('S');}
 void execute_updatedscripts(void){event('U');}
 void draw_textobjs(void){event('T');}
 void display_ents(void){event('E');}
+void obor_content_draw(void (*draw)(void)){draw();}
 void clearscreen(s_screen *s){assert(s==vscreen);memset(screen_pixels(s),0,4);event('C');}
 void putscreen(s_screen *dest,s_screen *src,int x,int y,s_drawmethod *method){
  assert(dest==vscreen && !x && !y);

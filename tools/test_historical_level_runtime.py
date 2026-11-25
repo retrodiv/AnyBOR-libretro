@@ -205,6 +205,7 @@ typedef struct {
 typedef struct {int noslow,settime,type;} level_state;
 static level_state scene;
 static level_state *level = &scene;
+static int current_level = 2;
 static s_player player[MAX_PLAYERS];
 static controls control[MAX_PLAYERS];
 static controls *playercontrolpointers[] = {control,control+1,control+2,control+3};
@@ -229,6 +230,12 @@ static unsigned timer_getinterval(int speed)
     assert(speed == GAME_SPEED);
     mark('T');
     return reading;
+}
+
+static unsigned obor_play_interval(unsigned speed, int level_index)
+{
+    assert(level_index == (level ? current_level : -1));
+    return timer_getinterval(speed);
 }
 
 static void control_update(controls **ports, int count)

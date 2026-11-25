@@ -93,6 +93,7 @@ void drawstatus(void) {event('H');}
 void draw_textobjs(void) {event('T');}
 void execute_updatedscripts(void) {event('U');}
 void display_ents(void) {event('E');}
+void obor_content_draw(void (*draw)(void)) {draw();}
 void clearscreen(s_screen *screen) {assert(screen==vscreen);event('C');}
 void putscreen(s_screen *destination,s_screen *source,int x,int y,s_drawmethod *method)
 {assert(destination==vscreen && source==background && !x && !y && !method);event('V');}

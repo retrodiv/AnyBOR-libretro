@@ -74,7 +74,9 @@ class EarlySystemCallbackTests(unittest.TestCase):
         prefix = update[update.index('{') + 1:pause_at]
         paused = update[update.index('{', pause_at) + 1:update.index('if((level_completed', pause_at)]
         entities = re.findall(r'(?m)^\s*if[^\n]*update_ents\(\);', update)
-        post = re.search(r'if[^\n]*\n\s*\{\s*execute_updatedscripts\(\);', update)
+        post = re.search(r'if[^\n]*\n\s*\{\s*'
+                         r'(?:execute_updatedscripts\(\)|obor_content_draw\(execute_updatedscripts\));',
+                         update)
         clearing = re.search(r'(if[^\n]*)\n\s*\{\s*clearscreen\(vscreen\);', update)
         self.assertEqual(len(entities), 1)
         self.assertIsNotNone(post)
@@ -145,6 +147,7 @@ static void probe_inputrefresh(void){event('I');}
 static void probe_keyscripts(void){event('K');}
 static void probe_entities(void){event('E');}
 static void probe_clear(void){event('C');}
+void obor_content_draw(void (*draw)(void)){draw();}
 void font_printf(int x,int y,int which,int z,char *format,...){(void)x;(void)y;(void)which;(void)z;assert(!strcmp(format,"visible"));event('T');}
 @VARIANTS@
 @PIECES@

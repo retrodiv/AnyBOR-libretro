@@ -67,6 +67,8 @@ static s_player player[4];
 static s_playercontrols controls[4];
 static s_playercontrols *playercontrolpointers[4]={&controls[0],&controls[1],&controls[2],&controls[3]};
 static int maxplayers[1]={2},current_set,movieplay,movielog,pause,movieloglen,moviebufptr,movielen;
+static s_level *level;
+static int current_level;
 static unsigned interval,bothkeys,bothnewkeys;
 static int queue,draw_queue,polls,expect_poll,expect_x,expect_y,expect_tx,expect_ty,expect_size,expect_value;
 static char trace[4096];
@@ -78,6 +80,10 @@ void sound_update_music(void){event('S');}
 void obor_port_startup_progress(int value,int max){assert(value==expect_value && max==100);}
 void control_update(s_playercontrols **p,int count){assert(p==playercontrolpointers && count==expect_poll);polls++;event('I');}
 unsigned timer_getinterval(unsigned freq){assert(freq==GAME_SPEED);event('R');return GAME_SPEED+1;}
+unsigned obor_play_interval(unsigned freq,int level_index){
+ assert(level_index==-1);
+ return timer_getinterval(freq);
+}
 void movie_update(s_playercontrols **p){(void)p;abort();}
 void movie_save(s_playercontrols **p){(void)p;abort();}
 void movie_closefile(void){abort();}

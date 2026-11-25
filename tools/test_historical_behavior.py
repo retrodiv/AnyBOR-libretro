@@ -2607,7 +2607,15 @@ int main(void){return 0;}
         update = function(source, 'update'); start = update.index('if(ingame==1 &&')
         pause = update[start:update.index('{', start)]
         program = (Path(__file__).parent / 'fixtures/early_movie_menu.c').read_text()
-        program = program.replace('@INPUT@', function(source, 'inputrefresh')).replace('@PAUSE@', pause)
+        native_input = r'''
+static s_level *level;
+static int current_level;
+unsigned obor_play_interval(unsigned rate, int level_index) {
+    CHECK(level_index == -1);
+    return timer_getinterval(rate);
+}
+''' + function(source, 'inputrefresh')
+        program = program.replace('@INPUT@', native_input).replace('@PAUSE@', pause)
         program = program.replace('@HELPERS@', '\n'.join(function(source, name) for name in (
             'obor_main_menu_choices', 'obor_main_menu_action')))
         program = program.replace('@SWITCH@', action).replace('@CHECKS@', '\n'.join(checks))
