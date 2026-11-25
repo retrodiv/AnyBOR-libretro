@@ -144,6 +144,7 @@ The macros account for the active character's facing direction.
 | CRT Oversize Canvas Height | `anybor_crt_oversize_canvas_height` | Keep Game Height, 224px, 240px, 360px, 384px, **448px**, or 480px. |
 | OS Screen Orientation | `anybor_os_screen_orientation` | **Horizontal**. Choose Horizontal for a system rotation of 0° or 180° and Vertical for 90° or 270°. |
 | Image Rotation | `anybor_image_rotation` | **None**. Left and Right rotate the complete game image by 90°. Upside Down rotates it by 180°. |
+| Content Override Directives | `anybor_content_overrides` | **On**. Enables [scoped presentation from the content descriptor](CONTENT_CONFIGURATION.md#scoped-presentation-directives). |
 | Left Analog Stick as D-Pad | `anybor_analog` | **On**. Adds movement with the left stick. |
 | Rumble | `anybor_rumble` | **On**. Enables controller vibration for game effects. |
 | Special Move Macros (L2/R2/L3/R3) | `anybor_macros` | **On**. Executes supported character move sequences. |

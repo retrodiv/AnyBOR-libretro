@@ -22298,7 +22298,7 @@ void inputrefresh()
 	{
 #endif
 		 control_update(playercontrolpointers, maxplayers[current_set]);
-		 interval = timer_getinterval(GAME_SPEED); // so interval can be logged into movie
+		 interval = obor_play_interval(GAME_SPEED, level ? current_level : -1); // so interval can be logged into movie
 		 if(interval > GAME_SPEED) interval = GAME_SPEED/GAME_SPEED;
 		 if(interval > GAME_SPEED/4) interval = GAME_SPEED/4;
 
@@ -22501,7 +22501,7 @@ void update(int ingame, int usevwait)
 
 	if(ingame == 1 || (obor_profile_build >= 3358 && alwaysupdate))
 	{
-		execute_updatedscripts();
+		obor_content_draw(execute_updatedscripts);
 		draw_textobjs();
 	}
 
@@ -22512,7 +22512,7 @@ void update(int ingame, int usevwait)
 		if(background) putscreen(vscreen, background, 0, 0, NULL);
 	}
 
-	if(ingame==1 || selectScreen) display_ents();
+	if(ingame==1 || selectScreen) obor_content_draw(display_ents);
 
     if(obor_profile_build >= 3366 && zoom_scale_x > 0 && zoom_scale_y > 0)
 	{

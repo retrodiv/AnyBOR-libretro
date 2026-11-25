@@ -25912,7 +25912,7 @@ void inputrefresh()
 	{
 #endif
 		 control_update(playercontrolpointers, player_count);
-		 interval = timer_getinterval(GAME_SPEED); // so interval can be logged into movie
+		 interval = obor_play_interval(GAME_SPEED, level ? current_level : -1); // so interval can be logged into movie
 		 if(interval > GAME_SPEED) interval = GAME_SPEED/GAME_SPEED;
 		 if(interval > GAME_SPEED/4) interval = GAME_SPEED/4;
 
@@ -26130,7 +26130,7 @@ if(ingame==1 &&
 
 	if(ingame == 1 || alwaysupdate)
 	{
-		execute_updatedscripts();
+		obor_content_draw(execute_updatedscripts);
 		draw_textobjs();
 	}
 
@@ -26141,7 +26141,7 @@ if(ingame==1 &&
 		if(background) putscreen(vscreen, background, 0, 0, NULL);
 	}
 
-	if(ingame==1 || selectScreen) display_ents();
+	if(ingame==1 || selectScreen) obor_content_draw(display_ents);
     }
     else
     {
@@ -26171,12 +26171,12 @@ if(ingame==1 &&
 	
 	// entity sprites queueing
 	if(ingame==1 || selectScreen)
-		if(!pause) display_ents();
+		if(!pause) obor_content_draw(display_ents);
 
 	/************ updated script  ************/
 	if(ingame == 1 || alwaysupdate)
 	{
-		execute_updatedscripts();
+		obor_content_draw(execute_updatedscripts);
 	}
 
 	// 2011/10/22 UT: move pause menu logic here 

@@ -574,6 +574,7 @@ static bool env_cb(unsigned cmd, void *data)
         if (!strcmp(storage_var->key, "anybor_clear_all_caches")) storage_env = "OBOR_CLEAR_ALL_CACHES";
         if (!strcmp(storage_var->key, "anybor_state_content")) storage_env = "OBOR_HOST_STATE_CONTENT";
         if (!strcmp(storage_var->key, "anybor_state_compression")) storage_env = "OBOR_HOST_STATE_COMPRESSION";
+        if (!strcmp(storage_var->key, "anybor_content_overrides")) storage_env = "OBOR_CONTENT_OVERRIDES";
         if (!strcmp(storage_var->key, "anybor_crt_oversize_canvas_width")) storage_env = "OBOR_CRT_CANVAS_WIDTH";
         if (!strcmp(storage_var->key, "anybor_crt_oversize_canvas_height")) storage_env = "OBOR_CRT_CANVAS_HEIGHT";
         if (!strcmp(storage_var->key, "anybor_image_rotation")) storage_env = "OBOR_IMAGE_ROTATION";

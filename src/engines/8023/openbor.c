@@ -51040,7 +51040,7 @@ void draw_scrolled_bg()
 
 u32 getinterval()
 {
-    interval = timer_getinterval(global_config.game_speed); // so interval can be logged into movie
+    interval = obor_play_interval(global_config.game_speed, level ? current_level : -1); // so interval can be logged into movie
     if(interval > global_config.game_speed)
     {
         interval = 1;
@@ -51868,13 +51868,13 @@ void update(int ingame, int usevwait)
     if(ingame == 1 || check_in_screen())
         if(!_pause)
         {
-            display_ents();
+            obor_content_draw(display_ents);
         }
 
     /************ updated script  ************/
     if(ingame == 1 || alwaysupdate)
     {
-        execute_updatedscripts();
+        obor_content_draw(execute_updatedscripts);
     }
 
     for(i = 0; i < MAX_PLAYERS; i++)

@@ -122,7 +122,9 @@ struct video_buffer {
     uint32_t *pixels;
     size_t capacity;
 };
-static video_buffer g_crt_buffer, g_rotation_buffer;
+static video_buffer g_window_buffer, g_crt_buffer, g_shift_buffer, g_rotation_buffer;
+static int g_content_level = -1;
+
 static char g_engine[48];           /* physical engine actually loaded */
 static char g_logical_engine[48];   /* selected logical compatibility profile */
 static char g_selection_error[160];
@@ -719,12 +721,24 @@ static bool g_rumble_on = true;
 static bool g_macros_on = true;
 static bool g_gamelog_on = false;
 struct video_options {
-    bool crt, vertical;
+    bool crt, vertical, content_overrides;
     int canvas_width, canvas_height;
     unsigned rotation;
 };
 static video_options g_video_options;
 static unsigned g_requested_rotation, g_frontend_rotation;
+
+static unsigned presentation_scopes(const video_options &options)
+{
+    if (!options.content_overrides) return 0;
+    unsigned scopes = 1u << OBOR_SCOPE_GAMERES;
+    if (options.crt) {
+        bool vertical = options.vertical != ((options.rotation & 1u) != 0);
+        scopes |= (1u << OBOR_SCOPE_CRT) |
+                  (1u << (vertical ? OBOR_SCOPE_CRT_VERTICAL : OBOR_SCOPE_CRT_HORIZONTAL));
+    }
+    return scopes;
+}
 
 static const char *option_value(const char *key)
 {
@@ -810,6 +824,7 @@ static void refresh_options(void)
     g_macros_on = opt_is_on("anybor_macros", true);
     g_gamelog_on = opt_is_on("anybor_gamelog", false);
     g_video_options.crt = opt_is_on("anybor_crt_tv", false);
+    g_video_options.content_overrides = opt_is_on("anybor_content_overrides", true);
     g_video_options.vertical = !strcmp(option_value("anybor_os_screen_orientation"), "Vertical");
     g_video_options.canvas_width = crt_canvas_extent("anybor_crt_oversize_canvas_width",
                                                      kCrtCanvasWidths, OBOR_CRT_DEFAULT_WIDTH);
@@ -1071,10 +1086,15 @@ static void content_stop(bool preserve_geometry = false)
     g_engine_source_path[0] = '\0';
     g_zip_engine_scanned = false;
     g_content_choice = obor_content_choice();
+    g_content_level = -1;
     memset(&g_zip_engine_identity, 0, sizeof(g_zip_engine_identity));
+    free(g_window_buffer.pixels);
     free(g_crt_buffer.pixels);
+    free(g_shift_buffer.pixels);
     free(g_rotation_buffer.pixels);
+    g_window_buffer = {};
     g_crt_buffer = {};
+    g_shift_buffer = {};
     g_rotation_buffer = {};
     if (!preserve_geometry) {
         g_width = g_source_width = 320;
@@ -1329,6 +1349,10 @@ void retro_set_environment(retro_environment_t cb)
               NULL, "video",
               { { "None", NULL }, { "Left", NULL }, { "Right", NULL }, { "Upside Down", NULL },
                 { NULL, NULL } }, "None" },
+            { "anybor_content_overrides", "Content Override Directives", "Content Override Directives",
+              "Applies CRT and game-resolution presentation directives declared by this content.",
+              NULL, "video",
+              { { "On", NULL }, { "Off", NULL }, { NULL, NULL } }, "On" },
             { "anybor_analog", "Left Analog Stick as D-Pad",
               "Left Analog Stick as D-Pad",
               "Move with the left stick in addition to the D-pad.",
@@ -1441,6 +1465,7 @@ void retro_set_environment(retro_environment_t cb)
         { "anybor_crt_oversize_canvas_height", "CRT Oversize Canvas Height; 448px|Keep Game Height|224px|240px|360px|384px|480px" },
         { "anybor_os_screen_orientation", "OS Screen Orientation; Horizontal|Vertical" },
         { "anybor_image_rotation", "Image Rotation; None|Left|Right|Upside Down" },
+        { "anybor_content_overrides", "Content Override Directives; On|Off" },
         { "anybor_analog", "Left Analog Stick as D-Pad; On|Off" },
         { "anybor_rumble", "Rumble; On|Off" },
         { "anybor_macros", "Special Move Macros (L2/R2/L3/R3); On|Off" },
@@ -1580,9 +1605,34 @@ static void output_geometry(int width, int height, bool notify,
 }
 
 struct video_presentation {
-    obor_crt_frame canvas;
+    obor_crt_frame raster, canvas;
+    int crop_x, crop_y, crop_width, crop_height;
+    int shift_x, shift_y;
     unsigned software_rotation;
 };
+
+static int32_t read_presentation_global(const char *name, double *value)
+{
+    return g_booted && g_vtbl->get_content_number(name, value);
+}
+
+static void content_video_fields(int (&fields)[OBOR_TARGET_COUNT])
+{
+    const auto &policy = g_content_choice.presentation;
+    unsigned scopes = presentation_scopes(g_video_options);
+    if (!scopes) return;
+    for (unsigned i = 0; i < policy.number_count; ++i) {
+        const auto &rule = policy.numbers[i];
+        if (rule.target < OBOR_TARGET_WINDOW_W || !(scopes & (1u << rule.scope))) continue;
+        double condition;
+        if (rule.condition[0] &&
+            (!read_presentation_global(rule.condition, &condition) || condition == 0)) continue;
+        double value;
+        if (!obor_presentation_number(rule.expression, read_presentation_global, &value))
+            continue;
+        if (value >= INT_MIN && value <= INT_MAX) fields[rule.target] = (int)value;
+    }
+}
 
 /* Use the same layout to negotiate and render loading screens and game frames. */
 static video_presentation video_geometry(int width, int height, bool notify)
@@ -1597,10 +1647,39 @@ static video_presentation video_geometry(int width, int height, bool notify)
     request_frontend_rotation(paired_rotation);
 
     bool vertical = options.vertical != ((rotation & 1u) != 0);
+    const auto &policy = g_content_choice.presentation;
+    auto window = (options.crt && options.content_overrides) ?
+        policy.crt_rasters[vertical] : obor_window_raster{};
+    obor_crt_mode mode = options.content_overrides ? policy.crt_mode : obor_crt_mode{};
+    int fields[OBOR_TARGET_COUNT] = {};
+    content_video_fields(fields);
+    int target_width = window.width ? window.width : width;
+    int target_height = window.height ? window.height : height;
+    if (!window.width) {
+        if (fields[OBOR_TARGET_WINDOW_W] > 0 && fields[OBOR_TARGET_WINDOW_W] <= 3840)
+            target_width = fields[OBOR_TARGET_WINDOW_W];
+        if (fields[OBOR_TARGET_WINDOW_H] > 0 && fields[OBOR_TARGET_WINDOW_H] <= 2160)
+            target_height = fields[OBOR_TARGET_WINDOW_H];
+    }
+    obor_crt_frame raster = {width, height, width, height, 1, 0, 0.0f};
+    if (width <= OBOR_CRT_MAX_EXTENT && height <= OBOR_CRT_MAX_EXTENT &&
+        (target_width != width || target_height != height)) {
+        raster.width = raster.image_width = target_width;
+        raster.height = raster.image_height = target_height;
+        obor_crt_fit(&raster, width, height, target_width, target_height);
+        raster.prescale = obor_crt_prescale(&raster, width, height);
+    }
+
+    int left = fields[OBOR_TARGET_CROP_LEFT], top = fields[OBOR_TARGET_CROP_TOP];
+    int right = fields[OBOR_TARGET_CROP_RIGHT], bottom = fields[OBOR_TARGET_CROP_BOTTOM];
+    if (left < 0 || top < 0 || right < 0 || bottom < 0 ||
+        (int64_t)left + right >= raster.width || (int64_t)top + bottom >= raster.height)
+        left = top = right = bottom = 0;
+    int crop_width = raster.width - left - right, crop_height = raster.height - top - bottom;
     obor_crt_frame canvas = options.crt ?
-        obor_crt_layout(width, height, vertical, options.canvas_width, options.canvas_height,
-                        g_content_choice.crt_mode) :
-        obor_crt_frame{width, height, width, height, 1, 0, 0.0f};
+        obor_crt_layout(crop_width, crop_height, vertical, options.canvas_width,
+                        options.canvas_height, mode) :
+        obor_crt_frame{crop_width, crop_height, crop_width, crop_height, 1, 0, 0.0f};
     unsigned software_rotation = (rotation + 4u - g_frontend_rotation) & 3u;
     bool swap_axes = (software_rotation & 1u) != 0;
     int out_w = swap_axes ? canvas.height : canvas.width;
@@ -1616,12 +1695,13 @@ static video_presentation video_geometry(int width, int height, bool notify)
     unsigned reserve_width = 0, reserve_height = 0;
     if (!options.crt) {
         obor_crt_frame fallback = obor_crt_layout(width, height, vertical,
-            options.canvas_width, options.canvas_height, g_content_choice.crt_mode);
+            options.canvas_width, options.canvas_height, mode);
         reserve_width = (unsigned)(swap_axes ? fallback.height : fallback.width);
         reserve_height = (unsigned)(swap_axes ? fallback.width : fallback.height);
     }
     output_geometry(out_w, out_h, notify, reserve_width, reserve_height, aspect);
-    return { canvas, software_rotation };
+    return { raster, canvas, left, top, crop_width, crop_height,
+             fields[OBOR_TARGET_SHIFT_X], fields[OBOR_TARGET_SHIFT_Y], software_rotation };
 }
 
 static bool reserve_video_buffer(video_buffer &buffer, int width, int height)
@@ -1635,6 +1715,19 @@ static bool reserve_video_buffer(video_buffer &buffer, int width, int height)
     return true;
 }
 
+static void shift_video(uint32_t *dst, const uint32_t *src, int width, int height, int pitch,
+                        int dx, int dy)
+{
+    memset(dst, 0, (size_t)width * height * sizeof(*dst));
+    if (dx <= -width || dx >= width || dy <= -height || dy >= height) return;
+    int dst_x = dx > 0 ? dx : 0, dst_y = dy > 0 ? dy : 0;
+    int src_x = dx < 0 ? -dx : 0, src_y = dy < 0 ? -dy : 0;
+    int columns = width - dst_x - src_x, rows = height - dst_y - src_y;
+    for (int y = 0; y < rows; ++y)
+        memcpy(dst + (size_t)(dst_y + y) * width + dst_x,
+               src + (size_t)(src_y + y) * pitch + src_x, (size_t)columns * sizeof(*dst));
+}
+
 static bool present_video(const uint32_t *px, int width, int height, int pitch)
 {
     uint64_t preparation_begin = obor_latency_begin();
@@ -1646,20 +1739,42 @@ static bool present_video(const uint32_t *px, int width, int height, int pitch)
         return true;
     }
     video_presentation presentation = video_geometry(width, height, true);
-    const obor_crt_frame &canvas = presentation.canvas;
-    bool compose = canvas.width != width || canvas.height != height ||
-                   canvas.image_width != width || canvas.image_height != height;
-    if ((compose && !reserve_video_buffer(g_crt_buffer, canvas.width, canvas.height)) ||
+    const auto &raster = presentation.raster;
+    const auto &canvas = presentation.canvas;
+    bool make_window = raster.width != width || raster.height != height;
+    int crop_width = presentation.crop_width, crop_height = presentation.crop_height;
+    bool compose = crop_width != raster.width || crop_height != raster.height ||
+                   canvas.width != crop_width || canvas.height != crop_height ||
+                   canvas.image_width != crop_width || canvas.image_height != crop_height;
+    bool shift = presentation.shift_x || presentation.shift_y;
+    if ((make_window && !reserve_video_buffer(g_window_buffer, raster.width, raster.height)) ||
+        (compose && !reserve_video_buffer(g_crt_buffer, canvas.width, canvas.height)) ||
+        (shift && !reserve_video_buffer(g_shift_buffer, canvas.width, canvas.height)) ||
         (presentation.software_rotation && !reserve_video_buffer(g_rotation_buffer, g_width, g_height))) {
         error_screen("Could not allocate the video presentation framebuffer.");
         present_error_frame();
         return false;
     }
+    if (make_window) {
+        obor_crt_present(g_window_buffer.pixels, &raster, px, width, height, pitch);
+        px = g_window_buffer.pixels;
+        width = pitch = raster.width;
+        height = raster.height;
+    }
+    px += (size_t)presentation.crop_y * pitch + presentation.crop_x;
+    width = crop_width;
+    height = crop_height;
     if (compose) {
         obor_crt_present(g_crt_buffer.pixels, &canvas, px, width, height, pitch);
         px = g_crt_buffer.pixels;
         width = pitch = canvas.width;
         height = canvas.height;
+    }
+    if (shift) {
+        shift_video(g_shift_buffer.pixels, px, width, height, pitch,
+                    presentation.shift_x, presentation.shift_y);
+        px = g_shift_buffer.pixels;
+        pitch = width;
     }
     if (presentation.software_rotation) {
         obor_rotate_frame(g_rotation_buffer.pixels, px, width, height, pitch,
@@ -1688,6 +1803,22 @@ static void startup_model_progress(int completed, int total)
     unsigned percent = completed >= total ? 100u :
         (unsigned)((uint64_t)completed * 100 / total);
     if (percent > g_startup_model_percent) g_startup_model_percent = percent;
+}
+
+static unsigned content_level_rate(int level)
+{
+    g_content_level = level;
+    if (!g_video_options.crt || !g_video_options.content_overrides ||
+        level < 0 || level >= OBOR_PRESENTATION_LEVELS) return 0;
+    return g_content_choice.presentation.level_rates[level];
+}
+
+static unsigned content_numeric_overrides(const obor_numeric_override **rules, unsigned *scopes)
+{
+    const auto &policy = g_content_choice.presentation;
+    *rules = policy.numbers;
+    *scopes = presentation_scopes(g_video_options);
+    return policy.number_count;
 }
 
 static bool boot_engine(void)
@@ -1722,6 +1853,9 @@ static bool boot_engine(void)
     boot.state_content = obor_state_session_settings.content;
     boot.state_compression = obor_state_session_settings.compression;
     boot.startup_progress = startup_model_progress;
+    boot.content_level_rate = content_level_rate;
+    boot.content_numeric_overrides = content_numeric_overrides;
+    g_content_level = -1;
     obor_engine_region regions[OBOR_MAX_ENGINE_REGIONS];
     const size_t n_eng = sizeof(kEngineDefs) / sizeof(kEngineDefs[0]);
     static_assert(sizeof(kEngineDefs) / sizeof(kEngineDefs[0]) <= OBOR_MAX_ENGINE_REGIONS,
@@ -2212,9 +2346,13 @@ void retro_run(void)
     if (!g_booted) return;
 
     obor_profile_init();
-    const auto &mode = g_content_choice.crt_mode;
-    update_presentation_timing(g_video_options.crt && mode.declared && mode.hz ?
-                              (unsigned)mode.hz : kNativeRefresh);
+    const auto &mode = g_content_choice.presentation.crt_mode;
+    unsigned refresh = kNativeRefresh;
+    if (g_video_options.crt && g_video_options.content_overrides) {
+        unsigned level_rate = content_level_rate(g_content_level);
+        refresh = obor_crt_refresh(level_rate ? level_rate : refresh, mode);
+    }
+    update_presentation_timing(refresh);
 
     struct retro_throttle_state throttle = {};
     bool frontend_rewind = p_startup_complete() &&
@@ -2272,7 +2410,7 @@ typedef struct {
     unsigned max_width, max_height;
     bool av_announced;
     presentation_timing timing;
-    video_buffer crt_buffer, rotation_buffer;
+    video_buffer window_buffer, crt_buffer, shift_buffer, rotation_buffer;
     video_options presentation_options;
     unsigned requested_rotation, frontend_rotation;
     uint32_t *loading_pixels;
@@ -2315,7 +2453,9 @@ static void glue_save(glue_regs *r)
     r->max_width = g_max_width; r->max_height = g_max_height;
     r->av_announced = g_av_announced;
     r->timing = g_presentation_timing;
-    r->crt_buffer = g_crt_buffer; r->rotation_buffer = g_rotation_buffer;
+    r->window_buffer = g_window_buffer;
+    r->crt_buffer = g_crt_buffer;
+    r->shift_buffer = g_shift_buffer; r->rotation_buffer = g_rotation_buffer;
     r->presentation_options = g_video_options;
     r->requested_rotation = g_requested_rotation; r->frontend_rotation = g_frontend_rotation;
     r->loading_pixels = g_loading_pixels;
@@ -2360,7 +2500,9 @@ static void glue_load(const glue_regs *r)
     g_max_width = r->max_width; g_max_height = r->max_height;
     g_av_announced = r->av_announced;
     g_presentation_timing = r->timing;
-    g_crt_buffer = r->crt_buffer; g_rotation_buffer = r->rotation_buffer;
+    g_window_buffer = r->window_buffer;
+    g_crt_buffer = r->crt_buffer;
+    g_shift_buffer = r->shift_buffer; g_rotation_buffer = r->rotation_buffer;
     g_video_options = r->presentation_options;
     g_requested_rotation = r->requested_rotation; g_frontend_rotation = r->frontend_rotation;
     g_loading_pixels = r->loading_pixels;
@@ -3092,7 +3234,7 @@ static bool load_game(const struct retro_game_info *info, bool retry, bool prepa
     }
 
     char routed[4096];
-    g_content_choice.crt_mode = {};
+    g_content_choice.presentation = {};
     if (!obor_content_loose(g_pak_path, routed, sizeof(routed), g_content_choice)) {
         error_reason("Invalid, ambiguous or unavailable .anybor content descriptor.");
         return false;
@@ -3484,7 +3626,7 @@ static bool loading_begin(const struct retro_game_info *info, bool retry)
             error_reason("Invalid .anybor descriptor or unavailable payload.");
             return false;
         }
-        g_content_choice.crt_mode = descriptor.crt_mode;
+        g_content_choice.presentation = descriptor.presentation;
         snprintf(path, sizeof(path), "%s", target);
     }
     /* Unpacked mods retain their original synchronous setup and namespace;

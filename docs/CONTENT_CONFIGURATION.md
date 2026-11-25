@@ -136,6 +136,45 @@ uses its payload's save namespace, whether the payload is a PAK or ZIP.
 ZIPs retain the namespace of the original ZIP; descriptor names do not create separate save
 namespaces.
 
+## Scoped presentation directives
+
+`[overrides]` accepts presentation directives for the current game.
+**Content Override Directives** controls these directives during play and is on
+by default. `?gameres` selects AnyBOR's native game-raster path. `?crt` requires
+**Adjust for 4:3 CRT TV**. The effective CRT orientation combines
+**OS Screen Orientation** with **Image Rotation**. Use `?crt=horizontal`
+or `?crt=vertical` to scope `windowraster` or `drawhold` to one orientation.
+
+```ini
+?crt=horizontal windowraster|320|240
+?crt=vertical windowraster|240|320
+?gameres ?global.enable_hud drawhold|hud_scale|1
+?crt $crt_layout=1
+```
+
+`windowraster|width|height` fits the engine picture into the specified raster
+before CRT fitting and rotation. Width accepts 1–3840 and height accepts
+1–2160. The content's own framebuffer and geometry remain available when
+the scope closes. A later matching window declaration takes priority.
+
+`drawhold|name|value` temporarily substitutes a numeric script global while
+drawing scripts run. `$name=value` holds an existing numeric global while
+the scope is active and restores its previous value when the scope closes.
+The optional `?global.name` condition requires a nonzero numeric global.
+Values can combine finite decimal numbers and existing numeric script globals
+using `$global.name`, arithmetic and parentheses. An unavailable global or a
+non-finite result skips that evaluation. Each directive in a semicolon chain
+carries its own scope. A loaded descriptor set supports up to 64 numeric directives.
+
+`@window_w` and `@window_h` select individual raster extents in the absence
+of a matching `windowraster` directive. `@present_crop_left`,
+`@present_crop_top`, `@present_crop_right` and `@present_crop_bottom`
+remove whole-pixel margins before CRT fitting. A negative margin or an
+empty result disables the crop. `@present_shift_x` and `@present_shift_y`
+move the composed frame before rotation and fill the exposed edges with
+black. Crop and shift affect the delivered picture and preserve the saved
+engine raster.
+
 ## Declared CRT mode
 
 A descriptor can request a CRT canvas and refresh in its `[overrides]` section.
@@ -160,13 +199,28 @@ dimension, normal CRT sizing applies at the declared refresh.
 ```
 
 Each example is a separate declaration. `window_w` and `window_h` follow the
-current game raster before CRT fitting and rotation. `window_fps` follows
-AnyBOR's normal 60 Hz output. A fixed refresh changes presentation cadence.
-The core keeps the same game clock and audio sample rate. The frontend can
+current game raster before CRT fitting and rotation. Automatic CRT timing
+and `window_fps` follow AnyBOR's normal 60 Hz output or the active level's
+declared cadence. For a slower level, the core requests an integer
+multiple of the cadence between 50 and 60 Hz when one is available.
+A fixed refresh changes presentation cadence. The core keeps the same
+game clock and audio sample rate. The frontend can
 decline the requested refresh and controls physical display timings.
 
-Use one CRT declaration per descriptor. An external descriptor for a ZIP can
-override the CRT declaration in the ZIP's own descriptor.
+A later `crtmode` declaration takes priority. An external descriptor for a ZIP
+can override the declaration in the ZIP's own descriptor.
+
+```ini
+?crt roomspeed|0,2-4|50
+```
+
+`roomspeed|levels|rate` sets the simulation ticks per second for the listed
+playable levels in the current set. Indices follow the set's entry order
+from zero, counting selection and scene entries. Use commas and inclusive
+ranges. The rate is an integer from 1 through 300. The directive
+applies to gameplay in those levels, and the native cadence applies again
+when the scope closes. Later declarations replace the rate for each
+overlapping level. `roomspeed` and `crtmode` use the plain `?crt` scope.
 
 ## Descriptor controls and labels
 

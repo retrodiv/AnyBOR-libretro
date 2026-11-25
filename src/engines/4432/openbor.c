@@ -33396,7 +33396,7 @@ void draw_scrolled_bg()
 
 u32 getinterval()
 {
-    interval = timer_getinterval(GAME_SPEED); // so interval can be logged into movie
+    interval = obor_play_interval(GAME_SPEED, level ? current_level : -1); // so interval can be logged into movie
     if(interval > GAME_SPEED)
     {
         interval = 1;
@@ -34005,13 +34005,13 @@ void update(int ingame, int usevwait)
                ? selectScreen : inScreen))
         if(!pause)
         {
-            display_ents();
+            obor_content_draw(display_ents);
         }
 
     /************ updated script  ************/
     if(ingame == 1 || alwaysupdate)
     {
-        execute_updatedscripts();
+        obor_content_draw(execute_updatedscripts);
     }
 
     // 2011/10/22 UT: move pause menu logic here

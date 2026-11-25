@@ -23,6 +23,16 @@ typedef struct obor_crt_mode {
     int width, height, hz; /* Zero follows the corresponding source value. */
 } obor_crt_mode;
 
+static inline unsigned obor_crt_refresh(unsigned cadence, obor_crt_mode mode)
+{
+    if (mode.declared && mode.hz) return (unsigned)mode.hz;
+    if (cadence && cadence < 50) {
+        unsigned refresh = ((50 + cadence - 1) / cadence) * cadence;
+        if (refresh <= 60) return refresh;
+    }
+    return cadence;
+}
+
 typedef struct obor_crt_frame {
     int width, height;             /* Canvas before rotation. */
     int image_width, image_height; /* Centered image inside the canvas. */
@@ -40,8 +50,8 @@ static int obor_crt_prescale(const obor_crt_frame *frame, int width, int height)
 
 static void obor_crt_fit(obor_crt_frame *frame, int width, int height, int shape_w, int shape_h)
 {
-    int width_limited = shape_w * height;
-    int height_limited = shape_h * width;
+    int64_t width_limited = (int64_t)shape_w * height;
+    int64_t height_limited = (int64_t)shape_h * width;
     if (width_limited <= height_limited)
         frame->image_height = width_limited * frame->height / height_limited;
     else

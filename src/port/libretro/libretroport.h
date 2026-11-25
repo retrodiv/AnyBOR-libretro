@@ -45,6 +45,14 @@ void obor_port_sleep_us(unsigned long long us);
 #undef usleep
 #define usleep(us) obor_port_sleep_us((unsigned long long)(us))
 
+unsigned obor_presentation_level_rate(int level);
+unsigned obor_presentation_numeric_rules(const obor_numeric_override **rules, unsigned *scopes);
+unsigned obor_play_interval(unsigned native, int level);
+void obor_content_update(void);
+void obor_content_draw(void (*draw)(void));
+void obor_content_draw_suspend(void);
+void obor_content_draw_resume(void);
+
 void borExit(int reset);
 /* A failed historical invariant stops this engine, never its frontend. */
 void obor_port_assert(int value, const char *assertion, const char *func,

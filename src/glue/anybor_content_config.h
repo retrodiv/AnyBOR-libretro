@@ -7,9 +7,11 @@
 #include <stdlib.h>
 #include <string.h>
 #include <ctype.h>
+#include <math.h>
 #include "anybor_zip_path.h"
 #include "anybor_abi.h"
 #include "anybor_crt.h"
+#include "anybor_presentation_number.h"
 #include "anybor_transform_vm.h"
 
 #define OBOR_OVERRIDE_MAX_RULES 256U
@@ -91,24 +93,71 @@ struct obor_content_function {
     size_t program_size, parameter_size;
     obor_content_function() : program(), parameters(), program_size(0), parameter_size(0) {}
 };
+struct obor_window_raster {
+    int width, height;
+};
+
+struct obor_presentation_directives {
+    obor_crt_mode crt_mode;
+    obor_window_raster crt_rasters[2];
+    uint16_t level_rates[OBOR_PRESENTATION_LEVELS];
+    obor_numeric_override numbers[OBOR_PRESENTATION_OVERRIDES];
+    unsigned number_count;
+};
+
 struct obor_content_choice {
     char source[4096], archive[4096], engine[48], descriptor[4096];
     char zip_engine[48], zip_descriptor[512], transform[64];
     obor_content_function function;
     obor_content_controls controls;
-    obor_crt_mode crt_mode;
-    obor_content_choice() : source(), archive(), engine(), descriptor(), zip_engine(), zip_descriptor(), transform(), controls(), crt_mode() {}
+    obor_presentation_directives presentation;
+    obor_content_choice() : source(), archive(), engine(), descriptor(), zip_engine(), zip_descriptor(), transform(), controls(), presentation() {}
 };
 struct obor_descriptor {
     char payload[512], engine[48], transform[64];
     obor_content_controls controls;
     obor_content_function function;
-    obor_crt_mode crt_mode;
+    obor_presentation_directives presentation;
 };
 
-static void obor_descriptor_settings(obor_content_choice &choice, const obor_descriptor &descriptor)
+static bool obor_same_numeric_target(const obor_numeric_override &a, const obor_numeric_override &b)
 {
-    if (!choice.crt_mode.declared) choice.crt_mode = descriptor.crt_mode;
+    return a.scope == b.scope && a.target == b.target &&
+           !strcmp(a.name, b.name) && !strcmp(a.condition, b.condition);
+}
+
+static bool obor_add_numeric_override(obor_presentation_directives &policy,
+                                      const obor_numeric_override &rule)
+{
+    unsigned i = 0;
+    for (; i < policy.number_count; ++i)
+        if (obor_same_numeric_target(policy.numbers[i], rule)) break;
+    if (i == policy.number_count && i == OBOR_PRESENTATION_OVERRIDES) return false;
+    if (i < policy.number_count) {
+        --policy.number_count;
+        memmove(&policy.numbers[i], &policy.numbers[i+1],
+                (policy.number_count - i) * sizeof(rule));
+    }
+    policy.numbers[policy.number_count++] = rule;
+    return true;
+}
+
+static bool obor_descriptor_settings(obor_content_choice &choice, const obor_descriptor &descriptor)
+{
+    auto &higher = choice.presentation;
+    const auto &lower = descriptor.presentation;
+    if (!higher.crt_mode.declared) higher.crt_mode = lower.crt_mode;
+    for (unsigned axis = 0; axis < 2; ++axis)
+        if (!higher.crt_rasters[axis].width) higher.crt_rasters[axis] = lower.crt_rasters[axis];
+    for (unsigned level = 0; level < OBOR_PRESENTATION_LEVELS; ++level)
+        if (!higher.level_rates[level]) higher.level_rates[level] = lower.level_rates[level];
+    if (lower.number_count) {
+        obor_presentation_directives merged = lower;
+        for (unsigned i = 0; i < higher.number_count; ++i)
+            if (!obor_add_numeric_override(merged, higher.numbers[i])) return false;
+        memcpy(higher.numbers, merged.numbers, sizeof(higher.numbers));
+        higher.number_count = merged.number_count;
+    }
     if (!choice.transform[0] && !choice.function.program_size) {
         snprintf(choice.transform,sizeof(choice.transform),"%s",descriptor.transform);
         choice.function=descriptor.function;
@@ -119,6 +168,7 @@ static void obor_descriptor_settings(obor_content_choice &choice, const obor_des
         if (!(choice.controls.labelled&bit) && (descriptor.controls.labelled&bit)) memcpy(choice.controls.labels[i],descriptor.controls.labels[i],sizeof(choice.controls.labels[i]));
     }
     choice.controls.mapped|=descriptor.controls.mapped;choice.controls.labelled|=descriptor.controls.labelled;
+    return true;
 }
 
 static bool obor_content_suffix(const char *path, const char *suffix)
@@ -204,7 +254,7 @@ static bool obor_content_engine_line(const char *text, size_t n, char engine[48]
 static bool obor_crt_mode_field(const char *first, const char *end, const char *follow,
                                 int minimum, int maximum, int &value)
 {
-    if ((size_t)(end - first) == strlen(follow) && !memcmp(first, follow, (size_t)(end - first))) {
+    if (follow && (size_t)(end - first) == strlen(follow) && !memcmp(first, follow, (size_t)(end - first))) {
         value = 0;
         return true;
     }
@@ -218,22 +268,151 @@ static bool obor_crt_mode_field(const char *first, const char *end, const char *
     return value >= minimum;
 }
 
-static bool obor_crt_mode_line(const char *line, size_t size, obor_crt_mode &mode)
+static bool obor_presentation_prefix(const char *&body, const char *end, const char *prefix)
 {
-    const char *end = line + size;
-    if (mode.declared || size <= 4 || memcmp(line, "?crt", 4)) return false;
-    const char *width = line + 4;
-    if (*width != ' ' && *width != '\t') return false;
-    while (width < end && (*width == ' ' || *width == '\t')) ++width;
-    if (end - width < 8 || memcmp(width, "crtmode|", 8)) return false;
-    width += 8;
+    size_t count = strlen(prefix);
+    if ((size_t)(end - body) < count || memcmp(body, prefix, count)) return false;
+    body += count;
+    return true;
+}
+
+static bool obor_parse_presentation_scope(const char *&body, const char *end,
+                                          obor_presentation_scope &scope)
+{
+    if (obor_presentation_prefix(body, end, "?crt=horizontal")) scope = OBOR_SCOPE_CRT_HORIZONTAL;
+    else if (obor_presentation_prefix(body, end, "?crt=vertical")) scope = OBOR_SCOPE_CRT_VERTICAL;
+    else if (obor_presentation_prefix(body, end, "?crt")) scope = OBOR_SCOPE_CRT;
+    else if (obor_presentation_prefix(body, end, "?gameres")) scope = OBOR_SCOPE_GAMERES;
+    else return false;
+    if (body == end || (*body != ' ' && *body != '\t')) return false;
+    while (body < end && (*body == ' ' || *body == '\t')) ++body;
+    return body < end;
+}
+
+static bool obor_crt_mode_line(const char *width, const char *end, obor_crt_mode &mode)
+{
     const char *height = (const char *)memchr(width, '|', (size_t)(end - width));
     if (!height) return false;
     const char *hz = (const char *)memchr(height + 1, '|', (size_t)(end - height - 1));
-    if (!hz || !obor_crt_mode_field(width, height, "window_w", 16, 640, mode.width) ||
-        !obor_crt_mode_field(height + 1, hz, "window_h", 16, 480, mode.height) ||
-        !obor_crt_mode_field(hz + 1, end, "window_fps", 2, 300, mode.hz)) return false;
-    mode.declared = 1;
+    obor_crt_mode parsed = {1, 0, 0, 0};
+    if (!hz || !obor_crt_mode_field(width, height, "window_w", 16, 640, parsed.width) ||
+        !obor_crt_mode_field(height + 1, hz, "window_h", 16, 480, parsed.height) ||
+        !obor_crt_mode_field(hz + 1, end, "window_fps", 2, 300, parsed.hz)) return false;
+    mode = parsed;
+    return true;
+}
+
+static bool obor_level_rate_line(const char *body, const char *end, uint16_t *rates)
+{
+    const char *separator = (const char *)memchr(body, '|', (size_t)(end - body));
+    int rate;
+    if (!separator || !obor_crt_mode_field(separator + 1, end, NULL, 1, 300, rate)) return false;
+    for (;;) {
+        const char *comma = (const char *)memchr(body, ',', (size_t)(separator - body));
+        const char *last = comma ? comma : separator;
+        const char *dash = (const char *)memchr(body, '-', (size_t)(last - body));
+        int lo, hi;
+        if (!obor_crt_mode_field(body, dash ? dash : last, NULL, 0, OBOR_PRESENTATION_LEVELS-1, lo))
+            return false;
+        hi = lo;
+        if (dash && !obor_crt_mode_field(dash + 1, last, NULL, lo, OBOR_PRESENTATION_LEVELS-1, hi))
+            return false;
+        for (int level = lo; level <= hi; ++level) rates[level] = (uint16_t)rate;
+        if (!comma) return true;
+        body = comma + 1;
+    }
+}
+
+static bool obor_presentation_name(const char *first, const char *last,
+                                    char (&name)[OBOR_PRESENTATION_NAME])
+{
+    size_t size = (size_t)(last - first);
+    if (!size || size >= sizeof(name)) return false;
+    for (const char *p = first; p < last; ++p)
+        if (!obor_presentation_name_char(*p)) return false;
+    memcpy(name, first, size);
+    name[size] = 0;
+    return true;
+}
+
+static bool obor_numeric_override_line(const char *body, const char *end,
+                                       obor_presentation_scope scope,
+                                       obor_presentation_directives &policy)
+{
+    obor_numeric_override rule = {};
+    rule.scope = (uint8_t)scope;
+    if (obor_presentation_prefix(body, end, "?global.")) {
+        const char *last = body;
+        while (last < end && *last != ' ' && *last != '\t') ++last;
+        if (last == end || !obor_presentation_name(body, last, rule.condition)) return false;
+        body = last;
+        while (body < end && (*body == ' ' || *body == '\t')) ++body;
+    }
+    bool drawing = obor_presentation_prefix(body, end, "drawhold|");
+    if (!drawing && scope != OBOR_SCOPE_CRT && scope != OBOR_SCOPE_GAMERES) return false;
+    const char *separator = (const char *)memchr(body, drawing ? '|' : '=', (size_t)(end - body));
+    if (!separator) return false;
+    if (drawing || obor_presentation_prefix(body, separator, "$")) {
+        rule.target = drawing ? OBOR_TARGET_DRAW : OBOR_TARGET_GLOBAL;
+        if (!obor_presentation_name(body, separator, rule.name)) return false;
+    } else {
+        static const char *const fields[] = {"@window_w", "@window_h", "@present_crop_left",
+            "@present_crop_top", "@present_crop_right", "@present_crop_bottom",
+            "@present_shift_x", "@present_shift_y"};
+        static_assert(sizeof(fields) / sizeof(*fields) == OBOR_TARGET_COUNT - OBOR_TARGET_WINDOW_W,
+                      "host override fields must match their target values");
+        unsigned field = 0;
+        while (field < sizeof(fields) / sizeof(*fields)) {
+            const char *key = body;
+            if (obor_presentation_prefix(key, separator, fields[field]) && key == separator) break;
+            ++field;
+        }
+        if (field == sizeof(fields) / sizeof(*fields)) return false;
+        rule.target = (uint8_t)(OBOR_TARGET_WINDOW_W + field);
+    }
+    size_t size = (size_t)(end - separator - 1);
+    if (!size || size >= sizeof(rule.expression)) return false;
+    memcpy(rule.expression, separator + 1, size);
+    double ignored;
+    return obor_presentation_number(rule.expression, NULL, &ignored) &&
+           obor_add_numeric_override(policy, rule);
+}
+
+static bool obor_presentation_line(const char *body, size_t size,
+                                   obor_presentation_directives &policy)
+{
+    const char *end = body + size;
+    obor_presentation_scope scope;
+    if (!obor_parse_presentation_scope(body, end, scope)) return false;
+    if (obor_presentation_prefix(body, end, "crtmode|"))
+        return scope == OBOR_SCOPE_CRT && obor_crt_mode_line(body, end, policy.crt_mode);
+    if (obor_presentation_prefix(body, end, "roomspeed|"))
+        return scope == OBOR_SCOPE_CRT && obor_level_rate_line(body, end, policy.level_rates);
+    if (!obor_presentation_prefix(body, end, "windowraster|"))
+        return obor_numeric_override_line(body, end, scope, policy);
+    if (scope == OBOR_SCOPE_GAMERES) return false;
+    const char *height = (const char *)memchr(body, '|', (size_t)(end - body));
+    obor_window_raster raster = {};
+    if (!height || !obor_crt_mode_field(body, height, NULL, 1, 3840, raster.width) ||
+        !obor_crt_mode_field(height + 1, end, NULL, 1, 2160, raster.height)) return false;
+    if (scope != OBOR_SCOPE_CRT_VERTICAL) policy.crt_rasters[0] = raster;
+    if (scope != OBOR_SCOPE_CRT_HORIZONTAL) policy.crt_rasters[1] = raster;
+    return true;
+}
+
+static bool obor_presentation_lines(const char *first, size_t size,
+                                    obor_presentation_directives &policy)
+{
+    const char *end = first + size;
+    while (first < end) {
+        const char *separator = (const char *)memchr(first, ';', (size_t)(end - first));
+        const char *last = separator ? separator : end;
+        while (first < last && (*first == ' ' || *first == '\t')) ++first;
+        while (last > first && (last[-1] == ' ' || last[-1] == '\t')) --last;
+        if (first != last && !obor_presentation_line(first, (size_t)(last - first), policy))
+            return false;
+        first = separator ? separator + 1 : end;
+    }
     return true;
 }
 
@@ -242,6 +421,7 @@ static bool obor_descriptor_parse(const char *text, size_t size, obor_descriptor
     obor_descriptor parsed = {};
     if (!size || size > OBOR_DESCRIPTOR_MAX_BYTES || memchr(text, 0, size)) return false;
     unsigned section = 0, seen = 0;
+    bool has_presentation = false;
     size_t at = size >= 3 && !memcmp(text, "\xef\xbb\xbf", 3) ? 3 : 0;
     while (at < size) {
         size_t first = at, end;
@@ -262,7 +442,8 @@ static bool obor_descriptor_parse(const char *text, size_t size, obor_descriptor
             seen |= section;
         } else if (section==2) {
             if (line[0]=='?') {
-                if (!obor_crt_mode_line(line,n,parsed.crt_mode)) return false;
+                if (!obor_presentation_lines(line, n, parsed.presentation)) return false;
+                has_presentation = true;
                 continue;
             }
             if (obor_content_engine_line(line,n,parsed.engine)) continue;
@@ -308,7 +489,7 @@ static bool obor_descriptor_parse(const char *text, size_t size, obor_descriptor
         } else return false;
     }
     if (!parsed.payload[0] || ((seen & 2) && !parsed.engine[0] && !parsed.transform[0] &&
-        !parsed.function.program_size && !parsed.crt_mode.declared)) return false;
+        !parsed.function.program_size && !has_presentation)) return false;
     out = parsed;
     return true;
 }

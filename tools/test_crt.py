@@ -15,6 +15,7 @@ from pathlib import Path
 import make_fixture
 import release
 import crt_reference
+from test_multiplayer import fixture as play_fixture
 import re
 from runtime_evidence import record_process
 
@@ -37,7 +38,7 @@ def check_option_order(result, profile_count, capacity, version):
     assert profile_count > 0 and capacity >= 4
     expected = ["anybor_crt_tv", "anybor_crt_oversize_canvas_width", "anybor_crt_oversize_canvas_height",
                 "anybor_os_screen_orientation",
-                "anybor_image_rotation", "anybor_analog", "anybor_rumble", "anybor_macros",
+                "anybor_image_rotation", "anybor_content_overrides", "anybor_analog", "anybor_rumble", "anybor_macros",
                 "anybor_engine", "anybor_engine_3000_3499", "anybor_engine_3500_3749",
                 "anybor_engine_3750_3999", "anybor_engine_4000_4999", "anybor_engine_5000_plus"]
     expected += ["anybor_state_content", "anybor_state_compression", "anybor_gamelog",
@@ -75,7 +76,7 @@ def main():
             "-O2", "-I", str(root / "src/third_party"), "-I", str(root / "src/glue"),
             str(root / "tests/host/libretro_host.c"), "-ldl", "-o", str(host)])
 
-        def run(engine, pak, label, expected, **options):
+        def run(engine, pak, label, expected, frames=180, **options):
             system = work / (engine + "-" + label)
             system.mkdir()
             env = {k: v for k, v in os.environ.items() if not k.startswith("OBOR_")}
@@ -85,13 +86,13 @@ def main():
             if options.get("OBOR_SAVE_STATE"):
                 Path(options["OBOR_SAVE_STATE"]).unlink(missing_ok=True)
             process = subprocess.run([
-                str(host), str(core), str(pak), str(system), "180", str(system / "frame")],
+                str(host), str(core), str(pak), str(system), str(frames), str(system / "frame")],
                 env=env, cwd=str(work), capture_output=True, text=True, timeout=60)
             record_process('crt', engine + '-' + label, process)
             result = process.stdout + process.stderr
             if process.returncode:
                 raise RuntimeError(label + ': ' + result)
-            for marker in ("frames=180 last=" + expected, "cwd_restored=1",
+            for marker in (f"frames={frames} last={expected}", "cwd_restored=1",
                            "file_descriptors_restored=1"):
                 assert marker in result, label + ": " + result
             assert "nonblack_max=0" not in result, result
@@ -110,7 +111,7 @@ def main():
             else:
                 assert "crt_legacy=Adjust for 4:3 CRT TV; Off|On" in result, result
             print("PASS " + engine + " " + label, flush=True)
-            return result, read_ppm(system / "frame000180.ppm")
+            return result, read_ppm(system / f"frame{frames:06d}.ppm")
 
         fixed_canvas = dict(OBOR_CRT_CANVAS_WIDTH="640px", OBOR_CRT_CANVAS_HEIGHT="480px")
         engines = [e["build"] for e in pin["engines"]]
@@ -375,6 +376,60 @@ def main():
         run("6412", archive, "descriptor-in-zip", "240x192", OBOR_CRT_TV="On")
         declare(archive, "crtmode|256|196|window_fps")
         run("6412", descriptor, "descriptor-external-priority", "256x196", OBOR_CRT_TV="On")
+        declare(archive, "crtmode|window_w|window_h|60\n"
+                         "?crt windowraster|304|228\n?crt=vertical windowraster|180|240")
+        run("6412", descriptor, "window-horizontal", "304x228", OBOR_CRT_TV="On")
+        run("6412", descriptor, "window-vertical", "180x240", OBOR_CRT_TV="On",
+            OBOR_CRT_ORIENTATION="Vertical")
+        run("6412", descriptor, "window-quarter-turn", "240x180", OBOR_CRT_TV="On",
+            OBOR_IMAGE_ROTATION="Right")
+        run("6412", descriptor, "window-off", "240x180", OBOR_CRT_TV="On",
+            OBOR_CONTENT_OVERRIDES="Off")
+        declare(archive, "crtmode|window_w|window_h|60\n"
+                         "?gameres @present_crop_left=10\n?gameres @present_shift_x=-(1+3)/2")
+        _, cropped = run("6412", descriptor, "native-raster-crop-shift", "230x180")
+        assert cropped[0:2] == (230, 180) and not any(cropped[2][228 * 3:230 * 3])
+
+        scoped = work / "scoped.pak"
+        members = play_fixture()
+        members["data/script.txt"] = b"alwaysupdate 1\n"
+        members["data/scripts/update.c"] = b"""
+void main() {
+    if (getglobalvar("paint") == NULL()) {
+        setglobalvar("paint", 1);
+        setglobalvar("locked", 4);
+        setglobalvar("enabled", 1);
+        setglobalvar("hold_value", 2);
+    }
+    setglobalvar("before_draw", getglobalvar("paint"));
+}
+"""
+        members["data/scripts/updated.c"] = b"""
+void main() {
+    if (openborvariant("in_level")) {
+        log("POLICY "+getglobalvar("before_draw")+" "+getglobalvar("paint")+" "+
+            getglobalvar("locked")+" "+openborvariant("elapsed_time")+"\\n");
+    }
+}
+"""
+        make_fixture.write_pak(scoped, members)
+        # The set starts with a skipselect entry. Its first playable level has index 1.
+        declare(scoped, "roomspeed|1|50\n?crt crtmode|window_w|window_h|window_fps\n"
+                        "?gameres ?global.enabled drawhold|paint|($global.hold_value+2)/2\n?crt $locked=7")
+        result, _ = run("6412", descriptor, "scoped-gameplay", "320x240", frames=720,
+                        OBOR_CRT_TV="On", OBOR_CRT_TOGGLE_AT=600, OBOR_GAMELOG="On",
+                        OBOR_INPUT="150-500:start:pulse")
+        assert re.search(r"accepted=1 fps=50\.000000", result), result
+        assert re.search(r"accepted=1 fps=60\.000000", result), result
+        observations = [tuple(map(int, row)) for row in
+                        re.findall(r"POLICY (\d+) (\d+) (\d+) (\d+)", result)]
+        held_ticks = [ticks for before, draw, locked, ticks in observations
+                      if (before, draw, locked) == (1, 2, 7)]
+        assert len(held_ticks) >= 65, result
+        assert 48 <= held_ticks[64] - held_ticks[4] <= 52, result
+        assert len(observations) >= 60 and all(row[:3] == (1, 2, 4) for row in observations[-20:]), result
+        assert 62 <= observations[-1][3] - observations[-20][3] <= 65, result
+
         print("CRT runtime regressions: OK", flush=True)
 
 

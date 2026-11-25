@@ -3,7 +3,7 @@
 /* Engine ABI table generated from src/pin.json. */
 #include "anybor_abi.h"
 
-#define OBOR_CORE_VERSION "0.2.68"
+#define OBOR_CORE_VERSION "0.2.69"
 #define OBOR_FALLBACK_BUILD 6391
 
 typedef struct {
@@ -15,6 +15,7 @@ typedef struct {
     int32_t (*get_fault_message)(char *, uint32_t);
     int32_t (*abandon)(void);
     void (*get_video)(const uint32_t **, int32_t *, int32_t *, int32_t *);
+    int32_t (*get_content_number)(const char *, double *);
     void (*set_button)(int32_t, int32_t, int32_t);
     int32_t (*get_audio)(int16_t *, int32_t);
     uint32_t (*serialize_size)(void);
@@ -40,6 +41,7 @@ int32_t obor_get_exit_status_3400(void);
 int32_t obor_get_fault_message_3400(char *, uint32_t);
 int32_t obor_abandon_3400(void);
 void obor_get_video_3400(const uint32_t **, int32_t *, int32_t *, int32_t *);
+int32_t obor_get_content_number_3400(const char *, double *);
 void obor_set_button_3400(int32_t, int32_t, int32_t);
 int32_t obor_get_audio_3400(int16_t *, int32_t);
 uint32_t obor_serialize_size_3400(void);
@@ -62,6 +64,7 @@ int32_t obor_get_exit_status_3741(void);
 int32_t obor_get_fault_message_3741(char *, uint32_t);
 int32_t obor_abandon_3741(void);
 void obor_get_video_3741(const uint32_t **, int32_t *, int32_t *, int32_t *);
+int32_t obor_get_content_number_3741(const char *, double *);
 void obor_set_button_3741(int32_t, int32_t, int32_t);
 int32_t obor_get_audio_3741(int16_t *, int32_t);
 uint32_t obor_serialize_size_3741(void);
@@ -84,6 +87,7 @@ int32_t obor_get_exit_status_3842(void);
 int32_t obor_get_fault_message_3842(char *, uint32_t);
 int32_t obor_abandon_3842(void);
 void obor_get_video_3842(const uint32_t **, int32_t *, int32_t *, int32_t *);
+int32_t obor_get_content_number_3842(const char *, double *);
 void obor_set_button_3842(int32_t, int32_t, int32_t);
 int32_t obor_get_audio_3842(int16_t *, int32_t);
 uint32_t obor_serialize_size_3842(void);
@@ -106,6 +110,7 @@ int32_t obor_get_exit_status_4086(void);
 int32_t obor_get_fault_message_4086(char *, uint32_t);
 int32_t obor_abandon_4086(void);
 void obor_get_video_4086(const uint32_t **, int32_t *, int32_t *, int32_t *);
+int32_t obor_get_content_number_4086(const char *, double *);
 void obor_set_button_4086(int32_t, int32_t, int32_t);
 int32_t obor_get_audio_4086(int16_t *, int32_t);
 uint32_t obor_serialize_size_4086(void);
@@ -128,6 +133,7 @@ int32_t obor_get_exit_status_4432(void);
 int32_t obor_get_fault_message_4432(char *, uint32_t);
 int32_t obor_abandon_4432(void);
 void obor_get_video_4432(const uint32_t **, int32_t *, int32_t *, int32_t *);
+int32_t obor_get_content_number_4432(const char *, double *);
 void obor_set_button_4432(int32_t, int32_t, int32_t);
 int32_t obor_get_audio_4432(int16_t *, int32_t);
 uint32_t obor_serialize_size_4432(void);
@@ -150,6 +156,7 @@ int32_t obor_get_exit_status_6391(void);
 int32_t obor_get_fault_message_6391(char *, uint32_t);
 int32_t obor_abandon_6391(void);
 void obor_get_video_6391(const uint32_t **, int32_t *, int32_t *, int32_t *);
+int32_t obor_get_content_number_6391(const char *, double *);
 void obor_set_button_6391(int32_t, int32_t, int32_t);
 int32_t obor_get_audio_6391(int16_t *, int32_t);
 uint32_t obor_serialize_size_6391(void);
@@ -172,6 +179,7 @@ int32_t obor_get_exit_status_7142(void);
 int32_t obor_get_fault_message_7142(char *, uint32_t);
 int32_t obor_abandon_7142(void);
 void obor_get_video_7142(const uint32_t **, int32_t *, int32_t *, int32_t *);
+int32_t obor_get_content_number_7142(const char *, double *);
 void obor_set_button_7142(int32_t, int32_t, int32_t);
 int32_t obor_get_audio_7142(int16_t *, int32_t);
 uint32_t obor_serialize_size_7142(void);
@@ -194,6 +202,7 @@ int32_t obor_get_exit_status_7533(void);
 int32_t obor_get_fault_message_7533(char *, uint32_t);
 int32_t obor_abandon_7533(void);
 void obor_get_video_7533(const uint32_t **, int32_t *, int32_t *, int32_t *);
+int32_t obor_get_content_number_7533(const char *, double *);
 void obor_set_button_7533(int32_t, int32_t, int32_t);
 int32_t obor_get_audio_7533(int16_t *, int32_t);
 uint32_t obor_serialize_size_7533(void);
@@ -216,6 +225,7 @@ int32_t obor_get_exit_status_8023(void);
 int32_t obor_get_fault_message_8023(char *, uint32_t);
 int32_t obor_abandon_8023(void);
 void obor_get_video_8023(const uint32_t **, int32_t *, int32_t *, int32_t *);
+int32_t obor_get_content_number_8023(const char *, double *);
 void obor_set_button_8023(int32_t, int32_t, int32_t);
 int32_t obor_get_audio_8023(int16_t *, int32_t);
 uint32_t obor_serialize_size_8023(void);
@@ -233,15 +243,15 @@ uint32_t obor_prepare_state_8023(void);
 
 typedef struct { int build; const char *name; obor_vtbl v; const char *bss_begin, *bss_end; } obor_engine_def;
 static const obor_engine_def kEngineDefs[] = {
-    { 3400, "3400", { obor_abi_version_3400, obor_boot_3400, obor_run_frame_3400, obor_startup_complete_3400, obor_get_exit_status_3400, obor_get_fault_message_3400, obor_abandon_3400, obor_get_video_3400, obor_set_button_3400, obor_get_audio_3400, obor_serialize_size_3400, obor_serialize_3400, obor_unserialize_3400, obor_shutdown_3400, obor_get_rumble_3400, obor_get_arena_3400, obor_get_player_state_3400, obor_owned_begin_3400, obor_owned_serialize_3400, obor_owned_end_3400, obor_prepare_state_3400 }, __obor_bss_begin_3400, __obor_bss_end_3400 },
-    { 3741, "3741", { obor_abi_version_3741, obor_boot_3741, obor_run_frame_3741, obor_startup_complete_3741, obor_get_exit_status_3741, obor_get_fault_message_3741, obor_abandon_3741, obor_get_video_3741, obor_set_button_3741, obor_get_audio_3741, obor_serialize_size_3741, obor_serialize_3741, obor_unserialize_3741, obor_shutdown_3741, obor_get_rumble_3741, obor_get_arena_3741, obor_get_player_state_3741, obor_owned_begin_3741, obor_owned_serialize_3741, obor_owned_end_3741, obor_prepare_state_3741 }, __obor_bss_begin_3741, __obor_bss_end_3741 },
-    { 3842, "3842", { obor_abi_version_3842, obor_boot_3842, obor_run_frame_3842, obor_startup_complete_3842, obor_get_exit_status_3842, obor_get_fault_message_3842, obor_abandon_3842, obor_get_video_3842, obor_set_button_3842, obor_get_audio_3842, obor_serialize_size_3842, obor_serialize_3842, obor_unserialize_3842, obor_shutdown_3842, obor_get_rumble_3842, obor_get_arena_3842, obor_get_player_state_3842, obor_owned_begin_3842, obor_owned_serialize_3842, obor_owned_end_3842, obor_prepare_state_3842 }, __obor_bss_begin_3842, __obor_bss_end_3842 },
-    { 4086, "4086", { obor_abi_version_4086, obor_boot_4086, obor_run_frame_4086, obor_startup_complete_4086, obor_get_exit_status_4086, obor_get_fault_message_4086, obor_abandon_4086, obor_get_video_4086, obor_set_button_4086, obor_get_audio_4086, obor_serialize_size_4086, obor_serialize_4086, obor_unserialize_4086, obor_shutdown_4086, obor_get_rumble_4086, obor_get_arena_4086, obor_get_player_state_4086, obor_owned_begin_4086, obor_owned_serialize_4086, obor_owned_end_4086, obor_prepare_state_4086 }, __obor_bss_begin_4086, __obor_bss_end_4086 },
-    { 4432, "4432", { obor_abi_version_4432, obor_boot_4432, obor_run_frame_4432, obor_startup_complete_4432, obor_get_exit_status_4432, obor_get_fault_message_4432, obor_abandon_4432, obor_get_video_4432, obor_set_button_4432, obor_get_audio_4432, obor_serialize_size_4432, obor_serialize_4432, obor_unserialize_4432, obor_shutdown_4432, obor_get_rumble_4432, obor_get_arena_4432, obor_get_player_state_4432, obor_owned_begin_4432, obor_owned_serialize_4432, obor_owned_end_4432, obor_prepare_state_4432 }, __obor_bss_begin_4432, __obor_bss_end_4432 },
-    { 6391, "6391", { obor_abi_version_6391, obor_boot_6391, obor_run_frame_6391, obor_startup_complete_6391, obor_get_exit_status_6391, obor_get_fault_message_6391, obor_abandon_6391, obor_get_video_6391, obor_set_button_6391, obor_get_audio_6391, obor_serialize_size_6391, obor_serialize_6391, obor_unserialize_6391, obor_shutdown_6391, obor_get_rumble_6391, obor_get_arena_6391, obor_get_player_state_6391, obor_owned_begin_6391, obor_owned_serialize_6391, obor_owned_end_6391, obor_prepare_state_6391 }, __obor_bss_begin_6391, __obor_bss_end_6391 },
-    { 7142, "7142", { obor_abi_version_7142, obor_boot_7142, obor_run_frame_7142, obor_startup_complete_7142, obor_get_exit_status_7142, obor_get_fault_message_7142, obor_abandon_7142, obor_get_video_7142, obor_set_button_7142, obor_get_audio_7142, obor_serialize_size_7142, obor_serialize_7142, obor_unserialize_7142, obor_shutdown_7142, obor_get_rumble_7142, obor_get_arena_7142, obor_get_player_state_7142, obor_owned_begin_7142, obor_owned_serialize_7142, obor_owned_end_7142, obor_prepare_state_7142 }, __obor_bss_begin_7142, __obor_bss_end_7142 },
-    { 7533, "7533", { obor_abi_version_7533, obor_boot_7533, obor_run_frame_7533, obor_startup_complete_7533, obor_get_exit_status_7533, obor_get_fault_message_7533, obor_abandon_7533, obor_get_video_7533, obor_set_button_7533, obor_get_audio_7533, obor_serialize_size_7533, obor_serialize_7533, obor_unserialize_7533, obor_shutdown_7533, obor_get_rumble_7533, obor_get_arena_7533, obor_get_player_state_7533, obor_owned_begin_7533, obor_owned_serialize_7533, obor_owned_end_7533, obor_prepare_state_7533 }, __obor_bss_begin_7533, __obor_bss_end_7533 },
-    { 8023, "8023", { obor_abi_version_8023, obor_boot_8023, obor_run_frame_8023, obor_startup_complete_8023, obor_get_exit_status_8023, obor_get_fault_message_8023, obor_abandon_8023, obor_get_video_8023, obor_set_button_8023, obor_get_audio_8023, obor_serialize_size_8023, obor_serialize_8023, obor_unserialize_8023, obor_shutdown_8023, obor_get_rumble_8023, obor_get_arena_8023, obor_get_player_state_8023, obor_owned_begin_8023, obor_owned_serialize_8023, obor_owned_end_8023, obor_prepare_state_8023 }, __obor_bss_begin_8023, __obor_bss_end_8023 },
+    { 3400, "3400", { obor_abi_version_3400, obor_boot_3400, obor_run_frame_3400, obor_startup_complete_3400, obor_get_exit_status_3400, obor_get_fault_message_3400, obor_abandon_3400, obor_get_video_3400, obor_get_content_number_3400, obor_set_button_3400, obor_get_audio_3400, obor_serialize_size_3400, obor_serialize_3400, obor_unserialize_3400, obor_shutdown_3400, obor_get_rumble_3400, obor_get_arena_3400, obor_get_player_state_3400, obor_owned_begin_3400, obor_owned_serialize_3400, obor_owned_end_3400, obor_prepare_state_3400 }, __obor_bss_begin_3400, __obor_bss_end_3400 },
+    { 3741, "3741", { obor_abi_version_3741, obor_boot_3741, obor_run_frame_3741, obor_startup_complete_3741, obor_get_exit_status_3741, obor_get_fault_message_3741, obor_abandon_3741, obor_get_video_3741, obor_get_content_number_3741, obor_set_button_3741, obor_get_audio_3741, obor_serialize_size_3741, obor_serialize_3741, obor_unserialize_3741, obor_shutdown_3741, obor_get_rumble_3741, obor_get_arena_3741, obor_get_player_state_3741, obor_owned_begin_3741, obor_owned_serialize_3741, obor_owned_end_3741, obor_prepare_state_3741 }, __obor_bss_begin_3741, __obor_bss_end_3741 },
+    { 3842, "3842", { obor_abi_version_3842, obor_boot_3842, obor_run_frame_3842, obor_startup_complete_3842, obor_get_exit_status_3842, obor_get_fault_message_3842, obor_abandon_3842, obor_get_video_3842, obor_get_content_number_3842, obor_set_button_3842, obor_get_audio_3842, obor_serialize_size_3842, obor_serialize_3842, obor_unserialize_3842, obor_shutdown_3842, obor_get_rumble_3842, obor_get_arena_3842, obor_get_player_state_3842, obor_owned_begin_3842, obor_owned_serialize_3842, obor_owned_end_3842, obor_prepare_state_3842 }, __obor_bss_begin_3842, __obor_bss_end_3842 },
+    { 4086, "4086", { obor_abi_version_4086, obor_boot_4086, obor_run_frame_4086, obor_startup_complete_4086, obor_get_exit_status_4086, obor_get_fault_message_4086, obor_abandon_4086, obor_get_video_4086, obor_get_content_number_4086, obor_set_button_4086, obor_get_audio_4086, obor_serialize_size_4086, obor_serialize_4086, obor_unserialize_4086, obor_shutdown_4086, obor_get_rumble_4086, obor_get_arena_4086, obor_get_player_state_4086, obor_owned_begin_4086, obor_owned_serialize_4086, obor_owned_end_4086, obor_prepare_state_4086 }, __obor_bss_begin_4086, __obor_bss_end_4086 },
+    { 4432, "4432", { obor_abi_version_4432, obor_boot_4432, obor_run_frame_4432, obor_startup_complete_4432, obor_get_exit_status_4432, obor_get_fault_message_4432, obor_abandon_4432, obor_get_video_4432, obor_get_content_number_4432, obor_set_button_4432, obor_get_audio_4432, obor_serialize_size_4432, obor_serialize_4432, obor_unserialize_4432, obor_shutdown_4432, obor_get_rumble_4432, obor_get_arena_4432, obor_get_player_state_4432, obor_owned_begin_4432, obor_owned_serialize_4432, obor_owned_end_4432, obor_prepare_state_4432 }, __obor_bss_begin_4432, __obor_bss_end_4432 },
+    { 6391, "6391", { obor_abi_version_6391, obor_boot_6391, obor_run_frame_6391, obor_startup_complete_6391, obor_get_exit_status_6391, obor_get_fault_message_6391, obor_abandon_6391, obor_get_video_6391, obor_get_content_number_6391, obor_set_button_6391, obor_get_audio_6391, obor_serialize_size_6391, obor_serialize_6391, obor_unserialize_6391, obor_shutdown_6391, obor_get_rumble_6391, obor_get_arena_6391, obor_get_player_state_6391, obor_owned_begin_6391, obor_owned_serialize_6391, obor_owned_end_6391, obor_prepare_state_6391 }, __obor_bss_begin_6391, __obor_bss_end_6391 },
+    { 7142, "7142", { obor_abi_version_7142, obor_boot_7142, obor_run_frame_7142, obor_startup_complete_7142, obor_get_exit_status_7142, obor_get_fault_message_7142, obor_abandon_7142, obor_get_video_7142, obor_get_content_number_7142, obor_set_button_7142, obor_get_audio_7142, obor_serialize_size_7142, obor_serialize_7142, obor_unserialize_7142, obor_shutdown_7142, obor_get_rumble_7142, obor_get_arena_7142, obor_get_player_state_7142, obor_owned_begin_7142, obor_owned_serialize_7142, obor_owned_end_7142, obor_prepare_state_7142 }, __obor_bss_begin_7142, __obor_bss_end_7142 },
+    { 7533, "7533", { obor_abi_version_7533, obor_boot_7533, obor_run_frame_7533, obor_startup_complete_7533, obor_get_exit_status_7533, obor_get_fault_message_7533, obor_abandon_7533, obor_get_video_7533, obor_get_content_number_7533, obor_set_button_7533, obor_get_audio_7533, obor_serialize_size_7533, obor_serialize_7533, obor_unserialize_7533, obor_shutdown_7533, obor_get_rumble_7533, obor_get_arena_7533, obor_get_player_state_7533, obor_owned_begin_7533, obor_owned_serialize_7533, obor_owned_end_7533, obor_prepare_state_7533 }, __obor_bss_begin_7533, __obor_bss_end_7533 },
+    { 8023, "8023", { obor_abi_version_8023, obor_boot_8023, obor_run_frame_8023, obor_startup_complete_8023, obor_get_exit_status_8023, obor_get_fault_message_8023, obor_abandon_8023, obor_get_video_8023, obor_get_content_number_8023, obor_set_button_8023, obor_get_audio_8023, obor_serialize_size_8023, obor_serialize_8023, obor_unserialize_8023, obor_shutdown_8023, obor_get_rumble_8023, obor_get_arena_8023, obor_get_player_state_8023, obor_owned_begin_8023, obor_owned_serialize_8023, obor_owned_end_8023, obor_prepare_state_8023 }, __obor_bss_begin_8023, __obor_bss_end_8023 },
 };
 
 typedef struct { int build; const char *name; const char *disp; int engine_build; int auto_until; int automatic; int tagged; int triage; const char *variant; uint32_t features; } obor_profile_def;

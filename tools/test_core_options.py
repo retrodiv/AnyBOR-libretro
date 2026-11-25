@@ -96,7 +96,7 @@ static unsigned registration_checks, selection_checks;
 static const char *const expected_keys[]={
     "anybor_crt_tv","anybor_crt_oversize_canvas_width",
     "anybor_crt_oversize_canvas_height","anybor_os_screen_orientation","anybor_image_rotation",
-    "anybor_analog","anybor_rumble","anybor_macros","anybor_engine",
+    "anybor_content_overrides","anybor_analog","anybor_rumble","anybor_macros","anybor_engine",
     "anybor_engine_3000_3499","anybor_engine_3500_3749","anybor_engine_3750_3999",
     "anybor_engine_4000_4999","anybor_engine_5000_plus",
     "anybor_state_content","anybor_state_compression","anybor_gamelog",
@@ -124,7 +124,7 @@ static int group_for(int build) {
     assert(!"unassigned profile");return -1;
 }
 static int group_key(const char *key) {
-    for (unsigned i=0;i<5;++i) if (!strcmp(key,expected_keys[9+i])) return (int)i;
+    for (unsigned i=0;i<5;++i) if (!strcmp(key,expected_keys[10+i])) return (int)i;
     return -1;
 }
 static void check_values(const option_snapshot &option) {
@@ -182,7 +182,7 @@ static void read_v2(const retro_core_options_v2 *options) {
         if (option.key=="anybor_crt_oversize_canvas_width")
             assert(!strcmp(def->desc,"CRT Oversize Canvas Width"));
         assert(def->category_key);
-        const char *category = active->options.size()<5 ? "video" :
+        const char *category = active->options.size()<6 ? "video" :
             (!strcmp(def->key,"anybor_analog") || !strcmp(def->key,"anybor_rumble") || !strcmp(def->key,"anybor_macros")) ? "input" :
             !strncmp(def->key,"anybor_clear_",13) ? "development" : "system";
         assert(!strcmp(def->category_key,category));
@@ -396,7 +396,7 @@ class CoreOptionTests(unittest.TestCase):
         from test_crt import check_option_order
         keys = ['anybor_crt_tv', 'anybor_crt_oversize_canvas_width', 'anybor_crt_oversize_canvas_height',
                 'anybor_os_screen_orientation',
-                'anybor_image_rotation', 'anybor_analog', 'anybor_rumble', 'anybor_macros',
+                'anybor_image_rotation', 'anybor_content_overrides', 'anybor_analog', 'anybor_rumble', 'anybor_macros',
                 'anybor_engine', 'anybor_engine_3000_3499', 'anybor_engine_3500_3749',
                 'anybor_engine_3750_3999', 'anybor_engine_4000_4999', 'anybor_engine_5000_plus',
                 'anybor_state_content', 'anybor_state_compression', 'anybor_gamelog',

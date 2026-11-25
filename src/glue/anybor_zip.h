@@ -438,7 +438,7 @@ static int obor_zip_prepare(const char *zip_path, const char *save_dir,
         snprintf(content_choice->archive, sizeof(content_choice->archive), "%s", zip_path);
         snprintf(content_choice->zip_engine, sizeof(content_choice->zip_engine), "%s", descriptor.engine);
         snprintf(content_choice->zip_descriptor, sizeof(content_choice->zip_descriptor), "%s", descriptor_name);
-        obor_descriptor_settings(*content_choice,descriptor);
+        if (!obor_descriptor_settings(*content_choice, descriptor)) return 0;
     }
     if (engine_identity) *engine_identity = identity;
     int written = snprintf(out, out_cap, "%s", chosen);

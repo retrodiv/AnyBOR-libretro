@@ -50,6 +50,30 @@ unsigned timer_getinterval(unsigned freq)
     return tickspassed;
 }
 
+/* The legacy interval sampler still advances its state every time, so
+ * withdrawing a level rate returns to the engine's own timing immediately. */
+unsigned obor_play_interval(unsigned native, int level)
+{
+    static uint64_t previous_clock, remainder;
+    static unsigned previous_rate;
+    static int previous_level = -1;
+    unsigned interval = timer_getinterval(native);
+    unsigned rate = obor_presentation_level_rate(level);
+    uint64_t now = obor_clock_us;
+    uint64_t elapsed = now >= previous_clock ? now - previous_clock : 0;
+    previous_clock = now;
+    if (rate != previous_rate || level != previous_level) remainder = 0;
+    previous_rate = rate;
+    previous_level = level;
+    obor_content_update();
+    if (!rate) return interval;
+    if (elapsed > 1000000) elapsed = 1000000;
+    remainder += elapsed * rate;
+    interval = (unsigned)(remainder / 1000000);
+    remainder %= 1000000;
+    return interval;
+}
+
 unsigned get_last_interval(void)
 {
     return lastinterval;

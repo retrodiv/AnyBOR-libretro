@@ -148,7 +148,7 @@ all: partial
 # path would let concurrent/interleaved builds overwrite each other's partial
 PARTIAL     = $(OBJDIR)/obor_engine_$(BUILD_NUM).o
 ABI_SYMS    = obor_abi_version obor_boot obor_run_frame obor_startup_complete obor_get_exit_status obor_get_fault_message obor_abandon obor_get_video \
-              obor_set_button obor_get_audio obor_serialize_size \
+              obor_set_button obor_get_audio obor_get_content_number obor_serialize_size \
               obor_serialize obor_unserialize obor_shutdown \
               obor_get_rumble obor_get_arena obor_get_player_state \
               obor_owned_begin obor_owned_serialize obor_owned_end obor_prepare_state

@@ -27,7 +27,7 @@
 extern "C" {
 #endif
 
-#define OBOR_ABI_VERSION 12u
+#define OBOR_ABI_VERSION 13u
 
 #define OBOR_EXIT_MEMORY_FAULT (-2)
 #define OBOR_LOW_RAM_MESSAGE "Not enough RAM to run this game."
@@ -90,6 +90,37 @@ typedef struct {
     uint32_t engine_build;
 } obor_engine_region;
 
+enum obor_presentation_scope {
+    OBOR_SCOPE_GAMERES,
+    OBOR_SCOPE_CRT,
+    OBOR_SCOPE_CRT_HORIZONTAL,
+    OBOR_SCOPE_CRT_VERTICAL
+};
+enum obor_numeric_target {
+    OBOR_TARGET_GLOBAL,
+    OBOR_TARGET_DRAW,
+    OBOR_TARGET_WINDOW_W,
+    OBOR_TARGET_WINDOW_H,
+    OBOR_TARGET_CROP_LEFT,
+    OBOR_TARGET_CROP_TOP,
+    OBOR_TARGET_CROP_RIGHT,
+    OBOR_TARGET_CROP_BOTTOM,
+    OBOR_TARGET_SHIFT_X,
+    OBOR_TARGET_SHIFT_Y,
+    OBOR_TARGET_COUNT
+};
+#define OBOR_PRESENTATION_OVERRIDES 64
+#define OBOR_PRESENTATION_LEVELS 1024
+#define OBOR_PRESENTATION_NAME 64
+#define OBOR_PRESENTATION_EXPRESSION 128
+typedef struct {
+    char name[OBOR_PRESENTATION_NAME];
+    char condition[OBOR_PRESENTATION_NAME];
+    char expression[OBOR_PRESENTATION_EXPRESSION];
+    uint8_t scope;
+    uint8_t target;
+} obor_numeric_override;
+
 typedef struct {
     uint8_t     state_build_identity[32];
     uint32_t    abi_version;   /* glue sets = OBOR_ABI_VERSION */
@@ -117,6 +148,10 @@ typedef struct {
     int32_t state_compression;
     /* Model progress, sampled by the frontend at existing startup yields. */
     void (*startup_progress)(int completed, int total);
+    /* Presentation policy is owned by the current frontend session. */
+    unsigned (*content_level_rate)(int level);
+    unsigned (*content_numeric_overrides)(const obor_numeric_override **rules,
+                                          unsigned *active_scopes);
 } obor_boot_info;
 
 /* Every function below is implemented by each linked engine object and wired
@@ -130,6 +165,9 @@ OBOR_API int32_t obor_boot(const obor_boot_info *info);
 /* Advance exactly one video frame (1/60 s of emulated time).
  * Returns 1 while the engine is alive, 0 once it exited (user quit). */
 OBOR_API int32_t obor_run_frame(void);
+
+/* Query a live numeric script global without executing game code. */
+OBOR_API int32_t obor_get_content_number(const char *name, double *value);
 
 /* Resource initialization is cooperative and may span loading frames. */
 OBOR_API int32_t obor_startup_complete(void);
