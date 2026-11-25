@@ -43,10 +43,11 @@ Automatic selection uses build tags and content clues to choose a profile. You c
 manually when a game needs it. Historical profiles preserve selected earlier
 content behavior while retaining safety and lifecycle corrections.
 
-The libretro video adapter has no native gamma/brightness correction backend.
-Screen fades use software modulation and final clearing for every profile.
-Host gamma-adjustment output is outside this adapter; the internal result
-reports the available backend capability.
+The game's brightness and gamma controls adjust the rendered image.
+True-colour output uses a software implementation of the source OpenGL
+colour curve. Indexed output uses the engine's palette correction.
+Profiles from the 8023 engine family retain their existing video backend
+and its software fade path.
 
 The 3741 source tree reads GIF headers and image descriptors as 13 and 9 bytes.
 Persisted configuration, progress and score records have their own explicit

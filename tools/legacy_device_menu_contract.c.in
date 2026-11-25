@@ -170,9 +170,9 @@ int main(void)
             assert(players[0].deviceID == swap && players[1].deviceID == 1 - swap);
             assert(players[swap ? 0 : 1].newkeyflags == FLAG_ESC);
             int32_t ratio, msec;
-            control_rumble(0, 50, 35);
+            control_rumble(0, 1, 35);
             obor_get_rumble(players[0].deviceID, &ratio, &msec);
-            assert(ratio == 50 && msec == 35);
+            assert(ratio == 100 && msec == 35);
         }
         assert(!bothnewkeys && !screen_status);
     }

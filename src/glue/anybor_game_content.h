@@ -2,6 +2,7 @@
  * Copyright (c) 2026 retrodiv <retrodiv@proton.me> */
 #ifndef OBOR_GAME_CONTENT_H
 #define OBOR_GAME_CONTENT_H
+#include "anybor_file_io.h"
 #include <ctype.h>
 #include <sys/stat.h>
 #include <dirent.h>
@@ -20,13 +21,13 @@ static bool obor_game_disk_path(const char *root, const char *asset, char *out, 
         memcpy(name, part, length); name[length] = 0;
         if (snprintf(candidate, sizeof(candidate), "%s/%s", out, name) >= (int)sizeof(candidate)) return false;
         struct stat st;
-        if (stat(candidate, &st)) {
-            DIR *directory = opendir(out);
+        if (obor_stat(candidate, &st)) {
+            obor_path_directory *directory = obor_opendir(out);
             if (!directory) return false;
             unsigned seen = 0;
             bool found = false;
-            struct dirent *entry;
-            while ((entry = readdir(directory))) {
+            obor_path_entry *entry;
+            while ((entry = obor_readdir(directory))) {
                 if (++seen > 8194U) { found = false; break; }
                 if (!strcasecmp(name, entry->d_name)) {
                     if (snprintf(candidate, sizeof(candidate), "%s/%s", out, entry->d_name) >= (int)sizeof(candidate)) break;
@@ -34,7 +35,7 @@ static bool obor_game_disk_path(const char *root, const char *asset, char *out, 
                     break;
                 }
             }
-            closedir(directory);
+            obor_closedir(directory);
             if (!found) return false;
         }
         if (snprintf(out, cap, "%s", candidate) >= (int)cap) return false;
@@ -54,12 +55,12 @@ static FILE *obor_game_asset(const char *content, bool packed, const char *asset
         char path[4096];
         if (!obor_game_disk_path(content, safe, path, sizeof(path))) return NULL;
         struct stat st;
-        if (stat(path, &st) || !S_ISREG(st.st_mode) || st.st_size < 0 || (uint64_t)st.st_size > UINT32_MAX)
+        if (obor_stat(path, &st) || !S_ISREG(st.st_mode) || st.st_size < 0 || (uint64_t)st.st_size > UINT32_MAX)
             return NULL;
         *size = (uint32_t)st.st_size;
-        return fopen(path, "rb");
+        return obor_fopen(path, "rb");
     }
-    FILE *file = fopen(content, "rb");
+    FILE *file = obor_fopen(content, "rb");
     unsigned char data[12];
     if (!file) return NULL;
     if (fseek(file, -4, SEEK_END) || fread(data, 1, 4, file) != 4) { fclose(file); return NULL; }
@@ -140,7 +141,7 @@ static bool obor_game_recognizable(const char *content, bool packed)
 /* A complete RIFF/WAVE is an audio asset even if its extension is .pak. */
 static bool obor_game_wave_asset(const char *path)
 {
-    FILE *file = fopen(path, "rb");
+    FILE *file = obor_fopen(path, "rb");
     if (!file) return false;
     unsigned char header[12];
     bool result = false, format = false, audio = false;
@@ -169,7 +170,7 @@ static uint32_t obor_game_big32(const unsigned char *p)
 { return (uint32_t)p[0]<<24 | (uint32_t)p[1]<<16 | (uint32_t)p[2]<<8 | p[3]; }
 static bool obor_game_png_asset(const char *path)
 {
-    FILE *file=fopen(path,"rb");
+    FILE *file=obor_fopen(path,"rb");
     if(!file) return false;
     unsigned char header[8], buffer[65536], expected[4];
     bool ok=fread(header,1,8,file)==8 && !memcmp(header,"\x89PNG\r\n\x1a\n",8);
@@ -202,9 +203,9 @@ static bool obor_game_model_asset(const char *path,const char *root)
 {
     size_t prefix=strlen(root);
     if(strncmp(path,root,prefix) || (prefix && root[prefix-1]!='/' && path[prefix]!='/')) return false;
-    FILE *file=fopen(path,"rb");if(!file) return false;
+    FILE *file=obor_fopen(path,"rb");if(!file) return false;
     struct stat status;
-    if(stat(path,&status) || status.st_size<=0 || status.st_size>(4<<20)) {fclose(file);return false;}
+    if(obor_stat(path,&status) || status.st_size<=0 || status.st_size>(4<<20)) {fclose(file);return false;}
     char line[4096];bool ok=true, name=false,type=false,health=false,animation=false,frame=false,script=false;
     long position=0;
     while(fgets(line,sizeof(line),file) && obor_prepare_checkpoint()) {
@@ -234,7 +235,7 @@ static bool obor_game_model_asset(const char *path,const char *root)
                 snprintf(asset,sizeof(asset),"%s%s",argument,suffix[i]);
                 if(obor_game_disk_path(root,asset,resource,sizeof(resource))) {
                     struct stat image;
-                    if(!stat(resource,&image) && S_ISREG(image.st_mode) && image.st_size>0) frame=true;
+                    if(!obor_stat(resource,&image) && S_ISREG(image.st_mode) && image.st_size>0) frame=true;
                 }
             }
         }

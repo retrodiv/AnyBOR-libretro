@@ -17,6 +17,7 @@
  */
 #ifndef OBOR_PADMAP_H
 #define OBOR_PADMAP_H
+#include "anybor_file_io.h"
 
 #include <stdio.h>
 #include "anybor_content_config.h"
@@ -298,7 +299,7 @@ static void obor_pm_collect(const char *pak_path, obor_padinfo *info)
     memset(info, 0, sizeof(*info));
     memset(g_pm_chars, 0, sizeof(g_pm_chars));
     g_pm_nchars = 0;
-    FILE *fp = fopen(pak_path, "rb");
+    FILE *fp = obor_fopen(pak_path, "rb");
     if (!fp)
         return;
     obor_pm_load_table(fp);

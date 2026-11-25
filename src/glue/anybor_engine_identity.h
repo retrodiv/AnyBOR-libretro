@@ -2,6 +2,7 @@
  * Copyright (c) 2026 retrodiv <retrodiv@proton.me> */
 #ifndef OBOR_ENGINE_IDENTITY_H
 #define OBOR_ENGINE_IDENTITY_H
+#include "anybor_file_io.h"
 #include <stdio.h>
 #include <stdint.h>
 #include <string.h>
@@ -111,9 +112,9 @@ static int obor_engine_binary_name(const char *name)
 static void obor_engine_inspect_file(obor_engine_identity *identity, const char *path)
 {
     struct stat st;
-    if (stat(path, &st) || !S_ISREG(st.st_mode) || st.st_size < 0) return;
+    if (obor_stat(path, &st) || !S_ISREG(st.st_mode) || st.st_size < 0) return;
     if (!obor_engine_reserve(identity, (uint64_t)st.st_size)) return;
-    FILE *file = fopen(path, "rb");
+    FILE *file = obor_fopen(path, "rb");
     if (!file) { identity->status = OBOR_ENGINE_SCAN_INCOMPLETE; return; }
     obor_sha256_ctx hash;
     obor_sha256_init(&hash);
@@ -145,49 +146,30 @@ static obor_engine_identity obor_engine_in_directory(const char *directory)
 {
     obor_engine_identity identity = {};
     unsigned entries = 0;
-#if defined(_WIN32)
-    char pattern[4096];
-    if (snprintf(pattern, sizeof(pattern), "%s/*", directory) >= (int)sizeof(pattern)) {
-        identity.status = OBOR_ENGINE_SCAN_INCOMPLETE; return identity;
-    }
-    WIN32_FIND_DATAA data;
-    HANDLE handle = FindFirstFileA(pattern, &data);
-    if (handle == INVALID_HANDLE_VALUE) return identity;
-    do {
-        if (++entries > OBOR_ENGINE_MAX_ENTRIES) { identity.status = OBOR_ENGINE_SCAN_INCOMPLETE; break; }
-        if ((data.dwFileAttributes & (FILE_ATTRIBUTE_DIRECTORY | FILE_ATTRIBUTE_REPARSE_POINT)) ||
-            !obor_engine_binary_name(data.cFileName)) continue;
-        char path[4096];
-        if (snprintf(path, sizeof(path), "%s/%s", directory, data.cFileName) >= (int)sizeof(path)) {
-            identity.status = OBOR_ENGINE_SCAN_INCOMPLETE; break;
-        }
-        obor_engine_inspect_file(&identity, path);
-        if (identity.status == OBOR_ENGINE_SCAN_INCOMPLETE) break;
-    } while (FindNextFileA(handle, &data));
-    if (identity.status != OBOR_ENGINE_SCAN_INCOMPLETE && GetLastError() != ERROR_NO_MORE_FILES)
-        identity.status = OBOR_ENGINE_SCAN_INCOMPLETE;
-    FindClose(handle);
-#else
-    DIR *dir = opendir(directory);
+    obor_path_directory *dir = obor_opendir(directory);
     if (!dir) return identity;
-    struct dirent *entry;
+    obor_path_entry *entry;
     for (;;) {
         errno = 0;
-        entry = readdir(dir);
+        entry = obor_readdir(dir);
         if (!entry) { if (errno) identity.status = OBOR_ENGINE_SCAN_INCOMPLETE; break; }
         if (++entries > OBOR_ENGINE_MAX_ENTRIES) { identity.status = OBOR_ENGINE_SCAN_INCOMPLETE; break; }
+#if defined(_WIN32)
+        if (entry->attributes & (FILE_ATTRIBUTE_DIRECTORY | FILE_ATTRIBUTE_REPARSE_POINT)) continue;
+#endif
         if (!obor_engine_binary_name(entry->d_name)) continue;
         char path[4096];
         if (snprintf(path, sizeof(path), "%s/%s", directory, entry->d_name) >= (int)sizeof(path)) {
             identity.status = OBOR_ENGINE_SCAN_INCOMPLETE; break;
         }
+#if !defined(_WIN32)
         struct stat st;
         if (lstat(path, &st) || !S_ISREG(st.st_mode)) continue;
+#endif
         obor_engine_inspect_file(&identity, path);
         if (identity.status == OBOR_ENGINE_SCAN_INCOMPLETE) break;
     }
-    closedir(dir);
-#endif
+    obor_closedir(dir);
     return identity;
 }
 

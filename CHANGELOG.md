@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.2.65
+
+- Support Unicode names in Windows content, system and save paths.
+- Control game vibration from the Rumble core option at the intended strength.
+- Apply the game's brightness and gamma controls on supported profiles.
+- Simplify the content, save-state and rewind documentation.
+
 ## 0.2.54
 
 - Add selectable OpenBOR profiles v3.0 3185-dev, v3.0 3787-dev, v3.0 3792-dev,

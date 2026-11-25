@@ -12,7 +12,7 @@
 #include <fcntl.h>
 #include <sys/stat.h>
 #if defined(_WIN32)
-#include <windows.h>
+#include "anybor_file_io.h"
 #elif defined(__linux__)
 #include <linux/magic.h>
 /* Older kernel headers may omit these filesystem identifiers. Preserve any
@@ -116,7 +116,9 @@ int obor_paths_set_root(const char *path)
 #if defined(_WIN32)
     if (!((path[0] && path[1] == ':' && (path[2] == '/' || path[2] == '\\')) ||
           (path[0] == '\\' && path[1] == '\\'))) { errno = EINVAL; return 0; }
-    next.directory = CreateFileA(path, 0,
+    wchar_t name[OBOR_WIN_PATH_CAP];
+    if (!obor_win_wide(path, name, OBOR_WIN_PATH_CAP)) return 0;
+    next.directory = CreateFileW(name, 0,
         FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE, NULL,
         OPEN_EXISTING, FILE_FLAG_BACKUP_SEMANTICS, NULL);
     if (next.directory == INVALID_HANDLE_VALUE) { errno = EACCES; return 0; }
@@ -125,9 +127,9 @@ int obor_paths_set_root(const char *path)
         !(information.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY)) {
         CloseHandle(next.directory); errno = ENOTDIR; return 0;
     }
-    char volume[4096];
-    if (GetVolumePathNameA(path, volume, sizeof(volume))) {
-        UINT type = GetDriveTypeA(volume);
+    wchar_t volume[OBOR_WIN_PATH_CAP];
+    if (GetVolumePathNameW(name, volume, OBOR_WIN_PATH_CAP)) {
+        UINT type = GetDriveTypeW(volume);
         next.local_notifications = type == DRIVE_FIXED || type == DRIVE_REMOVABLE || type == DRIVE_RAMDISK;
     }
 #else
@@ -169,11 +171,14 @@ static const char *resolve_root(const char *path, char *out, size_t capacity)
          (path[1] == '\\' || path[1] == '/')) ||
         (path[1] == ':' && (path[2] == '\\' || path[2] == '/'))) return path;
     char live_root[4096];
-    DWORD length = GetFinalPathNameByHandleA(paths.directory, live_root,
-        sizeof(live_root), FILE_NAME_NORMALIZED | VOLUME_NAME_DOS);
-    if (!length || length >= sizeof(live_root)) {
-        errno = length ? ENAMETOOLONG : ENOENT; return NULL;
+    wchar_t resolved[OBOR_WIN_PATH_CAP];
+    DWORD length = GetFinalPathNameByHandleW(paths.directory, resolved,
+        OBOR_WIN_PATH_CAP, FILE_NAME_NORMALIZED | VOLUME_NAME_DOS);
+    if (!length || length >= OBOR_WIN_PATH_CAP) {
+        errno = length ? ENAMETOOLONG : obor_win_path_error(GetLastError());
+        return NULL;
     }
+    if (!obor_win_utf8(resolved, live_root, sizeof(live_root))) return NULL;
     root = live_root;
     /* Keep the CRT's ordinary drive spelling when possible. UNC and extended
      * paths remain absolute. Root-relative and drive-relative names follow

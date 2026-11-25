@@ -2,6 +2,7 @@
  * Copyright (c) 2026 retrodiv <retrodiv@proton.me> */
 #ifndef OBOR_STORAGE_H
 #define OBOR_STORAGE_H
+#include "anybor_file_io.h"
 
 #include <errno.h>
 #include <stdio.h>
@@ -37,7 +38,7 @@ static bool obor_storage_join(char *out, size_t cap, const char *root, const cha
 static bool obor_storage_directory(const char *path)
 {
 #if defined(_WIN32)
-    DWORD a = GetFileAttributesA(path);
+    DWORD a = obor_win_attributes(path);
     return a != INVALID_FILE_ATTRIBUTES && (a & FILE_ATTRIBUTE_DIRECTORY) &&
            !(a & FILE_ATTRIBUTE_REPARSE_POINT);
 #else
@@ -51,29 +52,28 @@ static bool obor_storage_remove(const char *path, unsigned depth = 0)
     if (depth > 64) return false;
     if (!obor_storage_directory(path)) {
 #if defined(_WIN32)
-        DWORD a = GetFileAttributesA(path);
+        DWORD a = obor_win_attributes(path);
         if (a == INVALID_FILE_ATTRIBUTES)
             return GetLastError() == ERROR_FILE_NOT_FOUND || GetLastError() == ERROR_PATH_NOT_FOUND;
-        if (a & FILE_ATTRIBUTE_DIRECTORY) return RemoveDirectoryA(path) != 0;
+        if (a & FILE_ATTRIBUTE_DIRECTORY) {
+            wchar_t name[OBOR_WIN_PATH_CAP];
+            return obor_win_wide(path, name, OBOR_WIN_PATH_CAP) && RemoveDirectoryW(name);
+        }
 #endif
-        return remove(path) == 0 || errno == ENOENT;
+        return obor_remove(path) == 0 || errno == ENOENT;
     }
-    DIR *dir = opendir(path);
+    obor_path_directory *dir = obor_opendir(path);
     if (!dir) return false;
     bool ok = true;
-    struct dirent *entry;
-    while ((entry = readdir(dir))) {
+    obor_path_entry *entry;
+    while ((entry = obor_readdir(dir))) {
         if (!strcmp(entry->d_name, ".") || !strcmp(entry->d_name, "..")) continue;
         char child[4096];
         if (!obor_storage_join(child, sizeof(child), path, entry->d_name) ||
             !obor_storage_remove(child, depth + 1)) ok = false;
     }
-    closedir(dir);
-#if defined(_WIN32)
-    if (_rmdir(path)) ok = false;
-#else
-    if (rmdir(path)) ok = false;
-#endif
+    obor_closedir(dir);
+    if (obor_rmdir(path)) ok = false;
     return ok;
 }
 
@@ -169,7 +169,7 @@ static bool obor_storage_game_directory(const char *save_dir, const char *conten
     /* A missing game folder is fine; an existing link must not redirect
      * cleanup or game writes outside this game's namespace. */
 #if defined(_WIN32)
-    DWORD a = GetFileAttributesA(out);
+    DWORD a = obor_win_attributes(out);
     return a == INVALID_FILE_ATTRIBUTES || obor_storage_directory(out);
 #else
     struct stat st;

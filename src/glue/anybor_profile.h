@@ -4,6 +4,7 @@
  */
 #ifndef OBOR_PROFILE_H
 #define OBOR_PROFILE_H
+#include "anybor_file_io.h"
 
 #include <time.h>
 #include <fcntl.h>
@@ -43,7 +44,7 @@ static void obor_profile_init(void)
         return;
     /* Never truncate an earlier receipt or another process's profile. */
 #if defined(_WIN32)
-    int fd = _open(path, _O_WRONLY | _O_CREAT | _O_EXCL | _O_BINARY,
+    int fd = obor_open(path, _O_WRONLY | _O_CREAT | _O_EXCL | _O_BINARY,
                    _S_IREAD | _S_IWRITE);
     if (fd >= 0) {
         g_profile.file = _fdopen(fd, "wb");
@@ -51,7 +52,7 @@ static void obor_profile_init(void)
             _close(fd);
     }
 #else
-    int fd = open(path, O_WRONLY | O_CREAT | O_EXCL, 0600);
+    int fd = obor_open(path, O_WRONLY | O_CREAT | O_EXCL, 0600);
     if (fd >= 0) {
         g_profile.file = fdopen(fd, "w");
         if (!g_profile.file)

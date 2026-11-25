@@ -27,12 +27,13 @@
  *                    selection), fflush'd per line so a crash mid-step
  *                    loses nothing.
  * The single-file core makes one handler cover everything: glue and all
- * seven engines share this module, so any PC inside the port shows as
+ * engine builds share this module, so any PC inside the port shows as
  * core+0x... The handler never swallows the crash: Windows returns
  * EXCEPTION_CONTINUE_SEARCH, POSIX restores SIG_DFL and re-raises.
  */
 #ifndef OBOR_DEBUG_H
 #define OBOR_DEBUG_H
+#include "anybor_file_io.h"
 
 #include <stdarg.h>
 #include <stdio.h>
@@ -106,7 +107,7 @@ static int obor_dbg_on(void)
         else if (g_dbg_dir[0]) {
             char p[1100];
             snprintf(p, sizeof(p), "%s/obor_debug.enable", g_dbg_dir);
-            FILE *e = fopen(p, "rb");
+            FILE *e = obor_fopen(p, "rb");
             if (e) {
                 fclose(e);
                 st = 1;
@@ -123,10 +124,10 @@ static FILE *obor_dbg_open(const char *name, const char *mode)
     if (g_dbg_dir[0]) {
         char p[1100];
         snprintf(p, sizeof(p), "%s/%s", g_dbg_dir, name);
-        f = fopen(p, mode);
+        f = obor_fopen(p, mode);
     }
     if (!f)
-        f = fopen(name, mode);
+        f = obor_fopen(name, mode);
     return f;
 }
 

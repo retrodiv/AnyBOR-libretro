@@ -2,6 +2,7 @@
  * Copyright (c) 2026 retrodiv <retrodiv@proton.me> */
 #ifndef OBOR_PACKED_PREPARE_H
 #define OBOR_PACKED_PREPARE_H
+#include "anybor_file_io.h"
 #include "anybor_pak_repair.h"
 #include "anybor_transform.h"
 #include <fcntl.h>
@@ -61,7 +62,7 @@ static bool obor_packed_prepare(const char *source, const char *save_dir,
 {
     obor_prepare_range progress = obor_prepare_phase;
     obor_input_transform transform;
-    FILE *input = fopen(source, "rb");
+    FILE *input = obor_fopen(source, "rb");
     if (!input) return false;
     bool header_repair = obor_pak_header_repair_detect(input) != 0;
     /* A complete plain PACK structure takes precedence over an unrelated
@@ -187,14 +188,14 @@ static bool obor_packed_prepare(const char *source, const char *save_dir,
     static unsigned sequence;
     n = snprintf(temp, sizeof(temp), "%s/.partial-%lu-%u", parent, pid, ++sequence);
     if (n < 0 || (size_t)n >= sizeof(temp)) { fclose(input); return false; }
-    int fd = open(temp, O_WRONLY | O_CREAT | O_EXCL
+    int fd = obor_open(temp, O_WRONLY | O_CREAT | O_EXCL
 #if defined(_WIN32)
         | O_BINARY
 #endif
         , 0600);
     if (fd < 0) { fclose(input); return false; }
     FILE *output = fdopen(fd, "wb");
-    if (!output) { close(fd); remove(temp); fclose(input); return false; }
+    if (!output) { close(fd); obor_remove(temp); fclose(input); return false; }
     bool ok = false;
     obor_prepare_stage(progress, transform.program ? 350 : 200,
                        transform.program ? 500 : 400,
@@ -238,14 +239,14 @@ static bool obor_packed_prepare(const char *source, const char *save_dir,
         ok = obor_sha256_file(source, current_hash) && !strcmp(source_hash, current_hash);
     }
     if (!ok) {
-        remove(temp);
+        obor_remove(temp);
         log_cb(RETRO_LOG_ERROR, "[OpenBOR] Content preparation failed: %s\n", error[0] ? error : "invalid PACK result or source changed");
         return false;
     }
     /* An identity transform retains ordinary structural repair and the
      * original content path. It is applied exactly once. */
     if (!strcmp(source_hash, result_hash)) {
-        remove(temp);
+        obor_remove(temp);
         n = snprintf(out, out_cap, "%s", source);
         return n >= 0 && (size_t)n < out_cap;
     }
@@ -260,25 +261,28 @@ static bool obor_packed_prepare(const char *source, const char *save_dir,
     for (unsigned i = 0; i < 32; ++i) snprintf(key + i*2, 3, "%02x", digest[i]);
     /* Keep paths short; reuse still requires the complete result SHA-256. */
     n = snprintf(cache, sizeof(cache), "%s/input-%.8s", parent, key);
-    if (n < 0 || (size_t)n >= sizeof(cache)) { remove(temp); return false; }
+    if (n < 0 || (size_t)n >= sizeof(cache)) { obor_remove(temp); return false; }
     const char *base = strrchr(source, '/'), *backslash = strrchr(source, '\\');
     if (!base || (backslash && backslash > base)) base = backslash;
     base = base ? base+1 : source;
     n = snprintf(out, out_cap, "%s/%s", cache, base);
-    if (n < 0 || (size_t)n >= out_cap) { remove(temp); return false; }
-    if (!obor_storage_track(cache)) { remove(temp); return false; }
+    if (n < 0 || (size_t)n >= out_cap) { obor_remove(temp); return false; }
+    if (!obor_storage_track(cache)) { obor_remove(temp); return false; }
     mkdir_p(cache);
-    if (!obor_storage_directory(cache)) { remove(temp); return false; }
+    if (!obor_storage_directory(cache)) { obor_remove(temp); return false; }
     obor_prepare_stage(progress, 800, 1000, 0);
     if (obor_sha256_file(out, current_hash) && !strcmp(current_hash, result_hash)) {
-        remove(temp);
+        obor_remove(temp);
     } else {
 #if defined(_WIN32)
-        ok = MoveFileExA(temp, out, MOVEFILE_REPLACE_EXISTING | MOVEFILE_WRITE_THROUGH) != 0;
+        wchar_t from[OBOR_WIN_PATH_CAP], to[OBOR_WIN_PATH_CAP];
+        ok = obor_win_wide(temp, from, OBOR_WIN_PATH_CAP) &&
+             obor_win_wide(out, to, OBOR_WIN_PATH_CAP) &&
+             MoveFileExW(from, to, MOVEFILE_REPLACE_EXISTING | MOVEFILE_WRITE_THROUGH);
 #else
-        ok = rename(temp, out) == 0;
+        ok = obor_rename(temp, out) == 0;
 #endif
-        if (!ok) { remove(temp); return false; }
+        if (!ok) { obor_remove(temp); return false; }
     }
     log_cb(RETRO_LOG_INFO, "[OpenBOR] %s: validated prepared PACK\n",
            header_repair ? "structural header repair" :

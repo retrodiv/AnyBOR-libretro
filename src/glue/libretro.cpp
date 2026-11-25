@@ -11,6 +11,7 @@
  * -> sidecar exe -> content scan -> fallback),
  * points g_vtbl at that engine and shuttles video/audio/input.
  */
+#include "anybor_file_io.h"
 #include <ctype.h>
 #include <limits.h>
 #include <stdarg.h>
@@ -505,7 +506,7 @@ static int build_from_filename(const char *path, int *profile)
  * Returns a build number or 0. */
 static int build_from_exe(const char *exe_path)
 {
-    FILE *fp = fopen(exe_path, "rb");
+    FILE *fp = obor_fopen(exe_path, "rb");
     if (!fp)
         return 0;
     /* Version strings live in .rdata; scanning the whole exe (~5-15 MB) once
@@ -574,53 +575,27 @@ static int build_from_exe(const char *exe_path)
 
 /* Look for an OpenBOR exe next to the pak or one directory up
  * (the common "<Game>/<Game>.exe + <Game>/Paks/<game>.pak" layout). */
-#if defined(_WIN32)
-#include <windows.h>
-#include <direct.h> /* _mkdir */
 static int build_from_sidecar_dir(const char *dir)
 {
-    char pat[1200];
-    snprintf(pat, sizeof(pat), "%s\\*.exe", dir);
-    WIN32_FIND_DATAA fd;
-    HANDLE h = FindFirstFileA(pat, &fd);
-    if (h == INVALID_HANDLE_VALUE)
-        return 0;
-    int build = 0;
-    do {
-        if (strncasecmp(fd.cFileName, "borpak", 6) == 0)
-            continue;
-        char full[1400];
-        snprintf(full, sizeof(full), "%s\\%s", dir, fd.cFileName);
-        build = build_from_exe(full);
-    } while (!build && FindNextFileA(h, &fd));
-    FindClose(h);
-    return build;
-}
-#else
-#include <dirent.h>
-#include <sys/stat.h> /* mkdir */
-static int build_from_sidecar_dir(const char *dir)
-{
-    DIR *d = opendir(dir);
+    obor_path_directory *d = obor_opendir(dir);
     if (!d)
         return 0;
     int build = 0;
-    struct dirent *e;
-    while (!build && (e = readdir(d))) {
+    obor_path_entry *e;
+    while (!build && (e = obor_readdir(d))) {
         size_t n = strlen(e->d_name);
         if (n < 5 || strcasecmp(e->d_name + n - 4, ".exe") != 0)
             continue;
         if (strncasecmp(e->d_name, "borpak", 6) == 0)
             continue;
         char full[1400];
-        snprintf(full, sizeof(full), "%s/%s", dir, e->d_name);
+        if (snprintf(full, sizeof(full), "%s/%s", dir, e->d_name) >= (int)sizeof(full))
+            continue;
         build = build_from_exe(full);
     }
-    closedir(d);
+    obor_closedir(d);
     return build;
 }
-#endif
-
 static int build_from_sidecar(const char *pak_path)
 {
     char dir[1024];
@@ -833,7 +808,7 @@ static void refresh_options(void)
 /* rumble: engine hit events -> frontend rumble interface */
 static struct retro_rumble_interface g_rumble_if;
 static bool g_rumble_have;
-static long g_rumble_off_at[OBOR_MAX_PLAYERS];
+static uint64_t g_rumble_off_at[OBOR_MAX_PLAYERS];
 
 static void rumble_stop(void)
 {
@@ -857,9 +832,9 @@ static void rumble_frame(void)
             uint16_t s = (uint16_t)(ratio * 65535 / 100);
             g_rumble_if.set_rumble_state((unsigned)pl, RETRO_RUMBLE_STRONG, s);
             g_rumble_if.set_rumble_state((unsigned)pl, RETRO_RUMBLE_WEAK, s);
-            long frames = ms * 60 / 1000;
-            g_rumble_off_at[pl] = g_frame_no + (frames > 0 ? frames : 1);
-        } else if (g_rumble_off_at[pl] && g_frame_no >= g_rumble_off_at[pl]) {
+            uint64_t frames = ((uint64_t)ms * 60 + 999) / 1000;
+            g_rumble_off_at[pl] = (uint64_t)g_frame_no + frames;
+        } else if (g_rumble_off_at[pl] && (!g_rumble_on || (uint64_t)g_frame_no >= g_rumble_off_at[pl])) {
             g_rumble_if.set_rumble_state((unsigned)pl, RETRO_RUMBLE_STRONG, 0);
             g_rumble_if.set_rumble_state((unsigned)pl, RETRO_RUMBLE_WEAK, 0);
             g_rumble_off_at[pl] = 0;
@@ -901,7 +876,7 @@ static void gamelog_frame(void)
     if (!g_glog_fp) {
         snprintf(g_glog_path, sizeof(g_glog_path),
                  "%s/%s/Logs/OpenBorLog.txt", g_game_dir, g_logical_engine);
-        g_glog_fp = fopen(g_glog_path, "rb");
+        g_glog_fp = obor_fopen(g_glog_path, "rb");
         if (!g_glog_fp)
             return;
     }
@@ -1110,7 +1085,7 @@ static void engine_log_begin(void)
     if (n < 0 || (size_t)n >= sizeof(path)) return;
     /* The engine truncates this per-session log itself. Remove the old entry
      * first so a boot failure before its logger opens cannot reuse old text. */
-    g_engine_log_fresh = !remove(path) || errno == ENOENT;
+    g_engine_log_fresh = !obor_remove(path) || errno == ENOENT;
 }
 
 /* Read only the active profile's log. Some engines append the reason after
@@ -1125,12 +1100,12 @@ static bool engine_log_error(char *out, size_t cap)
                      g_game_dir, g_logical_engine);
     if (n < 0 || (size_t)n >= sizeof(path)) return false;
 #if defined(_WIN32)
-    DWORD attributes = GetFileAttributesA(path);
+    DWORD attributes = obor_win_attributes(path);
     if (attributes == INVALID_FILE_ATTRIBUTES ||
         (attributes & (FILE_ATTRIBUTE_DIRECTORY | FILE_ATTRIBUTE_REPARSE_POINT | FILE_ATTRIBUTE_DEVICE))) return false;
-    FILE *fp = fopen(path, "rb");
+    FILE *fp = obor_fopen(path, "rb");
 #else
-    int fd = open(path, O_RDONLY | O_NONBLOCK | O_NOFOLLOW);
+    int fd = obor_open(path, O_RDONLY | O_NONBLOCK | O_NOFOLLOW);
     if (fd < 0) return false;
     struct stat st;
     if (fstat(fd, &st) || !S_ISREG(st.st_mode)) { close(fd); return false; }
@@ -1233,7 +1208,7 @@ static void error_screen(const char *reason, bool deferred = false)
              g_logical_engine : (g_engine[0] ? g_engine : "not selected"));
     if (reason) error_reason(reason);
     if (g_fault_quarantined) {
-        const char *suffix = "\nWorkers could not be stopped safely. Restart RetroArch.";
+        const char *suffix = "\nWorkers could not be stopped safely. Restart the frontend.";
         size_t used = strlen(g_error_reason);
         snprintf(g_error_reason + used, sizeof(g_error_reason) - used, "%s", suffix);
     }
@@ -1333,7 +1308,7 @@ void retro_set_environment(retro_environment_t cb)
               { { "On", NULL }, { "Off", NULL }, { NULL, NULL } }, "On" },
             { "anybor_rumble", "Rumble",
               "Rumble",
-              "Forward the game's hit vibration to the controller.",
+              "Enable controller vibration for game effects.",
               NULL, "input",
               { { "On", NULL }, { "Off", NULL }, { NULL, NULL } }, "On" },
             { "anybor_macros", "Special move macros (L2/R2/L3/R3)",
@@ -1843,7 +1818,7 @@ static void glue_dump_maybe(const uint32_t *px, int w, int h, int pitch_px)
     dumped++;
     char path[1100];
     snprintf(path, sizeof(path), "%s%06ld.ppm", pfx, g_frame_no);
-    FILE *f = fopen(path, "wb");
+    FILE *f = obor_fopen(path, "wb");
     if (!f)
         return;
     fprintf(f, "P6\n%d %d\n255\n", w, h);
@@ -1867,7 +1842,7 @@ static void trace_init(void)
     done = 1;
     const char *p = getenv("OBOR_TRACE");
     if (p)
-        g_trace = fopen(p, "wt");
+        g_trace = obor_fopen(p, "wt");
 }
 
 struct gseg { int from, to; unsigned id; int period, held; };
@@ -2181,7 +2156,7 @@ void retro_run(void)
 }
 
 /* ---- single-file core machinery -------------------------------------
- * The seven engines live in this same module as partial-linked objects with
+ * The engine builds live in this same module as partial-linked objects with
  * only their suffixed ABI exported (see Makefile.libretro `partial`). Two
  * consequences handled here:
  *  - a fresh boot needs pristine engine statics: capture the module's
@@ -2230,7 +2205,7 @@ typedef struct {
     bool analog, rumble, macros, gamelog, raw, arena_owned;
     retro_rumble_interface rumble_if;
     bool rumble_have;
-    long rumble_off_at[OBOR_MAX_PLAYERS];
+    uint64_t rumble_off_at[OBOR_MAX_PLAYERS];
     obor_pm_char pm_chars[OBOR_PM_MAXCH];
     int pm_nchars;
     obor_diagnostics_state diagnostics;
@@ -2797,9 +2772,7 @@ static void decide_engine(void)
     }
 }
 
-/* mkdir -p: frontends hand out save dirs they haven't created yet (e.g.
- * RetroArch's per-session .netplay/ redirection) and the engine's own
- * dirExists only creates one level. */
+/* mkdir -p: the frontend may supply a save directory that has yet to be created. */
 static void mkdir_p(const char *path)
 {
     char tmp[4096];
@@ -2810,18 +2783,10 @@ static void mkdir_p(const char *path)
             continue;
         char sep = *c;
         *c = '\0';
-#if defined(_WIN32)
-        _mkdir(tmp);
-#else
-        mkdir(tmp, 0755);
-#endif
+        obor_mkdir(tmp, 0755);
         *c = sep;
     }
-#if defined(_WIN32)
-    _mkdir(tmp);
-#else
-    mkdir(tmp, 0755);
-#endif
+    obor_mkdir(tmp, 0755);
 }
 
 #include "anybor_zip.h"
@@ -2832,7 +2797,7 @@ static void abspath(const char *in, char *out, size_t out_len)
 {
     char tmp[4096]; /* realpath demands PATH_MAX; callers' buffers vary */
 #if defined(_WIN32)
-    if (GetFullPathNameA(in, sizeof(tmp), tmp, NULL))
+    if (obor_win_absolute(in, tmp, sizeof(tmp)))
         in = tmp;
 #else
     if (realpath(in, tmp))
@@ -2893,6 +2858,7 @@ __attribute__((constructor)) static void obor_arena_claim(void)
         VirtualFree(p, 0, MEM_RELEASE);
 #elif defined(__APPLE__)
     {
+        const bool debug = getenv("OBOR_DEBUG") != NULL;
         static const unsigned long long candidates[] = {
             (unsigned long long)OBOR_ARENA_BASE_VA, 0x400000000000ULL,
         };
@@ -2903,9 +2869,9 @@ __attribute__((constructor)) static void obor_arena_claim(void)
             kern_return_t kr = mach_vm_allocate(mach_task_self(), &where,
                                                 OBOR_ARENA_MAX_SZ,
                                                 VM_FLAGS_FIXED);
-            fprintf(stderr, "[OpenBOR] arena mach 0x%llx -> 0x%llx (kr=%d)\n",
+            if (debug) fprintf(stderr, "[OpenBOR] arena mach 0x%llx -> 0x%llx (kr=%d)\n",
                     candidates[index], (unsigned long long)where, (int)kr);
-            if (kr != KERN_SUCCESS) {
+            if (debug && kr != KERN_SUCCESS) {
                 char holder[1024] = "";
                 proc_regionfilename(getpid(),
                                     (uint64_t)candidates[index],
@@ -2923,7 +2889,7 @@ __attribute__((constructor)) static void obor_arena_claim(void)
                                     OBOR_ARENA_MAX_SZ, PROT_NONE,
                                     MAP_PRIVATE | MAP_ANONYMOUS |
                                         MAP_NORESERVE | MAP_FIXED, -1, 0);
-                fprintf(stderr, "[OpenBOR] arena mmap 0x%llx -> %p\n",
+                if (debug) fprintf(stderr, "[OpenBOR] arena mmap 0x%llx -> %p\n",
                         candidates[index], forced);
                 if (forced == (void *)candidates[index]) {
                     kr = KERN_SUCCESS;
@@ -2939,7 +2905,7 @@ __attribute__((constructor)) static void obor_arena_claim(void)
                 break;
             }
         }
-        if (index == sizeof(candidates) / sizeof(candidates[0]))
+        if (debug && index == sizeof(candidates) / sizeof(candidates[0]))
             fprintf(stderr, "[OpenBOR] arena refused at every candidate\n");
     }
 #else
@@ -2980,7 +2946,7 @@ static void write_license_documentation(void)
     int n = snprintf(path, sizeof(path), "%s/anybor-license-notices.txt", g_save_dir);
     if (!g_save_dir[0] || n < 0 || (size_t)n >= sizeof(path))
         return;
-    FILE *fp = fopen(path, "wb");
+    FILE *fp = obor_fopen(path, "wb");
     if (!fp)
         return;
     size_t size = sizeof(obor_license_text) - 1;
@@ -2998,7 +2964,7 @@ static bool load_game(const struct retro_game_info *info, bool retry, bool prepa
     const obor_prepare_range total_progress = {0, 1000};
     unsigned packed_start = 0;
     if (g_fault_quarantined) {
-        error_reason("The previous engine still has live workers. Restart RetroArch.");
+        error_reason("The previous engine still has live workers. Restart the frontend.");
         return false;
     }
     if (!info || !info->path) {
@@ -3308,7 +3274,7 @@ static uint32_t loading_capacity(const char *path)
     if (obor_state_coded_enabled())
         return obor_block_state_requested_capacity(getenv("OBOR_TEST_CODED_CAPACITY_MIB"));
     uint64_t footprint = 0, peak = 0, full = 0, inactive = 0, largest = 0;
-    FILE *fp = fopen(path, "rb");
+    FILE *fp = obor_fopen(path, "rb");
     if (fp) {
         if (!fseek(fp, 0, SEEK_END)) {
             long size = ftell(fp);
@@ -3324,20 +3290,19 @@ static uint32_t loading_capacity(const char *path)
     }
     size_t length = strlen(path);
     if (length > 4 && !strcasecmp(path + length - 4, ".zip")) {
-        mz_zip_archive archive = {};
-        if (mz_zip_reader_init_file(&archive, path, 0)) {
+        obor_zip_reader_scope reader(path);
+        if (reader.opened) {
             uint64_t total = 0;
-            unsigned count = (unsigned)mz_zip_reader_get_num_files(&archive);
+            unsigned count = (unsigned)mz_zip_reader_get_num_files(&reader.archive);
             if (count <= OBOR_ZIP_MAX_ENTRIES) {
                 for (unsigned i = 0; i < count; ++i) {
                     mz_zip_archive_file_stat item;
-                    if (!mz_zip_reader_file_stat(&archive, i, &item) ||
+                    if (!mz_zip_reader_file_stat(&reader.archive, i, &item) ||
                         item.m_uncomp_size > OBOR_ZIP_MAX_TOTAL - total) { total = 0; break; }
                     total += item.m_uncomp_size;
                 }
                 if (total) footprint = total;
             }
-            mz_zip_reader_end(&archive);
         }
     }
     if (footprint > OBOR_ARENA_MAX_SZ) footprint = OBOR_ARENA_MAX_SZ;
@@ -3348,7 +3313,7 @@ static uint32_t loading_capacity(const char *path)
         int n = snprintf(cache, sizeof(cache), "%s/%s/Saves/.obor_peak_sparse_v2_%s.txt",
                          g_game_dir, kProfiles[i].name, base);
         if (n < 0 || (size_t)n >= sizeof(cache)) continue;
-        FILE *file = fopen(cache, "rt");
+        FILE *file = obor_fopen(cache, "rt");
         unsigned long long bytes = 0;
         if (file) {
             if (fscanf(file, "%llu", &bytes) == 1 && bytes <= OBOR_ARENA_MAX_SZ && bytes > peak)
@@ -3404,7 +3369,7 @@ static bool loading_image(const char *path, bool notify, bool raw)
 static bool loading_begin(const struct retro_game_info *info, bool retry)
 {
     if (g_fault_quarantined) {
-        error_reason("The previous engine still has live workers. Restart RetroArch.");
+        error_reason("The previous engine still has live workers. Restart the frontend.");
         return false;
     }
     if (!info || !info->path) { error_reason("No content path was provided by the frontend."); return false; }

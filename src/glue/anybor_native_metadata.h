@@ -2,6 +2,7 @@
  * Copyright (c) 2026 retrodiv <retrodiv@proton.me> */
 #ifndef OBOR_NATIVE_METADATA_H
 #define OBOR_NATIVE_METADATA_H
+#include "anybor_file_io.h"
 #include <ctype.h>
 #include <limits.h>
 #include <stdint.h>
@@ -81,7 +82,7 @@ static char *obor_native_text(const obor_native_directory *pak,
     if (member->matches != 1 || member->size > maximum || obor_detection_expired(pak->started)) return NULL;
     char *text = (char *)malloc((size_t)member->size + 1);
     if (!text) return NULL;
-    FILE *file = fopen(pak->volumes.volumes[member->volume].path, "rb");
+    FILE *file = obor_fopen(pak->volumes.volumes[member->volume].path, "rb");
     if (!file) { free(text); return NULL; }
     bool ok = !obor_file_seek64(file, member->start, SEEK_SET) &&
         fread(text, 1, member->size, file) == member->size &&

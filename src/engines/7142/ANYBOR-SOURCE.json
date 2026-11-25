@@ -9,7 +9,7 @@
       "upstream_sha256": "adfc28feba4d32bb3933b29fe55fd0a6aa746084704c3ee71fc3f732706b9aa4"
     },
     "Makefile.libretro": {
-      "distributed_sha256": "61cb755b8a44d0add1e2d33f9a0c0c6b05c0dbfa80df2c03d6560054a955603c",
+      "distributed_sha256": "bf7e7fff726a1dcb95d60c85c308f7b0d407c8328f9dd78f877994206ff37be1",
       "modified": true,
       "origin": "Project libretro build overlay",
       "summary": "Supply the shared libretro engine build and symbol-isolation rules.",
@@ -17,7 +17,7 @@
       "upstream_sha256": null
     },
     "openbor.c": {
-      "distributed_sha256": "d4ee6af644d94fa3645a0285e5da72e103f0c236067e018854cc6135d926d7bb",
+      "distributed_sha256": "ec0d171b3c90f16888bc291805b27d2981d9377e82255a61212a51dbb8711fee",
       "modified": true,
       "summary": "Apply the port's engine corrections and select the PC video configuration on macOS. Derive output names from the content basename with explicit destination capacities, and reject overflowing output path joins. Leave multiplayer slots without a selected model available to join even if game scripts preassign lives to them. Let a missing basename-only PAK self-check read the active frontend content after it has been validated and prepared. Allocate each model's animation pointer table through the highest animation index that model uses, and bound cache, copy and cleanup paths to that capacity. Ignore optional defense and offense entries outside the configured attack-type range with a log warning before accessing their tables. Yield after each newly completed model during explicit model-list or level preparation, and defer states until that preparation has cleaned up its intermediate parsers and handles. Initialize all four RetroPads and repair legacy unbound player profiles without replacing custom bindings. Return a defined null result for absent colourmap models or tables while retaining valid palette fallback. Keep selected palette-conversion reads bounded and reject missing maps or flags, while preserving unselected slots and native allocation failure callbacks. Check destination animation capacity when retaining an animation across model changes, preserving the native fallback and timing. Preserve divergent 7086 and 2021 7123 animation, combat, model, script-selector and menu contracts by logical profile, retaining safe storage and additive APIs. Access script-container pointer slots with byte copies, preserving record layout, pointer values and native copy/cleanup order. Pointer-slot allocation and release accept byte storage without imposing pointer alignment on a packed field. Release each sprite owner once and complete cleanup independently of alias counts. Preserve native sprite-map capacity policies, check allocation extents and retain existing storage and capacity when growth is unavailable. Validate sprite-node allocations and release partial resources without changing existing owners. Check cached sprite availability before reading metadata and ignore cache requests for absent nodes. Capture explicit shutdown failure text before cleanup and bound legacy diagnostic formatting. Apply the standard palette at the original level and selection background stages for 6997 and 7039. Admit model defense and offense attack names according to the original source profile. Keep the 6997 and 7039 minimum animation ranges and read energy costs only for eligible animations. Preserve their horizontal binding offsets and block eligibility. Use their original grab drawing order and debug range coordinates. Preserve 6997's random grab attack order, credits and loading diagnostics. Apply the original startup palette and touchpad text placement in 6997 and 7039. Retain ACT level palette loading and script access to level blending collections for 6997 and 7039. Receive layer screen outputs in naturally aligned storage before assigning the packed member.",
       "topics": [
@@ -48,6 +48,7 @@
         "panel-order-bounds",
         "path-output-initialization",
         "pickup-inputs",
+        "platform-integration",
         "playable-model-validation",
         "record-dates-and-file-notices",
         "restored-player-names",

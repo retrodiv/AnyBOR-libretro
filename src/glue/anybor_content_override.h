@@ -2,6 +2,7 @@
  * Copyright (c) 2026 retrodiv <retrodiv@proton.me> */
 #ifndef OBOR_CONTENT_OVERRIDE_H
 #define OBOR_CONTENT_OVERRIDE_H
+#include "anybor_file_io.h"
 #include "anybor_transform.h"
 #include "anybor_imohash.h"
 #include "anybor_storage.h"
@@ -11,7 +12,7 @@
 static bool obor_content_regular(const char *path)
 {
 #if defined(_WIN32)
-    DWORD a = GetFileAttributesA(path);
+    DWORD a = obor_win_attributes(path);
     return a != INVALID_FILE_ATTRIBUTES && !(a & (FILE_ATTRIBUTE_DIRECTORY | FILE_ATTRIBUTE_REPARSE_POINT));
 #else
     struct stat s;
@@ -21,7 +22,7 @@ static bool obor_content_regular(const char *path)
 static bool obor_descriptor_read(const char *path, obor_descriptor &out)
 {
     if (!obor_content_regular(path)) return false;
-    FILE *file = fopen(path,"rb");
+    FILE *file = obor_fopen(path,"rb");
     if (!file) return false;
     char *text = (char *)malloc(OBOR_DESCRIPTOR_MAX_BYTES+1);
     size_t got = text ? fread(text,1,OBOR_DESCRIPTOR_MAX_BYTES+1,file) : 0;
@@ -68,12 +69,12 @@ static bool obor_content_loose(const char *path, char *out, size_t cap, obor_con
         size_t root=(size_t)(obor_content_basename(path)-path);
         if (!root || root>=sizeof(parent)) return false;
         memcpy(parent,path,root); parent[root]=0;
-        DIR *dir=opendir(parent);
+        obor_path_directory *dir=obor_opendir(parent);
         if (!dir) return false;
         unsigned scanned=0, matched=0;
         bool ok=true;
-        struct dirent *entry;
-        while ((entry=readdir(dir))) {
+        obor_path_entry *entry;
+        while ((entry=obor_readdir(dir))) {
             if (++scanned>4096) { ok=false; break; }
             if (!obor_content_suffix(entry->d_name,".anybor")) continue;
             char descriptor_path[4096], target[4096];
@@ -96,7 +97,7 @@ static bool obor_content_loose(const char *path, char *out, size_t cap, obor_con
         obor_descriptor_settings(choice,descriptor);
             snprintf(choice.descriptor,sizeof(choice.descriptor),"%s",descriptor_path);
         }
-        closedir(dir);
+        obor_closedir(dir);
         if (!ok || matched>1) {
             log_cb(RETRO_LOG_ERROR,"[OpenBOR] sibling descriptor scan incomplete or ambiguous\n");
             return false;
@@ -129,8 +130,8 @@ static bool obor_content_override(const char *system, const obor_content_choice 
         char path[4096], error[256]={0};
         if (!obor_storage_join(path,sizeof(path),system,"AnyBOR.ini")) return false;
         struct stat configuration;
-        if (!stat(path,&configuration) && !S_ISREG(configuration.st_mode)) return false;
-        FILE *file=fopen(path,"rb");
+        if (!obor_stat(path,&configuration) && !S_ISREG(configuration.st_mode)) return false;
+        FILE *file=obor_fopen(path,"rb");
         if (file) {
             char *text=(char *)malloc(OBOR_TRANSFORM_MAX_CONFIG_BYTES+1u);
             size_t size=text ? fread(text,1,OBOR_TRANSFORM_MAX_CONFIG_BYTES+1u,file) : 0;
@@ -164,15 +165,15 @@ static bool obor_content_override(const char *system, const obor_content_choice 
         if (!relevant || !source[0]) continue;
 #if defined(_WIN32)
         struct _stat64 st;
-        if (_stat64(source,&st) || !(st.st_mode & _S_IFREG) || st.st_size<0) return false;
+        if (obor_win_stat64(source,&st) || !(st.st_mode & _S_IFREG) || st.st_size<0) return false;
 #else
         struct stat st;
-        if (stat(source,&st) || !S_ISREG(st.st_mode) || st.st_size<0) return false;
+        if (obor_stat(source,&st) || !S_ISREG(st.st_mode) || st.st_size<0) return false;
 #endif
         bool candidate=false;
         for (unsigned i=0;i<rules.count;++i) if (rules.rows[i].zip==zip && rules.rows[i].size==(uint64_t)st.st_size) candidate=true;
         if (candidate) {
-            FILE *file=fopen(source,"rb");
+            FILE *file=obor_fopen(source,"rb");
             unsigned char digest[16]; char hex[33];
             bool ok=file && obor_imohash_read(obor_content_hash_read,file,(uint64_t)st.st_size,digest);
             if (file) fclose(file);

@@ -2,6 +2,7 @@
  * Copyright (c) 2026 retrodiv <retrodiv@proton.me> */
 #ifndef OBOR_PAK_VALIDATE_H
 #define OBOR_PAK_VALIDATE_H
+#include "anybor_file_io.h"
 #include <limits.h>
 #include <stdint.h>
 #include <stdio.h>
@@ -19,7 +20,7 @@ static uint32_t obor_pak_u32(const unsigned char *p)
  * Stream only metadata; no game extraction or payload copies are needed. */
 static const char *obor_pak_validate(const char *path)
 {
-    FILE *fp = fopen(path, "rb");
+    FILE *fp = obor_fopen(path, "rb");
     unsigned char header[12], name[256];
     const char *error = "Invalid or truncated PAK directory";
     int64_t end;

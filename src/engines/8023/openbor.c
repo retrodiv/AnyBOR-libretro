@@ -32576,11 +32576,11 @@ void check_gravity(entity *e)
                             }
                             if(self->modeldata.type & TYPE_PLAYER)
                             {
-                                if (savedata.joyrumble[self->playerindex]) control_rumble(self->playerindex, 1, 100 * (int)self->velocity.y / 2);
+                                control_rumble(self->playerindex, 1, 100 * (int)self->velocity.y / 2);
                             }
                             for(i = 0; i < MAX_PLAYERS; i++)
                             {
-                                if (savedata.joyrumble[i]) control_rumble(i, 1, 75 * (int)self->velocity.y / 2);
+                                control_rumble(i, 1, 75 * (int)self->velocity.y / 2);
                             }
                         }
                         else if((!self->animation->move[self->animpos]->base || self->animation->move[self->animpos]->base < 0) &&
@@ -37492,7 +37492,7 @@ void checkhitscore(entity* target_entity, entity* attacking_entity, s_attack* at
     {
         // Added obstacle so explosions can hurt enemies
         addscore(opp->playerindex, attack_object->attack_force * target_entity->modeldata.multiple);  // New multiple variable
-        if (savedata.joyrumble[opp->playerindex]) control_rumble(opp->playerindex, 1, attack_object->attack_force * 2);
+        control_rumble(opp->playerindex, 1, attack_object->attack_force * 2);
     }
     // Don't animate or fall if hurt by self, since
     // it means self fell to the ground already. :)
@@ -39551,7 +39551,7 @@ int common_takedamage(entity* target_entity, entity* attacking_entity, s_attack*
 
     if(target_entity->modeldata.type & TYPE_PLAYER)
     {
-        if (savedata.joyrumble[target_entity->playerindex]) control_rumble(target_entity->playerindex, 1, attack_object->attack_force * 3);
+        control_rumble(target_entity->playerindex, 1, attack_object->attack_force * 3);
     }
     if(target_entity->position.y <= PIT_DEPTH && target_entity->death_state & DEATH_STATE_DEAD)
     {
@@ -39665,7 +39665,7 @@ int common_takedamage(entity* target_entity, entity* attacking_entity, s_attack*
 
         if(target_entity->modeldata.type & TYPE_PLAYER)
         {
-            if (savedata.joyrumble[target_entity->playerindex]) control_rumble(target_entity->playerindex, 1, attack_object->attack_force * 3);
+            control_rumble(target_entity->playerindex, 1, attack_object->attack_force * 3);
         }
     }
     else if(attack_object->grab && !attack_object->no_pain)
@@ -44278,7 +44278,7 @@ void player_die_entity(entity* acting_entity)
         execute_respawn_script(playerindex);
         if(!nodropen)
         {
-            if (savedata.joyrumble[playerindex]) control_rumble(playerindex, 1, 125);
+            control_rumble(playerindex, 1, 125);
             drop_all_enemies();
         }
     }
@@ -49538,7 +49538,7 @@ void bike_crash()
     }
     for(i = 0; i < levelsets[current_set].maxplayers; i++)
     {
-        if (savedata.joyrumble[i]) control_rumble(i, 1, 100);
+        control_rumble(i, 1, 100);
     }
     //if(self->position.x < advancex-100 || self->position.x > advancex+(videomodes.hRes+100)) kill_entity(self);
 }
@@ -49641,7 +49641,7 @@ int obstacle_takedamage(entity* target_entity, entity* attacking_entity, s_attac
     set_opponent(attacking_entity, target_entity);
     if(target_entity->opponent && (target_entity->opponent->modeldata.type & TYPE_PLAYER))
     {
-        if (savedata.joyrumble[target_entity->opponent->playerindex]) control_rumble(target_entity->opponent->playerindex, 1, 75);
+        control_rumble(target_entity->opponent->playerindex, 1, 75);
     }
     
     /* Calculate and apply HP damage. */
@@ -54952,7 +54952,7 @@ void safe_set(int *arr, int index, int newkey, int oldkey)
 static int obor_edit_player_bindings_8020(int player, char buttonnames[MAX_BTN_NUM][32],
                                           const int disabledkey[MAX_BTN_NUM])
 {
-    const int OPTIONS_NUM = MAX_BTN_NUM + 3;
+    const int OPTIONS_NUM = MAX_BTN_NUM + 2;
     const int col1 = -8, col2 = 6;
     int quit = 0, selector = 0, setting = -1, ok = 0;
     int i, k;
@@ -54972,16 +54972,6 @@ static int obor_edit_player_bindings_8020(int player, char buttonnames[MAX_BTN_N
                 _menutext((selector == i), col2, voffset, "%s", control_legacy_key_name(savedata.keys[player][i]));
                 voffset++;
             }
-        }
-
-        ++voffset;
-        if(savedata.joyrumble[player])
-        {
-            _menutext((selector == OPTIONS_NUM - 3), col1, voffset++, Tr("Rumble Enabled"));
-        }
-        else
-        {
-            _menutext((selector == OPTIONS_NUM - 3), col1, voffset++, Tr("Rumble Disabled"));
         }
 
         _menutextm((selector == OPTIONS_NUM - 2), ++voffset, 0, Tr("OK"));
@@ -55047,18 +55037,11 @@ static int obor_edit_player_bindings_8020(int player, char buttonnames[MAX_BTN_N
                 while(disabledkey[selector]) if(++selector > MAX_BTN_NUM - 1) break;
             }
 
-            if(bothnewkeys & (FLAG_MOVELEFT | FLAG_MOVERIGHT | FLAG_ANYBUTTON))
+            if(bothnewkeys & FLAG_ANYBUTTON)
             {
                 sound_play_sample(global_sample_list.beep_2, 0, savedata.effectvol, savedata.effectvol, 100);
 
-                if (selector != OPTIONS_NUM - 3 &&
-                    bothnewkeys & (FLAG_MOVELEFT | FLAG_MOVERIGHT)) continue;
-
-                if(selector == OPTIONS_NUM - 3)
-                {
-                    savedata.joyrumble[player] ^= 1;
-                }
-                else if(selector == OPTIONS_NUM - 2) // OK
+                if(selector == OPTIONS_NUM - 2) // OK
                 {
                     quit = 2;
                 }
@@ -55068,7 +55051,6 @@ static int obor_edit_player_bindings_8020(int player, char buttonnames[MAX_BTN_N
                 }
                 else if(selector == OPTIONS_NUM) // default
                 {
-                    savedata.joyrumble[player] = 0;
                     control_legacy_default_keys(player, savedata.keys[player]);
                 }
                 else
@@ -55111,7 +55093,7 @@ void keyboard_setup(int player)
     ArgList arglist;
     
     char argbuf[MAX_ARG_LEN + 1] = "";
-    int OPTIONS_NUM = MAX_BTN_NUM + 3;
+    int OPTIONS_NUM = MAX_BTN_NUM + 2;
 
     screen_status |= IN_SCREEN_BUTTON_CONFIG_MENU;
 
@@ -55236,18 +55218,6 @@ finish:
             }
         }
 
-        //++voffset;
-        if(savedata.joyrumble[player])
-        {
-            _menutext((selector == OPTIONS_NUM - 3), col1, voffset, Tr("Rumble"));
-            _menutext((selector == OPTIONS_NUM - 3), col2, voffset++, Tr("Enabled"));
-        }
-        else
-        {
-            _menutext((selector == OPTIONS_NUM - 3), col1, voffset, Tr("Rumble"));
-            _menutext((selector == OPTIONS_NUM - 3), col2, voffset++, Tr("Disabled"));
-        }
-
         _menutextm((selector == OPTIONS_NUM - 2), ++voffset, 0, Tr("OK"));
         _menutextm((selector == OPTIONS_NUM - 1), ++voffset, 0, Tr("Cancel"));
         _menutextm((selector == OPTIONS_NUM), ++voffset, 0, Tr("Default"));
@@ -55312,13 +55282,7 @@ finish:
                 while(disabledkey[selector]) if(++selector > MAX_BTN_NUM - 1) break;
             }
 
-            if (selector == OPTIONS_NUM - 3 && (bothnewkeys & (FLAG_MOVELEFT | FLAG_MOVERIGHT) || any_button_except_esc(bothnewkeys)))
-            {
-                // TODO: make rumble enable/disable a property of device, not player
-                sound_play_sample(global_sample_list.beep_2, 0, savedata.effectvol, savedata.effectvol, 100);
-                savedata.joyrumble[player] = !savedata.joyrumble[player];
-            }
-            else if (bothnewkeys & FLAG_ANYBUTTON)
+            if (bothnewkeys & FLAG_ANYBUTTON)
             {
                 sound_play_sample(global_sample_list.beep_2, 0, savedata.effectvol, savedata.effectvol, 100);
 
@@ -55333,7 +55297,6 @@ finish:
                 else if(selector == OPTIONS_NUM) // default
                 {
                     control_resetmappings(deviceID);
-                    savedata.joyrumble[player] = 0;
                 }
                 else
                 {

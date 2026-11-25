@@ -5,6 +5,7 @@
 #ifndef OBOR_ZIP_H
 #define OBOR_ZIP_H
 
+#include "anybor_file_io.h"
 #include "miniz.h"
 #include "anybor_imohash.h"
 #include "anybor_prepare_progress.h"
@@ -53,7 +54,9 @@ static int obor_zip_space_ok(const char *path, uint64_t need)
 {
 #if defined(_WIN32)
     ULARGE_INTEGER avail;
-    return GetDiskFreeSpaceExA(path, &avail, NULL, NULL) &&
+    wchar_t name[OBOR_WIN_PATH_CAP];
+    return obor_win_wide(path, name, OBOR_WIN_PATH_CAP) &&
+           GetDiskFreeSpaceExW(name, &avail, NULL, NULL) &&
            avail.QuadPart >= need;
 #else
     struct statvfs st;
@@ -65,7 +68,7 @@ static int obor_zip_space_ok(const char *path, uint64_t need)
 static int obor_zip_marker_ok(const char *marker, const char *hash)
 {
     char line[96], expected[96];
-    FILE *f = fopen(marker, "rb");
+    FILE *f = obor_fopen(marker, "rb");
     if (!f) return 0;
     int ok = fgets(line, sizeof(line), f) != NULL;
     fclose(f);
@@ -104,7 +107,7 @@ static int obor_zip_cache_directory(const char *parent, const char *zip_path,
         int written = snprintf(cache, cap, "%s/%s-%s", parent, stem, hex);
         if (written < 0 || (size_t)written >= cap) return 0;
 #if defined(_WIN32)
-        DWORD attrs = GetFileAttributesA(cache);
+        DWORD attrs = obor_win_attributes(cache);
         if (attrs == INVALID_FILE_ATTRIBUTES) {
             DWORD error = GetLastError();
             if (error == ERROR_FILE_NOT_FOUND || error == ERROR_PATH_NOT_FOUND) return 1;
@@ -130,9 +133,16 @@ static int obor_zip_cache_directory(const char *parent, const char *zip_path,
 
 struct obor_zip_reader_scope {
     mz_zip_archive archive;
+    FILE *file;
     bool opened;
-    obor_zip_reader_scope() : archive(), opened(false) {}
-    ~obor_zip_reader_scope() { if (opened) mz_zip_reader_end(&archive); }
+    explicit obor_zip_reader_scope(const char *path)
+        : archive(), file(obor_fopen(path, "rb")),
+          opened(file && mz_zip_reader_init_cfile(&archive, file, 0, 0)) {}
+    ~obor_zip_reader_scope()
+    {
+        if (opened) mz_zip_reader_end(&archive);
+        if (file) fclose(file);
+    }
 };
 struct obor_zip_partial_scope {
     char path[1600];
@@ -191,9 +201,8 @@ static int obor_zip_prepare(const char *zip_path, const char *save_dir,
 {
     obor_prepare_range progress = obor_prepare_phase;
     obor_prepare_stage(progress, 0, 150, 0);
-    obor_zip_reader_scope reader;
+    obor_zip_reader_scope reader(zip_path);
     mz_zip_archive *za = &reader.archive;
-    reader.opened = mz_zip_reader_init_file(za, zip_path, 0);
     if (!reader.opened) return 0;
     char hash[33];
     unsigned char digest[16];
@@ -287,7 +296,7 @@ static int obor_zip_prepare(const char *zip_path, const char *save_dir,
             }
             snprintf(dst, sizeof(dst), "%s/%s", partial.path, entry->name);
             obor_zip_mkparents(dst);
-            FILE *file = fopen(dst, "wb");
+            FILE *file = obor_fopen(dst, "wb");
             bool ok = file && mz_zip_reader_extract_to_callback(za, entry->index, obor_zip_write, file, 0);
             if (file && fclose(file)) ok = false;
             if (!ok) return 0;
@@ -296,11 +305,11 @@ static int obor_zip_prepare(const char *zip_path, const char *save_dir,
         if (!obor_archive_expand(partial.path, entries, count, total_sz, true)) return 0;
         char temp_marker[1700];
         snprintf(temp_marker, sizeof(temp_marker), "%s/.complete", partial.path);
-        FILE *file = fopen(temp_marker, "wb");
+        FILE *file = obor_fopen(temp_marker, "wb");
         if (!file) return 0;
         bool written = fprintf(file, "oborzip-imohash-v2 %s\n", hash) > 0;
         if (fclose(file) || !written) return 0;
-        if (rename(partial.path, cache)) {
+        if (obor_rename(partial.path, cache)) {
             if (!obor_storage_directory(cache) || !obor_zip_marker_ok(marker, hash)) return 0;
         } else partial.path[0] = 0;
         log_cb(RETRO_LOG_INFO, "[OpenBOR] zip: extracted %u files\n", extracted);
@@ -327,7 +336,7 @@ static int obor_zip_prepare(const char *zip_path, const char *save_dir,
         }
         char *text = (char *)malloc((size_t)entry->size + 1);
         char path[2200];
-        FILE *input=obor_archive_disk_path(cache,entry->name,path,sizeof(path),false)?fopen(path,"rb"):NULL;
+        FILE *input=obor_archive_disk_path(cache,entry->name,path,sizeof(path),false)?obor_fopen(path,"rb"):NULL;
         bool ok = text && input && fread(text,1,(size_t)entry->size,input)==entry->size &&
                   obor_descriptor_parse(text,(size_t)entry->size,descriptor,false);
         if(input) fclose(input);

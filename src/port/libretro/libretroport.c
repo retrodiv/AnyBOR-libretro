@@ -34,11 +34,8 @@
 #include "anybor_resources.h"
 #include <errno.h>
 #include <sys/stat.h>
-#ifdef _WIN32
-#include <direct.h> /* chdir */
-#include <windows.h> /* NT_TIB stack-range fixup around co_switch */
-#else
-#include <unistd.h>
+#include "anybor_file_io.h"
+#ifndef _WIN32
 #include <signal.h>
 #endif
 
@@ -155,15 +152,6 @@ void *obor_frontend_context(void) { return co_frontend; }
 void obor_frontend_context_restore(void *context)
 {
     co_frontend = (cothread_t)context;
-}
-
-static char *obor_getcwd(char *buf, size_t cap)
-{
-#ifdef _WIN32
-    return _getcwd(buf, (int)cap);
-#else
-    return getcwd(buf, cap);
-#endif
 }
 
 static int obor_ascii_equal(char a, char b)
@@ -553,7 +541,7 @@ static int obor_make_dir(const char *path)
      * bytes past its slot, over the caller's saved frame, and kills the boot
      * of exactly the engines that expose that define. Asking for the
      * attributes answers the same question with no struct to size wrong. */
-    DWORD attrs = GetFileAttributesA(path);
+    DWORD attrs = obor_win_attributes(path);
     return attrs != INVALID_FILE_ATTRIBUTES &&
            (attrs & FILE_ATTRIBUTE_DIRECTORY) != 0;
 #else
@@ -596,7 +584,7 @@ int32_t obor_boot(const obor_boot_info *info)
         /* Unpacked mod: relative engine I/O uses the mod root, so
          * isRawData() can see data/. All mutable output is routed
          * to the frontend save directory, never into the content tree. */
-        if (chdir(info->pak_path) != 0)
+        if (obor_chdir(info->pak_path) != 0)
             goto fail;
         boot_dbg("boot: raw dir mode");
         const char *tail = strrchr(info->pak_path, '/');
@@ -672,7 +660,7 @@ int32_t obor_boot(const obor_boot_info *info)
         n = snprintf(root, sizeof(root), "%s/%s", info->save_dir, info->profile_key);
         if (n < 0 || (size_t)n >= sizeof(root)) goto fail;
         if (!obor_make_dir(root)) goto fail;
-        if (chdir(root) != 0)
+        if (obor_chdir(root) != 0)
             goto fail;
     }
     strcpy(savesDir, "Saves");
@@ -691,7 +679,7 @@ int32_t obor_boot(const obor_boot_info *info)
     boot_dbg("boot: dirs ok");
 capture_cwd:
     if (!obor_getcwd(engine_cwd, sizeof(engine_cwd)) ||
-        chdir(frontend_cwd) != 0)
+        obor_chdir(frontend_cwd) != 0)
         goto fail;
 
     if (!obor_paths_set_root(engine_cwd)) goto fail;
@@ -747,7 +735,7 @@ capture_cwd:
     return 0;
 
 fail:
-    chdir(frontend_cwd);
+    obor_chdir(frontend_cwd);
     engine_alive = 0;
     co_engine = NULL;
     obor_arena_release();

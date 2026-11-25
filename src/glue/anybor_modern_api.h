@@ -2,6 +2,7 @@
  * Copyright (c) 2026 retrodiv <retrodiv@proton.me> */
 #ifndef OBOR_MODERN_API_H
 #define OBOR_MODERN_API_H
+#include "anybor_file_io.h"
 
 /* Used after PACK validation. This probe follows automatic engine scripts
  * and their literal imports, rather than sampling every model in a large PAK.
@@ -341,7 +342,7 @@ static bool modern_script(obor_modern_state *s, const char *name, const char *da
 
 static int obor_modern_api_build(const char *path, obor_content_rule *bound_script)
 {
-    FILE *fp = fopen(path, "rb");
+    FILE *fp = obor_fopen(path, "rb");
     if (!fp) return 0;
     obor_modern_state s = {};
     s.clock.lower = s.clock.script_lower = 1;

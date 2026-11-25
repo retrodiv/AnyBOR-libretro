@@ -175,6 +175,8 @@ static void palette_set_corrected(int value,int gr,int gg,int gb,int br,int bg,i
  assert(gr==savedata.gamma && gg==gr && gb==gr);
  assert(br==savedata.brightness && bg==br && bb==br);++palettes;
 }
+/* Exercise the original software fade path independently of the output backend. */
+#undef LIBRETRO
 @CORRECTION@
 static int tracked_correction(int gm,int br){
  assert(corrections+1<expected->correction_n);

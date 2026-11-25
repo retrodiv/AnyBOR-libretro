@@ -158,6 +158,8 @@ The platform implementation is shared under
 with frontend video, audio, controls and timing; its files are catalogued below.
 Generated version headers preserve upstream version identities; frontend labels follow their published revision names. Each source tree uses the common build overlay.
 
+The controller vibration option governs engine haptic events. The controller binding menus share that setting through the core option. The video adapter applies the original OpenGL colour curve to supported true-colour frames. Indexed palettes retain their engine correction. On Windows, content and save paths use the Unicode filesystem APIs.
+
 ## Music buffer safety
 
 `98-music-buffer-null.patch` checks the music buffer before reading a sample.

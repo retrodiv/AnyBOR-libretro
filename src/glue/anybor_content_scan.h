@@ -2,6 +2,7 @@
  * Copyright (c) 2026 retrodiv <retrodiv@proton.me> */
 #ifndef OBOR_CONTENT_SCAN_H
 #define OBOR_CONTENT_SCAN_H
+#include "anybor_file_io.h"
 #include "anybor_detection_clock.h"
 #include "anybor_file64.h"
 #include <ctype.h>
@@ -434,7 +435,7 @@ static int build_from_content(const char *pak_path)
     obor_content_scan s = {1, INT_MAX, 1, INT_MAX, 0, 0, false, false, false, true, 0,
                           obor_detection_now()};
     if (bound_script.name) content_bounds(&s, bound_script.lower, bound_script.upper, false, bound_script.name);
-    FILE *fp = fopen(pak_path, "rb");
+    FILE *fp = obor_fopen(pak_path, "rb");
     if (!fp) return 0;
     unsigned char h[12];
     if (obor_file_seek64(fp, -4, SEEK_END) || fread(h, 1, 4, fp) != 4) { fclose(fp); return 0; }

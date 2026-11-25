@@ -2,6 +2,7 @@
  * Copyright (c) 2026 retrodiv <retrodiv@proton.me> */
 #ifndef OBOR_TRANSFORM_H
 #define OBOR_TRANSFORM_H
+#include "anybor_file_io.h"
 #include "anybor_transform_vm.h"
 #include "anybor_sha256.h"
 #include "anybor_content_config.h"
@@ -102,7 +103,7 @@ static bool obor_transform_load(const char *system_dir, obor_input_transform &in
     char path[4096], error[256] = {0};
     int n = snprintf(path, sizeof(path), "%s/AnyBOR.ini", system_dir);
     if (n < 0 || (size_t)n >= sizeof(path)) return false;
-    FILE *fp = fopen(path, "rb");
+    FILE *fp = obor_fopen(path, "rb");
     if (!fp) {
         if (errno == ENOENT) return !selected_key || !*selected_key;
         log_cb(RETRO_LOG_ERROR, "[OpenBOR] Cannot read %s\n", path);

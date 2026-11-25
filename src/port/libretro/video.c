@@ -30,6 +30,11 @@ static int fb_w, fb_h, fb_cap;
 static unsigned pal32[256];
 static const s_screen *state_source;
 
+#if OBOR_ENGINE_BUILD != 8023
+static unsigned char colour_map[256];
+static int colour_gamma, colour_brightness;
+#endif
+
 #ifdef OBOR_HAS_YUV
 static yuv_video_mode yuv_mode_info;
 static s_screen *yuv_rgb; /* PIXEL_16 conversion target for webm frames */
@@ -135,6 +140,19 @@ static int convert_screen(s_screen *src)
             d[i] = l[s[i]];
     }
     state_source = src;
+#if OBOR_ENGINE_BUILD != 8023
+    /* Indexed output already uses the engine's corrected palette. */
+    if (src->pixelformat != PIXEL_8 && (colour_gamma || colour_brightness)) {
+        for (int i = 0; i < w * h; ++i) {
+            unsigned pixel = fb[i];
+            fb[i] = ((unsigned)colour_map[(pixel >> 16) & 255] << 16) |
+                    ((unsigned)colour_map[(pixel >> 8) & 255] << 8) |
+                    colour_map[pixel & 255];
+        }
+        /* The framebuffer now contains transformed pixels. */
+        state_source = NULL;
+    }
+#endif
     return 1;
 }
 
@@ -173,7 +191,33 @@ void video_clearscreen(void)
 
 void video_fullscreen_flip(void) {}
 void video_stretch(int enable) { (void)enable; }
-void video_set_color_correction(int gm, int br) { (void)gm; (void)br; }
+void video_set_color_correction(int gm, int br)
+{
+#if OBOR_ENGINE_BUILD == 8023
+    (void)gm;
+    (void)br;
+#else
+    gm = gm < -256 ? -256 : gm > 256 ? 256 : gm;
+    br = br < -256 ? -256 : br > 256 ? 256 : br;
+    if (gm == colour_gamma && br == colour_brightness) return;
+    colour_gamma = gm;
+    colour_brightness = br;
+    if (!gm && !br) return;
+
+    /* Match the OpenGL colour curve in integer arithmetic. Gamma adjusts
+     * the midtones with c + gamma*c*(1-c). Brightness blends that output
+     * toward white or black. Round once to the final eight-bit channel. */
+    const int scale = 256 * 255;
+    const int denominator = 256 * scale;
+    const int brightness = br < 0 ? -br : br;
+    for (int value = 0; value < 256; ++value) {
+        int gamma_value = value * scale + gm * value * (255 - value);
+        int64_t mixed = (int64_t)gamma_value * (256 - brightness);
+        if (br > 0) mixed += (int64_t)255 * scale * brightness;
+        colour_map[value] = (unsigned char)((mixed + denominator / 2) / denominator);
+    }
+#endif
+}
 
 /* ---- YUV path (webm cutscenes): convert to RGB and present ---- */
 

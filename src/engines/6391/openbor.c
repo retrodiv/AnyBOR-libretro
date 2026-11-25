@@ -22781,11 +22781,11 @@ void check_gravity(entity *e)
                     }
                     if(self->modeldata.type & TYPE_PLAYER)
                     {
-                        if (savedata.joyrumble[self->playerindex]) control_rumble(self->playerindex, 1, 100 * (int)self->velocity.y / 2);
+                        control_rumble(self->playerindex, 1, 100 * (int)self->velocity.y / 2);
                     }
                     for(i = 0; i < MAX_PLAYERS; i++)
                     {
-                        if (savedata.joyrumble[i]) control_rumble(i, 1, 75 * (int)self->velocity.y / 2);
+                        control_rumble(i, 1, 75 * (int)self->velocity.y / 2);
                     }
                 }
                 else if((!self->animation->move[self->animpos]->base || self->animation->move[self->animpos]->base < 0) &&
@@ -27074,7 +27074,7 @@ void checkhitscore(entity *other, s_collision_attack *attack)
     {
         // Added obstacle so explosions can hurt enemies
         addscore(opp->playerindex, attack->attack_force * self->modeldata.multiple);  // New multiple variable
-        if (savedata.joyrumble[opp->playerindex]) control_rumble(opp->playerindex, 1, attack->attack_force * 2);
+        control_rumble(opp->playerindex, 1, attack->attack_force * 2);
     }
     // Don't animate or fall if hurt by self, since
     // it means self fell to the ground already. :)
@@ -27375,7 +27375,7 @@ int common_takedamage(entity *other, s_collision_attack *attack, int fall_flag)
 
     if(self->modeldata.type & TYPE_PLAYER)
     {
-        if (savedata.joyrumble[self->playerindex]) control_rumble(self->playerindex, 1, attack->attack_force * 3);
+        control_rumble(self->playerindex, 1, attack->attack_force * 3);
     }
     if(self->position.y <= PIT_DEPTH && self->dead)
     {
@@ -27478,7 +27478,7 @@ int common_takedamage(entity *other, s_collision_attack *attack, int fall_flag)
         }
         if(self->modeldata.type & TYPE_PLAYER)
         {
-            if (savedata.joyrumble[self->playerindex]) control_rumble(self->playerindex, 1, attack->attack_force * 3);
+            control_rumble(self->playerindex, 1, attack->attack_force * 3);
         }
     }
     else if(attack->grab && !attack->no_pain)
@@ -32349,7 +32349,7 @@ void player_die()
         execute_respawn_script(playerindex);
         if(!nodropen)
         {
-            if (savedata.joyrumble[playerindex]) control_rumble(playerindex, 1, 125);
+            control_rumble(playerindex, 1, 125);
             drop_all_enemies();
         }
     }
@@ -35506,7 +35506,7 @@ void bike_crash()
     }
     for(i = 0; i < levelsets[current_set].maxplayers; i++)
     {
-        if (savedata.joyrumble[i]) control_rumble(i, 1, 100);
+        control_rumble(i, 1, 100);
     }
     //if(self->position.x < advancex-100 || self->position.x > advancex+(videomodes.hRes+100)) kill_entity(self);
 }
@@ -35614,7 +35614,7 @@ int obstacle_takedamage(entity *other, s_collision_attack *attack, int fall_flag
     set_opponent(other, self);
     if(self->opponent && (self->opponent->modeldata.type & TYPE_PLAYER))
     {
-        if (savedata.joyrumble[self->opponent->playerindex]) control_rumble(self->opponent->playerindex, 1, 75);
+        control_rumble(self->opponent->playerindex, 1, 75);
     }
     checkdamage(other, attack);
     self->playerindex = other->playerindex;    // Added so points go to the correct player
@@ -37818,6 +37818,14 @@ void update(int ingame, int usevwait)
  * error. */
 int set_color_correction(int gm, int br)
 {
+#if defined(LIBRETRO)
+    if (savedata.gamma || savedata.brightness)
+    {
+        video_set_color_correction(gm, br);
+        return 1;
+    }
+    video_set_color_correction(0, 0);
+#endif
 #if WII || SDL || VITA
     video_set_color_correction(gm, br);
     return 1;
@@ -42955,6 +42963,9 @@ void openborMain(int argc, char **argv)
     // Load necessary components.
     printf("Game Selected: %s\n\n", packfile);
     loadsettings();
+#if defined(LIBRETRO)
+    video_set_color_correction(savedata.gamma, savedata.brightness);
+#endif
     startup();
 
     if(skiptoset < 0)

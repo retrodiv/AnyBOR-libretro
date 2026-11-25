@@ -106,7 +106,7 @@ and external input configuration as loose packed content.
 | Save states and rewind | Supported; states require the same core build and content. Unavailable during model preloading or threaded video playback. |
 | Netplay/runahead | The metadata advertises `serialized` state support; it makes no general deterministic/netplay/runahead compatibility claim. |
 | Players and remapping | Up to four RetroPads, subject to the game's player limit; frontend button remapping supported. |
-| Rumble | Optional forwarding of the game's hit vibration. |
+| Rumble | Controller vibration for game effects when the frontend supports it. |
 | Core options | Categories or a flat list, with all engine profiles available. |
 | Frontend cheats | Not implemented. A game's own cheats/options remain game-specific. |
 | Achievements | No integration is provided by this project. |
@@ -144,7 +144,7 @@ The macros account for the active character's facing direction.
 | OS Screen Orientation | `anybor_os_screen_orientation` | **Horizontal**. Choose Horizontal for a system rotation of 0° or 180° and Vertical for 90° or 270°. |
 | Image Rotation | `anybor_image_rotation` | **None**. Left and Right rotate the complete game image by 90°. Upside Down rotates it by 180°. |
 | Left analog stick as D-pad | `anybor_analog` | **On**. Adds movement with the left stick. |
-| Rumble | `anybor_rumble` | **On**. Forwards game hit vibration. |
+| Rumble | `anybor_rumble` | **On**. Enables controller vibration for game effects. |
 | Special move macros (L2/R2/L3/R3) | `anybor_macros` | **On**. Executes supported character move sequences. |
 | Automatic engine selection | `anybor_engine` | **On** detects the engine from the file, hides the manual ranges and ignores their selections. Off shows the manual ranges. Changes apply on Restart. |
 | Engine build 3000 -> 3499 | `anybor_engine_3000_3499` | **-**. Select a profile in this range. |
@@ -159,25 +159,7 @@ The macros account for the active character's facing direction.
 | Clear current game cache on unload | `anybor_clear_game_cache` | **On**. In Development. Deletes the cache directories used by this game after unloading or closing the core. The next load rebuilds them; saved data is unaffected. |
 | Clear all game caches on load | `anybor_clear_all_caches` | **On**. In Development. Empties `AnyBOR-cache/` before each load and before generating new cache files; saved data is unaffected. |
 
-The state options are in the System category. Their defaults are
-**Smart + On**. Writer selection
-is independent of the platform runtime policy. Supported targets enable
-guarded dirty-page tracking, advance preparation and the synchronous compression
-helper, with bounded pool maintenance. Frequently written pages remain writable
-and always dirty for snapshot proofs on the page-protection backends; Windows
-retains its native write-watch mechanism. No policy changes the complete-state contract.
-Full + Off may exceed a 256 MiB rewind buffer in large
-games. All combinations can be selected on every platform; see the
-[state compatibility limits](../README.md#save-states-and-rewind), including
-clean refusal whenever the core module address has changed, for both Smart
-and Full on every platform. The log reports `state module address differs`
-without changing the current game. macOS ASLR can therefore prevent loading
-after closing and reopening the frontend. The address check applies to both Full and Smart. Same-session rewind and
-restoration remain available. Loading a compatible Full state in Smart can
-also retain fewer reconstruction recipes and change capture cost or rewind
-duration. This is a performance limitation; saving again in Smart does not
-recover recipes that were absent. A fresh game in Smart catalogs resources
-as they load.
+See [save states and rewind](#save-states-and-rewind) for transport and compatibility.
 
 Automatic selection uses filename version tags, nearby engine-version data
 and PAK content markers, with profile v3.0 6391 as the current fallback. An explicit
@@ -381,7 +363,7 @@ Paths below are relative to the frontend's **Save Files** directory:
 | `AnyBOR-cache/input-<8-hex>/` | Prepared content derived from the source archive. |
 | `anybor-license-notices.txt` | The complete notice dossier embedded in the loaded core; attempted in this directory when content is loaded. |
 
-The three cleanup options are grouped in **Development**. Turn both cache options Off to retain and reuse
+The three cleanup options are grouped in **Development**. Turn both cache options **Off** to retain and reuse
 cache files across sessions. Restart keeps the currently loaded cache available;
 load cleanup runs when loading content. The unload option also honors a change
 made in the frontend menu immediately before closing content.
@@ -401,25 +383,121 @@ are left untouched.
 
 The frontend places save-state files in its configured **Save States** directory.
 Ordinary engine saves use their own files rather than a libretro save-RAM block.
-Save states and rewind are temporarily unavailable during model preloading.
-Some games do this briefly with the player already on screen, so a manual
-save or load can be refused and rewind history can contain gaps until preloading
-finishes.
-States may be large because they retain the running engine's memory and stack.
-Smart and Full with compression On use the fixed 64 MiB coded transport on
-every platform, including during loading and Reset. Each state is independently
-loadable; Smart can reconstruct exactly reproducible resources from the loaded
-content. Full + Off uses the complete base writer and its content-sized
-allowance; content that outgrows it requires a restart to use the learned peak.
-See [README.md](../README.md#save-states-and-rewind) for the resource limits and
-the recommended 256 MiB rewind history at granularity 10.
-We only recommend enabling rewind on a Raspberry Pi 5 (quad-core Cortex-A76
-at 2.4 GHz) or a device with an equivalent or faster CPU.
-
 Optional developer diagnostics can write beside loaded content when explicitly
 enabled; see [DEBUGGING.md](DEBUGGING.md). They are off by default.
 
+## Save states and rewind
+
+The default is **Smart + On**.
+Supported targets also enable dirty-page tracking, advance state preparation,
+bounded encoder-pool maintenance and the synchronous compression helper.
+Linux, Android and macOS use guarded page protection; Windows uses its native
+write-watch API. **Full + Off may not fit the
+256 MiB rewind buffer in large games.** The available duration and capture cost
+depend on the game, machine and selected combination.
+
+Smart, and Full with compression On, use complete, independently loadable
+states with a fixed 64 MiB libretro transport. This is the size of
+one serialized state, not additional rewind history. The frontend owns the
+history within its 256 MiB buffer. Its available duration depends on how much
+state changes: a large transition can shorten it substantially.
+
+The engines identify source-backed sample bytes; engines 3842 and later also
+identify reconstructible sprite bodies. Engine 3400 retains its sprite bytes
+in the mutable state. The common state layer verifies resource contents before
+replacing them with reconstruction recipes. Script-modified or unrecognized data stays in the
+mutable state. Headers, palettes, internal references, allocator metadata,
+engine globals, the live coroutine stack and audio playback state are retained.
+This selection depends on resource structure and lifetime, never game names
+or fingerprints.
+
+Every snapshot contains the information needed to rebuild its resources from
+the loaded content, including in a new session with an empty cache. The resource
+cache is bounded to 128 MiB and holds only source-derived data. Restoration
+staging is bounded to 256 MiB; resources beyond that budget remain ordinary
+state bytes. The block codec caches only its current image. None of these
+caches stores additional rewind history. A failed reconstruction or a complete
+state that exceeds its transport budget is rejected; data is never truncated
+to make a capture fit.
+
+The compressed transport uses OBC1 with independently encoded blocks and a
+resource manifest. Each image is complete and can be decoded without an earlier
+snapshot. New blocks use a compact initial encoding; changed blocks use a fast
+lossless codec. Bounded slot maintenance limits fragmentation. State preparation
+follows the frontend's observed capture interval and stops when captures stop;
+the requested capture still validates the current bytes. Unused transport
+bytes are deterministically zero. Fixed frontend capacity remains unchanged
+across loading, gameplay and Reset.
+
+On supported Windows, Linux, Android and macOS targets, captures with
+enough observed encoding work can use
+one auxiliary compression thread. It finishes before capture returns; the
+engine never advances while it is working. Scratch space stays below 2.1 MiB
+and stores no rewind history. Lighter updates, unavailable CPU measurements
+or threads, and single-CPU systems retain serial compression. Both paths
+produce the same serialized bytes and preserve the capture frequency.
+
+On supported targets, classic movie decoders retain write tracking while
+their engine-owned workers run, including between frontend calls. This avoids
+rechecking untouched resources after playback. Captures remain unavailable
+while workers are active. The asynchronous movie adapter has additional worker
+ownership and conservatively invalidates those proofs before playback instead.
+
+On supported page-protection tracking targets, bounded learning identifies
+frequently written pages and leaves
+those pages writable. Every such page remains dirty for state validation,
+including repeated writes between captures. It never supplies an immutable
+resource or block proof. Resource recipe metadata and allocation ordering are
+reused only while their validity checks hold; all allocation bounds and global
+nonoverlap checks are retained. These policies do not omit mutable state or
+change the frontend's fixed state capacity.
+
+The Android core is one installable `.so`. It contains a small libretro
+loader and the engine ELF; Android's `android_dlopen_ext` loads the engine at
+a reserved, stable address. This preserves saved code/static-data pointers
+without scanning and modifying arbitrary game data after ASLR changes.
+An address collision fails safely. Incompatible states are rejected before
+restoring engine memory.
+
+Full + Off uses the complete OBS writer with binary-identity and
+runtime-storage checks. It sizes its fixed capacity from
+packed content and measured heap peaks; content that outgrows its allowance
+requires a restart to use the learned peak. Save states should be made and
+loaded with the same core build and content.
+
+The reader accepts states from all four combinations regardless of the current
+writer selection. The ordinary build, layout, content and resource checks still
+apply. Both Smart and Full require the module to be at its original address.
+If its address changes on any platform, loading is refused with a
+`state module address differs` log message before changing the live game.
+The core does not guess which memory words are pointers or silently change
+the selected writer. This limits cross-process save states on macOS, where ASLR can move the dylib. After closing and reopening
+the frontend on macOS, expect loads to be refused if the module address changed.
+Selecting Full does not bypass the address check. Same-session
+rewind and restoration do not require relocation and remain available.
+
+Within a compatible core build, loading a Full state in a Smart session
+preserves the game, but resources without reconstruction recipes remain stored
+as bytes. Capture cost and rewind duration may differ from a game started in
+Smart. Saving again as Smart does not recover missing recipes; starting the
+game afresh in Smart rebuilds them as resources load.
+
+Save states and rewind are temporarily unavailable while the engine preloads
+models. Some games also preload models briefly while the player is already on
+screen. A manual save or load can be refused during that interval, and rewind
+history can contain gaps. Normal operation resumes when preloading finishes.
+
+Loading a state retains the active content path and save directory. Engine random-number state is captured with the world so external
+frontend activity does not change the restored AI sequence. Saving, loading
+and rewind are unavailable during internally threaded movie playback;
+the frontend's separate threaded-video setting does not trigger this exclusion.
+Returning from gameplay to an earlier menu requires its state to remain
+within the finite history. Entering gameplay does not clear the history.
+
 ## Geometry and timing
+
+The game's **Brightness** and **Gamma** controls adjust the image on supported
+profiles. See [historical profile notes](HISTORICAL_PROFILES.md) for coverage.
 
 The frontend frame rate is **60 Hz** and the audio sample rate is **44,100 Hz**.
 Geometry follows the presented image. The declared maximum uses the known

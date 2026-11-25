@@ -344,9 +344,9 @@ void obor_get_rumble(int32_t player, int32_t *ratio, int32_t *msec)
 
 void control_rumble(int deviceID, int ratio, int msec)
 {
-    if (!control_isvaliddevice(deviceID) || msec <= 0)
+    if (!control_isvaliddevice(deviceID) || ratio <= 0 || msec <= 0)
         return;
-    rumble_ratio[deviceID] = ratio > 0 ? (ratio > 100 ? 100 : ratio) : 100;
+    rumble_ratio[deviceID] = 100;
     rumble_ms[deviceID] = msec;
 }
 
@@ -495,18 +495,15 @@ void control_rumble(int port, int ratio, int msec)
 #if OBOR_ENGINE_BUILD == 6391
     if (obor_profile_build && obor_profile_build < 6229)
         return;
-    if (ratio <= 0)
-        return;
-    /* The original SDL haptic ratio is normalized to [0, 1]. */
-    ratio = 100;
 #endif
 #if OBOR_ENGINE_BUILD == 7533
     if (control_uses_device_mappings() && port >= 0 && port < 4)
         port = playercontrolpointers[port]->deviceID;
 #endif
-    if (port < 0 || port >= 4 || msec <= 0)
+    if (port < 0 || port >= 4 || ratio <= 0 || msec <= 0)
         return;
-    rumble_ratio[port] = ratio > 0 ? (ratio > 100 ? 100 : ratio) : 100;
+    /* The source engines pass integer 1 as SDL's normalized full strength. */
+    rumble_ratio[port] = 100;
     rumble_ms[port] = msec;
 }
 #else

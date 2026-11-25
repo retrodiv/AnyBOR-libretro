@@ -33,9 +33,9 @@ VERSION_CARRIERS = {"src/pin.json", "src/glue/anybor_engines.h", "CHANGELOG.md",
 
 
 def check_readme_profiles(root, pin):
-    """README shows the profile count and every exact label in registry order."""
+    """README shows every exact label in registry order."""
     text = (root / 'README.md').read_text(encoding='utf-8')
-    intro = re.search(r'offering ([0-9]+) selectable\s+engine\s+profiles:\n\n', text)
+    intro = re.search(r'offering selectable engine profiles:\n\n', text)
     if intro is None:
         raise RuntimeError('Missing README profile table introduction')
     table = text[intro.end():].split('\n\n', 1)[0].splitlines()
@@ -58,8 +58,6 @@ def check_readme_profiles(root, pin):
                 raise RuntimeError('Only trailing cells of the last README profile row may be empty')
             row = row[:row.index('')]
         labels.extend(row)
-    if intro.group(1) != str(len(labels)):
-        raise RuntimeError('README profile count differs from the table')
     engines = {row['build']: row for row in pin['engines']}
     expected = [profile_display(row, engines[row['engine']]) for row in pin['profiles']]
     if labels != expected:

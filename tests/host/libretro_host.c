@@ -50,9 +50,9 @@
 #define _DARWIN_C_SOURCE 1
 #endif
 #ifdef _WIN32
+#include "anybor_file_io.h"
 #include "dlfcn_win.h"
-#include <direct.h>
-#define host_getcwd _getcwd
+#define host_getcwd obor_getcwd
 #else
 #include <dlfcn.h>
 #include <dirent.h>
@@ -896,7 +896,11 @@ static int complete_loading(void (*run)(void))
     return loading_frames;
 }
 
+#ifdef _WIN32
+static int run_host(int argc, char **argv)
+#else
 int main(int argc, char **argv)
+#endif
 {
     if (argc < 5) {
         fprintf(stderr,
@@ -952,8 +956,8 @@ int main(int argc, char **argv)
     g_crt_orientation = getenv("OBOR_CRT_ORIENTATION");
 
 #ifdef _WIN32
-    _mkdir(g_sysdir);
-    _mkdir(g_savedir);
+    obor_mkdir(g_sysdir, 0700);
+    obor_mkdir(g_savedir, 0700);
 #else
     mkdir(g_sysdir, 0700);
     mkdir(g_savedir, 0700);
@@ -1797,3 +1801,23 @@ int main(int argc, char **argv)
                g_geometry_updates, g_av_updates, g_geometry.max_width, g_geometry.max_height);
     return 0;
 }
+
+#ifdef _WIN32
+int wmain(int argc, wchar_t **wide_argv)
+{
+    char **argv = (char **)calloc((size_t)argc + 1, sizeof(*argv));
+    if (!argv) return 2;
+    int result = 2;
+    int i;
+    for (i = 0; i < argc; ++i) {
+        int size = obor_win_utf8(wide_argv[i], NULL, 0);
+        if (!size) break;
+        argv[i] = (char *)malloc((size_t)size);
+        if (!argv[i] || !obor_win_utf8(wide_argv[i], argv[i], size)) break;
+    }
+    if (i == argc) result = run_host(argc, argv);
+    for (i = 0; i < argc; ++i) free(argv[i]);
+    free(argv);
+    return result;
+}
+#endif

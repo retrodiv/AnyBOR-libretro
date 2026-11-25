@@ -2,6 +2,7 @@
  * Copyright (c) 2026 retrodiv <retrodiv@proton.me> */
 #ifndef OBOR_LEGACY_API_H
 #define OBOR_LEGACY_API_H
+#include "anybor_file_io.h"
 #include "anybor_pak_validate.h"
 #include <stdlib.h>
 #include <ctype.h>
@@ -85,7 +86,7 @@ static int obor_script_legacy_build(const char *s, size_t n,
  * and bytes do not select a game-specific profile. */
 static int obor_legacy_api_build(const char *path)
 {
-    FILE *fp = fopen(path, "rb");
+    FILE *fp = obor_fopen(path, "rb");
     unsigned char h[12];
     char name[256], *source = NULL;
     long end;

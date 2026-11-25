@@ -2,6 +2,7 @@
  * Copyright (c) 2026 retrodiv <retrodiv@proton.me> */
 #ifndef OBOR_VIDEO_CONFIG_H
 #define OBOR_VIDEO_CONFIG_H
+#include "anybor_file_io.h"
 #include <ctype.h>
 #include <stdbool.h>
 #include <stdlib.h>
@@ -77,7 +78,7 @@ static int obor_video_volume_resolution(const char *path, int *width, int *heigh
     } else {
         uint32_t bytes = obor_volume_u32(record + 8);
         char *text = bytes <= 65536 ? (char *)malloc((size_t)bytes + 1) : NULL;
-        FILE *file = text ? fopen(pak.volumes[volume].path, "rb") : NULL;
+        FILE *file = text ? obor_fopen(pak.volumes[volume].path, "rb") : NULL;
         if (file && !obor_file_seek64(file, obor_volume_u32(record + 4), SEEK_SET) &&
             fread(text, 1, bytes, file) == bytes && !memchr(text, 0, bytes) &&
             !obor_detection_expired(started)) {
@@ -93,7 +94,7 @@ static int obor_video_volume_resolution(const char *path, int *width, int *heigh
 
 static int obor_video_resolution(const char *path, int *width, int *height)
 {
-    FILE *fp = fopen(path, "rb");
+    FILE *fp = obor_fopen(path, "rb");
     unsigned char header[8], tail[4], *table = NULL;
     char *text = NULL;
     int result = 0;
@@ -178,7 +179,7 @@ static int obor_video_directory_resolution(const char *root, int *width, int *he
         char path[4096];
         int n = snprintf(path, sizeof(path), "%s/%s", root, names[i]);
         if (n < 0 || (size_t)n >= sizeof(path)) return 0;
-        FILE *fp = fopen(path, "rb");
+        FILE *fp = obor_fopen(path, "rb");
         if (!fp) continue;
         long bytes = -1;
         if (!fseek(fp, 0, SEEK_END)) bytes = ftell(fp);

@@ -124,7 +124,7 @@ int main(void)
 
     const unsigned reset[] = {FLAG_MOVEUP, FLAG_ATTACK, FLAG_MOVEUP, FLAG_MOVEUP, FLAG_ATTACK};
     RUN(reset, keyboard_setup(0));
-    assert(resets == 1 && saves == 2 && applies == 1 && !savedata.joyrumble[0]);
+    assert(resets == 1 && saves == 2 && applies == 1 && savedata.joyrumble[0] == 1);
     assert(savedata.keys[0][SDID_MOVEUP] == OBOR_KEY(0, 0));
 
     const unsigned players[] = {FLAG_ATTACK, FLAG_MOVEDOWN, FLAG_ATTACK, FLAG_MOVEDOWN,

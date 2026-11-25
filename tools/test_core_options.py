@@ -138,7 +138,15 @@ static void check_values(const option_snapshot &option) {
         std::vector<std::string> expected={"None"};
         for (size_t i=0;i<active->profiles.size();++i)
             if (group_for(active->builds[i])==group) expected.push_back(active->profiles[i]);
+        if (expected.size() >= RETRO_NUM_CORE_OPTION_VALUES_MAX) {
+            fprintf(stderr, "%s has too many profiles for one core option\n", option.key.c_str());
+            abort();
+        }
         assert(option.default_value=="None" && option.values==expected);
+    }
+    if (option.key=="anybor_clear_game_cache" || option.key=="anybor_clear_all_caches") {
+        assert(option.default_value=="On");
+        assert(option.values==std::vector<std::string>({"On","Off"}));
     }
     if (option.key=="anybor_state_content") assert(option.default_value==OBOR_STATE_CONTENT_DEFAULT);
     if (option.key=="anybor_state_compression") assert(option.default_value==OBOR_STATE_COMPRESSION_DEFAULT);

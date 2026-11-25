@@ -10,6 +10,7 @@
 #include <stddef.h>
 #include <string.h>
 #ifndef OBOR_SHA256_STREAM_ONLY
+#include "anybor_file_io.h"
 #include <stdio.h>
 #include <sys/stat.h>
 #include "anybor_prepare_progress.h"
@@ -117,7 +118,7 @@ static void obor_sha256_final(obor_sha256_ctx *c, uint8_t out[32])
 #ifndef OBOR_SHA256_STREAM_ONLY
 static int obor_sha256_file(const char *path, char hex[65])
 {
-    FILE *f = fopen(path, "rb");
+    FILE *f = obor_fopen(path, "rb");
     if (!f) return 0;
     if (obor_prepare_progress) {
 #if defined(_WIN32)

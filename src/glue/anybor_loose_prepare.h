@@ -2,6 +2,7 @@
  * Copyright (c) 2026 retrodiv <retrodiv@proton.me> */
 #ifndef OBOR_LOOSE_PREPARE_H
 #define OBOR_LOOSE_PREPARE_H
+#include "anybor_file_io.h"
 
 /* An explicit descriptor function can prepare a resolved loose game. Each
  * invocation receives one asset and its normalized relative name as metadata.
@@ -78,7 +79,7 @@ static bool obor_loose_prepare(const char *cache, const char *models,
         const char *metadata=entry.lower+relative_root;
         size_t metadata_size=strlen(metadata);
         if (metadata_size>OBOR_TRANSFORM_MAX_METADATA_BYTES || ++files>OBOR_ZIP_MAX_ENTRIES) return false;
-        FILE *input=fopen(source,"rb");
+        FILE *input=obor_fopen(source,"rb");
         if (!input) return false;
         if (obor_file_seek64(input,0,SEEK_END) || obor_file_tell64(input)!=(int64_t)entry.size) {fclose(input);return false;}
         obor_transform_file reader(input,entry.size);
@@ -97,7 +98,7 @@ static bool obor_loose_prepare(const char *cache, const char *models,
         obor_sha256_update(&tree,relative,strlen(relative)+1);
         uint64_t result_size=buffers.result.size;
         obor_sha256_update(&tree,&result_size,sizeof(result_size));
-        FILE *output=fopen(destination,"wb");
+        FILE *output=obor_fopen(destination,"wb");
         if (!output) {fclose(input);return false;}
         unsigned char block[65536];
         for (size_t offset=0;ok && offset<buffers.result.size;) {
@@ -132,13 +133,13 @@ static bool obor_loose_prepare(const char *cache, const char *models,
     if (n<0 || (size_t)n>=sizeof(prepared) || !obor_storage_track(prepared)) return false;
     n=snprintf(marker,sizeof(marker),"%s/.complete",partial.path);
     if (n<0 || (size_t)n>=sizeof(marker)) return false;
-    FILE *stamp=fopen(marker,"wb");
+    FILE *stamp=obor_fopen(marker,"wb");
     if (!stamp) return false;
     bool ok=fwrite(identity,1,64,stamp)==64 && obor_prepare_sync_file(stamp);
     if (fclose(stamp)) ok=false;
     /* Recreate the prepared tree from verified streams on every load. An old
      * marker, a modified file or an injected extra file is never authoritative. */
-    if (!ok || !obor_storage_remove(prepared) || rename(partial.path,prepared)) return false;
+    if (!ok || !obor_storage_remove(prepared) || obor_rename(partial.path,prepared)) return false;
     partial.path[0]=0;
     n=snprintf(out,capacity,"%s/%s",prepared,models+root_length);
     log_cb(RETRO_LOG_INFO,"[OpenBOR] Prepared descriptor-selected loose files.\n");

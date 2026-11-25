@@ -47,7 +47,7 @@ def compile_host(root, host, windows=False):
     if windows:
         # The host times state operations through clock_gettime. MinGW
         # supplies it in winpthreads; keep the test executable standalone.
-        command += ["-static", "-lwinpthread"]
+        command += ["-municode", "-static", "-lwinpthread"]
     else:
         command.append("-ldl")
     subprocess.check_call(command)

@@ -34096,6 +34096,17 @@ void update(int ingame, int usevwait)
  * error. */
 int set_color_correction(int gm, int br)
 {
+#if defined(LIBRETRO)
+    if (screenformat != PIXEL_8)
+    {
+        if (savedata.gamma || savedata.brightness)
+        {
+            video_set_color_correction(gm, br);
+            return 1;
+        }
+        video_set_color_correction(0, 0);
+    }
+#endif
 #if WII || SDL
     video_set_color_correction(gm, br);
     return 1;
@@ -39593,6 +39604,9 @@ void openborMain(int argc, char **argv)
     // Load necessary components.
     printf("Game Selected: %s\n\n", packfile);
     loadsettings();
+#if defined(LIBRETRO)
+    video_set_color_correction(savedata.gamma, savedata.brightness);
+#endif
     startup();
 
     if(skiptoset < 0)

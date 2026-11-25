@@ -16,7 +16,7 @@
 #include <sys/stat.h>
 #include <unistd.h>
 #elif defined(_WIN32)
-#include <windows.h>
+#include "anybor_file_io.h"
 #endif
 
 /* This is directory-name metadata, not bytes from a game or rewind history.
@@ -81,7 +81,9 @@ static int start_watch(const char *root)
     loose.descriptor_plus_one = fd + 1;
     return 1;
 #elif defined(_WIN32)
-    HANDLE watch = FindFirstChangeNotificationA(root, FALSE,
+    wchar_t name[OBOR_WIN_PATH_CAP];
+    if (!obor_win_wide(root, name, OBOR_WIN_PATH_CAP)) return 0;
+    HANDLE watch = FindFirstChangeNotificationW(name, FALSE,
         FILE_NOTIFY_CHANGE_FILE_NAME | FILE_NOTIFY_CHANGE_DIR_NAME | FILE_NOTIFY_CHANGE_ATTRIBUTES);
     if (watch == INVALID_HANDLE_VALUE) return 0;
     loose.notification = watch;
@@ -138,7 +140,11 @@ static int watch_changes(void)
 static int read_names(const char *root)
 {
     loose.valid = 0; loose.count = 0; loose.missing_count = 0;
+#if defined(_WIN32)
+    DIR *directory = obor_opendir(root);
+#else
     DIR *directory = __real_opendir(root);
+#endif
     if (!directory) return 0;
     struct dirent *entry;
     int ok = 1;
@@ -177,7 +183,7 @@ static int native_absent(const char *part)
     /* A dangling symlink is still an entry: do not follow its target. */
     return fstatat(AT_FDCWD, path, &entry, AT_SYMLINK_NOFOLLOW) < 0 && errno == ENOENT;
 #elif defined(_WIN32)
-    DWORD attributes = GetFileAttributesA(path);
+    DWORD attributes = obor_win_attributes(path);
     if (attributes != INVALID_FILE_ATTRIBUTES) return 0;
     DWORD error = GetLastError();
     return error == ERROR_FILE_NOT_FOUND || error == ERROR_PATH_NOT_FOUND;

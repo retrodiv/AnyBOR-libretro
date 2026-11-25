@@ -2,6 +2,9 @@
  * Copyright (c) 2026 retrodiv <retrodiv@proton.me> */
 #ifndef OBOR_PAK_VOLUMES_H
 #define OBOR_PAK_VOLUMES_H
+#if !defined(OBOR_ENGINE_BUILD)
+#include "anybor_file_io.h"
+#endif
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -49,7 +52,12 @@ static inline const char *obor_pak_volumes_open(obor_pak_volumes *pak, const cha
         int64_t end;
         uint32_t position;
         if (written < 0 || (size_t)written >= sizeof(volume->path)) goto failed;
+#if defined(OBOR_ENGINE_BUILD)
+        /* The engine partial link supplies the session-scoped fopen. */
         file = fopen(volume->path, "rb");
+#else
+        file = obor_fopen(volume->path, "rb");
+#endif
         if (!file) { error = "Missing or unreadable PAK volume"; goto failed; }
         if (fread(header, 1, 8, file) != 8 || memcmp(header, "PACK", 4)) goto failed;
         if (!i) {

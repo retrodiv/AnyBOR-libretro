@@ -581,13 +581,104 @@ int main(void)
             code = code.replace('@MAP_PATH@', json.dumps(str(Path(directory) / 'mappings.controls')))
             self.assertEqual(native_output(code, data, engine_source=engine), 'PASS\n')
 
-    def test_native_menu_commit_cancel_default_and_rumble(self):
+    def test_native_menu_commit_cancel_and_default_with_core_managed_rumble(self):
         data = load_contract_fixture(FIXTURE)
         self.assertEqual({row['revision'] for row in data['sources']},
                          contract_revisions(data, data['expected_revisions']))
+        without_game_rumble = next(row['contract'] for row in data['sources']
+                                   if row['revision'] < 7690)
         expected = dict(status='PASS', profiles=[dict(revision=row['revision'],
-            cases=data['contracts'][row['contract']]) for row in data['sources']])
+            cases=data['contracts'][without_game_rumble]) for row in data['sources']])
         self.assertEqual(json.loads(native_output(program(data), data)), expected)
+
+
+    def test_rumble_strength_and_live_stop_across_engine_families(self):
+        port = (ROOT / 'src/port/libretro/control.c').read_text()
+        glue = (ROOT / 'src/glue/libretro.cpp').read_text()
+        first = port.index('static int rumble_ratio[4]')
+        last = port.rindex('static int rumble_ratio[4]')
+        code = r"""
+#include <assert.h>
+#include <stdbool.h>
+#include <stdint.h>
+#include "libretro.h"
+#define OBOR_MAX_PLAYERS 4
+static uint32_t obor_profile_build;
+static long g_frame_no;
+static bool g_rumble_have = true, g_rumble_on = true;
+static uint64_t g_rumble_off_at[4];
+static struct retro_rumble_interface g_rumble_if;
+static int last_strength[2], events;
+
+typedef struct { int deviceID; } s_playercontrols;
+static s_playercontrols controls[4];
+static s_playercontrols *playercontrolpointers[] = {
+    &controls[0], &controls[1], &controls[2], &controls[3]
+};
+static bool control_uses_device_mappings(void) { return false; }
+static bool control_isvaliddevice(int id) { return id >= 0 && id < 4; }
+
+@PORT@
+#define p_get_rumble obor_get_rumble
+@FRAME@
+
+static bool record(unsigned port, enum retro_rumble_effect effect, uint16_t strength)
+{
+    assert(port == 0);
+    assert(effect == RETRO_RUMBLE_STRONG || effect == RETRO_RUMBLE_WEAK);
+    last_strength[effect] = strength;
+    ++events;
+    return true;
+}
+
+static void hit(void)
+{
+#if OBOR_ENGINE_BUILD >= 5000
+    control_rumble(0, 1, 34);
+#else
+    control_rumble(0, 34);
+#endif
+    rumble_frame();
+}
+
+int main(void)
+{
+    g_rumble_if.set_rumble_state = record;
+#if OBOR_ENGINE_BUILD == 6391
+    obor_profile_build = 6228;
+    hit();
+    assert(!events);
+    obor_profile_build = 6229;
+#endif
+    hit();
+    assert(events == 2 && last_strength[0] == UINT16_MAX && last_strength[1] == UINT16_MAX);
+    g_frame_no = 1;
+    g_rumble_on = false;
+    hit();
+    assert(events == 4 && !last_strength[0] && !last_strength[1]);
+    hit();
+    assert(events == 4);
+    g_rumble_on = true;
+    hit();
+    assert(events == 6 && last_strength[0] == UINT16_MAX && last_strength[1] == UINT16_MAX);
+    g_frame_no = 3;
+    rumble_frame();
+    assert(events == 6);
+    g_frame_no = 4;
+    rumble_frame();
+    assert(events == 8 && !last_strength[0] && !last_strength[1]);
+    return 0;
+}
+"""
+        for build in ('4432', '6391', '7142', '7533', '8023'):
+            with self.subTest(build=build):
+                if build == '8023':
+                    events = port[first:port.index('\n#else\n', first)]
+                else:
+                    events = port[last:port.rindex('#endif /* OBOR_ENGINE_BUILD')]
+                source = code.replace('@PORT@', events).replace('@FRAME@', function(glue, 'rumble_frame'))
+                self.assertEqual(native_output(source, {'engine': build},
+                    extra_includes=(ROOT / 'src/third_party',)), '')
 
 
 class ClassicControlMenuContracts(unittest.TestCase):

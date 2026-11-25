@@ -1,6 +1,6 @@
 # AnyBOR
 
-An independent libretro core for OpenBOR games, offering 356 selectable engine profiles:
+An independent libretro core for OpenBOR games, offering selectable engine profiles:
 
 |  |  |  |  |  |  |
 |---|---|---|---|---|---|
@@ -76,6 +76,57 @@ Original AnyBOR work by retrodiv is [BSD-3-Clause-licensed](LICENSE). Bundled co
 dependencies retain their own licenses. The combined core includes OpenBOR 3400,
 whose license requires prior written permission for sale of the combined sources
 or binaries. See [licensing and redistribution](LICENSES.md) for the full scope.
+
+## Content
+
+Load a `.pak`, an unpacked game's `data/models.txt`, a ZIP, or a `.anybor`
+descriptor pointing to a PAK or ZIP. A unique descriptor inside a ZIP selects its
+packed payload; without one, the ZIP must contain one recognizable game and no
+inconclusive candidates. ZIP paths and extraction quotas are always checked.
+External INI rules for the ZIP take priority over rules for the selected PAK,
+then external descriptor settings, internal ZIP descriptor settings, verified
+engine-executable identities and filename/content detection.
+A manual profile choice takes priority over all of them. Executables are
+inspected as data, never executed. See [content configuration](docs/CONTENT_CONFIGURATION.md).
+The `.txt` extension is for `data/models.txt`, not
+arbitrary text documents. Newer engine versions are supported on a best
+effort basis through the latest pinned engine.
+
+No third-party game data, artwork, music, BIOS or game executables are included. Use
+content you are entitled to use. Engine compatibility does not grant rights
+to redistribute a game's assets. Saves use the directory supplied by the
+frontend, under `AnyBOR/<game>/<engine build>/`; ZIP extraction uses
+`AnyBOR-cache/zipcache/`. The two cache-clearing options under **Development**
+default to **On** and leave saved data intact. Set both to **Off** to keep
+extracted files for verified reuse on later loads.
+
+See [installation and data directories](docs/INSTALLATION.md) for frontend
+setup, external INI configuration and backup guidance.
+
+## Save states and rewind
+
+For rewind, we recommend **Rewind Frames** set to **10** and
+**Rewind Buffer Size (MB)** set to **256**. We only recommend enabling rewind
+on a Raspberry Pi 5 (quad-core Cortex-A76 at 2.4 GHz) or a device with an
+equivalent or faster CPU.
+
+The **System** category offers **Save state content** (Smart / Full) and
+**Save state compression** (On / Off). **Smart + On** is the default. Smart
+rebuilds source-backed resources when it can reproduce their bytes exactly.
+Full retains complete engine memory. Options apply on content load. Large
+games can exceed the rewind buffer with **Full + Off**. Rewind duration
+depends on the game and how much its state changes.
+
+## Limitations
+
+- Save states require the same core build, content and module address. On
+  macOS, reopening a session can change the address.
+- Saving, loading and rewind pause during model preloading and internally
+  threaded movie playback. Rewind history can contain gaps.
+- Netplay is unavailable.
+
+See [save states and rewind](docs/ANYBOR.md#save-states-and-rewind) for
+transport sizes, capture behavior and state compatibility.
 
 ## Build
 
@@ -187,162 +238,6 @@ Availability through core download services is managed by their maintainers.
 The required submission files, target commands and external registration steps
 are listed in [docs/PUBLISHING.md](docs/PUBLISHING.md). The core's frontend
 requirements, controls and core options are in [docs/ANYBOR.md](docs/ANYBOR.md).
-
-## Content
-
-Load a `.pak`, an unpacked game's `data/models.txt`, a ZIP, or a `.anybor`
-descriptor pointing to a PAK or ZIP. A unique descriptor inside a ZIP selects its
-packed payload; without one, the ZIP must contain one recognizable game and no
-inconclusive candidates. ZIP paths and extraction quotas are always checked.
-External INI rules for the ZIP take priority over rules for the selected PAK,
-then external descriptor settings, internal ZIP descriptor settings, verified
-engine-executable identities and filename/content detection.
-A manual profile choice takes priority over all of them. Executables are
-inspected as data, never executed. See [content configuration](docs/CONTENT_CONFIGURATION.md).
-The `.txt` extension is for `data/models.txt`, not
-arbitrary text documents. Newer engine versions are supported on a best
-effort basis through the latest pinned engine.
-
-No third-party game data, artwork, music, BIOS or game executables are included. Use
-content you are entitled to use. Engine compatibility does not grant rights
-to redistribute a game's assets. Saves use the directory supplied by the
-frontend, under `AnyBOR/<game>/<engine build>/`; ZIP extraction uses
-`AnyBOR-cache/zipcache/`. Cache identities use imohash: ZIPs smaller than
-128 KiB are hashed in full; ZIPs of at least 128 KiB use three 16 KiB samples
-and their size. Extraction folders use the ZIP filename stem, sanitized and
-limited to 80 characters, followed by an eight-digit hexadecimal locator
-(`Example-01234567`). The completion marker retains the complete 128-bit identity.
-Occupied folders with a different or unreadable marker select a deterministic
-alternative locator, with at most 64 candidates. Renaming a ZIP creates a separate
-cache entry.
-Changes outside those samples that preserve the ZIP size can reuse the same
-cache; remove that extraction cache after such content changes.
-Save states require the same core build and content.
-
-See [installation and data directories](docs/INSTALLATION.md) for frontend
-setup, external INI configuration and backup guidance.
-
-## Save states and rewind
-
-For rewind, we recommend **Rewind Frames** set to **10** and
-**Rewind Buffer Size (MB)** set to **256**. We only recommend enabling rewind
-on a Raspberry Pi 5 (quad-core Cortex-A76 at 2.4 GHz) or a device with an
-equivalent or faster CPU.
-
-The **System** category offers **Save state content** (Smart / Full) and
-**Save state compression** (On / Off). Smart reconstructs resources only when
-their bytes can be reproduced exactly; Full retains complete engine memory.
-Compression Off leaves changed blocks uncompressed and keeps the reuse of
-unchanged blocks. These options apply when content is loaded; changing them
-during a session, resetting or loading a state does not change that session's
-writer. Diagnostic environment overrides retain priority.
-
-The default is **Smart + On**.
-Supported targets also enable dirty-page tracking, advance state preparation,
-bounded encoder-pool maintenance and the synchronous compression helper.
-Linux, Android and macOS use guarded page protection; Windows uses its native
-write-watch API. **Full + Off may not fit the
-256 MiB rewind buffer in large games.** The available duration and capture cost
-depend on the game, machine and selected combination.
-
-Smart, and Full with compression On, use complete, independently loadable
-states with a fixed 64 MiB libretro transport. This is the size of
-one serialized state, not additional rewind history. The frontend owns the
-history within its 256 MiB buffer. Its available duration depends on how much
-state changes: a large transition can shorten it substantially.
-
-The engines identify source-backed sample bytes; engines 3842 and later also
-identify reconstructible sprite bodies. Engine 3400 retains its sprite bytes
-in the mutable state. The common state layer verifies resource contents before
-replacing them with reconstruction recipes. Script-modified or unrecognized data stays in the
-mutable state. Headers, palettes, internal references, allocator metadata,
-engine globals, the live coroutine stack and audio playback state are retained.
-This selection depends on resource structure and lifetime, never game names
-or fingerprints.
-
-Every snapshot contains the information needed to rebuild its resources from
-the loaded content, including in a new session with an empty cache. The resource
-cache is bounded to 128 MiB and holds only source-derived data. Restoration
-staging is bounded to 256 MiB; resources beyond that budget remain ordinary
-state bytes. The block codec caches only its current image. None of these
-caches stores additional rewind history. A failed reconstruction or a complete
-state that exceeds its transport budget is rejected; data is never truncated
-to make a capture fit.
-
-The compressed transport uses OBC1 with independently encoded blocks and a
-resource manifest. Each image is complete and can be decoded without an earlier
-snapshot. New blocks use a compact initial encoding; changed blocks use a fast
-lossless codec. Bounded slot maintenance limits fragmentation. State preparation
-follows the frontend's observed capture interval and stops when captures stop;
-the requested capture still validates the current bytes. Unused transport
-bytes are deterministically zero. Fixed frontend capacity remains unchanged
-across loading, gameplay and Reset.
-
-On supported Windows, Linux, Android and macOS targets, captures with
-enough observed encoding work can use
-one auxiliary compression thread. It finishes before capture returns; the
-engine never advances while it is working. Scratch space stays below 2.1 MiB
-and stores no rewind history. Lighter updates, unavailable CPU measurements
-or threads, and single-CPU systems retain serial compression. Both paths
-produce the same serialized bytes and preserve the capture frequency.
-
-On supported targets, classic movie decoders retain write tracking while
-their engine-owned workers run, including between frontend calls. This avoids
-rechecking untouched resources after playback. Captures remain unavailable
-while workers are active. The asynchronous movie adapter has additional worker
-ownership and conservatively invalidates those proofs before playback instead.
-
-On supported page-protection tracking targets, bounded learning identifies
-frequently written pages and leaves
-those pages writable. Every such page remains dirty for state validation,
-including repeated writes between captures. It never supplies an immutable
-resource or block proof. Resource recipe metadata and allocation ordering are
-reused only while their validity checks hold; all allocation bounds and global
-nonoverlap checks are retained. These policies do not omit mutable state or
-change the frontend's fixed state capacity.
-
-The Android core is one installable `.so`. It contains a small libretro
-loader and the engine ELF; Android's `android_dlopen_ext` loads the engine at
-a reserved, stable address. This preserves saved code/static-data pointers
-without scanning and modifying arbitrary game data after ASLR changes.
-An address collision fails safely. Incompatible states are rejected before
-restoring engine memory.
-
-Full + Off uses the complete OBS writer with binary-identity and
-runtime-storage checks. It sizes its fixed capacity from
-packed content and measured heap peaks; content that outgrows its allowance
-requires a restart to use the learned peak. Save states should be made and
-loaded with the same core build and content.
-
-The reader accepts states from all four combinations regardless of the current
-writer selection. The ordinary build, layout, content and resource checks still
-apply. Both Smart and Full require the module to be at its original address.
-If its address changes on any platform, loading is refused with a
-`state module address differs` log message before changing the live game.
-The core does not guess which memory words are pointers or silently change
-the selected writer. This limits cross-process save states on macOS, where ASLR can move the dylib. After closing and reopening
-the frontend on macOS, expect loads to be refused if the module address changed.
-Selecting Full does not bypass the address check. Same-session
-rewind and restoration do not require relocation and remain available.
-
-Within a compatible core build, loading a Full state in a Smart session
-preserves the game, but resources without reconstruction recipes remain stored
-as bytes. Capture cost and rewind duration may differ from a game started in
-Smart. Saving again as Smart does not recover missing recipes; starting the
-game afresh in Smart rebuilds them as resources load.
-
-Save states and rewind are temporarily unavailable while the engine preloads
-models. Some games also preload models briefly while the player is already on
-screen. A manual save or load can be refused during that interval, and rewind
-history can contain gaps. Normal operation resumes when preloading finishes.
-
-Loading a state retains the current session's content and writable-directory
-paths. Engine random-number state is captured with the world so external
-frontend activity does not change the restored AI sequence. Saving, loading
-and rewind are unavailable during internally threaded movie playback;
-the frontend's separate threaded-video setting does not trigger this exclusion.
-Returning from gameplay to an earlier menu requires its state to remain
-within the finite history. Entering gameplay does not clear the history.
 
 ## Licenses and redistribution
 

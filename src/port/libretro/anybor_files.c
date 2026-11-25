@@ -12,6 +12,7 @@
 #include <dirent.h>
 #include <sys/stat.h>
 #ifdef _WIN32
+#include "anybor_file_io.h"
 #include <io.h>
 #else
 #include <unistd.h>
@@ -35,7 +36,11 @@ static FILE *tracked_fopen(const char *path, const char *mode)
     char mapped[8192];
     path = obor_paths_resolve(path, mapped, sizeof(mapped));
     if (!path) return NULL;
+#ifdef _WIN32
+    FILE *file = obor_fopen(path, mode);
+#else
     FILE *file = __real_fopen(path, mode);
+#endif
     if (file && obor_resource_event)
         obor_resource_event(OBOR_RESOURCE_FILE_OPEN, (uintptr_t)file);
     return file;
@@ -68,7 +73,11 @@ int OBOR_WRAP_OPEN(const char *path, int flags, ...)
     path = obor_paths_resolve(path, mapped, sizeof(mapped));
     if (!path) return -1;
     if (flags & (O_CREAT | O_TRUNC | O_WRONLY | O_RDWR)) obor_loose_invalidate();
+#ifdef _WIN32
+    int fd = obor_open(path, flags, mode);
+#else
     int fd = OBOR_REAL_OPEN(path, flags, mode);
+#endif
     if (fd >= 0 && obor_resource_event)
         obor_resource_event(OBOR_RESOURCE_FD_OPEN, (uintptr_t)fd);
     return fd;
@@ -136,29 +145,59 @@ DIR *__wrap_opendir(const char *path)
 {
     char mapped[8192];
     path = obor_paths_resolve(path, mapped, sizeof(mapped));
+#ifdef _WIN32
+    return path ? obor_opendir(path) : NULL;
+#else
     return path ? __real_opendir(path) : NULL;
+#endif
 }
 
+#ifdef _WIN32
+struct dirent *__wrap_readdir(DIR *directory)
+{
+    return obor_readdir(directory);
+}
+
+int __wrap_closedir(DIR *directory)
+{
+    return obor_closedir(directory);
+}
+
+static int obor_win_unlink(const char *path)
+{
+    wchar_t name[OBOR_WIN_PATH_CAP];
+    return obor_win_wide(path, name, OBOR_WIN_PATH_CAP) ? _wunlink(name) : -1;
+}
+#define OBOR_NATIVE_REMOVE obor_remove
+#define OBOR_NATIVE_UNLINK obor_win_unlink
+#define OBOR_NATIVE_RMDIR obor_rmdir
+#define OBOR_NATIVE_RENAME obor_rename
+#else
+extern int __real_remove(const char *);
+extern int __real_unlink(const char *);
+extern int __real_rmdir(const char *);
+extern int __real_rename(const char *, const char *);
+#define OBOR_NATIVE_REMOVE __real_remove
+#define OBOR_NATIVE_UNLINK __real_unlink
+#define OBOR_NATIVE_RMDIR __real_rmdir
+#define OBOR_NATIVE_RENAME __real_rename
+#endif
+
 #define PATH_CALL_ONE(name, native) \
-    extern int __real_##native(const char *); \
     int __wrap_##name(const char *path) { \
         obor_loose_invalidate(); \
         char mapped[8192]; \
         path = obor_paths_resolve(path, mapped, sizeof(mapped)); \
-        return path ? __real_##native(path) : -1; \
+        return path ? native(path) : -1; \
     }
-PATH_CALL_ONE(remove, remove)
-#if defined(_WIN32)
-PATH_CALL_ONE(unlink, _unlink)
-PATH_CALL_ONE(_unlink, _unlink)
-PATH_CALL_ONE(rmdir, _rmdir)
-PATH_CALL_ONE(_rmdir, _rmdir)
-#else
-PATH_CALL_ONE(unlink, unlink)
-PATH_CALL_ONE(rmdir, rmdir)
+PATH_CALL_ONE(remove, OBOR_NATIVE_REMOVE)
+PATH_CALL_ONE(unlink, OBOR_NATIVE_UNLINK)
+PATH_CALL_ONE(rmdir, OBOR_NATIVE_RMDIR)
+#ifdef _WIN32
+PATH_CALL_ONE(_unlink, OBOR_NATIVE_UNLINK)
+PATH_CALL_ONE(_rmdir, OBOR_NATIVE_RMDIR)
 #endif
 
-extern int __real_rename(const char *, const char *);
 int __wrap_rename(const char *from, const char *to)
 {
     obor_loose_invalidate();
@@ -166,56 +205,46 @@ int __wrap_rename(const char *from, const char *to)
     from = obor_paths_resolve(from, old_path, sizeof(old_path));
     if (!from) return -1;
     to = obor_paths_resolve(to, new_path, sizeof(new_path));
-    return to ? __real_rename(from, to) : -1;
+    return to ? OBOR_NATIVE_RENAME(from, to) : -1;
 }
 
 #if defined(_WIN32)
-extern int __real__mkdir(const char *);
 int __wrap_mkdir(const char *path)
 {
     obor_loose_invalidate();
     char mapped[8192];
     path = obor_paths_resolve(path, mapped, sizeof(mapped));
-    return path ? __real__mkdir(path) : -1;
+    return path ? obor_mkdir(path, 0755) : -1;
 }
 int __wrap__mkdir(const char *path) { return __wrap_mkdir(path); }
-extern int __real__chmod(const char *, int);
 int __wrap_chmod(const char *path, int mode)
 {
     obor_loose_invalidate();
     char mapped[8192];
+    wchar_t name[OBOR_WIN_PATH_CAP];
     path = obor_paths_resolve(path, mapped, sizeof(mapped));
-    return path ? __real__chmod(path, mode) : -1;
+    return path && obor_win_wide(path, name, OBOR_WIN_PATH_CAP) ? _wchmod(name, mode) : -1;
 }
 int __wrap__chmod(const char *path, int mode) { return __wrap_chmod(path, mode); }
-/* MinGW's stat spellings depend on both time_t and _FILE_OFFSET_BITS in
- * each caller. Forward its buffer unchanged to the matching CRT ABI. */
-#define PATH_STAT(name, native) \
-    extern int __real_##native(const char *, void *); \
-    int __wrap_##name(const char *path, void *buf) { \
+/* Each emitted MinGW name encodes the caller's stat buffer ABI. */
+#define PATH_STAT(name, native, type) \
+    int __wrap_##name(const char *path, struct type *buf) { \
         char mapped[8192]; \
+        wchar_t wide[OBOR_WIN_PATH_CAP]; \
         path = obor_paths_resolve(path, mapped, sizeof(mapped)); \
-        return path ? __real_##native(path, buf) : -1; \
+        return path && obor_win_wide(path, wide, OBOR_WIN_PATH_CAP) ? native(wide, buf) : -1; \
     }
-/* The CRT exports underscore names on every supported MinGW version.
- * Non-underscore aliases are not present in older import libraries. Both
- * caller spellings must use the same native buffer ABI and path mapping. */
 #if !defined(_WIN64)
-PATH_STAT(stat32, _stat32)
-PATH_STAT(_stat32, _stat32)
-PATH_STAT(stat32i64, _stat32i64)
-PATH_STAT(_stat32i64, _stat32i64)
+PATH_STAT(stat32, _wstat32, _stat32)
+PATH_STAT(_stat32, _wstat32, _stat32)
+PATH_STAT(stat32i64, _wstat32i64, _stat32i64)
+PATH_STAT(_stat32i64, _wstat32i64, _stat32i64)
 #endif
-PATH_STAT(stat64i32, _stat64i32)
-PATH_STAT(_stat64i32, _stat64i32)
-PATH_STAT(stat64, _stat64)
-PATH_STAT(_stat64, _stat64)
-/* Older MinGW headers also emit plain stat for the default file-size ABI.
- * Expand the SDK's default native spelling before token-pasting its name;
- * a forward to plain stat is unavailable with newer import libraries. */
-#define PATH_DEFAULT_STAT(native) PATH_STAT(stat, native)
-PATH_DEFAULT_STAT(_stat)
-#undef PATH_DEFAULT_STAT
+PATH_STAT(stat64i32, _wstat64i32, _stat64i32)
+PATH_STAT(_stat64i32, _wstat64i32, _stat64i32)
+PATH_STAT(stat64, _wstat64, _stat64)
+PATH_STAT(_stat64, _wstat64, _stat64)
+PATH_STAT(stat, _wstat, _stat)
 #else
 #define PATH_MODE(name) \
     extern int __real_##name(const char *, mode_t); \

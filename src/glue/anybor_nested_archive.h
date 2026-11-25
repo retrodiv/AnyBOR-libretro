@@ -2,6 +2,7 @@
  * Copyright (c) 2026 retrodiv <retrodiv@proton.me> */
 #ifndef OBOR_NESTED_ARCHIVE_H
 #define OBOR_NESTED_ARCHIVE_H
+#include "anybor_file_io.h"
 
 /* Nested archives share the outer extraction budget and atomic publication.
  * A warm cache is verified against the current streams, including descriptors;
@@ -24,7 +25,7 @@ static bool obor_archive_disk_path(const char *root, const char *name, char *out
         return obor_storage_directory(out);
     }
 #if defined(_WIN32)
-    DWORD attributes = GetFileAttributesA(out);
+    DWORD attributes = obor_win_attributes(out);
     if (attributes == INVALID_FILE_ATTRIBUTES)
         return create && GetLastError() == ERROR_FILE_NOT_FOUND;
     return !(attributes & (FILE_ATTRIBUTE_DIRECTORY | FILE_ATTRIBUTE_REPARSE_POINT));
@@ -67,7 +68,7 @@ static bool obor_archive_check_zip(const char *root, const obor_zip_content_entr
     char path[2200];
     if (!obor_archive_disk_path(root, entry.name, path, sizeof(path), false, entry.directory)) return false;
     if (entry.directory) return true;
-    FILE *file = fopen(path, "rb");
+    FILE *file = obor_fopen(path, "rb");
     if (!file) return false;
     obor_archive_zip_compare context = {file, 0};
     bool ok = mz_zip_reader_extract_to_callback(archive, index,
@@ -239,7 +240,7 @@ static obor_zip_content_entry *obor_archive_add(obor_zip_content_entries &entrie
 static bool obor_archive_rar(const char *root, const char *path, const char *prefix,
     obor_zip_content_entries &entries, unsigned &count, uint64_t &total, unsigned depth, bool cold)
 {
-    FILE *file=fopen(path,"rb");
+    FILE *file=obor_fopen(path,"rb");
     if (!file) return false;
     uint64_t offset=0,length=0;
     unsigned services=0;uint64_t metadata=0;
@@ -271,7 +272,7 @@ static bool obor_archive_rar(const char *root, const char *path, const char *pre
         char destination[2200];
         if (!entry || !obor_archive_disk_path(root,entry->name,destination,sizeof(destination),cold,directory)) { ok=false;break; }
         if (directory) continue;
-        FILE *output=fopen(destination,cold?"wb":"rb");
+        FILE *output=obor_fopen(destination,cold?"wb":"rb");
         if (!output) { ok=false;break; }
         uint64_t got_total=0;
         mz_ulong crc=MZ_CRC32_INIT;
@@ -299,9 +300,8 @@ static bool obor_archive_rar(const char *root, const char *path, const char *pre
 static bool obor_archive_zip(const char *root, const char *path, const char *prefix,
     obor_zip_content_entries &entries, unsigned &count, uint64_t &total, unsigned depth, bool cold)
 {
-    obor_zip_reader_scope reader;
+    obor_zip_reader_scope reader(path);
     mz_zip_archive *archive=&reader.archive;
-    reader.opened=mz_zip_reader_init_file(archive,path,0);
     if (!reader.opened) return false;
     unsigned files=mz_zip_reader_get_num_files(archive);
     if (!files || files>OBOR_ZIP_MAX_ENTRIES-count-entries.overhead) return false;
@@ -319,7 +319,7 @@ static bool obor_archive_zip(const char *root, const char *path, const char *pre
         if (entry->directory) continue;
         if (cold) {
             if (!obor_zip_space_ok(root,st.m_uncomp_size+(64ULL<<20))) return false;
-            FILE *output=fopen(destination,"wb");
+            FILE *output=obor_fopen(destination,"wb");
             bool ok=output && mz_zip_reader_extract_to_callback(archive,i,obor_zip_write,output,0);
             if (output && fclose(output)) ok=false;
             if (!ok) return false;
@@ -337,7 +337,7 @@ static bool obor_archive_expand(const char *root, obor_zip_content_entries &entr
         if (entry.directory) continue;
         char path[2200];
         if (!obor_archive_disk_path(root,entry.name,path,sizeof(path),false)) return false;
-        FILE *file=fopen(path,"rb");
+        FILE *file=obor_fopen(path,"rb");
         if (!file) return false;
         unsigned char magic[8]={};
         size_t got=fread(magic,1,sizeof(magic),file);

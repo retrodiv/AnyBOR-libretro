@@ -3,6 +3,7 @@
  * Bounded opt-in latency boundaries. No frame/state payloads are retained. */
 #ifndef OBOR_LATENCY_BOUNDARIES_H
 #define OBOR_LATENCY_BOUNDARIES_H
+#include "anybor_file_io.h"
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -52,10 +53,10 @@ static void obor_latency_init(void)
     const char *path = getenv("OBOR_DIAG_LATENCY_BOUNDARIES");
     if (!path || !*path) return;
 #if defined(_WIN32)
-    int fd = _open(path, _O_WRONLY | _O_CREAT | _O_EXCL | _O_BINARY,
+    int fd = obor_open(path, _O_WRONLY | _O_CREAT | _O_EXCL | _O_BINARY,
                    _S_IREAD | _S_IWRITE);
 #else
-    int fd = open(path, O_WRONLY | O_CREAT | O_EXCL, 0600);
+    int fd = obor_open(path, O_WRONLY | O_CREAT | O_EXCL, 0600);
 #endif
     if (fd < 0) return;
 #if defined(_WIN32)
