@@ -291,8 +291,7 @@ MurmurHash3 x64_128 with seed zero, and unsigned LEB128 file-size encoding.
 Sampling and encoding follow Jim Kalafut's MIT implementation at commit
 `611245ae8069800035b185d9d43f36829885ab82`. MurmurHash3 follows Peter Scott's
 C port at commit `dae94be0c0f54a399d23ea6cbe54bca5a4e93ce4`, retaining Austin
-Appleby's public-domain dedication. The C adaptation is copied from retrodiv's
-AnyGM implementation at commit `31d5666d72559136327b3165bbaca3b81759965b`,
+Appleby's public-domain dedication. The C adaptation by retrodiv derives from commit `31d5666d72559136327b3165bbaca3b81759965b`,
 with local names and a miniz archive-reader adapter. Known-answer test vectors
 retain Jim Kalafut's MIT notice. Full notices accompany source and binaries in
 `LICENSES/imohash.txt` and `LICENSES/murmur3.txt`.

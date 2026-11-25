@@ -172,11 +172,11 @@ accepted. Section-shaped text within a function comment remains part of it.
 
 ## Validation, caching and ownership
 
-The original file remains unchanged. Preparation runs at each load and the normal
-PACK validator checks its complete result before engine boot. The cache identity
-includes the original SHA-256, compiled function and parameter identity, and result
-SHA-256. Preparation runs again when loading: a previously cached result cannot
-replace the currently selected operation or its validation. Without an `input`
+The original file remains unchanged. The normal PACK validator checks the selected
+output before engine boot. The cache identity
+includes the original size and imohash, the compiled function and parameter
+identity or the structural repair identifier, and the core version. A matching
+recipe can reuse its prepared output before running the operation. Without an `input`
 function, the original file follows ordinary PACK loading and structural checks.
 An invalid result fails before engine boot and returns control to the frontend.
 
@@ -186,13 +186,18 @@ needed. This avoids unnecessary disk traffic for ordinary archives that the
 configured function leaves unchanged.
 
 A completed result is published atomically below
-`<save>/AnyBOR-cache/input-<8-hex>/<original-name>.pak`. The directory uses the
-first eight hexadecimal characters of the source/configuration/result identity
-to keep paths short. A cached result is reused only when its complete SHA-256
-matches the newly prepared bytes; a short-prefix collision replaces the cached
-file with the correct result. Failed operations remove their temporary output
-and publish no partial result. Programs are freed before engine boot; they are
-not serialized with gameplay state.
+`<save>/AnyBOR-cache/input-<8-hex>/<original-name>.pak`. The directory uses
+an eight-digit locator. Its completion marker records the full recipe key and the
+prepared file's size and imohash. The cache uses the same sampling as ZIP
+identity: complete bytes below 128 KiB, and 16 KiB samples at the beginning,
+midpoint and end for larger files. Changes outside the samples can retain the
+same identity. Clear the cache after such changes. The loader validates the
+PACK structure before boot and samples the original again before publishing a
+new result. Failed operations remove temporary output. Programs are freed
+before boot and do not appear in gameplay state.
+
+Set both cache-clearing core options to **Off** to reuse prepared files across
+loads. Both options default to **On**.
 
 ## Implementation
 

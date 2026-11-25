@@ -98,7 +98,8 @@ to redistribute a game's assets. Saves use the directory supplied by the
 frontend, under `AnyBOR/<game>/<engine build>/`; ZIP extraction uses
 `AnyBOR-cache/zipcache/`. The two cache-clearing options under **Development**
 default to **On** and leave saved data intact. Set both to **Off** to keep
-extracted files for verified reuse on later loads.
+extracted and prepared files for verified reuse on later loads. Prepared
+output is tied to the sampled source, the recipe and the core version.
 
 See [installation and data directories](docs/INSTALLATION.md) for frontend
 setup, external INI configuration and backup guidance.

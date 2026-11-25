@@ -360,7 +360,8 @@ Paths below are relative to the frontend's **Save Files** directory:
 |---|---|
 | `AnyBOR/<game>/<profile build>/` | Profile-specific saves, settings, logs and learned memory-peak data. Different settings layouts stay separate. |
 | `AnyBOR-cache/zipcache/` | Cached extraction of ZIP content. |
-| `AnyBOR-cache/input-<8-hex>/` | Prepared content derived from the source archive. |
+| `AnyBOR-cache/input-<8-hex>/` | Prepared PACKs keyed by source and recipe. |
+| `AnyBOR-cache/files-<16-hex>/` | Prepared loose game files keyed by ZIP, game root and recipe. |
 | `anybor-license-notices.txt` | The complete notice dossier embedded in the loaded core; attempted in this directory when content is loaded. |
 
 The three cleanup options are grouped in **Development**. Turn both cache options **Off** to retain and reuse

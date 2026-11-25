@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.2.66
+
+- Reuse prepared PACKs and loose files when the input, recipe, core version,
+  and sampled output match. Preparation runs on a cache miss.
+
 ## 0.2.65
 
 - Support Unicode names in Windows content, system and save paths.

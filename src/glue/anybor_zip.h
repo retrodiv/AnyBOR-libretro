@@ -424,7 +424,9 @@ static int obor_zip_prepare(const char *zip_path, const char *save_dir,
     if (chosen_raw) {
         char prepared[4096];
         bool outer=content_choice && (content_choice->transform[0] || content_choice->function.program_size);
-        if (!obor_loose_prepare(cache,chosen,entries,count,save_dir,system_dir,
+        obor_prepared_sample source = {za->m_archive_size, {}};
+        memcpy(source.hash, digest, sizeof(source.hash));
+        if (!obor_loose_prepare(cache,chosen,source,entries,count,save_dir,system_dir,
                 outer?content_choice->transform:descriptor.transform,
                 outer?&content_choice->function:&descriptor.function,prepared,sizeof(prepared))) {
             log_cb(RETRO_LOG_ERROR,"[OpenBOR] Could not prepare descriptor-selected loose files.\n");

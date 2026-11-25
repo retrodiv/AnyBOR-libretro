@@ -6,6 +6,7 @@ Copyright (c) 2026 retrodiv <retrodiv@proton.me>
 import os
 import io
 from pathlib import Path
+import struct
 import subprocess
 import tempfile
 import unittest
@@ -32,7 +33,13 @@ static void log_cb(int,const char *format,...) {
 }
 static void mkdir_p(const char *path) { std::filesystem::create_directories(path); }
 @TABLE@
+#include "anybor_transform_vm.h"
+static unsigned transform_calls;
+#define obor_content_transform_execute_reader(...) (++transform_calls, obor_content_transform_execute_reader(__VA_ARGS__))
+#define obor_content_transform_execute_view(...) (++transform_calls, obor_content_transform_execute_view(__VA_ARGS__))
 #include "anybor_zip.h"
+#undef obor_content_transform_execute_reader
+#undef obor_content_transform_execute_view
 #include "anybor_content_override.h"
 int main(int argc,char **argv) {
  if(argc==3&&!strcmp(argv[1],"--hash")) {
@@ -59,6 +66,7 @@ int main(int argc,char **argv) {
  }
  if(ok)ok=obor_content_override(argv[4],choice,engine,evidence,sizeof(evidence));
  printf("ok=%d\npath=%s\nsource=%s\nengine=%s\nevidence=%s\n",ok,out,choice.source,engine,evidence);
+ printf("transform_calls=%u\n",transform_calls);
  printf("transform=%s\nmask=%u\nlabel=%s\n",choice.transform,obor_content_buttons(choice.controls,(1u<<OBOR_BTN_ATTACK)|(1u<<OBOR_BTN_ATTACK3)),choice.controls.labels[OBOR_BTN_SPECIAL]);
  return 0;
 }
@@ -546,6 +554,39 @@ class ContentOverrideTests(unittest.TestCase):
             f'if(input_size!={len(model)} || read8(input,{offset})!=65)reject();'
             f'write8(work,{offset},{value});return slice(0,input_size);}}')
 
+    def test_packed_recipe_reuses_transformed_and_repaired_results(self):
+        write_pak(self.pak, fixture_files())
+        original = self.pak.read_bytes()
+        rebased = bytearray(original)
+        entry = struct.unpack_from('<I', rebased, len(rebased) - 4)[0]
+        while entry < len(rebased) - 4:
+            length, start = struct.unpack_from('<II', rebased, entry)
+            struct.pack_into('<I', rebased, entry + 4, start + 513)
+            entry += length
+        cases = (
+            (b'DEMO' + original,
+             '[transforms]\ninput=buffer unwrap(){return slice(4,input_size-4);}\n', '1'),
+            (b'BROK' + original[4:], None, '0'),
+            (rebased, None, '0'),
+        )
+        for source, config, calls in cases:
+            with self.subTest(prefix=source[:8]):
+                settings = self.system / 'AnyBOR.ini'
+                if config is None:
+                    settings.unlink(missing_ok=True)
+                else:
+                    settings.write_text(config)
+                self.pak.write_bytes(source)
+                cold, log = self.route_content()
+                self.assertEqual(cold['ok'], '1', log)
+                self.assertEqual(cold['transform_calls'], calls)
+                self.assertEqual(Path(cold['path']).read_bytes(), original)
+                warm, log = self.route_content()
+                self.assertEqual(warm['ok'], '1', log)
+                self.assertEqual(warm['path'], cold['path'])
+                self.assertEqual(warm['transform_calls'], '0')
+                self.assertIn('Reusing prepared PACK.', log)
+
     def test_zip_loose_file_function_preserves_source_and_rebuilds_untrusted_prepared_tree(self):
         model,function=self.loose_function()
         archive=self.archive({'Root/data/models.txt':b'load Block data/chars/block.txt\n',
@@ -563,18 +604,37 @@ class ContentOverrideTests(unittest.TestCase):
         self.assertEqual(archive.read_bytes(),original)
         extraction=next((self.folder/'save/AnyBOR-cache/zipcache').glob('authored-????????'))
         self.assertEqual((extraction/'Root/data/chars/block.txt').read_bytes(),model)
-        edited.write_bytes(b'altered cached model')
-        (prepared/'injected.txt').write_text('not in the selected game')
-        again,log=self.route_content(descriptor)
-        self.assertEqual(again['ok'],'1',log)
-        self.assertEqual(again['path'],result['path'])
-        self.assertEqual(edited.read_bytes(),model.replace(b'# A',b'# B'))
-        self.assertFalse((prepared/'injected.txt').exists())
-        self.assertEqual(archive.read_bytes(),original)
+        self.assertEqual(result['transform_calls'], '2')
+        warm,log=self.route_content(descriptor)
+        self.assertEqual(warm['ok'],'1',log)
+        self.assertEqual(warm['path'],result['path'])
+        self.assertEqual(warm['transform_calls'],'0')
+        self.assertIn('Reusing prepared loose files.',log)
+        marker=(prepared/'.complete').read_text().splitlines()
+        self.assertEqual([row.split(' ',2)[2] for row in marker[1:]],
+                         ['data/chars/block.txt','data/models.txt'])
+        injected=prepared/'injected.txt'
+        expected=model.replace(b'# A',b'# B')
+        for fault in ('changed','missing','extra'):
+            with self.subTest(fault=fault):
+                if fault == 'changed':
+                    edited.write_bytes(expected.replace(b'# B',b'# D'))
+                elif fault == 'missing':
+                    edited.unlink()
+                else:
+                    injected.write_text('not in the selected game')
+                again,log=self.route_content(descriptor)
+                self.assertEqual(again['ok'],'1',log)
+                self.assertEqual(again['path'],result['path'])
+                self.assertEqual(again['transform_calls'],'2')
+                self.assertEqual(edited.read_bytes(),expected)
+                self.assertFalse(injected.exists())
+                self.assertEqual(archive.read_bytes(),original)
         descriptor.write_text(descriptor.read_text().replace(function,self.loose_function(67)[1]))
         changed,log=self.route_content(descriptor)
         self.assertEqual(changed['ok'],'1',log)
         self.assertNotEqual(changed['path'],result['path'])
+        self.assertEqual(changed['transform_calls'],'2')
         self.assertEqual((Path(changed['path']).parent/'chars/block.txt').read_bytes(),model.replace(b'# A',b'# C'))
 
     def test_zip_loose_named_function_is_explicit_and_independent_of_default_input(self):

@@ -212,9 +212,11 @@ combined in one descriptor.
 A local function takes precedence over the INI's default `input` transform.
 The external descriptor's transform, either local or named, takes precedence
 over a transform in the ZIP's descriptor. Engine-choice priorities remain
-independent. The original packed bytes are preserved; the prepared cache is
-bound to the compiled function and its parameters. A loose game's original
-extraction remains intact; changed files are published in a separate prepared
-tree. This tree is rebuilt from verified inputs on every load, so an old marker
-or modified prepared file cannot supply unverified content. Changed functions
-are read on load/restart and obtain distinct prepared identities.
+independent. Prepared output is keyed by the sampled input identity, compiled
+function and parameters, and core version. For loose games, the key uses the
+ZIP's size and imohash and the game's root within it. The separate prepared
+tree is reused when its marker lists the exact output files and their sizes
+and imohashes match the tree on disk. Missing or extra files trigger a rebuild.
+The ZIP extraction retains its own validation. Both cache-clearing core options
+default to **On**. Set both to **Off** to retain prepared output between loads.
+See [content transforms](CONTENT_TRANSFORMS.md) for the sampling rules.

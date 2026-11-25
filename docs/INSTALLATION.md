@@ -16,7 +16,7 @@ necessarily literal folders called `system` and `saves`.
 | Optional content descriptor | `.anybor` naming a relative PAK or ZIP; inside a ZIP, naming a relative PAK |
 | In-game saves, settings and logs | `AnyBOR/<game>/<engine>/` below the frontend save directory |
 | ZIP extraction cache | `AnyBOR-cache/zipcache/` below the frontend save directory |
-| Prepared content cache | `AnyBOR-cache/input-<8-hex>/` below the frontend save directory |
+| Prepared content cache | `AnyBOR-cache/input-<8-hex>/` for PACKs and `AnyBOR-cache/files-<16-hex>/` for loose games below the frontend save directory |
 | License dossier | `anybor-license-notices.txt`, attempted in the frontend save directory when content is loaded |
 
 If the frontend sorts saves by core name, it can add its own outer core
