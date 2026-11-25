@@ -284,6 +284,20 @@ class ContentOverrideTests(unittest.TestCase):
         self.descriptor(path, payload='nested/' + self.pak.name)
         self.assertEqual(self.route_content(path)[0]['ok'], '0')
 
+    def test_descriptor_crt_mode_rejects_malformed_fields_and_duplicates(self):
+        path = self.folder / 'Display.anybor'
+        header = f'[anybor]\npayload={self.pak.name}\n[overrides]\n'
+        for fields in ('15|192|60', '641|192|60', '256|481|60', '256|192|1',
+                       '256|192|301', 'window_h|192|60', '256|window_fps|60',
+                       '256|192|window_w', '256|192|window_fpsx', '256||60',
+                       '256|192|60|', '256|192|999999999999',
+                       'window_w|window_h|window_fps\n?crt crtmode|256|192|60'):
+            with self.subTest(fields=fields):
+                path.write_text(header + '?crt crtmode|' + fields + '\n')
+                self.assertEqual(self.route_content(path)[0]['ok'], '0')
+        path.write_text(header + '?crt crtmode|window_w|window_h|window_fps\n')
+        self.assertEqual(self.route_content(path)[0]['ok'], '1')
+
     def test_zip_descriptor_selects_payload_among_multiple_games(self):
         path = self.archive({'bundle/Name.anybor': b'[anybor]\npayload=Paks/game.pak\n[overrides]\nengine=6330\n',
                              'bundle/Paks/game.pak': self.pak.read_bytes(),

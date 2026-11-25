@@ -109,6 +109,11 @@ static int g_source_width = 320, g_source_height = 240;
 static float g_aspect = 4.0f / 3.0f;
 static unsigned g_max_width = 1920, g_max_height = 1080;
 static bool g_av_announced;
+static constexpr unsigned kNativeRefresh = 60;
+struct presentation_timing {
+    unsigned fps, requested, phase;
+};
+static presentation_timing g_presentation_timing = {kNativeRefresh, kNativeRefresh, 0};
 static void output_geometry(int width, int height, bool notify,
                             unsigned required_width = 0, unsigned required_height = 0,
                             float aspect = 0.0f);
@@ -621,7 +626,8 @@ static int build_from_sidecar(const char *pak_path)
 static obor_engine_identity g_zip_engine_identity;
 static bool g_zip_engine_scanned;
 #include "anybor_content_override.h"
-static obor_content_choice g_content_choice;
+/* Descriptor policy and content routing belong to the loaded session. */
+static obor_content_choice g_content_choice OBOR_RUNTIME;
 
 /* Choose the first automatic profile whose covered range reaches the
  * detected build. Explicit-only profiles never win a heuristic. */
@@ -652,11 +658,11 @@ struct engine_option_group {
     int first, last;
 };
 static const engine_option_group kEngineOptionGroups[] = {
-    { "anybor_engine_3000_3499", "Engine build 3000 -> 3499", 3000, 3499 },
-    { "anybor_engine_3500_3749", "Engine build 3500 -> 3749", 3500, 3749 },
-    { "anybor_engine_3750_3999", "Engine build 3750 -> 3999", 3750, 3999 },
-    { "anybor_engine_4000_4999", "Engine build 4000 -> 4999", 4000, 4999 },
-    { "anybor_engine_5000_plus", "Engine build > 5000", 5001, INT_MAX },
+    { "anybor_engine_3000_3499", "Engine Build 3000 -> 3499", 3000, 3499 },
+    { "anybor_engine_3500_3749", "Engine Build 3500 -> 3749", 3500, 3749 },
+    { "anybor_engine_3750_3999", "Engine Build 3750 -> 3999", 3750, 3999 },
+    { "anybor_engine_4000_4999", "Engine Build 4000 -> 4999", 4000, 4999 },
+    { "anybor_engine_5000_plus", "Engine Build > 5000", 5001, INT_MAX },
 };
 static const size_t n_engine_groups = sizeof(kEngineOptionGroups) / sizeof(kEngineOptionGroups[0]);
 
@@ -670,8 +676,9 @@ static bool engine_options_manual(void)
 static int g_engine_options_visible = -1;
 static int g_crt_options_visible = -1;
 
-static const char *const kCrtOversizeModes[] = {
-    "W:640 H:480", "W:Keep H:480", "W:320 H:240", "W:Keep H:240"
+static const char *const kCrtCanvasWidths[] = { "Keep Game Width", "320px", "512px", "640px" };
+static const char *const kCrtCanvasHeights[] = {
+    "Keep Game Height", "224px", "240px", "360px", "384px", "448px", "480px"
 };
 
 static bool update_engine_option_visibility(void)
@@ -713,7 +720,7 @@ static bool g_macros_on = true;
 static bool g_gamelog_on = false;
 struct video_options {
     bool crt, vertical;
-    enum obor_crt_oversize oversize;
+    int canvas_width, canvas_height;
     unsigned rotation;
 };
 static video_options g_video_options;
@@ -723,6 +730,15 @@ static const char *option_value(const char *key)
 {
     struct retro_variable var = { key, NULL };
     return env_cb && env_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value ? var.value : "";
+}
+
+template<size_t N>
+static int crt_canvas_extent(const char *key, const char *const (&values)[N], int fallback)
+{
+    const char *value = option_value(key);
+    for (const char *choice : values)
+        if (!strcmp(value, choice)) return atoi(choice);
+    return fallback;
 }
 
 static bool opt_is_on(const char *key, bool defval)
@@ -739,12 +755,16 @@ static bool update_option_visibility(void)
     if (!env_cb) return changed;
     bool visible = opt_is_on("anybor_crt_tv", false);
     if (g_crt_options_visible != (int)visible) {
-        struct retro_core_option_display oversize = { "anybor_crt_oversize_handling", visible };
-        struct retro_core_option_display orientation = { "anybor_os_screen_orientation", visible };
-        bool oversize_delivered = env_cb(RETRO_ENVIRONMENT_SET_CORE_OPTIONS_DISPLAY, &oversize);
-        bool orientation_delivered = env_cb(RETRO_ENVIRONMENT_SET_CORE_OPTIONS_DISPLAY, &orientation);
-        if (oversize_delivered && orientation_delivered) g_crt_options_visible = (int)visible;
-        changed = changed || oversize_delivered || orientation_delivered;
+        bool delivered = true;
+        const char *const keys[] = { "anybor_crt_oversize_canvas_width", "anybor_crt_oversize_canvas_height",
+                                     "anybor_os_screen_orientation" };
+        for (const char *key : keys) {
+            struct retro_core_option_display display = { key, visible };
+            bool accepted = env_cb(RETRO_ENVIRONMENT_SET_CORE_OPTIONS_DISPLAY, &display);
+            delivered = accepted && delivered;
+            changed = changed || accepted;
+        }
+        if (delivered) g_crt_options_visible = (int)visible;
     }
     return changed;
 }
@@ -791,12 +811,11 @@ static void refresh_options(void)
     g_gamelog_on = opt_is_on("anybor_gamelog", false);
     g_video_options.crt = opt_is_on("anybor_crt_tv", false);
     g_video_options.vertical = !strcmp(option_value("anybor_os_screen_orientation"), "Vertical");
-    const char *value = option_value("anybor_crt_oversize_handling");
-    g_video_options.oversize = OBOR_CRT_640_480;
-    for (unsigned i = 0; i < sizeof(kCrtOversizeModes) / sizeof(kCrtOversizeModes[0]); ++i)
-        if (!strcmp(value, kCrtOversizeModes[i]))
-            g_video_options.oversize = (enum obor_crt_oversize)i;
-    value = option_value("anybor_image_rotation");
+    g_video_options.canvas_width = crt_canvas_extent("anybor_crt_oversize_canvas_width",
+                                                     kCrtCanvasWidths, OBOR_CRT_DEFAULT_WIDTH);
+    g_video_options.canvas_height = crt_canvas_extent("anybor_crt_oversize_canvas_height",
+                                                      kCrtCanvasHeights, OBOR_CRT_DEFAULT_HEIGHT);
+    const char *value = option_value("anybor_image_rotation");
     g_video_options.rotation = !strcmp(value, "Left") ? OBOR_ROTATION_LEFT :
                                !strcmp(value, "Right") ? OBOR_ROTATION_RIGHT :
                                !strcmp(value, "Upside Down") ? OBOR_ROTATION_INVERTED : OBOR_ROTATION_NONE;
@@ -1064,6 +1083,9 @@ static void content_stop(bool preserve_geometry = false)
         g_max_width = 1920;
         g_max_height = 1080;
         g_av_announced = false;
+        g_presentation_timing = {kNativeRefresh, kNativeRefresh, 0};
+    } else {
+        g_presentation_timing.requested = 0;
     }
 }
 
@@ -1249,7 +1271,7 @@ static void present_error_frame(void)
 /* ------------------------------------------------------------ libretro --- */
 
 #define ENGINE_OPT_INFO \
-    "Automatic engine selection detects the engine from the file when On " \
+    "Automatic Engine Selection detects the engine from the file when On " \
     "(verified engine executable, filename build range or tag, sidecar exe, bounded content scan). " \
     "Off shows the manual build ranges. On ignores all range selections. " \
     "A dash in every range uses automatic detection. If several ranges have a selection, " \
@@ -1276,24 +1298,30 @@ void retro_set_environment(retro_environment_t cb)
         };
         static struct retro_core_option_v2_definition defs[] = {
             { "anybor_crt_tv", "Adjust for 4:3 CRT TV", "Adjust for 4:3 CRT TV",
-              "Applies CRT size limits to the complete game image. "
-              "Fits oversized images into the selected CRT canvas with centered black margins. "
-              "Smaller images outside the CRT aspect tolerance receive native-pixel padding and are checked again. "
-              "The frontend controls the TV video mode.",
+              "Fits images that need more than 244 scanlines after native-pixel padding. "
+              "Centers oversized images in the selected CRT canvas. The frontend controls the TV video mode.",
               NULL, "video",
               { { "Off", NULL }, { "On", NULL }, { NULL, NULL } }, "Off" },
-            { "anybor_crt_oversize_handling", "CRT Oversize Handling", "CRT Oversize Handling",
-              "Selects the canvas for oversized images. The 480-line fit uses sharp bilinear and the "
-              "240-line fit uses area filtering. Keep preserves native samples along the width. "
-              "A vertical CRT canvas swaps the fixed and preserved axes. Use the core's aspect ratio.",
+            { "anybor_crt_oversize_canvas_width", "CRT Oversize Canvas Width", "CRT Oversize Canvas Width",
+              "Sets the horizontal canvas extent for oversized images. Keep Game Width preserves native "
+              "samples along that axis and allows black margins. The axes follow CRT orientation.",
               NULL, "video",
-              { { kCrtOversizeModes[0], NULL }, { kCrtOversizeModes[1], NULL },
-                { kCrtOversizeModes[2], NULL }, { kCrtOversizeModes[3], NULL }, { NULL, NULL } },
-              kCrtOversizeModes[0] },
+              { { kCrtCanvasWidths[0], NULL }, { kCrtCanvasWidths[1], NULL },
+                { kCrtCanvasWidths[2], NULL }, { kCrtCanvasWidths[3], NULL }, { NULL, NULL } },
+              kCrtCanvasWidths[0] },
+            { "anybor_crt_oversize_canvas_height", "CRT Oversize Canvas Height", "CRT Oversize Canvas Height",
+              "Sets the vertical canvas extent for oversized images. Keep Game Height preserves native "
+              "samples along that axis and allows black margins. The axes follow CRT orientation.",
+              NULL, "video",
+              { { kCrtCanvasHeights[0], NULL }, { kCrtCanvasHeights[1], NULL },
+                { kCrtCanvasHeights[2], NULL }, { kCrtCanvasHeights[3], NULL },
+                { kCrtCanvasHeights[4], NULL }, { kCrtCanvasHeights[5], NULL },
+                { kCrtCanvasHeights[6], NULL }, { NULL, NULL } },
+              kCrtCanvasHeights[5] },
             { "anybor_os_screen_orientation", "OS Screen Orientation", "OS Screen Orientation",
               "Match the screen orientation already set in the operating system. This option only selects "
               "the axes for CRT fitting. The operating system controls its own rotation. Vertical swaps "
-              "the 364x244 limits and canvas axes. Left or Right Image Rotation swaps them again.",
+              "the scanline and canvas axes. Left or Right Image Rotation swaps them again.",
               NULL, "video",
               { { "Horizontal", NULL }, { "Vertical", NULL }, { NULL, NULL } }, "Horizontal" },
             { "anybor_image_rotation", "Image Rotation", "Image Rotation",
@@ -1301,8 +1329,8 @@ void retro_set_environment(retro_environment_t cb)
               NULL, "video",
               { { "None", NULL }, { "Left", NULL }, { "Right", NULL }, { "Upside Down", NULL },
                 { NULL, NULL } }, "None" },
-            { "anybor_analog", "Left analog stick as D-pad",
-              "Left analog stick as D-pad",
+            { "anybor_analog", "Left Analog Stick as D-Pad",
+              "Left Analog Stick as D-Pad",
               "Move with the left stick in addition to the D-pad.",
               NULL, "input",
               { { "On", NULL }, { "Off", NULL }, { NULL, NULL } }, "On" },
@@ -1311,18 +1339,18 @@ void retro_set_environment(retro_environment_t cb)
               "Enable controller vibration for game effects.",
               NULL, "input",
               { { "On", NULL }, { "Off", NULL }, { NULL, NULL } }, "On" },
-            { "anybor_macros", "Special move macros (L2/R2/L3/R3)",
-              "Special move macros (L2/R2/L3/R3)",
+            { "anybor_macros", "Special Move Macros (L2/R2/L3/R3)",
+              "Special Move Macros (L2/R2/L3/R3)",
               "Bind the active character's special-move sequences (from the "
               "game's own movelist) to the free shoulder/stick buttons. "
               "Pressing one performs the full input sequence.",
               NULL, "input",
               { { "On", NULL }, { "Off", NULL }, { NULL, NULL } }, "On" },
-            { "anybor_engine", "Automatic engine selection", "Automatic engine selection",
+            { "anybor_engine", "Automatic Engine Selection", "Automatic Engine Selection",
               ENGINE_OPT_INFO, NULL, "system",
               { { "On", NULL }, { "Off", NULL }, { NULL, NULL } },
               "On" },
-            { "anybor_state_content", "Save state content", "Save state content",
+            { "anybor_state_content", "Save State Content", "Save State Content",
               "Smart reconstructs resources whose bytes can be reproduced exactly. "
               "Full stores complete engine memory. Changes apply when content is loaded. "
               "Smart is the default on every platform. Full with compression Off may "
@@ -1330,7 +1358,7 @@ void retro_set_environment(retro_environment_t cb)
               NULL, "system",
               { { "Smart", NULL }, { "Full", NULL }, { NULL, NULL } },
               OBOR_STATE_CONTENT_DEFAULT },
-            { "anybor_state_compression", "Save state compression", "Save state compression",
+            { "anybor_state_compression", "Save State Compression", "Save State Compression",
               "On reduces state size. Off avoids compression work and can require "
               "more rewind memory; unchanged blocks remain reusable. Changes apply "
               "when content is loaded. On is the default on every platform. Full "
@@ -1338,23 +1366,23 @@ void retro_set_environment(retro_environment_t cb)
               NULL, "system",
               { { "On", NULL }, { "Off", NULL }, { NULL, NULL } },
               OBOR_STATE_COMPRESSION_DEFAULT },
-            { "anybor_gamelog", "Forward game log",
-              "Forward game log",
+            { "anybor_gamelog", "Forward Game Log",
+              "Forward Game Log",
               "Mirror the game's OpenBorLog into the frontend log "
               "(useful to debug mods).",
               NULL, "system",
               { { "Off", NULL }, { "On", NULL }, { NULL, NULL } }, "Off" },
-            { "anybor_clear_local_data", "Clear current game saved data on load", NULL,
+            { "anybor_clear_local_data", "Clear Current Game Saved Data on Load", NULL,
               "Deletes everything in this game's folder under AnyBOR before it loads, "
               "so the next run behaves like the first on this machine. Includes saved "
               "data from all engine builds. Other games and frontend save states are unaffected.", NULL, "development",
               { { "Off", NULL }, { "On", NULL }, { NULL, NULL } }, "Off" },
-            { "anybor_clear_game_cache", "Clear current game cache on unload", NULL,
+            { "anybor_clear_game_cache", "Clear Current Game Cache on Unload", NULL,
               "Deletes the cache directories used by the current game after unloading it "
               "or closing the core. The next load rebuilds them. Saved game data is unaffected.",
               NULL, "development",
               { { "On", NULL }, { "Off", NULL }, { NULL, NULL } }, "On" },
-            { "anybor_clear_all_caches", "Clear all game caches on load", NULL,
+            { "anybor_clear_all_caches", "Clear All Game Caches on Load", NULL,
               "Deletes all contents of AnyBOR-cache before loading a game or generating its "
               "cache. Every load starts with an empty cache while this is On. Saved game "
               "data is unaffected.", NULL, "development",
@@ -1409,24 +1437,25 @@ void retro_set_environment(retro_environment_t cb)
     }
     static const struct retro_variable vars[] = {
         { "anybor_crt_tv", "Adjust for 4:3 CRT TV; Off|On" },
-        { "anybor_crt_oversize_handling", "CRT Oversize Handling; W:640 H:480|W:Keep H:480|W:320 H:240|W:Keep H:240" },
+        { "anybor_crt_oversize_canvas_width", "CRT Oversize Canvas Width; Keep Game Width|320px|512px|640px" },
+        { "anybor_crt_oversize_canvas_height", "CRT Oversize Canvas Height; 448px|Keep Game Height|224px|240px|360px|384px|480px" },
         { "anybor_os_screen_orientation", "OS Screen Orientation; Horizontal|Vertical" },
         { "anybor_image_rotation", "Image Rotation; None|Left|Right|Upside Down" },
-        { "anybor_analog", "Left analog stick as D-pad; On|Off" },
+        { "anybor_analog", "Left Analog Stick as D-Pad; On|Off" },
         { "anybor_rumble", "Rumble; On|Off" },
-        { "anybor_macros", "Special move macros (L2/R2/L3/R3); On|Off" },
-        { "anybor_engine", "Automatic engine selection; On|Off" },
+        { "anybor_macros", "Special Move Macros (L2/R2/L3/R3); On|Off" },
+        { "anybor_engine", "Automatic Engine Selection; On|Off" },
         { kEngineOptionGroups[0].key, values[0] },
         { kEngineOptionGroups[1].key, values[1] },
         { kEngineOptionGroups[2].key, values[2] },
         { kEngineOptionGroups[3].key, values[3] },
         { kEngineOptionGroups[4].key, values[4] },
-        { "anybor_state_content", "Save state content; " OBOR_STATE_CONTENT_VALUES },
-        { "anybor_state_compression", "Save state compression; " OBOR_STATE_COMPRESSION_VALUES },
-        { "anybor_gamelog", "Forward game log; Off|On" },
-        { "anybor_clear_local_data", "Clear current game saved data on load; Off|On" },
-        { "anybor_clear_game_cache", "Clear current game cache on unload; On|Off" },
-        { "anybor_clear_all_caches", "Clear all game caches on load; On|Off" },
+        { "anybor_state_content", "Save State Content; " OBOR_STATE_CONTENT_VALUES },
+        { "anybor_state_compression", "Save State Compression; " OBOR_STATE_COMPRESSION_VALUES },
+        { "anybor_gamelog", "Forward Game Log; Off|On" },
+        { "anybor_clear_local_data", "Clear Current Game Saved Data on Load; Off|On" },
+        { "anybor_clear_game_cache", "Clear Current Game Cache on Unload; On|Off" },
+        { "anybor_clear_all_caches", "Clear All Game Caches on Load; On|Off" },
         { NULL, NULL },
     };
     cb(RETRO_ENVIRONMENT_SET_VARIABLES, (void *)vars);
@@ -1483,7 +1512,7 @@ static void system_av_info(struct retro_system_av_info *info)
     info->geometry.max_width = g_max_width;
     info->geometry.max_height = g_max_height;
     info->geometry.aspect_ratio = g_aspect;
-    info->timing.fps = 60.0;
+    info->timing.fps = g_presentation_timing.fps;
     info->timing.sample_rate = 44100.0;
 }
 
@@ -1491,6 +1520,34 @@ void retro_get_system_av_info(struct retro_system_av_info *info)
 {
     system_av_info(info);
     g_av_announced = true;
+}
+
+/* A frontend can decline a new refresh. Continue pacing at its last accepted
+ * rate and retry only when the requested rate changes or the content resets. */
+static void update_presentation_timing(unsigned fps)
+{
+    auto &timing = g_presentation_timing;
+    if (fps == timing.requested) return;
+    timing.requested = fps;
+    if (fps == timing.fps) return;
+
+    struct retro_system_av_info av;
+    system_av_info(&av);
+    av.timing.fps = fps;
+    if (g_av_announced && !env_cb(RETRO_ENVIRONMENT_SET_SYSTEM_AV_INFO, &av)) return;
+    timing.fps = fps;
+    timing.phase = fps > kNativeRefresh ? fps - kNativeRefresh : 0;
+}
+
+/* Keep simulation and mixing on their original deterministic 60 Hz clock. */
+static unsigned presentation_ticks(bool rewinding)
+{
+    auto &timing = g_presentation_timing;
+    if (rewinding) return 1;
+    timing.phase += kNativeRefresh;
+    unsigned ticks = timing.phase / timing.fps;
+    timing.phase %= timing.fps;
+    return ticks;
 }
 
 /* Allocation bounds belong to the current frontend, not to a saved frame.
@@ -1540,7 +1597,9 @@ static video_presentation video_geometry(int width, int height, bool notify)
     request_frontend_rotation(paired_rotation);
 
     bool vertical = options.vertical != ((rotation & 1u) != 0);
-    obor_crt_frame canvas = options.crt ? obor_crt_layout(width, height, vertical, options.oversize) :
+    obor_crt_frame canvas = options.crt ?
+        obor_crt_layout(width, height, vertical, options.canvas_width, options.canvas_height,
+                        g_content_choice.crt_mode) :
         obor_crt_frame{width, height, width, height, 1, 0, 0.0f};
     unsigned software_rotation = (rotation + 4u - g_frontend_rotation) & 3u;
     bool swap_axes = (software_rotation & 1u) != 0;
@@ -1556,7 +1615,8 @@ static video_presentation video_geometry(int width, int height, bool notify)
      * path's reservation so enabling it can reuse the existing buffer. */
     unsigned reserve_width = 0, reserve_height = 0;
     if (!options.crt) {
-        obor_crt_frame fallback = obor_crt_layout(width, height, false, OBOR_CRT_640_480);
+        obor_crt_frame fallback = obor_crt_layout(width, height, vertical,
+            options.canvas_width, options.canvas_height, g_content_choice.crt_mode);
         reserve_width = (unsigned)(swap_axes ? fallback.height : fallback.width);
         reserve_height = (unsigned)(swap_axes ? fallback.width : fallback.height);
     }
@@ -1946,41 +2006,13 @@ static bool present_audio_frame(const int16_t *samples, int32_t frames,
     return true;
 }
 
-void retro_run(void)
+static bool run_game_tick(bool frontend_rewind, bool deliver_video)
 {
-    /* Current delivered audio, captured with the ordinary module globals.
-     * This replaces the previous static mixing buffer, not a separate history.
-     * Explicit reverse presentation can replay it without advancing the mixer. */
+    /* Current delivered audio is captured with the ordinary module globals
+     * so reverse presentation can replay it without advancing the mixer. */
     static struct { int16_t samples[2048 * 2]; int32_t frames; } audio_frame;
-    if (g_loading) {
-        loading_run();
-        return;
-    }
-    if (g_error_active) {
-        if (g_fault_pending) {
-            char reason[sizeof(g_error_reason)];
-            snprintf(reason, sizeof(reason), "%s", g_error_reason);
-            g_fault_pending = false;
-            stop_faulted_engine();
-            error_screen(reason);
-        }
-        bool upd = false;
-        if (env_cb(RETRO_ENVIRONMENT_GET_VARIABLE_UPDATE, &upd) && upd)
-            refresh_options();
-        if (input_poll_cb) input_poll_cb();
-        present_error_frame();
-        return;
-    }
-    if (!g_booted)
-        return;
-
-    obor_profile_init();
     obor_latency_run_scope latency_scope(&g_frame_no);
     uint64_t profile_begin = obor_profile_now();
-
-    bool upd = false;
-    if (env_cb(RETRO_ENVIRONMENT_GET_VARIABLE_UPDATE, &upd) && upd)
-        refresh_options();
 
     ginput_init();
     trace_init();
@@ -2001,10 +2033,6 @@ void retro_run(void)
      * frontends without throttle reporting keep the normal forward path.
      * Before that first restore, allow an already active preload to finish:
      * its safety guard may temporarily defer every restore callback. */
-    struct retro_throttle_state throttle = {};
-    bool frontend_rewind = p_startup_complete() &&
-                         env_cb(RETRO_ENVIRONMENT_GET_THROTTLE_STATE, &throttle) &&
-                         throttle.mode == RETRO_THROTTLE_REWINDING;
     if (!frontend_rewind) g_reverse_has_snapshot = false;
     bool rewind_replay = frontend_rewind && g_reverse_has_snapshot;
     bool present_restored = rewind_replay &&
@@ -2078,7 +2106,7 @@ void retro_run(void)
         } else {
             env_cb(RETRO_ENVIRONMENT_SHUTDOWN, NULL);
         }
-        return;
+        return false;
     }
     uint64_t profile_core_end = obor_profile_now();
 
@@ -2094,7 +2122,7 @@ void retro_run(void)
 
     const uint32_t *px = NULL;
     int32_t w = 0, h = 0, pitch = 0;
-    p_get_video(&px, &w, &h, &pitch);
+    if (deliver_video) p_get_video(&px, &w, &h, &pitch);
     const char *callback_profile = getenv("OBOR_PROFILE_CALLBACKS");
     bool profile_callbacks = g_profile.file && callback_profile &&
                              !strcmp(callback_profile, "1");
@@ -2120,13 +2148,15 @@ void retro_run(void)
         }
     }
     if (audio_first && !present_audio_frame(audio_frame.samples, audio_frame.frames,
-                                           profile_callbacks)) return;
-    uint64_t video_begin = profile_callbacks ? obor_profile_now() : 0;
-    bool presented = present_video(px, w, h, pitch);
-    if (profile_callbacks)
-        obor_profile_record("video", g_frame_no, video_begin, obor_profile_now(),
-                            0, 0, 0, presented, 0);
-    if (!presented) return;
+                                           profile_callbacks)) return false;
+    if (deliver_video) {
+        uint64_t video_begin = profile_callbacks ? obor_profile_now() : 0;
+        bool presented = present_video(px, w, h, pitch);
+        if (profile_callbacks)
+            obor_profile_record("video", g_frame_no, video_begin, obor_profile_now(),
+                                0, 0, 0, presented, 0);
+        if (!presented) return false;
+    }
     if (px && w > 0 && h > 0) {
         free(g_loading_pixels);
         g_loading_pixels = NULL;
@@ -2136,7 +2166,7 @@ void retro_run(void)
         audio_frame.frames = p_get_audio(audio_frame.samples, 2048);
     int32_t frames = audio_frame.frames;
     if (!audio_first && !present_audio_frame(audio_frame.samples, frames,
-                                            profile_callbacks)) return;
+                                            profile_callbacks)) return false;
     if (present_restored && getenv("OBOR_STATE_TIMING"))
         fprintf(stderr, "[obor-reverse] frame=%ld present_snapshot=1 audio_frames=%d\n",
                 g_frame_no, frames);
@@ -2153,6 +2183,59 @@ void retro_run(void)
     }
     obor_profile_record("run", g_frame_no, profile_begin, profile_core_end,
                         0, 0, 0, 1, active_players);
+    return true;
+}
+
+void retro_run(void)
+{
+    if (g_loading) {
+        loading_run();
+        return;
+    }
+
+    bool upd = false;
+    if ((g_booted || g_error_active) && env_cb(RETRO_ENVIRONMENT_GET_VARIABLE_UPDATE, &upd) && upd)
+        refresh_options();
+    if (g_error_active) {
+        if (g_fault_pending) {
+            char reason[sizeof(g_error_reason)];
+            snprintf(reason, sizeof(reason), "%s", g_error_reason);
+            g_fault_pending = false;
+            stop_faulted_engine();
+            error_screen(reason);
+        }
+        update_presentation_timing(kNativeRefresh);
+        if (input_poll_cb) input_poll_cb();
+        present_error_frame();
+        return;
+    }
+    if (!g_booted) return;
+
+    obor_profile_init();
+    const auto &mode = g_content_choice.crt_mode;
+    update_presentation_timing(g_video_options.crt && mode.declared && mode.hz ?
+                              (unsigned)mode.hz : kNativeRefresh);
+
+    struct retro_throttle_state throttle = {};
+    bool frontend_rewind = p_startup_complete() &&
+                         env_cb(RETRO_ENVIRONMENT_GET_THROTTLE_STATE, &throttle) &&
+                         throttle.mode == RETRO_THROTTLE_REWINDING;
+    unsigned ticks = presentation_ticks(frontend_rewind);
+    if (!ticks) {
+        input_poll_cb();
+        bool can_dupe = false;
+        if (env_cb(RETRO_ENVIRONMENT_GET_CAN_DUPE, &can_dupe) && can_dupe) {
+            video_cb(NULL, (unsigned)g_width, (unsigned)g_height, 0);
+        } else {
+            const uint32_t *pixels;
+            int32_t width, height, pitch;
+            p_get_video(&pixels, &width, &height, &pitch);
+            present_video(pixels, width, height, pitch);
+        }
+        return;
+    }
+    for (unsigned tick = 0; tick < ticks; ++tick)
+        if (!run_game_tick(frontend_rewind, tick + 1 == ticks)) break;
 }
 
 /* ---- single-file core machinery -------------------------------------
@@ -2188,6 +2271,7 @@ typedef struct {
     float aspect;
     unsigned max_width, max_height;
     bool av_announced;
+    presentation_timing timing;
     video_buffer crt_buffer, rotation_buffer;
     video_options presentation_options;
     unsigned requested_rotation, frontend_rotation;
@@ -2230,6 +2314,7 @@ static void glue_save(glue_regs *r)
     r->aspect = g_aspect;
     r->max_width = g_max_width; r->max_height = g_max_height;
     r->av_announced = g_av_announced;
+    r->timing = g_presentation_timing;
     r->crt_buffer = g_crt_buffer; r->rotation_buffer = g_rotation_buffer;
     r->presentation_options = g_video_options;
     r->requested_rotation = g_requested_rotation; r->frontend_rotation = g_frontend_rotation;
@@ -2274,6 +2359,7 @@ static void glue_load(const glue_regs *r)
     g_aspect = r->aspect;
     g_max_width = r->max_width; g_max_height = r->max_height;
     g_av_announced = r->av_announced;
+    g_presentation_timing = r->timing;
     g_crt_buffer = r->crt_buffer; g_rotation_buffer = r->rotation_buffer;
     g_video_options = r->presentation_options;
     g_requested_rotation = r->requested_rotation; g_frontend_rotation = r->frontend_rotation;
@@ -3006,6 +3092,7 @@ static bool load_game(const struct retro_game_info *info, bool retry, bool prepa
     }
 
     char routed[4096];
+    g_content_choice.crt_mode = {};
     if (!obor_content_loose(g_pak_path, routed, sizeof(routed), g_content_choice)) {
         error_reason("Invalid, ambiguous or unavailable .anybor content descriptor.");
         return false;
@@ -3397,6 +3484,7 @@ static bool loading_begin(const struct retro_game_info *info, bool retry)
             error_reason("Invalid .anybor descriptor or unavailable payload.");
             return false;
         }
+        g_content_choice.crt_mode = descriptor.crt_mode;
         snprintf(path, sizeof(path), "%s", target);
     }
     /* Unpacked mods retain their original synchronous setup and namespace;

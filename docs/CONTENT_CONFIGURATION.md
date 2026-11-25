@@ -136,6 +136,38 @@ uses its payload's save namespace, whether the payload is a PAK or ZIP.
 ZIPs retain the namespace of the original ZIP; descriptor names do not create separate save
 namespaces.
 
+## Declared CRT mode
+
+A descriptor can request a CRT canvas and refresh in its `[overrides]` section.
+
+```ini
+[anybor]
+payload = Paks/content.pak
+
+[overrides]
+?crt crtmode|256|192|60
+```
+
+The directive applies while **Adjust for 4:3 CRT TV** is on. Numeric width is
+16 to 640, height 16 to 480, and refresh 2 to 300 Hz. The numbers are integers.
+The core centres the native image at its original pixel size in the declared
+canvas before applying **Image Rotation**. If the image exceeds a fixed
+dimension, normal CRT sizing applies at the declared refresh.
+
+```ini
+?crt crtmode|window_w|window_h|60
+?crt crtmode|256|192|window_fps
+```
+
+Each example is a separate declaration. `window_w` and `window_h` follow the
+current game raster before CRT fitting and rotation. `window_fps` follows
+AnyBOR's normal 60 Hz output. A fixed refresh changes presentation cadence.
+The core keeps the same game clock and audio sample rate. The frontend can
+decline the requested refresh and controls physical display timings.
+
+Use one CRT declaration per descriptor. An external descriptor for a ZIP can
+override the CRT declaration in the ZIP's own descriptor.
+
 ## Descriptor controls and labels
 
 `[controls]` maps the core's logical source actions to engine actions for this

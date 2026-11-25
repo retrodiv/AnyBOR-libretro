@@ -14,9 +14,14 @@ enum obor_image_rotation {
     OBOR_ROTATION_NONE, OBOR_ROTATION_LEFT, OBOR_ROTATION_INVERTED, OBOR_ROTATION_RIGHT
 };
 
-enum obor_crt_oversize {
-    OBOR_CRT_640_480, OBOR_CRT_KEEP_480, OBOR_CRT_320_240, OBOR_CRT_KEEP_240
-};
+#define OBOR_CRT_KEEP 0
+#define OBOR_CRT_DEFAULT_WIDTH OBOR_CRT_KEEP
+#define OBOR_CRT_DEFAULT_HEIGHT 448
+
+typedef struct obor_crt_mode {
+    int declared;
+    int width, height, hz; /* Zero follows the corresponding source value. */
+} obor_crt_mode;
 
 typedef struct obor_crt_frame {
     int width, height;             /* Canvas before rotation. */
@@ -26,66 +31,99 @@ typedef struct obor_crt_frame {
     float aspect;                 /* Display aspect before rotation. */
 } obor_crt_frame;
 
-static void obor_crt_fit(obor_crt_frame *frame, int width, int height)
+static int obor_crt_prescale(const obor_crt_frame *frame, int width, int height)
 {
-    if (width * frame->height >= height * frame->width) {
-        frame->image_width = frame->width;
-        frame->image_height = height * frame->width / width;
-        frame->prescale = (frame->width + width - 1) / width;
-    } else {
-        frame->image_width = width * frame->height / height;
-        frame->image_height = frame->height;
-        frame->prescale = (frame->height + height - 1) / height;
-    }
+    int scale_w = (frame->image_width + width - 1) / width;
+    int scale_h = (frame->image_height + height - 1) / height;
+    return scale_w < scale_h ? scale_w : scale_h;
+}
+
+static void obor_crt_fit(obor_crt_frame *frame, int width, int height, int shape_w, int shape_h)
+{
+    int width_limited = shape_w * height;
+    int height_limited = shape_h * width;
+    if (width_limited <= height_limited)
+        frame->image_height = width_limited * frame->height / height_limited;
+    else
+        frame->image_width = height_limited * frame->width / width_limited;
     if (frame->image_width < 1) frame->image_width = 1;
     if (frame->image_height < 1) frame->image_height = 1;
 }
 
-/* Calculate fitting in game coordinates. Padding rounds up to whole pixels,
- * then both axes are checked again against the inclusive CRT limits. */
+static void obor_crt_keep_axis(obor_crt_frame *frame, int width, int height,
+                               int shape_w, int shape_h, int keep_width, int keep_both)
+{
+    int kept = keep_width ? width : height;
+    int other = keep_width ? height : width;
+    int kept_ratio = keep_width ? shape_w : shape_h;
+    int fixed_ratio = keep_width ? shape_h : shape_w;
+    int fixed = keep_both ? other : (keep_width ? frame->height : frame->width);
+    int fitted = fixed;
+    int ideal = (other * kept_ratio + fixed_ratio - 1) / fixed_ratio;
+    if (kept >= ideal) {
+        ideal = kept;
+        if (!keep_both) {
+            fitted = fixed * kept_ratio * other / (kept * fixed_ratio);
+            if (fitted < 1) fitted = 1;
+        }
+    }
+    int extent = ideal > OBOR_CRT_MAX_EXTENT ? OBOR_CRT_MAX_EXTENT : ideal;
+    frame->width = keep_width ? extent : fixed;
+    frame->height = keep_width ? fixed : extent;
+    frame->image_width = keep_width ? kept : fitted;
+    frame->image_height = keep_width ? fitted : kept;
+    /* Account for bars that exceed the maximum physical buffer extent. */
+    frame->aspect = keep_width ? (float)(shape_w * extent) / (shape_h * ideal) :
+                                (float)(shape_w * ideal) / (shape_h * extent);
+}
+
+/* A declared mode and the automatic scanline limit are resolved in source
+ * coordinates. The orientation only swaps the automatic canvas axes. */
 static obor_crt_frame obor_crt_layout(int width, int height, int vertical,
-                                     enum obor_crt_oversize mode)
+                                      int canvas_width, int canvas_height,
+                                      obor_crt_mode mode)
 {
     obor_crt_frame frame = { width, height, width, height, 1, 0, 0.0f };
     if (width <= 0 || height <= 0 || width > OBOR_CRT_MAX_EXTENT || height > OBOR_CRT_MAX_EXTENT)
         return frame;
-    int limit_w = vertical ? 244 : 364, limit_h = vertical ? 364 : 244;
-    int shape_w = vertical ? 3 : 4, shape_h = vertical ? 4 : 3;
-    if (width <= limit_w && height <= limit_h) {
-        int horizontal = width * shape_h, vertical_extent = height * shape_w;
-        if (horizontal * 10 < vertical_extent * 9 || horizontal * 10 > vertical_extent * 11) {
-            if (horizontal > vertical_extent)
-                frame.height = (horizontal + shape_w - 1) / shape_w;
-            else
-                frame.width = (vertical_extent + shape_h - 1) / shape_h;
-        }
-        if (frame.width <= limit_w && frame.height <= limit_h)
-            return frame;
+
+    int mode_width = mode.width ? mode.width : width;
+    int mode_height = mode.height ? mode.height : height;
+    if (mode.declared && width <= mode_width && height <= mode_height) {
+        frame.width = mode_width;
+        frame.height = mode_height;
+        return frame;
     }
 
-    frame.area_filter = mode == OBOR_CRT_320_240 || mode == OBOR_CRT_KEEP_240;
-    int scale = frame.area_filter ? 80 : 160;
-    if (mode == OBOR_CRT_KEEP_480 || mode == OBOR_CRT_KEEP_240) {
-        int kept = vertical ? height : width, other = vertical ? width : height;
-        int fixed = 3 * scale, fitted = fixed, ideal = (other * 4 + 2) / 3;
-        if (kept >= ideal) {
-            ideal = kept;
-            fitted = 4 * scale * other / kept;
-            if (fitted < 1) fitted = 1;
-        }
-        int extent = ideal > OBOR_CRT_MAX_EXTENT ? OBOR_CRT_MAX_EXTENT : ideal;
-        frame.width = vertical ? fixed : extent;
-        frame.height = vertical ? extent : fixed;
-        frame.image_width = vertical ? fitted : kept;
-        frame.image_height = vertical ? kept : fitted;
-        /* The frontend supplies the remaining bars if the ideal extent exceeds the cap. */
-        float aspect = (4.0f * extent) / (3.0f * ideal);
-        frame.aspect = vertical ? 1.0f / aspect : aspect;
-    } else {
-        frame.width = shape_w * scale;
-        frame.height = shape_h * scale;
-        obor_crt_fit(&frame, width, height);
+    int shape_w = vertical ? 3 : 4, shape_h = vertical ? 4 : 3;
+    int horizontal = width * shape_h, vertical_extent = height * shape_w;
+    if (horizontal * 10 < vertical_extent * 9 || horizontal * 10 > vertical_extent * 11) {
+        if (horizontal > vertical_extent)
+            frame.height = (horizontal + shape_w - 1) / shape_w;
+        else
+            frame.width = (vertical_extent + shape_h - 1) / shape_h;
     }
+    if ((vertical ? frame.width : frame.height) <= 244)
+        return frame;
+
+    frame.area_filter = canvas_height == 224 || canvas_height == 240 ||
+                        (canvas_height == OBOR_CRT_KEEP && canvas_width == 320);
+    frame.width = vertical ? canvas_height : canvas_width;
+    frame.height = vertical ? canvas_width : canvas_height;
+    int keep_width = frame.width == OBOR_CRT_KEEP;
+    int keep_height = frame.height == OBOR_CRT_KEEP;
+    if (keep_width || keep_height) {
+        int keep_both = keep_width && keep_height;
+        if (keep_both) keep_width = horizontal <= vertical_extent;
+        obor_crt_keep_axis(&frame, width, height, shape_w, shape_h, keep_width, keep_both);
+    } else {
+        frame.image_width = frame.width;
+        frame.image_height = frame.height;
+        frame.aspect = (float)shape_w / shape_h;
+        obor_crt_fit(&frame, width, height, shape_w, shape_h);
+    }
+
+    frame.prescale = obor_crt_prescale(&frame, width, height);
     return frame;
 }
 

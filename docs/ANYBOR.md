@@ -140,24 +140,25 @@ The macros account for the active character's facing direction.
 | Option | Key | Default and effect |
 |---|---|---|
 | Adjust for 4:3 CRT TV | `anybor_crt_tv` | **Off**. Fits the complete image to the CRT canvas. See [CRT presentation and image rotation](#crt-presentation-and-image-rotation). |
-| CRT Oversize Handling | `anybor_crt_oversize_handling` | **W:640 H:480**. Chooses how to fit images that exceed the CRT limits. |
+| CRT Oversize Canvas Width | `anybor_crt_oversize_canvas_width` | **Keep Game Width**, 320px, 512px, or 640px. |
+| CRT Oversize Canvas Height | `anybor_crt_oversize_canvas_height` | Keep Game Height, 224px, 240px, 360px, 384px, **448px**, or 480px. |
 | OS Screen Orientation | `anybor_os_screen_orientation` | **Horizontal**. Choose Horizontal for a system rotation of 0° or 180° and Vertical for 90° or 270°. |
 | Image Rotation | `anybor_image_rotation` | **None**. Left and Right rotate the complete game image by 90°. Upside Down rotates it by 180°. |
-| Left analog stick as D-pad | `anybor_analog` | **On**. Adds movement with the left stick. |
+| Left Analog Stick as D-Pad | `anybor_analog` | **On**. Adds movement with the left stick. |
 | Rumble | `anybor_rumble` | **On**. Enables controller vibration for game effects. |
-| Special move macros (L2/R2/L3/R3) | `anybor_macros` | **On**. Executes supported character move sequences. |
-| Automatic engine selection | `anybor_engine` | **On** detects the engine from the file, hides the manual ranges and ignores their selections. Off shows the manual ranges. Changes apply on Restart. |
-| Engine build 3000 -> 3499 | `anybor_engine_3000_3499` | **-**. Select a profile in this range. |
-| Engine build 3500 -> 3749 | `anybor_engine_3500_3749` | **-**. Select a profile in this range. |
-| Engine build 3750 -> 3999 | `anybor_engine_3750_3999` | **-**. Select a profile in this range. |
-| Engine build 4000 -> 4999 | `anybor_engine_4000_4999` | **-**. Select a profile in this range. |
-| Engine build > 5000 | `anybor_engine_5000_plus` | **-**. Select a profile in this range. With automatic selection Off, the last range with a selection in this table takes priority. A dash in every range uses automatic selection. |
-| Save state content | `anybor_state_content` | **Smart** reconstructs resources after an exact byte proof. **Full** retains complete engine memory. Applies when content is loaded. |
-| Save state compression | `anybor_state_compression` | **On** compresses state blocks. **Off** leaves changed blocks uncompressed while retaining reuse of unchanged blocks. Applies when content is loaded. |
-| Forward game log | `anybor_gamelog` | **Off**. Mirrors the engine log into the frontend log. |
-| Clear current game saved data on load | `anybor_clear_local_data` | **Off**. In Development. Deletes the current game's entire `AnyBOR/<game>/` folder before loading, across all engine builds. |
-| Clear current game cache on unload | `anybor_clear_game_cache` | **On**. In Development. Deletes the cache directories used by this game after unloading or closing the core. The next load rebuilds them; saved data is unaffected. |
-| Clear all game caches on load | `anybor_clear_all_caches` | **On**. In Development. Empties `AnyBOR-cache/` before each load and before generating new cache files; saved data is unaffected. |
+| Special Move Macros (L2/R2/L3/R3) | `anybor_macros` | **On**. Executes supported character move sequences. |
+| Automatic Engine Selection | `anybor_engine` | **On** detects the engine from the file, hides the manual ranges and ignores their selections. Off shows the manual ranges. Changes apply on Restart. |
+| Engine Build 3000 -> 3499 | `anybor_engine_3000_3499` | **-**. Select a profile in this range. |
+| Engine Build 3500 -> 3749 | `anybor_engine_3500_3749` | **-**. Select a profile in this range. |
+| Engine Build 3750 -> 3999 | `anybor_engine_3750_3999` | **-**. Select a profile in this range. |
+| Engine Build 4000 -> 4999 | `anybor_engine_4000_4999` | **-**. Select a profile in this range. |
+| Engine Build > 5000 | `anybor_engine_5000_plus` | **-**. Select a profile in this range. With automatic selection Off, the last range with a selection in this table takes priority. A dash in every range uses automatic selection. |
+| Save State Content | `anybor_state_content` | **Smart** reconstructs resources after an exact byte proof. **Full** retains complete engine memory. Applies when content is loaded. |
+| Save State Compression | `anybor_state_compression` | **On** compresses state blocks. **Off** leaves changed blocks uncompressed while retaining reuse of unchanged blocks. Applies when content is loaded. |
+| Forward Game Log | `anybor_gamelog` | **Off**. Mirrors the engine log into the frontend log. |
+| Clear Current Game Saved Data on Load | `anybor_clear_local_data` | **Off**. In Development. Deletes the current game's entire `AnyBOR/<game>/` folder before loading, across all engine builds. |
+| Clear Current Game Cache on Unload | `anybor_clear_game_cache` | **On**. In Development. Deletes the cache directories used by this game after unloading or closing the core. The next load rebuilds them; saved data is unaffected. |
+| Clear All Game Caches on Load | `anybor_clear_all_caches` | **On**. In Development. Empties `AnyBOR-cache/` before each load and before generating new cache files; saved data is unaffected. |
 
 See [save states and rewind](#save-states-and-rewind) for transport and compatibility.
 
@@ -274,78 +275,50 @@ that profile. It uses 32-bit color and ignores `colourdepth`.
 ### CRT presentation and image rotation
 
 The Video options apply to the completed game frame, including its interface.
-**Adjust for 4:3 CRT TV** exposes **CRT Oversize Handling** and
-**OS Screen Orientation**. The OS setting supplies the CRT axes and the
-system sets its own rotation angle. **Image Rotation** applies with CRT
-adjustment on or off. Left and Right swap the CRT axes before fitting.
+**Adjust for 4:3 CRT TV** exposes both oversize canvas options and
+**OS Screen Orientation**. **Image Rotation** applies with CRT adjustment on
+or off. Left and Right swap the CRT axes before fitting.
 
-| OS Screen Orientation | Image Rotation | Width × height limit in game coordinates | Canvas aspect |
+| OS Screen Orientation | Image Rotation | Axis with the 244-line limit in game coordinates | Canvas aspect |
 | --- | --- | --- | --- |
-| Horizontal | None or Upside Down | 364×244 | 4:3 |
-| Horizontal | Left or Right | 244×364 | 3:4 |
-| Vertical | None or Upside Down | 244×364 | 3:4 |
-| Vertical | Left or Right | 364×244 | 4:3 |
+| Horizontal | None or Upside Down | Height | 4:3 |
+| Horizontal | Left or Right | Width | 3:4 |
+| Vertical | None or Upside Down | Width | 3:4 |
+| Vertical | Left or Right | Height | 4:3 |
 
-Images within both inclusive limits and within ±10% of the canvas aspect
-keep their native dimensions and pixels. Other small images receive centred
-black padding on one axis to reach the canvas aspect. Fractional extents round
-up. The core then checks both limits again. If either dimension exceeds its
-limit, the oversize mode fits the complete original image to the canvas.
+The core keeps the original pixels. It adds centred black margins when the
+raster is outside ±10% of the canvas aspect, rounding fractional extents up.
+If the resulting raster needs more than 244 scanlines, the selected oversize
+canvas fits the complete original raster. For example, 320×180 pads to
+320×240, while 360×180 needs 270 lines and uses the oversize canvas.
+A [declared CRT mode](CONTENT_CONFIGURATION.md#declared-crt-mode) can supply
+its own native canvas.
 
-For example, 320x180 becomes 320x240 with 30 black rows above and below;
-320x200 becomes 320x240 with 20 rows on each side. A square 240x240 image
-becomes 320x240 with 40 black columns at each side. A 360x180 image would
-need 360x270, exceeding the height limit, so it instead becomes a 640x320
-image inside 640x480 with 80 black rows above and below. Likewise, 364x244
-requires padding and then a 640x480 frame. A 368x240 image becomes 640x417,
-while 320x256 becomes 600x480. Each dimension is checked independently.
-
-With CRT adjustment on and the default oversize, orientation and rotation settings:
-
-| Mode | Internal resolution | Original aspect | Output frame | Game image inside the frame | Black borders: top / bottom |
-|---|---|---|---|---|---|
-| 0 | 320x240 | 4:3 | 320x240 | 320x240 (native) | None |
-| 1 | 480x272 | Approximately 16:9 | 640x480 | 640x362 | 59 / 59 pixels |
-| 2 | 640x480 | 4:3 | 640x480 | 640x480 (identity scale) | None |
-| 3 | 720x480 | 3:2 | 640x480 | 640x426 | 27 / 27 pixels |
-| 4 | 800x480 | 5:3 | 640x480 | 640x384 | 48 / 48 pixels |
-| 5 | 800x600 | 4:3 | 640x480 | 640x480 | None |
-| 6 | 960x540 | 16:9 | 640x480 | 640x360 | 60 / 60 pixels |
-
-The following example uses a 1920×1080 raster, a horizontal screen and no image rotation.
-
-| CRT Oversize Handling | Frame sent to the frontend | Picture inside the frame | Black lines at the top and bottom |
-| --- | --- | --- | --- |
-| `W:640 H:480` | 640×480 | 640×360 | 60 each |
-| `W:Keep H:480` | 1920×480 | 1920×360 | 60 each |
-| `W:320 H:240` | 320×240 | 320×180 | 30 each |
-| `W:Keep H:240` | 1920×240 | 1920×180 | 30 each |
-
-The 480-line modes use sharp bilinear filtering. The 240-line modes use a
-weighted area filter. **Keep** preserves samples along the variable axis,
-which is the width of a horizontal canvas or the height of a vertical canvas
-in game coordinates. A narrow image can gain black samples along this axis.
-The reported aspect accounts for the canvas even when its sample dimensions
+The table uses a horizontal 1920×1080 raster. Independently selected canvas
+dimensions preserve the display aspect, including when the sample dimensions
 have different proportions.
 
-With **Vertical** and **None**, a 1080×1920 image in `W:Keep H:480` fits
-as 360×1920 within a 480×1920 canvas. If the frontend accepts a paired
-rotation request, the core sends that canvas as 1920×480 and the frontend
-compensates for the framebuffer turn. If the frontend declines, the core
-applies the selected **Image Rotation** in software with the same CRT limits.
-The frontend controls the physical CRT mode and refresh rate.
+| CRT Oversize Canvas Width | CRT Oversize Canvas Height | Output frame | Game image | Black lines above and below |
+| --- | --- | --- | --- | --- |
+| **Keep Game Width** | **448px** | 1920×448 | 1920×336 | 56 each |
+| 640px | 480px | 640×480 | 640×360 | 60 each |
+| 512px | 360px | 512×360 | 512×270 | 45 each |
+| 320px | 224px | 320×224 | 320×168 | 28 each |
+| Keep Game Width | Keep Game Height | 1920×1440 | 1920×1080 | 180 each |
 
-These examples use the default oversize mode and a frontend that accepts core rotation requests.
+The 224- and 240-line selections use a weighted area filter. With **Keep
+Game Height**, a 320px width also uses that filter. Other fits use sharp
+bilinear filtering. Each **Keep Game** setting preserves samples on its
+selected axis and allows black margins. Keeping both axes preserves every
+source pixel. When padding exceeds the maximum canvas extent, the reported
+display aspect accounts for the remaining bars.
 
-| Game raster | System rotation | OS Screen Orientation | Image Rotation | Canvas before rotation | Frame sent |
-| --- | --- | --- | --- | --- | --- |
-| 224×288 | None | Horizontal | None | 640×480, with a centered 373×480 picture | 640×480 |
-| 224×288 | Left | Vertical | None | Native 224×288 | 288×224 |
-| 224×288 | None | Horizontal | Left | Native 224×288 | 288×224 |
-| 224×288 | Left | Vertical | Right | 640×480, with a centered 373×480 picture | 640×480 |
-| 288×216 | None | Horizontal | None | Native 288×216 | 288×216 |
-| 288×216 | Left | Vertical | None | 480×640, with a centered 480×360 picture | 640×480 |
-| 288×216 | Left | Vertical | Right | Native 288×216 | 288×216 |
+A vertical CRT canvas swaps the selector axes in game coordinates. For a
+1080×1920 raster with **Vertical**, **None**, **Keep Game Width** and
+**480px**, the canvas is 480×1920 with a 360×1920 image. A frontend that
+accepts paired rotation receives a 1920×480 buffer and compensates for its
+turn. Other frontends receive the software-rotated frame. The frontend
+controls the physical CRT mode and refresh rate.
 
 Video options apply during play and persist across Restart and state restoration.
 Changing **OS Screen Orientation** changes the fit while preserving the chosen

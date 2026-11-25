@@ -64,6 +64,7 @@ def program(glue, header):
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <algorithm>
 #include <string>
 #include <vector>
 #include "libretro.h"
@@ -86,14 +87,15 @@ struct frontend_fixture {
     const retro_variable *retained_legacy;
     const char *selected, *option_value, *crt, *groups[5];
     std::vector<int> builds;
-    bool visible[5], oversize_visible, orientation_visible, display_supported;
+    bool visible[5], width_visible, height_visible, orientation_visible, display_supported;
     unsigned display_calls;
     bool (*update_display)(void);
 };
 static frontend_fixture *active;
 static unsigned registration_checks, selection_checks;
 static const char *const expected_keys[]={
-    "anybor_crt_tv","anybor_crt_oversize_handling","anybor_os_screen_orientation","anybor_image_rotation",
+    "anybor_crt_tv","anybor_crt_oversize_canvas_width",
+    "anybor_crt_oversize_canvas_height","anybor_os_screen_orientation","anybor_image_rotation",
     "anybor_analog","anybor_rumble","anybor_macros","anybor_engine",
     "anybor_engine_3000_3499","anybor_engine_3500_3749","anybor_engine_3750_3999",
     "anybor_engine_4000_4999","anybor_engine_5000_plus",
@@ -122,7 +124,7 @@ static int group_for(int build) {
     assert(!"unassigned profile");return -1;
 }
 static int group_key(const char *key) {
-    for (unsigned i=0;i<5;++i) if (!strcmp(key,expected_keys[8+i])) return (int)i;
+    for (unsigned i=0;i<5;++i) if (!strcmp(key,expected_keys[9+i])) return (int)i;
     return -1;
 }
 static void check_values(const option_snapshot &option) {
@@ -150,8 +152,10 @@ static void check_values(const option_snapshot &option) {
     }
     if (option.key=="anybor_state_content") assert(option.default_value==OBOR_STATE_CONTENT_DEFAULT);
     if (option.key=="anybor_state_compression") assert(option.default_value==OBOR_STATE_COMPRESSION_DEFAULT);
-    if (option.key=="anybor_crt_oversize_handling")
-        assert(option.values==std::vector<std::string>({"W:640 H:480","W:Keep H:480","W:320 H:240","W:Keep H:240"}));
+    if (option.key=="anybor_crt_oversize_canvas_width")
+        assert(option.values==std::vector<std::string>({"Keep Game Width","320px","512px","640px"}));
+    if (option.key=="anybor_crt_oversize_canvas_height")
+        assert(option.values==std::vector<std::string>({"448px","Keep Game Height","224px","240px","360px","384px","480px"}));
     if (option.key=="anybor_os_screen_orientation")
         assert(option.values==std::vector<std::string>({"Horizontal","Vertical"}));
     if (option.key=="anybor_image_rotation")
@@ -170,14 +174,21 @@ static void read_v2(const retro_core_options_v2 *options) {
         for (;i<RETRO_NUM_CORE_OPTION_VALUES_MAX && def->values[i].value;++i)
             option.values.push_back(def->values[i].value);
         assert(i<RETRO_NUM_CORE_OPTION_VALUES_MAX && !def->values[i].label);
+        if (option.key=="anybor_crt_oversize_canvas_height") {
+            assert(!strcmp(def->desc,"CRT Oversize Canvas Height"));
+            assert(option.values==std::vector<std::string>({"Keep Game Height","224px","240px","360px","384px","448px","480px"}));
+            std::rotate(option.values.begin(),option.values.begin()+5,option.values.begin()+6);
+        }
+        if (option.key=="anybor_crt_oversize_canvas_width")
+            assert(!strcmp(def->desc,"CRT Oversize Canvas Width"));
         assert(def->category_key);
-        const char *category = active->options.size()<4 ? "video" :
+        const char *category = active->options.size()<5 ? "video" :
             (!strcmp(def->key,"anybor_analog") || !strcmp(def->key,"anybor_rumble") || !strcmp(def->key,"anybor_macros")) ? "input" :
             !strncmp(def->key,"anybor_clear_",13) ? "development" : "system";
         assert(!strcmp(def->category_key,category));
         if (!strcmp(def->key,"anybor_engine")) {
-            assert(!strcmp(def->desc,"Automatic engine selection"));
-            assert(!strcmp(def->desc_categorized,"Automatic engine selection"));
+            assert(!strcmp(def->desc,"Automatic Engine Selection"));
+            assert(!strcmp(def->desc_categorized,"Automatic Engine Selection"));
             assert(!def->values[0].label && !def->values[1].label);
         }
         if (group_key(def->key)>=0) {
@@ -242,7 +253,8 @@ static bool environment(unsigned command,void *data) {
         const retro_core_option_display *display=(const retro_core_option_display*)data;
         int group=group_key(display->key);
         if (group>=0) active->visible[group]=display->visible;
-        else if (!strcmp(display->key,"anybor_crt_oversize_handling")) active->oversize_visible=display->visible;
+        else if (!strcmp(display->key,"anybor_crt_oversize_canvas_width")) active->width_visible=display->visible;
+        else if (!strcmp(display->key,"anybor_crt_oversize_canvas_height")) active->height_visible=display->visible;
         else if (!strcmp(display->key,"anybor_os_screen_orientation")) active->orientation_visible=display->visible;
         else assert(!"unexpected visibility hint");
         ++active->display_calls;
@@ -286,14 +298,14 @@ void run(void) {
             // Storage remains valid after registration returns and on repeated registration.
             if (fixture.retained_v2) read_v2(fixture.retained_v2);else read_legacy(fixture.retained_legacy);
             assert(fixture.options==captured);
-            assert(fixture.update_display && fixture.display_calls==7);
-            assert(!fixture.oversize_visible && !fixture.orientation_visible);
+            assert(fixture.update_display && fixture.display_calls==8);
+            assert(!fixture.width_visible && !fixture.height_visible && !fixture.orientation_visible);
             fixture.crt="On";
             assert(fixture.update_display()==fixture.display_supported);
-            assert(fixture.oversize_visible && fixture.orientation_visible);
+            assert(fixture.width_visible && fixture.height_visible && fixture.orientation_visible);
             fixture.crt="Off";
             assert(fixture.update_display()==fixture.display_supported);
-            assert(!fixture.oversize_visible && !fixture.orientation_visible);
+            assert(!fixture.width_visible && !fixture.height_visible && !fixture.orientation_visible);
             fixture.crt=NULL;
             for (unsigned g=0;g<5;++g) assert(fixture.visible[g]==(repeat!=0));
             assert(!fixture.update_display());
@@ -382,7 +394,8 @@ printf("registrations=%u selections=%u\n",registration_checks,selection_checks);
 class CoreOptionTests(unittest.TestCase):
     def test_crt_option_order_checks_complete_grouped_registration(self):
         from test_crt import check_option_order
-        keys = ['anybor_crt_tv', 'anybor_crt_oversize_handling', 'anybor_os_screen_orientation',
+        keys = ['anybor_crt_tv', 'anybor_crt_oversize_canvas_width', 'anybor_crt_oversize_canvas_height',
+                'anybor_os_screen_orientation',
                 'anybor_image_rotation', 'anybor_analog', 'anybor_rumble', 'anybor_macros',
                 'anybor_engine', 'anybor_engine_3000_3499', 'anybor_engine_3500_3749',
                 'anybor_engine_3750_3999', 'anybor_engine_4000_4999', 'anybor_engine_5000_plus',

@@ -76,11 +76,13 @@ def main():
             value = str(path)
             return 'Z:' + value.replace('/', '\\') if args.windows else value
 
-        def run(label, frames=400, content=pak, initial_max='320x240', growth_count=None, **options):
+        def run(label, frames=400, content=pak, initial_max='320x240', growth_count=None,
+                follows_raster=False, **options):
             system = work / label
             system.mkdir()
             env = {k: v for k, v in os.environ.items() if not k.startswith('OBOR_')}
-            env.update(OBOR_ENGINE='6412', OBOR_VIDEO_TRACE='1', OBOR_CHECK_GEOMETRY='1')
+            env.update(OBOR_ENGINE='6412', OBOR_VIDEO_TRACE='1', OBOR_CHECK_GEOMETRY='1',
+                       OBOR_CRT_CANVAS_WIDTH='640px', OBOR_CRT_CANVAS_HEIGHT='480px')
             env.update({k: target(v) if isinstance(v, Path) else str(v) for k, v in options.items()})
             process = subprocess.run(shlex.split(args.runner) + [str(host), target(core),
                 target(content), target(system), str(frames), target(system / 'frame')],
@@ -91,7 +93,8 @@ def main():
             assert 'cwd_restored=1' in log and 'arena_released=1' in log, log
             assert 'FAILED' not in log and 'MISMATCH' not in log, log
             assert 'initial_maximum=' + initial_max in log, log
-            fitted_only = options.get('OBOR_CRT_TV') == 'On' and not options.get('OBOR_CRT_TOGGLE_AT')
+            fitted_only = (options.get('OBOR_CRT_TV') == 'On' and
+                           not options.get('OBOR_CRT_TOGGLE_AT') and not follows_raster)
             maximum = '640x480' if fitted_only else '2048x1152'
             assert 'final_maximum=' + maximum in log, log
             growth = re.findall(r'^av_info=.*$', log, re.M)
@@ -104,7 +107,7 @@ def main():
                     assert 'max=640x480' in growth[0], log
             # Reserve only composed output while CRT is enabled. Native
             # bounds grow when a live toggle actually exposes that output.
-            native_crossings = (0 if options.get('OBOR_CRT_TV') == 'On' else
+            native_crossings = (0 if options.get('OBOR_CRT_TV') == 'On' and not follows_raster else
                                 1 if options.get('OBOR_CRT_TOGGLE_AT') else 2)
             assert log.count('video=2048x1152') >= native_crossings, log
             print('PASS geometry ' + label, flush=True)
@@ -169,6 +172,12 @@ def main():
             run('crt-reserve-%d' % width, content=wide, initial_max=bounds)
             run('crt-movie-%d' % width, content=wide, initial_max='640x480',
                 OBOR_CRT_TV='On')
+        descriptor = work / 'dynamic.anybor'
+        descriptor.write_text('[anybor]\npayload=geometry.pak\n[overrides]\n'
+                              '?crt crtmode|window_w|window_h|60\n')
+        log, _ = run('descriptor-live-raster', content=descriptor, follows_raster=True,
+                     initial_max='320x200', OBOR_CRT_TV='On')
+        assert log.count('video=320x200') >= 3, log
         print('Geometry: CRT, monotonic bounds, exact load/rewind and >1080p: OK', flush=True)
 
 

@@ -33,6 +33,7 @@ def compile_probe(glue, header, includes, third_party, output, sanitizers=False)
 #include <string.h>
 #include "libretro.h"
 #include "anybor_legacy_api.h"
+#include "anybor_runtime.h"
 #define PATH_SEP '/'
 PROFILES
 FALLBACK

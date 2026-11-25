@@ -67,7 +67,8 @@ static uint32_t crt_reference_pixel(const uint32_t *src, int w, int h, int pitch
 static void compose_fixed(uint32_t *dst, const uint32_t *src, int w, int h, int pitch)
 {
     obor_crt_frame frame = {640, 480, 640, 480, 1, 0, 0};
-    obor_crt_fit(&frame, w, h);
+    obor_crt_fit(&frame, w, h, 4, 3);
+    frame.prescale = obor_crt_prescale(&frame, w, h);
     obor_crt_present(dst, &frame, src, w, h, pitch);
 }
 
@@ -189,6 +190,8 @@ static void test_crt(void)
             assert(frame[y * 640 + x] == (uint32_t)((y / 2) * 320 + x / 2 + 1));
 }
 
+static const obor_crt_mode automatic_mode = {0};
+
 static void test_crt_presentation(void)
 {
     const struct { int w, h, out_w, out_h, left, top; } cases[] = {
@@ -211,12 +214,9 @@ static void test_crt_presentation(void)
         {219, 150, 219, 150, 0, 0},
         {220, 150, 220, 150, 0, 0},
         {221, 150, 221, 166, 0, 8},
-        {364, 244, 640, 480, 0, 25},
-        {364, 240, 640, 480, 0, 29},
-        {365, 244, 640, 480, 0, 26},
-        {364, 245, 640, 480, 0, 25},
+        {324, 244, 324, 244, 0, 0},
+        {324, 245, 640, 480, 3, 0},
         {320, 245, 640, 480, 7, 0},
-        {365, 245, 640, 480, 0, 25},
         {640, 480, 640, 480, 0, 0},
         {800, 800, 640, 480, 80, 0},
         {1, 1, 2, 1, 0, 0},
@@ -226,15 +226,15 @@ static void test_crt_presentation(void)
     uint32_t *frame = guarded + 1;
     size_t n, p;
     int x, y;
-    obor_crt_frame invalid = obor_crt_layout(0, 240, 0, OBOR_CRT_640_480);
+    obor_crt_frame invalid = obor_crt_layout(0, 240, 0, 640, 480, automatic_mode);
     assert(invalid.width == 0 && invalid.height == 240);
-    invalid = obor_crt_layout(4097, 1, 0, OBOR_CRT_640_480);
+    invalid = obor_crt_layout(4097, 1, 0, 640, 480, automatic_mode);
     assert(invalid.width == 4097 && invalid.height == 1);
-    invalid = obor_crt_layout(1, -1, 0, OBOR_CRT_640_480);
+    invalid = obor_crt_layout(1, -1, 0, 640, 480, automatic_mode);
     assert(invalid.width == 1 && invalid.height == -1);
     for (n = 0; n < sizeof(cases) / sizeof(cases[0]); ++n) {
         int w = cases[n].w, h = cases[n].h, pitch = w + 3;
-        obor_crt_frame layout = obor_crt_layout(w, h, 0, OBOR_CRT_640_480);
+        obor_crt_frame layout = obor_crt_layout(w, h, 0, 640, 480, automatic_mode);
         int out_w = layout.width, out_h = layout.height;
         int fitted = out_w == 640 && out_h == 480;
         assert(out_w == cases[n].out_w && out_h == cases[n].out_h);
@@ -266,28 +266,46 @@ static void test_crt_presentation(void)
 
 static void test_crt_oversize_modes(void)
 {
-    const struct { int w, h, iw, ih; } expected[] = {
-        {640, 480, 640, 360}, {1920, 480, 1920, 360},
-        {320, 240, 320, 180}, {1920, 240, 1920, 180}
+    const struct { int canvas_w, canvas_h, w, h, iw, ih, area; } cases[] = {
+        {640, 480, 640, 480, 640, 360, 0},
+        {512, 360, 512, 360, 512, 270, 0},
+        {640, 384, 640, 384, 640, 288, 0},
+        {OBOR_CRT_KEEP, 448, 1920, 448, 1920, 336, 0},
+        {320, 224, 320, 224, 320, 168, 1},
+        {OBOR_CRT_KEEP, 240, 1920, 240, 1920, 180, 1},
+        {320, OBOR_CRT_KEEP, 320, 1440, 320, 1080, 1},
+        {OBOR_CRT_KEEP, OBOR_CRT_KEEP, 1920, 1440, 1920, 1080, 0},
     };
-    for (int mode = OBOR_CRT_640_480; mode <= OBOR_CRT_KEEP_240; ++mode) {
-        obor_crt_frame wide = obor_crt_layout(1920, 1080, 0, (enum obor_crt_oversize)mode);
-        obor_crt_frame tall = obor_crt_layout(1080, 1920, 1, (enum obor_crt_oversize)mode);
-        assert(wide.width == expected[mode].w && wide.height == expected[mode].h);
-        assert(wide.image_width == expected[mode].iw && wide.image_height == expected[mode].ih);
+    for (size_t i = 0; i < sizeof(cases) / sizeof(cases[0]); ++i) {
+        obor_crt_frame wide = obor_crt_layout(1920, 1080, 0, cases[i].canvas_w,
+                                              cases[i].canvas_h, automatic_mode);
+        obor_crt_frame tall = obor_crt_layout(1080, 1920, 1, cases[i].canvas_w,
+                                              cases[i].canvas_h, automatic_mode);
+        assert(wide.width == cases[i].w && wide.height == cases[i].h);
+        assert(wide.image_width == cases[i].iw && wide.image_height == cases[i].ih);
         assert(tall.width == wide.height && tall.height == wide.width);
         assert(tall.image_width == wide.image_height && tall.image_height == wide.image_width);
-        assert(wide.area_filter == (mode >= OBOR_CRT_320_240));
+        assert(wide.area_filter == cases[i].area);
         assert(tall.area_filter == wide.area_filter);
+        assert(wide.aspect == 4.0f / 3.0f && tall.aspect == 3.0f / 4.0f);
     }
-    obor_crt_frame limit = obor_crt_layout(244, 320, 1, OBOR_CRT_320_240);
+    obor_crt_frame limit = obor_crt_layout(244, 320, 1, 320, 240, automatic_mode);
     assert(limit.width == 244 && limit.height == 320);
-    limit = obor_crt_layout(245, 320, 1, OBOR_CRT_320_240);
+    limit = obor_crt_layout(245, 320, 1, 320, 240, automatic_mode);
     assert(limit.width == 240 && limit.height == 320 && limit.area_filter);
-    obor_crt_frame capped = obor_crt_layout(320, 4096, 0, OBOR_CRT_KEEP_480);
+    obor_crt_frame capped = obor_crt_layout(320, 4096, 0, OBOR_CRT_KEEP, 480, automatic_mode);
     assert(capped.width == 4096 && capped.height == 480);
     assert(capped.image_width == 320 && capped.image_height == 480);
     assert(capped.aspect == (4.0f * 4096) / (3.0f * 5462));
+
+    const obor_crt_mode fixed = {1, 256, 192, 0}, follow = {1, 0, 0, 60};
+    obor_crt_frame declared = obor_crt_layout(240, 180, 1, 640, 480, fixed);
+    assert(declared.width == 256 && declared.height == 192);
+    assert(declared.image_width == 240 && declared.image_height == 180);
+    declared = obor_crt_layout(320, 180, 0, 640, 480, fixed);
+    assert(declared.width == 320 && declared.height == 240);
+    declared = obor_crt_layout(480, 272, 0, 640, 480, follow);
+    assert(declared.width == 480 && declared.height == 272);
 
     /* Source padding and fractional footprint weights on the reduced axis. */
     const uint32_t source[] = {0xff0000, 0, 0, 0xabcdef, 0, 0, 0x00ff00, 0xabcdef};

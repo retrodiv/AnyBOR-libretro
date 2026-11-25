@@ -111,8 +111,8 @@ For rewind, we recommend **Rewind Frames** set to **10** and
 on a Raspberry Pi 5 (quad-core Cortex-A76 at 2.4 GHz) or a device with an
 equivalent or faster CPU.
 
-The **System** category offers **Save state content** (Smart / Full) and
-**Save state compression** (On / Off). **Smart + On** is the default. Smart
+The **System** category offers **Save State Content** (Smart / Full) and
+**Save State Compression** (On / Off). **Smart + On** is the default. Smart
 rebuilds source-backed resources when it can reproduce their bytes exactly.
 Full retains complete engine memory. Options apply on content load. Large
 games can exceed the rewind buffer with **Full + Off**. Rewind duration
@@ -166,8 +166,9 @@ policies as the other Linux targets.
 In the **Video** core options, **Adjust for 4:3 CRT TV** fits the game raster
 to a CRT canvas. **OS Screen Orientation** supplies the axes set by the
 system. **Image Rotation** turns the complete picture, including the interface.
-**CRT Oversize Handling** selects the fit for images that exceed the CRT
-limits. See [CRT presentation and image rotation](docs/ANYBOR.md#crt-presentation-and-image-rotation).
+**CRT Oversize Canvas Width** and **CRT Oversize Canvas Height** size the fit
+for images that exceed the 244-line CRT limit. See
+[CRT presentation and image rotation](docs/ANYBOR.md#crt-presentation-and-image-rotation).
 
 Video allocation follows the output size or starts at 1920x1080 when the
 mode is unknown. Larger modes expand it on demand. Smaller modes reuse the

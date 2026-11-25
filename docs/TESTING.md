@@ -73,7 +73,7 @@ for small regression suites and 6144 MiB / 1800 seconds with at most four compil
 jobs for builds. The guard requires a working systemd user manager and refuses an
 unlimited fallback.
 
-The regression suite saves with Forward game log enabled and loads in new
+The regression suite saves with Forward Game Log enabled and loads in new
 processes with that option both on and off, then restarts the content. It
 also repeats state loads with extra frontend files open and runs nine
 consecutive restarts. Linux hosts check that all file descriptors are
@@ -109,36 +109,16 @@ hot-page learning and foreign-signal forwarding. Execution faults, including
 an instruction straddling an executable/NX boundary, must not dirty the data.
 These tests do not constitute validation on physical RISC-V hardware.
 
-The CRT suite checks the Video / Input / System category order, matching flat
-option order on legacy frontends, disabled default,
-black borders and pixel output against the captured native frames.
-Output must remain byte-identical to disabled output when its width is at
-most 364, its height is at most 244, and its aspect is within inclusive
-4:3 +/-10%. Smaller images outside that tolerance receive native-pixel black
-padding on one axis, with fractional extents rounded up, followed by another
-size-limit check. Exceeding either limit requires fitting the complete image inside 640x480, preserving
-its aspect with centred black borders and a 4:3 output aspect. Cases cover
-the 364x244 boundary after padding, both exact tolerance endpoints and their
-pixel neighbours, wide and narrow native padding, unequal borders, independent
-width-only and height-only crossings, both limits exceeded, 800x600, 800x601,
-square 800x800, portrait 600x800 and widescreen 1280x720 frames. Primitive
-tests exercise the exact 365-pixel crossing; runtime tests use 368 pixels
-because engine screens round widths down to a multiple of four. Their full
-pixel output is compared against independently filtered native frames.
-Native padding must preserve every source pixel exactly and clear all borders;
-320x180 remains 320x240, while 360x180 crosses the padded height limit and
-uses 640x480. Live toggles, resets and state loads also exercise native padding.
-The suite also
-toggles adaptation during play, restarts, and loads states from a
-separate process while keeping the current video option. The primitive tests
-include exact 16:9, near-16:9, 4:3, narrow and portrait frames, padded source
-rows, and consecutive frames whose borders differ.
-Sharp-bilinear filtering is checked against an independent floating-point
-texture-sampling reference, allowing at most one 8-bit channel level for Q16
-and separable rounding. Coverage includes fractional enlargement, reduction,
-integer/identity sampling, clamped edges, very narrow/tall images, and six
-horizontal-scroll phases of one-pixel strokes at 480x272. Runtime frames from
-the tested engines are compared against the same independent reference.
+The CRT suite checks option order, defaults, horizontal and vertical output,
+image rotation, and the 244-line limit after native-pixel padding. It covers
+both ends of the inclusive aspect tolerance, exact margins and output pixels,
+oversize canvas selectors and filters, live updates, and state restoration.
+The descriptor cases cover fixed and dynamic dimensions, fixed and native
+refresh, CRT gating, ZIP descriptors and frontend acceptance or refusal.
+Sharp bilinear filtering is checked against an independent floating-point
+reference with a tolerance of one 8-bit channel level for Q16 and separable
+rounding. Coverage includes fractional enlargement and reduction, integer
+and identity sampling, clamped edges and scrolling single-pixel strokes.
 
 On the Linux and macOS hosts, `OBOR_CHECK_FDS=1` checks that the number of open
 file descriptors returns to its baseline after unloading the core. Linux uses

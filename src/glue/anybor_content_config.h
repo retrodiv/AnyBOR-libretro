@@ -9,6 +9,7 @@
 #include <ctype.h>
 #include "anybor_zip_path.h"
 #include "anybor_abi.h"
+#include "anybor_crt.h"
 #include "anybor_transform_vm.h"
 
 #define OBOR_OVERRIDE_MAX_RULES 256U
@@ -95,12 +96,19 @@ struct obor_content_choice {
     char zip_engine[48], zip_descriptor[512], transform[64];
     obor_content_function function;
     obor_content_controls controls;
-    obor_content_choice() : source(), archive(), engine(), descriptor(), zip_engine(), zip_descriptor(), transform(), controls() {}
+    obor_crt_mode crt_mode;
+    obor_content_choice() : source(), archive(), engine(), descriptor(), zip_engine(), zip_descriptor(), transform(), controls(), crt_mode() {}
 };
-struct obor_descriptor { char payload[512], engine[48], transform[64]; obor_content_controls controls; obor_content_function function; };
+struct obor_descriptor {
+    char payload[512], engine[48], transform[64];
+    obor_content_controls controls;
+    obor_content_function function;
+    obor_crt_mode crt_mode;
+};
 
 static void obor_descriptor_settings(obor_content_choice &choice, const obor_descriptor &descriptor)
 {
+    if (!choice.crt_mode.declared) choice.crt_mode = descriptor.crt_mode;
     if (!choice.transform[0] && !choice.function.program_size) {
         snprintf(choice.transform,sizeof(choice.transform),"%s",descriptor.transform);
         choice.function=descriptor.function;
@@ -193,6 +201,42 @@ static bool obor_content_engine_line(const char *text, size_t n, char engine[48]
     memcpy(engine, text+at, end-at); engine[end-at] = 0;
     return obor_content_engine_value(engine);
 }
+static bool obor_crt_mode_field(const char *first, const char *end, const char *follow,
+                                int minimum, int maximum, int &value)
+{
+    if ((size_t)(end - first) == strlen(follow) && !memcmp(first, follow, (size_t)(end - first))) {
+        value = 0;
+        return true;
+    }
+    if (first == end) return false;
+    value = 0;
+    for (; first < end; ++first) {
+        if (*first < '0' || *first > '9') return false;
+        value = value * 10 + (*first - '0');
+        if (value > maximum) return false;
+    }
+    return value >= minimum;
+}
+
+static bool obor_crt_mode_line(const char *line, size_t size, obor_crt_mode &mode)
+{
+    const char *end = line + size;
+    if (mode.declared || size <= 4 || memcmp(line, "?crt", 4)) return false;
+    const char *width = line + 4;
+    if (*width != ' ' && *width != '\t') return false;
+    while (width < end && (*width == ' ' || *width == '\t')) ++width;
+    if (end - width < 8 || memcmp(width, "crtmode|", 8)) return false;
+    width += 8;
+    const char *height = (const char *)memchr(width, '|', (size_t)(end - width));
+    if (!height) return false;
+    const char *hz = (const char *)memchr(height + 1, '|', (size_t)(end - height - 1));
+    if (!hz || !obor_crt_mode_field(width, height, "window_w", 16, 640, mode.width) ||
+        !obor_crt_mode_field(height + 1, hz, "window_h", 16, 480, mode.height) ||
+        !obor_crt_mode_field(hz + 1, end, "window_fps", 2, 300, mode.hz)) return false;
+    mode.declared = 1;
+    return true;
+}
+
 static bool obor_descriptor_parse(const char *text, size_t size, obor_descriptor &out, bool allow_zip = true)
 {
     obor_descriptor parsed = {};
@@ -217,6 +261,10 @@ static bool obor_descriptor_parse(const char *text, size_t size, obor_descriptor
             if (!section || (seen & section)) return false;
             seen |= section;
         } else if (section==2) {
+            if (line[0]=='?') {
+                if (!obor_crt_mode_line(line,n,parsed.crt_mode)) return false;
+                continue;
+            }
             if (obor_content_engine_line(line,n,parsed.engine)) continue;
             if (parsed.transform[0] || parsed.function.program_size) return false;
             if (obor_content_transform_name(line,n,parsed.transform)) continue;
@@ -259,7 +307,8 @@ static bool obor_descriptor_parse(const char *text, size_t size, obor_descriptor
                  !(allow_zip && obor_content_suffix(parsed.payload,".zip")))) return false;
         } else return false;
     }
-    if (!parsed.payload[0] || ((seen & 2) && !parsed.engine[0] && !parsed.transform[0] && !parsed.function.program_size)) return false;
+    if (!parsed.payload[0] || ((seen & 2) && !parsed.engine[0] && !parsed.transform[0] &&
+        !parsed.function.program_size && !parsed.crt_mode.declared)) return false;
     out = parsed;
     return true;
 }

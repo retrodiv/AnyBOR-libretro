@@ -22,7 +22,7 @@
  *   OBOR_GAMELOG=On|Off   set the Forward game log core option
  *   OBOR_CRT_TV=On|Off / OBOR_CRT_TOGGLE_AT=N[,N...]   CRT option and live toggles
  *   OBOR_CRT_ORIENTATION=Horizontal|Vertical / OBOR_CRT_ORIENTATION_TOGGLE_AT=N[,N...]
- *   OBOR_CRT_OVERSIZE / OBOR_IMAGE_ROTATION          Same values as the core options
+ *   OBOR_CRT_CANVAS_WIDTH / OBOR_CRT_CANVAS_HEIGHT / OBOR_IMAGE_ROTATION          Same values as the core options
  *   OBOR_HOST_ACCEPT_ROTATION=1                      Accept frontend rotation requests
  *   OBOR_VIDEO_TRACE=1 / OBOR_OPTIONS_VERSION=0|2   video/option diagnostics
  *   OBOR_HOST_STATE_CONTENT=Smart|Full / OBOR_HOST_STATE_COMPRESSION=On|Off
@@ -574,7 +574,8 @@ static bool env_cb(unsigned cmd, void *data)
         if (!strcmp(storage_var->key, "anybor_clear_all_caches")) storage_env = "OBOR_CLEAR_ALL_CACHES";
         if (!strcmp(storage_var->key, "anybor_state_content")) storage_env = "OBOR_HOST_STATE_CONTENT";
         if (!strcmp(storage_var->key, "anybor_state_compression")) storage_env = "OBOR_HOST_STATE_COMPRESSION";
-        if (!strcmp(storage_var->key, "anybor_crt_oversize_handling")) storage_env = "OBOR_CRT_OVERSIZE";
+        if (!strcmp(storage_var->key, "anybor_crt_oversize_canvas_width")) storage_env = "OBOR_CRT_CANVAS_WIDTH";
+        if (!strcmp(storage_var->key, "anybor_crt_oversize_canvas_height")) storage_env = "OBOR_CRT_CANVAS_HEIGHT";
         if (!strcmp(storage_var->key, "anybor_image_rotation")) storage_env = "OBOR_IMAGE_ROTATION";
         if (storage_env && getenv(storage_env)) {
             storage_var->value = getenv(storage_env);
@@ -690,11 +691,11 @@ static bool env_cb(unsigned cmd, void *data)
     case RETRO_ENVIRONMENT_SET_SYSTEM_AV_INFO: {
         const struct retro_system_av_info *av = data;
         if (getenv("OBOR_VIDEO_TRACE"))
-            printf("av_info=%ux%u max=%ux%u aspect=%.6f frame=%d accepted=%d\n",
+            printf("av_info=%ux%u max=%ux%u aspect=%.6f frame=%d accepted=%d fps=%.6f\n",
                    av->geometry.base_width, av->geometry.base_height,
                    av->geometry.max_width, av->geometry.max_height,
                    av->geometry.aspect_ratio, g_frame,
-                   !getenv("OBOR_HOST_REJECT_AV_INFO"));
+                   !getenv("OBOR_HOST_REJECT_AV_INFO"), av->timing.fps);
         ++g_av_updates;
         if (getenv("OBOR_HOST_REJECT_AV_INFO")) return false;
         g_geometry = av->geometry;
@@ -797,6 +798,8 @@ static void audio_sample_cb(int16_t l, int16_t r)
 
 static size_t audio_batch_cb(const int16_t *data, size_t frames)
 {
+    if (getenv("OBOR_AUDIO_FRAME_TRACE"))
+        printf("audio_frames=%zu frame=%d\n", frames, g_frame);
     trace_replay_audio(data, frames);
     for (size_t i = 0; i < frames * 2; i++) {
         g_frame_audio_hash = (g_frame_audio_hash ^ (uint16_t)data[i]) * 16777619u;

@@ -258,8 +258,8 @@ def main():
             if required not in log:
                 raise RuntimeError(label + ": " + log)
             for key, title, values, chosen in (
-                    ("content", "Save state content", "Smart|Full", default[0]),
-                    ("compression", "Save state compression", "On|Off", default[1])):
+                    ("content", "Save State Content", "Smart|Full", default[0]),
+                    ("compression", "Save State Compression", "On|Off", default[1])):
                 marker = "state_option=anybor_state_" + key + " label=" + title + " category=system default=" + chosen + " values=" + values
                 legacy_marker = "state_legacy=anybor_state_" + key + " " + title + "; " + values
                 if marker not in log and legacy_marker not in log:

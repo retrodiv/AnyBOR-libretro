@@ -10,6 +10,7 @@ import shlex
 import subprocess
 import sys
 import tempfile
+import zipfile
 from pathlib import Path
 import make_fixture
 import release
@@ -34,7 +35,8 @@ def read_ppm(path):
 def check_option_order(result, profile_count, capacity, version):
     """Check complete registration, including every manual build range."""
     assert profile_count > 0 and capacity >= 4
-    expected = ["anybor_crt_tv", "anybor_crt_oversize_handling", "anybor_os_screen_orientation",
+    expected = ["anybor_crt_tv", "anybor_crt_oversize_canvas_width", "anybor_crt_oversize_canvas_height",
+                "anybor_os_screen_orientation",
                 "anybor_image_rotation", "anybor_analog", "anybor_rumble", "anybor_macros",
                 "anybor_engine", "anybor_engine_3000_3499", "anybor_engine_3500_3749",
                 "anybor_engine_3750_3999", "anybor_engine_4000_4999", "anybor_engine_5000_plus"]
@@ -110,6 +112,7 @@ def main():
             print("PASS " + engine + " " + label, flush=True)
             return result, read_ppm(system / "frame000180.ppm")
 
+        fixed_canvas = dict(OBOR_CRT_CANVAS_WIDTH="640px", OBOR_CRT_CANVAS_HEIGHT="480px")
         engines = [e["build"] for e in pin["engines"]]
         for engine in engines:
             members = make_fixture.files()
@@ -121,7 +124,7 @@ def main():
             assert native == explicit, "Default must preserve native output"
             state = work / (engine + ".state")
             _, adapted = run(engine, pak, "crt-on", "640x480", OBOR_CRT_TV="On",
-                             OBOR_OPTIONS_VERSION=2, OBOR_SAVE_AT=120, OBOR_SAVE_STATE=state)
+                             OBOR_OPTIONS_VERSION=2, OBOR_SAVE_AT=120, OBOR_SAVE_STATE=state, **fixed_canvas)
             width, height, pixels = adapted
             stride = width * 3
             assert (width, height) == (640, 480)
@@ -130,7 +133,7 @@ def main():
             # Check the complete fitted image against the native engine frame.
             crt_reference.assert_matches(pixels, crt_reference.compose(*native))
             result, _ = run(engine, pak, "toggle-on", "640x480", OBOR_CRT_TOGGLE_AT=100,
-                            OBOR_RESET_AT=140)
+                            OBOR_RESET_AT=140, **fixed_canvas)
             assert "geometry=640x480 aspect=1.333333 frame=100" in result, result
             # Restore a real earlier CRT-on state in this process. A new
             # process may have a different module base and must refuse it;
@@ -138,17 +141,17 @@ def main():
             result, _ = run(engine, pak, "toggle-off-load-crt-state", "480x272",
                             OBOR_CRT_TV="On", OBOR_CRT_TOGGLE_AT=100,
                             OBOR_SAVE_AT=90, OBOR_SAVE_STATE=state,
-                            OBOR_LOAD_AT=120, OBOR_LOAD_STATE=state, OBOR_RESET_AT=140)
+                            OBOR_LOAD_AT=120, OBOR_LOAD_STATE=state, OBOR_RESET_AT=140, **fixed_canvas)
             assert "geometry=480x272 aspect=1.764706 frame=100" in result, result
             run(engine, pak, "load-crt-state", "640x480", OBOR_CRT_TV="On",
                 OBOR_SAVE_AT=90, OBOR_SAVE_STATE=state,
-                OBOR_LOAD_AT=120, OBOR_LOAD_STATE=state, OBOR_RESET_AT=140)
+                OBOR_LOAD_AT=120, OBOR_LOAD_STATE=state, OBOR_RESET_AT=140, **fixed_canvas)
             members.pop("data/video.txt")
             make_fixture.write_pak(pak, members)
             _, native = run(engine, pak, "4-by-3-off", "320x240")
             _, adapted = run(engine, pak, "4-by-3-on", "320x240", OBOR_CRT_TV="On")
             assert native == adapted, "4:3 output must remain byte-identical"
-        # Native output requires both size limits and inclusive 4:3 +/-10%.
+        # Native output uses at most 244 lines and inclusive 4:3 +/-10%.
         for width, height in ((320, 240), (240, 200), (244, 200), (216, 150), (220, 150)):
             members = make_fixture.files()
             label = "native-%dx%d" % (width, height)
@@ -205,19 +208,12 @@ def main():
                                   OBOR_CRT_TV="On", OBOR_SAVE_AT=90, OBOR_SAVE_STATE=state,
                                   OBOR_LOAD_AT=120, OBOR_LOAD_STATE=state)
                 assert restored == adapted
-        # Explicit fitted rectangles exercise either size limit independently,
-        # the exact boundary, and wide/square/portrait output without cropping.
-        # Engine screens round widths down to a multiple of four; the primitive
-        # tests exercise the exact 365-pixel crossing directly.
+        # Fitting samples the original raster when native padding or the original
+        # height requires more than 244 scanlines.
         for width, height, left, top, fitted_width, fitted_height in (
                 (360, 180, 0, 80, 640, 320),
                 (328, 180, 0, 64, 640, 351),
-                (364, 244, 0, 25, 640, 429),
-                (364, 240, 0, 29, 640, 421),
-                (368, 240, 0, 31, 640, 417),
                 (320, 245, 7, 0, 626, 480),
-                (364, 245, 0, 25, 640, 430),
-                (368, 245, 0, 27, 640, 426),
                 (320, 256, 20, 0, 600, 480),
                 (640, 480, 0, 0, 640, 480),
                 (644, 480, 0, 1, 640, 477),
@@ -240,7 +236,7 @@ def main():
             make_fixture.write_pak(pak, members)
             label = "%dx%d" % (width, height)
             _, native = run("6412", pak, label + "-off", label)
-            result, adapted = run("6412", pak, label + "-on", "640x480", OBOR_CRT_TV="On")
+            result, adapted = run("6412", pak, label + "-on", "640x480", OBOR_CRT_TV="On", **fixed_canvas)
             assert "geometry=640x480 aspect=1.333333" in result, result
             pixels = adapted[2]
             stride = 640 * 3
@@ -256,7 +252,7 @@ def main():
                 assert native == adapted, "640x480 output must remain byte-identical"
             if (width, height) == (800, 600):
                 _, toggled = run("6412", pak, label + "-toggle-on", "640x480",
-                                 OBOR_CRT_TOGGLE_AT=100)
+                                 OBOR_CRT_TOGGLE_AT=100, **fixed_canvas)
                 assert toggled == adapted, "Live toggle must use the same complete downscale"
                 _, toggled = run("6412", pak, label + "-toggle-off", label,
                                  OBOR_CRT_TV="On", OBOR_CRT_TOGGLE_AT=100)
@@ -273,14 +269,14 @@ def main():
             make_fixture.write_pak(pak, members)
             return pak
 
-        crt = dict(OBOR_CRT_TV="On", OBOR_HOST_ACCEPT_ROTATION=1)
+        crt = dict(OBOR_CRT_TV="On", OBOR_HOST_ACCEPT_ROTATION=1, **fixed_canvas)
         portrait = make_grid_pak(224, 288)
         _, native = run("6412", portrait, "portrait-native", "224x288")
         _, horizontal = run("6412", portrait, "portrait-horizontal", "640x480", **crt)
         for turn, size in (("Left", "288x224"), ("Right", "288x224"), ("Upside Down", "224x288")):
             result, turned = run("6412", portrait, "crt-off-" + turn, size,
                                  OBOR_IMAGE_ROTATION=turn, OBOR_CRT_ORIENTATION="Vertical",
-                                 OBOR_CRT_OVERSIZE="W:Keep H:240", OBOR_HOST_ACCEPT_ROTATION=1)
+                                 OBOR_CRT_CANVAS_HEIGHT="240px", OBOR_HOST_ACCEPT_ROTATION=1)
             assert turned == rotate(native, turn) and "rotation=" not in result
         _, left = run("6412", portrait, "portrait-left", "288x224", OBOR_IMAGE_ROTATION="Left", **crt)
         assert left == rotate(native, "Left")
@@ -298,7 +294,8 @@ def main():
         assert cancelled == horizontal
         assert "rotation=3 frame=0 accepted=1" in result and "aspect=0.750000" in result
         result, refused = run("6412", portrait, "portrait-refused", "480x640",
-                              OBOR_CRT_TV="On", OBOR_CRT_ORIENTATION="Vertical", OBOR_IMAGE_ROTATION="Right")
+                              OBOR_CRT_TV="On", OBOR_CRT_ORIENTATION="Vertical", OBOR_IMAGE_ROTATION="Right",
+                              **fixed_canvas)
         assert refused == rotate(horizontal, "Right")
         assert "rotation=3 frame=0 accepted=0" in result and "rotation=0 frame=0 accepted=0" in result
         state = work / "rotation.state"
@@ -312,25 +309,72 @@ def main():
             assert f"rotation={request} frame=100 accepted=1" in result
 
         wide = make_grid_pak(1920, 1080)
-        for mode, width, height, border in (("W:640 H:480", 640, 480, 60),
-                                             ("W:Keep H:480", 1920, 480, 60),
-                                             ("W:320 H:240", 320, 240, 30),
-                                             ("W:Keep H:240", 1920, 240, 30)):
-            result, frame = run("6412", wide, "wide-" + mode.replace(" ", "-"), f"{width}x{height}",
-                                OBOR_CRT_OVERSIZE=mode, **crt)
+        for canvas_w, canvas_h, width, height, border in (
+                (None, None, 1920, 448, 56),
+                ("640px", "480px", 640, 480, 60),
+                ("512px", "360px", 512, 360, 45),
+                ("320px", "224px", 320, 224, 28),
+                ("Keep Game Width", "240px", 1920, 240, 30),
+                ("Keep Game Width", "Keep Game Height", 1920, 1440, 180)):
+            settings = {"OBOR_CRT_TV": "On"}
+            if canvas_w:
+                settings.update(OBOR_CRT_CANVAS_WIDTH=canvas_w, OBOR_CRT_CANVAS_HEIGHT=canvas_h)
+            result, frame = run("6412", wide, f"wide-{width}x{height}", f"{width}x{height}", **settings)
             assert "aspect=1.333333" in result
             stride = width * 3
             pixels = frame[2]
             assert not any(pixels[:border * stride]) and not any(pixels[-border * stride:])
             assert any(pixels[border * stride:(border + 1) * stride])
             assert any(pixels[-(border + 1) * stride:-border * stride])
-        wide = make_grid_pak(1080, 1920)
-        result, frame = run("6412", wide, "vertical-keep", "1920x480", OBOR_CRT_OVERSIZE="W:Keep H:480",
-                            OBOR_CRT_ORIENTATION="Vertical", **crt)
+        tall = make_grid_pak(1080, 1920)
+        result, frame = run("6412", tall, "vertical-keep", "1920x480",
+                            OBOR_CRT_CANVAS_HEIGHT="480px", OBOR_CRT_TV="On",
+                            OBOR_HOST_ACCEPT_ROTATION=1, OBOR_CRT_ORIENTATION="Vertical")
         assert "aspect=0.750000" in result
         stride = 1920 * 3
         assert not any(frame[2][:60 * stride]) and not any(frame[2][-60 * stride:])
         assert any(frame[2][60 * stride:61 * stride]) and any(frame[2][-61 * stride:-60 * stride])
+
+        pak = make_grid_pak(240, 180)
+        descriptor = work / "external.anybor"
+        def declare(path, command):
+            descriptor.write_text(f"[anybor]\npayload = {path.name}\n\n[overrides]\n?crt {command}\n",
+                                  encoding="utf-8")
+        declare(pak, "crtmode|256|192|window_fps")
+        run("6412", descriptor, "descriptor-off", "240x180")
+        result, fitted = run("6412", descriptor, "descriptor-fixed", "256x192",
+                             OBOR_CRT_TV="On", OBOR_RESET_AT=140)
+        assert not any(fitted[2][:6 * 256 * 3])
+        declare(pak, "crtmode|window_w|window_h|60")
+        run("6412", descriptor, "descriptor-native", "240x180", OBOR_CRT_TV="On")
+        declare(pak, "crtmode|window_w|192|50")
+        result, _ = run("6412", descriptor, "descriptor-mixed", "240x192",
+                        OBOR_CRT_TV="On", OBOR_CRT_ORIENTATION="Vertical",
+                        OBOR_IMAGE_ROTATION="Right", OBOR_HOST_ACCEPT_ROTATION=1,
+                        OBOR_AUDIO_FRAME_TRACE=1)
+        assert re.search(r"accepted=1 fps=50\.000000", result), result
+        def samples(log):
+            return sum(int(count) for count, frame in re.findall(r"audio_frames=(\d+) frame=(\d+)", log)
+                       if 100 <= int(frame) < 150)
+        assert samples(result) == 44100, result
+        declare(pak, "crtmode|window_w|192|120")
+        result, _ = run("6412", descriptor, "descriptor-repeat-frames", "240x192",
+                        OBOR_CRT_TV="On", OBOR_AUDIO_FRAME_TRACE=1)
+        assert re.search(r"accepted=1 fps=120\.000000", result), result
+        assert samples(result) == 18375, result
+        declare(pak, "crtmode|window_w|192|50")
+        result, _ = run("6412", descriptor, "descriptor-refresh-rejected", "240x192",
+                        OBOR_CRT_TV="On", OBOR_HOST_REJECT_AV_INFO=1, OBOR_AUDIO_FRAME_TRACE=1)
+        assert re.search(r"accepted=0 fps=50\.000000", result), result
+        assert samples(result) == 36750, result
+
+        archive = work / "internal.zip"
+        with zipfile.ZipFile(archive, "w") as container:
+            container.write(pak, pak.name)
+            container.write(descriptor, "internal.anybor")
+        run("6412", archive, "descriptor-in-zip", "240x192", OBOR_CRT_TV="On")
+        declare(archive, "crtmode|256|196|window_fps")
+        run("6412", descriptor, "descriptor-external-priority", "256x196", OBOR_CRT_TV="On")
         print("CRT runtime regressions: OK", flush=True)
 
 

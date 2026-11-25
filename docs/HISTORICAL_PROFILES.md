@@ -211,7 +211,7 @@ engine stops.
 Select a profile manually when the metadata is missing or incorrect:
 
 1. Find the engine build specified by the content's author or original release.
-2. Open **Automatic engine selection** in the core-options list, under **System** when
+2. Open **Automatic Engine Selection** in the core-options list, under **System** when
    categories are available.
 3. Set it to **Off**, then select the full profile value, such as **v3.0 3780**,
    in its build range. Leave the other ranges at **-**. Use **Restart** or
@@ -219,7 +219,7 @@ Select a profile manually when the metadata is missing or incorrect:
 4. Keep that profile for the session. States require the same logical profile,
    core build and content; switching profiles does not convert existing states.
 
-If the required revision is unknown, leave **Automatic engine selection** set to **On** and consult the content
+If the required revision is unknown, leave **Automatic Engine Selection** set to **On** and consult the content
 release documentation before choosing manually.
 
 ## Selected contracts and shared behavior
