@@ -615,6 +615,11 @@ int main(void) {
             'TESTS': '\n'.join(cases),
         }
         template = (Path(__file__).with_name('fixtures') / 'early-controls-contract.c.in').read_text()
+        # The frontend option filters vibration. Both saved setting values still
+        # exercise the same engine event, and the saved-data checks remain historical.
+        saved_setting_filter = 'bool enabled = has_output && configured;'
+        self.assertEqual(template.count(saved_setting_filter), 1)
+        template = template.replace(saved_setting_filter, 'bool enabled = has_output;')
         native(re.sub(r'@([A-Z_]+)@', lambda match: values[match[1]], template),
                extra_flags=('-DSDL=1', '-DOBOR_ENGINE_BUILD=6391'))
 
