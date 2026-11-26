@@ -34238,7 +34238,7 @@ void update_ents()
 }
 
 
-void display_ents()
+void display_ents(void)
 {
     unsigned f;
     int i, z, wall = 0, wall2;
@@ -51293,7 +51293,7 @@ void execute_updatescripts()
     }
 }
 
-void execute_updatedscripts()
+void execute_updatedscripts(void)
 {
     if(Script_IsInitialized(&updated_script))
     {

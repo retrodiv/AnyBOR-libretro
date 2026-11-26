@@ -15244,7 +15244,7 @@ void update_ents()
 }
 
 
-void display_ents()
+void display_ents(void)
 {
 	unsigned f;
 	int i, z, wall = 0, wall2;
@@ -26002,7 +26002,7 @@ void execute_updatescripts()
     if(obor_profile_build < 3536) pcurrentscript = caller_script;
 }
 
-void execute_updatedscripts()
+void execute_updatedscripts(void)
 {
     Script *caller_script = pcurrentscript;
 	if(Script_IsInitialized(&updated_script))

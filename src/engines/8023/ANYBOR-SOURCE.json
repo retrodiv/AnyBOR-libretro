@@ -17,7 +17,7 @@
       "upstream_sha256": null
     },
     "openbor.c": {
-      "distributed_sha256": "6cc5589b8a0deb84501e651897a4bebceffa57e79c8432ce635be7c1ca55d871",
+      "distributed_sha256": "8a6a3da009dfb87fbae6172da15f03ca0a8a266eca72162f73ff6b12cda6764c",
       "modified": true,
       "summary": "Apply the port's engine corrections and select the PC video configuration on macOS. Derive output names from the content basename with explicit destination capacities, and reject overflowing output path joins. Bound raw palette stores to the declared allocation while retaining its native in-range layout and complete input reads. Leave multiplayer slots without a selected model available to join even if game scripts preassign lives to them. Let a missing basename-only PAK self-check read the active frontend content after it has been validated and prepared. Allocate each model's animation pointer table through the highest animation index that model uses, and bound cache, copy and cleanup paths to that capacity. Ignore optional defense and offense entries outside the configured attack-type range with a log warning before accessing their tables. Yield after each newly completed model during explicit model-list or level preparation, and defer states until that preparation has cleaned up its intermediate parsers and handles. Use four independent RetroPad devices and per-device mappings. Place player state in aligned storage for PE SIMD reads. Yield to the frontend and decoder workers while asynchronous movies are pending. Grow each collision collection's pointer table only through its highest author-facing slot. Return a defined null result for absent colourmap models or tables while retaining valid palette fallback. Keep selected palette-conversion reads bounded and reject missing maps or flags, while preserving unselected slots and native allocation failure callbacks. Check destination animation capacity when retaining an animation across model changes, preserving the native fallback and timing. Access script-container pointer slots with byte copies, preserving record layout, pointer values and native copy/cleanup order. Pointer-slot allocation and release accept byte storage without imposing pointer alignment on a packed field. Release each sprite owner once and complete cleanup independently of alias counts. Preserve native sprite-map capacity policies, check allocation extents and retain existing storage and capacity when growth is unavailable. Validate sprite-node allocations and release partial resources without changing existing owners. Check cached sprite availability before reading metadata and ignore cache requests for absent nodes. Capture explicit shutdown failure text before cleanup and bound legacy diagnostic formatting. Receive layer screen outputs in naturally aligned storage before assigning the packed member.",
       "topics": [
@@ -67,7 +67,7 @@
       "upstream_sha256": "4b72fbaeea76155c2a78820a2f514921843735e908a20fe86399b197e06ace56"
     },
     "openbor.h": {
-      "distributed_sha256": "e834fda74f1458fc4affff553dab21f034bd0855f77a56742a39b43bcc41c694",
+      "distributed_sha256": "e078211e224d72b995d0e51cf234fb3b1cce7c055c718fcce1432168f9afc627",
       "modified": true,
       "summary": "Allocate collision pointer slots through the highest author-facing index used by each collection. Track each model's allocated animation-table capacity and reject lookups outside it.",
       "topics": [
@@ -76,6 +76,7 @@
         "attack-query-input-bounds",
         "collision-memory-layout",
         "draw-method-input-bounds",
+        "platform-integration",
         "record-dates-and-file-notices",
         "script-text-object-ownership",
         "script-variable-ownership",

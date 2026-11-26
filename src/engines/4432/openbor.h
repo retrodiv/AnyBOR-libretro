@@ -2805,7 +2805,7 @@ void adjust_base(entity *e, entity **pla);
 void check_gravity(entity *e);
 void update_ents();
 entity *find_ent_here(entity *exclude, float x, float z, int types, int (*test)(entity *, entity *));
-void display_ents();
+void display_ents(void);
 void toss(entity *ent, float lift);
 entity *findent(int types);
 int count_ents(int types);

@@ -22424,7 +22424,7 @@ static int obor_shadow_in_hole(float x, float z, float height)
     return checkhole(x, z);
 }
 
-void display_ents()
+void display_ents(void)
 {
     unsigned f;
     int i, z, wall = 0, wall2;
@@ -33511,7 +33511,7 @@ void execute_updatescripts()
     }
 }
 
-void execute_updatedscripts()
+void execute_updatedscripts(void)
 {
     if(Script_IsInitialized(&updated_script))
     {

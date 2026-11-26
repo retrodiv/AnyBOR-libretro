@@ -17,7 +17,7 @@
       "upstream_sha256": null
     },
     "openbor.c": {
-      "distributed_sha256": "0e63945a2c8257a1035577d2cf0f29601115daf2e92f8149d7a6e7aa9e95f8f1",
+      "distributed_sha256": "5e4d7f57048f572fd146373380b0b883a67cbe22cb086fd489fd44491cec2dec",
       "modified": true,
       "summary": "Apply the port's engine corrections and select the PC video configuration on macOS. Keep damage-over-time updates within the native effect arrays while retaining valid-slot tick and expiration calculations. Derive output names from the content basename with explicit destination capacities, and reject overflowing output path joins. Leave multiplayer slots without a selected model available to join even if game scripts preassign lives to them. Let a missing basename-only PAK self-check read the active frontend content after it has been validated and prepared. Allocate each model's animation pointer table through the highest animation index that model uses, and bound cache, copy and cleanup paths to that capacity. Ignore optional defense and offense entries outside the configured attack-type range with a log warning before accessing their tables. Yield after each newly completed model during explicit model-list or level preparation, and defer states until that preparation has cleaned up its intermediate parsers and handles. Validate playable-model lookup before using the result and retain the missing-model diagnostic with controlled engine stop. Fall back when legacy content names missing model, level, scene or background overrides. Keep selected palette-conversion reads bounded and reject missing maps or flags, while preserving unselected slots and native allocation failure callbacks. Access script-container pointer slots with byte copies, preserving record layout, pointer values and native copy/cleanup order. Release each sprite owner once and complete cleanup independently of alias counts. Preserve native sprite-map capacity policies, check allocation extents and retain existing storage and capacity when growth is unavailable. Validate sprite-node allocations and release partial resources without changing existing owners. Retire only the released level's owned stream bytes and extent metadata. Preserve source-defined model-allocation failure feedback. Preserve script-save values with explicit 32-bit fields, owned names, live references and profile-defined indexed capacity. Preserve native session-save ordering, movie-menu availability, layer loading, water clocks, shadow predicates and camera progress for each profile. Capture explicit shutdown failure text before cleanup and bound legacy diagnostic formatting.",
       "topics": [
@@ -58,13 +58,14 @@
       "upstream_sha256": "8d70c8b55eba868e6dfe09d3f1139104195506c83beedf889f3544cabbb48ed8"
     },
     "openbor.h": {
-      "distributed_sha256": "262e5edb95975ee91d2123b88e7aeef462be4509f0539662007e62c8d4f303f1",
+      "distributed_sha256": "43d6227581f023663b4144f6b7a0dd33da6d9cf12add0839aa37d501e5cc28fa",
       "modified": true,
       "summary": "Allocate collision pointer slots through the highest author-facing index used by each collection. Track each model's allocated animation-table capacity and reject lookups outside it. Track initialized owned stream bytes independently of native size, bound cursor reads and preserve buffer-base append/save behavior and native slot policy. Declare the historical transform interface, path query and layer records used by the shared runtime.",
       "topics": [
         "animation-memory-layout",
         "compiler-warning-cleanup",
         "logical-profile-compatibility",
+        "platform-integration",
         "record-dates-and-file-notices",
         "script-streams"
       ],

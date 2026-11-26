@@ -4876,9 +4876,10 @@ int main(void) {
         start = source.index('if(drawmethod.flag)')
         stop = source.index('else dm.flag = 0;', start) + len('else dm.flag = 0;')
         frame_code = source[start:stop]
-        start = source.index('obor_model_clip_screen(drawmethod,', source.index('void display_ents()'))
-        stop = source.index('spriteq_add_sprite(', start)
-        submission = source[start:source.index(';', stop)+1]
+        display = function(source, 'display_ents')
+        start = display.index('obor_model_clip_screen(drawmethod,')
+        stop = display.index('spriteq_add_sprite(', start)
+        submission = display[start:display.index(';', stop)+1]
         self.assertEqual(source.count('obor_model_clip_frame(&dm, offset);'), 1)
         self.assertEqual(source.count('obor_model_clip_screen(drawmethod,'), 1)
         native(r'''

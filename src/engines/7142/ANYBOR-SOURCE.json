@@ -17,7 +17,7 @@
       "upstream_sha256": null
     },
     "openbor.c": {
-      "distributed_sha256": "82e8fc56ac8041627c3b3db3f8bb92b6fd7f1db4e76b278a8cb20a7dab79ed9d",
+      "distributed_sha256": "04248ced297a4ef2db1c1f8e3ab0754fe0d760a8fc8e7f5072079fa188396b52",
       "modified": true,
       "summary": "Apply the port's engine corrections and select the PC video configuration on macOS. Derive output names from the content basename with explicit destination capacities, and reject overflowing output path joins. Leave multiplayer slots without a selected model available to join even if game scripts preassign lives to them. Let a missing basename-only PAK self-check read the active frontend content after it has been validated and prepared. Allocate each model's animation pointer table through the highest animation index that model uses, and bound cache, copy and cleanup paths to that capacity. Ignore optional defense and offense entries outside the configured attack-type range with a log warning before accessing their tables. Yield after each newly completed model during explicit model-list or level preparation, and defer states until that preparation has cleaned up its intermediate parsers and handles. Initialize all four RetroPads and repair legacy unbound player profiles without replacing custom bindings. Return a defined null result for absent colourmap models or tables while retaining valid palette fallback. Keep selected palette-conversion reads bounded and reject missing maps or flags, while preserving unselected slots and native allocation failure callbacks. Check destination animation capacity when retaining an animation across model changes, preserving the native fallback and timing. Preserve divergent 7086 and 2021 7123 animation, combat, model, script-selector and menu contracts by logical profile, retaining safe storage and additive APIs. Access script-container pointer slots with byte copies, preserving record layout, pointer values and native copy/cleanup order. Pointer-slot allocation and release accept byte storage without imposing pointer alignment on a packed field. Release each sprite owner once and complete cleanup independently of alias counts. Preserve native sprite-map capacity policies, check allocation extents and retain existing storage and capacity when growth is unavailable. Validate sprite-node allocations and release partial resources without changing existing owners. Check cached sprite availability before reading metadata and ignore cache requests for absent nodes. Capture explicit shutdown failure text before cleanup and bound legacy diagnostic formatting. Apply the standard palette at the original level and selection background stages for 6997 and 7039. Admit model defense and offense attack names according to the original source profile. Keep the 6997 and 7039 minimum animation ranges and read energy costs only for eligible animations. Preserve their horizontal binding offsets and block eligibility. Use their original grab drawing order and debug range coordinates. Preserve 6997's random grab attack order, credits and loading diagnostics. Apply the original startup palette and touchpad text placement in 6997 and 7039. Retain ACT level palette loading and script access to level blending collections for 6997 and 7039. Receive layer screen outputs in naturally aligned storage before assigning the packed member.",
       "topics": [
@@ -68,7 +68,7 @@
       "upstream_sha256": "71fd11c5f33bce214d0af7ef6ad521cc34440d460e4e2a45e99bf28ee9c03c69"
     },
     "openbor.h": {
-      "distributed_sha256": "e7139ae5c24d4539bda8ddd3fd694aa240b1364948bfcd176ec4dbd9bc014150",
+      "distributed_sha256": "33e9919951c765dfe405d6e64579a5945d5954f1b8619ee92fb0f912ec354246",
       "modified": true,
       "summary": "Allocate collision pointer slots through the highest author-facing index used by each collection. Track each model's allocated animation-table capacity and reject lookups outside it. Preserve divergent 7086 and 2021 7123 animation, combat, model, script-selector and menu contracts by logical profile, retaining safe storage and additive APIs. Preserve numeric animation properties and the original script property conversion routes for 6997, 7039 and 7091. Keep the 7091 depth order of neon panels and shadows. Retain ACT level palette loading and script access to level blending collections for 6997 and 7039.",
       "topics": [
@@ -78,6 +78,7 @@
         "compiler-warning-cleanup",
         "draw-method-input-bounds",
         "logical-profile-compatibility",
+        "platform-integration",
         "record-dates-and-file-notices",
         "script-text-object-ownership",
         "script-variable-ownership",

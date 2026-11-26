@@ -1877,7 +1877,7 @@ int testmove(entity*, float, float, float, float);
 void do_attack(entity *e);
 void update_ents();
 entity * find_ent_here(entity *exclude, float x, float z, int types);
-void display_ents();
+void display_ents(void);
 void toss(entity *ent, float lift);
 entity * findent(int types);
 int count_ents(int types);

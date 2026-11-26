@@ -13985,7 +13985,7 @@ void update_ents()
 }
 
 
-void display_ents()
+void display_ents(void)
 {
     const int x_offset = obor_profile_build >= 3328 ? gfx_x_offset : 0;
 	unsigned f;
@@ -22366,7 +22366,7 @@ void execute_updatescripts()
 	pcurrentscript = ptempscript;
 }
 
-void execute_updatedscripts()
+void execute_updatedscripts(void)
 {
 	Script* ptempscript = pcurrentscript;
 	if(obor_profile_build >= 3358 && Script_IsInitialized(&updated_script))
