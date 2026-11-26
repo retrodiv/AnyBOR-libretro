@@ -22,6 +22,7 @@ class ExecutableBuildTagTests(unittest.TestCase):
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include "anybor_file_io.h"
 static unsigned date_calls;
 static int date_to_build(int year,int month){
     assert(year==2023 && month==5);++date_calls;return 4242;
@@ -47,7 +48,8 @@ int main(void){
     check("Build ",0,0);check("",0,0);
     assert(build_from_exe("missing.bin")==0);
 }
-'''.replace('@READER@', function(GLUE.read_text(), 'build_from_exe')))
+'''.replace('@READER@', function(GLUE.read_text(), 'build_from_exe')),
+               include_dirs=(ROOT / 'src/glue',))
 
 
 if __name__ == '__main__':

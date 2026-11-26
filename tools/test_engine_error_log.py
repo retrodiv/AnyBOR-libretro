@@ -46,6 +46,7 @@ class EngineErrorLogTests(unittest.TestCase):
 #include <stdlib.h>
 #include <stdint.h>
 #include <string.h>
+#include "anybor_file_io.h"
 static char g_game_dir[2048], g_logical_engine[64];
 static int active;
 static bool g_engine_error_context, g_engine_log_fresh;
@@ -80,7 +81,7 @@ int main(int argc, char **argv) {
         compiler = shlex.split(os.environ.get('CXX', 'c++'))
         result = subprocess.run(
             [*compiler, '-std=c++11', '-Wall', '-Wextra', '-Werror',
-             str(source), '-o', str(cls.executable)],
+             '-I', str(ROOT / 'src/glue'), str(source), '-o', str(cls.executable)],
             capture_output=True, text=True, timeout=60)
         record_process('engine-error-log', 'compile', result,
                        dict(glue_sha256=cls.glue_hash, compiler=compiler))

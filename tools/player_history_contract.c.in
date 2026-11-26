@@ -17,12 +17,18 @@ static s_player player[MAX_PLAYERS];
 static s_playercontrols controls[MAX_PLAYERS],*playercontrolpointers[MAX_PLAYERS];
 static s_set_entry selected,*levelsets=&selected;
 static int current_set,control_calls,control_count;
+static s_level *level;
+static int current_level;
 static u32 time,interval,bothkeys,bothnewkeys,supplied_interval;
 void control_update(s_playercontrols **ports,int count){
  assert(ports==playercontrolpointers && count>=0 && count<=MAX_PLAYERS);
  ++control_calls;control_count=count;
 }
 unsigned timer_getinterval(unsigned rate){assert(rate==GAME_SPEED);return supplied_interval;}
+unsigned obor_play_interval(unsigned rate,int level_index){
+ assert(level_index==-1);
+ return timer_getinterval(rate);
+}
 @INPUT@
 static void spawn_history_reset(int index){@RESET@}
 struct input{int operation,count,pending,oldheld,held,newkeys,entity,age,direction,

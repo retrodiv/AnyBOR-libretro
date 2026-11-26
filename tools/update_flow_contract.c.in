@@ -77,6 +77,7 @@ PROVIDER(update_ents,"entities")
 PROVIDER(draw_scrolled_bg,"background_draw")
 PROVIDER(draw_textobjs,"text")
 PROVIDER(display_ents,"display")
+void obor_content_draw(void (*draw)(void)){draw();}
 PROVIDER(pausemenu,"pause_menu")
 PROVIDER(spriteq_clear,"queue_clear")
 PROVIDER(spriteq_lock,"lock")
