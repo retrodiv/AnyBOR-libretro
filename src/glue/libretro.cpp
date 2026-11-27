@@ -680,7 +680,7 @@ static int g_crt_options_visible = -1;
 
 static const char *const kCrtCanvasWidths[] = { "Keep Game Width", "320px", "512px", "640px" };
 static const char *const kCrtCanvasHeights[] = {
-    "Keep Game Height", "224px", "240px", "360px", "384px", "448px", "480px"
+    "Keep Game Height", "240px", "384px", "480px"
 };
 
 static bool update_engine_option_visibility(void)
@@ -1334,10 +1334,8 @@ void retro_set_environment(retro_environment_t cb)
               "samples along that axis and allows black margins. The axes follow CRT orientation.",
               NULL, "video",
               { { kCrtCanvasHeights[0], NULL }, { kCrtCanvasHeights[1], NULL },
-                { kCrtCanvasHeights[2], NULL }, { kCrtCanvasHeights[3], NULL },
-                { kCrtCanvasHeights[4], NULL }, { kCrtCanvasHeights[5], NULL },
-                { kCrtCanvasHeights[6], NULL }, { NULL, NULL } },
-              kCrtCanvasHeights[5] },
+                { kCrtCanvasHeights[2], NULL }, { kCrtCanvasHeights[3], NULL }, { NULL, NULL } },
+              kCrtCanvasHeights[3] },
             { "anybor_os_screen_orientation", "OS Screen Orientation", "OS Screen Orientation",
               "Match the screen orientation already set in the operating system. This option only selects "
               "the axes for CRT fitting. The operating system controls its own rotation. Vertical swaps "
@@ -1462,7 +1460,7 @@ void retro_set_environment(retro_environment_t cb)
     static const struct retro_variable vars[] = {
         { "anybor_crt_tv", "Adjust for 4:3 CRT TV; Off|On" },
         { "anybor_crt_oversize_canvas_width", "CRT Oversize Canvas Width; Keep Game Width|320px|512px|640px" },
-        { "anybor_crt_oversize_canvas_height", "CRT Oversize Canvas Height; 448px|Keep Game Height|224px|240px|360px|384px|480px" },
+        { "anybor_crt_oversize_canvas_height", "CRT Oversize Canvas Height; 480px|Keep Game Height|240px|384px" },
         { "anybor_os_screen_orientation", "OS Screen Orientation; Horizontal|Vertical" },
         { "anybor_image_rotation", "Image Rotation; None|Left|Right|Upside Down" },
         { "anybor_content_overrides", "Content Override Directives; On|Off" },

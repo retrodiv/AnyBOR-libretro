@@ -268,10 +268,7 @@ static void test_crt_oversize_modes(void)
 {
     const struct { int canvas_w, canvas_h, w, h, iw, ih, area; } cases[] = {
         {640, 480, 640, 480, 640, 360, 0},
-        {512, 360, 512, 360, 512, 270, 0},
         {640, 384, 640, 384, 640, 288, 0},
-        {OBOR_CRT_KEEP, 448, 1920, 448, 1920, 336, 0},
-        {320, 224, 320, 224, 320, 168, 1},
         {OBOR_CRT_KEEP, 240, 1920, 240, 1920, 180, 1},
         {320, OBOR_CRT_KEEP, 320, 1440, 320, 1080, 1},
         {OBOR_CRT_KEEP, OBOR_CRT_KEEP, 1920, 1440, 1920, 1080, 0},

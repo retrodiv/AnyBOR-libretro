@@ -311,10 +311,8 @@ def main():
 
         wide = make_grid_pak(1920, 1080)
         for canvas_w, canvas_h, width, height, border in (
-                (None, None, 1920, 448, 56),
+                (None, None, 1920, 480, 60),
                 ("640px", "480px", 640, 480, 60),
-                ("512px", "360px", 512, 360, 45),
-                ("320px", "224px", 320, 224, 28),
                 ("Keep Game Width", "240px", 1920, 240, 30),
                 ("Keep Game Width", "Keep Game Height", 1920, 1440, 180)):
             settings = {"OBOR_CRT_TV": "On"}

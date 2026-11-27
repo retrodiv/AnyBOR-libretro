@@ -16,7 +16,7 @@ enum obor_image_rotation {
 
 #define OBOR_CRT_KEEP 0
 #define OBOR_CRT_DEFAULT_WIDTH OBOR_CRT_KEEP
-#define OBOR_CRT_DEFAULT_HEIGHT 448
+#define OBOR_CRT_DEFAULT_HEIGHT 480
 
 typedef struct obor_crt_mode {
     int declared;
@@ -116,7 +116,7 @@ static obor_crt_frame obor_crt_layout(int width, int height, int vertical,
     if ((vertical ? frame.width : frame.height) <= 244)
         return frame;
 
-    frame.area_filter = canvas_height == 224 || canvas_height == 240 ||
+    frame.area_filter = canvas_height == 240 ||
                         (canvas_height == OBOR_CRT_KEEP && canvas_width == 320);
     frame.width = vertical ? canvas_height : canvas_width;
     frame.height = vertical ? canvas_width : canvas_height;

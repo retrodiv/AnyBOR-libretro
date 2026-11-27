@@ -141,7 +141,7 @@ The macros account for the active character's facing direction.
 |---|---|---|
 | Adjust for 4:3 CRT TV | `anybor_crt_tv` | **Off**. Fits the complete image to the CRT canvas. See [CRT presentation and image rotation](#crt-presentation-and-image-rotation). |
 | CRT Oversize Canvas Width | `anybor_crt_oversize_canvas_width` | **Keep Game Width**, 320px, 512px, or 640px. |
-| CRT Oversize Canvas Height | `anybor_crt_oversize_canvas_height` | Keep Game Height, 224px, 240px, 360px, 384px, **448px**, or 480px. |
+| CRT Oversize Canvas Height | `anybor_crt_oversize_canvas_height` | Keep Game Height, 240px, 384px, or **480px**. |
 | OS Screen Orientation | `anybor_os_screen_orientation` | **Horizontal**. Choose Horizontal for a system rotation of 0° or 180° and Vertical for 90° or 270°. |
 | Image Rotation | `anybor_image_rotation` | **None**. Left and Right rotate the complete game image by 90°. Upside Down rotates it by 180°. |
 | Content Override Directives | `anybor_content_overrides` | **On**. Enables [scoped presentation from the content descriptor](CONTENT_CONFIGURATION.md#scoped-presentation-directives). |
@@ -301,13 +301,12 @@ have different proportions.
 
 | CRT Oversize Canvas Width | CRT Oversize Canvas Height | Output frame | Game image | Black lines above and below |
 | --- | --- | --- | --- | --- |
-| **Keep Game Width** | **448px** | 1920×448 | 1920×336 | 56 each |
+| **Keep Game Width** | **480px** | 1920×480 | 1920×360 | 60 each |
 | 640px | 480px | 640×480 | 640×360 | 60 each |
-| 512px | 360px | 512×360 | 512×270 | 45 each |
-| 320px | 224px | 320×224 | 320×168 | 28 each |
+| Keep Game Width | 240px | 1920×240 | 1920×180 | 30 each |
 | Keep Game Width | Keep Game Height | 1920×1440 | 1920×1080 | 180 each |
 
-The 224- and 240-line selections use a weighted area filter. With **Keep
+The 240-line selection uses a weighted area filter. With **Keep
 Game Height**, a 320px width also uses that filter. Other fits use sharp
 bilinear filtering. Each **Keep Game** setting preserves samples on its
 selected axis and allows black margins. Keeping both axes preserves every

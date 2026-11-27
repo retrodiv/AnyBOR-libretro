@@ -154,8 +154,10 @@ static void check_values(const option_snapshot &option) {
     if (option.key=="anybor_state_compression") assert(option.default_value==OBOR_STATE_COMPRESSION_DEFAULT);
     if (option.key=="anybor_crt_oversize_canvas_width")
         assert(option.values==std::vector<std::string>({"Keep Game Width","320px","512px","640px"}));
-    if (option.key=="anybor_crt_oversize_canvas_height")
-        assert(option.values==std::vector<std::string>({"448px","Keep Game Height","224px","240px","360px","384px","480px"}));
+    if (option.key=="anybor_crt_oversize_canvas_height") {
+        assert(option.default_value=="480px");
+        assert(option.values==std::vector<std::string>({"480px","Keep Game Height","240px","384px"}));
+    }
     if (option.key=="anybor_os_screen_orientation")
         assert(option.values==std::vector<std::string>({"Horizontal","Vertical"}));
     if (option.key=="anybor_image_rotation")
@@ -176,8 +178,8 @@ static void read_v2(const retro_core_options_v2 *options) {
         assert(i<RETRO_NUM_CORE_OPTION_VALUES_MAX && !def->values[i].label);
         if (option.key=="anybor_crt_oversize_canvas_height") {
             assert(!strcmp(def->desc,"CRT Oversize Canvas Height"));
-            assert(option.values==std::vector<std::string>({"Keep Game Height","224px","240px","360px","384px","448px","480px"}));
-            std::rotate(option.values.begin(),option.values.begin()+5,option.values.begin()+6);
+            assert(option.values==std::vector<std::string>({"Keep Game Height","240px","384px","480px"}));
+            std::rotate(option.values.begin(),option.values.end()-1,option.values.end());
         }
         if (option.key=="anybor_crt_oversize_canvas_width")
             assert(!strcmp(def->desc,"CRT Oversize Canvas Width"));
